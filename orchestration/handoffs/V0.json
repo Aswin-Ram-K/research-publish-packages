@@ -1,0 +1,93 @@
+{
+  "unit": "V0",
+  "batch": "0",
+  "overall": "PASS",
+  "checks": [
+    {"id": "1", "name": "spec integrity", "verdict": "PASS",
+     "expected": "docs/PLAN.md identical to the approved plan recoverable from the session log; 12 headings; required normative strings present",
+     "observed": "last plan-bearing log record (line 258) = 29875 bytes / 308 lines / 12 '## ' headings; cmp byte-identical to docs/PLAN.md (md5 7c4aac1199d530a3172cfa55c9a042d1); s0 line 10, s11 line 301; no normative content missing",
+     "evidence": "zstd -dc session.v4.jsonl.zstd | extract.py -> plan_from_log.txt; cmp -s -> BYTE-IDENTICAL; earlier 27770 B record corroborates U0.1 stale-11-section claim"},
+    {"id": "2", "name": "environment", "verdict": "PASS",
+     "expected": "py3.14.4; graphify 0.9.80; graspologic-native 1.3.1; openai 3.26.1; 9 imports; graphify flags present",
+     "observed": "Python 3.14.4; graphify 0.9.80; graspologic-native 1.3.1; openai 3.26.1; all 9 imports OK; resextract --version 0.1.0 rc0; every sampled flag found (--token-budget, --max-concurrency, --code-only, --backend, --out, god-nodes, affected, save-result, reflect, export wiki)",
+     "evidence": ".venv/bin/python -V; .venv/bin/graphify --version; importlib.metadata checks; grep -Fc against state/logs/graphify-0.9.80-help.txt"},
+    {"id": "3", "name": "doctor gate", "verdict": "PASS",
+     "expected": "doctor --json exit 0, core 4/4; sqlite has 11 tables + schema_version, WAL, declared column order",
+     "observed": "3/3 attempts rc0 ok=true core_down=[] (Occamy/SearXNG/crawl/graphify ok each time), optional_down=[docling bridge]; plain doctor rc0 'core 4/4 green; optional 2/3 green'; SearXNG never timed out (retry rule untriggered); RO sqlite: wal, 12 tables incl schema_version, 15 indices, column order matches DDL, exactly 4 CHECK vocabularies",
+     "evidence": "resextract doctor --json x3 + resextract doctor; sqlite3.connect('file:state/state.sqlite?mode=ro',uri=True) PRAGMA journal_mode/table_info"},
+    {"id": "4", "name": "test suite", "verdict": "PASS",
+     "expected": "U0.2 33 passed + 1 skipped; U0.3 64 passed; whole tree ~97 passed 1 skipped; skip is the live marker",
+     "observed": "U0.2 alone 33 passed, 1 skipped; U0.3 (store+journal+doctor) 64 passed; whole tree now 131p/1s then 177p/6f/1deselected because siblings added tests mid-run; the 6 failures are tests/test_web_fetch.py against src/resextract/web/fetch.py -> out of scope sibling-owned; skip reason 'live test — run with --live or RESEXTRACT_LIVE=1'",
+     "evidence": "pytest tests/test_occamy_client.py -q -> 33 passed,1 skipped; pytest tests/test_store.py tests/test_journal.py tests/test_doctor.py -q -> 64 passed; pytest tests/ -q; pytest tests/test_occamy_client.py -q -rs"},
+    {"id": "5a", "name": "thinking guard red->green", "verdict": "PASS",
+     "expected": "reverting 'if not thinking:' makes tests/test_occamy_client.py::test_thinking_off_sends_disable_flag fail; restoring passes",
+     "observed": "reverted -> 1 failed (AssertionError: thinking=False must send chat_template_kwargs, test_occamy_client.py:70); restored -> 1 passed",
+     "evidence": "sha before=sha after restore=7a44b4e8f678ade03e4cb7262662c3431882f9facf9e6d2d1a813310fd95c932 (revert 361db632...); state/verify/V0/redgreen-5a.txt"},
+    {"id": "5b", "name": "journal tamper guard red->green", "verdict": "PASS",
+     "expected": "reverting verify()'s hash recompute makes test_tampering_is_detected_with_first_bad_seq fail; restoring passes",
+     "observed": "reverted -> 1 failed (assert ok is False); restored -> 1 passed",
+     "evidence": "sha before=sha after restore=3f82e6c6edd7842f6ec06f358d8f8e0956b95fdaece1685f0a1b9dec9fa99f6a (revert 7cda1a6b...); state/verify/V0/redgreen-5b.txt"},
+    {"id": "5c", "name": "optional leg cannot fail doctor test", "verdict": "PASS",
+     "expected": "tests/test_doctor.py::test_optional_leg_cannot_fail_the_doctor exists and passes without source edits",
+     "observed": "1 passed in 0.01s",
+     "evidence": "pytest tests/test_doctor.py::test_optional_leg_cannot_fail_the_doctor -q --no-header"},
+    {"id": "6", "name": "journal integrity independent", "verdict": "PASS",
+     "expected": "clean verify ok; tampered middle line -> first_bad_seq=2; secret redacted; tokens_used/reasoning_tokens NOT redacted",
+     "observed": "clean (True,None); tamper middle -> (False,2); secret value 'sk-abcdefghijklmnopqrstuvwxyz0123456789' stored as '<redacted>' with 0/5 chunks surviving under api_key/client_secret/token/innocent; tokens_used=1234, reasoning_tokens=256, max_tokens=8192 all intact",
+     "evidence": "state/verify/V0/journal_scratch, journal_scratch2 via resextract.journal.Journal"},
+    {"id": "7", "name": "live thinking re-check", "verdict": "PASS",
+     "expected": "off -> reasoning_tokens 0 and non-empty content; on -> non-empty reasoning_content; small max_tokens truncation trap observable",
+     "observed": "off 151.8 ms, reasoning_tokens=0, completion_tokens=2, content 'OK', finish_reason=stop; on 7438.7 ms, reasoning_tokens=256, completion_tokens=256 (max_tokens=256), reasoning_content 602 chars, content EMPTY, finish_reason=length -> truncation trap REPRODUCED",
+     "evidence": "2 Occamy calls via OccamyClient(config_path=config/resextract.toml); state/logs/V0-live.json"},
+    {"id": "8", "name": "honesty audit", "verdict": "PASS",
+     "expected": "list non-reproduced/overstated/unverifiable claims and CLI placeholder owners",
+     "observed": "3 UNVERIFIED/not-reproduced items recorded; CLI 11 placeholders all exit 3; owners reuse live unit-id space",
+     "evidence": "resextract --help; resextract target/run/serve rc3; owner labels U1.1/U2.1/U4.1/U4.2/U5.2/U6.1/U7.1"},
+    {"id": "9", "name": "containment", "verdict": "PASS",
+     "expected": "Duval untouched; no writes outside workspace; .gitignore covers state/ .venv/ dockets/",
+     "observed": "Duval HEAD 6deaed07af0d998d1672fe3f1ab1579e6ba0cdc4 unchanged; only pre-existing ?? .ci-trunk.txt and ?? .lane-j-scratch/ (mtimes 00:59-02:32, before this session's 05:22 start); find /home/zer0null -maxdepth 1 -newermt 05:20 lists only the workspace; .gitignore has .venv/ state/ dockets/",
+     "evidence": "git -C /home/zer0null/Duval rev-parse HEAD + status --short (before and after); find -newermt; cat .gitignore; workspace git status shows state/ ignored"}
+  ],
+  "not_reproduced": [
+    "U0.2's whole-tree '97 passed, 1 skipped' is not reproducible now: sibling units added tests during verification (131 passed/1 skipped, then 177 passed/6 failed/1 deselected). Consistent with batch-0 arithmetic 33+64=97; point-in-time claim, not a defect.",
+    "U0.3's SearXNG intermittent ReadTimeout was not observed in 4 doctor runs (3 JSON + 1 plain) — the one-retry rule was never triggered."
+  ],
+  "overstated": [
+    "U0.1b 'zero CLI drift' between graphify 0.9.65 and 0.9.80 is stated more strongly than local evidence supports: only the 0.9.80 side is provable (every sampled flag is present); no 0.9.65 artifact exists locally to diff against."
+  ],
+  "unverified": [
+    "graphify 0.9.65 baseline for the CLI-drift claim: no 0.9.65 artifact (install log mentions 0.9.65 zero times; no cached wheel).",
+    "U0.2 internals only verified at suite level (33 tests green): null-name continuation guard, tool-call parsed args, retries/backoff, metering, Budget/BudgetExhausted, call_json one-retry-then-UnparseableOutput were not each exercised individually by V0.",
+    "What U0.1's inherited context actually held (the 'stale 11-section revision' claim) is corroborated by an earlier 27770-byte plan record in the log but is not directly observable."
+  ],
+  "id_collision": {
+    "observed_placeholder_owners": [
+      "resextract target -> batch 1 (U1.1)",
+      "resextract run -> batch 2 (U2.1)",
+      "resextract mine -> batch 2 (U2.1)",
+      "resextract assess -> batch 4 (U4.1)",
+      "resextract lanes -> batch 4 (U4.2)",
+      "resextract materialize -> batch 5 (U5.2)",
+      "resextract open -> batch 5 (U5.2)",
+      "resextract export -> batch 5 (U5.2)",
+      "resextract serve -> batch 6 (U6.1)",
+      "resextract refresh -> batch 7 (U7.1)",
+      "resextract watch -> batch 7 (U7.1)"
+    ],
+    "canonical_note": "All 11 placeholders exit 3; doctor/status are live; unknown commands exit 2. The owner labels reuse the live orchestration unit-id space — U1.1 is simultaneously a currently running sibling unit (kg/graphify) and the declared owner of `resextract target`. Rename CLI owners (e.g. B1.1) or map each explicitly to a canonical unit card id."
+  },
+  "restoration_proof": {
+    "llm/occamy.py": "sha ok (7a44b4e8f678ade03e4cb7262662c3431882f9facf9e6d2d1a813310fd95c932 before == after restore)",
+    "journal.py": "sha ok (3f82e6c6edd7842f6ec06f358d8f8e0956b95fdaece1685f0a1b9dec9fa99f6a before == after restore)",
+    "doctor.py": "never modified (d40630a9a340fe4b45c35708094dc1e00356c03fb1ec02c66bff2a0074c53b37)"
+  },
+  "blocker": "",
+  "next_unit_hint": "Batch 0 may advance. Non-blocking follow-ups: (1) rename the CLI placeholder owner labels so they stop reusing live unit ids; (2) surface the unwired [stages.*].thinking / max_thinking_tokens policy table as a stage->(thinking,max_tokens) helper; (3) consumers must treat finish_reason=='length' with empty content (thinking-on at a small cap) as truncation, not a final answer. The 6 failing tests in tests/test_web_fetch.py belong to the U3.x web owner, not batch 0.",
+  "write_paths": [
+    "orchestration/VERDICTS.md",
+    "orchestration/units/V0.md",
+    "orchestration/handoffs/V0.json",
+    "state/logs/V0-live.json",
+    "state/verify/V0/**"
+  ]
+}

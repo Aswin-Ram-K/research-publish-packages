@@ -1,0 +1,44 @@
+{
+  "unit": "U0.2",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/llm/__init__.py",
+    "src/resextract/llm/occamy.py",
+    "tests/conftest.py",
+    "tests/test_occamy_client.py",
+    "state/logs/U0.2-offline-tests.txt",
+    "state/logs/U0.2-red-green.txt",
+    "state/logs/U0.2-live.json",
+    "state/logs/U0.2-versions.txt",
+    "orchestration/units/U0.2.md"
+  ],
+  "evidence": {
+    "offline_tests": "33 passed, 1 skipped (tests/test_occamy_client.py, offline only); 97 passed, 1 skipped across tests/ incl. U0.3's test_store/test_journal/test_doctor",
+    "red_green": "guard 'thinking=False must send chat_template_kwargs.enable_thinking=false' failed when reverted: tests/test_occamy_client.py:70: AssertionError: thinking=False must send chat_template_kwargs (body was {'model':...,'messages':...,'max_tokens':32,'temperature':0.0}); restored -> 1 passed, source grep for REVERTED GUARD = 0",
+    "live_smoke": "ran: thinking_off=122.4ms / prompt 17 + 2 completion / 0 reasoning tokens, content 'OK'; thinking_on=7213.9ms / 26 prompt + 256 completion / 256 reasoning tokens (max_tokens=256 fully consumed by reasoning -> content empty), reasoning_content 670 chars non-empty; 34 passed in 7.38s",
+    "httpx_version": "0.28.1",
+    "pydantic_version": "2.13.5",
+    "pytest_version": "9.1.1 (pytest-asyncio 1.4.0)",
+    "python": "3.14.4",
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_occamy_client.py -q  ->  33 passed, 1 skipped in 0.04s",
+      ".venv/bin/python -m pytest tests/ -q  ->  97 passed, 1 skipped in 0.41s",
+      ".venv/bin/python -m pytest tests/test_occamy_client.py --live -q -s  ->  34 passed in 7.38s",
+      "# red->green: patch src/resextract/llm/occamy.py 'if not thinking:' -> 'if False:', then",
+      ".venv/bin/python -m pytest tests/test_occamy_client.py::test_thinking_off_sends_disable_flag -q --tb=line  ->  1 failed (line 70)",
+      "cp /tmp/occamy_backup.py src/resextract/llm/occamy.py && grep -c 'REVERTED GUARD' src/resextract/llm/occamy.py  ->  0",
+      ".venv/bin/python -c 'import resextract.llm as m; print(sorted(m.__all__))'"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Client is ready for U0.3 (doctor can probe via OccamyClient.chat) and U2.x. Three operational gotchas to carry forward: (1) SGLang counts reasoning INSIDE max_tokens -- with thinking=True, max_tokens=256 produced 256 reasoning tokens and EMPTY content (finish_reason would be 'length'); thinking-on stages (mining 4096 / assessment 8192 per config) must budget reasoning + answer together and treat empty content at the cap as truncation, not a final answer. (2) This SGLang build reports reasoning at usage.reasoning_tokens TOP-LEVEL (not in completion_tokens_details); parse_usage reads all three shapes. (3) Repair discipline: a retry loop that ignores finish_reason=='length' will burn calls on empty content. Also unwired: config's [stages.*].thinking / max_thinking_tokens policy table is NOT yet surfaced -- a later unit should expose a stage->(thinking, max_tokens) helper rather than hardcoding. SyncOccamyClient raises inside a running loop; the CLI must use the async client (or call sync methods outside a loop).",
+  "write_paths": [
+    "src/resextract/llm/__init__.py",
+    "src/resextract/llm/occamy.py",
+    "tests/conftest.py",
+    "tests/test_occamy_client.py",
+    "state/logs/U0.2*",
+    "orchestration/handoffs/U0.2.json",
+    "orchestration/units/U0.2.md"
+  ]
+}

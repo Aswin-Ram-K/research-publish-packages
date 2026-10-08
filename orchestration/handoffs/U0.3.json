@@ -1,0 +1,79 @@
+{
+  "unit": "U0.3",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/store.py",
+    "src/resextract/journal.py",
+    "src/resextract/doctor.py",
+    "src/resextract/cli.py",
+    "tests/test_store.py",
+    "tests/test_journal.py",
+    "tests/test_doctor.py",
+    "state/state.sqlite",
+    "state/logs/U0.3-evidence.txt",
+    "state/logs/U0.3-redgreen.txt",
+    "state/logs/U0.3-pytest.txt",
+    "orchestration/units/U0.3.md",
+    "orchestration/handoffs/U0.3.json"
+  ],
+  "evidence": {
+    "tests": "64 passed in 0.38s",
+    "red_green": "state/logs/U0.3-redgreen.txt: two guards reverted at once, ran `pytest tests/test_journal.py::test_tampering_is_detected_with_first_bad_seq tests/test_doctor.py::test_optional_leg_cannot_fail_the_doctor -q` -> `FF [100%] ... assert True is False (journal.py:96) ... assert 2 == 0 (test_doctor.py:96) ... 2 failed in 0.02s`; restoring both guards -> 64 passed. Reverted variants: journal.verify() trusting the stored hash instead of recomputing it; run_doctor() exiting 2 when an OPTIONAL leg is down. Both failing outputs pasted verbatim into those two tests' docstrings.",
+    "doctor_exit_code": 0,
+    "doctor_json": {
+      "checked_at": "2026-10-08T10:29:57.046Z",
+      "ok": true,
+      "exit_code": 0,
+      "core": {
+        "Occamy": "ok - model=occamy-1.0; completion HTTP 200 (thinking=off, max_tokens=8, 327 ms)",
+        "SearXNG": "ok - HTTP 200, results=20",
+        "crawl bridge": "ok - HTTP 200, ok=True",
+        "graphify": "ok - graphify 0.9.80; openai 3.26.1"
+      },
+      "optional": {
+        "docling bridge": "DOWN (expected) - ConnectError: [Errno 111] Connection refused",
+        "renderers": "ok - missing: pdflatex, pandoc, tectonic (absence reported, not a failure)",
+        "dashboard port": "ok - 127.0.0.1:8901 free"
+      },
+      "core_down": [],
+      "optional_down": ["docling bridge"]
+    },
+    "schema_tables": 11,
+    "schema_tables_note": "11 application tables + schema_version = 12 sqlite_master tables; WAL on; 15 declared indices (17 sqlite_master index entries incl. the two PRIMARY KEY auto-indices).",
+    "commands": [
+      ".venv/bin/resextract doctor            # exit 0, core 4/4 green, docling DOWN (optional)",
+      ".venv/bin/resextract doctor --json     # exit 0 on retry; first attempt exit 2 (SearXNG ReadTimeout, see intermittency note)",
+      ".venv/bin/resextract status --json     # exit 0, schema v1, 11 tables, all counts 0, last_run null",
+      "for c in target run mine assess lanes materialize refresh open export serve watch; do .venv/bin/resextract $c; done  # each exit 3 with owner batch",
+      ".venv/bin/pytest tests/test_store.py tests/test_journal.py tests/test_doctor.py -q   # 64 passed",
+      "sqlite3 schema check: 11 tables, journal_mode=wal, 15 indices"
+    ],
+    "live_intermittency": "Of two consecutive live `doctor` invocations (human then --json), the human run was 4/4 core green; the --json run 16 s later returned `SearXNG ReadTimeout: timed out` at the mandated 5 s timeout and exited 2. A third (allowed) --json run 3 s later was green. SearXNG intermittency is real and is the only non-determinism in the gate; a single retry is recommended before declaring a core failure. Probes were deliberately left single-attempt with the mandated 5 s hard timeout."
+  },
+  "blocker": "",
+  "next_unit_hint": "V0.1 can gate on `.venv/bin/resextract doctor --json` (exit 0; core 4/4). Expect docling DOWN and renderers missing pdflatex/pandoc/tectonic - both optional by design. SearXNG intermittently returns ReadTimeout at 5 s: retry once before calling a core leg down (observed twice in three runs). Do not treat the journal's sha256 hex digests as secrets (pure-hex is intentionally exempt from base64ish redaction) and note that key-name redaction uses word boundaries so `tokens_used`/`reasoning_tokens` metering survives while `token`/`api_key`/`client_secret` are redacted. Lane rows are unique on (target, slug) and dockets on (dir) to make upsert deterministic; `init_db` is idempotent and preserves rows.",
+  "schema_decisions": [
+    "journal genesis entry has prev='' (empty string), not null; hash covers the entry minus the 'hash' key, canonical JSON = sort_keys + compact separators.",
+    "redaction key regex uses token boundaries: api_key|authorization|token|secret|password match only when not flanked by alphanumerics, so 'tokens_used' and 'reasoning_tokens' metering is preserved.",
+    "secret-shaped values: sk-*, okr_*, and 40+ char base64ish blobs are redacted, but pure lowercase-hex runs of 40+ chars (sha256/sha1 digests, the journal's own provenance) are exempt.",
+    "renderers leg is always ok=true and lists `missing` - absence of pdflatex/pandoc/tectonic is information, never a doctor failure.",
+    "lanes gains UNIQUE(target, slug) and dockets UNIQUE(dir) so upsert is deterministic; all other tables key on their integer id or natural PK.",
+    "store accessors take a sqlite3.Connection and return plain dicts; columns ending in '_json' accept Python objects on write and are decoded on read.",
+    "status_json() reports counts for all 11 tables, lanes by status/type, dockets by freshness, runs by status and the last run row."
+  ],
+  "write_paths": [
+    "src/resextract/store.py",
+    "src/resextract/journal.py",
+    "src/resextract/doctor.py",
+    "src/resextract/cli.py",
+    "tests/test_store.py",
+    "tests/test_journal.py",
+    "tests/test_doctor.py",
+    "state/state.sqlite",
+    "state/logs/U0.3-evidence.txt",
+    "state/logs/U0.3-redgreen.txt",
+    "state/logs/U0.3-pytest.txt",
+    "orchestration/units/U0.3.md",
+    "orchestration/handoffs/U0.3.json"
+  ]
+}
