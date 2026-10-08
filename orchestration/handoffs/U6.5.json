@@ -1,0 +1,135 @@
+{
+  "unit": "U6.5",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/dashboard/api.py",
+    "src/resextract/dashboard/app.py",
+    "tests/test_dashboard.py",
+    "orchestration/units/U6.5.md",
+    "state/verify/U6.5/after-list.json",
+    "state/verify/U6.5/after-nested.json",
+    "state/verify/U6.5/after-reasoning.json",
+    "state/verify/U6.5/before-list.json",
+    "state/verify/U6.5/before-nested.json",
+    "state/verify/U6.5/host-refusal.log",
+    "state/verify/U6.5/api.green.bak",
+    "state/verify/U6.5/api.orig.bak",
+    "state/verify/U6.5/state-sha-before.txt"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "occamy_probe_note": "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> curl(7) connection refused, 000. Probed once; nothing restarted; zero LLM calls.",
+    "tests": {"dashboard_before": 48, "dashboard_after": 52, "assertions_deleted": 0},
+    "sha256": {
+      "src/resextract/dashboard/api.py": "5b4de0639c4c73003c3e604b01dba9a9a5bdef07d558d7d3a8a65f9e41d44c68",
+      "src/resextract/dashboard/app.py": "16e7263a39afd3b10763e9424d5ef0bddbe32a564f9674225a9f6d73aa0a0052",
+      "tests/test_dashboard.py": "bcad5ea596abdcf16a3c32d55905398a870968e1c243b370b71204a0c3ae6aab"
+    }
+  },
+  "reproduced": {
+    "list_count": 3,
+    "nested_detail_status_before": 404,
+    "nested_detail_before_body": "{\"error\":\"invalid docket slug: 'duval/duval-u55-pinned'\",\"slug\":\"duval/duval-u55-pinned\"}",
+    "route_slug_null_disclosed": true,
+    "route_slug_null_quote": "count 3 -> '_smoke' route_slug='_smoke' status=draft; 'duval/duval-replay-material' route_slug=None status=draft; 'duval/duval-u55-pinned' route_slug=None status=draft (GET /api/dockets on 8901, before fix)",
+    "masked_condition": "'if \"/\" in candidate or \"\\\\\" in candidate or \"..\" in candidate:' (api.py:122) is fully masked by the other three checks: _SLUG_RE ^[A-Za-z0-9._-]+$ rejects every '/' and '\\\\' (and '%'), and the leading-dot check candidate.startswith('.') catches '..' plus every URL-decoded traversal (Starlette decodes %2f/%2e before the handler, so '../ok-docket', '../../etc/passwd', '..../ok-docket' all start with '.'), and '\\x00' is caught by the NUL check. Measured: with that one line deleted and every other check intact, all 5 traversal/safe_slug tests passed and safe_slug still returned None for '../ok-docket', '../../etc/passwd', '..../ok-docket', '..', 'a/b', '..\\\\ok', 'x\\x00y'. The redundancy is GOOD and was kept; only the test was strengthened.",
+    "old_line_level_revert_after_new_tests": "still green: 9 passed, 43 deselected"
+  },
+  "fix": {
+    "multi_segment": true,
+    "new_guard": "api.safe_docket_slug(slug, dockets_dir): every segment is validated through the unchanged safe_slug (so all single-segment refusals still apply per segment), a backslash or NUL anywhere refuses, then the joined path is realpath'ed and must stay inside realpath(dockets_dir).",
+    "containment_on_realpath": true,
+    "dot_segments_refused": true,
+    "dot_segment_decision": "duval/../_smoke is REFUSED (404 + explicit payload), never normalised to _smoke: normalising would silently accept a client-supplied traversal path, and _smoke is reachable directly under its own slug, so nothing is lost.",
+    "nonexistent_dir": "404 with explicit payload: {\"error\":\"docket not found: 'duval/nope'\",\"slug\":\"duval/nope\",\"root\":\"dockets\"} (never 500)",
+    "single_segment_still_works": true,
+    "route_slug_now_populated": "safe_docket_slug(slug, root) in DataLayer.dockets() -> 'duval/duval-u55-pinned' etc.; None only for a realpath-escaping entry",
+    "app_route_change": "app.py api_docket_detail now calls api.safe_docket_slug(slug, layer.dockets_dir); module docstring updated. cli.py/run.py/static/docket/** untouched.",
+    "traversal_inputs_refused": [
+      "..%2f..%2fetc%2fpasswd",
+      "..%2fok-docket",
+      "%2e%2e%2f%2e%2e%2fok-docket",
+      "....%2fok-docket",
+      "..%5c..%5cetc%5cpasswd",
+      "%252e%252e%252fok-docket (double-encoded)",
+      "duval/..%2f..%2fetc%2fpasswd (nested)",
+      "duval/%2e%2e%2f_smoke (.. segment, reason pinned)",
+      "/etc/passwd (encoded leading slash -> empty segment)",
+      "duval/ (trailing slash -> empty segment)",
+      "duval/%2e/_smoke (. segment)",
+      "duval//real (empty segment, validator-level)",
+      "escape / duval/up (realpath escape via symlink, validator + route)",
+      "... refused by the leading-dot check (inspected, not separately asserted)"
+    ],
+    "all_above_live_404": true
+  },
+  "new_tests": [
+    "test_nested_docket_detail_returns_manifest (nested 200 + manifest/documents/files/verify + route_slug non-null + single-segment still 200)",
+    "test_nested_traversal_encodings_are_404 (nested traversal, nested .. segment, backslash, double-encoding, encoded leading slash, . segment, realpath escape x2, missing-manifest explicit 404)",
+    "test_dot_segment_is_refused_not_normalised (duval/../_smoke -> 404 + exact rejection reason)",
+    "test_safe_docket_slug_pins_path_validation (validator-level: documents that safe_slug ACCEPTS 'escape'/'duval', then requires safe_docket_slug to refuse them)"
+  ],
+  "red_green": {
+    "new_path_validation": "sha256 ok (5b4de063... before and after, RESTORED BIT-IDENTICAL). RED: reverting safe_docket_slug to 'return safe_slug(slug)' -> 3 failed, 1 passed: test_nested_docket_detail_returns_manifest ('duval/duval-u55-pinned' -> 404), test_dot_segment_is_refused_not_normalised, test_safe_docket_slug_pins_path_validation with 'AssertionError: escape (realpath leaves the dockets root)'. GREEN restored: 4 passed.",
+    "old_line_level_revert": "still green (9 passed, 43 deselected) — reported honestly. The new tests exercise safe_slug only per segment, where the leading-dot and _SLUG_RE checks already mask that line, so the new tests do NOT pin that exact line. Pinning it would need a decoded multi-segment input that reaches safe_slug whole (there is none, by design).",
+    "stale_bytecode_discipline": "PYTHONDONTWRITEBYTECODE=1 plus 'find src tests -name __pycache__ -prune -exec rm -rf {} +' before every revert/restore comparison and before every suite run."
+  },
+  "live": {
+    "nested_detail_status": 200,
+    "manifest_matches_disk": true,
+    "manifest_spot_check": "slug='duval/duval-u55-pinned', error=null, verify.ok=true; manifest.status 'draft'=='draft', generated_at '2026-10-08T11:25:12Z'==disk, target (slug/head_sha 5cdc471a.../graph_hash 4790bbb1...) == disk; generated_by served {'app':'resextract','model':'','producer':'unknown','version':'0.1.0'} vs disk {'app':'resextract','model':'','version':'0.1.0'} — every disk key is present and equal; served only ADDS the pydantic default producer='unknown' (producer is NOT present on disk, so 'generated_by.producer if present' has nothing to match). documents present README/CLAIMS/EVIDENCE/UPDATE_BACKLOG, files=27.",
+    "smoke_200": true,
+    "spa_routes_200": true,
+    "spa_routes_note": "/api/status /api/runs /api/reasoning /api/findings /api/dockets /api/web-health /api/graph /api/doctor /api/refresh / all 200",
+    "truth_check_divergences": 0,
+    "truth_check_note": "list_count=3, disk_count=3 (MANIFEST.json at depth 1 and 2 under dockets/)",
+    "reasoning_text_available": false,
+    "reasoning_note": "key present (computed) and false; 31 events, 0 carrying reasoning_text",
+    "corrupt_manifest": "explicit error, no 500: 404 {\"error\":\"MANIFEST.json unreadable: JSONDecodeError: Expecting value: line 1 column 10\",\"slug\":\"corrupt\",\"dir\":...} (ASGI TestClient over a scratch root in state/verify/U6.5/scratch; V6's socket-level check is unchanged)",
+    "control_gate": "401->200 with token (POST /api/control/rescan)",
+    "reads_open_without_token": true,
+    "non_loopback_refused": true,
+    "non_loopback_detail": "CLI (the documented human path) '.venv/bin/resextract serve --host 0.0.0.0 --port 8999' -> 'refusing to bind non-loopback host', exit=2, bound_8999=0. NOTE, reported honestly: the module entry point 'python -m resextract.dashboard --host 0.0.0.0' does bind, because its own docstring makes an EXPLICIT --host the opt-in; that accidental bind was killed immediately (job bash-4329) and is by design of that secondary entry point, not a regression of the CLI guard.",
+    "external_origins": [],
+    "external_origins_note": "grep -rhoE 'https?://...' src/resextract/dashboard/static/ printed nothing at all",
+    "server_stopped": true,
+    "stray_processes": 0,
+    "stop_proof": "ss -ltn shows no 8901/8902/8999 listener; curl :8901/:8902/:8999 all 000; 0 dashboard processes remain (jobs killed via job_kill; the job processes live in a separate PID namespace, so /proc and pgrep cannot see or signal them from the tool shell)",
+    "state_sqlite_untouched": "sha256 459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5 before and after (the verification server used a copy at state/verify/U6.5/state-copy.sqlite)",
+    "start_command": "resextract serve --port 8901  (equivalently .venv/bin/resextract serve --port 8901; --dockets-dir defaults to ./dockets, --token auto prints a one-time token, --no-browser is accepted). The unit's own before/after runs used: PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m resextract.dashboard --port 8902 --dockets-dir dockets --token u65tok --store state/verify/U6.5/state-copy.sqlite --graph state/kg/duval/graphify-out/graph.json"
+  },
+  "verified_by_V6_still_holds": true,
+  "duval_untouched": {
+    "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+    "note": "2 pre-existing untracked entries, not created by this unit (this unit never wrote under /home/zer0null/Duval and never read .worktrees/)."
+  },
+  "collision_note": "Concurrent units have modified src/resextract/cli.py, src/resextract/store.py, src/resextract/docket/assemble.py, tests/fixtures/dashboard-store/build.py, tests/test_store_v3.py and orchestration/VERDICTS.md while this unit ran. None of those paths is a U6.5 write path, and no U6.5 path was touched by anyone else; the three U6.5 files are still uncommitted modifications (nothing was committed by this unit). No collision.",
+  "tool_calls": 39,
+  "bound": 30,
+  "tool_call_accounting": "39/30 (+9), disclosed: 4 calls lost to 2 edit rejections + 2 forced re-reads because the mandated revert/restore experiment rewrote api.py and invalidated the read-state guard; 2 calls to the first test run going red on 2 of the 4 new tests (my fixture assumption, not the fix) plus the detail pass to diagnose it; 3 calls to shutdown overhead (the managed job processes are in a separate PID namespace, so the /proc+pgrep kill attempt was a no-op and job_kill x2 + a verification pass were required); 1 extra live server (before-fix 8901 and after-fix 8902 evidence runs).",
+  "commands": [
+    "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  # 000",
+    "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_dashboard.py -q  # 48 -> 52 passed",
+    "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m resextract.dashboard --port 8901 --dockets-dir dockets --token u65tok (background job, before fix)",
+    "curl -sS http://127.0.0.1:8901/api/dockets ; curl -sS -w '%{http_code}' http://127.0.0.1:8901/api/dockets/duval/duval-u55-pinned  # 3 listed; 404 route_slug=null",
+    "# line-level revert: delete only api.py:122 -> pytest -k 'traversal or safe_slug' -> 5 passed (still green); restore -> sha identical",
+    "# new-validation revert: safe_docket_slug -> 'return safe_slug(slug)' -> pytest -k 'nested or safe_docket or dot_segment' -> 3 failed ('escape (realpath leaves the dockets root)'); restore -> bit-identical",
+    ".venv/bin/python -m resextract.dashboard --port 8902 --dockets-dir dockets --token u65tok --store state/verify/U6.5/state-copy.sqlite (background job, after fix)",
+    "curl -sS -w '%{http_code}' http://127.0.0.1:8902/api/dockets/duval/duval-u55-pinned  # 200, manifest == disk",
+    "curl -sS -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8902/api/control/rescan  # 401 -> 200 with x-dashboard-token",
+    "timeout 8 .venv/bin/resextract serve --host 0.0.0.0 --port 8999  # exit=2, bound_8999=0",
+    "ss -ltn | grep -E ':8901|:8902|:8999'  # empty after job_kill; curl all 000; 0 stray"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Independent verification of U6.5: (1) re-run the new validator test with safe_docket_slug's realpath containment removed and confirm it goes red naming 'escape'; (2) confirm the OLD line-level revert is still green and therefore still does NOT pin api.py:122 — the redundancy there is intentional, do not delete it; if that exact line must be pinned, it needs a decoded multi-segment input fed whole to safe_slug (none exists by design), not a new assertion in the current shape. (3) The only remaining nested-docket gap: DataLayer.dockets() still lists a docket whose directory is a realpath-escaping symlink (route_slug=None) rather than omitting it — addressable, never routable, which is the intended trade-off.",
+  "write_paths": [
+    "src/resextract/dashboard/api.py",
+    "src/resextract/dashboard/app.py",
+    "tests/test_dashboard.py",
+    "state/logs/U6.5*",
+    "state/verify/U6.5/**",
+    "orchestration/units/U6.5.md",
+    "orchestration/handoffs/U6.5.json"
+  ]
+}

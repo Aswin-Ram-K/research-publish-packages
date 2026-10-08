@@ -1,0 +1,123 @@
+{
+  "unit": "U4.1",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/assess/__init__.py",
+    "src/resextract/assess/evidence.py",
+    "src/resextract/assess/verdicts.py",
+    "tests/test_assess_evidence.py",
+    "tests/test_assess_verdicts.py",
+    "state/logs/U4.1-redgreen.sh",
+    "state/logs/U4.1-redgreen.log",
+    "state/logs/U4.1-live.py",
+    "state/logs/U4.1-live.json",
+    "state/logs/U4.1-search-attempts.jsonl",
+    "state/assess/assess-v1-ef10039fee17/",
+    "orchestration/units/U4.1.md"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "probe_at": "2026-10-08T06:54:36-0500",
+    "tests": {
+      "evidence": 14,
+      "verdicts": 23,
+      "total": 37
+    },
+    "red_green": {
+      "a": "sha ok; evidence.py b4b3b385.. -> reverted 8ab93b29.. -> 1 failed (test_degraded_search_empty_is_never_positive, EXIT=1); restored bit-identical=b4b3b385.. -> 1 passed",
+      "b": "sha ok; verdicts.py d03a5c21.. -> reverted 3a6f0838.. -> 1 failed (test_no_evidence_never_calls_the_llm, EXIT=1); restored bit-identical=d03a5c21.. -> 1 passed"
+    },
+    "gates": {
+      "degraded_never_positive": true,
+      "clean_empty_distinct_reason": true,
+      "suspect_fetch_excluded": true,
+      "no_evidence_no_llm": true,
+      "verdict_must_cite_evidence": true,
+      "no_client_never_confirms": true
+    },
+    "live": {
+      "claims_source": "state/claims/store-copy.sqlite (sha256 8f451fe0..), copied to state/assess/claims-assess-copy.sqlite",
+      "claims_assessed": 9,
+      "by_verdict": {
+        "CONFIRMS": 0,
+        "EXTENDS": 0,
+        "CONTRADICTS": 0,
+        "UNVERIFIED": 9
+      },
+      "evidence_rows": 0,
+      "searches": 9,
+      "degraded_searches": 9,
+      "suspect_fetches": 0,
+      "fetches": 0,
+      "model_calls": 0,
+      "producer": "none",
+      "client_producer": "replay",
+      "partial": false,
+      "real_queries_run": 10,
+      "real_fetches_run": 0,
+      "run_dir": "/home/zer0null/reserach extarctor/state/assess/assess-v1-ef10039fee17",
+      "example_verdict": {
+        "claim": "claim_id 1",
+        "verdict": "UNVERIFIED",
+        "rationale": "no evidence: no evidence records were gathered. 1 search(es) were degraded, so this absence proves nothing: 1 engine(s) reported themselves unresponsive (google: Suspended: access denied) -- SearXNG said the search was broken; the empty response arrived in 2.3ms, under fast_empty_ms=50ms -- too fast to have searched; the client's degradation latch is set (engine_unresponsive); empties from a degraded client are unverified for its lifetime [unresponsive: google: Suspended: access denied]",
+        "evidence_ids": [],
+        "absence_reason": "1 engine(s) reported themselves unresponsive (google: Suspended: access denied) -- SearXNG said the search was broken; the empty response arrived in 2.3ms, under fast_empty_ms=50ms -- too fast to have searched; the client's degradation latch is set (engine_unresponsive); empties from a degraded client are unverified for its lifetime [unresponsive: google: Suspended: access denied]",
+        "producer": "none"
+      },
+      "example_evidence": null,
+      "raw_unresponsive": [
+        "google: access denied"
+      ],
+      "raw_unresponsive_in_run": [
+        "google: Suspended: access denied"
+      ],
+      "raw_absence_reason_probe": "1 engine(s) reported themselves unresponsive (google: access denied) -- SearXNG said the search was broken; the client's degradation latch is set (engine_unresponsive); empties from a degraded client are unverified for its lifetime",
+      "resume": {
+        "second_run_searches": 0,
+        "resumed_claims": 9
+      }
+    },
+    "store_gap": "verdicts/evidence have no producer column (verdicts: id,claim_id,verdict,rationale,evidence_ids_json,checked_at); producer kept in report.json/verdicts.jsonl instead of dropped",
+    "real_store_untouched": {
+      "rows_before": {
+        "claims": 0,
+        "evidence": 0,
+        "verdicts": 0
+      },
+      "rows_after": {
+        "claims": 0,
+        "evidence": 0,
+        "verdicts": 0
+      }
+    },
+    "duval_untouched": {
+      "head": "55710509ff677ce078f786d98907b2d6c7716986",
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "unchanged": true
+    },
+    "model_path": "UNVERIFIED (blocked: endpoint down at 2026-10-08T06:47:15-05:00, HTTP 000)"
+  },
+  "deferred": [
+    "value axes (dropped for budget)",
+    "live model-vs-replay verdict reasoning (endpoint down)"
+  ],
+  "tool_calls": 32,
+  "bound": 40,
+  "commands": [
+    "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  # 000",
+    "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_assess_evidence.py tests/test_assess_verdicts.py -q  # 37 passed",
+    "bash state/logs/U4.1-redgreen.sh  # 2 reverts, both RED then GREEN, sha bit-identical",
+    "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/logs/U4.1-live.py  # 10 real queries, 9 claims, 9 UNVERIFIED, 0 evidence"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Evidence/verdict tables are filled only when the search backend works: with SearXNG denying access every verdict is UNVERIFIED by gate 1 and no evidence row can exist. Repair or replace the search backend before U4.2/acceptance \u00a71.3 (>=3 ready dockets, >=2 publication types) can reach a positive verdict; the honesty gates are proven and must not be weakened. Producer column gap: add it to store schema v4 before any model-produced verdict is published.",
+  "write_paths": [
+    "src/resextract/assess/**",
+    "tests/test_assess_evidence.py",
+    "tests/test_assess_verdicts.py",
+    "state/assess/**",
+    "state/logs/U4.1*",
+    "orchestration/units/U4.1.md",
+    "orchestration/handoffs/U4.1.json"
+  ]
+}

@@ -4,10 +4,17 @@ Safety contract
 ---------------
 * The app binds loopback by default.  :func:`check_bind_host` refuses a
   non-loopback host unless ``allow_remote=True`` is passed explicitly.
-* Read routes are open on loopback (this is a local read-only surface).  The
-  *control* routes (``POST /api/control/*``) honour an optional one-time token.
-* No directory traversal: a docket slug containing ``/`` or ``..`` is rejected
-  by :func:`resextract.dashboard.api.safe_slug` and the route answers 404.
+* Read routes are open on loopback (this is a local read-only surface).  On a
+  **non-loopback** bind (``--allow-remote``) every route -- the reads included --
+  requires the configured token: the single ``_authorized`` gate that already
+  covered ``POST /api/control/*`` now covers the read surface too.  Remote
+  access must be intentional *and* bounded; there is one gate, not two.
+* No directory traversal: a docket slug is validated segment-by-segment by
+  :func:`resextract.dashboard.api.safe_docket_slug`, which still applies
+  :func:`resextract.dashboard.api.safe_slug` to every segment, and the joined
+  path must resolve (``realpath``) inside the dockets root.  A refused slug, a
+  ``.``/``..`` segment or a realpath escape answers 404.  Nested dockets
+  (``duval/duval-u55-pinned``) are therefore addressable.
 * A hard byte cap (``max_bytes``) bounds every read; the 3 MB graph is hashed
   by streaming and summarised by ``graph_stats`` (which itself streams).
 
@@ -53,7 +60,16 @@ def is_loopback(host: str | None) -> bool:
 
 
 def check_bind_host(host: str | None, allow_remote: bool = False) -> str:
-    """Return the host, or raise ``ValueError`` for a non-loopback bind.
+    """THE single bind decision.  Every entry point must reach this function.
+
+    An explicit ``--host`` is **not** an opt-in: only a user-supplied
+    ``--allow-remote`` / ``allow_remote=True`` may authorise a non-loopback
+    bind.  U6.9 found that ``python -m resextract.dashboard`` inferred
+    ``allow_remote`` from an explicit ``--host`` and so bound ``0.0.0.0`` while
+    ``resextract serve`` (and this guard) refused; that inference was removed,
+    so the decision below is now the only one.  Entry points must pass only the
+    user's own flag here and must never compute ``allow_remote`` themselves
+    (pinned by ``test_no_entry_point_grants_remote_binding_by_itself``).
 
     Reverting this guard lets ``create_app(host="0.0.0.0")`` succeed, which
     exposes the read surface to the network — the red state of
@@ -64,7 +80,7 @@ def check_bind_host(host: str | None, allow_remote: bool = False) -> str:
         return resolved
     raise ValueError(
         f"refusing to bind non-loopback host {resolved!r}; "
-        "pass allow_remote=True (or an explicit --host) to override"
+        "pass --allow-remote (allow_remote=True) to opt in explicitly"
     )
 
 
@@ -88,6 +104,9 @@ def create_app(
     max_bytes: int = api.DEFAULT_MAX_BYTES,
 ) -> FastAPI:
     bound_host = check_bind_host(host, allow_remote)
+    # A remote bind is not "the same app, reachable further"; it is a different
+    # trust boundary.  `remote` drives the single gate installed below.
+    remote = not is_loopback(bound_host)
     layer = api.DataLayer(
         store_path, journal_dir, dockets_dir, graph_path, max_bytes=max_bytes
     )
@@ -98,8 +117,11 @@ def create_app(
         "host": bound_host,
         "allow_remote": bool(allow_remote),
         "token_required": token is not None,
+        "remote_reads_gated": remote,
         "max_bytes": max_bytes,
         "store_path": str(layer.store_path),
+        "store_source": layer.store_source,
+        "store_resolution": layer.resolution(),
         "journal_dir": str(layer.journal_dir),
         "dockets_dir": str(layer.dockets_dir),
         "graph_path": str(layer.graph_path),
@@ -107,12 +129,46 @@ def create_app(
 
     def _authorized(request: Request) -> bool:
         if token is None:
-            return True
+            # U6.12: a non-loopback bind with no token authenticates *nobody*
+            # (fail closed, 401 for every route) -- it must never fall back to
+            # the anonymous loopback read surface.  On loopback the reads are
+            # anonymous by design, exactly as before.
+            return not remote
         supplied = request.headers.get("x-dashboard-token") or ""
         auth = request.headers.get("authorization") or ""
         if not supplied and auth.lower().startswith("bearer "):
             supplied = auth[7:].strip()
         return bool(supplied) and hmac.compare_digest(supplied, token)
+
+    # -- the one gate ------------------------------------------------------ #
+    # U6.12.  U6.9 proved live that `--allow-remote` served the READ surface to a
+    # LAN client with no token (GET /api/status, /api/dockets and /api/graph all
+    # answered 200 from the machine's non-loopback address) while only
+    # POST /api/control/* was gated.  What remote access granted was therefore
+    # "everything readable, nothing writable".
+    #
+    # Rule: a non-loopback bind requires an operator-chosen token and that same
+    # token is then required for EVERY route, reads included.  This gate reuses
+    # `_authorized` -- the control routes' existing mechanism -- so there is
+    # exactly one token gate, not two.
+    #
+    # It is installed ONLY when the bound host is non-loopback: on loopback the
+    # middleware does not exist at all, so the bundled UI (which sends no token
+    # header), the anonymous local read UX and the SSE stream are byte-for-byte
+    # unchanged, and the control handlers keep their own check.
+    #
+    # A remote app built with `token=None` fails CLOSED (401 to everyone) rather
+    # than falling back to open reads.  The entry points refuse that combination
+    # before anything binds (`cli._resolve_serve`, `dashboard.__main__`), but the
+    # library-level app stays constructible, as U6.11's
+    # `test_non_loopback_host_is_refused` pins.
+    if remote:
+
+        @app.middleware("http")
+        async def _remote_read_gate(request: Request, call_next: Any) -> Any:
+            if not _authorized(request):
+                return JSONResponse({"error": "dashboard token required"}, status_code=401)
+            return await call_next(request)
 
     # -- UI ---------------------------------------------------------------- #
 
@@ -151,7 +207,7 @@ def create_app(
 
     @app.get("/api/dockets/{slug:path}")
     def api_docket_detail(slug: str) -> Any:
-        if api.safe_slug(slug) is None:
+        if api.safe_docket_slug(slug, layer.dockets_dir) is None:
             return JSONResponse({"error": f"invalid docket slug: {slug!r}", "slug": slug}, status_code=404)
         payload = _safe(layer.docket_detail, slug)
         if isinstance(payload, dict) and payload.get("error"):

@@ -1,0 +1,107 @@
+{
+  "unit": "U8.35",
+  "status": "done",
+  "artifacts": [
+    "tests/test_orchestration_handoffs.py",
+    "state/verify/U8.35/driver.py",
+    "state/logs/U8.35-redgreen.txt",
+    "orchestration/units/U8.35.md",
+    "orchestration/handoffs/U8.35.json"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "defect_quoted": "V8.29: \"a torn write can be byte-identical across the double read => HARD failure, so the docstring's 'does not flicker' holds only for short tears. Pre-existing fragility; a bounded re-read loop fixes it. Consequence: '10 passed / 0 failed' is not reproducible on a busy corpus (9 passed / 1 failed full file; U8.25-only surface 5 passed).\" -- recurred live at V8.27.json 09:44 and U8.28.json 09:47.",
+    "mechanism": "same partial bytes across two immediate reads looked settled -> parsed -> JSONDecodeError -> hard failure",
+    "fix": {
+      "delay_ms": 200,
+      "max_attempts": 4,
+      "before": "first = path.read_bytes()\ntry:\n    doc = json.loads(first)\nexcept Exception as exc:\n    second = path.read_bytes()\n    if second != first:          # changed under us: torn read, not a defect\n        mid_write.append(path.name); continue\n    failures.append({'file': ..., 'error': '...'}); continue",
+      "after": "_read_until_settled(path): read once; if it parses to an object -> accept (no pause). Else loop up to 4x { sleep(0.2); re-read; if readable -> return settled; track moved/quiet }. At exhaustion: moved or still moving -> status 'unstable' (SKIP + reason); never moved -> 'settled' -> error is reported as a HARD failure. audit() now also returns skip_reason, retried and docs (so no caller re-reads a moving file).",
+      "justification": "200 ms is ~3 orders of magnitude longer than the time a 16-23 KB handoff write needs to become visible, so 'identical across reads' stops meaning 'identical across one syscall gap'. The bound is deliberately small because it is a LATENCY budget, not a correctness one: exhaustion while a file is MOVING is a skip, so a slow writer is never punished for outliving the window, and a file that never moved is a settled defect at 0.8 s exactly as it was at 0 ms. Only SUSPECT (unparseable) files pay the pause - the live corpus paid ZERO pauses (retried == [] over 177 handoffs, 9 of them known baseline gaps), so the suite does not crawl (5 consecutive full-file runs: 13 passed in 2.44 s each).",
+      "docstring_before": "'A committed broken handoff is stable across two reads, so it is still caught; a torn read is not, so the guard does not flicker.'",
+      "docstring_after": "CORRECTED, not merely re-worded: 'THE OVERSTATEMENT THIS CORRECTS (U8.35). The old claim -- \"a torn read is not [stable], so the guard does not flicker\" -- was too strong, for exactly V8.29's reason ... The loop does NOT remove that exposure and this docstring no longer says it does; no finite window can outlast a writer that pauses longer than the window. What IS now true: the window is a real pause instead of two back-to-back syscalls, and a file that MOVES at all during the watch can never become a hard failure. SETTLE_DELAY_S and SETTLE_MAX_ATTEMPTS are therefore a LATENCY budget, not a correctness one.'"
+    },
+    "not_weakened": {
+      "settled_invalid_still_fails": true,
+      "failure_verbatim": "driver CASE D, frozen invalid file, no writer: {\"file\": \"U9.90.json\", \"error\": \"JSONDecodeError: Expecting ',' delimiter: line 1 column 47 (char 46)\"} -- identical under the OLD pre-image; retried == ['U9.90.json'] proves it waited the full 0.8 s bound and still failed. In-suite: test_settled_invalid_file_still_fails_after_the_settle_loop.",
+      "torn_then_complete_skipped": true,
+      "skip_reason_verbatim": "{\"U9.90.json\": \"unstable: still changing after 4 pauses of 200 ms (unfinished write, not a defect)\"}",
+      "torn_then_complete_outcome": "driver CASE B, real torn prefix completed by a thread 0.5 s later (longer than the old double-read window) under the NEW guard: failures [], gaps {}, mid_write [], retried ['U9.90.json'], settled doc unit U9.90 -- i.e. NOT failed. A torn write that is still MOVING at the bound is the SKIP quoted above (CASE C). Both outcomes are non-failures; the task's 'skipped, not failed' holds for the moving case and is strictly better for the settling case.",
+      "old_behaviour_hard_failed": true,
+      "old_failure_verbatim": "CASE A, same tear, completion at 0.5 s, OLD guard returned in 0.0001 s: {\"file\": \"U9.90.json\", \"error\": \"JSONDecodeError: Unterminated string starting at: line 5 column 3 (char 62)\"}, mid_write [] -- while the file was VALID JSON 0.5 s later (unit=U9.90), so the failure was transient, exactly V8.29's mechanism.",
+      "preimage_file": "state/verify/V8.21/test_orchestration_handoffs.py.V821-backup",
+      "preimage_sha": "d7f85e367736bc4b58c34a13b6c867d5c45e461e1af1844d5e5f9c22ff1c4953",
+      "preimage_note": "exact 52fbceb7 predecessor is the CURRENT file; V8.29 reports the exact d00044f0 predecessor is not on disk, so the near-antecedent d7f85e36 was used. driver asserted the pre-image really is the immediate-double-read guard ('second = path.read_bytes()') and printed IMPORTED_FROM + sha + repointed ROOT.",
+      "new_guard_identity": "NEW guard imported from tests/test_orchestration_handoffs.py sha 7d9c97ee95014c74845ed3a5af20d652dc849dbf73d7d81edebf33933ed3d70e"
+    },
+    "tripwire_message": {
+      "before": "\"baseline exemption(s) now over-declare the live measurement (the handoff was repaired, so the exemption would silently tolerate the key being lost again): %s\"",
+      "after": "\"baseline exemption(s) now over-declare the live measurement (the handoff was repaired, so the exemption would silently tolerate the key being lost again): %s. REMEDY: delete this entry and update BASELINE_GAPS_SHA256 — do NOT loosen and do NOT re-derive from live data. (For a verifier-shape entry the pin to update is VERIFIER_BASELINE_SHA256. Re-deriving from the corpus would re-absolve every known gap, and loosening the check would stop it catching the next one.)\"",
+      "remedy_text_verbatim": "REMEDY: delete this entry and update BASELINE_GAPS_SHA256 — do NOT loosen and do NOT re-derive from live data."
+    },
+    "tightenings": {
+      "shapes_param": "retired: _regressions(gaps, shapes, baseline) -> _regressions(gaps, baseline). The parameter was never read (callers had already filtered gaps by shape), so it invited the reader to believe a shape filter happened inside. All 3 call sites updated.",
+      "weak_assertion": "tightened, without coupling to a version-fragile literal. Before: assert \"line 6 column 32\" in err or \"delimiter\" in err. After: err = failures[0][\"error\"]; assert err.startswith(\"JSONDecodeError: \"), err; assert \"delimiter\" in err, err. The old form accepted EITHER a position literal that CPython renumbers between releases (the brittle half) OR a bare substring (the weak half, satisfiable by any unrelated message). Both facts are now required and neither is a position pin; the frozen fixture's real message is \"JSONDecodeError: Expecting ',' delimiter: line 6 column 32 (char 1165)\", which satisfies the tightened conjunction."
+    },
+    "counts": {
+      "tests_before": 10,
+      "tests_after": 13,
+      "passed_after": 13,
+      "file_sha_before": "52fbceb74d09e59d69968a5892556689cc73b9a23b50a8dc77283c7d154ee3e4",
+      "file_sha_after": "7d9c97ee95014c74845ed3a5af20d652dc849dbf73d7d81edebf33933ed3d70e",
+      "busy_corpus_result": "13 passed / 0 failed, five consecutive full-file runs at 2.44 s each (177 handoffs live, 9 known baseline gaps, 0 files needed the pause). V8.29 measured 9 passed / 1 failed on this corpus before the fix; my own pre-fix run today was 10 passed / 0 failed because no sibling happened to be mid-write at that instant -- the 9/1 case is not reproducible on demand, which is why the torn path is proven by the driver instead (CASE A vs B/C).",
+      "baselines_touched": "none - both pins still match: baseline_gaps.json 1a16e39d..., verifier_shape_baseline.json ad97c906...",
+      "new_tests": [
+        "test_settled_invalid_file_still_fails_after_the_settle_loop",
+        "test_torn_then_complete_write_is_judged_not_failed",
+        "test_still_changing_file_is_skipped_with_a_reason"
+      ]
+    },
+    "handoffs_edited_by_me": [],
+    "handoff_count_before": 174,
+    "handoff_count_after": 179,
+    "handoff_method": "count + enumerated writes: my only handoff write is orchestration/handoffs/U8.35.json (created 09:55 at STEP 0b, rewritten once at the end with the verdict). The other growth is siblings in flight - six sibling handoffs have mtimes later than mine (U8.34 09:59:58, V5.37 09:59:15, U8.32 09:58:06, U5.33 09:57:53, U8.36 09:57:13, U8.31 09:55:47) and no write/edit call of mine targeted any of them.",
+    "store_untouched": {
+      "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+      "version": 4,
+      "real_store_never_opened": true,
+      "used_immutable": false,
+      "sidecars_observed": 2,
+      "sidecars_created_by_me": 0,
+      "note": "sha/version are as stated by the unit card; I never computed them because I never opened the store - only stat/ls (state.sqlite 167936 B, -shm 32768 B, -wal 0 B). No sqlite3 connection, no immutable=1."
+    },
+    "duval_untouched": {
+      "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "note": "two pre-existing untracked entries only; no tracked file modified; never wrote to /home/zer0null/Duval and never read .worktrees/"
+    },
+    "hand_ups": {
+      "delay_bound_verbatim": "A suspect handoff is re-read across up to 4 pauses of 200 ms (at most ~0.8 s watched): a file that becomes readable is judged on its settled bytes, a file that MOVED and is still unreadable is skipped as an unfinished write, and only a file that NEVER MOVED and is unreadable is still a hard failure.",
+      "torn_write_path_tested": true,
+      "if_not_why": ""
+    },
+    "tool_calls_work": 32,
+    "tool_calls_total": 35,
+    "bound": 18,
+    "overage_account": "+14 over the 18-call WORK bound: work 32 of 35 total (the 3 STEP-0-mandated calls -- liveness probe, handoff create, handoff validate -- are excluded, as is the report-back message). Where it went: 11 edit operations on the single test file, where 3 larger edits would have covered the same changes (the file had already been read, so batching was free) -- that alone is 8 of the 14; the red-green driver cost 4 (write, run, fix a typo in MY driver (gaps == [] vs {}), rerun); 2 reconnaissance calls into state/verify/V8.29 and V8.21 that one call would have covered; 5 calls on handoff/verification mechanics, of which 1 was a redone heredoc (my first attempt mis-nested a key, caught by an explicit top-level key assert) and 2 were final sha/validation passes. No call was spent recovering damaged handoff JSON: STEP 0b used json.dumps + immediate validation after every write and the handoff was never hand-edited.",
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  -> 000 (DOWN)",
+      "find . -path ./.venv -prune -o -name '__pycache__' -type d -print -exec rm -rf {} +   (FULL purge, twice)",
+      "sha256sum tests/test_orchestration_handoffs.py  -> before 52fbceb7... / after 7d9c97ee95014c74845ed3a5af20d652dc849dbf73d7d81edebf33933ed3d70e",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_orchestration_handoffs.py -q -p no:cacheprovider  (x6: 10 passed pre-fix, 13 passed x5 post-fix)",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/verify/U8.35/driver.py | tee state/logs/U8.35-redgreen.txt",
+      "sha256sum state/verify/V8.21/test_orchestration_handoffs.py.V821-backup -> d7f85e367736bc4b58c34a13b6c867d5c45e461e1af1844d5e5f9c22ff1c4953",
+      "sha256sum state/logs/U8.15/baseline_gaps.json state/logs/U8.18/verifier_shape_baseline.json -> 1a16e39d... / ad97c906... (unchanged)",
+      "git -C /home/zer0null/Duval rev-parse HEAD ; git -C /home/zer0null/Duval status --porcelain"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "The loop is a latency budget, not a correctness one: the residual exposure is a tear that stays frozen (byte-identical to every read) for longer than the whole 0.8 s window, which is still reported as a settled defect, and a tear that leaves VALID but incomplete JSON, which parses on the first read and is accepted. Both are recorded in the module docstring rather than papered over; a verifier should treat a 9/1-style run as evidence about WINDOW SIZE, not about a defect, and should re-read the corpus file after a delay before believing any red.",
+  "write_paths": [
+    "tests/test_orchestration_handoffs.py",
+    "state/verify/U8.35/**",
+    "state/logs/U8.35*",
+    "orchestration/units/U8.35.md",
+    "orchestration/handoffs/U8.35.json"
+  ]
+}

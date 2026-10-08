@@ -1,0 +1,108 @@
+{
+  "unit": "V2",
+  "batch": "2",
+  "overall": "FAIL",
+  "checks": [
+    {"id": "1", "name": "re-run tests/test_mine_candidates.py", "verdict": "PASS",
+     "observed": "13 passed in 0.49s (PYTHONDONTWRITEBYTECODE=1, -p no:randomly, only this file)",
+     "evidence": "state/verify/V2/redgreen-a-green.txt"},
+    {"id": "2", "name": "red->green, two guards, sha-proven", "verdict": "PASS",
+     "observed": "a: assert report.accepted == 0 / E assert 1 == 0; b: assert True is False / detail='lines 900-999 of 38'. Both shas restored exactly; green 1 passed each.",
+     "evidence": "state/verify/V2/redgreen-a.txt, state/verify/V2/redgreen-b.txt"},
+    {"id": "3", "name": "provenance matrix + accept/reject policy (own inputs)", "verdict": "PASS",
+     "observed": "real node True; ghost node False; README.md#L99999-L100000 False 'span 99999-100000 beyond 275 lines'; L0/L5-L2 invalid span; ../ and /etc/passwd outside root; nonsense and '' malformed; file#L -> doc_section 'file not found'; one-good-one-bad stored with only the good ref + score 0.5 (high->medium); zero refs rejected; rejected titles absent from store; no input raised",
+     "evidence": "state/verify/V2/check3.out, state/verify/V2/check3.py"},
+    {"id": "4", "name": "replay-vs-mined distinguishability", "verdict": "FAIL",
+     "observed": "candidates columns [id,run_id,kind,title,summary,provenance_json,graph_nodes_json,score,state] and runs columns [id,target,started_at,finished_at,status,budget,tokens_used,notes] carry no producer/model/mode field; 10/10 replay rows are state='mined'; only signals are the run_id string 'live-u21-replay' and the 'REPLAY ' title prefix (a naming convention, not a field); report.json has no model/mode/producer key",
+     "evidence": "PRAGMA table_info on state/verify/V2/store-copy.sqlite; MineReport().as_dict() keys; state/mine/live-u21-replay/report.json"},
+    {"id": "5", "name": "model_calls / reasoning_tokens semantics", "verdict": "FAIL",
+     "observed": "_Meter.absorb increments calls on every usage_sink record; a zero-I/O replay-style client produced model_calls=2, prompt_tokens=200, total_tokens=240 with no HTTP transport at all; a down endpoint likewise emits a zero-token record",
+     "evidence": "candidates.py:307-312 (absorb) and :401-406 (sink attach); occamy.py:910,927,935 (_emit sites); state/verify/V2/check5.py output"},
+    {"id": "6", "name": "budget/partial/resume/dedupe/unparseable", "verdict": "PASS",
+     "observed": "budget: partial=True status=partial 1 candidate persisted, run row 'partial', journal budget_exhausted; resume: same hash resumed=2 calls=0 http_seen=0, graph-b resumed=0 calls=2; dedupe: found=2 accepted=1 deduped=1 stored=1; unparseable: degradation recorded, status=done, later query yields a candidate (model_calls=3 = 2 attempts + 1)",
+     "evidence": "state/verify/V2/check6.py output"},
+    {"id": "7", "name": "honesty audit of U2.1", "verdict": "PARTIAL",
+     "observed": "13 tests + both guards + all 20 stored provenance refs (10 graph_node, 10 file_lines) re-verified by V2 against the real graph and /home/zer0null/Duval, all exists=True. Live replay numbers are artifact-only: the driver script was not persisted, so queries_run 5 / unmatched 1 / accepted 10 / rejected 5 / deduped 0 / wall 1.5s cannot be re-derived. 'Clearly-labelled replay client' is overstated (title/run_id convention only). A run row (id 3) is left status='running', finished_at NULL. Model path UNVERIFIED (blocked: endpoint down at 2026-10-08T11:20:29Z, HTTP 000).",
+     "evidence": "state/verify/V2/check3.out, state/verify/V2/store-copy.sqlite re-verification; U2.1 handoff"},
+    {"id": "8", "name": "containment", "verdict": "PASS",
+     "observed": "real state.sqlite sha256 4fda29bb60144b63d4e0e19dd4cce9af9903f12f7a59dd285a7c322dd9f414fc identical before/after; rows runs 4/candidates 10/claims 0/evidence 0/verdicts 0 identical; Duval HEAD 5cdc471afb2a14934030d581a20f6a9bcffb727e and porcelain unchanged; mine/*.py restored to original shas; 0 outside writes",
+     "evidence": "state/verify/V2/candidates.py.orig + provenance.py.orig shas; baseline/after store queries"}
+  ],
+  "red_green": {
+    "a": "sha ok (bdb802ebf2587ec902fa20dab6c247d19094782d32e652a7156752f1efce4992 -> 220db3f047babaf3ef27441c91b15b434141f2dc42a0b9c19f18320c7ae25f07 -> restored bdb802ebf2587ec902fa20dab6c247d19094782d32e652a7156752f1efce4992); fail: tests/test_mine_candidates.py:304 assert report.accepted == 0 / E AssertionError: assert 1 == 0; pass: 1 passed",
+    "b": "sha ok (f0a84f7a1cdbc1894d67acb377d11a278aed292d9c41f4f4cf3ccb5a7e311e11 -> 6693788849cd3cb8e5be3b233d5d2f07af484b1b22eab845de5ee5d47581c22a -> restored f0a84f7a1cdbc1894d67acb377d11a278aed292d9c41f4f4cf3ccb5a7e311e11); fail: tests/test_mine_candidates.py:240 assert True is False / + where True = Provenance(ref='miner.py#L900-L999', kind='file_lines', exists=True, detail='lines 900-999 of 38'); pass: 1 passed"
+  },
+  "provenance_matrix": [
+    {"input": "concurrent_futures", "exists": true, "detail": "node in graph", "candidate_outcome": "verified"},
+    {"input": "graph:ghost_node_9f", "exists": false, "detail": "node id not found in graph", "candidate_outcome": "rejected when sole/bad ref"},
+    {"input": "README.md#L99999-L100000", "exists": false, "detail": "span 99999-100000 beyond 275 lines", "candidate_outcome": "rejected when it is the only ref; dropped when a good ref exists"},
+    {"input": "README.md#L273-L280", "exists": false, "detail": "span 273-280 beyond 275 lines", "candidate_outcome": "dropped"},
+    {"input": "README.md#L0", "exists": false, "detail": "invalid span 0-0", "candidate_outcome": "dropped"},
+    {"input": "README.md#L5-L2", "exists": false, "detail": "invalid span 5-2", "candidate_outcome": "dropped"},
+    {"input": "../README.md#L1-L2", "exists": false, "detail": "path outside target_root or missing", "candidate_outcome": "dropped"},
+    {"input": "/etc/passwd#L1-L1", "exists": false, "detail": "path outside target_root or missing", "candidate_outcome": "dropped"},
+    {"input": "nonsense", "exists": false, "detail": "malformed", "candidate_outcome": "dropped (no exception)"},
+    {"input": "file#L", "exists": false, "detail": "file not found: file", "candidate_outcome": "dropped (no exception)"},
+    {"input": "", "exists": false, "detail": "malformed", "candidate_outcome": "dropped (no exception)"},
+    {"input": "scripts/docs-gate.mjs#L235", "exists": true, "detail": "lines 235-235 of 1185", "candidate_outcome": "verified"},
+    {"input": "[\"concurrent_futures\",\"README.md#L99999-L100000\"]", "exists": true, "detail": "one good + one bad", "candidate_outcome": "accepted with only the good ref; score 0.5 (claimed high -> medium)"},
+    {"input": "[]", "exists": false, "detail": "no provenance_refs cited", "candidate_outcome": "rejected"}
+  ],
+  "replay_distinguishable": {
+    "answer": "no",
+    "field": "NONE — no producer/model/mode column on candidates or runs and no model/mode/producer key in report.json; only the human run_id 'live-u21-replay' and the 'REPLAY ' title prefix (10/10 rows) hint at it",
+    "consequence": "a consumer or docket that selects candidates by state='mined' cannot tell these 10 rows from genuinely mined ones; the same failure class as fabricated reasoning. Missing field to add: candidates.producer (or mode) + candidates.model, runs.model/mode, and mode/model in report.json."
+  },
+  "model_calls_semantics": {
+    "counts_on": "every usage record delivered to OccamyClient.usage_sink: successful completions (occamy.py:927), 4xx ModelRequestError (occamy.py:910) and exhausted transport failures (occamy.py:935)",
+    "misleading": true,
+    "site": "candidates.py:307-312 (_Meter.absorb: self.calls += 1), attached at candidates.py:401-406"
+  },
+  "partial_semantics": {"means": "budget exhaustion only (candidates.py:898); status becomes 'partial'", "unit_block_distinct": true},
+  "resume": {"same_graph_zero_calls": true, "different_graph_remines": true},
+  "dedupe": {"merged": true},
+  "unparseable": {"continues": true},
+  "not_reproduced": [
+    "the live replay driver script is not persisted, so queries_run 5 / unmatched 1 / accepted 10 / rejected 5 / deduped 0 / wall 1.5 s and the 'real graphify queries' claim are artifact-only (consistent with the store, not re-derivable)",
+    "the model path (blocked)",
+    "the exact synthetic candidate selection of the replay run"
+  ],
+  "overstated": [
+    "'clearly-labelled replay client' — the label is a title prefix and a run_id string, not a field any consumer can rely on",
+    "model_calls=5 presented as model calls when the endpoint was down and the producer was a replay client",
+    "runs.notes was expected to carry the graph path, but finish_run overwrites it, so the graph used is not recorded in the store (run 4 notes = 'live-u21-replay accepted=10 rejected=5')"
+  ],
+  "unverified": ["miner model path (endpoint down at 2026-10-08T11:20:29Z, HTTP 000, connection refused; one probe, zero LLM calls)"],
+  "corrections": [
+    {"plan_assumption": "a stored candidate records how it was produced (producer/model), so a replay-sourced row is distinguishable from a mined one",
+     "actually": "candidates = [id,run_id,kind,title,summary,provenance_json,graph_nodes_json,score,state]; no producer/model/mode field; replay rows sit at state='mined'. runs has no model/mode either and finish_run overwrites notes, dropping even the graph path.",
+     "evidence": "PRAGMA table_info(candidates/runs) on state/verify/V2/store-copy.sqlite; store.py:472-484 finish_run; state/mine/live-u21-replay/report.json",
+     "unit": "U2.1"},
+    {"plan_assumption": "MineReport.model_calls counts model calls",
+     "actually": "it counts usage_sink records (candidates.py:307 self.calls += 1); a client that makes zero HTTP requests but emits synthetic usage records reports model_calls=2 / total_tokens=240, and a fully failed live run against a down endpoint emits one zero-token record per query.",
+     "evidence": "candidates.py:307-312 and :401-406; occamy.py:910/927/935; state/verify/V2/check5.py output (no transport, model_calls=2)",
+     "unit": "U2.1"},
+    {"plan_assumption": "the runs row records the graph and budget actually used",
+     "actually": "runs.notes set at insert ('<run_id> graph=<path>') is overwritten by finish_run's notes ('<run_id> accepted=.. rejected=..'); targets is empty (0 rows), so no store column carries the graph_hash of a mining run. Run id 3 is also left status='running', finished_at NULL.",
+     "evidence": "store.py:472-484; SELECT * FROM runs on the store copy (run 3 running/None, run 4 notes without graph); targets count 0",
+     "unit": "U2.1"}
+  ],
+  "tool_calls": 34,
+  "bound": 40,
+  "containment": {
+    "duval_head": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+    "outside_writes": 0,
+    "store_rows_before": {"runs": 4, "candidates": 10, "claims": 0, "evidence": 0, "verdicts": 0},
+    "store_rows_after": {"runs": 4, "candidates": 10, "claims": 0, "evidence": 0, "verdicts": 0}
+  },
+  "blocker": "Occamy endpoint http://192.168.2.168:8012/v1 refused connections (HTTP 000) at 2026-10-08T11:20:29Z; the miner's model path is UNVERIFIED (blocked), not broken. The unit-level FAIL is independent of the outage: no schema field distinguishes a replay candidate from a mined one, and model_calls counts client-reported usage records.",
+  "next_unit_hint": "Before any downstream docket consumes candidates: add a producer/mode (+model) field to candidates and runs and a mode/model key to report.json, and have the miner stamp it from the client (e.g. a `producer` attribute on the client, default 'occamy'); alternatively keep replay runs out of the store. Separately relabel model_calls as metered usage records (or count only ok=True records with tokens>0) so a reader cannot read 5 calls into a down endpoint. When :8012 is up, re-run the miner unmodified for a genuinely model-mined run and compare kind mix + reasoning_tokens>0.",
+  "write_paths": [
+    "orchestration/VERDICTS.md",
+    "orchestration/units/V2.md",
+    "orchestration/handoffs/V2.json",
+    "state/verify/V2/**",
+    "state/logs/V2*"
+  ]
+}

@@ -1,0 +1,245 @@
+{
+ "unit": "U2.12",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/claims/decompose.py",
+  "orchestration/handoffs/U2.12.json",
+  "orchestration/units/U2.12.md",
+  "state/logs/U2.12_test_claims_decompose.log",
+  "state/logs/U2.12_test_store_v4.log"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "probe_url": "http://192.168.2.168:8012/v1/models",
+  "occurrences": [
+   {
+    "file": "src/resextract/claims/decompose.py",
+    "line": 493,
+    "quote": "# Delegated (U2.10): `report.producer` IS a producer-vocabulary value (store.PRODUCER_VOCAB), so this is exactly the model-standing test that `store.producer_is_model` defines -- the single string-level comparison.",
+    "kind": "live-code",
+    "action": "fixed"
+   },
+   {
+    "file": "src/resextract/claims/decompose.py",
+    "line": 659,
+    "quote": "# Delegated (U2.10): `producer` is a producer-vocabulary value; model standing is `store.producer_is_model`, not a local literal.",
+    "kind": "live-code",
+    "action": "fixed"
+   },
+   {
+    "file": "src/resextract/store.py",
+    "line": 61,
+    "quote": "\"\"\"True only for exactly ``model`` -- the **single** string-level comparison **in :mod:`resextract.store`**.",
+    "kind": "live-code",
+    "action": "left-as-is",
+    "note": "already correctly scoped to this module; :64-69 explicitly disclaim any codebase-wide reading ('Other modules in src/resextract still spell the literal themselves'). Verified true within store.py."
+   },
+   {
+    "file": "src/resextract/store.py",
+    "line": 54,
+    "quote": "PRODUCER_VOCAB: tuple[str, ...] = (\"model\", \"replay\", \"fixture\", \"unknown\")",
+    "kind": "live-code",
+    "action": "left-as-is",
+    "note": "declaration site -- the vocabulary must spell the literal; not a comparison"
+   },
+   {
+    "file": "src/resextract/store.py",
+    "line": 489,
+    "quote": "\"CHECK (producer IN ('model', 'replay', 'fixture', 'unknown'))\"",
+    "kind": "live-code",
+    "action": "left-as-is",
+    "note": "SQL CHECK declaration (repeat at :536/:538); not a comparison"
+   },
+   {
+    "file": "orchestration/VERDICTS.md",
+    "line": 1652,
+    "quote": "**False, as worded:** *\"`store.py` contains 0 `\"model\"` literals\"*. `store.py` has **15** lines containing",
+    "kind": "historical-record",
+    "action": "left-as-record",
+    "note": "V2.11's own correction; the false wording lives ONLY here and in units/V2.11.md -- it appears nowhere in live code"
+   },
+   {
+    "file": "orchestration/units/V2.11.md",
+    "line": 27,
+    "quote": "C5 honesty -- the brief's *\"store.py contains 0 `\"model\"` literals\"* is **false** (15 lines); true form is 0 bare-literal producer comparisons.",
+    "kind": "historical-record",
+    "action": "left-as-record"
+   },
+   {
+    "file": "orchestration/units/U2.10.md",
+    "line": 1,
+    "quote": "# U2.10 \u2014 judge & resolve the surviving `== \"model\"` literals",
+    "kind": "historical-record",
+    "action": "left-as-record"
+   },
+   {
+    "file": "orchestration/handoffs/U2.10.json",
+    "line": 196,
+    "quote": "after the 6 remaining delegations a codebase-wide uniqueness claim holds: store.producer_is_model is the only string-level producer comparison",
+    "kind": "historical-record",
+    "action": "left-as-record",
+    "note": "the unqualified uniqueness claim; superseded by V2.11/U2.12"
+   },
+   {
+    "file": "docs/PLAN_CORRECTIONS.md",
+    "line": 967,
+    "quote": "**What is true** \u2014 `store.producer_is_model` is the single string-level comparison;",
+    "kind": "historical-record",
+    "action": "left-as-record",
+    "note": "docs/** is not a U2.12 write path and is treated as record; the sentence is contextually qualified two lines later (:969-970 lists the 8 remaining literal comparisons that 'must be judged individually'). Qualified wording handed up for the ledger append."
+   },
+   {
+    "file": "orchestration/units/U2.7.md",
+    "line": 37,
+    "quote": "(\"the single string-level comparison\") is **still false codebase-wide** \u2014 8 literals",
+    "kind": "historical-record",
+    "action": "left-as-record"
+   },
+   {
+    "file": "orchestration/VERDICTS.md",
+    "line": 1324,
+    "quote": "only then may a codebase-wide uniqueness claim be made.",
+    "kind": "historical-record",
+    "action": "left-as-record"
+   }
+  ],
+  "not_live_finding": "FALSE CLAIM 'store.py contains 0 \"model\" literals' appears NOWHERE in live code/docstring (grep of src/ for 'literals': zero hits in store.py or any src file). No live site was invented to 'fix' it.",
+  "fixes": [
+   {
+    "file": "src/resextract/claims/decompose.py",
+    "line": 493,
+    "before": "# Delegated (U2.10): `report.producer` IS a producer-vocabulary value\n# (store.PRODUCER_VOCAB), so this is exactly the model-standing test that\n# `store.producer_is_model` defines -- the single string-level comparison.",
+    "after": "# Delegated (U2.10): `_producer_of` returns *any* declared string, so\n# `report.producer` is NOT guaranteed to be a `store.PRODUCER_VOCAB` value;\n# the predicate below decides, which keeps the model-standing rule exact and\n# centralised. (Qualified: `store.producer_is_model` is the only *scalar\n# bare-literal model-standing comparison* -- not the only `\"model\"` spelling.)"
+   },
+   {
+    "file": "src/resextract/claims/decompose.py",
+    "line": 659,
+    "before": "# Delegated (U2.10): `producer` is a producer-vocabulary value;\n# model standing is `store.producer_is_model`, not a local literal.",
+    "after": "# Delegated (U2.10): `producer` is merely a declared string, not\n# guaranteed to be in `PRODUCER_VOCAB`; model standing is decided\n# by `store.producer_is_model`, not a local literal."
+   }
+  ],
+  "store_literal_count": {
+   "claimed_by_v2_11": 15,
+   "measured_by_me": 15,
+   "measured_detail": {
+    "lines_with_double_quoted_literal": [
+     54,
+     57,
+     66,
+     453,
+     511,
+     525,
+     887,
+     914,
+     926,
+     1057,
+     1085,
+     1103,
+     1248,
+     1301,
+     1318
+    ],
+    "lines_with_single_quoted_literal_sql_CHECKs": [
+     489,
+     509,
+     536,
+     538
+    ],
+    "union_lines": 19
+   },
+   "claim_corrected_to": "0 bare-literal producer comparisons"
+  },
+  "uniqueness": {
+   "qualified_wording": "`store.producer_is_model` is the only *scalar bare-literal model-standing comparison* in `src/resextract` -- the only place that decides model standing by testing a single producer value against the `\"model\"` literal. It is NOT the only place `\"model\"` is spelled, and NOT the only producer comparison overall (`docket/assemble.py:1690` compares against the second vocabulary `\"mixed\"`).",
+   "declaration_vs_comparison_criterion": "A *declaration site* spells the producer literal because the vocabulary must be written down somewhere -- `PRODUCER_VOCAB` (store.py:54), `MODEL_PRODUCER` (store.py:57), the SQL CHECKs (store.py:489/536/538), and the five functions that *return* a producer string (decompose.py:329, assess/evidence.py:271, mine/candidates.py:356, llm/occamy.py:777, docket/materialize.py:563). A declaration *establishes* a value and duplicates no decision rule, so it is legitimate and expected and is NOT a counterexample to uniqueness. A *comparison* re-derives the model-standing decision by testing a value against the literal; that IS the rule, and duplicating it is what creates drift risk. Only scalar bare-literal model-standing comparisons count against the claim.",
+   "still_false_unqualified_because": [
+    "docket/materialize.py:562 `if seen == {\"model\"}:` (real producer-literal comparison the U2.10 census MISSED)",
+    "docket/materialize.py:1549 `return value if value in (\"model\", \"replay\") else \"unknown\"` (producer-literal form the census MISSED)",
+    "docket/assemble.py:1690 `if producer == \"mixed\":` + :1692 message -- second vocabulary PRODUCERS = PRODUCER_VOCAB + (\"mixed\",); excluded, NOT model-standing",
+    "docket/materialize.py:566 `\"model\" in seen` and assemble.py:1690 -- both exclusions CONFIRMED CORRECT by V2.11",
+    "five literal producer SOURCES (declarations, legitimate): claims/decompose.py:329, assess/evidence.py:271, mine/candidates.py:356, llm/occamy.py:777, docket/materialize.py:563"
+   ],
+   "not_re_litigated": "U2.10's two exclusions correct; `==`-site equivalence held across 21 inputs (divergences []); the one theoretical `not`-site divergence needs an adversarial non-complementary __ne__ on a ->str value => unreachable."
+  },
+  "behaviour_changed": false,
+  "sha_before": {
+   "src/resextract/claims/decompose.py": "df92eb448a87caef8c9ddbf2d83a19b52eef4bdcfeaf0612bd4c2ba686b188ba",
+   "src/resextract/store.py": "b7e1f5be8bfae59370ed20b42905f9aaac7043d6f310e152bf6b9c38489f9e7f"
+  },
+  "sha_after": {
+   "src/resextract/claims/decompose.py": "7f7cb0751808d39783f0660e3273cd7759fd23eb3feec10854cb49bab606a995",
+   "src/resextract/store.py": "b7e1f5be8bfae59370ed20b42905f9aaac7043d6f310e152bf6b9c38489f9e7f"
+  },
+  "diff_is_comments_only": true,
+  "diff_proof": "AST-equality: reversing ONLY U2.12's two comment blocks in the current file and re-parsing gives ast.dump(before) == ast.dump(after) => True. store.py byte-identical (same sha). NOTE: `git diff` vs HEAD also shows U2.10's pre-existing code delegation (`producer == \"model\"` -> `store_mod.producer_is_model(...)`), which was already in the working tree before U2.12; U2.12 added comment lines only.",
+  "tests_run": {
+   "claims_decompose": 13,
+   "store_v4": 10,
+   "assertions_deleted": 0,
+   "commands": [
+    ".venv/bin/python -m pytest tests/test_claims_decompose.py -q -p no:cacheprovider",
+    "/home/zer0null/reserach extarctor/.venv/bin/python -m pytest tests/test_store_v4.py -q -p no:cacheprovider"
+   ],
+   "result": "13 passed / 10 passed; full __pycache__ purge first (0 dirs found), PYTHONDONTWRITEBYTECODE=1; docket/dashboard tests deliberately NOT run"
+  },
+  "store_untouched": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "path": "state/state.sqlite",
+   "version": 4,
+   "rows_identical": true,
+   "rows": {
+    "runs": 4,
+    "candidates": 10,
+    "claims": 0,
+    "evidence": 0,
+    "verdicts": 0,
+    "dockets": 2
+   },
+   "new_sidecars": 0,
+   "sidecars_before": [
+    "U2.5_realmirror_before.sqlite-shm",
+    "U2.5_realmirror_before.sqlite-wal"
+   ],
+   "sidecars_after": [
+    "U2.5_realmirror_before.sqlite-shm",
+    "U2.5_realmirror_before.sqlite-wal"
+   ],
+   "method": "opened via file:...?immutable=1"
+  },
+  "duval_untouched": {
+   "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+   "note": "2 untracked entries are the expected foreign actor's; U2.12 wrote nothing (used --no-optional-locks)",
+   "worktrees_read": false
+  },
+  "follow_ups": {
+   "materialize_562": "docket/materialize.py:562 `if seen == {\"model\"}:` should be `if seen == {store.MODEL_PRODUCER}:` (recommend only; V5G owns the file)",
+   "materialize_1549": "docket/materialize.py:1549 `value in (\"model\", \"replay\")` should use a PRODUCER_VOCAB-membership helper (e.g. `store.is_producer(value) or value in PRODUCERS`) rather than an inline literal tuple (recommend only)",
+   "ledger_append_owed": "be+",
+   "ledger_note": "orchestration/VERDICTS.md and docs/PLAN_CORRECTIONS.md were NOT updated: the qualified uniqueness wording and the store.py 15-literal correction are handed up verbatim for a separate ledger-append unit."
+  },
+  "tool_calls": 19,
+  "bound": 18,
+  "bound_overrun_accounting": "19 vs target 18 (+1). Two calls were spent on rejected edits because the fs-observation policy requires the read tool before an edit; the file had only been inspected via sed, so both edits were refused and two read calls were then needed. No other overrun.",
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models => 000 (curl: could not connect; probed once, nothing restarted, zero LLM calls)",
+   "sha256sum src/resextract/claims/decompose.py src/resextract/store.py",
+   "grep -rn 'literals|0 bare|string-level comparison|normalises exactly' src/ docs/ orchestration/",
+   "grep -c '\"model\"' src/resextract/store.py => 15",
+   "sed -n on the 10 cited line sites (all verified, incl. missed :562/:1549)",
+   "find . -name __pycache__ -exec rm -rf {} + => 0 dirs",
+   ".venv/bin/python -m pytest tests/test_claims_decompose.py -q -p no:cacheprovider => 13 passed",
+   ".venv/bin/python -m pytest tests/test_store_v4.py -q -p no:cacheprovider => 10 passed",
+   "sqlite3 uri immutable=1 on state/state.sqlite => schema_version 4, rows as above",
+   "git --no-optional-locks -C /home/zer0null/Duval rev-parse HEAD / status --porcelain"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "A separate ledger-append unit owes a `be+` append recording (a) the qualified uniqueness wording in evidence.uniqueness.qualified_wording, (b) that store.py contains 15 lines spelling the `\"model\"` literal / 0 bare-literal producer comparisons, and (c) the two census-missed forms docket/materialize.py:562 and :1549 as follow-ups for V5G. Do NOT re-open U2.10's work otherwise: its two exclusions and its `==`-site equivalence were confirmed.",
+ "write_paths": [
+  "src/resextract/claims/decompose.py",
+  "state/logs/U2.12*",
+  "orchestration/units/U2.12.md",
+  "orchestration/handoffs/U2.12.json"
+ ]
+}

@@ -1,0 +1,87 @@
+{
+ "unit": "U6.13",
+ "status": "done",
+ "artifacts": [
+  "state/logs/U6.13-evidence.txt",
+  "state/logs/U6.13-serve.log",
+  "state/verify/U6.13/report.md",
+  "orchestration/units/U6.13.md",
+  "orchestration/handoffs/U6.13.json"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "construction_call": "114:     app = FastAPI(title=\"resextract dashboard\", docs_url=None, redoc_url=None)   # app.py:114; openapi_url NOT passed",
+  "docs_url": "None",
+  "redoc_url": "None",
+  "openapi_url": "'/openapi.json' (framework default; app.openapi_url) \u2014 ENABLED",
+  "routes_served": 16,
+  "framework_routes": [
+   {
+    "path": "/openapi.json",
+    "enabled": true,
+    "controlling_option": "openapi_url (not passed -> default '/openapi.json')",
+    "anon_remote_status": 401,
+    "discloses": "nothing anonymously; 200 only with token: 4975 B schema enumerating all 14 project paths, params and response models"
+   },
+   {
+    "path": "/static",
+    "enabled": true,
+    "controlling_option": "app.mount('/static', StaticFiles(...)) app.py:388 \u2014 not a FastAPI URL option",
+    "anon_remote_status": 401,
+    "discloses": "nothing anonymously; 200 only with token (UI assets)"
+   },
+   {
+    "path": "/docs",
+    "enabled": false,
+    "controlling_option": "docs_url",
+    "anon_remote_status": 401,
+    "discloses": "not a route; 401 is the gate short-circuiting before routing"
+   },
+   {
+    "path": "/redoc",
+    "enabled": false,
+    "controlling_option": "redoc_url",
+    "anon_remote_status": 401,
+    "discloses": "not a route"
+   },
+   {
+    "path": "/docs/oauth2-redirect",
+    "enabled": false,
+    "controlling_option": "docs_url (swagger ui oauth redirect)",
+    "anon_remote_status": 401,
+    "discloses": "not a route"
+   }
+  ],
+  "project_routes": 14,
+  "census": {
+   "claimed_before": 12,
+   "true_count": 14,
+   "claimed_12_breakdown": "'/' + 11 GET /api reads (status, runs, reasoning, findings, dockets, dockets/{slug:path}, web-health, graph, doctor, refresh, events)",
+   "omitted": [
+    "/openapi.json (framework Route from openapi_url default)",
+    "/static (project StaticFiles Mount, app.py:388)"
+   ],
+   "note": "12 was correct for project-authored reads; wrong as a census of what the server serves. Pre-fix anonymous reachable on remote = 14; post-fix = 0."
+  },
+  "leak_found": false,
+  "minimal_fix": "openapi_url=None at app.py:114 (optional defence-in-depth / loopback parity; NOT required \u2014 U6.12's middleware already gates it)",
+  "implemented": false,
+  "servers_started": 1,
+  "server_stopped": true,
+  "stray_processes": 0,
+  "commands": [
+   ".venv/bin/python -m resextract.cli serve --host 192.168.2.187 --port 8913 --token u613-probe-token --allow-remote --no-browser",
+   "curl -sS -m 15 -o /tmp/b -w '%{http_code}' http://192.168.2.187:8913/openapi.json  -> 401",
+   "curl -sS -m 15 -H 'x-dashboard-token: u613-probe-token' http://192.168.2.187:8913/openapi.json -> 200 (4975 B, 14 paths)",
+   "kill $PID; ss -ltn | grep ':8913' (none); curl post-stop -> 000; 0 stray"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "No fix required for U6.12. If you want loopback/framework parity, the only change is openapi_url=None at app.py:114 \u2014 someone else implements it. Do not re-open the 12-vs-13 census: the 13th candidate exists as a route but is gated (401 anon on LAN).",
+ "write_paths": [
+  "state/logs/U6.13*",
+  "state/verify/U6.13/**",
+  "orchestration/units/U6.13.md",
+  "orchestration/handoffs/U6.13.json"
+ ]
+}

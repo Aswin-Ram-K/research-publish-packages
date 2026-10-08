@@ -1,0 +1,127 @@
+{
+  "unit": "V1",
+  "batch": "1",
+  "overall": "PARTIAL",
+  "checks": [
+    {
+      "id": "1",
+      "name": "gate A re-run",
+      "verdict": "PASS",
+      "expected": "2685/7102/128",
+      "observed": "rc 0, 2.75 s, 2695 nodes / 7151 edges / 119 communities at b44e0e1; U1.1 artifact built_at_commit=6deaed0 contains exactly 2685/7102/128 -> difference attributable to the HEAD move",
+      "evidence": "stdbuf -oL -eL .venv/bin/graphify extract /home/zer0null/Duval --code-only --out state/verify/V1/kg; state/logs/V1-gate-a.log"
+    },
+    {
+      "id": "2",
+      "name": "pollution + node shape",
+      "verdict": "PASS",
+      "expected": ".worktrees 0, node_modules 0, .tmp-consonance 0, .lane-j-scratch ~23; file_type present, no type; confidence on links",
+      "observed": "0/0/0; lane-j 23 (untracked, not gitignored, 10 scratch files, all file_type=code); file_type={code:2636,concept:32,rationale:17}; `type` key on 26 synthetic external nodes only; no `edges` key, links=7102 and all carry confidence+confidence_score; 4 placeholder nodes carry confidence (exception)",
+      "evidence": "inline python audit of state/kg/duval/graphify-out/graph.json and state/verify/V1/kg/graphify-out/graph.json"
+    },
+    {
+      "id": "3",
+      "name": "surface claims",
+      "verdict": "PASS",
+      "expected": "--no-viz absent for extract / present for cluster-only; query prints labels; relative --graph from another cwd exits 1",
+      "observed": "help:40 cluster-only, help:91-116 extract (absent), help:124 export html; extract silently accepts --no-viz (no-op, reaches path check identically); query printed main()/Job/run_job() vs ids main_main/pkg_core_job/pkg_core_run_job; relative --graph from /tmp exit 1, absolute from /tmp exit 0",
+      "evidence": "state/logs/graphify-0.9.80-help.txt; state/logs/V1-extract-help.txt; query transcripts"
+    },
+    {
+      "id": "4",
+      "name": "red-green guards",
+      "verdict": "PASS",
+      "expected": ":187 DID NOT RAISE GraphifyError; :209 DID NOT RAISE GraphifyTimeout",
+      "observed": "both reproduced verbatim; sha256 fd1b6d30cebf2d246625b253b441aeed3edb187804acc8cd0479fba87f231330 before==after each; restored lines verified present",
+      "evidence": "state/logs/V1-redgreen1.txt; state/logs/V1-redgreen2.txt; state/verify/V1/graphify.py.bak-guard1|2"
+    },
+    {
+      "id": "5",
+      "name": "scoped tests",
+      "verdict": "PASS",
+      "expected": "22",
+      "observed": "22 passed in 1.14s (tests/test_kg_graphify.py + tests/test_kg_queries.py); whole suite NOT run per hard bound",
+      "evidence": "state/logs/V1-scoped-tests.txt"
+    },
+    {
+      "id": "6",
+      "name": "gate B semantic pass",
+      "verdict": "UNVERIFIED",
+      "expected": "54 s / 1 call / 913 in / 1938 out / 6 nodes / document|concept",
+      "observed": "endpoint down: HTTP 000 at 2026-10-08T05:50:47-05:00; one probe only, not re-run",
+      "evidence": "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> (7) Could not connect to server"
+    },
+    {
+      "id": "7",
+      "name": "honesty audit",
+      "verdict": "PASS",
+      "expected": "name every unreproduced/overstated/unrun claim",
+      "observed": "'3 s' reproduced as 2.75 s; '1 LLM call' has no local corroborating artifact; 'no type field' overstated by 26 nodes; 'confidence not on nodes' overstated by 4 nodes; Gate C never run by U1.1; 54 s / token counts / 36 tok/s unreproducible while Occamy is down",
+      "evidence": "docs/PLAN_CORRECTIONS.md; orchestration/units/V1.md"
+    },
+    {
+      "id": "8",
+      "name": "corrections ledger",
+      "verdict": "PASS",
+      "expected": "a-j present, unreproducible ones marked reported-only",
+      "observed": "11 entries a-k written, each with plan quote, truth, evidence, finder and V1 status; (d) and (e) marked reported-only, half of (h) and (i) reported-only",
+      "evidence": "docs/PLAN_CORRECTIONS.md"
+    },
+    {
+      "id": "9",
+      "name": "containment",
+      "verdict": "PASS",
+      "expected": "HEAD unchanged, no graphify-out, no hooks, no new files in Duval",
+      "observed": "HEAD b44e0e1 before==after; porcelain identical (?? .ci-trunk.txt, ?? .lane-j-scratch/); 0 graphify-out; 0 non-sample hooks; 0 new files; all V1 writes inside workspace",
+      "evidence": "git rev-parse/status transcripts; find/ls sweep"
+    }
+  ],
+  "corrections_written": 11,
+  "not_reproduced": [
+    "Gate B semantic pass (Occamy down, HTTP 000)",
+    "54 s semantic-pass wall time",
+    "'1 LLM call' count (no local artifact can corroborate it; needs server-side accounting)",
+    "913 in / 1938 out token counts",
+    "~36 output tok/s throughput",
+    "whole-suite '131 passed / 1 skipped' (scoped runs only, per hard bound)"
+  ],
+  "overstated": [
+    "'nodes have no type field' - 26 synthetic external nodes carry type:\"external\"",
+    "'confidence lives on edges, not nodes' - 4 placeholder nodes carry confidence:\"EXTRACTED\" (never confidence_score)",
+    "'no pollution' headline needs U1.1's own qualifier: it covers .worktrees/node_modules/.tmp-consonance only; .lane-j-scratch leaks 23 nodes"
+  ],
+  "unverified": [
+    "Gate B (blocked: endpoint down at 2026-10-08T05:50:47-05:00, HTTP 000)",
+    "Gate C community labelling (U1.1 never ran it; plan integration gate docs/PLAN.md:256 not cleared)",
+    "buffered-vs-unbuffered stdout measurement behind gotcha (h) - the stdbuf remedy reproduced, the failure mode not measured",
+    "SearXNG latency signal (correction e) - outside Batch 1 scope, reported-only"
+  ],
+  "restoration_proof": {
+    "kg/graphify.py": "sha ok - sha256 fd1b6d30cebf2d246625b253b441aeed3edb187804acc8cd0479fba87f231330 identical before revert and after restore for BOTH guards; line 943 'if proc.returncode != 0 and check:' and 'timeout=limit,' both present after restore; backups state/verify/V1/graphify.py.bak-guard1|2; EXIT trap + hard stop on sha mismatch"
+  },
+  "occamy_probe": {
+    "http_code": "000 (curl exit 7, connection refused) at 2026-10-08T05:50:47-05:00",
+    "verdict": "down"
+  },
+  "containment": {
+    "head": "b44e0e111e0875029ed3cf932e60841f13956342",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+    "new_files_in_repo": 0,
+    "graphify_out_in_repo": false,
+    "hooks_in_repo": 0
+  },
+  "blocker": "Occamy 192.168.2.168:8012 is down (HTTP 000) - Gate B cannot be re-derived and Gate C was never run, so the plan's Phase-1 integration gate (docs/PLAN.md:256) is not cleared. Everything else in Batch 1 verified.",
+  "next_unit_hint": "When Occamy is back: one bounded semantic run on the smallest Duval docs subdirectory (--backend openai --model occamy-1.0 --max-concurrency 1 --token-budget 1500 --api-timeout 300, stdbuf -oL -eL) settles Gate B and its call/token counts; then 'cluster-only --no-viz' settles Gate C. Separately, no unit owns the .ipynb normalizer required by docs/PLAN.md:199 / :288.",
+  "write_paths": [
+    "docs/PLAN_CORRECTIONS.md",
+    "orchestration/VERDICTS.md",
+    "orchestration/units/V1.md",
+    "orchestration/handoffs/V1.json",
+    "state/logs/V1-gate-a.log",
+    "state/logs/V1-extract-help.txt",
+    "state/logs/V1-redgreen1.txt",
+    "state/logs/V1-redgreen2.txt",
+    "state/logs/V1-scoped-tests.txt",
+    "state/verify/V1/**"
+  ]
+}

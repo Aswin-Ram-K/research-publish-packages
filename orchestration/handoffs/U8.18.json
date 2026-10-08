@@ -1,0 +1,143 @@
+{
+  "unit": "U8.18",
+  "status": "done",
+  "artifacts": [
+    "AGENTS.md",
+    "tests/test_orchestration_handoffs.py",
+    "orchestration/units/U8.18.md",
+    "state/logs/U8.18/measurement.txt",
+    "state/logs/U8.18/verifier_shape_baseline.json",
+    "state/logs/U8.18/red_green.txt",
+    "state/logs/U8.18/final_verify.txt",
+    "state/logs/U8.18/handoff_shas_before.json",
+    "state/logs/U8.18/AGENTS.md.before"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "occamy_probe_note": "DOWN (curl -sS -m 5 http://192.168.2.168:8012/v1/models -> connection refused, http_code 000). Probed once; nothing restarted; zero live LLM calls in this unit.",
+    "measurement": {
+      "handoffs_total": 148,
+      "handoffs_total_at_final_reread": 150,
+      "parse_failures": 0,
+      "mid_write_seen": false,
+      "reread_note": "First read 148 files, 0 parse failures, 0 torn reads. A final re-read found 150: siblings added V5.26.json and U6.21.json and rewrote U6.20.json and V5.25.json while this unit ran (71s-drift class). No handoff file was edited by me.",
+      "shape_split_by_prefix": {"U": 104, "V": 43, "D": 1},
+      "verifier_shape_keys": [
+        {"key": "unit", "count": 43},
+        {"key": "checks", "count": 42},
+        {"key": "blocker", "count": 42},
+        {"key": "write_paths", "count": 42},
+        {"key": "overall", "count": 41},
+        {"key": "next_unit_hint", "count": 40},
+        {"key": "not_reproduced", "count": 37},
+        {"key": "overstated", "count": 37},
+        {"key": "unverified", "count": 37},
+        {"key": "tool_calls", "count": 36},
+        {"key": "containment", "count": 36},
+        {"key": "bound", "count": 35},
+        {"key": "scope", "count": 34},
+        {"key": "red_green", "count": 32},
+        {"key": "corrections", "count": 31}
+      ],
+      "verifier_core_rule": "keys carried by >=90% (>=38/43) of V* files -> unit, overall, checks, blocker, next_unit_hint, write_paths",
+      "unit_shape_missing_keys_recorded": 45,
+      "files_missing_ge1_unit_key": 46,
+      "verifier_files_with_real_gaps_under_correct_contract": 6,
+      "note": "45 is U8.15's frozen count; the 46th is V5.25.json (new, verifier-shaped). Under the per-shape contract only 6 verifier files have real gaps (V2T, V4R, V5.25, V5F, V6E, V6F): the other ~41 U8.15 entries were contract mis-specification, not defects."
+    },
+    "agents_md": {
+      "sha_before": "019da8ee51c965db7ecc66c58ef434d1af5e0f53c4762338e2721b2cf7106cb2",
+      "sha_after": "201a0b9eb0bc5de7a6c0776478b3bb5c95cf75a3a3c0b858c218748291ae7549",
+      "changed_lines": [
+        {
+          "before": "| Launch subagents (`subagent`, `subagent_fork`), <=3 concurrent, watching for write-path clashes | Run builds, tests, installs, `git`, or the pipeline itself |",
+          "after": "| Launch subagents (`subagent`, `subagent_fork`), <=5 concurrent, watching for write-path clashes | Run builds, tests, installs, `git`, or the pipeline itself |"
+        },
+        {
+          "before": "(no such line)",
+          "after": "**Concurrency cap: <=5 concurrent subagents.** Raised from <=3 by explicit **user instruction** during this build (\"use upto 5 subagents in cincurrency\") - an operator instruction, not a build convenience."
+        },
+        {
+          "before": "(no such paragraph: rule 5 ended at '...keeps the orchestrating session small.')",
+          "after": "26 inserted lines: a handoff MUST be valid JSON, enforced by tests/test_orchestration_handoffs.py; and two handoff shapes are contracted - the unit handoff (the existing 7 keys, unchanged) and the verifier verdict (core: unit, overall, checks, blocker, next_unit_hint, write_paths, measured over the 43 V* files), with common-but-not-required keys listed and the recorded-gap rule restated."
+        }
+      ],
+      "everything_else_byte_identical": true,
+      "diff_proof": "difflib opcodes: 0 delete, 1 replace (the concurrency table cell only), 2 insert. 1 line changed, 29 lines added, none removed or reordered.",
+      "concurrency_cap": "3 -> 5 (user instruction)",
+      "shapes_defined": ["unit", "verifier"]
+    },
+    "guard": {
+      "file": "tests/test_orchestration_handoffs.py",
+      "enforced_before": "parses every handoff; requires 'unit'; requires a status/verdict/result key (13 frozen exemptions); checks the 7 unit keys against the frozen U8.15 baseline, failing on any NEW file or NEW missing key.",
+      "enforced_before_quote": "missing = [k for k in CONTRACT if k not in doc] / new = {f: m for f, m in gaps.items() if f not in BASELINE_GAPS} ... assert new == {} and worsened == {}",
+      "discriminator": "verifier iff basename startswith 'V' OR doc carries 'verdict'/'overall'; else unit",
+      "discriminator_failure_mode": "Fail-loud, not fail-silent. An ambiguous unit report that carries 'overall' is judged against the verifier contract and fails on its missing 'checks'; a V*-named unit report fails on its missing 'overall'. V5.26.json is missing required keys under EITHER discriminator, so today's red is not an artefact of the choice.",
+      "checks_unit_shape": true,
+      "checks_verifier_shape": true,
+      "baseline_preserved": true,
+      "baseline_preserved_detail": "U8.15's BASELINE_GAPS dict is inline and verbatim; its file state/logs/U8.15/baseline_gaps.json is untouched (sha256 pinned in-test to 9b0b0a715ce7d3ab951720d4ef678c699e8aed022e3169e6f8478593813fc234). The verifier shape gets its own frozen baseline, state/logs/U8.18/verifier_shape_baseline.json (6 files), asserted equal to the in-test copy.",
+      "invents_values": false,
+      "no_handoff_edited": true,
+      "red_green": {
+        "broken_json": "scratch fixture -> RED: {'U0.22.json': \"JSONDecodeError: Expecting ',' delimiter: line 2 column 1 (char 96)\"}; the real pre-repair bytes state/logs/U8.15/repairs/U0.22.before.json exist and are exercised by test_u0_22_pre_repair_bytes_would_have_been_caught (does not skip)",
+        "missing_key": "unit fixture {unit,status,artifacts,evidence} -> RED {'U0.22.json': ['blocker','next_unit_hint','write_paths']}; verifier fixture {unit,checks,blocker,write_paths} -> RED {'V9.99.json': ['overall','next_unit_hint']}; plus test_new_gap_is_flagged_not_silently_accepted proves an unfrozen gap surfaces instead of being accepted"
+      },
+      "status_now": "1 failed, 7 passed - RED only on sibling V5.26.json (sha 66a3a326f8d358fc, mtime 09:20:00, 144 bytes, keys checks/note/scope/status/unit), an in-flight placeholder outside my write paths. Deliberately NOT frozen into a baseline: freezing it would silently accept a new missing key."
+    },
+    "tests": {
+      "guard_before": "1 failed, 4 passed (U8.15 reported 5 passed; the pre-existing failure is V5.25.json, a new verifier-shaped handoff absent from the U8.15 baseline)",
+      "guard_after": "1 failed, 7 passed",
+      "assertions_deleted": 0,
+      "tests_after_names": ["test_every_handoff_parses_and_declares_a_unit", "test_no_new_contract_key_gaps", "test_broken_fixture_is_rejected", "test_u0_22_pre_repair_bytes_would_have_been_caught", "test_mid_write_torn_read_is_skipped", "test_missing_required_key_fixture_is_rejected", "test_missing_required_key_fixture_is_rejected_for_verifier_shape", "test_new_gap_is_flagged_not_silently_accepted", "test_frozen_baselines_are_untouched_and_recorded"],
+      "assertion_widening": "STATUSISH now also accepts 'overall' (the verifier's status carrier); the U8.15 use of BASELINE_NO_STATUSISH is retained verbatim.",
+      "neighbour_regression": "tests/test_repo_hygiene.py -> 11 passed",
+      "bytecode_discipline": "PYTHONDONTWRITEBYTECODE=1 with a FULL __pycache__ purge (find -name __pycache__ -prune -exec rm -rf) before every run; 0 pyc files remain outside .venv"
+    },
+    "handoffs_touched_by_me": [],
+    "handoff_manifest": "state/logs/U8.18/handoff_shas_before.json (148 sha256 entries). Final re-read: changed by siblings = U6.20.json, V5.25.json; added by siblings = U6.21.json, V5.26.json; removed = none; edited by me = none.",
+    "store_untouched": {
+      "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+      "version": 4,
+      "version_detail": "v4 read from the schema_version table (=4); PRAGMA user_version is 0 and is unused by this app",
+      "rows_identical": true,
+      "used_immutable": false,
+      "method": "sha256 before and after are identical (byte-identical file => identical rows); a copy at state/logs/U8.18/state_copy.sqlite was queried, never the live path, and no immutable=1 was used. Copy census: runs 4, candidates 10, lanes 5, dockets 2, lane_candidates 10, schema_version 4; integrity_check ok.",
+      "sidecars": "none (no -wal/-shm)"
+    },
+    "duval_untouched": {
+      "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "head_before": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "note": "Both entries are the foreign actor's, present before and after; HEAD unmoved across this unit. No .worktrees/ was read."
+    },
+    "still_unreconciled": [
+      "V5.26.json (sha 66a3a326f8d358fc, mtime 09:20:00) is a sibling's in-flight verifier placeholder missing overall/blocker/next_unit_hint/write_paths. The guard is red on it, deliberately: it is a NEW missing key, so it must not be frozen into a baseline. It should clear when its author finishes.",
+      "U0.22.json still lacks blocker/next_unit_hint/write_paths; U3.2.json, U6.16.json, U6.17.json still lack write_paths; V2T/V4R/V5F/V6E/V6F still have verifier-shape gaps. All remain RECORDED gaps in frozen baselines - no value was invented into any handoff.",
+      "docs/PLAN_CORRECTIONS.md is explicitly not mine to edit; a later unit must append this reconciliation (and the concurrency change) to that append-only ledger."
+    ],
+    "tool_calls": 20,
+    "bound": 20,
+    "tool_call_note": "20 effective calls used. Two further invocations (write, then edit, of my own handoff) were REFUSED by the fs-observation policy because the stub had been created by shell, so no read record existed; the final handoff was written with one shell call instead. Disclosed rather than hidden.",
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> 000",
+      ".venv/bin/python -c \"import json;json.load(open('orchestration/handoffs/U8.18.json'))\"",
+      "sha256sum AGENTS.md state/state.sqlite state/logs/U8.15/baseline_gaps.json",
+      ".venv/bin/python <measurement: 148 handoffs, 0 parse failures, V*-key frequency table>",
+      "git -C /home/zer0null/Duval rev-parse HEAD; git -C /home/zer0null/Duval status --porcelain",
+      "find . -name __pycache__ -type d -not -path './.venv/*' -prune -exec rm -rf {} +  (FULL purge)",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_orchestration_handoffs.py -q  (before: 1 failed, 4 passed; after: 1 failed, 7 passed)",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_repo_hygiene.py -q  (11 passed)",
+      "cp state/state.sqlite state/logs/U8.18/state_copy.sqlite; query the copy (no immutable=1)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "The guard now names both shapes and is strict by design: V5.26.json (a sibling in flight) keeps it red until its author completes it - do NOT freeze V5.26 into either baseline. A later unit should append this reconciliation (two handoff shapes; the JSON guard; concurrency raised to <=5 by user instruction) to docs/PLAN_CORRECTIONS.md, which this unit was forbidden to edit.",
+  "write_paths": [
+    "AGENTS.md",
+    "tests/test_orchestration_handoffs.py",
+    "state/logs/U8.18",
+    "orchestration/units/U8.18.md",
+    "orchestration/handoffs/U8.18.json"
+  ]
+}

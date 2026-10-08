@@ -1,0 +1,215 @@
+{
+ "unit": "U6.20",
+ "status": "done",
+ "supersedes": "U6.19",
+ "artifacts": [
+  "src/resextract/dashboard/api.py",
+  "tests/test_dashboard.py",
+  "orchestration/handoffs/U6.20.json",
+  "orchestration/units/U6.20.md",
+  "state/logs/U6.20-live-before.log",
+  "state/logs/U6.20-live-after.log",
+  "state/logs/U6.20-board-after.json",
+  "state/logs/U6.20-red.txt",
+  "state/logs/U6.20-green.txt"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "probe": "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> curl: (7) connection refused, 000 (one probe; UP expected second never needed)",
+  "tests": {
+   "dashboard_before": 71,
+   "dashboard_after": 75,
+   "deletions": 0,
+   "existing_assertions_changed": [],
+   "baseline_failures": [
+    "test_dockets_board_lists_valid_and_corrupt",
+    "test_docket_detail_renders_headings",
+    "test_nested_docket_detail_returns_manifest"
+   ],
+   "note": "At the release sha d5df9b08 (before any edit) the file was NOT green: 71 collected, 68 passed, 3 failed, all `verify.ok is False` from the docket-verifier leg (tests/fixtures/dashboard-store). After adding 4 tests: 75 collected, 72 passed, the SAME 3 failures. No existing assertion was changed; 0 deletions."
+  },
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  # 000",
+   "sha256sum src/resextract/dashboard/api.py tests/test_dashboard.py",
+   "cp -p state/state.sqlite state/logs/U6.20-store-copy.sqlite  # read-only analysis copy",
+   ".venv/bin/python -m pytest tests/test_dashboard.py -q -p no:cacheprovider",
+   ".venv/bin/python -m resextract.dashboard --host 127.0.0.1 --port 35767 --store state/state.sqlite --dockets-dir dockets",
+   "curl -sS http://127.0.0.1:35767/api/dockets",
+   "git -C /home/zer0null/Duval rev-parse HEAD ; git -C /home/zer0null/Duval status --porcelain"
+  ]
+ },
+ "predecessor": {
+  "artifacts_found": [
+   "orchestration/handoffs/U6.19.json (272 bytes, status=partial)"
+  ],
+  "partial_handoff_claimed": "{\"unit\":\"U6.19\",\"status\":\"partial\",\"artifacts\":[],\"evidence\":{},\"blocker\":\"\",\"next_unit_hint\":\"in progress\"} - written immediately, then nothing. Its closing message was only the promise to start Step 0.",
+  "absent": [
+   "orchestration/units/U6.19.md",
+   "state/logs/U6.19*",
+   "state/verify/U6.19/**"
+  ],
+  "shas": {
+   "api_py": {
+    "expected": "d5df9b08",
+    "actual": "d5df9b08505189eceb0cb89021ae9b21685bf96dfb30dbeb07a30ef5ad24a511",
+    "match": true
+   },
+   "test_dashboard": {
+    "expected": "db788a00",
+    "actual": "db788a0020bd8340cd6209db361fcdcb659ffc965a19e5375c2f4f0e730919dc",
+    "match": true
+   }
+  },
+  "revert_markers": [],
+  "revert_marker_note": "no `if False` / `assert False` / bare `return` / commented-out guard in either file; the one 'if False' hit is prose inside a docstring at tests/test_dashboard.py:753",
+  "tests_green_at_start": false,
+  "tests_green_at_start_detail": "71 collected, 68 passed, 3 failed (verify.ok leg) at the release sha, full __pycache__ purge",
+  "action_taken": "none",
+  "action_reason": "both shas matched their releases exactly, so U6.19 made no partial edit and there was nothing to restore"
+ },
+ "reproduced": {
+  "route": "GET /api/dockets (board) - and GET /api/dockets/duval/duval-replay-material",
+  "title_before": "NO title key existed at all on a board entry; the entry's `lane` field carried the SLUG 'duval-replay-material'; `evidence` did not exist (claims=4, material=8, material_bytes=183644)",
+  "title_is_slug": true,
+  "evidence_count_before": 0,
+  "board_entry_keys_before": "claim_verdicts, claims, dir, error, files, freshness, generated_at, generated_by, lane, material, material_bytes, open_questions, rework_open, route_slug, slug, status, target, thesis, type, verify, web_sources",
+  "store_row": {
+   "lane_title": null,
+   "lane_slug": "duval-replay-material",
+   "evidence": 8,
+   "claims": 4,
+   "generated_by": {
+    "app": "resextract",
+    "model": "",
+    "version": "0.1.0"
+   },
+   "verified_at": "2026-10-08T11:04:22.359Z"
+  },
+  "finding_correction": "V5.20's `evidence=0` and `generated_by=None` do NOT reproduce on today's row: manifest_json holds evidence=8 and a non-null generated_by. What DOES reproduce: lane.title=None and generated_by missing producer='replay' (the re-render added it). The board never read this row at all, so the reproduced user-facing defect is the ABSENT title/evidence fields, with `lane` = the manifest's lane.slug.",
+  "manifest_truth": {
+   "lane_title": "Duval replay-sourced material",
+   "evidence": 8,
+   "claims": 4,
+   "generated_by": {
+    "app": "resextract",
+    "version": "0.1.0",
+    "model": "",
+    "producer": "replay"
+   },
+   "verified_at": "2026-10-08T11:04:22.359Z",
+   "manifest_sha256_prefix": "9b6a577e"
+  },
+  "second_docket": {
+   "dir": "dockets/duval/duval-u55-pinned",
+   "store_lane_title": null,
+   "manifest_lane_title": "Duval - commit-pinned material (U5.5)",
+   "evidence_store": 9,
+   "evidence_disk": 9,
+   "manifest_sha256_prefix": "445032f7",
+   "verified_at": "2026-10-08T11:25:12.764Z"
+  },
+  "how_store_opened": "sqlite3 `file:...?mode=ro` URI against a byte copy (state/logs/U6.20-store-copy.sqlite, sha == the store's); the live server used the layer's own mode=ro _connect. immutable=1 was NEVER used.",
+  "user_visible_consequence": "A reader of the docket board saw the slug where the real title belongs and no evidence count, for a docket whose on-disk manifest carries 'Duval replay-sourced material' and 8 evidence entries."
+ },
+ "design": {
+  "source_of_truth": "manifest-with-store-fallback",
+  "justified": "dockets/<target>/<slug>/MANIFEST.json is what the pipeline produced, what verify_docket validates and what an operator can read; dockets.manifest_json is a snapshot taken at insert/refresh, so the re-render that repaired the artifact left the row damaged. The artifact serves first; the row is a cache used only when the manifest is absent or unreadable.",
+  "source_field_added": true,
+  "source_field_why": "A silent fallback serving stale metadata is precisely how this defect arose, so every board entry now carries `source` (manifest|store|null) - and, on a fallback, `store_status` plus an `error` naming the missing artifact. Cost is one string; the alternative is an unattributable number.",
+  "path_safety_helper_reused": "safe_docket_slug (segment validation + realpath containment) is applied to EVERY store-row slug candidate, and the candidate must also resolve to an existing directory under the dockets root; file listings keep _contained_realpath / _read_text_capped_checked.",
+  "traversal_introduced": false,
+  "store_write_avoided": "Read path only. No INSERT/UPDATE, no PRAGMA journal_mode, no store open for writing anywhere in this unit."
+ },
+ "implemented": {
+  "file": "src/resextract/dashboard/api.py",
+  "sha": "004d88fdbb61a2fcc5ea4e0a509571f740c042a6b4521ee4fc7d7a2fbb2edb6c",
+  "added": [
+   "module helper _store_dir_slug_candidates",
+   "DataLayer._store_docket_snapshots / _snapshot_metadata / _snapshot_for (mode=ro, never raises on a bad row)",
+   "board entry keys title / lane_title / evidence / source, plus store_status on a fallback",
+   "fallback to the store row when the manifest is unreadable, and a listing (source=store) for a directory whose MANIFEST.json is absent",
+   "docket_detail gains source=\"manifest\""
+  ],
+  "live_proof": {
+   "board_url": "http://127.0.0.1:35767/api/dockets",
+   "detail_url": "http://127.0.0.1:35767/api/dockets/duval/duval-replay-material",
+   "title_after": "Duval replay-sourced material",
+   "lane_title_after": "Duval replay-sourced material",
+   "evidence_after": 8,
+   "source_after": "manifest",
+   "lane_field_still": "duval-replay-material",
+   "detail_source": "manifest",
+   "detail_lane_title": "Duval replay-sourced material",
+   "detail_evidence": 8,
+   "server_proven_gone": true,
+   "post_kill_http": "000",
+   "pid_alive_after_kill": false,
+   "detail_note": "the run bound 127.0.0.1:35767, a port first proven free by an explicit bind; port 8791 was already held by a FOREIGN dashboard and was left untouched (my first attempt failed to bind there and its output was discarded)"
+  }
+ },
+ "fallback": {
+  "missing_manifest_uses_store": true,
+  "smoke_still_works": true,
+  "source_reported": true,
+  "smoke_detail": "dockets/_smoke (41ec711a) validates but lacks lane.title and producer; the board serves source=manifest, lane_title=None, evidence=3, and title falls back to the manifest's lane.slug 'duval-trace-integrity' (which is NOT the directory name) - no raise. Proven with a store_path pointing at a file that does not exist, which also shows the board is not store-dependent.",
+  "detail_route_asymmetry": "GET /api/dockets/<slug> still 404s for a present-but-corrupt MANIFEST.json: the existing assertion at tests/test_dashboard.py:309 pins that, and the detail payload's documents/files/verify are artifact reads, so nothing there is served from a snapshot. The fallback lives on the board, where `source` names it."
+ },
+ "red_green": {
+  "a": "sha256(api.py)=004d88fdbb61a2fcc5ea4e0a509571f740c042a6b4521ee4fc7d7a2fbb2edb6c before the revert and after the restore - BIT-IDENTICAL; FULL __pycache__ purge on both sides",
+  "b": "RED (the three artifact-branch lines removed from DataLayer.dockets): `E AssertionError: assert None == 'manifest'` - the entry reverts to the damaged shape (lane_title/evidence/source gone, so the title degrades to the lane slug), 1 failed, 74 deselected",
+  "c": "GREEN (restored): 1 passed, 74 deselected; transcript pasted into the guard's docstring; state/logs/U6.20-red.txt / U6.20-green.txt",
+  "guard_scope": "the guard reverts the fix's behaviour, not the whole file; the defaults mean the reverted entry reports lane_title=None / evidence=0, i.e. exactly the metadata the defect produced"
+ },
+ "store_untouched": {
+  "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+  "sha_expected": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+  "sha_match": true,
+  "version": 4,
+  "rows_identical": true,
+  "rows_check": "sha256 of id,dir,manifest_json,freshness,verified_at ordered by id from the live store == the same from the copy taken before any work (copy sha == store sha)",
+  "used_immutable": false,
+  "sidecars_left": 0,
+  "sidecar_detail": "state.sqlite-wal was 0 bytes (no frames) with no lsof holder after my server was killed, so -wal/-shm were removed; sha256 re-verified unchanged at 40e8aa0c... A foreign dashboard on 8791 was left running and untouched."
+ },
+ "duval_untouched": {
+  "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt;?? .lane-j-scratch/",
+  "note": "foreign actor's entries and its moving HEAD are expected; .worktrees was never read; no write and no git state change from this unit"
+ },
+ "record_gap": {
+  "closed": [
+   "the board published no lane title and no evidence count, so the slug stood in for the title",
+   "a docket directory whose MANIFEST.json is absent was invisible on the board",
+   "an unreadable manifest produced an entry with no metadata and no statement of where metadata could come from",
+   "the metadata source was nowhere disclosed"
+  ],
+  "still_open": [
+   "the store rows ARE still stale (lane.title=None, generated_by without producer): the read path now ignores them when the artifact is readable, but every other consumer of dockets.manifest_json still sees the damage",
+   "the 3 pre-existing tests/test_dashboard.py failures (verify.ok False) are untouched and not caused by this unit - a verifier should attribute them to the verifier leg/fixture, not to U6.20",
+   "material/material_bytes/web_sources are 0 for a store-sourced board entry (the snapshot has no file listing)",
+   "nothing re-verifies a store-sourced docket: verify.ok is null, never true"
+  ]
+ },
+ "follow_ups": {
+  "refresh_store_rows": "STILL NEEDED, but no longer urgent for the board (the read path serves the artifact). Refresh dockets.manifest_json from the on-disk manifests in a QUIET WINDOW, as its own unit: it is a store WRITE and four siblings assert 'the store is unchanged' for their containment checks. Until then, any store-backed report keeps the damaged snapshot.",
+  "stop_writing_manifest_json": "Do NOT stop writing it yet. It is the only metadata for a docket whose directory/manifest is gone, this unit's fallback reads it, and store.py consumers (get_docket/get_docket_by_dir, refresh_backlog's docket->dir index, tests/test_store*.py) depend on the column. Removing the write would break the fallback and the rework join; the durable fix is to make the row a real cache re-derived on refresh.",
+  "still_not_truthful": [
+   "whether a snapshot's lane.title is stale or merely absent - only `source` distinguishes it",
+   "material/file/byte counts for a store-sourced entry (always 0)",
+   "a corrupt-but-present manifest on the detail route (404, deliberate)",
+   "why the artifact and the row diverged (no re-render timestamp on the row)"
+  ]
+ },
+ "tool_calls": 26,
+ "bound": 24,
+ "tool_call_account": "24 bash calls to probe/inventory/reproduce/implement/test/prove + 1 malformed red-green call (invalid arguments, retried) + 2 calls whose inline python failed (handoff write KeyError) = 26. Over the 24 bound by 2, both from self-inflicted scripting slips; no step of the objective was skipped.",
+ "blocker": "",
+ "next_unit_hint": "Verify by re-running tests/test_dashboard.py (expect 75 collected / 72 passed / the same 3 pre-existing verify.ok failures) and by curling /api/dockets for duval/duval-replay-material (expect title 'Duval replay-sourced material', evidence 8, source 'manifest'). Then schedule the quiet-window store refresh as its own unit, away from the four store-containment siblings.",
+ "write_paths": [
+  "src/resextract/dashboard/api.py",
+  "tests/test_dashboard.py",
+  "state/logs/U6.20*",
+  "orchestration/units/U6.20.md",
+  "orchestration/handoffs/U6.20.json"
+ ]
+}

@@ -1,0 +1,85 @@
+{
+  "unit": "U5.3",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/docket/materialize.py",
+    "src/resextract/cli.py",
+    "tests/test_docket_materialize.py",
+    "tests/test_cli.py",
+    "dockets/duval/duval-replay-material/",
+    "state/logs/U5.3_duval_lane.json",
+    "state/logs/U5.3_live_dryrun.json",
+    "state/logs/U5.3_live_run.json",
+    "state/logs/U5.3_live_rerun.json",
+    "state/logs/U5.3_live_final.json",
+    "state/logs/U5.3_tests.txt",
+    "state/logs/U5.3_red1.txt",
+    "state/logs/U5.3_red2.txt",
+    "orchestration/units/U5.3.md",
+    "orchestration/handoffs/U5.3.json"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "tests": "39 passed in 1.29s (tests/test_docket_materialize.py 25 + tests/test_cli.py 14)",
+    "red_green": "two guards, both pasted into tests/test_docket_materialize.py docstring; full logs state/logs/U5.3_red1.txt and U5.3_red2.txt",
+    "red_green_detail": {
+      "guard_1_all_refs_unresolvable": "revert = delete the `if not verifiable: raise MaterializeRefused` block AND the later `if not claims: raise` -> test_refusal_writes_no_docket FAILS: 'Failed: DID NOT RAISE MaterializeRefused' (1 failed in 0.04s)",
+      "guard_2_containment": "revert = delete the `if not _contained(src, target_root): return None, UnresolvedRef(ref, \"outside_target_root\", src)` branch -> test_containment_refs_are_never_emitted_as_requests FAILS: 'AssertionError: assert [CopyRequest(...excerpt=None)] == []  Left contains 2 more items, first extra item: CopyRequest(src=.../outside/leak.md, dest_rel=docs/leak.md)' (1 failed in 0.03s)"
+    },
+    "cli": {
+      "materialize": "implemented",
+      "placeholders_remaining": 10,
+      "cli_test_changes": "materialize removed from EXPECTED_PLACEHOLDERS (11 -> 10); added cli.IMPLEMENTED == {doctor, status, materialize} and asserted placeholders ∩ implemented == ∅ and that registered subcommands == implemented ∪ placeholders; added test_materialize_is_a_real_subcommand_with_real_flags pinning --target/--lane/--lane-file/--docket-root/--dry-run/--json. No assertion deleted: the original 'every placeholder names a batch, never a bare unit id' parametrization is intact over the 10 remaining placeholders."
+    },
+    "live": {
+      "lane": "duval-replay-material",
+      "lane_source": "hand-built LaneSpec JSON (state/logs/U5.3_duval_lane.json) from real replay-sourced candidates 3/5/7 (state='mined', titles 'REPLAY ...') in state/state.sqlite, plus a curated member over docs/FINDINGS.md, README.md, CITATION.cff, src/adapter.ts, evals/baseline.json, and one deliberately bad ref (docs/NOT_PRESENT.md) to exercise partial resolution",
+      "head_sha": "3982f261cc77e193890d442603e399fa0663d80c",
+      "head_sha_note": "Duval HEAD moved three times during the session (b44e0e1 -> b2bade3 -> 3982f261); the dry run and the real run both recorded 3982f261, re-read via `git -C /home/zer0null/Duval rev-parse HEAD`",
+      "dry_run_plan": {"files": 8, "bytes": 183644},
+      "dry_run_wrote_nothing": true,
+      "copied": 8,
+      "unchanged": 8,
+      "linked": 0,
+      "refused": 0,
+      "unresolved": 1,
+      "unresolved_detail": ["docs/NOT_PRESENT.md: not_a_file_in_target (deliberate, reported not dropped)"],
+      "verify_ok": true,
+      "verify": {"ok": true, "problems": [], "claims": 4, "material": 8},
+      "docket_files": 28,
+      "rerun": "idempotent",
+      "rerun_detail": "second run: copied=0, unchanged=8, ITEM.md.r1 present, HISTORY.md appended (2 blocks, first line intact), dockets rows=1",
+      "dockets_rows": 1,
+      "dockets_row": {"id": 1, "lane_id": null, "dir": "dockets/duval/duval-replay-material", "source_head": "3982f261cc77e193890d442603e399fa0663d80c", "graph_hash": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b", "freshness": "current"},
+      "byte_exact": "sha256(material/<dest>) == sha256(manifest material[].src) for all 8 copies",
+      "graph_hash": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b"
+    },
+    "duval_untouched": {
+      "head": "3982f261cc77e193890d442603e399fa0663d80c",
+      "porcelain": "M  traces/2026-09-28-duval-m0.jsonl\n?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "proof": "captured immediately before and immediately after the final materialize run: rev-parse HEAD identical (YES), git status --porcelain byte-identical (YES); `find /home/zer0null/Duval -newer state/logs/U5.3_t1 -type f` (excluding .git/, node_modules/) returned ZERO files. The three porcelain entries are pre-existing external modifications (the same repo was being pulled by someone else during the session: HEAD moved 3x).",
+      "copier_contract": "Copier refuses symlinks and any realpath escape; keep the target strictly read-only"
+    },
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  # 000",
+      ".venv/bin/python -m pytest tests/test_docket_materialize.py tests/test_cli.py -q  # 39 passed in 1.29s",
+      ".venv/bin/resextract materialize --target duval --lane-file state/logs/U5.3_duval_lane.json --json --dry-run  # exit 0, 8 files / 183644 bytes, nothing written",
+      ".venv/bin/resextract materialize --target duval --lane-file state/logs/U5.3_duval_lane.json --json  # exit 0, copied=8, verify ok, row 1",
+      ".venv/bin/resextract materialize --target duval --lane-file state/logs/U5.3_duval_lane.json --json  # exit 0, unchanged=8, 1 row",
+      "git -C /home/zer0null/Duval rev-parse HEAD ; git -C /home/zer0null/Duval status --porcelain  # before/after identical",
+      "find /home/zer0null/Duval -newer state/logs/U5.3_t1 -type f -not -path '*/.git/*' -not -path '*/node_modules/*'  # zero hits"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Verifier: re-run the two red guards (state/logs/U5.3_red{1,2}.txt) and re-check the before/after Duval sweep. Two honest gaps for U4.2/later: (1) `materialize --lane` selects candidates WHERE state='mined' for every lane because there is still no lane<->candidate join table; (2) `dockets.dir` is stored workspace-relative (dockets/duval/<slug>) and looked up by dir, so a moved docket root creates a new row by design. Destination convention is material/{code,docs,figures,data}/<basename> (collisions disambiguated with a 6-hex path hash) — smoke docket's path-preserving scheme is unaffected.",
+  "write_paths": [
+    "src/resextract/docket/materialize.py",
+    "src/resextract/cli.py",
+    "tests/test_docket_materialize.py",
+    "tests/test_cli.py",
+    "dockets/duval/**",
+    "state/logs/U5.3*",
+    "orchestration/units/U5.3.md",
+    "orchestration/handoffs/U5.3.json"
+  ]
+}

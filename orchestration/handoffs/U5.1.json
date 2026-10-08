@@ -1,0 +1,100 @@
+{
+  "unit": "U5.1",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/docket/copy.py",
+    "src/resextract/docket/__init__.py",
+    "tests/test_docket_copy.py",
+    "tests/fixtures/copy-src/",
+    "state/logs/U5.1-tests.txt",
+    "state/logs/U5.1-redgreen.txt",
+    "state/logs/U5.1-live.out",
+    "state/logs/U5.1-live-summary.json",
+    "state/logs/U5.1-live-cap.txt",
+    "state/verify-docket/material/",
+    "state/verify-docket-cap/material/LINKS.md",
+    "orchestration/units/U5.1.md"
+  ],
+  "evidence": {
+    "tests": "15 passed",
+    "red_green": "two guards, both pasted (real captured failure text in test docstrings; state/logs/U5.1-redgreen.txt)",
+    "live": {
+      "copied": 6,
+      "linked": 0,
+      "refused": 2,
+      "missing": 0,
+      "total_bytes": 134236,
+      "verified": 6,
+      "sha_spotcheck": [
+        {
+          "file": "README.md",
+          "src_sha8": "b24f1005",
+          "dst_sha8": "b24f1005",
+          "match": true
+        },
+        {
+          "file": "source-material/design-record/Consonance_Master_Architecture.docx",
+          "src_sha8": "951bc2b2",
+          "dst_sha8": "951bc2b2",
+          "match": true
+        }
+      ],
+      "rerun_unchanged": 6,
+      "refusals": [
+        {"dest": ".worktrees", "reason": "is_directory"},
+        {"dest": "hostname.txt", "reason": "outside_target_root"}
+      ],
+      "linked_note": "no file in the requested live set exceeded the 2 MiB per-file cap, so LINKS.md is correctly absent in state/verify-docket/; the linked path is proven by test_over_cap_linked_in_links_md (3 MiB file, 1 MiB cap) and by the live cap demo below"
+    },
+    "live_cap_demo": {
+      "docket": "state/verify-docket-cap",
+      "per_docket_cap": 30000,
+      "copied": 2,
+      "linked": 4,
+      "refused": 0,
+      "missing": 0,
+      "total_bytes": 20551,
+      "linked_reason": "docket_cap",
+      "links_md_row_fields": ["absolute source path", "sha256", "byte size", "runnable quoted cp command"]
+    },
+    "source_untouched": {
+      "head": "6deaed07af0d998d1672fe3f1ab1579e6ba0cdc4",
+      "git_status": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "status_lines_before": 2,
+      "status_lines_after": 2,
+      "mtime_new": 0
+    },
+    "policy_notes": "symlinks all refused (component check first, so an escaping link reports 'symlink', not 'outside_target_root'; ancestors shared with the target root are trusted); secret refusal is path+content, evaluated before the caps so it is not bypassable by an over-cap path; secrets are not even hashed into the docket",
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_docket_copy.py -p no:cacheprovider -q",
+      ".venv/bin/python state/logs/U5.1-redgreen.py",
+      ".venv/bin/python state/logs/U5.1-live.py",
+      ".venv/bin/python state/logs/U5.1-live-cap.py",
+      "git -C /home/zer0null/Duval rev-parse HEAD",
+      "git -C /home/zer0null/Duval status --short",
+      "find /home/zer0null/Duval -newer state/logs/U5.1-marker -not -path '*/.git/*' | wc -l"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Docket assembly should read material/EXCERPTS.md (dest, inclusive 1-based span, reason) and material/LINKS.md (dest, absolute source, sha256, bytes, cp command) to build EVIDENCE.md and MANIFEST.json; LINKS.md merges idempotently and is sorted by source path. Reuse Copier.plan()/execute() rather than re-implementing hashing. Note the deliberate gate order: symlink component -> containment -> secret -> caps.",
+  "write_paths": [
+    "src/resextract/docket/__init__.py",
+    "src/resextract/docket/copy.py",
+    "tests/test_docket_copy.py",
+    "tests/fixtures/copy-src/",
+    "state/logs/U5.1-live.py",
+    "state/logs/U5.1-live-cap.py",
+    "state/logs/U5.1-redgreen.py",
+    "state/logs/U5.1-tests.txt",
+    "state/logs/U5.1-redgreen.txt",
+    "state/logs/U5.1-live.out",
+    "state/logs/U5.1-live-summary.json",
+    "state/logs/U5.1-live-report.json",
+    "state/logs/U5.1-live-cap.txt",
+    "state/logs/U5.1-marker",
+    "state/verify-docket/",
+    "state/verify-docket-cap/",
+    "orchestration/units/U5.1.md",
+    "orchestration/handoffs/U5.1.json"
+  ]
+}

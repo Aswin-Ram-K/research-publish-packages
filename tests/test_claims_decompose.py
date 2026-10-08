@@ -292,3 +292,47 @@ def test_vocabularies_are_closed_and_documented(tmp_path):
         ddl = con.execute("SELECT sql FROM sqlite_master WHERE name='claims'").fetchone()[0]
         con.close()
         assert "CHECK" not in ddl, "if the store later declares a CHECK, conform to it instead"
+
+
+# --- U2.10: producer standing is delegated to the store, never re-spelled --- #
+
+PRODUCER_LIKE_INPUTS = (
+    "model", "replay", "fixture", "unknown", "Model", "MODEL", " model ", "", None, 0, object(),
+)
+
+
+def test_u2_10_predicate_agrees_with_the_replaced_literal_expression():
+    """Equivalence table: the delegated sites' old expression vs the predicate.
+
+    Both delegated sites compared a producer value against the model producer
+    (``!= "model"`` for the CLAIMS.md unverified banner, ``== "model"`` for
+    ``model_calls`` metering).  ``store.producer_is_model`` is
+    ``producer == store.MODEL_PRODUCER`` and ``MODEL_PRODUCER == "model"``, so
+    every input below must agree; any divergence forbids delegation.
+    """
+    divergences = [v for v in PRODUCER_LIKE_INPUTS if store.producer_is_model(v) != (v == "model")]
+    assert divergences == [], f"delegation forbidden: predicate diverged on {divergences!r}"
+    assert store.producer_is_model("model") is True, "case-exact standing"
+    assert store.producer_is_model("Model") is False and store.producer_is_model(None) is False
+
+
+def test_u2_10_decompose_spells_no_model_literal():
+    """Red->green guard (source-level).
+
+    Reverted fix -> failing test: restore ``== "model"`` / ``!= "model"`` in
+    ``claims/decompose.py`` (or drop one ``producer_is_model`` call) and this
+    test fails; restore the delegation -> it passes.  ``decompose.py`` sha256
+    before/after the revert is bit-identical (recorded in
+    ``orchestration/handoffs/U2.10.json``), with a full ``__pycache__`` purge
+    each way.
+    """
+    source = (
+        Path(__file__).resolve().parent.parent
+        / "src" / "resextract" / "claims" / "decompose.py"
+    ).read_text()
+    assert '== "model"' not in source and '!= "model"' not in source, (
+        "producer standing must go through store.producer_is_model, not a local literal"
+    )
+    assert source.count("producer_is_model(") == 2, (
+        "both delegated sites (CLAIMS.md banner, model_calls metering) must call the predicate"
+    )

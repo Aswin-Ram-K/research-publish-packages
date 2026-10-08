@@ -1,0 +1,159 @@
+{
+  "unit": "U5.33",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/docket/assemble.py",
+    "tests/test_docket_provenance.py",
+    "state/verify/U5.33/measure_rotation.py",
+    "state/verify/U5.33/ast_before.txt",
+    "state/logs/U5.33-rotation.txt",
+    "state/logs/U5.33-red-a.txt",
+    "state/logs/U5.33-red-b.txt",
+    "orchestration/units/U5.33.md"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "rotation_measured": [
+      {"render": 0, "rn_set": [], "snapshot_count": 0, "banner_files": 15, "history_bytes": 309, "manifest_sha12": "bd7fde86c93b"},
+      {"render": 1, "rn_set": ["r1"], "snapshot_count": 1, "banner_files": 16, "history_bytes": 1027, "manifest_sha12": "933f27f9543a"},
+      {"render": 2, "rn_set": ["r1", "r2"], "snapshot_count": 2, "banner_files": 17, "history_bytes": 1440, "manifest_sha12": "933f27f9543a"},
+      {"render": 3, "rn_set": ["r1", "r2", "r3"], "snapshot_count": 3, "banner_files": 18, "history_bytes": 1853, "manifest_sha12": "933f27f9543a"},
+      {"render": 4, "rn_set": ["r1", "r2", "r3", "r4"], "snapshot_count": 4, "banner_files": 19, "history_bytes": 2266, "manifest_sha12": "933f27f9543a"},
+      {"render": 5, "rn_set": ["r1", "r2", "r3", "r4", "r5"], "snapshot_count": 5, "banner_files": 20, "history_bytes": 2679, "manifest_sha12": "933f27f9543a"},
+      {"render": 6, "rn_set": ["r2", "r3", "r4", "r5", "r6"], "snapshot_count": 5, "banner_files": 20, "history_bytes": 3092, "manifest_sha12": "933f27f9543a"},
+      {"render": 7, "rn_set": ["r3", "r4", "r5", "r6", "r7"], "snapshot_count": 5, "banner_files": 20, "history_bytes": 3505, "manifest_sha12": "933f27f9543a"}
+    ],
+    "recipe": "state/verify/U5.33/measure_rotation.py: fixture store (resextract.store.init_db/connect/upsert_lane/insert_candidate, producer=replay) + target state/verify/U5.33/rotation/target with docs/GUIDE.md; MAT.materialize_lane(..., docket_root=state/verify/U5.33/rotation/dockets, window_s=0.0) = render 0; then 7x A.assemble(docket, lane={slug,type,title}, claims=[], material_report=A.material_report_from_docket(docket), target_meta={slug:'fixture'}, freshness={'state':'current'}) = renders 1..7. Per render: sorted ITEM.md.rN ints via os.listdir + re.fullmatch(r'ITEM\\.md\\.r(\\d+)'); banner_files = recursive count of files whose utf-8 text contains 'PROVENANCE:'; HISTORY.md st_size; MANIFEST.json sha256[:12]. Temp docket path: state/verify/U5.33/rotation/dockets/fixture/u533-rotation-lane (dockets/** never written). banner_files is 15 at render 0 because BANNER_FILES has 15 entries; ITEM.md.rN copies of ITEM.md also carry the banner and are what makes it 16..20.",
+    "artifact_note": "snapshot contents were byte-identical to each other in this fixture (ITEM.md rendered identically every pass, all sha256 adb28d3c...), so the rotation is only observable by NAME/index, not by content hash.",
+    "item_snapshot_keep_confirmed": 5,
+    "keep_line": "assemble.py:1696",
+    "comment": {
+      "before": "# A re-render is **not byte-identical**, by construction (U5.31).  Two\n# deliberate effects make it so: :func:`_append_history` *appends* a new block\n# to ``HISTORY.md`` (the append-only audit log -- never rewritten), and\n# :func:`_preserve_item` writes the outgoing ``ITEM.md`` as a fresh\n# ``ITEM.md.rN`` snapshot.  That rotation is **destructive**: it keeps only the\n# newest :data:`ITEM_SNAPSHOT_KEEP` = 5 snapshots, so once the window is full\n# each render also *deletes the oldest* ``ITEM.md.rN`` (V5.30 measured\n# r5 -> r6 (+ delete r1) -> r7 (+ delete r2), banner files +1 per run while the\n# manifest sha stayed fixed).  A verifier diffing a re-rendered docket must\n# therefore expect a new ``HISTORY.md`` block, one new ``ITEM.md.rN``, and the\n# loss of the oldest snapshot; byte identity across renders is not a contract.",
+      "after": "# A re-render is **not byte-identical**, by construction (U5.31).  Two\n# deliberate effects make it so: :func:`_append_history` *appends* a new block\n# to ``HISTORY.md`` (the append-only audit log -- never rewritten), and\n# :func:`_preserve_item` writes the outgoing ``ITEM.md`` as a fresh\n# ``ITEM.md.rN`` snapshot.  That rotation is **destructive**: it keeps only the\n# newest :data:`ITEM_SNAPSHOT_KEEP` = 5 snapshots, so once the window is full\n# each render also *deletes the oldest* ``ITEM.md.rN`` (V5.30 measured\n# r5 -> r6 (+ delete r1) -> r7 (+ delete r2); U5.33 measured the file counts:\n# banner-marked files +1 per render **while the window fills**, **net 0 once it\n# is full** -- one new snapshot added, the oldest deleted -- while the manifest\n# sha stayed fixed).  A verifier diffing a re-rendered docket must\n# therefore expect a new ``HISTORY.md`` block, one new ``ITEM.md.rN``, and the\n# loss of the oldest snapshot; byte identity across renders is not a contract.",
+      "clause_corrected": "banner files +1 per run",
+      "node_type": "comment",
+      "proof_used": "ast-dump-equality",
+      "proof_result": true,
+      "proof_detail": "ast.dump(ast.parse(assemble.py)) sha256 7dd3ca11c27a41d643bc2a1c1e83a05f77373e5e4b404eea48a1883bf10cf30b identical before and after; the edited node is a `#` comment, so comment text is not an AST node (a docstring would be an ast.Constant and ast.dump equality would be FALSE by construction)."
+    },
+    "assemble_sha": {
+      "before": "fd722f7e72848e9fb1f24dce4b18c7036cd305c9a9397d9c2550c42ff32fba22",
+      "after": "be737a02844c055ecdbf21ee53e0c87467ea00fc990ac61ce3c0c5721b332b3c",
+      "before_confirmed": true,
+      "comment_now_at": "assemble.py:1699-1711",
+      "preserve_item_def_now_at": "assemble.py:1712"
+    },
+    "pin_decision": {
+      "pinned": true,
+      "justification": "Eviction is the ACCEPTED contract, not a defect awaiting repair. ITEM_SNAPSHOT_KEEP exists precisely to bound the one unbounded growth in a docket tree; the max-index allocator is documented as load-bearing (first-free would delete the newest prior revision); the live ITEM.md always survives pruning; and U5.31 deliberately kept the render non-idempotent, accepting both side effects. A property that a diffing verifier must expect is worth a machine check, and the comment alone is not machine-checked.",
+      "what_would_make_it_wrong": "(a) A deliberate decision to drop the window and keep snapshots unbounded -- then the bound assertion should be removed with the constant, and the constant's justification rewritten. (b) A deliberate decision to renumber snapshots 1..N after each eviction -- the max+1/set-difference assertions would then need rewriting (but that renumbering is exactly the silent-loss behaviour _preserve_item's docstring forbids). (c) Reversing U5.31 and making the render idempotent -- the growth and eviction assertions would both be wrong. (d) Merely re-tuning ITEM_SNAPSHOT_KEEP does NOT make it wrong: the bound is read from the constant.",
+      "robust_to": "re-tuning A.ITEM_SNAPSHOT_KEEP (bound read from the constant, not hardcoded 5); which rN integers exist and what they are called (no literal r1/r5 anywhere; eviction is checked as set difference against the observed minimum, not a filename); the temp root path and docket name; generated_at/manifest field content (only sha STABILITY across re-renders is asserted). Deliberately NOT robust to a first-free renumbering refactor, which the allocator's docstring forbids.",
+      "assertions": [
+        "docket path starts with REPO/state/verify/U5.33 (never a real docket)",
+        "per fill render: len(snapshots()) == filled (1,2,3,4,5)",
+        "per fill render: len(snapshots()) <= A.ITEM_SNAPSHOT_KEEP (the bound)",
+        "HISTORY.md st_size strictly increasing across the fill renders (sizes == sorted(set(sizes)))",
+        "after overflow render: len(after) == A.ITEM_SNAPSHOT_KEEP (net 0, bound still holds)",
+        "after overflow render: set(after) != set(full) (the names churned)",
+        "after overflow render: set(full) - set(after) == {min(full)} (exactly the OLDEST left)",
+        "after overflow render: set(after) - set(full) == {max(full)+1} (one newer revision arrived)",
+        "after overflow render: min(full) not in after",
+        "after overflow render: HISTORY.md st_size > size after fill (append-only log grew)",
+        "after overflow render: MANIFEST.json sha256 equals the sha taken after the first re-render (claim-bearing record did not move)"
+      ],
+      "node_id": "tests/test_docket_provenance.py::test_guard_u533_rotation_window_is_bounded_and_destructive",
+      "node_line": "tests/test_docket_provenance.py:1207",
+      "candidates_not_chosen": "Candidate 2 (evict the oldest) WAS chosen, on the judgement above. Candidate 3's HISTORY.md growth and the manifest-sha-stays-fixed half are encoded too. Candidate 1 (bound) is encoded relationally against A.ITEM_SNAPSHOT_KEEP, so raising the constant alone does not fail the pin by design -- disclosed rather than hidden."
+    },
+    "pin_red": {
+      "copy_location": "state/verify/U5.33-red",
+      "copy_was_imported": true,
+      "imported_from": "/home/zer0null/reserach extarctor/state/verify/U5.33-red/resextract/docket/assemble.py",
+      "import_proof_command": "PYTHONPATH=state/verify/U5.33-red .venv/bin/python -c \"from resextract.docket import assemble as A; print('IMPORTED_FROM', A.__file__)\"",
+      "mutations": [
+        "A (_preserve_item): 'excess = len(snaps) - (ITEM_SNAPSHOT_KEEP - 1)' -> 'excess = 0' (never evict the oldest)",
+        "B (_append_history): inserted an early 'return' so HISTORY.md is never appended to"
+      ],
+      "failures_verbatim": [
+        "A: >           assert len(after) == keep | E           assert 6 == 5 | E            +  where 6 = len([1, 2, 3, 4, 5, 6]) | tests/test_docket_provenance.py:1286: AssertionError | FAILED tests/test_docket_provenance.py::test_guard_u533_rotation_window_is_bounded_and_destructive | 1 failed in 0.23s",
+        "B: >           assert sizes == sorted(set(sizes))  # HISTORY.md grew on every render |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ | E           assert [106, 106, 106, 106, 106] == [106] | E             Left contains 4 more items, first extra item: 106 | tests/test_docket_provenance.py:1280: AssertionError | FAILED tests/test_docket_provenance.py::test_guard_u533_rotation_window_is_bounded_and_destructive | 1 failed in 0.21s"
+      ],
+      "failure_logs": ["state/logs/U5.33-red-a.txt", "state/logs/U5.33-red-b.txt"],
+      "copy_deleted": true,
+      "real_tree_sha_before": "be737a02844c055ecdbf21ee53e0c87467ea00fc990ac61ce3c0c5721b332b3c",
+      "real_tree_sha_after": "be737a02844c055ecdbf21ee53e0c87467ea00fc990ac61ce3c0c5721b332b3c",
+      "real_tree_unchanged": true
+    },
+    "counts": {
+      "passed_before": 37,
+      "passed_after": 38,
+      "def_test_before": 31,
+      "def_test_after": 32,
+      "asserts_before": 184,
+      "asserts_after": 195,
+      "assert_count_method": "grep -c 'assert ' tests/test_docket_provenance.py (lines containing the literal 'assert ', not statement-level: two verifiers got 184 by this recipe and 167 at statement level for the same file)",
+      "assertions_deleted": 0,
+      "deletion_method": "the edit reproduced the file's final two lines verbatim as the anchor and appended after them (no old_string line was dropped); grep -c went 184 -> 195 and `sed -n '1199,1297p' | grep -c 'assert '` = 11, i.e. 184 + 11 = 195; sorted-input discipline: the file's own assertion lines were not diffed by comm (unsorted-input comm already produced a spurious '58 deleted' in this build), so the check is the arithmetic above plus 37 -> 38 passed with every pre-existing test still passing",
+      "new_node_ids": ["tests/test_docket_provenance.py::test_guard_u533_rotation_window_is_bounded_and_destructive"],
+      "lines_before": 1198,
+      "lines_after": 1297,
+      "test_cmd": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_provenance.py -q -p no:cacheprovider",
+      "pycache": "FULL purge (find . -path ./.venv -prune -o -name __pycache__ -type d -exec rm -rf {} +) ran before the green run and before the red runs; it reported 0 directories to remove (PYTHONDONTWRITEBYTECODE=1 throughout), so the narrow-purge artifact risk did not apply"
+    },
+    "dockets_observed": [
+      {"slug": "duval-replay-material", "sha": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4", "sha_of": "MANIFEST.json", "mtime_meaning": "directory", "mtime": 1791469731, "manifest_mtime": 1791469731, "byte_identity_asserted": false, "note": "card quoted .303536743 (dir) vs .302382 (MANIFEST.json); integer-second mtimes are equal, the sub-second values are what differ. No byte-identity claim is made."},
+      {"slug": "duval-u55-pinned", "sha": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07", "sha_of": "MANIFEST.json", "mtime_meaning": "directory", "mtime": 1791466595, "manifest_mtime": 1791466595, "byte_identical": true, "note": "MANIFEST.json sha256 equals the recorded baseline exactly; no full-tree byte-identity claim."},
+      {"slug": "_smoke", "sha": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6", "sha_of": "MANIFEST.json", "mtime_meaning": "directory", "mtime": 1791456549, "manifest_mtime": 1791456549, "still_fails": true, "verify_docket_ok": false, "verify_docket_problem": "claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='unknown') -- a non-model run may not assert CONFIRMS"}
+    ],
+    "store_untouched": {
+      "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+      "version": 4,
+      "version_source": "inherited from the card -- the store was never opened by this unit, so the version could not be re-derived (which is the point)",
+      "real_store_never_opened": true,
+      "used_immutable": false,
+      "sidecars_observed": 2,
+      "sidecars_detail": "state/state.sqlite-wal (0 bytes, mtime 09:29) and state/state.sqlite-shm (32768 bytes, mtime 09:54) observed; state/state.sqlite itself mtime 07:47, size 167936, sha256 unchanged",
+      "sidecars_created_by_me": 0,
+      "note": "no command in this unit referenced state/state.sqlite or state/state.sqlite-*; the temp measurement used state/verify/U5.33/rotation/store.sqlite and the tests used their own temp stores. The shm mtime is a sibling/other reader, not this unit."
+    },
+    "duval_untouched": {
+      "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "note": "two pre-existing untracked entries; this unit performed no write and no git command other than read-only rev-parse/status in /home/zer0null/Duval."
+    }
+  },
+  "hand_ups": {
+    "rotation_facts_verbatim": [
+      "Rendering a docket is not byte-identical by construction: each render appends one block to HISTORY.md (the append-only audit log, never rewritten) and writes the outgoing ITEM.md as a fresh ITEM.md.rN snapshot.",
+      "That rotation is destructive and bounded: only the newest ITEM_SNAPSHOT_KEEP = 5 snapshots are kept, so banner-marked files grow by one per render while the window fills and are net 0 once it is full (one new snapshot added, the oldest deleted), while ITEM.md and MANIFEST.json -- the claim-bearing record -- do not change across re-renders."
+    ],
+    "belongs_in_a_test": "Yes -- the bound and the eviction are the accepted contract and a diffing verifier must expect them, so they belong in a machine check, not only a comment. The comment stays as the rationale; the test is the enforcement. What the comment must carry either way: the destructiveness, the bound, and that byte identity across renders is not a contract."
+  },
+  "tool_calls_work": 42,
+  "tool_calls_total": 43,
+  "bound": 18,
+  "overage_note": "42 work calls against the 18 bound (43 total; the single mandated report-back send_message is the +1 and is not counted as work). Account: ~10 exploratory reads/locates of assemble.py and the test file, 2 measurement calls (script write + run), 1 docket-content check that showed snapshots are content-identical, 2 AST-proof calls, 2 comment calls (read + edit), 2 test calls (read tail + append), 1 green run, 3 count/tracking checks, 1 config+copy, 3 red-mutation calls, 2 cleanup/verification calls, 4 card/handoff writes+validation. The measurement-and-red mandate needed the majority; the rest is my failure to batch independent diagnostics into single shell calls rather than call granularity that the card did not force.",
+  "commands": [
+    "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models",
+    "sha256sum src/resextract/docket/assemble.py",
+    "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/verify/U5.33/measure_rotation.py",
+    ".venv/bin/python -c \"import ast,hashlib; ast.dump(ast.parse(open('src/resextract/docket/assemble.py').read()))\"  # ast_before/ast_after equality",
+    "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_provenance.py -q -p no:cacheprovider",
+    "PYTHONPATH=state/verify/U5.33-red .venv/bin/python -c \"from resextract.docket import assemble as A; print(A.__file__)\"",
+    "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=state/verify/U5.33-red .venv/bin/python -m pytest tests/test_docket_provenance.py::test_guard_u533_rotation_window_is_bounded_and_destructive -q",
+    "sha256sum dockets/duval/duval-replay-material/MANIFEST.json dockets/duval/duval-u55-pinned/MANIFEST.json dockets/_smoke/MANIFEST.json",
+    "sha256sum state/state.sqlite",
+    "git -C /home/zer0null/Duval rev-parse HEAD && git -C /home/zer0null/Duval status --porcelain"
+  ],
+  "blocker": "",
+  "next_unit_hint": "The property is now both documented (assemble.py:1699-1711) and pinned (tests/test_docket_provenance.py::test_guard_u533_rotation_window_is_bounded_and_destructive). An independent verifier should re-run the pin and re-apply the two red mutations in its own throwaway copy (the bound reads A.ITEM_SNAPSHOT_KEEP, so only removing eviction/appending fails it -- raising the constant is deliberately not a failure). Also worth a verifier's eye: whether the ITEM_SNAPSHOT_KEEP justification comment should say the real dockets' deepest chain is now deeper than 4.",
+  "write_paths": [
+    "src/resextract/docket/assemble.py",
+    "tests/test_docket_provenance.py",
+    "state/verify/U5.33",
+    "state/verify/U5.33-red",
+    "state/logs/U5.33*",
+    "orchestration/units/U5.33.md",
+    "orchestration/handoffs/U5.33.json"
+  ]
+}

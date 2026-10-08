@@ -1,0 +1,267 @@
+{
+ "unit": "V0.23",
+ "scope": "U0.22 slow-vs-down classification",
+ "overall": "PARTIAL",
+ "liveness_probe": {
+  "http_code": "000",
+  "time_total_s": 0.001863,
+  "at": "2026-10-08T08:49:35-05:00",
+  "note": "curl -m 5 to 192.168.2.168:8012 refused in 1.9 ms: the probe's own latency is instant, so it cannot be mistaken for the classifier; Occamy leg is cheap. Zero live LLM calls (the /v1/models refusal returns before the completion POST)."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "name": "suite + unchanged pre-existing",
+   "verdict": "PASS",
+   "observed": "27 passed in 0.57s (twice); git diff --numstat HEAD: tests/test_doctor.py 580 insertions / 0 deletions, src/resextract/doctor.py 305/23; HEAD's version is 193 lines / 10 test funcs and contains NONE of the slow-classification tests, so 0 committed lines were modified; the 4 U0.22-added tests are named and collected (27-4=23 pre-existing, all pass); live verdict core_down ['Occamy'], 7 legs, exit 2, optional_down ['docling bridge'], core_slow []; cached leg dict byte-identical to a fresh one (r1==r2 True, plus a targeted clear-cache probe_occamy(force=True) comparison True)",
+   "evidence": "state/logs/V0.23-realrun.json, state/verify/V0.23/doctor.py.V023-backup.py"
+  },
+  {
+   "id": "C2",
+   "name": "anti-mask",
+   "verdict": "CAVEAT (finding recorded; no mask found)",
+   "observed": "refused -> down/exit 2; blackhole -> down/exit 2; accept-then-RST -> ReadError Connection reset by peer -> down/exit 2 (the card's named worry is REFUTED); accept-never-reply -> slow, core_down [], exit 0 (the disclosed wedge: a service that can serve NO request is 'slow', leg ok=false, degraded=true, but the exit code says healthy)",
+   "evidence": "state/logs/V0.23-classification.json"
+  },
+  {
+   "id": "C3",
+   "name": "loud + human-visible",
+   "verdict": "PASS",
+   "observed": "state='slow', slow=true, bound_s, core_slow ['SearXNG'], degraded true in JSON; format_table row 'SearXNG core slow ...' and verdict line 'CORE SLOW: SearXNG (exit 0)'; proved through the real HUMAN CLI, not just format_table: cli.main(['doctor']) captured stdout shows the slow row and 'CORE SLOW: SearXNG (exit 0)'",
+   "evidence": "state/logs/V0.23-realrun.json cli_table_slow_case; src/resextract/cli.py:238 prints format_table"
+  },
+  {
+   "id": "C4",
+   "name": "exit-code constraint real",
+   "verdict": "PASS",
+   "observed": "tests/test_cli.py:280-283 quoted: 'assert code == report[\"exit_code\"]', 'expected = 0 if not report[\"core_down\"] else cli.EXIT_CORE_DOWN', 'assert code == expected', 'assert report[\"ok\"] == (code == 0)'; report ok = not core_down, so a third code for slow would make ok True while code != 0 and break line 283. Ran that one sibling test live once: 1 passed.",
+   "evidence": "tests/test_cli.py:280-283, single pytest -k run"
+  },
+  {
+   "id": "C5",
+   "name": "the two changed assertions",
+   "verdict": "PARTIAL",
+   "observed": "AFTER verified real at tests/test_doctor.py:627-636; BEFORE not independently quotable: no pre-U0.22 copy of test_doctor.py exists on disk and HEAD lacks the test entirely, so the before-text is U0.22's disclosure only. Both new asserts are self-referential tautologies over a hardcoded tuple vs doctor.HTTP_TIMEOUT and never read the cited V0.21.json; the enclosing _SlowClient does not actually slow anything (it increments a counter and returns instantly), so 'a slow leg stays UP' is not exercised there - the real slow path is covered by the separate new test. Not vacuous, not weakened into existence-assertions.",
+   "evidence": "grep -rn 1.747 (only the current file, prose only); git show HEAD:tests/test_doctor.py"
+  },
+  {
+   "id": "C6",
+   "name": "ITEM 2 integrity",
+   "verdict": "PASS (one literal overstatement)",
+   "observed": "(a) state/logs/U0.19-{searxng,measure}.json and U0.19-redgreen.txt all ABSENT; U0.19.json evidence == {}; (b) 1.747/3.50 are no longer asserted anywhere (grep: 0 assert uses) but they are NOT gone from the file - 4 prose mentions at lines 21/430/590/591; (c) all 10 state/logs refs + orchestration/handoffs/{U0.19,V0.21}.json EXIST, 0 dangling; (d) LIVE_LATENCY_SAMPLES_S exists at line 436, cited in prose to V0.21.json which exists and really contains 0.75/1.7584/8.232; (e) no fabricated artifact - every cited non-U0.22 file has an mtime earlier than U0.22's logs (U0.3 05:28, U0.17 07:37, U0.19.json 08:17, V0.21.json 08:37) while U0.22's own logs are 08:40-08:45",
+   "evidence": "state/logs/V0.23-classification.json, grep/ls/test -e sweep"
+  },
+  {
+   "id": "C7",
+   "name": "red->green re-derived",
+   "verdict": "PASS",
+   "observed": "sha256 before 3993ce72... ; distinctly named backup state/verify/V0.23/doctor.py.V023-backup.py (same sha); full __pycache__ purge; revert of probe_searxng's TIMEOUT_EXCEPTIONS branch (content-located) -> sha 511fdbe8...; purge; single test -> 1 failed, 26 deselected, verbatim 'E AssertionError: assert (down == slow' at tests/test_doctor.py:698; hard-stop guard saw unchanged content; restore -> sha EQUALITY OK, diff -q clean; purge; single test 1 passed; full suite 27 passed",
+   "evidence": "state/logs/V0.23-classification.json, inline run log; the pre-revert backup (sha 3993ce72...) was retired once the restore was sha-verified, and a post-restore copy is kept at state/verify/V0.23/doctor.py.V023-backup.restored.py (sha 3993ce72...)"
+  },
+  {
+   "id": "C8",
+   "name": "honesty audit",
+   "verdict": "PASS with caveats",
+   "observed": "27 count real; 580/0 real (doctor.py 305/23 also matches); assert-statement count 120 real; SLOW_LIVENESS_TIMEOUT=0.5 tested: 50 loopback connects each to the real live 127.0.0.1:8080 and :8891 gave max 95 us / 28 us (about 5000x margin), so NOT too short for the configured loopback endpoints; but a saturated accept queue (listener listen(1), 6 of 8 filler connects timed out at 0.4 s) made the leg's own cheap check time out -> a LISTENING service classified DOWN (old-bug direction, mitigated because its 5 s full probe also timed out); graphify has no host:port and its subprocess timeout returns plain DOWN by design (src/resextract/doctor.py:420-441), confirmed by reading, not silently excused",
+   "evidence": "state/logs/V0.23-realrun.json, state/logs/V0.23-classification.json"
+  },
+  {
+   "id": "C9",
+   "name": "containment",
+   "verdict": "PASS",
+   "observed": "Duval HEAD 6c60da5aa9240c0dcc2ff97b46f2a2cf37774951 with porcelain only '?? .ci-trunk.txt' and '?? .lane-j-scratch/' (foreign); 0 writes outside the workspace; 0 .worktrees reads (.worktrees present, never opened); store sha 40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3 (unchanged), 13 tables / 35 rows via immutable=1, PRAGMA user_version reads 0 (the v4 marker is not user_version), 0 -wal/-shm sidecars; no stray processes or listeners of mine (only the pre-existing real 127.0.0.1:8080 and :8891 services)",
+   "evidence": "inline containment run"
+  }
+ ],
+ "test_counts": {
+  "doctor": 27,
+  "assert_lines_deleted": 0,
+  "numstat": "580/0",
+  "assert_statements": 120
+ },
+ "classification_table": [
+  {
+   "case": "refused (nothing listening)",
+   "state": "down",
+   "in_core_down": true,
+   "in_core_slow": false,
+   "exit_code": 2
+  },
+  {
+   "case": "blackhole 192.0.2.1:80 (cheap check also fails)",
+   "state": "down",
+   "in_core_down": true,
+   "in_core_slow": false,
+   "exit_code": 2
+  },
+  {
+   "case": "accept-never-reply (wedged, listening)",
+   "state": "slow",
+   "in_core_down": false,
+   "in_core_slow": true,
+   "exit_code": 0
+  },
+  {
+   "case": "accept-then-RST on read",
+   "state": "down",
+   "in_core_down": true,
+   "in_core_slow": false,
+   "exit_code": 2
+  },
+  {
+   "case": "timeout whose cheap check fails",
+   "state": "down",
+   "in_core_down": true,
+   "in_core_slow": false,
+   "exit_code": 2
+  },
+  {
+   "case": "listening but accept-queue saturated",
+   "state": "down",
+   "in_core_down": true,
+   "in_core_slow": false,
+   "exit_code": 2
+  }
+ ],
+ "ability_to_hide_a_broken_service": {
+  "found": "no new hidden case; the only slow-covered unserviceable case is the disclosed wedged acceptor",
+  "wedged_accepting_classified": "slow",
+  "judgement": "A service that accepts TCP and then serves errors/RSTs is correctly DOWN (ReadError, exit 2) - the mask the card feared does not exist. The wedged acceptor is the genuine false negative: it is surfaced (state=slow, core_slow, degraded, table 'CORE SLOW', leg ok=false) so it is not hidden, but it never enters core_down and the exit code stays 0, so an exit-code consumer reads a total outage as healthy. Recommendation: treat a slow CORE leg as blocking in a preflight (run.py) or add an explicit breakage signal; by construction TCP accept cannot separate wedged from slow, and the pinned sibling test forbids a third exit code."
+ },
+ "loud_and_visible": {
+  "fields": [
+   "state",
+   "slow",
+   "bound_s",
+   "core_slow",
+   "optional_slow",
+   "degraded"
+  ],
+  "table_row": "SearXNG core slow ... / CORE SLOW: SearXNG (exit 0)",
+  "visible_to_human": true,
+  "sufficient": "Partly: the operator's TABLE shows it (proved via cli.main(['doctor']) stdout), so it is NOT JSON-only; but exit_code stays 0 and report-level ok stays True, and format_table's verdict only says CORE SLOW when report ok is True."
+ },
+ "exit_code_constraint_real": {
+  "pinned_at": "tests/test_cli.py:280-283",
+  "quote": "expected = 0 if not report[\"core_down\"] else cli.EXIT_CORE_DOWN / assert code == expected / assert report[\"ok\"] == (code == 0)",
+  "third_code_would_break_it": true,
+  "note": "report ok = not core_down, so a slow-but-ok report with code 3 fails line 283; that one test was run live once and passed"
+ },
+ "changed_assertions": [
+  {
+   "line": 628,
+   "before": "assert doctor.HTTP_TIMEOUT > 1.747 (pinned to state/logs/U0.19-searxng.json; per U0.22's disclosure - no pre-U0.22 artifact exists to quote verbatim)",
+   "after": "assert max(LIVE_LATENCY_SAMPLES_S) > doctor.HTTP_TIMEOUT, '...8.232 s ABOVE the 5.0 s bound... (orchestration/handoffs/V0.21.json)'",
+   "repointed_correctly": true,
+   "weakened": false
+  },
+  {
+   "line": 636,
+   "before": "assert doctor.HTTP_TIMEOUT > 3.50 (pinned to state/logs/U0.19-measure.json; per U0.22's disclosure)",
+   "after": "assert doctor.HTTP_TIMEOUT == 5.0, 'U0.22 changes the classification, never the bound value'",
+   "repointed_correctly": true,
+   "weakened": false
+  }
+ ],
+ "item2_integrity": {
+  "u019_paths_absent": true,
+  "constants_removed": [
+   "1.747",
+   "3.50"
+  ],
+  "constants_removed_scope": "no longer asserted or used anywhere; 4 prose mentions survive at tests/test_doctor.py:21,430,590,591, so 'gone from the file' is literally false",
+  "all_referenced_paths_exist": true,
+  "dangling_refs": [],
+  "samples_cited_to": "orchestration/handoffs/V0.21.json",
+  "no_fabricated_artifacts": true
+ },
+ "cheap_check_adequacy": {
+  "value_s": 0.5,
+  "too_short_risk": "Not for the configured endpoints: 50 connect samples each against the real live 127.0.0.1:8080 and :8891 gave max 95 us and 28 us - a ~5000x margin. Demonstrated real risk only under saturation/remote load: with a listener on listen(1) and a full accept queue, 6 of 8 filler connects timed out at 0.4 s and the leg's own 0.5 s cheap check timed out, so a LISTENING service was classified DOWN (exit 2). That is the old false-DOWN direction, mitigated because the same leg's 5 s full probe also timed out.",
+  "tested": "50-sample loopback timing on both live services; accept-queue-saturation stub; blackhole 192.0.2.1:80"
+ },
+ "verdict_unchanged": {
+  "core_down": [
+   "Occamy"
+  ],
+  "legs": 7,
+  "exit_code": 2,
+  "optional_down": [
+   "docling bridge"
+  ],
+  "core_slow": [],
+  "cached_leg_dict_identical": true
+ },
+ "red_green": {
+  "a": "reproduced; sha 3993ce72 before and after; revert sha 511fdbe8; failure verbatim 'E AssertionError: assert (down == slow' at tests/test_doctor.py:698 (my -k selected the single guard, so '1 failed, 26 deselected' where U0.22 logged '1 failed, 2 passed, 24 deselected'); restore bit-identical (diff -q clean); 27 passed. Full __pycache__ purge before each run."
+ },
+ "release_sha": {
+  "expected": "3993ce72",
+  "actual": "3993ce723e5831b1685c3b6bb4de72c7db974103fc5135cf084cadd3580854c4",
+  "restored_bit_identical": true
+ },
+ "not_reproduced": [
+  "the pre-U0.22 text of the 2 changed assertion lines (HEAD lacks the test; no pre-U0.22 copy of tests/test_doctor.py exists on disk) - before-state rests on U0.22's disclosure",
+  "U0.22's exact red-run selection ('1 failed, 2 passed, 24 deselected'); my equivalent selected one test (1 failed, 26 deselected) and the failure text matched",
+  "one earlier run showed run_doctor() vs run_doctor(force=True) Occamy leg dicts differing; two targeted re-tests show them IDENTICAL (r1==r2, and fresh force probe == cached) - not reproduced",
+  "Duval mtime sweep (only git status + HEAD were checked, per the read-only/no-write rule)",
+  "whether dashboard/ or the search surface exposes core_slow (out of scope, dashboard/** not read)"
+ ],
+ "overstated": [
+  "'1.747 and 3.50 are gone from the file' - they are gone from the assertions but survive in 4 explanatory prose mentions",
+  "the relayed 'ok stays false' is per-leg only: report-level ok is True for a slow-only core set (U0.22's own slow_only_verdict says ok: true, so the artifact is self-consistent; the compressed claim is not)"
+ ],
+ "unverified": [
+  "independent provenance for the 1.747/3.50 before-text",
+  "call-by-call accounting of the 38-vs-24 overage (the disclosed reason is plausible; the practice was visible in the artifacts)"
+ ],
+ "corrections": [
+  {
+   "relayed_claim": "a hung server that ACCEPTS and never replies looks slow forever",
+   "actually": "confirmed by construction: classify_timeout returns slow, core_slow ['SearXNG'], core_down [], exit 0 while the server can serve nothing. It is the only case found where an unserviceable core dependency leaves exit_code 0.",
+   "evidence": "state/logs/V0.23-classification.json case 'accept-never-reply'",
+   "unit": "U0.22"
+  },
+  {
+   "relayed_claim": "1.747 and 3.50 are removed / gone",
+   "actually": "no longer asserted or load-bearing, but present as prose in tests/test_doctor.py lines 21,430,590,591",
+   "evidence": "grep -n -E '1\\.747|3\\.50' tests/test_doctor.py",
+   "unit": "U0.22"
+  },
+  {
+   "relayed_claim": "2 assertion lines repointed in place",
+   "actually": "true (lines 628 and 636); neither is vacuous, but both are self-referential tautologies over a hardcoded tuple vs doctor.HTTP_TIMEOUT and never read the cited V0.21.json - the citation is prose-only",
+   "evidence": "tests/test_doctor.py:627-636",
+   "unit": "U0.22"
+  }
+ ],
+ "tool_calls": 18,
+ "bound": 26,
+ "tool_calls_note": "all under the 26 target; includes the liveness probe, 2 handoff writes, the suite/red-green run, the anti-mask battery (2 stub starts: hang + RST, plus a 3rd saturated-listener stub = 3 total), the live/CLI margin run, containment, and this report",
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "store": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "user_version_pragma": 0,
+   "rows_identical": true,
+   "rows": "13 tables / 35 rows via immutable=1"
+  },
+  "new_sqlite_sidecars": 0,
+  "stray_processes": 0,
+  "hash_recipe": "sha256sum state/state.sqlite; sqlite3 URI file:state/state.sqlite?immutable=1 (never written); ss -ltnp | grep -E ':(8080|8891|8893|8901|1877|1878)\\b' showed only the pre-existing real 8080 and 8891"
+ },
+ "blocker": "",
+ "next_unit_hint": "Decide the exit/preflight semantics of core_slow: a wedged-but-accepting CORE dependency currently exits 0. Options: make run.py's preflight treat a slow core leg as blocking, or add a distinct wedge/DOWN-graded signal where the pinned cli contract allows. Also note report-level ok is True when a core leg is only slow - any consumer that reads ok/exit_code alone misses it.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V0.23.md",
+  "orchestration/handoffs/V0.23.json",
+  "state/logs/V0.23-classification.json",
+  "state/logs/V0.23-realrun.json",
+  "state/verify/V0.23/**"
+ ]
+}

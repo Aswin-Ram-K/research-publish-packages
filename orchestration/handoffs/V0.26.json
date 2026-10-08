@@ -1,0 +1,160 @@
+{
+ "unit": "V0.26",
+ "scope": "U0.25 preflight core_slow signal",
+ "overall": "PASS",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "state, suites, untracked-file claim",
+   "verdict": "PASS-with-correction",
+   "observed": "run 51 passed, doctor 27 passed; run.py sha 7f0b6a65... match; test_doctor.py prose de-numbered, 1.747/3.50 absent; pin real line 522; test_cli.py is UNTRACKED (?? in git status) so the cited 'absent from git status' evidence is false",
+   "evidence": "pytest -q both files; sha256sum; grep -nE '1\\.747|3\\.50\\b' -> rc=1; git status --porcelain shows '?? tests/test_cli.py'; grep -n 'expected = 0 if not report' tests/test_cli.py -> 522"
+  },
+  {
+   "id": "C2",
+   "name": "mislabelling fixed, both directions",
+   "verdict": "PASS",
+   "observed": "PRE: slow SearXNG -> degradable_core_down=['SearXNG'], text 'core leg SearXNG is DOWN'; POST: core_slow=['SearXNG'], degradable_core_down=[], text 'SLOW (reachable but slow, not down)'. POST refused -> core_slow=[] , degradable_core_down=['SearXNG'] => a DOWN leg can never appear in core_slow (branch requires state=='slow'). Needsd slow graphify -> core_slow=['graphify'] AND hard_core_down=['graphify'] + failure 'core dependency slow' (exit-2 gate kept). LEG_STAGE_NEEDS['searxng'] == frozenset()",
+   "evidence": "state/verify/V0.26/c2_prepost.{py,json,txt}: real _preflight called on both source files side by side"
+  },
+  {
+   "id": "C3",
+   "name": "signal real and observable",
+   "verdict": "PASS",
+   "observed": "live dry run: report.preflight['core_slow']=['SearXNG'], degradable_core_down=[], degradations carry 'core leg SearXNG is SLOW (reachable but slow, not down) ...', ok=True exit_code=0",
+   "evidence": "state/verify/V0.26/c3_live.py output; new test tests/test_run.py:1812-1862"
+  },
+  {
+   "id": "C4",
+   "name": "residual judged",
+   "verdict": "PASS",
+   "observed": "exit-code-only reader still sees ok=True/exit 0 (confirmed); acceptable because LEG_STAGE_NEEDS['searxng']==empty and any needed slow leg still gates exit 2; caller should read report.preflight['core_slow'] / report.degradations (both in Preflight.to_dict) or doctor's 'CORE SLOW:' table line",
+   "evidence": "experiment + run.py:257,280,639-666; doctor.py:620"
+  },
+  {
+   "id": "C5",
+   "name": "anti-mask unchanged",
+   "verdict": "PASS",
+   "observed": "doctor suite 27 passed incl. test_report_verdict_is_unchanged_and_still_lists_seven_legs (line 380), test_a_refused_connection_is_still_down (712), test_a_slow_leg_is_never_remembered_as_down (739), test_cheap_liveness_check_is_short_and_reports_refusal (752), cached-DOWN reuse (287/360); standard verdict 7 legs / core_down ['Occamy'] / exit 2 / optional_down ['docling bridge']",
+   "evidence": "pytest tests/test_doctor.py -q -> 27 passed; test_doctor.py:380-391"
+  },
+  {
+   "id": "C6",
+   "name": "red-green re-derived",
+   "verdict": "PASS",
+   "observed": "sha 7f0b6a65 -> backup (sha asserted) -> pre copy (sha 78ae6101) -> RED KeyError 'core_slow' tests/test_run.py:1856, 1 failed 50 deselected -> restore, sha equality asserted -> GREEN 1 passed 50 deselected -> final sha 7f0b6a65. Full __pycache__ purge + PYTHONDONTWRITEBYTECODE=1 each way; hard stop guard on sha drift",
+   "evidence": "state/logs/V0.26-evidence.txt; state/verify/V0.26/run.py.V026-revert-backup-py"
+  },
+  {
+   "id": "C7",
+   "name": "honesty audit + containment",
+   "verdict": "PASS-with-corrections",
+   "observed": "23 vs 22: U0.25 self-reports 23/22 calls - an overage of 1, undisclosed in prose but present in its handoff; 6.25% figure weakens the empirical support but not the structural argument; preflight change alters no exit code (pre slow SearXNG ok=True == post; pre slow graphify ok=False == post); store sha 40e8aa0c... unchanged, v4, 13 tables, 35 rows (copy read, no immutable=1)",
+   "evidence": "state/verify/V0.26/c2_prepost.json; sha256sum state/state.sqlite before/after"
+  }
+ ],
+ "test_counts": {
+  "run": 51,
+  "doctor": 27,
+  "assert_lines_deleted": 0
+ },
+ "run_py_sha": {
+  "expected": "7f0b6a65",
+  "actual": "7f0b6a659102b9d56ec25f0d12e856324387efe72f0eceb1858ffd29346ccd35",
+  "match": true
+ },
+ "test_cli_untouched": true,
+ "test_cli_untouched_basis": "NOT 'absent from git status' - it IS untracked ('?? tests/test_cli.py'). Untouchedness rests on mtime 08:56 (predates U0.25 window 09:03-09:06); no HEAD baseline exists to diff.",
+ "pin_quoted": {
+  "file": "tests/test_cli.py",
+  "line": 522,
+  "text": "expected = 0 if not report[\"core_down\"] else cli.EXIT_CORE_DOWN (and :524 assert report[\"ok\"] == (code == 0))"
+ },
+ "prose_de_numbered": true,
+ "constants_absent": true,
+ "preflight": {
+  "slow_in_core_slow": true,
+  "slow_not_in_degradable_core_down": true,
+  "honest_text": "core leg SearXNG is SLOW (reachable but slow, not down) \u2014 <detail>; no selected stage invokes it, so this run continues (reported, never silently ignored)",
+  "down_still_down": true,
+  "stage_invoked_slow_gates_exit2": true,
+  "LEG_STAGE_NEEDS_searxng_empty": true,
+  "note": "a *needed* slow leg appears in core_slow AND hard_core_down by design (named SLOW, still gates); a DOWN leg cannot reach core_slow because the branch requires state=='slow'"
+ },
+ "signal_observable": {
+  "report_preflight_core_slow": "['SearXNG']",
+  "report_degradations": "core leg SearXNG is SLOW (reachable but slow, not down) \u2014 TimeoutError: timed out; TCP connect accepted within 0.5s -> reachable but slow (per-leg bound 5.0s); no selected stage invokes it, so this run continues",
+  "new_test_calls_run_pipeline": true,
+  "asserts_constant": false
+ },
+ "residual_judged": {
+  "exit_only_reader_sees": "healthy (ok=True, exit_code=0)",
+  "acceptable": true,
+  "what_caller_should_read": "report.preflight['core_slow'] and report.degradations (or doctor's 'CORE SLOW:' verdict line)",
+  "discoverable": true
+ },
+ "anti_mask": {
+  "standard_verdict_unchanged": true,
+  "refused_down": true,
+  "failed_cheap_check_down": true,
+  "cached_dict_identical": true
+ },
+ "red_green": {
+  "a": "reproduced; sha ok; f: KeyError: 'core_slow' @ tests/test_run.py:1856, 1 failed 50 deselected; p: 1 passed 50 deselected"
+ },
+ "release_sha_restored": "7f0b6a659102b9d56ec25f0d12e856324387efe72f0eceb1858ffd29346ccd35",
+ "not_reproduced": [
+  "tests/test_run.py assert baseline 230->236 (file untracked; no baseline copy retained - only the new test's +6 asserts are visible)",
+  "direct doctor.classify_timeout slow/down call (real signature is (klass, base_url, exc); classification instead rests on the passing doctor guards and doctor.py:254-269)"
+ ],
+ "overstated": [
+  "8 SearXNG samples with slow_fraction 0.0 presented as measured spurious-block risk: too few samples; including V0.21's 8.232 s, 1/16 = 6.25 % would be slow, which weakens the empirical 'blocking is spurious' claim. The structural argument (LEG_STAGE_NEEDS['searxng']==empty AND a needed slow leg still gates exit 2) stands independently and is what makes the residual acceptable."
+ ],
+ "unverified": [
+  "test_run.py 230->236 assert baseline",
+  "that the pre-copy is bit-identical to the true 78ae6101 predecessor (I verified sha equality to the retained artifact, not to any external source)"
+ ],
+ "corrections": [
+  {
+   "relayed_claim": "tests/test_cli.py was NOT edited (absent from git status)",
+   "actually": "it IS in git status as untracked '?? tests/test_cli.py', so that evidence is false; untouchedness holds on mtime grounds only",
+   "evidence": "git status --porcelain | grep test_cli -> '?? tests/test_cli.py'; stat mtime 08:56 < U0.25 window 09:03-09:06",
+   "unit": "U0.25"
+  },
+  {
+   "relayed_claim": "the pin is at tests/test_cli.py:520-523 (previously cited :280-283)",
+   "actually": "the pin statement is at :522 (:524 for the ok==code assertion)",
+   "evidence": "grep -n 'expected = 0 if not report' tests/test_cli.py -> 522",
+   "unit": "U0.25"
+  }
+ ],
+ "tool_calls": 23,
+ "bound": 24,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt | ?? .lane-j-scratch/ (untracked, NOT created by me - I never wrote to Duval)",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "store": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows_identical": true,
+   "used_immutable": false,
+   "sidecars_left": 0,
+   "note": "13 tables / 35 rows matches U0.25; store read via a copy under state/verify/V0.26. 2 sidecars (state.sqlite-wal/-shm, mtime 09:11:15) EXIST but are NOT mine (my only store open was on the copy; no process holds the original); left in place rather than delete a possibly-live sibling WAL. Original sha unchanged before/after.",
+   "corroboration": "VERDICTS.md's own V8.16 addendum independently records the same 09:11:15 sidecars as not created by V8.16 either; combined with my copy-only store open, the sidecars are attributable to a sibling unit's plain mode=ro open, not to V0.26."
+  },
+  "new_sqlite_sidecars": 0,
+  "stray_processes": 0,
+  "hash_recipe": "sha256sum <file> | cut -d' ' -f1; store row count via resextract.store.schema_version + sqlite_master count(*) on a ro copy"
+ },
+ "blocker": "",
+ "next_unit_hint": "U0.25 is safe to release: the fix is real, exit codes are provably unchanged, and SearXNG gates nothing. Two write-ups to fix in the next unit: (1) tests/test_cli.py is untracked, not absent from git status - use mtime evidence; (2) the pin is :522. If a future stage ever needs SearXNG, re-examine the residual.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V0.26.md",
+  "orchestration/handoffs/V0.26.json",
+  "state/logs/V0.26-evidence.txt",
+  "state/verify/V0.26/**"
+ ]
+}

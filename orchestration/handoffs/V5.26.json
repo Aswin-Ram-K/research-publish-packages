@@ -1,0 +1,199 @@
+{
+ "unit": "V5.26",
+ "scope": "U5.22 claim-standing boundary + U5.24 restated witness",
+ "overall": "PASS",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "suite and split, 0 deletions",
+   "verdict": "PASS",
+   "observed": "173 passed / 0 failed; 70 reassembly / 27 assemble / 34 provenance / 25 materialize / 17 pinned; tests/test_docket_assemble.py 92 additions / 0 deletions; test-name diff vs HEAD DELETED=[]",
+   "evidence": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest <five files> -q; git diff --numstat tests/test_docket_assemble.py -> 92 0"
+  },
+  {
+   "id": "C2",
+   "name": "cap-on-input and no duplicated rule",
+   "verdict": "PASS",
+   "observed": "injected Claim(id=C-inj, verdict=CONFIRMS, producer='replay', provenance=['f.md']) on a COPY -> rendered 'EXTENDS'; reason recorded and present verbatim in CLAIMS.md and MANIFEST.json; assemble().downgrades == [] so it is not an assemble-only channel; _cap_uncapped_claims calls _store.producer_is_model; 4 '\"model\"' literals in assemble.py, none in the claim-standing path (0 new comparisons)",
+   "evidence": "state/verify/V5.26/retry_c2_c3.json"
+  },
+  {
+   "id": "C3",
+   "name": "verifier condition both directions",
+   "verdict": "PASS",
+   "observed": "condition is exactly 'claim.verdict == \"CONFIRMS\" and not store.producer_is_model(claim.producer)' (assemble.py:2493), keyed on claim.producer with generated_by.producer only as message context; _smoke and the real replay docket reported; F2 (model verdict, docket producer replay) -> problems [] and verify ok True; file-fact CONFIRMS on non-model producer -> reported",
+   "evidence": "state/verify/V5.26/experiments.json + retry_c2_c3.json; assemble.py:2488-2525"
+  },
+  {
+   "id": "C4",
+   "name": "loading vs certifying scope",
+   "verdict": "PASS",
+   "observed": "_smoke: validate_manifest == [], read_manifest loads with producer 'unknown', status_reason None, promotion_eligible False; verify_docket ok is False with the CONFIRMS/'unknown' problem. Loading intact; only certification changed",
+   "evidence": "state/verify/V5.26/experiments.json C4"
+  },
+  {
+   "id": "C5",
+   "name": "restated test vacuity/rename/frozen witness",
+   "verdict": "PASS",
+   "observed": "tests/test_docket_provenance.py:391 test_pre_u5_7_smoke_manifest_still_loads_and_reports_uncapped_confirms; load assertions present; exact problems list equality; frozen sha 41ec711a... pinned; renamed (old name absent from tests/); independent flip of C1.producer 'unknown'->'model' in memory gives [] vs [contradiction]",
+   "evidence": "state/verify/V5.26/experiments.json C5"
+  },
+  {
+   "id": "C6",
+   "name": ".rN bound",
+   "verdict": "PASS",
+   "observed": "ITEM_SNAPSHOT_KEEP = 5; allocator n = snaps[-1][0] + 1 if snaps else 1 (max+1); 9 assemblies on a COPY -> final indices [4,5,6,7,8], oldest pruned, live ITEM.md exists every round, HISTORY.md 193 -> 2433 bytes, no non-rotation file touched",
+   "evidence": "state/verify/V5.26/experiments.json C6"
+  },
+  {
+   "id": "C7",
+   "name": "red-green three guards",
+   "verdict": "PASS",
+   "observed": "(a) cap no-op -> \"assert 'CONFIRMS' == 'EXTENDS'\" then green; (b) verifier no-op -> \"assert True is False\" with problems [] then green; (c) prune disabled -> \"assert 8 == 5\", first-free allocator -> newest snapshot became '# sentinel 5' then green. Each restore sha256 == 0c8f7386...",
+   "evidence": "state/verify/V5.26/guard-a-red.txt, guard-b-red.txt, guard-c-red1.txt, guard-c-red2.txt"
+  },
+  {
+   "id": "C8",
+   "name": "honesty audit and containment",
+   "verdict": "PASS",
+   "observed": "store sha256 40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3, schema_version 4, row counts stable across two reads on a COPY, immutable=1 never used; zero WAL/shm sidecars observed or created; three manifest shas match the claimed values; Duval HEAD 6c60da5aa9240c0dcc2ff97b46f2a2cf37774951; 0 stray processes; 0 .worktrees reads",
+   "evidence": "state/verify/V5.26/store_rows.json; sha256sum of the three MANIFEST.json files"
+  }
+ ],
+ "test_counts": {
+  "reassembly": 70,
+  "assemble": 27,
+  "provenance": 34,
+  "materialize": 25,
+  "pinned": 17,
+  "total": 173,
+  "deletions": 0
+ },
+ "cap_on_input": {
+  "injected_claim_rendered": "EXTENDS",
+  "reason_recorded": true,
+  "reason_visible_in": [
+   "CLAIMS.md",
+   "MANIFEST.json"
+  ],
+  "reuses_store_predicate": true,
+  "new_model_literals_in_assemble": 0,
+  "note": "4 '\"model\"' literals exist in assemble.py total (docstring 1116, dict key 1631, provenance_warning 1775, f-string 1941); none implements the claim-standing rule. HEAD had 2, so the net +2 are prose and the docket-level provenance warning gate, not a duplicated standing comparison."
+ },
+ "verifier_condition": {
+  "quoted": "claim.verdict == \"CONFIRMS\" and not store.producer_is_model(claim.producer)",
+  "keyed_on_claim_producer": true,
+  "keyed_on_docket_producer": false,
+  "replay_confirms_reported": true,
+  "replay_problem_quoted": "claim C-curated: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='replay') -- a non-model run may not assert CONFIRMS; ...",
+  "f2_model_verdict_not_reported": true,
+  "filefact_reported": "yes",
+  "f2_construction": "docket generated_by.producer='replay' + claim.producer='model' on a COPY -> _claim_standing_problems == [] and verify_docket ok True"
+ },
+ "loading_vs_certifying": {
+  "read_manifest_still_loads": true,
+  "verify_docket_reports": true,
+  "scope_correct": true
+ },
+ "restated_test": {
+  "file": "tests/test_docket_provenance.py",
+  "line": 391,
+  "new_name": "test_pre_u5_7_smoke_manifest_still_loads_and_reports_uncapped_confirms",
+  "load_assertions_present": true,
+  "exact_problem_list_asserted": true,
+  "frozen_sha_pinned": true,
+  "renamed": true,
+  "non_vacuity_reproduced": true,
+  "flip_result": "[] vs [contradiction]"
+ },
+ "rn_bound": {
+  "constant": "ITEM_SNAPSHOT_KEEP",
+  "value": 5,
+  "allocator": "max+1 (snaps[-1][0] + 1 if snaps else 1)",
+  "oldest_pruned": true,
+  "live_item_survives": true,
+  "history_unbounded": true,
+  "file_counts": {
+   "rounds": 9,
+   "snap_count_final": 5,
+   "final_indices": [
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "history_bytes_first": 193,
+   "history_bytes_last": 2433,
+   "stray_files": 0
+  }
+ },
+ "red_green": {
+  "a": "reproduced; sha ok; FAILED assert 'CONFIRMS' == 'EXTENDS'; 1 passed on restore",
+  "b": "reproduced; sha ok; FAILED assert True is False (problems []); 1 passed on restore",
+  "c": "reproduced x2; sha ok; FAILED assert 8 == 5 (prune off) and newest snapshot lost (first-free); 1 passed on restore"
+ },
+ "release_sha": {
+  "assemble": "0c8f7386394b2e92866aba0217c3bb9626dc12cc1707c6f2d474b124b95f1000",
+  "actual": "0c8f7386394b2e92866aba0217c3bb9626dc12cc1707c6f2d474b124b95f1000",
+  "restored_bit_identical": true
+ },
+ "not_reproduced": [
+  "the real dockets' existing .rN snapshot counts (claimed 4 and 3) were not measured, so the 'bound 5 prunes nothing that exists today' argument is unverified"
+ ],
+ "overstated": [
+  "U5.22 evidence records diffstat '1195 73' for src/resextract/docket/assemble.py; measured 1200 additions / 74 deletions vs HEAD",
+  "U5.22 evidence records assemble_before 24; a 'def test_' count of HEAD:src/resextract/docket/assemble tests gives 23 (now 26 defs collecting as 27), so +3 holds but the 24 baseline does not match a def count"
+ ],
+ "unverified": [
+  "U5.22's 32 tool calls against a bound of 26 is relayed from the unit card; U5.22.json carries no bound/tool_calls key (verifier-shape gap, status partial)",
+  "F2 was constructed at the docket/claim layer (generated_by.producer='replay' + claim.producer='model'); the material-level candidate producer was not separately exercised, since claim.producer is the documented gate"
+ ],
+ "corrections": [
+  {
+   "relayed_claim": "assemble.py diffstat 1195 73",
+   "actually": "1200 additions / 74 deletions vs HEAD",
+   "evidence": "git diff --numstat src/resextract/docket/assemble.py",
+   "unit": "U5.22"
+  },
+  {
+   "relayed_claim": "tests 170 -> 173 with assemble 24 -> 27",
+   "actually": "total 173 and assemble 27 collected are confirmed, but 'def test_' count is 23 (HEAD) -> 26 (now) with DELETED=[]; +3 added, 0 deleted",
+   "evidence": "git show HEAD:tests/test_docket_assemble.py vs working tree name-set diff",
+   "unit": "U5.22"
+  }
+ ],
+ "tool_calls": 21,
+ "bound": 26,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt; ?? .lane-j-scratch/ (pre-existing untracked Duval scratch, NOT written by this unit)",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "store": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows_identical": true,
+   "used_immutable": false,
+   "sidecars_observed": 0,
+   "sidecars_created_by_me": 0
+  },
+  "dockets": {
+   "replay_manifest": "9b6a577e1402fe41841e153a485e4b044a945a5f8bf05a59c2268df6086cd130",
+   "u55_manifest": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+   "smoke_manifest": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+   "hash_recipe": "sha256sum <docket>/MANIFEST.json (raw file bytes; confirmed by the _smoke test's own pin)",
+   "unchanged": true
+  },
+  "stray_processes": 0
+ },
+ "blocker": "",
+ "next_unit_hint": "Nothing to fix in U5.22/U5.24. Open items: (1) the two real dockets (duval-replay-material, _smoke) are REPORTED not repaired -- decide re-derive-via-materialize vs accept-by-design; (2) the file-fact CONFIRMS vocabulary gap (U5.22 follow-up) is recorded, not resolved -- a distinct standing for mechanically-verified facts is the fix; (3) U5.22.json lacks a bound/tool_calls key so its 32/26 overage is not auditable from the artifact.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V5.26.md",
+  "orchestration/handoffs/V5.26.json",
+  "state/logs/V5.26*",
+  "state/verify/V5.26/**"
+ ]
+}

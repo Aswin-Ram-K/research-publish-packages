@@ -1,0 +1,204 @@
+{
+ "unit": "U2.10",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/claims/decompose.py",
+  "tests/test_claims_decompose.py",
+  "orchestration/units/U2.10.md",
+  "state/logs/U2.10-grep-before.txt",
+  "state/logs/U2.10-grep-after.txt",
+  "state/logs/U2.10-sha256-decompose.txt"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "decompose_before": 11,
+   "decompose_after": 13,
+   "deletions": 0
+  },
+  "grep": {
+   "pattern": "== \"model\"|!= \"model\"",
+   "count_before": 8,
+   "count_after": 6,
+   "remaining_by_file": {
+    "src/resextract/run.py": 2,
+    "src/resextract/docket/materialize.py": 2,
+    "src/resextract/docket/manifest.py": 1,
+    "src/resextract/docket/assemble.py": 1
+   }
+  },
+  "real_producer_comparisons": 8,
+  "map": [
+   {
+    "file": "run.py",
+    "line": 1247,
+    "expression": "if producer != \"model\":",
+    "verdict": "delegate",
+    "why": "producer = str(getattr(report,\"producer\",\"unknown\")) from the mine report; degraded-status test IS model standing."
+   },
+   {
+    "file": "run.py",
+    "line": 1292,
+    "expression": "if producer != \"model\":",
+    "verdict": "delegate",
+    "why": "producer from the claims report; status=\"degraded\" for any non-model producer \u2014 same standing test."
+   },
+   {
+    "file": "docket/materialize.py",
+    "line": 577,
+    "expression": "if producer != \"model\":",
+    "verdict": "delegate",
+    "why": "model_id_for(): \"Only a ``model`` producer may name a model\" \u2014 producer-vocabulary standing, cannot become a keep."
+   },
+   {
+    "file": "docket/materialize.py",
+    "line": 1787,
+    "expression": "docket_status = status if producer == \"model\" else \"draft\"",
+    "verdict": "delegate",
+    "why": "docket status promotion gates on producer standing (model->status, else draft)."
+   },
+   {
+    "file": "docket/manifest.py",
+    "line": 321,
+    "expression": "if producer == \"model\":  # producer_gate_reason",
+    "verdict": "delegate",
+    "why": "producer_gate_reason(): refusal reason for a non-model producer \u2014 the vocabulary test itself."
+   },
+   {
+    "file": "docket/assemble.py",
+    "line": 1688,
+    "expression": "if producer == \"model\":  # provenance_warning",
+    "verdict": "delegate",
+    "why": "producer from ctx[\"manifest\"].generated_by.producer (default \"unknown\"); model dockets get no warning."
+   },
+   {
+    "file": "claims/decompose.py",
+    "line": 493,
+    "expression": "if report.producer != \"model\":  # was, now NOT producer_is_model",
+    "verdict": "delegate",
+    "why": "ClaimReport.producer is a PRODUCER_VOCAB value; banner shown when the run is not model-produced. DELEGATED."
+   },
+   {
+    "file": "claims/decompose.py",
+    "line": 656,
+    "expression": "if producer == \"model\":  # was, now producer_is_model",
+    "verdict": "delegate",
+    "why": "producer = _producer_of(client); gates model_calls metering. DELEGATED."
+   }
+  ],
+  "delegated": [
+   "claims/decompose.py:493 (CLAIMS.md unverified banner)",
+   "claims/decompose.py:656 (model_calls metering)"
+  ],
+  "kept_with_comment": [],
+  "false_positives": [],
+  "equivalence_table": {
+   "agree": true,
+   "divergent_inputs": [],
+   "inputs": [
+    "model",
+    "replay",
+    "fixture",
+    "unknown",
+    "Model",
+    "MODEL",
+    " model ",
+    "",
+    null,
+    0,
+    "<object>"
+   ],
+   "note": "store.producer_is_model is `producer == MODEL_PRODUCER`, MODEL_PRODUCER == \"model\"; old `==`/`!=` agreed on all 11 inputs (case-exact, no coercion)."
+  },
+  "changed_behaviour": false,
+  "red_green": {
+   "a": "sha_green(df92eb448a87caef8c9ddbf2d83a19b52eef4bdcfeaf0612bd4c2ba686b188ba) -> revert -> sha_red(bd333108a01d81540a2951f2be5356364e3eadb9d3e3ccdc54cf70aefadaf635) -> guard FAILED (1 failed, 12 deselected) -> restore -> sha bit-identical df92eb44... -> 13 passed",
+   "note": "source-level guard (no literal + exactly 2 predicate calls), not a behaviour fix; full __pycache__ purge both ways (0 dirs, PYTHONDONTWRITEBYTECODE=1); existing metering assertion untouched (test diff 44 insertions/0 deletions)"
+  },
+  "residual_remaining": [
+   {
+    "file": "run.py",
+    "line": 1247,
+    "verdict": "delegate",
+    "owner": "V8C (owns run.py, in flight)",
+    "follow_up": "replace with `not store.producer_is_model(producer)`; keep status=\"degraded\" text"
+   },
+   {
+    "file": "run.py",
+    "line": 1292,
+    "verdict": "delegate",
+    "owner": "V8C (owns run.py, in flight)",
+    "follow_up": "replace with `not store.producer_is_model(producer)`"
+   },
+   {
+    "file": "docket/materialize.py",
+    "line": 577,
+    "verdict": "delegate",
+    "owner": "docket unit (U5.17 owns assemble.py; materialize.py unowned here)",
+    "follow_up": "replace with `not store.producer_is_model(producer)` in model_id_for"
+   },
+   {
+    "file": "docket/materialize.py",
+    "line": 1787,
+    "verdict": "delegate",
+    "owner": "docket unit",
+    "follow_up": "replace with `store.producer_is_model(producer)` in the docket_status ternary"
+   },
+   {
+    "file": "docket/manifest.py",
+    "line": 321,
+    "verdict": "delegate",
+    "owner": "docket unit",
+    "follow_up": "replace with `store.producer_is_model(producer)` in producer_gate_reason"
+   },
+   {
+    "file": "docket/assemble.py",
+    "line": 1688,
+    "verdict": "delegate",
+    "owner": "U5.17 (owns assemble.py + 5 docket test files, in flight)",
+    "follow_up": "replace with `store.producer_is_model(producer)` in provenance_warning"
+   }
+  ],
+  "store_untouched": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "migrations": "sha256 matches the recorded v4 store exactly; user_version=0; provenance table=schema_version row=(4, '2026-10-08T12:47:56.009Z')",
+   "rows": {
+    "candidates": 10,
+    "evidence": 0,
+    "verdicts": 0
+   },
+   "rows_identical": true,
+   "note": "sha256 byte-identical to the recorded v4 sha; opened with immutable=1",
+   "sidecars_created": {
+    "-wal": false,
+    "-shm": false
+   },
+   "provenance": "state/state.sqlite schema_version table = 4 (2026-10-08T12:47:56.009Z), user_version=0; sha256 byte-identical to the recorded v4 sha"
+  },
+  "duval_untouched": {
+   "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/"
+  },
+  "tool_calls": 19,
+  "bound": 20,
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models",
+   "grep -rn -E '[!=]= \"model\"' src/ | wc -l  # 8 before, 6 after",
+   ".venv/bin/python -m pytest tests/test_claims_decompose.py -q  # 11 before, 13 after",
+   "sed -n windows over the six read-only sites",
+   "sha256sum src/resextract/claims/decompose.py; revert/restore red-green; find -name __pycache__ -exec rm -rf",
+   "sqlite3 immutable=1 PRAGMA/schema_migrations/row counts on state/state.sqlite",
+   "git -C /home/zer0null/Duval rev-parse HEAD; git status --porcelain"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "All 8 surviving `==/!= \"model\"` comparisons are REAL producer-standing tests (0 keeps, 0 false positives), so after the 6 remaining delegations a codebase-wide uniqueness claim holds: store.producer_is_model is the only string-level producer comparison, with store.PRODUCER_VOCAB/MODEL_PRODUCER the only declarations. Near-miss not in the eight (do NOT blind-replace): docket/materialize.py:566 `\"model\" in seen` is a set-membership over derived producers (returns \"mixed\"), not standing; assemble.py:1690 `producer == \"mixed\"` uses a second vocabulary. Owners left: V8C run.py:1247,1292; docket materialize.py:577,1787 + manifest.py:321; U5.17 assemble.py:1688.",
+ "write_paths": [
+  "src/resextract/claims/decompose.py",
+  "tests/test_claims_decompose.py",
+  "state/logs/U2.10*",
+  "orchestration/units/U2.10.md",
+  "orchestration/handoffs/U2.10.json"
+ ]
+}

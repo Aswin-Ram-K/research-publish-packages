@@ -1,0 +1,200 @@
+{
+ "unit": "V8.21",
+ "scope": "U8.18 orchestration-contract reconciliation",
+ "overall": "FAIL",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "the derivation - is the verifier shape real?",
+   "verdict": "pass-with-drift",
+   "observed": "45 V* handoffs parsed at my first count (43 at U8.18's snapshot, per state/logs/U8.18/handoff_shas_before.json which lists exactly 43 V*; 46 by end of run). All 6 documented core keys are >=90% over my 45-set: unit 45/45=100.0%, checks 44/45=97.8%, blocker 43/45=95.6%, write_paths 43/45=95.6%, overall 42/45=93.3%, next_unit_hint 42/45=93.3%. No documented 'not required' key reaches 90% (highest: not_reproduced/overstated/unverified 39/45=86.7%).",
+   "evidence": "state/verify/V8.21/derive.py + derivation.json"
+  },
+  {
+   "id": "C2",
+   "name": "nothing else changed",
+   "verdict": "pass",
+   "observed": "AGENTS.md is git-tracked. Pre-image established twice and the two agree byte-for-byte: git show HEAD:AGENTS.md sha256 = 019da8ee51c965db7ecc66c58ef434d1af5e0f53c4762338e2721b2cf7106cb2 == state/logs/U8.18/AGENTS.md.before sha256; current sha256 = 201a0b9eb0bc5de7a6c0776478b3bb5c95cf75a3a3c0b858c218748291ae7549 (mtime 2026-10-08 09:20:40.910, 5616 bytes). git diff HEAD..worktree contains exactly the 5 claimed items: 1 deletion (the <=3 concurrency cell, replaced by <=5) and 4 additions (concurrency attribution note, valid-JSON requirement naming the guard, the two-shape block, the neither-shape-wrong/frozen-baseline paragraph). Target-repo read-only rule, secrets rule, and the rest of the main-session table are untouched: no hunks in those regions.",
+   "evidence": "git diff -- AGENTS.md; diff -u state/logs/U8.18/AGENTS.md.before AGENTS.md"
+  },
+  {
+   "id": "C3",
+   "name": "the guard checks the right shape per class and can fail",
+   "verdict": "fail",
+   "observed": "It enforces the unit 7 keys and the verifier 6-key core and it CAN fail - but it is RED on the real, unchanged tree: 7 passed, 1 failed. test_no_new_contract_key_gaps fails with \"NEW verifier-shape gaps: {} {'V6E.json': ['next_unit_hint']}\". V6E.json's sha (d65fa537cf02c862ac2d072e0fbbe3ed701f662a9c8d05b1d633ce6e896b0c38) is IDENTICAL to the frozen manifest, so this is not drift: U8.18's own state/logs/U8.18/measurement.txt records \"verifier-shape gap: V6E.json ['blocker', 'next_unit_hint']\" while both state/logs/U8.18/verifier_shape_baseline.json and the guard's VERIFIER_BASELINE_GAPS record only ['blocker']. The frozen record contradicts its own measurement; the baseline is under-declared, so the guard reports a false regression and can never go green.",
+   "evidence": "pytest tests/test_orchestration_handoffs.py -q -> 1 failed, 7 passed; state/logs/U8.18/measurement.txt vs verifier_shape_baseline.json"
+  },
+  {
+   "id": "C4",
+   "name": "the JSON requirement is checkable",
+   "verdict": "pass",
+   "observed": "AGENTS.md rule 5 states 'A handoff MUST be valid JSON ... enforced rather than aspirational by tests/test_orchestration_handoffs.py, which parses every orchestration/handoffs/*.json'. The guard implements it: audit() does path.read_bytes()+json.loads for every *.json, re-reads on failure and only skips a file whose bytes changed (mid-write); a stable unparseable file is a hard failure. Enforcement shown live by my U0.22 pre-repair fixture run.",
+   "evidence": "guard lines 109-131, 148-155; fixtures.py case B"
+  },
+  {
+   "id": "C5",
+   "name": "red-green on one guard (LAST)",
+   "verdict": "reproduced",
+   "observed": "Reverted U8.18's second shape (classify() -> always 'unit'); the guard went to 3 failed, 5 passed (test_no_new_contract_key_gaps, test_missing_required_key_fixture_is_rejected_for_verifier_shape, test_new_gap_is_flagged_not_silently_accepted). Restored from state/verify/V8.21/test_orchestration_handoffs.py.V821-backup with sha256 equality asserted (d7f85e367736bc4b58c34a13b6c867d5c45e461e1af1844d5e5f9c22ff1c4953 before == after); the pre-restore guard refused to overwrite a changed file (hard stop not triggered). Re-run after restore: 1 failed, 7 passed - the same pre-existing V6E red, so the guard cannot be shown green on the real tree.",
+   "evidence": "state/verify/V8.21/test_orchestration_handoffs.py.V821-backup"
+  },
+  {
+   "id": "C6",
+   "name": "honesty audit + containment",
+   "verdict": "pass-with-unverified",
+   "observed": "0 handoffs edited by me; only my own handoff written. Duval read-only: HEAD 6c60da5aa9240c0dcc2ff97b46f2a2cf37774951, porcelain 2 untracked lines. Store sha 40e8aa0c...c3 unchanged, read from a copy (no immutable=1). 0 stray processes, 0 live-store sidecars.",
+   "evidence": "see containment"
+  }
+ ],
+ "derivation": {
+  "v_handoffs_counted": 45,
+  "core_keys_measured": [
+   {
+    "key": "unit",
+    "count": 45,
+    "pct": 100.0
+   },
+   {
+    "key": "checks",
+    "count": 44,
+    "pct": 97.8
+   },
+   {
+    "key": "blocker",
+    "count": 43,
+    "pct": 95.6
+   },
+   {
+    "key": "write_paths",
+    "count": 43,
+    "pct": 95.6
+   },
+   {
+    "key": "overall",
+    "count": 42,
+    "pct": 93.3
+   },
+   {
+    "key": "next_unit_hint",
+    "count": 42,
+    "pct": 93.3
+   }
+  ],
+  "documented_core": [
+   "unit",
+   "overall",
+   "checks",
+   "blocker",
+   "next_unit_hint",
+   "write_paths"
+  ],
+  "documented_core_confirmed": true,
+  "discrepancies": [
+   "V* count drift, not error: U8.18 wrote '43' and state/logs/U8.18/handoff_shas_before.json lists exactly 43 V* files; I counted 45 at 09:23 (siblings V5.26.json + my own V8.21.json appeared after the snapshot) and 46 by end of run (V8.23.json). U8.18's 43 is accurate for its snapshot.",
+   "U8.18's recorded frequency_over_43 under-counts 8 keys by exactly 1 versus my recompute over the same 43-shape set (next_unit_hint 40 vs 41; not_reproduced/overstated/unverified 37 vs 38; tool_calls/containment 36 vs 37; bound 35 vs 36; corrections 31 vs 32; scope 34 and red_green 32 agree). EXPLAINED, not an error: V5.25.json was rewritten by its own author after the snapshot (sha 84656eca... -> bb16e3f9..., mtime 09:21:24) and gained exactly those keys plus next_unit_hint, while it already carried scope/red_green. At U8.18's snapshot the recorded numbers were accurate. The conclusion is unaffected: over the 43-set next_unit_hint is 41/43=95.3% (>=90%) and the nearest not-required key is not_reproduced 38/43=88.4% (<90%).",
+   "U8.15's frozen baseline_gaps.json has exactly 45 entries (4 unit files + 41 V*), consistent with the '45 of 137' measurement U8.18 acted on; I did not re-derive the 137 denominator."
+  ],
+  "not_required_but_above_90": []
+ },
+ "scope_of_change": {
+  "preimage_method": "git HEAD and the U8.18 backup agree byte-for-byte (identical sha256 019da8ee...), so both were used; git status shows ' M AGENTS.md' (unstaged, HEAD = pre-image). Limit: git gives the pre-image only if U8.18's edit is the sole uncommitted change to the file - which the byte-equality of the independent backup corroborates.",
+  "before_sha": "019da8ee51c965db7ecc66c58ef434d1af5e0f53c4762338e2721b2cf7106cb2",
+  "after_sha": "201a0b9eb0bc5de7a6c0776478b3bb5c95cf75a3a3c0b858c218748291ae7549",
+  "changes_found": [
+   "two shape definitions (verifier verdict core + documented non-required counts)",
+   "valid-JSON requirement naming the guard",
+   "neither-shape-wrong / no-rewrite note + frozen-baseline mechanism",
+   "concurrency 3->5 with in-file attribution",
+   "guard update (shape-aware audit/classify, verifier baseline, U8.15 baseline checksum-pinned)"
+  ],
+  "changes_outside_claimed_scope": [],
+  "governance_rules_touched": false
+ },
+ "guard": {
+  "discriminator": "classify(): 'verifier' iff basename starts with 'V' OR the doc carries 'verdict' OR the doc carries 'overall'; otherwise 'unit'. Verifier is judged against VERIFIER_CONTRACT (unit, overall, checks, blocker, next_unit_hint, write_paths); unit against CONTRACT (unit, status, artifacts, evidence, blocker, next_unit_hint, write_paths).",
+  "ambiguous_file_behaviour": "Fail-loud, not silent: a unit report that carries 'overall' is classified verifier and then reported as a NEW gap on the missing 'checks' -> the suite FAILS. A V*-named file that is really a unit report is likewise judged as a verdict and fails on missing 'overall'/'checks'. Measured: no unit-named handoff currently carries overall/verdict ([]), so there is no live false failure. Residual hole: an ambiguous file that IS listed in the frozen baseline would absorb the misclassification silently.",
+  "enforces_unit_seven": true,
+  "enforces_verifier_core": true,
+  "fails_on_new_missing_key": true,
+  "fails_on_unparseable": true,
+  "new_missing_key_failure_verbatim": "fixture U9.99.json (valid JSON, unit-shaped, missing blocker/next_unit_hint/write_paths, not in any baseline): audit gaps {'U9.99.json': ['blocker','next_unit_hint','write_paths']} -> _regressions NEW = {'U9.99.json': [...]} -> would FAIL. Live, on the real tree: AssertionError: NEW unit-shape handoff contract gaps: {} {} ; NEW verifier-shape gaps: {} {'V6E.json': ['next_unit_hint']}  (tests/test_orchestration_handoffs.py:164, 1 failed 7 passed)",
+  "unparseable_failure_verbatim": "recorded pre-repair bytes of U0.22 were on disk (state/logs/U8.15/repairs/U0.22.before.json) and were used: [{'file': 'U0.22.json', 'error': \"JSONDecodeError: Expecting ',' delimiter: line 6 column 32 (char 1165)\"}], mid_write [] - exactly the defect U8.15 recorded.",
+  "baseline_respected": false,
+  "values_invented": false,
+  "can_hide_a_real_regression": "no for a NEW handoff or a NEW key (proved: baselined V5F.json losing 'checks' yields worsened {'V5F.json': ['checks']} -> FAIL); yes for the loss of a key ALREADY listed in that file's baseline (invisible by construction) and yes for an over-declared baseline. The defect here is the mirror image - an UNDER-declared baseline - which produces a permanent, false RED rather than a hidden regression."
+ },
+ "json_requirement": {
+  "stated": true,
+  "names_guard": true,
+  "enforced_in_guard": true
+ },
+ "red_green": {
+  "a": "reproduced; guard sha ok before/after (d7f85e36...); f=3 failed 5 passed on revert of classify(); p=1 failed 7 passed after restore - the guard is NOT green on the real tree, and the red (V6E.json next_unit_hint) predates my revert"
+ },
+ "guard_sha_now": "d7f85e367736bc4b58c34a13b6c867d5c45e461e1af1844d5e5f9c22ff1c4953",
+ "guard_tests": {
+  "before": 5,
+  "after": 8
+ },
+ "agagents_tracked_in_git": true,
+ "not_reproduced": [
+  "U8.18's test file pre-image: tests/test_orchestration_handoffs.py is untracked/absent from git HEAD, so its 'no assertion deleted' claim and its exact 5->8 test delta rest on U8.18's word plus the collected count (8); I did not diff it against a pre-image.",
+  "I ran only tests/test_orchestration_handoffs.py; no neighbouring suite was run (none was needed).",
+  "U8.15's '137 parseable handoffs' denominator was not re-derived; only its 45 entry baseline_gaps.json was counted."
+ ],
+ "overstated": [
+  "U8.18 card: 'Status: done (one sibling-transient guard red remains ... V5.26.json ... The guard is red on it and will clear when its author finishes).' V5.26.json now carries all 6 verifier keys and is absent from the real-dir gaps; the red did not clear - it is V6E.json, on a file unchanged since the snapshot.",
+  "U8.18 card claims the recorded gaps are 'recorded gaps, never invented values' - true as to invention, but the verifier record is not faithful to U8.18's own measurement.txt for V6E.json."
+ ],
+ "unverified": [
+  "That AGENTS.md's quotation \"use upto 5 subagents in cincurrency\" reproduces the user's literal wording: no record of the user's message exists on disk or in my context (grep found no other copy of the phrase).",
+  "'v4' store version: pragma user_version is 0; the v4 signature is the schema_version table's 4 rows (1..4). Reported as observed, not as user_version."
+ ],
+ "corrections": [
+  {
+   "relayed_claim": "U8.18: the remaining guard red is the sibling-transient V5.26.json and will clear by itself.",
+   "actually": "The remaining red is V6E.json ['next_unit_hint'] - a file whose sha256 d65fa537... is identical to the frozen manifest - because the frozen verifier baseline records only ['blocker'] for it. V5.26.json now carries all 6 verifier keys and passes.",
+   "evidence": "pytest 1 failed/7 passed; audit() real-dir gaps; state/logs/U8.18/verifier_shape_baseline.json",
+   "unit": "U8.18"
+  },
+  {
+   "relayed_claim": "U8.18's frozen verifier baseline records the measured verifier-shape gaps.",
+   "actually": "It drops one measured key: measurement.txt says V6E.json ['blocker','next_unit_hint'], both the baseline file and the inline VERIFIER_BASELINE_GAPS say ['blocker']. A test-count claim of green therefore cannot hold.",
+   "evidence": "state/logs/U8.18/measurement.txt vs verifier_shape_baseline.json vs guard line 77",
+   "unit": "U8.18"
+  },
+  {
+   "relayed_claim": "U8.18 card: 'Status: done'.",
+   "actually": "orchestration/handoffs/U8.18.json (sha ec73c85e..., mtime 09:23:41) reads {\"unit\":\"U8.18\",\"status\":\"partial\",\"artifacts\":[],\"evidence\":{},\"blocker\":\"\",...} - no evidence, no before/after sha, status partial. The card also says 'sha 019da8ee... -> see handoff', but the handoff does not contain it.",
+   "evidence": "cat orchestration/handoffs/U8.18.json",
+   "unit": "U8.18"
+  }
+ ],
+ "tool_calls": 15,
+ "bound": 20,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\\n?? .lane-j-scratch/",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "store": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows_identical": true,
+   "used_immutable": false,
+   "sidecars_observed": 0,
+   "sidecars_created_by_me": 0
+  },
+  "stray_processes": 0,
+  "notes": "The live store holds only state/state.sqlite (no -wal/-shm), so sidecars_observed=0. I queried a copy at state/verify/V8.21/storecopy/ (my write path); the live store sha equals U8.18's recorded sha, so it is unchanged across my whole run. rows_identical=true in that sense. Disclosure: my file-name sweep printed .worktrees/ PATHS as names (duval-u55-pinned material copies) but no .worktrees/ content was read. Duval porcelain lines are untracked-only and match U8.18's own recorded lines."
+ },
+ "blocker": "",
+ "next_unit_hint": "A NEW unit (not a fix in place) must add 'next_unit_hint' to VERIFIER_BASELINE_GAPS['V6E.json'] in tests/test_orchestration_handoffs.py AND to state/logs/U8.18/verifier_shape_baseline.json['gaps']['V6E.json'], then re-run the guard to green; the under-declaration in U8.18's shipped baseline is the sole cause of the current red. Also worth pinning: the guard should FAIL if a new handoff's basename is not unique per unit id, and AGENTS.md's '>=90%' threshold is stated only as prose, never asserted.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V8.21.md",
+  "orchestration/handoffs/V8.21.json",
+  "state/logs/V8.21*",
+  "state/verify/V8.21/**"
+ ]
+}

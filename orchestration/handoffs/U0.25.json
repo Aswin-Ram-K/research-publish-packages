@@ -1,0 +1,184 @@
+{
+ "unit": "U0.25",
+ "status": "done",
+ "supersedes": "U0.24",
+ "artifacts": [
+  "orchestration/handoffs/U0.25.json",
+  "orchestration/units/U0.25.md",
+  "src/resextract/run.py",
+  "tests/test_run.py",
+  "tests/test_doctor.py",
+  "state/logs/U0.25-repro.txt",
+  "state/logs/U0.25-searxng-samples.txt",
+  "state/logs/U0.25-redgreen.txt",
+  "state/logs/U0.25-run-pre.py",
+  "state/logs/U0.25-run-post.py"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "occamy_probe_time_s": 0.002041,
+  "occamy_probe_note": "curl -sS -m5 http://192.168.2.168:8012/v1/models -> rc=7 connection refused (000) at 2026-10-08T09:00:30-05:00; zero LLM calls made",
+  "tests": {
+   "doctor_before": 27,
+   "doctor_after": 27,
+   "run_before": 50,
+   "run_after": 51,
+   "assert_lines_deleted": 0,
+   "note": "combined 78 passed after = 27 + 51; test_doctor assert lines 120 -> 120 (untouched); test_run 230 -> 236 (6 added, 0 deleted)"
+  },
+  "commands": [
+   "curl -m5 -w '%{http_code} %{time_total}' http://192.168.2.168:8012/v1/models",
+   "sha256sum src/resextract/{doctor,run}.py tests/test_{doctor,run}.py",
+   ".venv/bin/python -m pytest tests/test_doctor.py tests/test_run.py -q",
+   "8x curl -m9 -o /dev/null -w '%{time_total}' 'http://127.0.0.1:8080/search?q=probe&format=json'",
+   "in-process accept-and-never-reply stub -> doctor.classify_timeout -> run_doctor",
+   "red: cp state/logs/U0.25-run-pre.py src/resextract/run.py; pytest -k surfaced_as_slow -> 1 failed (KeyError 'core_slow')",
+   "green: cp state/logs/U0.25-run-post.py src/resextract/run.py; pytest -k surfaced_as_slow -> 1 passed",
+   "sqlite3 read-only open of state/state.sqlite (no immutable=1): schema_version 4, 13 tables / 35 rows",
+   "git -C /home/zer0null/Duval --no-optional-locks rev-parse HEAD / status --porcelain"
+  ]
+ },
+ "predecessor": {
+  "artifacts_found": [],
+  "partial_handoff_claimed": "nothing - orchestration/handoffs/U0.24.json, orchestration/units/U0.24.md, state/logs/U0.24* and state/verify/U0.24/** are ALL ABSENT (U0.24 died with no residue except the four files it may have touched)",
+  "shas": {
+   "doctor": {
+    "expected": "3993ce72",
+    "actual": "3993ce723e5831b1685c3b6bb4de72c7db974103fc5135cf084cadd3580854c4",
+    "match": true
+   },
+   "run": {
+    "expected": "78ae6101",
+    "actual": "78ae610127bb1de492782be23547d494086dad82c6d1d8286fdada5d28f94165",
+    "match": true
+   },
+   "test_doctor": {
+    "expected": "no release sha; last verified 27 passed",
+    "actual": "523e08c0ac7145bad2c61d95dfdb1b0de7b51dd38d78836163d1d0a8f4c97514",
+    "match": null
+   },
+   "test_run": {
+    "expected": "no release sha; last verified 50 passed",
+    "actual": "1a255ccb74b86da481fe8a14d0e217b60cabbc1815043c7efc94e1119381d3f5",
+    "match": null
+   }
+  },
+  "revert_markers": [
+   "run.py:518 bare return",
+   "run.py:529 bare return",
+   "run.py:666 bare return"
+  ],
+  "revert_markers_verdict": "all three inspected in context: benign early exits (dry-run / non-existent db / WAL-checkpoint success), not revert tell-tales; no 'if False', no 'assert False', no commented-out guard, no unexplained bare return",
+  "tests_green_at_start": true,
+  "action_taken": "none"
+ },
+ "reproduced": {
+  "report_ok": true,
+  "exit_code": 0,
+  "core_slow": [
+   "SearXNG"
+  ],
+  "caller_concludes": "healthy - a consumer reading only doctor's exit code (or report['ok']) cannot tell CORE SLOW from all-green; the leg dict is {state:'slow', ok:false} but ok/exit are computed from core_down only",
+  "human_line": "core 0/1 green; optional 0/0 green (none down; slow: SearXNG) -> doctor: CORE SLOW: SearXNG (exit 0)"
+ },
+ "spurious_block_risk": {
+  "samples_s": [
+   2.379566,
+   1.445027,
+   0.969807,
+   1.095196,
+   1.653652,
+   1.169253,
+   1.163271,
+   1.009982
+  ],
+  "slow_fraction": 0.0,
+  "min_s": 0.969807,
+  "median_s": 1.2692275,
+  "max_s": 2.379566,
+  "would_block_live_working_service": "rarely",
+  "note": "8/8 live SearXNG samples were HTTP 200 and under the 5.0 s HTTP_TIMEOUT -> slow_fraction 0.0 in this sweep; combined with verifier V0.21/V0.23's recorded 8.232 s max, 1 of 16 recorded live samples (6.25%) would have been classified slow. Even then SearXNG is needed by no stage (LEG_STAGE_NEEDS['searxng'] == frozenset()), so a slow SearXNG degrades a run, it never hard-blocks one."
+ },
+ "decision": {
+  "chosen": "combination",
+  "why": "Surface the state everywhere a consumer looks, and block only where the run would actually invoke the leg: (1) doctor keeps its documented contract - ok/exit change only for a leg whose state is DOWN, while core_slow/optional_slow/degraded and the 'CORE SLOW:' table row already expose reachable-but-over-bound; (2) run.py's preflight now carries a first-class core_slow list and names a slow leg SLOW instead of filing it under degradable_core_down as DOWN (the old wording literally said 'core leg SearXNG is DOWN' about a reachable service); (3) a slow leg that a selected stage would invoke keeps the pre-existing hard gate (exit 2) - unchanged - because that stage really would call it; (4) the doctor's own ok/exit is deliberately NOT changed. Measured live latency is 0.97-2.38 s in this sweep with 8.232 s recorded earlier: making a *working* dependency fail the doctor's exit would manufacture the mirror-image defect U0.22 was fixing (refusing to run when nothing is wrong).",
+  "cost": "An exit-code-only consumer of `doctor` still reads 0 for a slow core leg and must read core_slow/degraded to see it; a consumer that only checks `ok` cannot distinguish 'all core legs UP' from 'a core leg is reachable but over-bound'. Accepted and documented (doctor --json already emits both fields, the human table prints CORE SLOW, and the run-level exit code is NOT fooled: a slow leg that no stage needs yields exit 1 = degraded, and one a stage needs yields exit 2). The alternative (c) would break tests/test_cli.py:520-523, which is outside my write paths.",
+  "exit_code_contract_preserved": true,
+  "preserved_pin": "tests/test_cli.py:520-523 -> \"assert code == report[\\\"exit_code\\\"]\" / \"expected = 0 if not report[\\\"core_down\\\"] else cli.EXIT_CORE_DOWN\" / \"assert code == expected\" / \"assert report[\\\"ok\\\"] == (code == 0)\"",
+  "changes_ok_semantics": false,
+  "did_not_edit": {
+   "tests/test_cli.py": true,
+   "tests/test_dashboard.py": true,
+   "dashboard/**": true,
+   "docket/**,dockets/**,claims/**,store.py,assess/**,state/state.sqlite,docs/**,config/**,pyproject.toml": true
+  },
+  "doctor_ok_change_handed_up": null
+ },
+ "implemented": {
+  "files": [
+   "src/resextract/run.py",
+   "tests/test_run.py",
+   "tests/test_doctor.py"
+  ],
+  "signal_observable_where": "run.py Preflight.core_slow -> report.preflight['core_slow'] (and Preflight.as_dict), plus an explicit degradation line 'core leg <name> is SLOW (reachable but slow, not down)' and the endpoint variant 'core leg Occamy (model endpoint) is SLOW ...'; doctor.py already exposes report['core_slow']/['degraded'] and the table row 'CORE SLOW:' unchanged. doctor.py is byte-identical (3993ce72...) - nothing to change there.",
+  "test_reads_artefact": true,
+  "note": "the new test calls the real run_pipeline and asserts on report.preflight['core_slow'], report.preflight['degradable_core_down'], report.degradations and report.exit_code - it does not assert on a constant"
+ },
+ "red_green": {
+  "a": "run.py 78ae6101... -> 7f0b6a659102b9d56ec25f0d12e856324387efe72f0eceb1858ffd29346ccd35; full __pycache__ purge; restoring 78ae6101 made tests/test_run.py::test_slow_core_leg_is_surfaced_as_slow_not_reported_down FAIL (KeyError 'core_slow', 1 failed/50 deselected); restoring 7f0b6a65 passed (1 passed) and the file's sha was bit-identical to the saved post sha"
+ },
+ "anti_mask_preserved": {
+  "refused_still_down": true,
+  "failed_cheap_check_still_down": true,
+  "standard_verdict_unchanged": true,
+  "how_proven": "the untouched 27-test doctor suite (refused-connection -> DOWN, failed cheap check -> DOWN) and the run suite's standard-verdict tests are green after the change: 78 passed = 27 doctor + 51 run. The DOWN branch is textually untouched (state=='down' falls to the same elif needed/else arms) and slow is routed to a new branch before it."
+ },
+ "item2_prose": {
+  "mentions_fixed": 4,
+  "grep_literal_absent": true,
+  "assertions_untouched": true,
+  "detail": "tests/test_doctor.py prose mentions at (by content) the module docstring, the samples comment block and the CITATION REPAIR docstring now say 'two U0.19 latency constants' with no digits; grep -n '1\\.747|3\\.50\\b' tests/test_doctor.py -> no matches; assert lines 120 -> 120 (the two sample assertions at ~:628/:636 untouched); sha 523e08c0... -> 5ef954243e2baa85bf603e60d7aac757c98ea54d5f68374d6ce6ef323034d6e5"
+ },
+ "store_untouched": {
+  "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+  "version": 4,
+  "rows_identical": true,
+  "rows": "13 tables / 35 rows total via a plain 'file:...?mode=ro' open",
+  "used_immutable": false,
+  "sidecars_left": 0,
+  "detail": "state/state.sqlite sha256 unchanged and equal to the release sha; opened only with uri mode=ro (no immutable=1, no nolock=1). Honest disclosure: the first mode=ro open of this WAL store CREATED an empty state/state.sqlite-wal (0 bytes) + state/state.sqlite-shm; with no live holder (0 entries under /proc/*/fd) and a 0-byte WAL (no committed data pending) I removed both, restoring the pre-session file set - 'ls state/state.sqlite*' now lists the base file only. Base sha re-checked after removal: 40e8aa0c... unchanged."
+ },
+ "duval_untouched": {
+  "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "note": "2 foreign-actor untracked entries only; no tracked modification, no index write (git --no-optional-locks); .worktrees never read; the store sidecar episode is disclosed above"
+ },
+ "residual": "A consumer that reads only the doctor's exit code (or only report['ok']) still cannot distinguish 'every core leg UP' from 'a core leg is reachable but over its bound' - doctor exit 0 / ok=True is unchanged for CORE SLOW. That is accepted: the run-level exit code is not fooled (slow+unneeded => exit 1 degraded; slow+needed => exit 2), changing it would break tests/test_cli.py:520-523 (another unit's file), and the measurements (0.97-2.38 s now, 8.232 s max previously on a live 8/8-working service) show that failing on slow would gate a working service. Second residual: a slow leg a selected stage *does* need is still a hard gate (exit 2) - intentional (that stage would really invoke it) and unchanged by U0.25.",
+ "record_gap": {
+  "closed": [
+   "run.py no longer files a reachable-but-slow core leg under degradable_core_down / says 'is DOWN' about it - it now reports core_slow and says SLOW",
+   "a structural, testable signal exists at report.preflight['core_slow'] for an exit-code consumer of the run report",
+   "the doctor's slow classification and the run preflight now agree on the same state vocabulary (up/slow/down)",
+   "the two unverifiable latency literals are gone from test_doctor.py prose"
+  ],
+  "still_open": [
+   "doctor's own ok/exit still treats slow as healthy - deliberately unchanged because tests/test_cli.py:520-523 is not in this unit's write paths; if a future unit wants option (c) it must edit that pin and hand the change up",
+   "no consumer-facing schema/doc field marks 'exit 0 means no core leg DOWN, not all-green' beyond the docstrings and core_slow/degraded fields",
+   "the 8.232 s observation is V0.21/V0.23's, not re-measured here (my sweep's max was 2.38 s)"
+  ]
+ },
+ "tool_calls": 23,
+ "bound": 22,
+ "blocker": "",
+ "next_unit_hint": "V-unit: re-run tests/test_doctor.py + tests/test_run.py (expect 27 + 51), reproduce the red by restoring state/logs/U0.25-run-pre.py (sha 78ae6101...), and confirm report.preflight['core_slow'] on a hand-built slow-leg doctor report. If the doctor's own exit semantics are ever to change (option c), edit tests/test_cli.py:520-523 in the unit that owns it - it pins code == 0 iff not core_down AND report['ok'] == (code == 0).",
+ "write_paths": [
+  "src/resextract/doctor.py",
+  "src/resextract/run.py",
+  "tests/test_doctor.py",
+  "tests/test_run.py",
+  "state/logs/U0.25*",
+  "orchestration/units/U0.25.md",
+  "orchestration/handoffs/U0.25.json"
+ ],
+ "budget_note": "23 calls vs a <=22 target: the extra call is the side-effect cleanup/verification of the empty WAL/SHM pair a mode=ro open of state/state.sqlite created, discovered in the final evidence check. All other work (probe, inventory, baselines, repro, latency sweep, implementation, prose scrub, red-green, evidence, handoff) fit the plan."
+}

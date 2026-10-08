@@ -1,0 +1,42 @@
+{
+  "unit": "U3.2",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/web/fetch.py",
+    "tests/test_web_fetch.py",
+    "state/webcache/<sha256(url)>.json|.txt (5 live entries)",
+    "state/logs/U3.2-live.log",
+    "state/logs/U3.2-redgreen.log",
+    "orchestration/units/U3.2.md"
+  ],
+  "evidence": {
+    "tests": "52 passed (tests/test_web_fetch.py); workspace-wide 183 passed, 1 skipped",
+    "red_green": "two guards, both pasted: (1) SSRF — replacing the _ssrf_blocked(...) call with `if False:` gives '18 failed, 1 passed, 33 deselected'; e.g. `assert 'empty_response' == 'blocked_url'` for file:///etc/passwd. (2) refresh change detection — reverting refresh to `result.changed = False` gives '3 failed, 1 passed, 48 deselected'; e.g. `assert False is True` in test_refresh_detects_changed_content_and_reports_both_digests. Both failures are pasted verbatim into the relevant test docstrings.",
+    "live": [
+      {"url": "https://arxiv.org/abs/2505.22954", "title": "[2505.22954] Darwin Godel Machine: Open-Ended Evolution of Self-Improving Agents", "chars": 9408, "sha256_8": "0dde6e26", "page_date": "2025-05-29", "kind": "crawl", "wall_s": 0.66},
+      {"url": "https://en.wikipedia.org/wiki/Retrieval-augmented_generation", "title": "Retrieval-augmented generation - Wikipedia", "chars": 12000, "sha256_8": "d7401954", "page_date": null, "kind": "crawl", "wall_s": 0.76},
+      {"url": "https://raw.githubusercontent.com/karpathy/nanoGPT/master/README.md", "title": "", "chars": 12000, "sha256_8": "baf31106", "page_date": null, "kind": "crawl", "wall_s": 0.58},
+      {"url": "https://raw.githubusercontent.com/openai/gpt-2/main/README.md", "title": "", "chars": 25, "sha256_8": "e9faa3fe", "page_date": null, "kind": "crawl", "wall_s": 0.56}
+    ],
+    "refresh_same": "changed=false",
+    "refresh_same_detail": {"url": "https://arxiv.org/abs/2505.22954", "note": "unchanged", "old_sha256": "0dde6e267fe7f42d32b3b8d262c14f3dfbacb1f660c76959c43eb077584cf087", "new_sha256": "0dde6e267fe7f42d32b3b8d262c14f3dfbacb1f660c76959c43eb077584cf087", "wall_s": 0.63},
+    "nfc_note": "text is unicodedata.normalize('NFC', ...) before sha256 and before storage, so NFD input hashes identically to its NFC form; asserted directly (content_sha256(NFD)==content_sha256(NFC)) and end-to-end (stored meta.text == NFC form, digest == sha256 of NFC bytes). Non-ASCII corpora would otherwise hash differently across runs and refresh would report false change.",
+    "ssrf_blocked": ["file://", "ftp://", "127.0.0.1", "169.254.169.254", "192.168.2.1", "10.0.0.5", "172.16.4.4", "::1", "localhost", "DNS-name->127.0.0.1", "DNS-name->::1", "DNS-name->169.254.169.254", "::ffff:127.0.0.1"],
+    "allow_private": "allow_private=True permits http://127.0.0.1:8891/health (1 request, captured in the mock) but still refuses file:///etc/passwd; the guard also runs on cache hits (test_ssrf_guard_is_enforced_on_a_cached_url_too).",
+    "fetch_budget": "5 real fetches used of 6 (4 live pages + 1 refresh of the arXiv page)",
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_web_fetch.py -q",
+      ".venv/bin/python -m pytest tests/ -q",
+      ".venv/bin/python -m pytest tests/test_web_fetch.py -q -k 'ssrf or allow_private or blocked'   # after reverting the guard",
+      ".venv/bin/python -m pytest tests/test_web_fetch.py -q -k refresh                            # after reverting change detection",
+      ".venv/bin/python <live script> | tee state/logs/U3.2-live.log  # 4 pages + refresh(), Fetcher(cache_dir='state/webcache')",
+      "sha256sum src/resextract/web/fetch.py tests/test_web_fetch.py"
+    ],
+    "checksums": {
+      "src/resextract/web/fetch.py": "8729ec5349a0f78a6ed3a83487763ac66c73e1211900d490a1f453973199c501",
+      "tests/test_web_fetch.py": "9b131e4aab98950213688d5d66cb89920b9311e69a122dbfeb4e7654520782e0"
+    }
+  },
+  "blocker": "",
+  "next_unit_hint": "Verifier (not the author): re-run `.venv/bin/python -m pytest tests/test_web_fetch.py -q` (expect 52 passed) and independently reproduce both red→green reverts (guard: `if _ssrf_blocked(url, self.allow_private):` -> `if False:`; change detection: replace refresh's old/new comparison with `result.changed = False`). Then confirm `refresh()` on a cached URL still reports changed=false with identical digests, and that `state/webcache` holds <sha256(url)>.json/.txt pairs. Two things a later unit must know: (1) importing resextract.web.fetch executes resextract/web/__init__.py, which U3.1 owns and which imports .search — a broken search.py breaks fetch imports even though fetch.py never imports it; (2) an anomaly worth a second look — the bridge returned only 25 chars for raw.githubusercontent.com/openai/gpt-2/main/README.md while the nanoGPT README returned 12000, so a short crawl payload is accepted as success (only empty/whitespace triggers the scrape fallback); a downstream unit may want a min-length retry or a scrape cross-check for raw-file URLs. PDFs are recorded as kind='pdf' plus error='pdf_not_supported' (never faked) until Docling is available; swap in a PDF extractor there."
+}

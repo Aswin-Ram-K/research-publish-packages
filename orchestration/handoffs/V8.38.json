@@ -1,0 +1,182 @@
+{
+  "unit": "V8.38",
+  "overall": "PASS",
+  "checks": [
+    {"id": "C1", "name": "the intended invariant", "verdict": "PASS",
+     "observed": "test_would_be_downgrade_is_recorded_not_silent (:331) checks a bare re-assembly healing a U5.8 provenance downgrade both records it (one healed summary line :348-358) and repairs it; the final assertion intended the whole material[] block post-heal == the pinned PRE-image. The load-bearing evidence (c) is real and correctly ordered: sibling test_bare_reassembly_preserves_git_object_provenance has :269 `before = read_manifest(dock / \"MANIFEST.json\")` -> :272 `result = _bare(dock, src)` -> :282 `assert _block(after) == _block(before)`, with :281 '# the whole block, not just the rows we happened to look at'. (a) _block docstring :259-260 'The whole material[] block, serialised - not just the fields we assert.' and (b) the :357 comment then :358-359 row check then :360 whole-block check are quoted correctly.",
+     "evidence": "sed/awk of tests/test_docket_reassembly.py (sha dc09ea00be921ef1c17625479d9a6c7d85893a0f199ed9690d2b56d00b7b2966, mtime 2026-10-08 09:56:08.324263170 -0500); real lines 269/272/281/282 and 331/341/343/345/348-358/360-366"},
+    {"id": "C2", "name": "the repair", "verdict": "PASS",
+     "observed": "before: :360-362 (pre-repair) `assert _block(read_manifest(dock / \"MANIFEST.json\")) == _block(read_manifest(dock / \"MANIFEST.json\"))` - both operands reads of the same post-state file. after: :342-343 add the comment + `before = read_manifest(dock / \"MANIFEST.json\")` immediately after _pin (:341) and BEFORE `:345 result = _bare(dock, src)`; the assertion is now :362-366 `assert _block(read_manifest(dock / \"MANIFEST.json\")) == _block(before), (\"the repaired manifest's material block differs from the pinned pre-image\")`. Capture precedes the operation by line order (343 < 345).",
+     "real_lines": ["343:     before = read_manifest(dock / \"MANIFEST.json\")", "345:     result = _bare(dock, src)", "364:     assert _block(read_manifest(dock / \"MANIFEST.json\")) == _block(before), (", "365:         \"the repaired manifest's material block differs from the pinned pre-image\"", "366:     )"],
+     "changes_that_fail_it": ["any change to any field of any material[] row (resolved_from, blob_sha, unpinned, sha256, src, dest, bytes, excerpt, excerpt_reason, linked, note)", "a material row added or removed", "material rows reordered (json.dumps preserves list order; it is json.dumps([row.model_dump() ...], sort_keys=True))", "a U5.8 downgrade (resolved_from git_object->working_tree, blob_sha->None)", "an unpinned flip", "a sha256 or src change"],
+     "changes_that_would_NOT_fail_it": ["any non-material manifest field: schema, status, lane, target, freshness, claims, open_questions, rework_open, web_sources, generated_at, generated_by", "any rendered file: HISTORY.md, RESULTS.md, PRIOR_ART.md", "it cannot distinguish 'preserved' from 'the re-assembly never rewrote MANIFEST.json' (closed by the same test's result.preserved / HISTORY.md assertions)", "a read_manifest-level normalisation that alters both reads equally"],
+     "capture_precedes_operation": true},
+    {"id": "C3", "name": "the demonstration, re-run", "verdict": "PASS",
+     "observed": "All three re-runs matched U8.32's recorded output exactly, byte for byte on the demo. No deviation.",
+     "evidence": "full purge to 0 __pycache__ (excluding .venv) then (1) `.venv/bin/python state/verify/U8.32/demo_predicate.py` -> identical to state/verify/U8.32/demo_output.txt: 'GOOD byte-identical to PRE (_smoke): True' / 'OLD   form (:360 as written)  good=True  lie=True' / 'FIXED form (vs pre-image)     good=True  lie=False' / 'DEMO_OK: old=True/True (cannot fail); fixed=True/False (can)'; (2) fixed-form throwaway + U5.8 downgrade injected on the docket's own f.md row -> 'E AssertionError: the repaired manifest's material block differs from the pinned pre-image' / 'FAILED state/verify/U8.32/test_red_fixed_form_downgrade.py::test_would_be_downgrade_is_recorded_not_silent' / '1 failed, 69 deselected in 0.14s'; (3) same injection, OLD form -> '1 passed, 69 deselected in 0.12s'; (4) real file, no injection -> '70 passed in 0.19s', repeated later '70 passed in 0.17s'"},
+    {"id": "C4", "name": "how much of a lie is m_lie", "verdict": "PASS with correction",
+     "observed": "m_lie sha 1089ddc188015480615c0d7609c7263214c8a62acbd3db034e3d44af87d9eaa7 (mtime 2026-10-08 09:49:32.084689577 -0500) and _smoke sha 41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6 (mtime 2026-10-08 05:49:09.150312393 -0500) confirmed. Structured diff: all 12 top-level keys present, EVERY non-material top-level value equal, row count 6 = 6, exactly ONE differing row (row 0) differing in TWO fields: blob_sha None -> '0000000000000000000000000000000000000000000000000000000000000000' and resolved_from None -> 'corrupted'. dest is IDENTICAL in every row, so U8.32's 'with different dests' is inaccurate; the corruption is provenance-shaped. The lie is MULTI-FIELD (the weaker demonstration form), but this does NOT weaken the conclusion: the old form's blindness is structural (both operands read the same bytes), independent of how many fields differ. No single-field case was run - only derivable by construction.",
+     "evidence": "state/verify/V8.38/lie_diff.py; m_good sha == _smoke sha (byte-identical to PRE, verified); parsed m_good == parsed _smoke True"},
+    {"id": "C5", "name": "suite-wide sweep, own detector", "verdict": "PASS",
+     "observed": "Own detector over ALL tests/**/*.py: 56 files, 3820 ast.Assert nodes. POSITIVE CONTROL: it flags state/verify/U8.32/test_red_old_form_downgrade.py:370 as identical-operand ('_block(read_manifest(dock / \\'MANIFEST.json\\')) Eq _block(read_manifest(dock / \\'MANIFEST.json\\'))'), so a 0 is meaningful. Real file -> 0 hits in ALL classes. Suite-wide -> 0 hits in every structural class (truthy-constant, identical-operand Compare, set/frozenset-of-itself, x in (x,...) self-membership); 20 hits, ALL isinstance(...)-sole. Those 20 are NOT the same defect class: each is genuinely falsifiable (e.g. tests/test_dashboard.py:130 `assert isinstance(body, dict)` fails if the body is a list). 2 of the 20 are in watch-list files - tests/test_dashboard.py:130 (aeefc2fed980efcb..., mtime 09:36:59.196119251) and tests/test_cli.py:512 (4395af6c582b3f0a..., mtime 08:56:00.168943132). ZERO hits in tests/test_run.py (03fe85bfd3bf0efd..., 09:53:38), tests/test_docket_provenance.py (8eb9a623a01f2737..., 09:55:12) and tests/test_orchestration_handoffs.py (7d9c97ee95014c74..., 10:00:29 - edited DURING my sweep; the count was stable at 20 across two runs). Suite-wide structural count 0 => U8.32's 'no other test file needs this treatment' is SUPPORTED, not merely asserted.",
+     "evidence": "state/verify/V8.38/sweep_detector.py + sweep_result.json; recipe printed by the tool"},
+    {"id": "C6", "name": "counts and the diff", "verdict": "PASS",
+     "observed": "70 passed / 70 collected / 39 def test_ / 0 deleted all confirmed (grep -c '^def test_' = 39; AST FunctionDef test_* = 39; reconstructed PRE file = 39 => 0 deleted). sha dc09ea00be921ef1c17625479d9a6c7d85893a0f199ed9690d2b56d00b7b2966 identical in two measurements. The file is NOT git-tracked: `git ls-files --error-unmatch` fails and `git status --porcelain` shows '?? tests/test_docket_reassembly.py' (361 untracked entries). THEREFORE U8.32's git-diff claim is unsupportable - `git diff -U1 -- tests/test_docket_reassembly.py` emits 0 bytes. I established the diff by RECONSTRUCTION: dropping :342-343 and :362-366 and restoring the old 3-line assertion from the real file yields sha256 492872341ea37a8e37d8e22782847b506e1bcc12cf951fcc2e40aa19f82d3c47, an EXACT match to the claimed pre-repair sha, and `diff -U1` is exactly two hunks - the added capture (2 lines) and the replaced assertion (3 -> 5 lines). My assert recipe for this file: ast.Assert 218, line-leading 'assert' 222, lines containing 'assert ' 234. The card's divergent numbers (279 ast.Assert, 281 line-leading, 294 lines containing 'assert') all reproduce exactly for tests/test_dashboard.py, so the recipe-dependence is attributed to that file.",
+     "evidence": "state/verify/V8.38/reconstruct_pre.py + reconstructed_pre_repair.py; diff -U1 output; sweep_detector.py"},
+    {"id": "C7", "name": "red->green", "verdict": "PASS",
+     "observed": "The C3 old-vs-new pair IS the red->green: on the same injected U5.8 downgrade the OLD form passes (1 passed, 69 deselected) while the NEW form fails (1 failed, 69 deselected). I DECLINED a manufactured in-place revert of tests/test_docket_reassembly.py: the throwaway pair already exercises the real test body and the pre-repair sha is independently reproduced from the repaired file, so an in-place revert would risk the workspace for zero added evidence.",
+     "evidence": "C3 runs; state/verify/V8.38/reconstruct_pre.py"},
+    {"id": "C8", "name": "honesty audit + containment", "verdict": "PASS with 2 corrections",
+     "observed": "Overrun: U8.32 reports 16 work / 17 total against bound 16 => it is AT the bound, NOT under it as 'under bound' would imply, and the count is self-reported (another unit's ledger cannot be audited independently). Two corrections: (1) the git-diff claim (untracked file, 0-byte diff; substance verified by reconstruction); (2) 'different dests' (dests identical; two provenance fields on one row). Not reproduced: the card's 294/296-lines-containing-'assert' and 184/195-by-grep -c 'assert ' figures; 279/281/294 attribute cleanly to tests/test_dashboard.py, the remaining two I could not attribute. Unverified: the store's version 4 - I never opened state/state.sqlite, so v4 rests on the card and prior handoffs. Containment: Duval HEAD 6c60da5aa9240c0dcc2ff97b46f2a2cf37774951, porcelain 2 pre-existing untracked lines (?? .ci-trunk.txt, ?? .lane-j-scratch/), unchanged; 0 .worktrees/ reads; 0 stray pytest/occamy/uvicorn processes; store sha 40e8aa0c... unchanged and NO command of mine opened it (no sqlite3, no immutable=1, no connection - only sha256sum/stat/ls byte+metadata reads; the verified test file and tests/conftest.py contain no sqlite reference); sidecars observed 2 / created by me 0 (-shm mtime 09:54:49.382667509, -wal 0 B mtime 09:29:14.666991008, both unchanged across my runs).",
+     "evidence": "/home/zer0null/Duval git rev-parse/status; sha256sum state/state.sqlite; ps -eo args | grep pytest/occamy/uvicorn -> 0"},
+    {"id": "C9", "name": "docket read-only invariants", "verdict": "PASS",
+     "observed": "dockets/duval/duval-replay-material/MANIFEST.json sha ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4, MANIFEST.json mtime 2026-10-08 09:28:51.302382844 -0500 (directory mtime 09:28:51.303536743 -0500) - NO byte-identity claim asserted. dockets/duval/duval-u55-pinned/MANIFEST.json sha 445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07, file mtime 08:36:35.984233876 -0500. dockets/_smoke/MANIFEST.json sha 41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6, file mtime 2026-10-08 05:49:09.150312393 -0500 (dir 05:49:09.151055969) - measured twice, identical. All three match U8.32's claimed values. NOTE the real paths are dockets/duval/<slug>/MANIFEST.json and dockets/_smoke/MANIFEST.json, not dockets/<slug>/MANIFEST.json.",
+     "evidence": "sha256sum + stat on all three MANIFEST.json files"}
+  ],
+  "blocker": "",
+  "next_unit_hint": "U8.32's substantive claim is VERIFIED: the diagnosis is sound (the sibling captures `before` before the operation; :360 had no operand), the repair is real and falsifiable, the demo reproduces byte-exactly (demo / 1 failed / 1 passed / 70 passed), and the structural cannot-fail class is 0 suite-wide (my own detector, positive-controlled). Treat as PASS. Carry two recorded corrections forward for the ledger: (1) '`git diff -U1` shows only ...' is unsupportable - tests/test_docket_reassembly.py is UNTRACKED and git diff on it is empty; the diff was proved instead by reconstructing the pre-repair file to the exact claimed sha 49287234...; (2) m_lie is NOT a 'different dests' copy - it differs from _smoke in one row, two provenance fields (blob_sha None->64 zeros, resolved_from None->'corrupted'), i.e. a multi-field lie (weaker demo form) whose conclusion still holds because the old form's blindness is structural. Also: 16/16 is AT bound, not under. Residual, honestly bounded, on the repair: the new assertion sees material[] only (not schema/status/lane/target/freshness/claims/open_questions/rework_open/web_sources/rendered files) and cannot distinguish 'preserved' from 'MANIFEST.json never rewritten'. Consider, in a future unit, upgrading U8.32's hand_ups lesson with these two corrections, and note that no single-field lie case was ever run.",
+  "write_paths": [
+    "orchestration/VERDICTS.md",
+    "orchestration/units/V8.38.md",
+    "orchestration/handoffs/V8.38.json",
+    "state/logs/V8.38*",
+    "state/verify/V8.38/**"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "diagnosis": {
+      "intended_invariant": "The whole material[] block of the healed manifest must equal the pinned PRE-image block - i.e. the repair is total, not just on the one row (f.md) the test indexes.",
+      "sibling_captures_before_operation": true,
+      "sibling_lines": ["269:     before = read_manifest(dock / \"MANIFEST.json\")", "272:     result = _bare(dock, src)  # bare: nothing provenance-shaped is passed in", "281:     # the whole block, not just the rows we happened to look at", "282:     assert _block(after) == _block(before)"],
+      "line_360_had_no_operand": true,
+      "strongest_available_invariant": true,
+      "weakened_by_preimage": "no - the pre-image is an independent STATE (pre-op vs post-op) and is strictly stronger than the field-level row check; the residual gaps are that both sides use the same reader read_manifest, and that the compared value is material[] only. A golden literal block would catch a reader that normalises both sides equally, but that is marginal, not categorical.",
+      "evidence_a": "_block docstring :259-260 'The whole material[] block, serialised - not just the fields we assert.'",
+      "evidence_b": ":357 '# recorded *and* repaired (U5.8's field-level guarantee, unchanged)' then :358-359 field-level row check then :360 whole-block check",
+      "evidence_c": "sibling :269 before / :272 operation / :281-282 whole-block assert - before is captured BEFORE the operation (269 < 272 < 282)"
+    },
+    "repair": {
+      "before": "assert _block(read_manifest(dock / \"MANIFEST.json\")) == _block(\n        read_manifest(dock / \"MANIFEST.json\")\n    )   (:360-362 pre-repair)",
+      "after": "assert _block(read_manifest(dock / \"MANIFEST.json\")) == _block(before), (\n        \"the repaired manifest's material block differs from the pinned pre-image\"\n    )   (:362-366, plus the added capture at :342-343)",
+      "capture_precedes_operation": true,
+      "real_lines": ["341:     _pin(dock, {\"f.md\": PIN_F})", "342:     # pre-image of the material block, captured BEFORE the re-assembly runs", "343:     before = read_manifest(dock / \"MANIFEST.json\")", "345:     result = _bare(dock, src)", "364:     assert _block(read_manifest(dock / \"MANIFEST.json\")) == _block(before), ("],
+      "changes_that_fail_it": ["any material-row field change (resolved_from, blob_sha, unpinned, sha256, src, dest, bytes, excerpt, excerpt_reason, linked, note)", "a row added or removed", "rows reordered", "U5.8 downgrade (resolved_from -> working_tree, blob_sha -> None)", "an unpinned flip", "a sha256/src change"],
+      "changes_that_would_NOT_fail_it": ["any non-material manifest field (schema, status, lane, target, freshness, claims, open_questions, rework_open, web_sources, generated_at, generated_by)", "any rendered file (HISTORY.md, RESULTS.md, PRIOR_ART.md)", "'preserved' vs 'the re-assembly never rewrote MANIFEST.json' (closed by the test's result.preserved / HISTORY.md assertions)", "a read_manifest normalisation applied equally to both reads"],
+      "net_line_change": "+4 (capture comment+line; assertion 3 -> 5 lines)"
+    },
+    "demonstration": {
+      "demo_output": "OLD good=True lie=True / FIXED good=True lie=False / DEMO_OK",
+      "demo_output_verbatim": "read_manifest from: resextract.docket.manifest | _block from: t_reasm\nPRE=_smoke  41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6\nGOOD m_good 41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6\nLIE  m_lie  1089ddc188015480615c0d7609c7263214c8a62acbd3db034e3d44af87d9eaa7\nGOOD byte-identical to PRE (_smoke): True\nOLD   form (:360 as written)  good=True  lie=True\nFIXED form (vs pre-image)     good=True  lie=False\nDEMO_OK: old=True/True (cannot fail); fixed=True/False (can)",
+      "demo_matches_recorded_output": true,
+      "fixed_form_failure_verbatim": "E       AssertionError: the repaired manifest's material block differs from the pinned pre-image\nE       assert '[{\"blob_sha\"...ned\": false}]' == '[{\"blob_sha\"...ned\": false}]'\nFAILED state/verify/U8.32/test_red_fixed_form_downgrade.py::test_would_be_downgrade_is_recorded_not_silent\n1 failed, 69 deselected in 0.14s",
+      "old_form_passed_verbatim": "1 passed, 69 deselected in 0.12s",
+      "real_file_passed": 70,
+      "real_file_passed_rerun": "70 passed in 0.17s (second, independent run after a delay - stable)",
+      "purge": "full purge immediately before: find . -name __pycache__ -not -path './.venv/*' -prune -exec rm -rf {} + -> 0 remaining; PYTHONDONTWRITEBYTECODE=1; -p no:cacheprovider (no .pytest_cache created)",
+      "deviations": []
+    },
+    "lie_manifest": {
+      "lie_sha": "1089ddc188015480615c0d7609c7263214c8a62acbd3db034e3d44af87d9eaa7",
+      "lie_mtime": "2026-10-08 09:49:32.084689577 -0500",
+      "smoke_sha": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+      "smoke_mtime": "2026-10-08 05:49:09.150312393 -0500",
+      "diff_summary": "All 12 top-level keys present and every non-material top-level value equal; row count 6 = 6; exactly ONE differing row (row 0) differing in TWO fields - blob_sha None -> '0000000000000000000000000000000000000000000000000000000000000000' and resolved_from None -> 'corrupted'. dest identical in every row => U8.32's 'different dests' is inaccurate.",
+      "single_field_lie": false,
+      "multi_field_weakness": "The lie is multi-field, which is the weaker demo form because a multi-field difference could in principle be caught incidentally. Here it does NOT weaken the conclusion: the OLD form's blindness is structural (both operands are reads of the same bytes), so it cannot discriminate good from lie regardless of how many fields differ - demonstrated by OLD good=True lie=True. What is absent is a SINGLE-field case; single-field detection follows only by construction (model_dump serialises every field, so any one-field change alters the json.dumps string), not from a run.",
+      "good_copy_byte_identical_to_pre": true
+    },
+    "sweep": {
+      "detector": "state/verify/V8.38/sweep_detector.py - ast.parse every tests/**/*.py; count ast.Assert; flag (i) truthy-constant test (ast.Constant truthy / non-empty literal collection / JoinedStr), (ii) any Compare whose two operands are identical after ast.unparse, (iii) set/frozenset-of-itself, (iv) isinstance(...) as the sole test, (v) assert x in (x, ...) self-membership",
+      "positive_control": "state/verify/U8.32/test_red_old_form_downgrade.py:370 flagged identical-operand ('_block(read_manifest(dock / \\'MANIFEST.json\\')) Eq _block(read_manifest(dock / \\'MANIFEST.json\\'))') - the detector is not blind",
+      "files_scanned": 56,
+      "assert_nodes_scanned": 3820,
+      "hits": ["tests/test_assess_evidence.py:288 isinstance-sole", "tests/test_assess_value.py:165 isinstance-sole", "tests/test_assess_value.py:348 isinstance-sole", "tests/test_assess_verdicts.py:597 isinstance-sole", "tests/test_cli.py:512 isinstance-sole", "tests/test_dashboard.py:130 isinstance-sole", "tests/test_docket_copy.py:394 isinstance-sole", "tests/test_kg_graphify.py:73 isinstance-sole", "tests/test_kg_graphify.py:83 isinstance-sole", "tests/test_kg_graphify.py:127 isinstance-sole", "tests/test_kg_graphify.py:140 isinstance-sole", "tests/test_kg_graphify.py:212 isinstance-sole", "tests/test_kg_graphify.py:227 isinstance-sole", "tests/test_kg_policy.py:283 isinstance-sole", "tests/test_lanes_build.py:108 isinstance-sole", "tests/test_occamy_client.py:692 isinstance-sole", "tests/test_occamy_client.py:776 isinstance-sole", "tests/test_occamy_producer.py:200 isinstance-sole", "tests/test_store_v2.py:385 isinstance-sole", "tests/test_web_fetch.py:765 isinstance-sole"],
+      "hits_in_sibling_edited_files": ["tests/test_dashboard.py:130 (aeefc2fed980efcb..., mtime 09:36:59.196119251)", "tests/test_cli.py:512 (4395af6c582b3f0a..., mtime 08:56:00.168943132)"],
+      "sibling_edited_files_with_no_hits": ["tests/test_run.py (03fe85bfd3bf0efd..., 09:53:38)", "tests/test_docket_provenance.py (8eb9a623a01f2737..., 09:55:12)", "tests/test_orchestration_handoffs.py (7d9c97ee95014c74..., 10:00:29 - edited during my sweep; count stable across two runs)"],
+      "judgement_of_the_20": "NOT the same defect class: every one is genuinely falsifiable (e.g. assert isinstance(body, dict) fails if the body is a list). They are reported because the card listed isinstance-sole in the detector spec, not because they are cannot-fail.",
+      "suite_wide_count": 0,
+      "suite_wide_count_note": "0 in every STRUCTURAL cannot-fail class; 20 under the broad isinstance-sole heuristic. The claim 'the count is 0 suite-wide' holds for the class the audit found (identical operands).",
+      "stability": "two runs, identical (56 files, 3820 asserts, 20 hits)"
+    },
+    "counts": {
+      "passed": 70,
+      "collected": 70,
+      "def_test": 39,
+      "assertions_deleted": 0,
+      "file_sha": "dc09ea00be921ef1c17625479d9a6c7d85893a0f199ed9690d2b56d00b7b2966",
+      "file_sha_measurements": 2,
+      "file_mtime": "2026-10-08 09:56:08.324263170 -0500",
+      "file_is_git_tracked": false,
+      "diff_method": "The file is UNTRACKED (git ls-files --error-unmatch fails; git status --porcelain shows '?? tests/test_docket_reassembly.py'; 361 untracked entries), so `git diff -U1 -- tests/test_docket_reassembly.py` emits 0 BYTES and CANNOT witness the change. No pre-image backup exists on disk. I reconstructed the pre-repair file from the real one by dropping :342-343 (capture) and :362-366 (new comments + new assert) and restoring the old 3-line assertion positionally: sha256 = 492872341ea37a8e37d8e22782847b506e1bcc12cf951fcc2e40aa19f82d3c47, an EXACT match to the claimed pre-repair sha. `diff -U1 reconstructed_pre_repair.py tests/test_docket_reassembly.py` = exactly two hunks (capture +2 lines; assertion 3 -> 5 lines). Cross-check: the old-form throwaway copy minus its injection and the new comments equals the same reconstruction plus the 2 capture lines.",
+      "diff_is_only_capture_and_assertion": true,
+      "assert_count_recipe": "ast.Assert = 218; line-leading 'assert' = 222; lines containing 'assert ' = 234 (for tests/test_docket_reassembly.py). Reconciliation: the card's divergent figures 279 (ast.Assert), 281 (line-leading) and 294 (lines containing 'assert') all reproduce EXACTLY for tests/test_dashboard.py, so they belong to that file, not this one. The card's 184/195-by-`grep -c \"assert \"` figures I could NOT attribute; I state my own recipe rather than adopting them.",
+      "def_test_recipes_agree": "grep -c '^def test_' 39; golang-style grep -cE '^def test_' 39; AST FunctionDef/AsyncFunctionDef name startswith 'test_' 39; reconstructed PRE file 39 (=> 0 deleted)"
+    },
+    "red_green_used": "C3 old-vs-new pair",
+    "manufactured_cycle": false,
+    "overrun_judged": {
+      "work": 16,
+      "total": 17,
+      "bound": 16,
+      "under_or_at_bound": "at bound (16/16), NOT under",
+      "independently_auditable": false,
+      "note": "self-reported by U8.32; another unit's call ledger cannot be audited from this unit."
+    },
+    "not_reproduced": [
+      "The card's 294/296 'lines containing assert' and 184/195 'grep -c \"assert \"' figures for the assert-count recipe - I could attribute 279/281/294 to tests/test_dashboard.py but not the remaining two; my own recipe for tests/test_docket_reassembly.py is 218/222/234.",
+      "U8.32's '`git diff -U1` shows only the added capture and the replaced assertion' - literally impossible for an untracked file (0-byte diff). The SUBSTANCE was reproduced by reconstruction instead.",
+      "U8.32's 'different dests' description of m_lie - dests are identical in all 6 rows; the difference is two provenance fields in one row.",
+      "Any single-field lie demonstration - no such case exists in U8.32's evidence; single-field detection is derivable only by construction from json.dumps(model_dump)."
+    ],
+    "overstated": [
+      "U8.32: '`git diff -U1` shows only the added pre-image capture + the replaced assertion; no assertion was deleted or weakened.' The file is untracked, so git diff is empty; the claim's METHOD is unsupportable (its CONCLUSION is correct, proved by my reconstruction to sha 49287234...).",
+      "U8.32: the lie manifest is 'a corrupted copy of the frozen _smoke manifest with different dests'. Dests are identical; the corruption is blob_sha None->64 zeros and resolved_from None->'corrupted' on row 0.",
+      "The framing 'under bound as claimed' - U8.32 spent 16 work against bound 16, which is AT the bound, not under it."
+    ],
+    "unverified": [
+      "Store version 4: I deliberately never opened state/state.sqlite (forbidden), so v4 is taken from the unit card and prior handoffs, not re-measured by me.",
+      "U8.32's tool-call ledger (16 work / 17 total) is self-reported and not independently auditable.",
+      "The internal claim that no NARROW __pycache__ purge affected the runs is moot here - I used a FULL purge (0 remaining) before every pytest run.",
+      "One nuance I did not chase: whether a reordering-only change would be caught by _block - it follows from json.dumps preserving list order that it would, but I did not run that case."
+    ],
+    "corrections": [
+      {"relayed_claim": "'`git diff -U1` shows only the added pre-image capture + the replaced assertion' (implying git witnessed the diff)", "actually": "tests/test_docket_reassembly.py is UNTRACKED; `git diff -U1 -- tests/test_docket_reassembly.py` emits 0 bytes. The diff is real (exactly two hunks) but was proved by reconstructing the pre-repair file to the exact claimed sha 49287234..., not by git.", "evidence": "git ls-files --error-unmatch fails; git status --porcelain -> '?? tests/test_docket_reassembly.py'; git diff | wc -c = 0; state/verify/V8.38/reconstruct_pre.py -> sha 492872341ea37a8e37d8e22782847b506e1bcc12cf951fcc2e40aa19f82d3c47", "unit": "U8.32"},
+      {"relayed_claim": "m_lie.json is 'a corrupted copy of the frozen _smoke manifest with different dests'", "actually": "dests are identical in all 6 rows; m_lie differs from _smoke in exactly one row (row 0) in two fields: blob_sha None -> 64 zeros, resolved_from None -> 'corrupted'. It is a multi-field lie on one row, not a dest difference.", "evidence": "state/verify/V8.38/lie_diff.py structured diff; field-change histogram {'blob_sha': 1, 'resolved_from': 1}", "unit": "U8.32"},
+      {"relayed_claim": "U8.32 '16 work / 17 total calls vs bound 16' framed as under bound", "actually": "16 work against bound 16 is AT the bound, not under it.", "evidence": "U8.32 handoff tool_calls_work 16, bound 16", "unit": "U8.32"}
+    ],
+    "tool_calls": 18,
+    "tool_calls_work": 18,
+    "tool_calls_total": 19,
+    "bound": 18,
+    "containment": {
+      "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "porcelain_count": 2,
+      "porcelain_note": "2 pre-existing untracked lines, unchanged across my runs; I wrote nothing under /home/zer0null/Duval.",
+      "outside_writes": 0,
+      "worktrees_reads": 0,
+      "store": {
+        "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+        "version": 4,
+        "version_source": "unit card + prior handoffs; NOT re-measured by me",
+        "read_by_any_command_of_mine": false,
+        "read_by_any_command_of_mine_note": "No sqlite connection was opened: no sqlite3 invocation, no immutable=1, no connect(). Only sha256sum/stat/ls byte+metadata reads touched state/state.sqlite. tests/test_docket_reassembly.py and tests/conftest.py contain no sqlite reference (the single 'state/U5.9_bare.py' mention at :660 is a docstring).",
+        "used_immutable": false,
+        "mtime": "2026-10-08 07:47:56.009682763 -0500",
+        "mtime_predates_unit": true,
+        "sidecars_observed": 2,
+        "sidecars_created_by_me": 0,
+        "sidecar_detail": "state.sqlite-shm 32768 B mtime 2026-10-08 09:54:49.382667509 -0500; state.sqlite-wal 0 B mtime 2026-10-08 09:29:14.666991008 -0500 - both unchanged across all my runs"
+      },
+      "dockets": [
+        {"slug": "duval-replay-material", "path": "dockets/duval/duval-replay-material/MANIFEST.json", "sha": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4", "mtime_meaning": "file (MANIFEST.json)", "mtime": "2026-10-08 09:28:51.302382844 -0500", "directory_mtime": "2026-10-08 09:28:51.303536743 -0500", "byte_identity_asserted": false},
+        {"slug": "duval-u55-pinned", "path": "dockets/duval/duval-u55-pinned/MANIFEST.json", "sha": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07", "mtime_meaning": "file (MANIFEST.json)", "mtime": "2026-10-08 08:36:35.984233876 -0500", "directory_mtime": "2026-10-08 08:36:35.984233876 -0500", "byte_identity_asserted": false, "note": "measured once by me; matches U8.32's pre/post claim"},
+        {"slug": "_smoke", "path": "dockets/_smoke/MANIFEST.json", "sha": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6", "mtime_meaning": "file (MANIFEST.json)", "mtime": "2026-10-08 05:49:09.150312393 -0500", "directory_mtime": "2026-10-08 05:49:09.151055969 -0500", "byte_identity_asserted": true, "note": "measured twice, identical"}
+      ],
+      "stray_processes": 0,
+      "pytest_cache_created": false,
+      "pycache_purged_to": 0,
+      "my_files": ["state/verify/V8.38/demo_rerun.txt", "state/verify/V8.38/sweep_detector.py", "state/verify/V8.38/sweep_result.json", "state/verify/V8.38/lie_diff.py", "state/verify/V8.38/reconstruct_pre.py", "state/verify/V8.38/reconstructed_pre_repair.py", "state/verify/V8.38/old_minus_injection.py", "orchestration/VERDICTS.md (appended V8.38 section)", "orchestration/units/V8.38.md", "orchestration/handoffs/V8.38.json"]
+    }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "unit": "U6.9",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/__main__.py (new)",
+    "src/resextract/dashboard/__main__.py",
+    "src/resextract/dashboard/app.py",
+    "src/resextract/cli.py",
+    "tests/test_cli.py",
+    "state/logs/U6.9-enum.sh",
+    "state/logs/U6.9-enum-pre.txt",
+    "state/logs/U6.9-enum-post.txt",
+    "state/logs/U6.9-red-a.txt",
+    "state/logs/U6.9-red-b.txt",
+    "state/logs/U6.9-allowremote.out",
+    "orchestration/units/U6.9.md",
+    "orchestration/handoffs/U6.9.json"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "occamy_probe_command": "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> 000 (curl: (7) Failed to connect); probed twice, restarted nothing, zero LLM calls",
+    "tests": {"cli_before": 23, "cli_after": 38, "dashboard": 63, "deletions": 0},
+    "deletions_proof": "tests/test_cli.py 486 -> 734 lines: diff of the saved 698-line copy against head -486 of the current file yields 212 '<' (copy-side appended-block lines) and 0 '>' lines, i.e. the original 486 lines are a byte-identical prefix; no assertion deleted (assert count 98 -> 102)",
+    "entry_points": [
+      {"invocation": ".venv/bin/resextract serve (console -> resextract.cli:main)", "host": "0.0.0.0", "exit_code": 2, "bound": false, "address": "-", "consults_guard": true, "pre_fix": {"exit_code": 2, "bound": false}},
+      {"invocation": "python -m resextract serve", "host": "0.0.0.0", "exit_code": 2, "bound": false, "address": "-", "consults_guard": true, "pre_fix": {"exit_code": 1, "bound": false, "note": "no __main__.py existed: 'No module named resextract.__main__'"}},
+      {"invocation": "python -m resextract.cli serve", "host": "0.0.0.0", "exit_code": 2, "bound": false, "address": "-", "consults_guard": true, "pre_fix": {"exit_code": 2, "bound": false}},
+      {"invocation": "python -m resextract.dashboard --host", "host": "0.0.0.0", "exit_code": 2, "bound": false, "address": "-", "consults_guard": true, "pre_fix": {"exit_code": 124, "bound": true, "address": "0.0.0.0:8971", "note": "BYPASS: uvicorn running on http://0.0.0.0:8971"}},
+      {"invocation": "ALL FOUR (console, -m resextract, -m resextract.cli, -m resextract.dashboard)", "host": "192.168.2.187 (real LAN IP)", "exit_code": 2, "bound": false, "address": "-", "consults_guard": true, "pre_fix_dashboard": {"exit_code": 124, "bound": true, "address": "192.168.2.187:8972"}},
+      {"invocation": ".venv/bin/resextract serve (console)", "host": "127.0.0.1", "exit_code": 124, "bound": true, "address": "127.0.0.1:8973", "consults_guard": true, "note": "started as required, stopped, port free"}
+    ],
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models",
+      "bash state/logs/U6.9-enum.sh pre",
+      "bash state/logs/U6.9-enum.sh post",
+      ".venv/bin/resextract serve --host 0.0.0.0 --allow-remote --port 8974 --no-browser &",
+      ".venv/bin/python -m pytest tests/test_cli.py -q",
+      "U6.9_LAN_IP=192.168.2.187 .venv/bin/python -m pytest tests/test_cli.py -q",
+      ".venv/bin/python -m pytest tests/test_dashboard.py -q -k non_loopback",
+      "sha256sum state/state.sqlite state/backups/U0.18-state-pre-v4/state.sqlite",
+      "git -C /home/zer0null/Duval rev-parse HEAD; git -C /home/zer0null/Duval status --porcelain",
+      "pgrep -af '[u]vicorn'; ss -ltn | grep -cE ':(8971|8972|8973|8974)\\b'"
+    ]
+  },
+  "discrepancy_explained": "The divergence lived in src/resextract/dashboard/__main__.py (the file the card calls src/resextract/__main__.py; the top-level src/resextract/__main__.py did NOT exist). It computed allow_remote = args.allow_remote or (explicit_host and not is_loopback(host)) and then called the shared guard with allow_remote=True, so the guard's own logic was never a refusal for that path: it BOUND 0.0.0.0:8971 and 192.168.2.187:8972 with uvicorn's open read routes. The console script resolves to resextract.cli:main (pyproject [project.scripts]), and cli._resolve_serve calls check_bind_host(host, allow_remote) with only the user's flag, so `.venv/bin/resextract serve` and `python -m resextract.cli serve` refused with exit 2. Entry-point table (post-fix, --host 0.0.0.0, no --allow-remote): console exit 2 bound no | python -m resextract exit 2 bound no | python -m resextract.cli exit 2 bound no | python -m resextract.dashboard exit 2 bound no. Same for the real LAN IP 192.168.2.187. --host 127.0.0.1 starts (127.0.0.1:8973), stopped, port free.",
+  "which_verifier_described_which_path": "U6.8=__main__ (python -m resextract.dashboard, the bypassing path), U6.6/U6.7=cli/console (resextract.cli:main via -m resextract.cli and .venv/bin/resextract). Both earlier verifications were correct about their own entry point; the entry points disagreed.",
+  "fix": {
+    "single_decision_site": "resextract.dashboard.app.check_bind_host(host, allow_remote=False) — the only place that may grant a non-loopback bind. cli._resolve_serve imports and calls it with the user's own flag; dashboard.__main__.main calls it with bool(args.allow_remote); create_app re-validates through it. src/resextract/__main__.py (new) delegates to cli.main.",
+    "no_bypass_remains": true,
+    "allow_remote_required": true,
+    "lan_ip_refused": true,
+    "loopback_still_starts": true,
+    "other_behaviours_unchanged": true,
+    "other_behaviours_note": "port-in-use still exit 2 (cli catches OSError/SystemExit from uvicorn); --docket-root resolution/printing untouched (34 docket-root tests still pass); --allow-remote with a non-loopback host still starts.",
+    "write_path_deviation": "src/resextract/dashboard/__main__.py is not in the declared write paths. It is the file the card names (src/resextract/__main__.py) under its real name and it is where the bypass lived; no sibling owns it. No other out-of-path file was modified."
+  },
+  "exposure_recommendation": "Honest exposure: with --allow-remote and a non-loopback bind the READ routes are reachable from the network — proven live: curl http://127.0.0.1:8974/ -> 200 AND curl http://192.168.2.187:8974/ -> 200 (the same response from the LAN), while only POST /api/control/* is token-gated. That is acceptable ONLY as a loud, explicit opt-in (the CLI prints 'WARNING binding non-loopback host ...; this exposes the dashboard'), but it is not 'safe': a token on the control routes does not protect the store, journals, dockets or graph. Recommendation: on a non-loopback bind, require the token on READ routes too (an auth dependency over the read handlers) or refuse to start without one. This is NOT a one-line change (read routes are ~12 handlers with no auth dependency), so it is left to the main session as a new unit; the closest one-line mitigation would be to require an explicitly supplied non-auto token whenever the bound host is non-loopback, which does not by itself gate reads.",
+  "red_green": {
+    "a": "sha ok (app.py ed8492794b2204820b8fc378bfbf8d505c7255d48122e3276019ca6e3d471bf6, dashboard/__main__.py 3d982b3a61a3b85a42cd6acb2ba43ca4743a9726972df1724c4a4d271676c75e); reverted the inference in dashboard/__main__.py -> 3 failed, 4 passed, 31 deselected: FAILED test_non_loopback_bind_is_refused_on_every_entry_point[dashboard-0.0.0.0], [dashboard-203.0.113.7], test_no_entry_point_grants_remote_binding_by_itself (AssertionError: assert 0 == 2); restored bit-identical from state/logs/U6.9-bak-dashmain.py, sha re-verified, full __pycache__ purge before and after",
+    "b": "sha ok (app.py ed8492794b2204820b8fc378bfbf8d505c7255d48122e3276019ca6e3d471bf6); reverted check_bind_host to 'if is_loopback(resolved):' (ignores allow_remote) -> 2 failed, 36 deselected: FAILED test_allow_remote_opt_in_still_starts[cli] and [dashboard] (assert 2 == 0); restored bit-identical from state/logs/U6.9-bak-app.py, sha re-verified, full __pycache__ purge before and after",
+    "evidence_files": ["state/logs/U6.9-red-a.txt", "state/logs/U6.9-red-b.txt"]
+  },
+  "live": {
+    "per_entry_point": [
+      {"invocation": ".venv/bin/resextract serve --host 0.0.0.0 --port 8971 --no-browser", "exit_code": 2, "bound": false},
+      {"invocation": "python -m resextract serve --host 0.0.0.0 --port 8971 --no-browser", "exit_code": 2, "bound": false},
+      {"invocation": "python -m resextract.cli serve --host 0.0.0.0 --port 8971 --no-browser", "exit_code": 2, "bound": false},
+      {"invocation": "python -m resextract.dashboard --host 0.0.0.0 --port 8971", "exit_code": 2, "bound": false},
+      {"invocation": "all four with --host 192.168.2.187 --port 8972", "exit_code": 2, "bound": false}
+    ],
+    "allow_remote_starts": true,
+    "allow_remote_evidence": "timeout 60 .venv/bin/resextract serve --host 0.0.0.0 --allow-remote --port 8974 --no-browser -> ss: LISTEN 0.0.0.0:8974; curl -m 20 http://127.0.0.1:8974/ -> 200; curl -m 20 http://192.168.2.187:8974/ -> 200",
+    "port_freed": true,
+    "port_freed_evidence": "after kill: 0 listeners on 8974, curl -> 000 (connection refused); 0 listeners on 8971/8972/8973",
+    "stray_processes": 0,
+    "stray_evidence": "pgrep -af '[u]vicorn' / '[r]esextract serve' / '[r]esextract\\.dashboard' -> no output; ss -ltn 897x -> 0. (An earlier 'STRAY PROCS' line was a pgrep self-match on the wrapper bash command line, not a process.)",
+    "server_starts_used": 4,
+    "server_starts_accounting": "pre-fix: dashboard@0.0.0.0:8971 and dashboard@192.168.2.187:8972 (the bypass, both stopped, ports free); post-fix: console@127.0.0.1:8973 (loopback still starts) and console@0.0.0.0:8974 --allow-remote (the opt-in). Every one stopped and proven gone.",
+    "commands": [
+      "bash state/logs/U6.9-enum.sh pre",
+      "bash state/logs/U6.9-enum.sh post",
+      ".venv/bin/resextract serve --host 0.0.0.0 --allow-remote --port 8974 --no-browser",
+      "curl -sS -m 20 -o /dev/null -w '%{http_code}' http://192.168.2.187:8974/",
+      "ss -ltn 'sport = :8974'"
+    ]
+  },
+  "state_store_untouched": false,
+  "state_store_note": "NEGATIVE, honestly reported and attributed: the card's pin (sha 459e16cc..., v3) no longer matches state/state.sqlite, which is now sha 40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3 with a fourth schema_version row stamped 2026-10-08T12:47:56.009Z (file mtime identical). That is a v3->v4 migration of the shared store performed by a CONCURRENT unit, not by U6.9: the pinned v3 bytes exist verbatim as state/backups/U0.18-state-pre-v4/state.sqlite (sha256 459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5, schema_version rows 1-3, mtime 06:31) alongside state/backups/U0.18-state-pre-v4/state.sqlite.online-backup-api, and state/verify/U0.18/check-copy.sqlite shares the migration's exact mtime. This unit wrote nothing there: the dashboard opens the store read-only (src/resextract/dashboard/api.py:371 sqlite3.connect('file:...?mode=ro', uri=True)) and neither dashboard/app.py nor dashboard/api.py calls store.init_db or any migration.",
+  "duval_untouched": {
+    "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+    "note": "the foreign actor's untracked entries and its moving HEAD are expected; U6.9 wrote nothing to /home/zer0null/Duval and never read .worktrees/"
+  },
+  "tool_calls": 31,
+  "bound": 28,
+  "tool_call_accounting": "31 > 28. Overrun = 3: (1) src/resextract/__main__.py did not exist, so the real bypassing entry point had to be located (dashboard/__main__.py) before any fix; (2) the first enumeration script lost its interpreter paths through a source-with-args bug and had to be rewritten and re-run; (3) two edit calls were rejected until the target files had been read with the read tool. Plus one unavoidable forensics call to attribute the store's v3->v4 change, which the card's premise did not anticipate.",
+  "blocker": "",
+  "next_unit_hint": "Two things for the main session: (a) the store v3 pin in unit cards is stale — U0.18 migrated state/state.sqlite to v4 at 2026-10-08T12:47:56Z, keep the v3 bytes at state/backups/U0.18-state-pre-v4/state.sqlite if it is still needed; (b) the remaining real exposure is that a non-loopback bind under --allow-remote serves the READ routes (store, journals, dockets, graph) with no token — proven 200 from 192.168.2.187:8974 — so a new unit should gate reads on a non-loopback bind. Any future server entry point must call dashboard.app.check_bind_host and must not compute allow_remote from --host; tests/test_cli.py::test_no_source_infers_allow_remote_from_an_explicit_host and ::test_no_entry_point_grants_remote_binding_by_itself pin that.",
+  "write_paths": [
+    "src/resextract/__main__.py",
+    "src/resextract/cli.py",
+    "src/resextract/dashboard/app.py",
+    "src/resextract/dashboard/__main__.py",
+    "tests/test_cli.py",
+    "state/logs/U6.9*",
+    "orchestration/units/U6.9.md",
+    "orchestration/handoffs/U6.9.json"
+  ]
+}

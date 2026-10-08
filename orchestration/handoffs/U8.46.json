@@ -1,0 +1,276 @@
+{
+ "unit": "U8.46",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/run.py"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "occamy_probe_recipe": "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  -> 000, curl exit 7 (connection refused); probed once, nothing restarted, zero live LLM calls",
+  "rule_from_code": [
+   {
+    "state": "0 hex",
+    "literal": "pin empty (lowercase; PIN_EMPTY=\"empty\" at :902)",
+    "real_line": 1116,
+    "compared": false,
+    "note_emitted": true,
+    "note_kind": "refusal note (pin empty)",
+    "refusal_branch": "1109-1122",
+    "continue_line": 1122,
+    "note": "lowercase literal confirmed: PIN_EMPTY = \"empty\" at :902; the note text is f\"pin {pin_state}: ...\" at :1116; continue at :1122 so :1169 never runs \u2014 no digest mismatch, no PIN ABBREVIATED"
+   },
+   {
+    "state": "1-11 hex",
+    "literal": "digest mismatch (lowercase)",
+    "real_line": 1181,
+    "compared": true,
+    "note_emitted": true,
+    "note_kind": "digest mismatch refusal",
+    "note": "_same_digest IS called at :1169 and returns False at the width floor (:957 width=min(len,len,64); :958 return width >= 12 and ...); falls to else at :1181-1182; PIN ABBREVIATED note lives only in the match branch (:1172-1180) so none is emitted"
+   },
+   {
+    "state": "12-63 hex that matches",
+    "literal": "PIN ABBREVIATED (uppercase note) + REDUCED STRENGTH (uppercase clause)",
+    "real_line": 1173,
+    "compared": true,
+    "note_emitted": true,
+    "note_kind": "PIN ABBREVIATED note (:1173-1180) + REDUCED STRENGTH clause at :1020-1024",
+    "note": "match at :1169-1171 then _pin_is_abbreviated at :1172 -> _add_note at :1173; clause branch at :1020 with text at :1021-1024 \u2014 usable but loudly flagged"
+   },
+   {
+    "state": "64 hex",
+    "literal": "none (silent match)",
+    "real_line": 1169,
+    "compared": true,
+    "note_emitted": false,
+    "note_kind": "none",
+    "note": "match at :1169-1171; _pin_is_abbreviated (:924, 0 < len < 64) is False at 64, so no note and no clause"
+   },
+   {
+    "state": ">64 hex",
+    "literal": "PIN OVERLONG (uppercase; note text \"graph: PIN OVERLONG: ...\")",
+    "real_line": 1131,
+    "compared": false,
+    "note_emitted": true,
+    "note_kind": "PIN OVERLONG note (:1129-1136) + refusal note (:1137-1146)",
+    "continue_line": 1147,
+    "note": "detected at :1123, note at :1131, refused at :1137-1146, continue at :1147 \u2014 BEFORE the comparison at :1169"
+   }
+  ],
+  "card_vs_code_disagreement": "none",
+  "card_vs_code_detail": "every address and literal in the card matched the code at sha e778e967: :902 PIN_EMPTY, :1109-1122 refusal, :1116 note, :1122 continue, :957-958 width floor, :1181-1182 mismatch, :1169-1171 match, :1173-1180 PIN ABBREVIATED, :1020-1024 REDUCED STRENGTH, :1131 PIN OVERLONG, :1137-1146 refusal, :1147 continue. No drift measured in this file. Literal case verified: 'empty'/'pin empty'/'digest mismatch' lowercase; 'PIN ABBREVIATED'/'REDUCED STRENGTH'/'PIN OVERLONG' uppercase.",
+  "sites": [
+   {
+    "site": "run.py comment block above DIGEST_HEX",
+    "real_line_before": 891,
+    "real_line_after": 891,
+    "was_inaccurate": true,
+    "why": "omitted the 0-hex state entirely: it described only the 12-63 comparable range, 1-11 refused-as-mismatch and 65+ over-long, so a reader would take 0 hex for a 1-11 mismatch.",
+    "before": "#: gain) but reported loudly as reduced strength.  A pin of 1-11 hex is REFUSED\n#: as a mismatch:",
+    "after": "#: gain) but reported loudly as reduced strength.  A pin of 0 hex is REFUSED\n#: as the DISTINCT EMPTY state (``PIN_EMPTY``, reported ``pin empty``) and is\n#: never compared at all \u2014 it is not a mismatch.  A pin of 1-11 hex is REFUSED\n#: as a mismatch:",
+    "node_type": "comment",
+    "proof_used": "ast-dump-equality",
+    "proof_result": true
+   },
+   {
+    "site": "_pin_is_abbreviated docstring",
+    "real_line_before": 919,
+    "real_line_after": 923,
+    "was_inaccurate": true,
+    "why": "said 'below 12 hex the pin ... lands in the mismatch branch', which is false for 0 hex (refused earlier as the distinct empty state, never compared).",
+    "before": "    (fail-closed, no ``PIN ABBREVIATED`` note).  ``_same_digest`` compares",
+    "after": "    (fail-closed, no ``PIN ABBREVIATED`` note).  A 0-hex pin is refused even\n    earlier, as the distinct EMPTY state (``PIN_EMPTY``, reported ``pin empty``),\n    and is never compared.  ``_same_digest`` compares",
+    "node_type": "docstring",
+    "proof_used": "one-constant-ast-diff+code-objects",
+    "proof_result": true
+   },
+   {
+    "site": "_same_digest docstring",
+    "real_line_before": 951,
+    "real_line_after": 957,
+    "was_inaccurate": true,
+    "why": "said only 'A pin of 1-11 hex returns False here ... refused as a mismatch'; a 0-hex pin never reaches this function, so the empty state was unstated.",
+    "before": "    accepted at reduced strength.",
+    "after": "    accepted at reduced strength.  A 0-hex pin never reaches this function at\n    all: the caller refuses it first as the distinct EMPTY state (``PIN_EMPTY``,\n    reported ``pin empty``, never compared).",
+    "node_type": "docstring",
+    "proof_used": "one-constant-ast-diff+code-objects",
+    "proof_result": true
+   },
+   {
+    "site": "_stage_graph docstring prose",
+    "real_line_before": 1258,
+    "real_line_after": 1264,
+    "was_inaccurate": true,
+    "why": "said 'a pin shorter than 12 hex ... is therefore refused as a mismatch' \u2014 imprecise at 0 hex, which is refused as the distinct empty state and never compared.",
+    "before": "    ``REDUCED STRENGTH`` clause, while a pin shorter than 12 hex cannot be\n    compared at all (``_same_digest`` needs ``width >= 12``) and is therefore\n    refused as a mismatch, fail-closed, without that note; and an over-long pin",
+    "after": "    ``REDUCED STRENGTH`` clause, while a pin of 1-11 hex cannot be compared at\n    all (``_same_digest`` needs ``width >= 12``) and is therefore refused as a\n    mismatch, fail-closed, without that note; a 0-hex pin is refused as the\n    distinct EMPTY state and never compared at all; and an over-long pin",
+    "node_type": "docstring",
+    "proof_used": "one-constant-ast-diff+code-objects",
+    "proof_result": true
+   }
+  ],
+  "sites_left_unchanged": [],
+  "run_py": {
+   "sha_before": "e778e9678cf1fdbcfb14fe3716ece0527a22cf0f661442ce5e61c3f7c57a2b48",
+   "sha_after": "178234f39fdc21aabd21626c6e94ec707ee5e57dfd64f267960aea9a0fdf82ae",
+   "git_tracked": false,
+   "diff_method": "git ls-files --error-unmatch failed and git status --porcelain shows '?? src/resextract/run.py' => NOT tracked, so git diff is unusable. Proved by explicit reconstruction: the pre-edit bytes were copied to state/logs/U8.46.run.py.before (sha256 = sha_before), the four literal replacements recorded in state/logs/U8.46.edits.json each matched exactly once (asserted), and applying them to the before copy reproduces the on-disk file byte-for-byte (printed 'reconstruction==disk: True'). Scripts: state/logs/U8.46.edit.py, state/logs/U8.46.proof.py"
+  },
+  "proof_summary": {
+   "comment_site1": "ast.dump(before_step0)==ast.dump(after_step1) -> True, and 0 differing Constant nodes over the whole file: a comment edit is invisible to the AST (the correct proof for '#' comments)",
+   "docstring_sites_2_3_4": "ast.dump differs by construction; path-keyed Constant diff is exactly 1 Constant per edit and that Constant is exactly the changed docstring (diff==changed_docstrings True for all three); plus 129 code objects before and after, all_bytecode_identical=True over (co_code, co_names, co_varnames, co_argcount, co_flags)",
+   "reminder": "a first version of this check keyed Constants by id() across two parses and wrongly reported n_changed_docstrings=0; replaced with structural path keys before any claim was made. No claim rests on the buggy run."
+  },
+  "dry_run": {
+   "ran": true,
+   "exit_code": 0,
+   "read_real_store": true,
+   "command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m resextract run --target duval --dry-run --stages graph  (log: state/logs/U8.46-dryrun.log)",
+   "graph_line": "graph  skipped  dry run: would reuse existing code-only graph at state/kg/duval/graphify-out/graph.json (built at 6deaed07af0d, target head 6c60da5aa924 \u2014 STALE; sha256 4790bbb1111b matches the pinned digest 4790bbb1111b; graphify not re-run: bounded, and a re-extract would write inside the target)",
+   "pin_note": "digest_state='match', pin_state='ok', no PIN ABBREVIATED note (64-hex pin is silent) \u2014 matches the corrected rule",
+   "still_matches": true,
+   "store_opened": "yes \u2014 the dry run performs the store/target preflight against the real v4 store read-only (state/state.sqlite sha unchanged 40e8aa0cd1350275...); no immutable=1, no store write, no graph build",
+   "hashes_before_after": "graph.json 4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b and state.sqlite 40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3 identical before and after"
+  },
+  "real_graph_sha_unchanged": true,
+  "test_asserts_changed_wording": "none",
+  "test_asserts_detail": "tests/test_run.py asserts behaviour strings, not run.py prose: 'pin empty' at :1751 and :2112, 'PIN ABBREVIATED' at :1681/:1937/:2084, 'REDUCED STRENGTH' at :1682/:1939/:1959/:2085 \u2014 all unchanged by this unit. No test reads run.py source (grep for read_text/inspect/getdoc/__doc__ over tests/ referenced only run.py paths in comments; the Path()/open() hits in test_run.py are graph artifacts). test_run.py:2070's phrase \"shorter than 12 is accepted but reported loudly\" is inside that test's own docstring describing the rot it guards against \u2014 not an assertion on run.py wording. Left unedited.",
+  "other_policy_copies": [
+   {
+    "path": "config/graph_pin.toml",
+    "kind": "live",
+    "action": "already-correct",
+    "sha256": "8dfff9c12c1c74680ab90e5960a14c2311f65ede4f583284ae4a70d91a6e6918"
+   },
+   {
+    "path": "src/resextract/run.py :888-895, :912-926, :940-956, :1244-1266",
+    "kind": "live",
+    "action": "fixed"
+   },
+   {
+    "path": "docs/PLAN_CORRECTIONS.md :2174",
+    "kind": "record",
+    "action": "left",
+    "note": "'<12 => refused as a mismatch' \u2014 imprecise at 0 hex, but a record of a past verdict; not in my write paths"
+   },
+   {
+    "path": "orchestration/VERDICTS.md :2224, :2230-2233",
+    "kind": "record",
+    "action": "left",
+    "note": ":2233 already flags the 0-hex imprecision of :1256-1259"
+   },
+   {
+    "path": "orchestration/units/U8.44.md :28",
+    "kind": "record",
+    "action": "left",
+    "note": "the hand-up that named these four sites"
+   },
+   {
+    "path": "orchestration/units/U8.11.md :24,:36",
+    "kind": "record",
+    "action": "left"
+   },
+   {
+    "path": "orchestration/units/U8.24.md :38,:39,:43",
+    "kind": "record",
+    "action": "left",
+    "note": ":38 says '<12 hex' where 0 hex is a distinct state"
+   },
+   {
+    "path": "orchestration/units/U8.31.md :9,:15-18",
+    "kind": "record",
+    "action": "left"
+   },
+   {
+    "path": "orchestration/units/V8.27.md :18",
+    "kind": "record",
+    "action": "left"
+   },
+   {
+    "path": "state/logs/U8.46.run.py.before, U8.46.run.py.after, U8.46.edits.json, U8.46.edit.py, U8.46.proof.py, U8.46-dryrun.log",
+    "kind": "throwaway",
+    "action": "left",
+    "note": "this unit's own scratch evidence"
+   },
+   {
+    "path": "state/logs/U8.24/pre/run.py.pre",
+    "kind": "throwaway",
+    "action": "left",
+    "note": "pre-image of run.py (contains pre-U8.24 prose 'shorter than 12 is accepted but reported loudly')"
+   },
+   {
+    "path": "state/logs/U0.25-run-pre.py, state/logs/U0.25-run-post.py",
+    "kind": "throwaway",
+    "action": "left",
+    "note": "U0.25 before/after copies of run.py"
+   },
+   {
+    "path": "state/logs/U8.24/pre/test_run.py.pre",
+    "kind": "throwaway",
+    "action": "left",
+    "note": "pre-image of tests/test_run.py; not mine"
+   },
+   {
+    "path": "state/logs/U8.14.prefix.bak, U8.17.prefix_backup.md, U8.19-table-before.txt, U8.19-table-after.txt, U8.20.prefix-backup.md, U8.26.prefix.backup.md, U8.28.prefix.backup.md, U8.34_prefix_backup.md, U8.40_prefix_backup.md, U8.40_prefix_extract.bin, V8.23-harness.out, state/verify/V8.27/c1_behaviour.py",
+    "kind": "throwaway",
+    "action": "left",
+    "note": "scratch/backup extractions from earlier units that quote the old pin prose; matched by grep -rIl -E 'shorter than 12|1-11 hex|below 12 hex|PIN ABBREVIATED' over state/"
+   }
+  ],
+  "hand_up_quoted_wording": "0-hex clause as written: (a) comment :889-891 '#: A pin of 0 hex is REFUSED / #: as the DISTINCT EMPTY state (``PIN_EMPTY``, reported ``pin empty``) and is / #: never compared at all \u2014 it is not a mismatch.'; (b) _pin_is_abbreviated :921-923 'A 0-hex pin is refused even earlier, as the distinct EMPTY state (``PIN_EMPTY``, reported ``pin empty``), and is never compared.'; (c) _same_digest :951-953 'A 0-hex pin never reaches this function at all: the caller refuses it first as the distinct EMPTY state (``PIN_EMPTY``, reported ``pin empty``, never compared).'; (d) _stage_graph :1258-1260 'while a pin of 1-11 hex cannot be compared at all (``_same_digest`` needs ``width >= 12``) and is therefore refused as a mismatch, fail-closed, without that note; a 0-hex pin is refused as the distinct EMPTY state and never compared at all'",
+  "live_old_policy_left_unfixed": "none \u2014 all five live places now state the code's rule (four corrected here, config/graph_pin.toml already correct). The remaining imprecise copies are records under docs/ and orchestration/ (not live, not in my write paths).",
+  "not_reproduced": [
+   "per-card docket sha prefixes ce45766d (replay) / 445032f7 (u55) / 41ec711a (_smoke): my recipe (sha256 over the LC_ALL=C sorted per-file sha256 list) yielded identical composites abcfa6a9d4df344d for BOTH replay and u55 and 0eda52ac42b3ae4c for _smoke \u2014 the card's prefixes come from a different recipe, so I assert only that I wrote nothing there, NOT byte identity to the card's values"
+  ],
+  "overstated": [
+   "nothing \u2014 no claim is made that the store was never opened (the dry run did open it read-only, stated)"
+  ],
+  "unverified": [
+   "that the dry run's store access issued no write syscalls (not instrumented; inferred from unchanged sha + read-only mode)",
+   "the two untracked entries in /home/zer0null/Duval porcelain (.ci-trunk.txt, .lane-j-scratch/) \u2014 observed, pre-existing, not attributable to me and not investigated (read-only target)"
+  ],
+  "tool_calls_work": 14,
+  "tool_calls_total": 15,
+  "bound": 14,
+  "containment": {
+   "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/  (observed pre-existing; no write by this unit \u2014 only git status/rev-parse were run there)",
+   "outside_writes": 0,
+   "dockets": [
+    {
+     "slug": "duval-replay-material",
+     "sha": "card ce45766d (not reproduced by my recipe; composite abcfa6a9d4df344d)",
+     "byte_identity_asserted": false
+    },
+    {
+     "slug": "duval-u55-pinned",
+     "sha": "card 445032f7 (not reproduced; composite abcfa6a9d4df344d)",
+     "byte_identity_asserted": false
+    },
+    {
+     "slug": "_smoke",
+     "sha": "card 41ec711a (not reproduced; composite 0eda52ac42b3ae4c)",
+     "byte_identity_asserted": false
+    }
+   ],
+   "handoffs_edited_by_me": [],
+   "store": "state/state.sqlite v4 sha256 40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3 unchanged; never immutable=1"
+  },
+  "measurement_discipline": [
+   "sha256sum for every artifact; LC_ALL=C sort before any xargs hashing; every number reported at the sha it was taken at (before e778e967 / after 178234f3)",
+   "no __pycache__ purge attempted (no test suite run); Python used PYTHONDONTWRITEBYTECODE=1 for the dry run",
+   "/tmp not used for anything persisted \u2014 all scratch under state/logs/U8.46*"
+  ],
+  "scratch_search_recipe": "grep -rIl -E 'shorter than 12|1-11 hex|below 12 hex|PIN ABBREVIATED' state/ ; *.md records found separately via the grep tool over the whole tree"
+ },
+ "blocker": "",
+ "next_unit_hint": "Prose-only fix complete; a verifier can re-run state/logs/U8.46.proof.py (it rebuilds the four steps from state/logs/U8.46.edits.json + the before copy and re-prints the one-Constant-per-docstring result and bytecode identity), then confirm sha256(run.py)==178234f39fdc21aa and that config/graph_pin.toml stayed 8dfff9c1. The record copies under docs/PLAN_CORRECTIONS.md:2174 and orchestration/units/U8.24.md:38 still say '<12 hex' generically; correcting them is a records unit's call, not this unit's.",
+ "write_paths": [
+  "src/resextract/run.py",
+  "state/logs/U8.46*",
+  "orchestration/units/U8.46.md",
+  "orchestration/handoffs/U8.46.json"
+ ],
+ "tool_calls_work": 15,
+ "over_bound": "+1 over the 14 bound: the mandated unit card had to be persisted (AGENTS.md unit contract) and the scratch-copy search output arrived in the same call as the handoff write, so recording it cost the extra call. Everything else was batched (4 reads in one message, all 4 edits in one script)."
+}

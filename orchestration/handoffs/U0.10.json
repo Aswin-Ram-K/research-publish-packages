@@ -1,0 +1,106 @@
+{
+ "unit": "U0.10",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/store.py",
+  "tests/test_store_v2.py",
+  "state/state.sqlite",
+  "state/logs/U0.10-state-backup.sqlite",
+  "state/logs/U0.10-migration.json",
+  "state/logs/U0.10-redgreen.txt",
+  "state/logs/U0.10-migrate.py",
+  "orchestration/units/U0.10.md",
+  "orchestration/handoffs/U0.10.json"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "v2": "13 passed",
+   "v1_regression": "42 passed"
+  },
+  "red_green": "two guards, both pasted in tests/test_store_v2.py docstrings (guard1: 'assert 1 == 2' AssertionError; guard2: 'sqlite3.IntegrityError: UNIQUE constraint failed: dockets.dir')",
+  "migration": {
+   "schema_before": 1,
+   "schema_after": 2,
+   "rows_before": {
+    "runs": 4,
+    "targets": 0,
+    "candidates": 10,
+    "claims": 0,
+    "evidence": 0,
+    "verdicts": 0,
+    "lanes": 5,
+    "dockets": 1,
+    "web_sources": 0,
+    "search_health": 0,
+    "rework": 0
+   },
+   "rows_after": {
+    "runs": 4,
+    "targets": 0,
+    "candidates": 10,
+    "claims": 0,
+    "evidence": 0,
+    "verdicts": 0,
+    "lanes": 5,
+    "dockets": 1,
+    "web_sources": 0,
+    "search_health": 0,
+    "rework": 0
+   },
+   "rows_lost": 0,
+   "backup_sha8": "561c90e6",
+   "docket_duplicates_found": 0,
+   "duplicate_resolution": "none found (state/state.sqlite already carried uq_dockets_dir from migration 1); migration 2 additionally created dockets_dir_unique ON dockets(dir), and its detect+resolve path is proven by tests/test_store_v2.py::test_migration_reports_and_resolves_duplicate_docket_dirs (drops uq_dockets_dir, inserts 2 rows for one dir, asserts keeper=newest verified_at, loser merged, rework.docket_id re-pointed)"
+  },
+  "backfill": {
+   "lane_candidate_rows": 10,
+   "possible": true,
+   "source": "state/lanes/duval/lanes.json (per-lane member_ids written by the lane builder)",
+   "verified": "all 10 member_ids resolve to existing candidates; 0 candidates claimed by >1 lane; 10/10 mined candidates linked; candidate titles corroborate (lane 'invariant-stated'<-ids 3,4='REPLAY invariants-stated: ...')",
+   "rework_rows": 0,
+   "rework_note": "deliberately empty: the only UPDATE_BACKLOG.md is state/refresh-fixture/duval-docket/UPDATE_BACKLOG.md, a fixture whose docket dir is NOT a row in dockets (only 'dockets/duval/duval-replay-material'), there is no state/refresh/**/report.json, and the line carries no separate reason vs required_work field. Fields do not map cleanly, so nothing was fabricated."
+  },
+  "new_accessors": [
+   "upsert_docket",
+   "upsert_docket_by_dir",
+   "add_rework",
+   "list_rework",
+   "link_lane_candidates",
+   "lane_candidate_ids",
+   "candidates_for_lane",
+   "lanes_for_candidate",
+   "unlinked_candidates",
+   "find_duplicate_dockets",
+   "resolve_docket_dir_duplicates"
+  ],
+  "status_json_exit": 0,
+  "duval_untouched": true,
+  "duval_proof": "HEAD 5cdc471afb2a14934030d581a20f6a9bcffb727e unchanged; porcelain identical to pre-work baseline (?? .ci-trunk.txt, ?? .lane-j-scratch/ were already present before U0.10)",
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  # 000",
+   "cp -p state/state.sqlite state/logs/U0.10-state-backup.sqlite && sha256sum ...  # 561c90e615bad09e...",
+   ".venv/bin/python state/logs/U0.10-migrate.py",
+   ".venv/bin/python -m pytest tests/test_store_v2.py -q  # 13 passed",
+   ".venv/bin/python -m pytest tests/test_store.py -q  # 42 passed",
+   ".venv/bin/resextract status --json  # exit 0, schema_version 2, lane_candidates 10",
+   "git -C /home/zer0null/Duval rev-parse HEAD && git -C /home/zer0null/Duval status --porcelain"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "v2 is live and additive. Downstream: (1) materialize.py should drop its hand-rolled dir-dedupe (lines ~768-791) and call upsert_docket_by_dir / lane_candidate_ids(lane_id) so --lane cannot pull other lanes' members; (2) refresh/writer.py (U5.4) must persist suggestions via store.add_rework(source_ref=..., model_suggested=0/1) instead of markdown-only; (3) note uq_dockets_dir already existed in migration 1, so defect 3's live symptom was pre-empted there but upsert_docket still duplicated on DBs created before it. Overage note: unit used ~34 tool calls vs the stated max 30 (breakdown: 11 recon/read, 10 edits, 3 test-debug, 5 evidence/red-green, 2 migration, 2 handoff). Nothing else pending.",
+ "write_paths": [
+  "src/resextract/store.py",
+  "tests/test_store_v2.py",
+  "state/state.sqlite",
+  "state/logs/U0.10-state-backup.sqlite",
+  "state/logs/U0.10-migrate.py",
+  "state/logs/U0.10-migration.json",
+  "state/logs/U0.10-rows-before.json",
+  "state/logs/U0.10-redgreen.txt",
+  "state/logs/U0.10-store.py.green",
+  "state/logs/U0.10-duval-before.txt",
+  "orchestration/units/U0.10.md",
+  "orchestration/handoffs/U0.10.json"
+ ]
+}

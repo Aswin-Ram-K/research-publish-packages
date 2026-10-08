@@ -1,0 +1,108 @@
+{
+ "unit": "U0.16",
+ "status": "done",
+ "artifacts": [
+  "tests/conftest.py",
+  "pyproject.toml",
+  "tests/test_live_marker_convention.py",
+  "orchestration/units/U0.16.md",
+  "state/logs/U0.16-audit.py",
+  "state/logs/U0.16-audit2.py",
+  "state/logs/U0.16-skips-before.json",
+  "state/logs/U0.16-skips-after.json",
+  "state/logs/U0.16-skips-after-live.json",
+  "state/logs/U0.16-conftest.fixed.py",
+  "orchestration/handoffs/U0.16.json"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "rule_verbatim": "def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:\n    if config.getoption(\"--live\") or os.environ.get(\"RESEXTRACT_LIVE\") == \"1\":\n        return\n    skip = pytest.mark.skip(reason=\"live test \u2014 run with --live or RESEXTRACT_LIVE=1\")\n    for item in items:\n        if \"live\" in item.keywords:\n            item.add_marker(skip)",
+  "matches_on": "keywords (EXACT bare key membership in item.keywords), not a name substring. pytest builds needlessly-bare keyword keys from: the item's own full name (key 'test_param[live]', key 'test_lively' \u2014 neither equals 'live'), the enclosing module/class names, mark names, and EACH PARAMETRISATION ID AS A BARE KEY. Measured with pytest 9.1.1: test_lively/test_livewire/test_olive/test_live -> NOT matched; test_param[live] (parametrize id 'live') -> MATCHED; @pytest.mark.live -> MATCHED (intended). So the live channel is a bare parametrisation id, a module/class literally named 'live', or the mark.",
+  "audit_before": {
+   "collected": 711,
+   "skipped": 1,
+   "skipped_names": [
+    "tests/test_occamy_client.py::test_live_thinking_toggle_and_record_timings"
+   ],
+   "genuinely_live": [
+    "tests/test_occamy_client.py::test_live_thinking_toggle_and_record_timings (marked @pytest.mark.live at tests/test_occamy_client.py:794, hits :8012)"
+   ],
+   "skipped_only_by_name": [],
+   "note": "Zero items were being skipped only by name in the tree as found: the sibling unit had ALREADY renamed its 'live' parametrisation id to 'cached' (see the stale NOTE at tests/test_occamy_producer.py:250-251). The defect was LATENT, not active. `pytest tests/ --collect-only -q` = 711 collected (no --live and with --live identical, since collect-only still collects skipped items); body counts came from a collection hook that inspects post-conftest skip markers (state/logs/U0.16-audit.py).",
+   "latent_channel_proved": "state/logs/U0.16-probe-semantics.py: @pytest.mark.parametrize(\"mode\", [\"live\"]) -> 'substr_live_in_keywords': true -> silently skipped; test_lively/test_livewire/test_olive -> false."
+  },
+  "fix": {
+   "mechanism": "pytest.mark.live",
+   "live_flag_still_works": true,
+   "marker_registered": true,
+   "name_fallback_removed": true,
+   "skip_visibility": "pytest_terminal_summary in tests/conftest.py prints a red separator line '= N live test(s) SKIPPED \u2014 NOT run and NOT passed; rerun with --live or RESEXTRACT_LIVE=1 =' when live-marked items were skipped. Verified on a real run: 'pytest tests/test_occamy_client.py -q' now prints that line above '33 passed, 1 skipped'. The hook only ADDS a summary line \u2014 it cannot turn a failure into a skip.",
+   "detail": "pytest_collection_modifyitems now skips iff item.get_closest_marker(\"live\") is not None (honours module/class/pytestmark marking; never names or ids). Shared reason constant LIVE_SKIP_REASON. --live / RESEXTRACT_LIVE=1 unchanged via _live_enabled(). 'live' marker registered in pyproject.toml [tool.pytest.ini_options].markers AND by the pre-existing pytest_configure addinivalue_line (left untouched for minimality; getini('markers') therefore lists the entry twice, harmless \u2014 no unknown-mark warning in any run with -W error-free output)."
+  },
+  "audit_after": {
+   "collected": 721,
+   "skipped": 1,
+   "delta": 0,
+   "collected_delta_note": "+10 is the new guard file tests/test_live_marker_convention.py, not a change in any other file's collection.",
+   "newly_running": [
+    {
+     "test": "tests/test_live_marker_convention.py::test_parametrised_id_live_is_not_a_marker[live]",
+     "outcome": "passed",
+     "detail": "case (a): this is the exact item the old rule silently skipped (bare keyword key 'live' from the parametrisation id); it now runs and passes. Proved by reverting the rule: it was skipped and the observer guard failed."
+    },
+    {
+     "test": "tests/test_live_marker_convention.py::test_no_item_is_skipped_without_the_live_marker",
+     "outcome": "passed",
+     "detail": "case (a) observer: no collected item carries the live skip reason unless it carries @pytest.mark.live."
+    },
+    {
+     "test": "tests/test_live_marker_convention.py::test_parametrised_id_live_is_not_a_marker[deliver|lively|olive|livewire]",
+     "outcome": "passed",
+     "detail": "case (a): the vocabulary ids the sibling had to rename away from would also have been swallowed by the old rule; they run under both rules and pass."
+    }
+   ],
+   "markers_added": [],
+   "markers_added_note": "NONE. I added no @pytest.mark.live anywhere: no un-skipped test required a live service, so no marker needed justifying. The single existing live marker (tests/test_occamy_client.py:794) was left exactly as found.",
+   "tree_level_note": "Delta 0 at tree level because the only pre-fix skip was the genuinely live test and the sibling had already renamed its 'live' param id. The false-green capacity is therefore demonstrated by the guard (RED under the old rule), not by a count change."
+  },
+  "findings": [
+   "NO real failure was surfaced by un-skipping: nothing in the tree was being skipped only by name at audit time, so no test changed outcome. The defect was latent, not active \u2014 reported honestly rather than inflated.",
+   "Structural finding (the rule is broader than the sibling's report): 'if \"live\" in item.keywords' is not a name-substring test at all; it is exact bare-key membership, which also silently skips any module or class literally named 'live' (module/class names are injected as bare keys) and any parametrisation id equal to 'live'. Names CONTAINING live (test_lively, test_livewire, test_olive) were never matched \u2014 the sibling's 'contains live' description is imprecise. Fixed direction: only @pytest.mark.live skips anything.",
+   "Stale artefact for a later unit (NOT touched \u2014 outside my write paths): the NOTE at tests/test_occamy_producer.py:250-251 ('a param literally named \"live\" is silently skipped by conftest') and the workaround id 'cached' are now obsolete; they can be renamed back in a cosmetic follow-up if the vocabulary value matters."
+  ],
+  "red_green": {
+   "a": "sha256 fixed=72ac7401ff18a7b790e9060ccaca63e85f42c732e5671114ede5934bb82214aa; revert only the skip loop to `if \"live\" in item.keywords` -> `3 failed, 6 passed, 1 skipped`: test_no_item_is_skipped_without_the_live_marker FAILED (AssertionError: these items were skipped by the 'live' convention without carrying @pytest.mark.live (name-based skip regression?): ['tests/test_live_marker_convention.py::test_parametrised_id_live_is_not_a_marker[live]']), plus test_conftest_hook_skips_only_live_marked_items and test_does_not_decide_live_by_name_or_keywords FAILED; `test_parametrised_id_live_is_not_a_marker[live]` SILENTLY SKIPPED. Restore -> sha256 == 72ac7401\u2026 (bit-identical). GREEN after restore: 10 passed.",
+   "b": "sha256 fixed=72ac7401ff18a7b790e9060ccaca63e85f42c732e5671114ede5934bb82214aa; delete the `item.get_closest_marker(\"live\")` branch -> `2 failed, 8 passed`: test_conftest_hook_skips_only_live_marked_items FAILED (AssertionError: a live-marked item was NOT skipped without --live) and test_does_not_decide_live_by_name_or_keywords FAILED. Restore -> sha256 == 72ac7401\u2026 (bit-identical). GREEN after restore: 10 passed.",
+   "method": "PYTHONDONTWRITEBYTECODE=1 and `find tests -name __pycache__ -prune -exec rm -rf` before every measurement; the pristine fixed conftest was kept at state/logs/U0.16-conftest.fixed.py and `cp`-restored, then sha256-compared."
+  },
+  "tests": {
+   "tests/test_live_marker_convention.py": "10 passed (all 5 directions: param-id not a marker, skip-invariant observer, hook marker-only + --live honoured, AST pin against name/keyword reads, marker registered, warning-summary behaviour)",
+   "tests/test_occamy_client.py": "33 passed, 1 skipped (the one genuine @pytest.mark.live test) + the new visible '1 live test(s) SKIPPED \u2014 NOT run and NOT passed' line",
+   "tests/test_occamy_producer.py": "14 passed",
+   "collection(tests/)": "721 collected, 1 skipped without --live; 0 skipped with --live (--collect-only, no test executed, so no network)"
+  },
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models   # -> 000 (curl 7, connection refused)",
+   ".venv/bin/python -m pytest tests/ --collect-only -q            # -> 711 collected (before guard file)",
+   ".venv/bin/python state/logs/U0.16-probe-semantics.py           # -> keyword-semantics table",
+   ".venv/bin/python state/logs/U0.16-audit.py state/logs/U0.16-skips-before.json",
+   ".venv/bin/python state/logs/U0.16-audit2.py state/logs/U0.16-skips-after.json",
+   ".venv/bin/python state/logs/U0.16-audit2.py state/logs/U0.16-skips-after-live.json --live",
+   ".venv/bin/python -m pytest tests/test_live_marker_convention.py -v -p no:cacheprovider",
+   ".venv/bin/python -m pytest tests/test_occamy_client.py -q -p no:cacheprovider",
+   ".venv/bin/python -m pytest tests/test_occamy_producer.py -q -p no:cacheprovider"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Independent verifier (not U0.16): re-run `pytest tests/test_live_marker_convention.py -q`, then revert ONLY the skip loop in tests/conftest.py to `if \"live\" in item.keywords` and confirm RED (1 skipped + 3 failed), restore and confirm sha256 72ac7401ff18a7b790e9060ccaca63e85f42c732e5671114ede5934bb82214aa; then `pytest tests/ --collect-only -q --live` -> 0 skipped. Optional cosmetic follow-up unit: the now-obsolete workaround NOTE + 'cached' id at tests/test_occamy_producer.py:250-251 (outside U0.16 write paths).",
+ "write_paths": [
+  "tests/conftest.py",
+  "pyproject.toml",
+  "tests/test_live_marker_convention.py",
+  "state/logs/U0.16*",
+  "orchestration/units/U0.16.md",
+  "orchestration/handoffs/U0.16.json"
+ ],
+ "tool_calls": 25,
+ "bound": 25
+}

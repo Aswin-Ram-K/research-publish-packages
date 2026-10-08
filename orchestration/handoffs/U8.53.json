@@ -1,0 +1,153 @@
+{
+ "unit": "U8.53",
+ "status": "done",
+ "artifacts": [
+  "orchestration/handoffs/U8.53.json",
+  "orchestration/units/U8.53.md",
+  "state/logs/U8.53.log"
+ ],
+ "evidence": {
+  "probe": "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models -> 000 (curl: (7) Failed to connect); zero LLM calls; nothing restarted",
+  "tree": "find dockets -mindepth 1 -path '*/.worktrees*' -prune -o -print | sort ; 3 dockets present (dockets/duval/duval-replay-material 30 files, dockets/duval/duval-u55-pinned 29 files, dockets/_smoke 31 files); no .worktrees/ path emitted",
+  "manifest_hashes": "sha256sum <path>/MANIFEST.json (raw bytes): replay ce45766d...=record MATCH; u55 445032f7...=record MATCH; _smoke 41ec711a...=record MATCH (3/3)",
+  "verify_docket": "from resextract.docket import verify_docket; replay ok=True problems=[]; u55 ok=True problems=[]; _smoke ok=False problems=['claim C1: standing CONFIRMS contradicts its backing producer \\'unknown\\', not \\'model\\' ...'] -- exactly the known CONFIRMS problem",
+  "recipe_reproduction": "recipe A (recursive sha256sum|xargs composite) reproduced BOTH sibling anomalies: e98113702041b86b...=dockets/duval (59 files), 0eda52ac42b3ae4c...=dockets/_smoke (31 files). abcfa6a9d4df344d NOT reproduced by A/A2/A3/A4/B/B2/B3/A5/A6.",
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models",
+   "find dockets -mindepth 1 -path '*/.worktrees*' -prune -o -print | sort",
+   "find dockets -name MANIFEST.json -not -path '*/.worktrees/*' -print0 | sort -z | while read -r -d '' f; do sha256sum \"$f\"; stat -c '%y' \"$f\"; done",
+   ".venv/bin/python -c 'from resextract.docket import verify_docket; ...'",
+   ".venv/bin/python <recipe A/B composite hashing over dockets/duval, dockets/_smoke, both sub-dockets>",
+   ".venv/bin/python <A3/A4/A5/A6 variants for abcfa6a9d4df344d>"
+  ]
+ },
+ "tree": "dockets/ (dir)\ndockets/duval/ (dir)\ndockets/duval/duval-replay-material/ (dir) - 30 files: CHECKLIST.md CLAIMS.md EVIDENCE.md HISTORY.md ITEM.md ITEM.md.r1-.r4 MANIFEST.json METHOD.md OPEN_QUESTIONS.md PRIOR_ART.md README.md REFERENCES.bib REFERENCES.md RESULTS.md UPDATE_BACKLOG.md; material/code/{adapter,decisions,lease,performance}.ts; material/data/baseline.json; material/docs/{CITATION.cff,FINDINGS.md,README.md}; material/EXCERPTS.md; repro/{README.md,run.sh}; web/README.md\ndockets/duval/duval-u55-pinned/ (dir) - 29 files: CHECKLIST.md CLAIMS.md EVIDENCE.md HISTORY.md ITEM.md ITEM.md.r1-.r3 MANIFEST.json METHOD.md OPEN_QUESTIONS.md PRIOR_ART.md README.md REFERENCES.bib REFERENCES.md RESULTS.md UPDATE_BACKLOG.md; material/data/2026-09-28-duval-m0.jsonl; material/docs/{AGENTS.md,CITATION.cff,.ci-trunk.txt,consonance-external-evidence-2026-10-07.md.txt,CONSONANCE.md,FINDINGS.md,monograph.txt,README.md}; repro/{README.md,run.sh}; web/README.md\ndockets/_smoke/ (dir) - 31 files: CHECKLIST.md CLAIMS.md EVIDENCE.md HISTORY.md ITEM.md MANIFEST.json METHOD.md OPEN_QUESTIONS.md PRIOR_ART.md README.md REFERENCES.bib REFERENCES.md RESULTS.md UPDATE_BACKLOG.md; material/{CITATION.cff,EXCERPTS.md,README.md}, material/docs/FINDINGS.md, material/evals/baseline.json, material/source-material/design-record/Consonance_Master_Architecture.docx, material/src/adapter.ts; _refusal/material/... (mirror of material/); repro/{README.md,run.sh}; web/README.md\nNO .worktrees/ path was read or listed anywhere. All three dockets present; none missing, none renamed.",
+ "manifests": [
+  {
+   "path": "dockets/duval/duval-replay-material/MANIFEST.json",
+   "sha256": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4",
+   "mtime": "2026-10-08 09:28:51.302382844 -0500",
+   "mtime_kind": "file mtime (the containing dir's mtime is 2026-10-08 09:28:51.303536743 -0500, ~1.2ms later)",
+   "expected": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4",
+   "match": true,
+   "verify_ok": true,
+   "problems": []
+  },
+  {
+   "path": "dockets/duval/duval-u55-pinned/MANIFEST.json",
+   "sha256": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+   "mtime": "2026-10-08 08:36:35.984233876 -0500",
+   "mtime_kind": "file mtime (dir mtime identical to 1e-9s)",
+   "expected": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+   "match": true,
+   "verify_ok": true,
+   "problems": []
+  },
+  {
+   "path": "dockets/_smoke/MANIFEST.json",
+   "sha256": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+   "mtime": "2026-10-08 05:49:09.150312393 -0500",
+   "mtime_kind": "file mtime (dir mtime 2026-10-08 05:49:09.151055969 -0500)",
+   "expected": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+   "match": true,
+   "verify_ok": false,
+   "problems": [
+    "claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='unknown') -- a non-model run may not assert CONFIRMS; re-derive the claim through materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)"
+   ]
+  }
+ ],
+ "recipe_attempts": [
+  {
+   "recipe": "A: recursive composite = sha256 of `find <dir> -type f -not -path '*/.worktrees/*' | sort | xargs sha256sum` output (abs paths, sha256sum line format)",
+   "dir": "dockets/duval",
+   "value": "e98113702041b86b4a81ca77801746123f507786678c33e50536b3454d6e52e1",
+   "match": "MATCH sibling value e98113702041b86b (59 files)"
+  },
+  {
+   "recipe": "A",
+   "dir": "dockets/_smoke",
+   "value": "0eda52ac42b3ae4c1ef316c216fa787d2e795d35ae42e789576c58648202d08e",
+   "match": "MATCH sibling value 0eda52ac42b3ae4c (31 files)"
+  },
+  {
+   "recipe": "A",
+   "dir": "dockets/duval/duval-replay-material",
+   "value": "e52448c04227d90781f3e86aeeac10e7c78108b5b046f58d6685cacd01a2ee85",
+   "match": "none"
+  },
+  {
+   "recipe": "A",
+   "dir": "dockets/duval/duval-u55-pinned",
+   "value": "6965533cd9a18dfd13921b3b8c7615c1ba8ba83928e1771901b8b9a955573e0d",
+   "match": "none"
+  },
+  {
+   "recipe": "A2: as A but paths relative to docket dir",
+   "value": "duval e63decef/ _smoke a9e847b4 / replay 29747bbe / u55 3deb5b5f",
+   "match": "none"
+  },
+  {
+   "recipe": "A3: sha256 of concatenated raw bytes of all files, sorted by path",
+   "value": "replay 945e43af768a0214daefab49aa6e6765d78e4709103ae60b7bc8fcb238ca3fd7 / u55 7975ef22ba31dc9f0a076eeee1f6d1de5d41ead32bc04dad96a4ca389d11cc71",
+   "match": "none"
+  },
+  {
+   "recipe": "A4: sha256 of newline-joined MANIFEST.json hashes only",
+   "value": "replay a40e9f06b82d12852397738d7b58af29c707786a58d6a131a4a564c30c2d5d1d / u55 ebfcebc1a7ba0d7da88b00aaad07b08c92bada17b3433923e1804b81e07a4ced",
+   "match": "none"
+  },
+  {
+   "recipe": "B: hash of the sorted name list only",
+   "value": "duval 3d9d7155 / _smoke 6be230c1 / replay bb1e68f4 / u55 af1bce90 (rel-path variants: 8e9ec25e / 43efe991 / e9f7626e / e0b95600)",
+   "match": "none"
+  },
+  {
+   "recipe": "B3: hash of directory metadata (path:mtime_ns:size of the docket dir)",
+   "value": "duval 324388cf / _smoke 65ccace4 / replay 1419871f / u55 6ac22441",
+   "match": "none"
+  },
+  {
+   "recipe": "A5/A6: sha256 of the two MANIFEST.json hashes concatenated r+u / u+r",
+   "value": "7b46b6bbbc615a7d93d1934a33c2575b9976ae3642be5ed4034a52975fbe579d / 03e59cb3edfa3a378ebef9c90f9ad36d246ba42dcf5a55a35b9bfc5c1d6d12cb",
+   "match": "none - abcfa6a9d4df344d NOT reproduced"
+  }
+ ],
+ "answers": {
+  "exists": true,
+  "path": "dockets/duval/duval-replay-material",
+  "matches_canonical": true,
+  "intact": true,
+  "verify_ok": true,
+  "problems": [],
+  "explanation": "The contradictory reports are a RECIPE DIFFERENCE, not a missing/renamed/changed docket: the sibling values e98113702041b86b and 0eda52ac42b3ae4c are tree-level roll-up digests (sha256 of the recursive sha256sum list) over the PARENT dirs dockets/duval and dockets/_smoke, not the canonical per-file MANIFEST.json hash. PROVEN for those two by reproduction; the 'abcfa6a9d4df344d identical for replay AND u55' claim is unproven and contradicted by the file counts (30 vs 29)."
+ },
+ "inferred_vs_proven": {
+  "proven": [
+   "delivery docket dockets/duval/duval-replay-material exists",
+   "its MANIFEST.json hashes to ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4 (raw bytes)",
+   "it is intact: verify_docket ok=True, problems=[]",
+   "e98113702041b86b = recipe-A roll-up of dockets/duval",
+   "0eda52ac42b3ae4c = recipe-A roll-up of dockets/_smoke",
+   "_smoke fails verify_docket with exactly the known CONFIRMS problem",
+   "abcfa6a9d4df344d is NOT reproducible under any of the 9 recipe variants tried, and cannot be a value identical for replay and u55 under content hashing (30 vs 29 files)"
+  ],
+  "inferred": [
+   "that the sibling units computed roll-up digests over parent dirs while the record quotes per-file MANIFEST.json bytes - the mechanism is proven for two of the three values, so the mismatch is a unit-of-measurement disagreement rather than any disk change"
+  ]
+ },
+ "tool_calls_work": 7,
+ "bound": 12,
+ "containment": {
+  "wrote_under_dockets": false,
+  "worktrees_reads": 0,
+  "outside_writes": 0,
+  "read_only": "Every docket/material/target path opened read-only; no mkdir/touch/write/cp/mv/rm under dockets/ (not even temporary); no immutable=1; /home/zer0null/Duval untouched; state/state.sqlite, tests/**, src/**, docs/**, config/** and all other handoffs untouched"
+ },
+ "blocker": "",
+ "next_unit_hint": "abcfa6a9d4df344d remains unexplained: ask the sibling that reported it for its exact one-liner. The delivery docket itself needs no repair - MANIFEST ce45766d... is canonical and verify_docket is clean; only dockets/_smoke carries a real (known, U5.22-follow-up) CONFIRMS defect.",
+ "write_paths": [
+  "state/logs/U8.53.log",
+  "orchestration/units/U8.53.md",
+  "orchestration/handoffs/U8.53.json"
+ ]
+}

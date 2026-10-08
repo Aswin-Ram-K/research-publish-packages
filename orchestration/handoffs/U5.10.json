@@ -1,0 +1,111 @@
+{
+ "unit": "U5.10",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/docket/assemble.py",
+  "tests/test_docket_reassembly.py",
+  "state/U5.10_fixture.py",
+  "state/U5.10_patch.py",
+  "state/logs/U5.10-repro-before.txt",
+  "state/logs/U5.10-live.txt",
+  "state/logs/U5.10-guard-a.txt",
+  "state/logs/U5.10-guard-b.txt",
+  "state/logs/U5.10-live-checks.txt",
+  "state/U5.10-guards.json",
+  "orchestration/units/U5.10.md"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "reassembly": 17,
+   "assemble": 24,
+   "provenance": 19,
+   "materialize": 25,
+   "pinned": 17,
+   "total": 102
+  },
+  "reproduced_measured": {
+   "open_questions": "2->0",
+   "rework_open": "1->0",
+   "web_sources": "2->0",
+   "results": "1->0",
+   "prior_art": "1->0",
+   "one_lost_value_verbatim": "does the 503 rate hold under a second region?",
+   "verify_still_ok": true,
+   "downgrades_pre_fix": [],
+   "preserved_pre_fix": [
+    "material provenance preserved for 2/2 entries"
+   ],
+   "fixture_manifest_sha_before_bare": "60223b5553f6976fb3ebd38e9b5c8bdd270fca03430dbcb6d4a2e19e86710719",
+   "how": "state/U5.10_fixture.py builds state/U5.10-fixture/dock (non-empty in every list; >=1 material row with dest != src), then the documented bare re-assembly (state/U5.9_bare.py entry point).",
+   "field_name_correction": "manifest.py has NO 'results'/'prior_art' fields (DocketManifest is extra=\"forbid\"): the manifest's real lists are claims/material/web_sources/open_questions/rework_open. 'results'/'prior_art' are assembly INPUTS rendered to RESULTS.md/PRIOR_ART.md and otherwise not persisted, so nothing can inherit them. The card's five-name list is wrong on two names; the manifest hole is the three UNSUPPLIED lists."
+  },
+  "fix": {
+   "empty_vs_absent_rule": "None = not supplied => inherit the existing manifest's own value; an explicit empty iterable = a deliberate clear (verbatim, silent, no alarm). Defaults changed () -> None so a bare re-assembly and a deliberate clear are distinguishable and a genuine clear is expressible.",
+   "target_changed_rule": "refuse",
+   "target_changed_justification": "slug/head_sha/graph_hash differ => do NOT carry; one loud per-list warning naming both revisions. 'Inherit-marked' would require mutating list[str] content (breaking the byte-identity guarantee) or an 'inherited' field on WebSource in an extra=\"forbid\" contract with a deliberately un-bumped schema.",
+   "no_fabrication": true,
+   "logging": "healed=1 summary line (joined into one '- **preserved** \u2014 ...'); unhealable=per-entry/per-list ('- **downgrade** \u2014 ...')",
+   "where": "assemble.py:_inherit_manifest_lists + _warn_unsupplied_render_inputs + _same_target + _describe_target; call site before the evidence gate (inherited web_sources must satisfy it)",
+   "manifest_py_changed": false,
+   "results_prior_art_handling": "not manifest fields => not inheritable; previously rendered content is ALARMED per file (detected by absence of the renderer's own stub), never re-derived from markdown (fabrication) and never silently emptied."
+  },
+  "red_green": {
+   "a": "sha ok (assemble.py 20e46f8a... bit-identical before==after revert/restore); f=1 failed in 0.05s AssertionError: ('open_questions', [], ['does the 503 rate hold under a second region?', 'is the trace chain complete for m0?']) [revert = inheritance call site disabled]; p=1 passed in 0.04s [restored]",
+   "b": "sha ok (same bit-identical restore); f=1 failed in 0.05s AssertionError: assert ['does the 50...lete for m0?'] == [] [revert = target check disabled, stale content carried]; p=1 passed in 0.05s [restored]"
+  },
+  "live": {
+   "fixture_preserved": {
+    "open_questions": "2/2",
+    "rework_open": "1/1",
+    "web_sources": "2/2",
+    "results": "1/1 rendered -> 0: NOT a manifest field, so not inheritable; alarmed per file (1 downgrade line), never invented",
+    "prior_art": "1/1 rendered -> 0: same; alarmed per file (1 downgrade line), never invented"
+   },
+   "summary_line_verbatim": "- **preserved** \u2014 manifest lists preserved from the previous manifest for target u510-target@0000000000000000000000000000000000000000/deadbeef: open_questions 2/2, rework_open 1/1, web_sources 2/2; material provenance preserved for 2/2 entries",
+   "verify_ok": true,
+   "downgrades_after_fix": [
+    "RESULTS.md: NOT preserved -- this docket previously rendered content here and a bare re-assembly supplies none; 'results'/'prior_art' are not manifest fields (extra=\"forbid\"), so the values cannot be inherited and are NOT re-derived from the rendered markdown (re-supply them to re-render)",
+    "PRIOR_ART.md: NOT preserved -- this docket previously rendered content here and a bare re-assembly supplies none; 'results'/'prior_art' are not manifest fields (extra=\"forbid\"), so the values cannot be inherited and are NOT re-derived from the rendered markdown (re-supply them to re-render)"
+   ],
+   "real_docket_lists": "0/0 (nothing to preserve - stated plainly): the real docket carries 0 open_questions, 0 rework_open, 0 web_sources and 0 rendered results/prior_art, before AND after; it cannot demonstrate this family, which is why the fixture exists."
+  },
+  "verified_docket_untouched": {
+   "manifest_sha_still": "879e66b88f1ef52be541efaf00a4ba67f804c85c2fb8649c3cb99b4022333810"
+  },
+  "duval_untouched": {
+   "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/ (foreign actor's untracked entries; this unit wrote nothing there)"
+  },
+  "hashes": {
+   "assemble_py": "20e46f8ae9d6e40f123ff94a23f2c302332391432b6ea39de42d548e65bab1a8",
+   "tests_file_final": "091351d46b20092c3a0497b76e4fa84fd5f98ae9ff53990d22abc8d513a004fb",
+   "tests_file_at_guard_run": "40f8f9e6acfa60c20b55521294047ed42ba69c60d75eaa2af098b4d2edfde308"
+  },
+  "tool_calls": 30,
+  "bound": 28,
+  "tool_call_overshoot_reason": "1 wasted: the initial handoff rewrite used the write tool on a file created by shell heredoc (refused, file-not-read). 1 wasted: the patch-time backup state/U5.10-assemble.fixed.bak was taken BEFORE the patch, so the first guard round's 'restores' reverted the fix; that round was discarded, the patch re-applied and both guards re-run against a correctly-named backup (final state sha-verified).",
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/U5.10_fixture.py before-fix",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/U5.10_patch.py",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/U5.10_fixture.py after-fix-final",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_reassembly.py tests/test_docket_assemble.py tests/test_docket_provenance.py tests/test_docket_materialize.py tests/test_docket_materialize_pinned.py -q -p no:cacheprovider",
+   "sha256sum dockets/duval/duval-u55-pinned/MANIFEST.json",
+   "git -C /home/zer0null/Duval rev-parse HEAD; git -C /home/zer0null/Duval status --porcelain"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "The manifest-list family is closed for the three real manifest lists. results/prior_art cannot be inherited without a contract change: a follow-up could add ADDITIVE optional results[]/prior_art[] records to DocketManifest (extra=\"forbid\" allows it, schema string deliberately un-bumped) so they too survive a bare re-assembly instead of being alarmed. A verifier should also confirm materialize_lane (which passes none of these lists) now inherits on an unchanged head_sha and refuses loudly when HEAD moved.",
+ "write_paths": [
+  "src/resextract/docket/assemble.py",
+  "tests/test_docket_reassembly.py",
+  "state/U5.10_fixture.py",
+  "state/U5.10_patch.py",
+  "state/U5.10-fixture/**",
+  "state/logs/U5.10*",
+  "state/U5.10-guards.json",
+  "orchestration/units/U5.10.md",
+  "orchestration/handoffs/U5.10.json"
+ ]
+}

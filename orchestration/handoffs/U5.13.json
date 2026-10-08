@@ -1,0 +1,91 @@
+{
+ "unit": "U5.13",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/docket/materialize.py",
+  "src/resextract/docket/manifest.py",
+  "tests/test_docket_provenance.py",
+  "orchestration/units/U5.13.md"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "reassembly": 22, "assemble": 24, "provenance": 25, "materialize": 25, "pinned": 17,
+   "total": 113, "deletions": 0,
+   "before": {"reassembly": 22, "assemble": 24, "provenance": 19, "materialize": 25, "pinned": 17, "total": 107}
+  },
+  "reproduced": {
+   "claim": "C-curated",
+   "rendered_verdict": "CONFIRMS",
+   "attribution_present": false,
+   "manifest_claim_record": "{\"id\":\"C-curated\",\"kind\":\"file-fact\",\"verdict\":\"CONFIRMS\",\"provenance\":[...],\"evidence\":[...]} in dockets/duval/duval-replay-material/MANIFEST.json -- no producer / assessor field of any kind",
+   "claims_md_line": "CLAIMS.md:7 '## C-curated - CONFIRMS'; CLAIMS.md:13 '**Verification state.** CONFIRMS'",
+   "status_map": "materialize.py:210-218 (_VERDICT_BY_STATE; the CONFIRMS mappings at :211-213, exactly the hinted lines), consumed bare at _claim_for as _VERDICT_BY_STATE.get(member.verification_state.lower(), 'UNVERIFIED')",
+   "status_map_has_model_check": false,
+   "assess_cap": "assess/verdicts.py:401-406 (hint said :401 -- exact)",
+   "assess_cap_semantics": "caps a CONFIRMS to EXTENDS when the run is not model-produced (not is_model) and appends a bracketed reason; assess.verdicts.may_back_model_claim IS store.producer_is_model (same function object)",
+   "docket_producer": "replay",
+   "promotion_eligible": false,
+   "promotion_eligible_source": "manifest.promotion_eligible(manifest) == (False, 'producer is replay: no model mined these candidates; not publication-eligible') -- derived from generated_by.producer + status, never a stored field"
+  },
+  "fix": {
+   "records_producer": true,
+   "bounds_standing": true,
+   "cap_target": "EXTENDS",
+   "reason_recorded_where": "Claim.verdict_reason in MANIFEST.json, travelling with the claim; the assemble.py renderer must also print it at the single re-render (assemble.py is outside this unit's write paths)",
+   "reuses_single_predicate": "store.producer_is_model",
+   "additive_manifest_change": true,
+   "schema_bumped": false,
+   "schema": "resextract/docket/1",
+   "fields_added": ["Claim.producer: str = 'unknown'", "Claim.verdict_reason: str | None = None", "MemberSpec.producer: str = 'unknown'"],
+   "backward_compat": "a U5.12-shaped manifest claim {verdict:'CONFIRMS'} still loads (producer defaults to 'unknown', verdict_reason to None); _smoke validates; extra='forbid' intact; reading is never downgraded -- the cap applies only at materialize time"
+  },
+  "red_green": {
+   "a": "sha ok; src/resextract/docket/materialize.py sha256 173a2e49e2fa2a950152525aecac5e20dfd005ff6e95c037328137de233274c4 identical before and after restore (backup witness state/U5.13-materialize.orig.py); full __pycache__ purge both ways; RED: Failure 'assert 'CONFIRMS' == 'EXTENDS'' -> 1 failed in 0.13s; GREEN: 1 passed in 0.12s",
+   "b": "sha ok; materialize.py restored bit-identical to 173a2e49e2fa2a950152525aecac5e20dfd005ff6e95c037328137de233274c4; tests/test_docket_provenance.py sha256 4d42c1243d9d5ccd0b7931808cdd8a77f2e5e562a936088de414727266ce8ecc; full purge both ways; RED after dropping the from_store producer threading: Failure 'assert 'unknown' == 'replay'' -> 1 failed; GREEN: 1 passed in 0.13s"
+  },
+  "artifacts_untouched": {
+   "u55_manifest": "4441b99741126cb8b534987874300def4fcab4cecb461cd233a456ced220bd31",
+   "replay_manifest": "3fa52cd90af379ecb698a23e6d731cf7d73fc36696e9e7430506c8c90562b502",
+   "tree_hash_recipe": "cd <docket_root> && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum",
+   "u55_tree": "f72310f958280ca77cf4ff7568f175477fe835a2771e6fade10ebe49a76383a5",
+   "replay_tree": "17acc29be924e0ab7e1a9879816b6dae3ba8e5acb23d2dc1318d079fc34d9b8b",
+   "smoke_tree": "4aa9aca441bbfb51abc759447ff9c4659740e1da87c86dbd3b9be78d94556c98",
+   "note": "my three tree hashes match V5C's independently measured values exactly under the stated recipe; no docket file was written by this unit"
+  },
+  "store_untouched": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "version_source": "store.schema_version(con) == 4; PRAGMA user_version is 0 because the version lives in the schema_version table",
+   "rows_identical": true,
+   "rows": {"candidates": 10, "claims": 0, "evidence": 0, "verdicts": 0, "lanes": 5, "lane_candidates": 10, "dockets": 2, "runs": 4}
+  },
+  "follow_up_handed_up": "a single re-render of the real dockets, AFTER the render regression is fixed (README/ITEM descriptive titles; EVIDENCE.md source-kind/context prose); the renderer should also print Claim.verdict_reason beside the verification state so the cap is visible in CLAIMS.md itself",
+  "duval_untouched": {
+   "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/ (the foreign actor's untracked entries; its moving HEAD is expected)"
+  },
+  "tool_calls": 49,
+  "bound": 24,
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models   # 000, probed twice",
+   ".venv/bin/python -m pytest tests/test_docket_{reassembly,assemble,provenance,materialize,materialize_pinned}.py -q -p no:cacheprovider",
+   "sha256sum dockets/duval/duval-u55-pinned/MANIFEST.json dockets/duval/duval-replay-material/MANIFEST.json",
+   "cd dockets/duval/<docket> && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum",
+   "sha256sum state/state.sqlite && python -c 'store.schema_version(con)'",
+   "git -C /home/zer0null/Duval rev-parse HEAD; git -C /home/zer0null/Duval status --porcelain"
+  ],
+  "over_bound_accounting": "49 invocations against the target of 24. Breakdown: 18 read-only inspection calls (locate-by-content as instructed, since every hinted line number had drifted or needed confirmation), 9 edit calls (one refused until the file was read under the fs-observation policy, then re-issued), 8 scoped pytest runs (baseline 5 + verification 3), 6 shell calls for the two red->green sha proofs and the artifact/store/Duval evidence, 3 calls for the probe, unit card and handoff, and this final report. Nothing was skipped to fit the bound except would-be extra convenience reads; the red->green sha proof and the untouched-artifact proof were both required and were not abbreviated."
+ },
+ "blocker": "",
+ "next_unit_hint": "Do NOT re-render the real dockets yet. First fix the render regression in assemble.py (descriptive README/ITEM titles are replaced by the bare lane slug; EVIDENCE.md drops source-kind/context prose) AND make the claims renderer print Claim.verdict_reason next to '**Verification state.**' -- then a single re-render rewrites C-curated to verdict EXTENDS with its reason and attributes every claim.",
+ "write_paths": [
+  "src/resextract/docket/materialize.py",
+  "src/resextract/docket/manifest.py",
+  "tests/test_docket_provenance.py",
+  "state/U5.13-materialize.orig.py",
+  "state/logs/U5.13*",
+  "orchestration/units/U5.13.md",
+  "orchestration/handoffs/U5.13.json"
+ ]
+}

@@ -27,6 +27,7 @@ import json
 import os
 import re
 import sqlite3
+import stat
 import time
 from collections import Counter
 from datetime import datetime, timezone
@@ -35,7 +36,7 @@ from typing import Any, Iterable
 
 from resextract import doctor as doctor_mod
 from resextract import journal as journal_mod
-from resextract.store import TABLES, status_json, utcnow
+from resextract.store import DEFAULT_DB_PATH, TABLES, status_json, utcnow
 
 try:  # docket package is read-only for this unit
     from resextract.docket import read_manifest, verify_docket
@@ -126,6 +127,104 @@ def safe_slug(slug: Any) -> str | None:
     return candidate
 
 
+def safe_docket_slug(slug: Any, dockets_dir: Any = None) -> str | None:
+    """Return a validated relative docket slug (one or more segments) or ``None``.
+
+    Dockets may live in a nested directory (``duval/duval-u55-pinned``), so the
+    detail route accepts multi-segment slugs.  Every segment is validated
+    **individually** through :func:`safe_slug`, so the whole single-segment
+    guard still applies per segment and none of its redundancy is dropped: a
+    ``.`` or ``..`` segment, an empty segment, a backslash, a NUL byte, a
+    leading dot, a ``..`` substring or any unexpected character refuses the
+    slug.  Refusing is preferred to normalising — a client-supplied traversal
+    path is never resolved into a legitimate one.
+
+    When ``dockets_dir`` is given the joined path is *also* resolved with
+    :func:`os.path.realpath` and must stay inside the realpath of that root.
+    Containment is therefore enforced on the resolved filesystem path, not on
+    string matching alone: a symlinked docket that escapes the root is refused.
+    """
+    if not isinstance(slug, str):
+        return None
+    candidate = slug.strip()
+    if not candidate or len(candidate) > 200:
+        return None
+    if "\\" in candidate or "\x00" in candidate:
+        return None
+    segments = candidate.split("/")
+    if any(segment != safe_slug(segment) for segment in segments):
+        return None
+    if dockets_dir is not None:
+        try:
+            root = Path(os.path.realpath(str(dockets_dir)))
+            target = Path(os.path.realpath(str(root.joinpath(*segments))))
+        except (OSError, ValueError, TypeError):
+            return None
+        if target != root and root not in target.parents:
+            return None
+    return candidate
+
+
+def _store_dir_slug_candidates(directory: Any) -> list[str]:
+    """U6.20: slug candidates for a store ``dockets.dir`` value, best first.
+
+    The store records the directory the way the pipeline wrote it
+    (``dockets/duval/duval-replay-material``), while a layer may be pointed at
+    an absolute root.  The board only ever supports depth 1-2 (``*`` and
+    ``*/*``), so the trailing segments carry the slug; the single-segment name
+    is kept as a last-resort alias.  **Every** candidate is later validated by
+    :func:`safe_docket_slug` (segment check + realpath containment) and
+    required to be an existing directory under the root, so an ambiguous
+    candidate can never widen the read.
+    """
+    if not directory:
+        return []
+    parts = [
+        part
+        for part in Path(str(directory).replace("\\", "/")).parts
+        if part not in ("", ".", "/", os.sep)
+    ]
+    if not parts:
+        return []
+    anchors = [index for index, part in enumerate(parts) if part == "dockets"]
+    tail = parts[anchors[-1] + 1 :] if anchors else parts
+    candidates: list[str] = []
+    if tail:
+        candidates.append("/".join(tail[-2:]) if len(tail) > 2 else "/".join(tail))
+    if len(parts) >= 2:
+        candidates.append("/".join(parts[-2:]))
+    candidates.append(parts[-1])
+    ordered: list[str] = []
+    for candidate in candidates:
+        if candidate and candidate not in ordered:
+            ordered.append(candidate)
+    return ordered
+
+
+def _contained_realpath(path: Path, root: Path) -> Path | None:
+    """Return the ``realpath`` of *path* only when it stays inside *root*.
+
+    This is the per-file analogue of the ``realpath`` containment already done
+    in :func:`safe_docket_slug` for the docket *directory*.  Containing the
+    directory is not enough: a **file symlink inside an accepted docket** still
+    follows its target on read (``_read_text_capped``) and on listing
+    (``_docket_files``), which crosses the containment boundary one layer down.
+
+    ``None`` means "refuse": the path resolves outside ``root`` (an escape), or
+    resolution raised ``OSError``/``ValueError``/``TypeError``.  Containment is
+    realpath-based, so an **in-root** symlink alias is allowed — it is not an
+    escape — while a symlinked directory that leaves the root is refused too.
+    """
+    try:
+        root_real = Path(os.path.realpath(str(root)))
+        real = Path(os.path.realpath(str(path)))
+    except (OSError, ValueError, TypeError):
+        return None
+    if real == root_real or root_real not in real.parents:
+        return None
+    return real
+
+
 def _read_text_capped(path: Path, max_bytes: int) -> tuple[str, bool, int]:
     """Read at most ``max_bytes``; returns ``(text, truncated, total_bytes)``."""
     try:
@@ -136,6 +235,89 @@ def _read_text_capped(path: Path, max_bytes: int) -> tuple[str, bool, int]:
         return "", False, 0
     truncated = len(raw) < total
     return raw.decode("utf-8", errors="replace"), truncated, total
+
+
+def _open_readonly(path: Path) -> int:
+    """The single ``open`` seam, so a test can retarget a path inside the window."""
+    return os.open(str(path), os.O_RDONLY)
+
+
+def _fd_realpath(fd: int) -> Path | None:
+    """Identity of the object the *kernel* has open for ``fd`` (Linux procfs)."""
+    try:
+        return Path(os.readlink(f"/proc/self/fd/{fd}"))
+    except OSError:
+        return None
+
+
+def _read_text_capped_checked(
+    path: Path, expected_real: Path, max_bytes: int
+) -> tuple[str, bool, int, str | None]:
+    """Read *path*, but only if the **opened file descriptor** is ``expected_real``.
+
+    What this closes, stated honestly: the older shape was
+    ``real = _contained_realpath(path, root)`` and then ``_read_text_capped(real)``
+    — **two steps** — so a local writer could retarget a symlink between the
+    containment *check* and the ``open`` (a TOCTOU window) and the read followed
+    the new target.  Here the containment decision is still taken from the path
+    (``expected_real``, produced by :func:`_contained_realpath`), and then the
+    read is performed **from the descriptor** whose identity is resolved *after*
+    the open (:func:`_fd_realpath` → ``/proc/self/fd/{fd}``).  A swap between
+    check and use cannot matter: the object that will be read is exactly the
+    object whose identity is compared.  Either it still resolves to the
+    validated ``expected_real`` (safe) or it does not and the read is refused
+    with an explicit reason — never a silent read and never a 500.
+
+    Residual, disclosed and **not** closed here: **hard links**.  A hard link
+    placed inside the root to an outside inode has an in-root path *and* an
+    in-root descriptor identity, so path-based containment cannot tell it apart
+    from a legitimate file.  Creating one requires write access to the outside
+    file's filesystem — the same precondition the loopback-only threat model
+    already names.
+    """
+    try:
+        fd = _open_readonly(path)
+    except OSError as exc:
+        return "", False, 0, f"refused: unreadable ({type(exc).__name__}: {exc})"
+    try:
+        try:
+            st = os.fstat(fd)
+        except OSError as exc:
+            return "", False, 0, f"refused: fstat failed ({type(exc).__name__})"
+        if not stat.S_ISREG(st.st_mode):
+            return "", False, 0, "refused: not a regular file"
+        actual = _fd_realpath(fd)  # GUARD-B: identity taken AFTER the open
+        if actual is None:
+            return (
+                "",
+                False,
+                0,
+                "refused: cannot resolve the opened file descriptor "
+                "(/proc/self/fd unavailable on this platform)",
+            )
+        if actual != expected_real:
+            return (
+                "",
+                False,
+                0,
+                f"refused: the opened file descriptor is {str(actual)!r}, not the "
+                f"validated path {str(expected_real)!r} (swapped between check and use)",
+            )
+        try:
+            with os.fdopen(fd, "rb") as fh:
+                fd = -1  # fdopen owns the descriptor now
+                raw = fh.read(max_bytes)
+        except OSError as exc:
+            return "", False, 0, f"refused: read failed ({type(exc).__name__})"
+    finally:
+        if fd >= 0:
+            try:
+                os.close(fd)
+            except OSError:  # pragma: no cover
+                pass
+    total = st.st_size
+    truncated = len(raw) < total
+    return raw.decode("utf-8", errors="replace"), truncated, total, None
 
 
 def _headings(text: str, limit: int = 120) -> list[dict[str, Any]]:
@@ -183,6 +365,64 @@ def _match_journal(run: dict[str, Any], files: list[Path]) -> Path | None:
 
 
 # --------------------------------------------------------------------------- #
+# Store resolution -- the ONE boundary (U6.16)
+# --------------------------------------------------------------------------- #
+# Before U6.16 there were two resolutions and they disagreed: `default_layer()`
+# honoured ``RESEXTRACT_STATE_DB`` / ``RESEXTRACT_JOURNAL_DIR`` while
+# ``DataLayer.__init__`` ignored them and fell back to the literal
+# ``"state/state.sqlite"``.  A caller that set the env var to isolate the store
+# redirected only the routes that used ``default_layer()``; a ``create_app()``
+# server (which builds its own ``DataLayer``) read the *real* store while
+# believing it was contained.  Two verifier units paid for that.
+#
+# Every layer construction now goes through the functions below, so the class of
+# bug cannot recur -- enforce at the boundary, not at instances.
+#
+# Precedence (matches ``store.default_db_path()``, the reference behaviour):
+#   explicit argument (``--store`` / ``create_app(store_path=...)``)
+#     > ``RESEXTRACT_STATE_DB`` (process-level)
+#     > the cwd-relative default (``state/state.sqlite``).
+
+STORE_SOURCE_EXPLICIT = "explicit"
+STORE_SOURCE_ENV = "env"
+STORE_SOURCE_DEFAULT = "default"
+
+JOURNAL_SOURCE_EXPLICIT = "explicit"
+JOURNAL_SOURCE_ENV = "env"
+JOURNAL_SOURCE_DEFAULT = "default"
+
+
+def resolve_store(explicit: str | os.PathLike[str] | None = None) -> tuple[Path, str]:
+    """Resolve the store path **and report which rule decided it**.
+
+    The single source of truth for every ``DataLayer`` store path.  Returns the
+    resolved :class:`Path` plus one of ``"explicit"``, ``"env"`` or ``"default"``,
+    so a caller can *see* which store it is using instead of inferring it.
+    """
+    if explicit is not None:
+        return Path(explicit), STORE_SOURCE_EXPLICIT
+    env = os.environ.get("RESEXTRACT_STATE_DB")
+    if env:
+        return Path(env), STORE_SOURCE_ENV
+    return Path(DEFAULT_DB_PATH), STORE_SOURCE_DEFAULT
+
+
+def resolve_store_path(explicit: str | os.PathLike[str] | None = None) -> Path:
+    """Path-only form of :func:`resolve_store`."""
+    return resolve_store(explicit)[0]
+
+
+def resolve_journal_dir(explicit: str | os.PathLike[str] | None = None) -> tuple[Path, str]:
+    """Resolve the journal directory and its source (same precedence rule)."""
+    if explicit is not None:
+        return Path(explicit), JOURNAL_SOURCE_EXPLICIT
+    env = os.environ.get("RESEXTRACT_JOURNAL_DIR")
+    if env:
+        return Path(env), JOURNAL_SOURCE_ENV
+    return Path("state/journal"), JOURNAL_SOURCE_DEFAULT
+
+
+# --------------------------------------------------------------------------- #
 # Data layer
 # --------------------------------------------------------------------------- #
 
@@ -199,20 +439,69 @@ class DataLayer:
         *,
         max_bytes: int = DEFAULT_MAX_BYTES,
         doctor_ttl: float = 20.0,
+        backlog_dirs: Iterable[str | os.PathLike[str]] | None = None,
     ) -> None:
-        self.store_path = Path(store_path) if store_path is not None else Path("state/state.sqlite")
-        self.journal_dir = Path(journal_dir) if journal_dir is not None else Path("state/journal")
+        # U6.16: the ONE resolution boundary -- explicit > env var > default.
+        self.store_path, self.store_source = resolve_store(store_path)
+        self.journal_dir, self.journal_source = resolve_journal_dir(journal_dir)
         self.dockets_dir = Path(dockets_dir) if dockets_dir is not None else Path("dockets")
         self.graph_path = Path(graph_path) if graph_path is not None else DEFAULT_GRAPH_PATH
         self.max_bytes = int(max_bytes)
         self.doctor_ttl = float(doctor_ttl)
+        # Explicit, opt-in extra backlog roots.  There is deliberately NO
+        # ``cwd`` root any more (U6.8): see :meth:`refresh_backlog`.
+        self.backlog_dirs = tuple(Path(d) for d in (backlog_dirs or ()))
         self._doctor_cache: dict[str, Any] | None = None
         self._doctor_at: float = 0.0
         self._graph_cache: tuple[tuple[str, int, int], dict[str, Any]] | None = None
 
     # -- plumbing ---------------------------------------------------------- #
 
+    def resolution(self) -> dict[str, str]:
+        """Report *which* store/journal this layer resolved to, and by which rule.
+
+        U6.16: an isolation mechanism that half-works produces false containment
+        claims, so the resolved path is observable here, on the instance, rather
+        than inferred from behaviour.
+        """
+        return {
+            "store_path": str(self.store_path),
+            "store_source": self.store_source,
+            "journal_dir": str(self.journal_dir),
+            "journal_source": self.journal_source,
+        }
+
     def _connect(self) -> tuple[sqlite3.Connection | None, str | None]:
+        """Open the store read-only.  U6.18 boundary note (decision, with evidence).
+
+        Why ``mode=ro`` and *not* ``immutable=1``/``nolock=1``: the store is a
+        **WAL** database (header bytes 18/19 = ``2/2``, established from the
+        header of a copy) and the pipeline writes it through
+        ``store.connect()`` while a dashboard can be up, so readers and writers
+        are concurrent **by design**.  Measured on throwaway copies
+        (``tests/test_cli.py::test_readonly_open_*`` / ``::test_immutable_uri_*``,
+        U6.18):
+
+        * ``mode=ro`` creates ``<store>-wal``/``<store>-shm`` beside the store.
+          That is a WAL reader's shared-memory bookkeeping, not a write to the
+          database: the store's own bytes, sha256 and mtime are unchanged.  It
+          cannot be suppressed safely while the store is WAL and concurrently
+          written, so U6.18 records it as a **documented non-fix** (option d)
+          rather than trading it for a torn read.
+        * ``immutable=1`` *does* suppress the sidecars, but it asserts the file
+          can never change: it does not consult the ``-wal`` at all.  With
+          committed pages still in the WAL it answered ``no such table`` where
+          ``mode=ro`` returned the rows -- silent data loss -- and it disables
+          the change detection that would notice a checkpoint rewriting the
+          file under the reader.  REJECTED as unsafe here.
+        * ``nolock=1`` cannot open this database at all (``unable to open
+          database file``).  Unusable, not merely risky.
+
+        The real remedy belongs to the *writer* (``journal_mode=DELETE`` needs
+        no reader sidecars, at the cost of the WAL's concurrent read/write
+        capability); it is handed up, not applied, because ``state/state.sqlite``
+        is read-only to this unit.
+        """
         path = self.store_path
         if not path.is_file():
             return None, f"store not found: {path}"
@@ -224,9 +513,14 @@ class DataLayer:
             return con, None
         except sqlite3.Error:
             pass
+        # U6.18: this fallback used to be a plain read-WRITE open.  A layer whose
+        # whole contract is read-only must not silently regain write access when
+        # the URI form fails, so the fallback is made read-only at the SQL level
+        # too -- the boundary's "read-only" claim now holds on every path.
         try:
             con = sqlite3.connect(str(path))
             con.row_factory = sqlite3.Row
+            con.execute("PRAGMA query_only=ON")
             con.execute("SELECT 1 FROM sqlite_master LIMIT 1")
             return con, None
         except sqlite3.Error as exc:  # pragma: no cover - defensive
@@ -642,11 +936,19 @@ class DataLayer:
 
     def _docket_files(self, directory: Path) -> list[dict[str, Any]]:
         files: list[dict[str, Any]] = []
+        root = Path(self.dockets_dir)
         try:
             entries = sorted(p for p in directory.rglob("*") if p.is_file())
         except OSError:
             return files
         for path in entries[:500]:
+            # Per-file realpath containment (GUARD-B): the docket *directory*
+            # was contained, but a file symlink inside an accepted docket still
+            # follows its target here.  An entry that resolves outside the
+            # dockets root — directly, or through a symlinked directory — is
+            # excluded from the listing rather than disclosed.
+            if _contained_realpath(path, root) is None:
+                continue
             try:
                 files.append(
                     {
@@ -658,6 +960,74 @@ class DataLayer:
                 continue
         return files
 
+    def _store_docket_snapshots(self) -> list[tuple[list[str], dict[str, Any]]]:
+        """U6.20: the ``dockets.manifest_json`` rows, parsed, as (slug keys, snapshot).
+
+        Why this is a *fallback* and never the source of truth: ``manifest_json``
+        is a snapshot taken when the row was inserted or refreshed.  A re-render
+        that repairs the artifact -- a descriptive ``lane.title``, the evidence
+        lists, ``generated_by.producer`` -- leaves the row exactly as it was, so
+        a surface that reads the row reports the damaged, pre-re-render metadata
+        (the slug standing in for the title, no evidence) for a docket whose
+        on-disk manifest is correct.  The artifact is what the pipeline
+        produced, what ``verify_docket`` validates and what an operator can
+        read; the row is a cache.
+
+        Read through the layer's usual ``mode=ro`` connection (never
+        ``immutable=1``: this is a WAL store and ``immutable=1`` does not
+        consult the ``-wal`` -- see :meth:`_connect`).  A row whose snapshot
+        will not parse is dropped rather than guessed at.  Nothing is written.
+        """
+        con, _err_text = self._connect()
+        if con is None:
+            return []
+        try:
+            rows, _sel_err = self._select(con, "dockets", "id")
+        except sqlite3.Error:  # pragma: no cover - defensive
+            return []
+        finally:
+            con.close()
+        out: list[tuple[list[str], dict[str, Any]]] = []
+        for row in rows:
+            snapshot = row.get("manifest_json")
+            if not isinstance(snapshot, dict):
+                continue
+            candidates = _store_dir_slug_candidates(row.get("dir"))
+            if candidates:
+                out.append((candidates, snapshot))
+        return out
+
+    @staticmethod
+    def _snapshot_metadata(snapshot: dict[str, Any]) -> dict[str, Any]:
+        """Flatten a store snapshot to the fields the board publishes."""
+        lane = snapshot.get("lane") if isinstance(snapshot.get("lane"), dict) else {}
+        claims = snapshot.get("claims") if isinstance(snapshot.get("claims"), list) else []
+        evidence = 0
+        for claim in claims:
+            if isinstance(claim, dict) and isinstance(claim.get("evidence"), list):
+                evidence += len(claim["evidence"])
+        freshness = (
+            snapshot.get("freshness") if isinstance(snapshot.get("freshness"), dict) else {}
+        )
+        return {
+            "lane_title": lane.get("title"),
+            "lane_slug": lane.get("slug"),
+            "claims": len(claims),
+            "evidence": evidence,
+            "generated_by": snapshot.get("generated_by"),
+            "verified_at": freshness.get("verified_at"),
+            "store_status": snapshot.get("status"),
+        }
+
+    @staticmethod
+    def _snapshot_for(
+        snapshots: list[tuple[list[str], dict[str, Any]]], slug: str
+    ) -> dict[str, Any] | None:
+        for candidates, snapshot in snapshots:
+            if slug in candidates:
+                return snapshot
+        return None
+
     def dockets(self) -> dict[str, Any]:
         root = Path(self.dockets_dir)
         if not root.is_dir():
@@ -668,19 +1038,32 @@ class DataLayer:
                 "dockets": [],
                 "note": "no dockets directory on disk",
             }
+        # U6.20: the store rows are read once per board read and used ONLY as
+        # a fallback (a directory whose MANIFEST.json is absent/unreadable).
+        snapshots = self._store_docket_snapshots()
         out: list[dict[str, Any]] = []
         for directory in self._iter_docket_dirs():
             try:
                 slug = str(directory.relative_to(root)).replace(os.sep, "/")
             except ValueError:  # pragma: no cover
                 slug = directory.name
+            route_slug = safe_docket_slug(slug, root)
+            if route_slug is None:
+                # a docket directory that resolves outside the dockets root (a
+                # symlinked docket) is excluded from the board entirely: nothing
+                # about an escaped directory is listed or served.
+                continue
             entry: dict[str, Any] = {
                 "slug": slug,
-                "route_slug": slug if "/" not in slug else None,
+                "route_slug": route_slug,
                 "dir": str(directory),
                 "status": None,
                 "type": None,
                 "lane": None,
+                "lane_title": None,
+                "title": None,
+                "evidence": 0,
+                "source": None,
                 "target": None,
                 "freshness": {"state": None, "age_days": None, "verified_at": None},
                 "claims": 0,
@@ -709,6 +1092,24 @@ class DataLayer:
             except Exception as exc:  # noqa: BLE001
                 entry["error"] = f"MANIFEST.json unreadable: {type(exc).__name__}: {exc}"
                 entry["status"] = "unreadable"
+                # U6.20: the artifact cannot be read, so the store snapshot is
+                # the only metadata left.  It IS served -- and ``source`` says
+                # so.  ``status``/``error`` still report the unreadable
+                # artifact, so a stale row can never pass itself off as fresh.
+                snapshot = self._snapshot_for(snapshots, slug)
+                if snapshot is not None:
+                    metadata = self._snapshot_metadata(snapshot)
+                    entry.update(
+                        {
+                            "lane_title": metadata["lane_title"],
+                            "evidence": metadata["evidence"],
+                            "claims": metadata["claims"],
+                            "generated_by": metadata["generated_by"],
+                            "store_status": metadata["store_status"],
+                            "source": "store",
+                        }
+                    )
+                    entry["title"] = metadata["lane_title"] or entry["lane"] or slug
                 out.append(entry)
                 continue
 
@@ -742,9 +1143,91 @@ class DataLayer:
                     "claim_verdicts": dict(
                         Counter(str(claim.verdict) for claim in manifest.claims)
                     ),
+                    # U6.20: ``lane`` carries the manifest's ``lane.slug`` (normally
+                    # the directory slug, but not always: ``dockets/_smoke``
+                    # records ``duval-trace-integrity``).  ``lane_title``/``title``
+                    # add the artifact's real title so no slug stands in for it,
+                    # and ``evidence`` counts the artifact's evidence entries.
+                    "lane_title": getattr(manifest.lane, "title", None),
+                    "evidence": sum(
+                        len(getattr(claim, "evidence", None) or [])
+                        for claim in manifest.claims
+                    ),
+                    "source": "manifest",
                 }
             )
+            entry["title"] = entry["lane_title"] or entry["lane"]
             out.append(entry)
+        # U6.20 (b): a store row whose docket directory exists but whose
+        # MANIFEST.json is *absent* (so the glob above never saw it) is still
+        # listed -- from the snapshot, with ``source="store"`` and an explicit
+        # error naming the missing artifact.  The slug is validated and
+        # contained through ``safe_docket_slug`` and must resolve to an
+        # existing directory under the root, so no store row can name a path
+        # outside the dockets root or resurrect a docket that is gone.
+        seen = {str(item.get("slug")) for item in out}
+        for candidates, snapshot in snapshots:
+            resolved: str | None = None
+            for candidate in candidates:
+                safe_candidate = safe_docket_slug(candidate, root)
+                if safe_candidate is None:
+                    continue
+                if safe_candidate in seen or root.joinpath(
+                    *safe_candidate.split("/")
+                ).is_dir():
+                    resolved = safe_candidate
+                    break
+            if resolved is None or resolved in seen:
+                continue
+            metadata = self._snapshot_metadata(snapshot)
+            directory = root.joinpath(*resolved.split("/"))
+            out.append(
+                {
+                    "slug": resolved,
+                    "route_slug": resolved,
+                    "dir": str(directory),
+                    "status": "unreadable",
+                    "type": None,
+                    "lane": metadata["lane_slug"] or resolved.split("/")[-1],
+                    "lane_title": metadata["lane_title"],
+                    "title": metadata["lane_title"] or resolved.split("/")[-1],
+                    "target": None,
+                    "claims": metadata["claims"],
+                    "evidence": metadata["evidence"],
+                    "generated_by": metadata["generated_by"],
+                    "freshness": {
+                        "state": None,
+                        "age_days": None,
+                        "verified_at": metadata["verified_at"],
+                    },
+                    "store_status": metadata["store_status"],
+                    "material": 0,
+                    "material_bytes": 0,
+                    "web_sources": 0,
+                    "open_questions": [],
+                    "rework_open": [],
+                    "files": self._docket_files(directory),
+                    # U6.23: two distinct states, never one.  ``verify.ok`` is
+                    # ``None`` here because *no verification was run*: there is
+                    # no MANIFEST.json to verify and this store-only listing
+                    # path never calls ``verify_docket``.  That is NOT the same
+                    # as the corrupt-but-present artifact handled above, where
+                    # ``verify_docket`` *did* run and failed, so ``verify.ok`` is
+                    # ``False``.  So: a store-sourced entry with no artifact
+                    # reports ``None`` (did not run); a corrupt-but-present
+                    # manifest reports ``False`` (ran and failed).
+                    "verify": {
+                        "ok": None,
+                        "problems": ["no MANIFEST.json on disk: not verified"],
+                    },
+                    "error": (
+                        "MANIFEST.json absent on disk: metadata served from the "
+                        "store snapshot (source=store, possibly stale)"
+                    ),
+                    "source": "store",
+                }
+            )
+            seen.add(resolved)
         return {
             "generated_at": utcnow(),
             "root": str(root),
@@ -754,13 +1237,23 @@ class DataLayer:
         }
 
     def docket_detail(self, slug: str) -> dict[str, Any]:
-        safe = safe_slug(slug)
+        safe = safe_docket_slug(slug, self.dockets_dir)
         if safe is None:
             return _err(f"invalid docket slug: {slug!r}", slug=slug)
         root = Path(self.dockets_dir)
-        directory = root / safe
-        if not (directory / "MANIFEST.json").is_file():
+        directory = root.joinpath(*safe.split("/"))
+        manifest_path = directory / "MANIFEST.json"
+        if not manifest_path.is_file():
             return _err(f"docket not found: {safe!r}", slug=safe, root=str(root))
+        # The directory guard proved the docket *directory* did not escape; the
+        # manifest is contained again per file, because it may itself be a
+        # symlink out of the root (MANIFEST.json is the one file always read).
+        if _contained_realpath(manifest_path, root) is None:
+            return _err(
+                f"MANIFEST.json resolves outside the dockets root: {safe!r}",
+                slug=safe,
+                dir=str(directory),
+            )
         try:
             manifest = read_manifest(directory)  # type: ignore[misc]
             manifest_json: Any = manifest.model_dump(mode="json", by_alias=True)
@@ -773,19 +1266,44 @@ class DataLayer:
         documents: list[dict[str, Any]] = []
         for name in HEADING_FILES:
             path = directory / name
-            if not path.is_file():
-                documents.append({"name": name, "present": False, "headings": [], "bytes": 0})
+            real = _contained_realpath(path, root)  # GUARD-A: per-file containment
+            entry: dict[str, Any] = {
+                "name": name,
+                "present": False,
+                "headings": [],
+                "bytes": 0,
+            }
+            if real is None:
+                # explicit refusal: never a 500, never a silent serve
+                entry["error"] = f"refused: {name!r} resolves outside the dockets root"
+                documents.append(entry)
                 continue
-            text, truncated, size = _read_text_capped(path, self.max_bytes)
-            documents.append(
+            if not real.is_file():
+                # broken symlink, or a symlink to a directory where a file is
+                # expected: an explicit error, never a crash and never a serve
+                if path.is_symlink():
+                    entry["error"] = (
+                        f"refused: {name!r} is a symlink that does not resolve "
+                        "to a regular file"
+                    )
+                documents.append(entry)
+                continue
+            text, truncated, size, read_refusal = _read_text_capped_checked(
+                real, real, self.max_bytes  # GUARD-B: fd identity after open
+            )
+            if read_refusal is not None:
+                entry["error"] = read_refusal
+                documents.append(entry)
+                continue
+            entry.update(
                 {
-                    "name": name,
                     "present": True,
                     "bytes": size,
                     "truncated": truncated,
                     "headings": _headings(text),
                 }
             )
+            documents.append(entry)
         verify: dict[str, Any] = {"ok": None, "problems": []}
         if verify_docket is not None:
             try:
@@ -795,6 +1313,8 @@ class DataLayer:
         return {
             "slug": safe,
             "dir": str(directory),
+            # U6.20: every field below is read from the artifact.
+            "source": "manifest",
             "manifest": manifest_json,
             "documents": documents,
             "files": self._docket_files(directory),
@@ -953,7 +1473,7 @@ class DataLayer:
         ):
             return dict(self._doctor_cache)
         try:
-            report = doctor_mod.run_doctor()
+            report = doctor_mod.run_doctor(force=force)
         except Exception as exc:  # noqa: BLE001 - never 500 on a probe
             report = {
                 "ok": False,
@@ -1015,30 +1535,80 @@ class DataLayer:
             row["docket_dir"] = docket_index.get(row.get("docket_id"))
 
         files: list[dict[str, Any]] = []
-        roots: list[Path] = [Path(self.dockets_dir), Path.cwd()]
+        # Roots are EXPLICIT.  ``Path.cwd()`` used to be a second root here and
+        # is DROPPED (U6.8): resolving BACKLOG_NAMES against the process working
+        # directory made this the weakest read in the dashboard — a local writer
+        # could drop a file *named* ``UPDATE_BACKLOG.md`` anywhere under the cwd
+        # and have an arbitrary path read back through ``/api/refresh``, with no
+        # relation to any docket, no slug validation and (before this unit) no
+        # containment.  Every genuine backlog file in this repo lives *inside* a
+        # dockets tree, which the recursive walk below already finds, so dropping
+        # cwd breaks no legitimate read; a deployment that really keeps a backlog
+        # outside the tree must now pass it explicitly via ``backlog_dirs``, and
+        # each such root is contained exactly like the dockets root.
+        roots: list[tuple[Path, bool]] = [(Path(self.dockets_dir), True)]
+        roots += [(Path(d), False) for d in self.backlog_dirs]
         seen: set[Path] = set()
-        for root in roots:
+        for root, recursive in roots:
             if not root.exists():
                 continue
             for name in BACKLOG_NAMES:
-                candidates = list(root.rglob(name)) if root != Path.cwd() else list(root.glob(name))
+                candidates = list(root.rglob(name) if recursive else root.glob(name))
                 for path in candidates:
-                    try:
-                        resolved = path.resolve()
-                    except OSError:  # pragma: no cover
+                    if not path.is_file():
+                        # a broken symlink, a symlink to a directory, a symlink
+                        # loop, or a directory with the backlog name: disclose an
+                        # explicit refusal, never a silent skip that reads as
+                        # "no backlog file here"
+                        files.append(
+                            {
+                                "path": str(path),
+                                "present": False,
+                                "bytes": 0,
+                                "truncated": False,
+                                "headings": [],
+                                "error": (
+                                    f"refused: {name!r} is not a regular file "
+                                    "(broken symlink, directory, or unresolvable)"
+                                ),
+                            }
+                        )
                         continue
-                    if resolved in seen or not path.is_file():
+                    real = _contained_realpath(path, root)  # GUARD-A: per-file containment
+                    if real is None:
+                        # explicit refusal payload naming the reason: the escape
+                        # is disclosed as a refusal, never served and never dropped
+                        # silently (a silent drop would read as "no data")
+                        files.append(
+                            {
+                                "path": str(path),
+                                "present": False,
+                                "bytes": 0,
+                                "truncated": False,
+                                "headings": [],
+                                "error": (
+                                    f"refused: {name!r} resolves outside the docket "
+                                    f"root {str(root)!r}"
+                                ),
+                            }
+                        )
                         continue
-                    seen.add(resolved)
-                    text, truncated, size = _read_text_capped(path, self.max_bytes)
-                    files.append(
-                        {
-                            "path": str(path),
-                            "bytes": size,
-                            "truncated": truncated,
-                            "headings": _headings(text),
-                        }
+                    if real in seen:
+                        continue
+                    seen.add(real)
+                    text, truncated, size, refusal = _read_text_capped_checked(
+                        path, real, self.max_bytes  # GUARD-B: fd identity after open
                     )
+                    entry: dict[str, Any] = {
+                        "path": str(path),
+                        "present": refusal is None,
+                        "bytes": size,
+                        "truncated": truncated,
+                        "headings": _headings(text),
+                    }
+                    if refusal is not None:
+                        entry["error"] = refusal
+                    files.append(entry)
         open_rows = [row for row in rework if not row.get("closed_at")]
         closed_rows = [row for row in rework if row.get("closed_at")]
         if not rework and not files:
@@ -1081,14 +1651,19 @@ class DataLayer:
 # --------------------------------------------------------------------------- #
 
 _DEFAULT_LAYER: DataLayer | None = None
+# U6.16: the cache key is the *resolved* paths, so a changed
+# RESEXTRACT_STATE_DB rebuilds the layer instead of silently reusing the old one.
+_DEFAULT_LAYER_KEY: tuple[str, str] | None = None
 
 
 def default_layer() -> DataLayer:
-    global _DEFAULT_LAYER
-    if _DEFAULT_LAYER is None:
-        store = os.environ.get("RESEXTRACT_STATE_DB", "state/state.sqlite")
-        journal = os.environ.get("RESEXTRACT_JOURNAL_DIR", "state/journal")
-        _DEFAULT_LAYER = DataLayer(store, journal, "dockets")
+    """The process-wide layer, re-resolved when the env var changes."""
+    global _DEFAULT_LAYER, _DEFAULT_LAYER_KEY
+    key = (str(resolve_store_path()), str(resolve_journal_dir()[0]))
+    if _DEFAULT_LAYER is None or _DEFAULT_LAYER_KEY != key:
+        # No explicit store/journal: resolution must stay truthful ("env"/"default").
+        _DEFAULT_LAYER = DataLayer(dockets_dir="dockets")
+        _DEFAULT_LAYER_KEY = key
     return _DEFAULT_LAYER
 
 
@@ -1143,5 +1718,6 @@ __all__ = [
     "refresh_backlog",
     "runs_summary",
     "safe_slug",
+    "safe_docket_slug",
     "web_research_health",
 ]

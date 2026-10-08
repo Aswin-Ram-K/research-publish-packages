@@ -1,0 +1,89 @@
+{
+  "unit": "U3.4",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/web/search.py",
+    "tests/test_web_search.py",
+    "state/logs/U3.4-live-evidence.py",
+    "state/logs/U3.4-live.txt",
+    "state/logs/U3.4-search.py.bak",
+    "orchestration/units/U3.4.md"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "occamy_probe_command": "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  # -> 000 (curl: (7) Could not connect); probed twice at most, nothing restarted, zero LLM calls",
+    "tests": "30 passed",
+    "test_command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_web_search.py -q  # 30 passed in 24.39s (was 16 collected before this unit)",
+    "tool_calls": 25,
+    "tool_call_bound": 35,
+    "red_green": "two guards, both pasted with sha before/after. sha256(search.py)=b79ff107df66b2cd6b6408cc61448418de309774393bf837ac925e5c8745fc7d identical before revert and after restore for BOTH reverts; __pycache__ purged and PYTHONDONTWRITEBYTECODE=1 on every run. REVERT 1 (drop the `if unresponsive:` branch in _note_empty): tests/test_web_search.py:693 `AssertionError: assert None == 'engine_unresponsive'` + `+ where None = SearchOutcome(query='capability-based security agent isolation', results=[], ok=True, degraded=False, ..., unresponsive_engines=['brave: Suspended', 'duckduckgo: CAPTCHA'], responded_engines=[]).degradation_reason` -> `1 failed, 29 deselected`; green again after restore. REVERT 2 (absence_blockers = list(blockers), i.e. no condition can block the claim): tests/test_web_search.py:796 `AssertionError: assert True is False` + `+ where True = SearchOutcome(query='row-b fast empty', results=[], ok=True, degraded=True, ..., degradation_reason='fast_empty', absence_is_meaningful=True, absence_reason=None, ...).absence_is_meaningful` -> `1 failed, 29 deselected`; green again after restore. Both transcripts are pasted verbatim into the two tests' docstrings.",
+    "new_guards_added": [
+      "transport-not-negatively-cached",
+      "4xx-ok-false",
+      "5xx-ok-false",
+      "empty-malformed-ok-false",
+      "latch-survives-success",
+      "engine-unresponsive-latch",
+      "absence-truth-table"
+    ],
+    "extra_guards_added": [
+      "unresponsive-shape-normalisation (4 shapes: bare string, colon string, [engine, reason] pair, dict)",
+      "sink-receives-new-engine-fields-per-attempt",
+      "clean-slow-empty-is-meaningful-and-does-not-latch"
+    ],
+    "live": {
+      "queries": [
+        {"query": "capability-based security agent isolation", "results": 0, "latency_ms": 494.467, "ok": true, "degraded": true, "reason": "engine_unresponsive", "absence_is_meaningful": false, "unresponsive": ["google: access denied"], "raw_unresponsive": [["google", "access denied"]]},
+        {"query": "hash-chained audit log tamper detection", "results": 0, "latency_ms": 2.301, "ok": true, "degraded": true, "reason": "engine_unresponsive", "absence_is_meaningful": false, "unresponsive": ["google: Suspended: access denied"], "raw_unresponsive": [["google", "Suspended: access denied"]]},
+        {"query": "content-addressed state machine", "results": 0, "latency_ms": 2.288, "ok": true, "degraded": true, "reason": "engine_unresponsive", "absence_is_meaningful": false, "unresponsive": ["google: Suspended: access denied"], "raw_unresponsive": [["google", "Suspended: access denied"]]},
+        {"query": "Darwin Godel Machine self-improving agents", "results": 0, "latency_ms": 2.101, "ok": true, "degraded": true, "reason": "engine_unresponsive", "absence_is_meaningful": false, "unresponsive": ["google: Suspended: access denied"], "raw_unresponsive": [["google", "Suspended: access denied"]]}
+      ],
+      "headline": "refused to conclude absence",
+      "quote": "SearchOutcome(query='capability-based security agent isolation', results=[], ok=True, degraded=True, degradation_reason='engine_unresponsive', absence_is_meaningful=False, unresponsive_engines=['google: access denied'], responded_engines=[], absence_reason=\"1 engine(s) reported themselves unresponsive (google: access denied) -- SearXNG said the search was broken; the client's degradation latch is set (engine_unresponsive); empties from a degraded client are unverified for its lifetime\") -- raw envelope for that same request: \"unresponsive_engines\": [[\"google\", \"access denied\"]] at latency_ms=494.467. Every one of the four genuine queries returned 0 results and every one reported absence_is_meaningful=False, so the tool cannot be used to claim the literature is absent on this host today.",
+      "rapid": {
+        "latencies": [1.388, 2.019],
+        "fast_empty_latched": true,
+        "latched_reason": ["engine_unresponsive", "engine_unresponsive"],
+        "note": "both rapid forced identical queries were sub-fast_empty_ms (1.388/2.019 ms) so the fast-empty path WOULD fire, but the reason recorded is engine_unresponsive because a directly-reported failure outranks the heuristic -- as designed. The fast_empty path itself is pinned independently by the unchanged offline guard test_fast_empty_escalates_immediately_on_a_sub_threshold_latency (still passing)."
+      },
+      "query_budget": "4 genuine + 2 rapid = 6 real SearXNG queries (bound 8); paced by the client at min_interval_s=2.0 (genuine) / 1.5 (rapid) with jitter; max_attempts=1 so no rotation multiplied the count. The raw envelope was captured by a delegating transport, which cost zero extra queries.",
+      "raw_shape_observation": "the live raw shape is the pair form with the reason string itself containing a colon: [[\"google\", \"Suspended: access denied\"]] -> normalised 'google: Suspended: access denied'"
+    },
+    "integrity": {
+      "state_sqlite": "PRAGMA quick_check -> [('ok',)], 13 tables (read-only connection)",
+      "webcache": "state/webcache untouched: 10 entries, 104K (this unit made no fetch calls)",
+      "duval_git_status_porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/  (foreign actor's untracked files, left alone; no writes by this unit)",
+      "search_py_sha256": "b79ff107df66b2cd6b6408cc61448418de309774393bf837ac925e5c8745fc7d",
+      "test_web_search_sha256": "97abbaaf33fc8d3d80e553a991249359701583d3f1ee464f916d1a2086bb1fb2",
+      "web_init_sha256_unchanged": "2ced643401c9d22d9a0d723dce454479a3e1e9d50a89f16003db6ee91a355515"
+    },
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  # 000",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_web_search.py -q  # 30 passed",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/logs/U3.4-live-evidence.py  # live rows above (6 SearXNG queries)",
+      "git -C /home/zer0null/Duval status --porcelain  # only ?? .ci-trunk.txt, ?? .lane-j-scratch/"
+    ]
+  },
+  "contract_added": {
+    "Attempt": "unresponsive_engines: list[str], responded_engines: list[str]",
+    "SearchOutcome": "absence_is_meaningful: bool, absence_reason: str | None, unresponsive_engines: list[str], responded_engines: list[str]",
+    "DegradationEvidence": "engines: list[str]",
+    "third_reason": "engine_unresponsive -- files immediately, like fast_empty; a directly-reported failure outranks the heuristics. fast_empty and consecutive_empty are unchanged.",
+    "semantic_guarantee_in_docstring": "an empty result set is never by itself evidence that nothing exists; only a successful, quiet, slow-enough empty search is",
+    "deliberate_strengthening": "absence_is_meaningful=False for an empty from an ALREADY-degraded client (the spec listed ok/empty/no-unresponsive/latency as necessary conditions; the latch is an extra blocker documented in the SearchOutcome docstring and pinned by truth-table row F)"
+  },
+  "exports_added": [],
+  "exports_note": "src/resextract/web/__init__.py was left byte-identical (sha256 shown above): the additive public surface is the new dataclass fields on Attempt/SearchOutcome/DegradationEvidence, pinned by tests/test_web_search.py::test_package_surface_exposes_exactly_the_declared_names (asserts the new field names and len(__all__) >= 13). No name was removed.",
+  "blocker": "",
+  "next_unit_hint": "A search_health persistence unit should consume Attempt.unresponsive_engines / Attempt.responded_engines through the existing sink (per attempt) and store the normalised 'engine: reason' strings; the prior-art stage must gate every absence claim on SearchOutcome.absence_is_meaningful (never on len(results)==0) and surface absence_reason verbatim when it is False. Two fidelity notes for that unit: (a) the live field shape here is the [engine, reason] pair form and the reason string may itself contain ':' ('Suspended: access denied'), so do not re-split on ':' downstream; (b) a slow zero-result response (494 ms observed) is still a dead search, so latency must never be used as a classifier -- it is only a lower bound.",
+  "write_paths": [
+    "src/resextract/web/search.py",
+    "tests/test_web_search.py",
+    "state/logs/U3.4-live-evidence.py",
+    "state/logs/U3.4-live.txt",
+    "state/logs/U3.4-search.py.bak",
+    "orchestration/units/U3.4.md",
+    "orchestration/handoffs/U3.4.json"
+  ],
+  "not_committed": "no commit made (Batch 0 stays at b4ea93c)"
+}

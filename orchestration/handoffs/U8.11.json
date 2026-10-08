@@ -1,0 +1,150 @@
+{
+ "unit": "U8.11",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/run.py",
+  "tests/test_run.py",
+  "orchestration/units/U8.11.md",
+  "state/logs/U8.11-red-green.txt",
+  "state/logs/U8.11-dry.json",
+  "state/logs/U8.11-real.json",
+  "state/verify/U8.11/run.py.pristine",
+  "state/verify/U8.11/run.py.fixed"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "run_before": 45,
+   "run_after": 50,
+   "deletions": 0,
+   "baseline_cmd": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_run.py -q",
+   "measured": "45 passed in 1.84s (before) -> 50 passed in 2.53s (after); 5 new def test_, 0 deleted",
+   "new_tests": [
+    "test_non_object_nodes_are_rejected_not_reused_as_ok_zero_nodes",
+    "test_every_object_node_still_reuses_including_the_genuine_graph",
+    "test_wrong_tail_pin_is_a_mismatch_and_a_short_pin_is_loud",
+    "test_broken_pin_is_refused_and_absent_pin_is_loudly_unverified",
+    "test_require_fresh_graph_now_refuses_an_unverified_graph_too"
+   ]
+  },
+  "item1_element_type": {
+   "reproduced": {
+    "nodes": "[100000 ints]",
+    "status_before": "ok",
+    "nodes_count_before": 0,
+    "detail": "_graph_unusable_reason -> None (accepted); graph_stats nodes=0 edges=0; red-cycle run: dry status=skipped mode=reuse nodes=0 edges=1 (see state/logs/U8.11-red-green.txt)"
+   },
+   "fix": "_graph_unusable_reason rejects any graph whose 'nodes' is not a non-empty list of JSON objects (walks every element via isinstance(node, dict))",
+   "check_depth": "all",
+   "genuine_still_reuses": 2685
+  },
+  "item2_full_digest": {
+   "reproduced": {
+    "wrong_tail_matched_before": true,
+    "detail": "_graph_digest len was 12; red-cycle run with a wrong-tail pin (identical first 12 hex) produced sha256 '2daf6fc671b1' and the line said 'matches the pinned digest 2daf6fc671b1' -> mode=reuse"
+   },
+   "fix": "_graph_digest returns the full 64-hex sha256; _digest12 truncates for display only; _same_digest compares min(len,64) so a 64-hex pin is compared character for character",
+   "short_pin_policy": "accept-and-report",
+   "pin_rewrite_required": false,
+   "recommended_pin_content": "",
+   "note": "config/graph_pin.toml already carries the full 64-hex digest '4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b' for state/kg/duval/graphify-out/graph.json, so no format change and no rewrite is needed. If it is ever shortened to 12 hex it still matches but now raises a PIN ABBREVIATED note + REDUCED STRENGTH clause. Committing the file (currently UNTRACKED, ledger 'aw') remains a checkpoint-4 action.",
+   "tests": [
+    "wrong-tail pin (same first 12 hex) => digest mismatch, refused, reported, file kept",
+    "exact full digest => match, provenance sha256 is 64 hex",
+    "12-hex pin => match + PIN ABBREVIATED note + REDUCED STRENGTH clause"
+   ]
+  },
+  "item3_pin_failure_modes": {
+   "missing": "reuse + loud note (PIN DEGRADED (absent) ... UNVERIFIED): a fresh setup has no pin yet; refusing would hard-fail every pre-pin/scratch setup, and absence cannot be distinguished from deletion without breaking the documented control boundary",
+   "malformed": "refuse (pin malformed): the file exists and cannot be honoured; a present-and-broken control must not equal 'no pin'",
+   "unreadable": "refuse (pin unreadable, e.g. chmod 000 / EISDIR): same argument - interference or corruption, not absence",
+   "other_path": "reuse + loud note (PIN DEGRADED (no_entry)): a well-formed committed pin may legitimately cover other targets; no expectation exists for THIS artifact, and the loud note is the mitigation",
+   "empty": "refuse (pin empty): an entry for this exact path with no usable value is a recorded expectation that cannot be checked (and an easy way to launder a deletion)",
+   "now_loud": "note added: 'graph: PIN DEGRADED (<state>): ... UNVERIFIED and reused anyway; this is a degraded control, not a verified match' for the reuse cases; refusals go to ctx.graph_rejected AND notes ('pin <state>: ... the graph is NOT reused'). The stage line also carries '(no pin recorded [<state>] ...)'",
+   "require_fresh_graph_refuses_unverified": true,
+   "justification": "The flag means 'do not trust a graph I cannot vouch for'; an unverified graph (no recorded built_at_commit, or an unreadable target HEAD) is exactly that, so the opt-in now refuses it too - it is opt-in, so the default report-only reuse is untouched and the genuine graph is STALE (not unverified), so the real path is unaffected."
+  },
+  "red_green": {
+   "a": "ITEM1 guard test_non_object_nodes_are_rejected_not_reused_as_ok_zero_nodes: RED = AssertionError plan: mode 'reuse' nodes 0 (sha 78ae6101 -> dcf9694f); GREEN = 1 passed, cmp-clean restore to 78ae610127bb1de492782be23547d494086dad82c6d1d8286fdada5d28f94165",
+   "b": "ITEM2 guard test_wrong_tail_pin_is_a_mismatch_and_a_short_pin_is_loud: RED = AssertionError plan: reuse, 'digest 2daf6fc671b1' matched (sha -> d7464882); GREEN = 1 passed, cmp-clean restore to 78ae6101...",
+   "c": "ITEM3 guards test_broken_pin_is_refused_and_absent_pin_is_loudly_unverified (+ require_fresh_graph unverified test): RED = AssertionError on the PIN DEGRADED note / on mode=='build' (sha -> 9d9df7f6 / ca826a1b); GREEN = 1 passed each, cmp-clean restore to 78ae6101...",
+   "purge": "FULL __pycache__ purge + *.pyc delete between every revert and restore, PYTHONDONTWRITEBYTECODE=1 (no narrow purge)",
+   "pristine": "reversing every replacement this unit applied reproduces the incoming run.py bit-identically: 78c989a0a3307375959a5d03593b2e28518530f2bfab9a8db488e1e327f866c0 (state/verify/U8.11/run.py.pristine)"
+  },
+  "release_sha": {
+   "expected": "78c989a0a3307375",
+   "actual": "78ae610127bb1de492782be23547d494086dad82c6d1d8286fdada5d28f94165",
+   "restored_bit_identical": true,
+   "pristine_reconstructed_sha256": "78c989a0a3307375959a5d03593b2e28518530f2bfab9a8db488e1e327f866c0",
+   "note": "78c989a0... is the INCOMING (pre-fix) sha and is preserved bit-identically in state/verify/U8.11/run.py.pristine (and reproduced by reversing the edit set); run.py necessarily differs at the end (actual) because the fix is a source change. Every revert-restore cycle restored the working file cmp-clean to the fixed sha."
+  },
+  "live": {
+   "dry_run": {
+    "exit_code": 0,
+    "graph_line": "dry run: would reuse existing code-only graph at state/kg/duval/graphify-out/graph.json (built at 6deaed07af0d, target head 6c60da5aa924 — STALE; sha256 4790bbb1111b matches the pinned digest 4790bbb1111b; graphify not re-run: bounded, and a re-extract would write inside the target)",
+    "graph": "status=skipped mode=reuse nodes=2685 edges=7102 sha256=4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b (full 64) pin_state=ok digest_state=match state=stale",
+    "cmd": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/resextract run --target duval --dry-run --json"
+   },
+   "real_run": {
+    "exit_code": 1,
+    "blocked": [
+     "mine",
+     "claims",
+     "assess"
+    ],
+    "materialize": "skipped",
+    "window_sealed": true,
+    "graph_line": "reused existing code-only graph at state/kg/duval/graphify-out/graph.json (built at 6deaed07af0d, target head 6c60da5aa924 — STALE; sha256 4790bbb1111b matches the pinned digest 4790bbb1111b; graphify not re-run: bounded, and a re-extract would write inside the target)",
+    "cmd": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/resextract run --target duval --json"
+   },
+   "no_graph_build": true,
+   "plan_line_equals_run_line": true,
+   "pin_degradation_notes_in_live_runs": "none (the committed pin is healthy: pin_state=ok, match) — the loudness paths are exercised by the new tests"
+  }
+ },
+ "confirmed_still_holding": {
+  "tampered_not_reused": true,
+  "file_byte_identical": true,
+  "stale_reused_loudly": true,
+  "spy_calls": 2,
+  "detail": "focused re-run: 16 passed / 34 deselected over tampered/stale/single_shared/genuine/unusable/object_node; tampered+pin => mode=build + note + byte-identical file; stale => reuse with STALE in line and a note; spy seen == [None, None]; plan/report provenance dicts identical and the parenthetical stamp of the dry and real graph lines is byte-identical"
+ },
+ "store_untouched": {
+  "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+  "version": 4,
+  "rows_identical": true,
+  "detail": "state/state.sqlite sha256 identical before/after; schema_version table = 4 (PRAGMA user_version is 0 in this db, the version lives in the schema_version table); row counts identical: candidates 10, claims 0, dockets 2, evidence 0, lane_candidates 10, lanes 5, rework 0, runs 4, schema_version 4, search_health 0, targets 0, verdicts 0, web_sources 0"
+ },
+ "real_graph_sha_before": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+ "real_graph_sha_after": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+ "pin_sha_before": "52f491ed584b330a8ce468cf57a6c42cc4f7e2393a4435317709e9efa2ab4d1a",
+ "pin_sha_after": "52f491ed584b330a8ce468cf57a6c42cc4f7e2393a4435317709e9efa2ab4d1a",
+ "duval_untouched": {
+  "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "detail": "2 untracked entries, identical before and after; both are the foreign actor's, expected"
+ },
+ "tool_calls": 22,
+ "bound": 26,
+ "commands": [
+  "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  -> 000 (DOWN, as expected)",
+  "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_run.py -q  -> 45 passed (before) / 50 passed (after)",
+  ".venv/bin/python state/verify/U8.11/repro_before.py  (items 1-3 before-state, state/logs/U8.11-repro-before.txt)",
+  ".venv/bin/python state/verify/U8.11/patch.py  (11 run.py + 3 tests replacements, exact-match asserted)",
+  "red-green: 4x (revert one item, FULL pycache purge, pytest -k guard => FAIL; cp fixed; purge; pytest -k => PASS; cmp)",
+  ".venv/bin/python -m resextract.cli run --help  (CLI flag inventory: no allow_graph_digest_mismatch flag)",
+  ".venv/bin/resextract run --target duval --dry-run --json  -> exit 0",
+  ".venv/bin/resextract run --target duval --json  -> exit 1",
+  "sha256sum config/graph_pin.toml state/kg/duval/graphify-out/graph.json state/state.sqlite (before/after, identical)"
+ ],
+ "blocker": "",
+ "next_unit_hint": "Independent verifier (V8C') should re-run tests/test_run.py (50) and the 4 revert-restore guards, then both live commands. Open items for a later checkpoint-4 unit: config/graph_pin.toml is still UNTRACKED (commit it; content needs NO format change - it already holds the full 64-hex digest), and the residual policies are deliberate: a pin keyed on another path is reuse+loud (control boundary unchanged), a nodes list of empty objects is still accepted (same documented residual class as truncated-valid), and allow_graph_digest_mismatch remains not CLI-reachable so the CLI always enforces the fail-closed default.",
+ "write_paths": [
+  "src/resextract/run.py",
+  "tests/test_run.py",
+  "state/verify/U8.11/",
+  "state/logs/U8.11*",
+  "orchestration/units/U8.11.md",
+  "orchestration/handoffs/U8.11.json"
+ ]
+}

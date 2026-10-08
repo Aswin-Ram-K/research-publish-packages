@@ -1,0 +1,184 @@
+{
+  "unit": "V5.37",
+  "overall": "PARTIAL",
+  "checks": [
+    {"id": "C1", "name": "rotation measurement re-derived", "verdict": "PASS with a measured deviation", "observed": "Own driver, own fixture. All five load-bearing facts reproduced; every HISTORY.md byte count and banner count identical to U5.33. r8 after sleep 1.2 flips the manifest sha.", "evidence": "state/verify/V5.37/measure_rotation.py; state/logs/V5.37-rotation.txt; state/logs/V5.37-rotation-run2.txt"},
+    {"id": "C2", "name": "comment graded", "verdict": "PASS", "observed": "Corrected clause accurate; destructive + bound + V5.30 citation kept; node is a # comment; ast.dump equality reproduces byte-for-byte against state/verify/U5.33/ast_before.txt; no reverse error in the comment.", "evidence": "assemble.py:1699-1711 sha be737a02...; state/logs/V5.37-ast.txt"},
+    {"id": "C3", "name": "pin robustness boundary", "verdict": "PASS (weakness confirmed and judged acceptable); latent timing dependence in assertion 11", "observed": "11 assertions read; pristine copy green; raising ITEM_SNAPSHOT_KEEP 5->7 alone leaves 1 passed; 40/40 probe runs green; manifest sha moves across a clock second.", "evidence": "state/logs/V5.37-pin-pristine.txt, -pin-keep7.txt, -flake.txt"},
+    {"id": "C4", "name": "red re-applied in my copy", "verdict": "PASS", "observed": "Both mutations reproduce U5.33's verbatim failures in a copy proven imported (IMPORTED_FROM the copy); copy deleted; real assemble.py sha identical before and after.", "evidence": "state/logs/V5.37-red-a.txt, -red-b.txt"},
+    {"id": "C5", "name": "counts", "verdict": "PASS", "observed": "38 passed; 32 def test_; grep -c 'assert ' 195 (recipe = lines containing the token pair); ast.Assert 178; 0 deleted by LC_ALL=C comm; +11.", "evidence": "state/logs/V5.37-green.txt, -deleted.txt; state/verify/V5.37/asserts.{before,after}.sorted"},
+    {"id": "C6", "name": "docstring forbids renumbering", "verdict": "PASS", "observed": "_preserve_item docstring does forbid first-free renumbering and explains the silent loss; pin's stated boundary is correct.", "evidence": "assemble.py:1713-1724 quoted in VERDICTS"},
+    {"id": "C7", "name": "deepest real chain = 4", "verdict": "PASS - still accurate", "observed": "duval-replay-material holds ITEM.md.r1..r4 (4); duval-u55-pinned r1..r3; _smoke 0. One _preserve_item call site, one assemble_docket call site, no recursion, no other writer.", "evidence": "dockets/duval/duval-replay-material; dockets/duval/duval-u55-pinned"},
+    {"id": "C8", "name": "honesty audit + containment", "verdict": "PARTIAL - reassuring half overstated", "observed": "ITEM.md unchanged; MANIFEST.json changes across a second. Store v4 re-derived from a copy without opening the real store. 42/18 is partly a card-design problem.", "evidence": "VERDICTS.md V5.37 section"}
+  ],
+  "blocker": "",
+  "next_unit_hint": "Nothing to repair in the code: the comment is accurate and the pin is real and red-verified. Two optional follow-ups, neither a defect introduced by U5.33: (1) freeze _now via monkeypatch in the pin so assertion 11 (MANIFEST.json sha fixed) cannot straddle a clock second; (2) move the pin's temp root out of state/verify/U5.33/ into a path the guard itself owns. Do NOT read the manifest-sha-stays-fixed observation as an invariant - it holds only within one second (measured at render 8). The store's version 4 IS re-derivable without opening the real store: copy the sqlite file and read schema_version (rows 1..4).",
+  "write_paths": [
+    "orchestration/VERDICTS.md",
+    "orchestration/units/V5.37.md",
+    "orchestration/handoffs/V5.37.json",
+    "state/logs/V5.37*",
+    "state/verify/V5.37/**"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "rotation_table": [
+      {"render": 0, "rn_set": [], "snapshot_count": 0, "banner_files": 15, "history_bytes": 309, "manifest_sha12": "3bec6024f75c", "item_md_sha12": "6e3ba349d4ae", "generated_at": "2026-10-08T15:02:03Z"},
+      {"render": 1, "rn_set": ["r1"], "snapshot_count": 1, "banner_files": 16, "history_bytes": 1027, "manifest_sha12": "20d4a997cd1a", "item_md_sha12": "6e3ba349d4ae"},
+      {"render": 2, "rn_set": ["r1", "r2"], "snapshot_count": 2, "banner_files": 17, "history_bytes": 1440, "manifest_sha12": "20d4a997cd1a", "item_md_sha12": "6e3ba349d4ae"},
+      {"render": 3, "rn_set": ["r1", "r2", "r3"], "snapshot_count": 3, "banner_files": 18, "history_bytes": 1853, "manifest_sha12": "20d4a997cd1a", "item_md_sha12": "6e3ba349d4ae"},
+      {"render": 4, "rn_set": ["r1", "r2", "r3", "r4"], "snapshot_count": 4, "banner_files": 19, "history_bytes": 2266, "manifest_sha12": "20d4a997cd1a", "item_md_sha12": "6e3ba349d4ae"},
+      {"render": 5, "rn_set": ["r1", "r2", "r3", "r4", "r5"], "snapshot_count": 5, "banner_files": 20, "history_bytes": 2679, "manifest_sha12": "20d4a997cd1a", "item_md_sha12": "6e3ba349d4ae"},
+      {"render": 6, "rn_set": ["r2", "r3", "r4", "r5", "r6"], "snapshot_count": 5, "banner_files": 20, "history_bytes": 3092, "manifest_sha12": "20d4a997cd1a", "item_md_sha12": "6e3ba349d4ae"},
+      {"render": 7, "rn_set": ["r3", "r4", "r5", "r6", "r7"], "snapshot_count": 5, "banner_files": 20, "history_bytes": 3505, "manifest_sha12": "20d4a997cd1a", "item_md_sha12": "6e3ba349d4ae"},
+      {"render": 8, "rn_set": ["r4", "r5", "r6", "r7", "r8"], "snapshot_count": 5, "banner_files": 20, "history_bytes": 3918, "manifest_sha12": "7643fa62f32b", "item_md_sha12": "6e3ba349d4ae", "generated_at": "2026-10-08T15:02:05Z", "note": "mine only: deliberate sleep 1.2 before this render; the manifest sha left the fixed value because generated_at has second resolution. Proof that 'manifest sha stayed fixed' is a sub-second artifact, not an invariant."}
+    ],
+    "method": "built own (state/verify/V5.37/measure_rotation.py, modelled on state/verify/U5.33/measure_rotation.py): fixture replay store + target under state/verify/V5.37/rotation/, MAT.materialize_lane = render 0, then 7x A.assemble() = r1..r7 plus a delayed r8. Per render: sorted ITEM.md.rN set via os.listdir; banner_files = recursive count of files whose utf-8 text contains 'PROVENANCE:'; HISTORY.md st_size; MANIFEST.json sha256[:12]; ITEM.md sha256[:12]; manifest generated_at. dockets/** never written. Two independent runs agreed on every column except the clock-derived manifest shas.",
+    "deviations": [
+      "Manifest sha VALUES differ from U5.33's (bd7fde86c93b/933f27f9543a vs my 3bec6024f75c/20d4a997cd1a) because generated_at is the real clock (_now(), assemble.py:1542) and differs per run. The SHAPE (fixed from r1 on) reproduced in both of my runs.",
+      "A deliberately delayed render (r8, sleep 1.2) changed generated_at 15:02:03Z -> 15:02:05Z and the manifest sha 20d4a997cd1a -> 7643fa62f32b. U5.33's 'manifest sha stayed fixed' and the hand-up's 'MANIFEST.json does not change across re-renders' are therefore sub-second artifacts, not invariants. ITEM.md did NOT change (sha12 6e3ba349d4ae at r0..r8).",
+      "My FACTS helper printed r6_evicts_min_of_full = [1,2] because it diffed r5 against r7 (two steps). The per-step evictions are read from the rows: r5 {1..5} -> r6 {2..6} evicts {1}; r6 {2..6} -> r7 {3..7} evicts {2}. Post-processing only; the table is unaffected.",
+      "My first run of the driver raised ValueError in post-processing after all ROW lines had printed; the driver was patched and re-run (run 2, exit 0). The table was never affected."
+    ],
+    "window_full_at": 5,
+    "r6_evicts_r1": true,
+    "r7_evicts_r2": true,
+    "banner_net_zero_when_full": true,
+    "manifest_sha_fixed_from_r1": true,
+    "manifest_sha_fixed_from_r1_caveat": "true only within one clock second (see deviations[1])",
+    "comment_graded": {
+      "quote": "# A re-render is **not byte-identical**, by construction (U5.31).  Two\n# deliberate effects make it so: :func:`_append_history` *appends* a new block\n# to ``HISTORY.md`` (the append-only audit log -- never rewritten), and\n# :func:`_preserve_item` writes the outgoing ``ITEM.md`` as a fresh\n# ``ITEM.md.rN`` snapshot.  That rotation is **destructive**: it keeps only the\n# newest :data:`ITEM_SNAPSHOT_KEEP` = 5 snapshots, so once the window is full\n# each render also *deletes the oldest* ``ITEM.md.rN`` (V5.30 measured\n# r5 -> r6 (+ delete r1) -> r7 (+ delete r2); U5.33 measured the file counts:\n# banner-marked files +1 per render **while the window fills**, **net 0 once it\n# is full** -- one new snapshot added, the oldest deleted -- while the manifest\n# sha stayed fixed).  A verifier diffing a re-rendered docket must\n# therefore expect a new ``HISTORY.md`` block, one new ``ITEM.md.rN``, and the\n# loss of the oldest snapshot; byte identity across renders is not a contract.",
+      "location": "assemble.py:1699-1711 (all 13 lines start with #); _preserve_item at :1712; ITEM_SNAPSHOT_KEEP = 5 at :1696",
+      "filling_clause_accurate": true,
+      "carries_destructive": true,
+      "carries_bound": true,
+      "carries_v530_citation": true,
+      "node_type": "comment",
+      "ast_dump_equal": true,
+      "ast_dump_sha256": "7dd3ca11c27a41d643bc2a1c1e83a05f77373e5e4b404eea48a1883bf10cf30b",
+      "ast_before_file_sha256": "7dd3ca11c27a41d643bc2a1c1e83a05f77373e5e4b404eea48a1883bf10cf30b",
+      "ast_proof_detail": "sha256(ast.dump(ast.parse(assemble.py))) equals sha256(state/verify/U5.33/ast_before.txt) and the two texts are byte-for-byte equal. The edited node is a # comment (not an ast.Constant), so ast.dump equality is the right proof.",
+      "claims_record_unchanged": true,
+      "claims_record_unchanged_verified": "half true: ITEM.md sha12 6e3ba349d4ae is constant r0..r8 (verified); MANIFEST.json sha is constant only within one clock second and changes at r8 after a 1.2 s pause (measured false as a general statement)",
+      "reverse_error": false
+    },
+    "pin_assertions": [
+      "docket path starts with REPO/state/verify/U5.33 (never a real docket)",
+      "per fill render: len(snapshots()) == filled (1..5)",
+      "per fill render: len(snapshots()) <= A.ITEM_SNAPSHOT_KEEP",
+      "HISTORY.md st_size strictly increasing across the fill renders (sizes == sorted(set(sizes)))",
+      "after overflow render: len(after) == keep",
+      "after overflow render: set(after) != set(full)",
+      "after overflow render: set(full) - set(after) == {min(full)} (the OLDEST left)",
+      "after overflow render: set(after) - set(full) == {max(full) + 1}",
+      "after overflow render: min(full) not in after",
+      "after overflow render: HISTORY.md st_size > sizes[-1]",
+      "after overflow render: MANIFEST.json sha256 equals the sha taken after the first re-render"
+    ],
+    "pin_survives_constant_retune": true,
+    "pin_survives_demonstrated_in_copy": true,
+    "pin_retune_demo": "copy at state/verify/V5.37/pin-copy, ITEM_SNAPSHOT_KEEP sed'd 5 -> 7: '1 passed in 0.21s' (pristine: '1 passed in 0.22s'), IMPORTED_FROM /home/zer0null/reserach extarctor/state/verify/V5.37/pin-copy/resextract/__init__.py",
+    "pin_flake_probe": "40 consecutive runs of the single pin on the pristine copy: 0 failures (all '1 passed in 0.20-0.23s'). The timing dependence of assertion 11 is latent: mechanism proven by render 8, not observed in the pin.",
+    "my_view_on_robustness": "Reading the bound from A.ITEM_SNAPSHOT_KEEP and pinning the mechanics (count bounded by the constant named in the code, exactly the oldest leaves, one index above the previous max arrives) is the RIGHT contract for a bound: re-tuning the number is precisely the deliberate change a reviewer may make, and the pin should not fight it. It is not under-specified, because the value is not unguarded elsewhere: the constant's own comment justifies 5 against the measured real chains and tests/test_docket_assemble.py:646 asserts len(snaps) == ITEM_SNAPSHOT_KEEP == 5. The 'wrong if the window is dropped by decision' caveat is adequate cover for the value/mechanics half. What that caveat does NOT cover, and the docstring does not disclose, is that assertion 11 also depends on the wall clock: the manifest embeds generated_at at second resolution, so a second boundary between fill-render 1 and the overflow render fails the pin. Freeze _now (monkeypatch) to remove that. A secondary hygiene wart: the pin's temp root is state/verify/U5.33/pin/<uuid>, a previous unit's directory; the guard should own its own path.",
+    "red": {
+      "copy": "state/verify/V5.37/pin-copy (from src/resextract; assemble.py sha be737a02844c055ecdbf21ee53e0c87467ea00fc990ac61ce3c0c5721b332b3c, identical to the real tree before mutation), plus state/verify/V5.37/pin-copy.tar and state/verify/V5.37/v537plugin.py",
+      "copy_was_imported": true,
+      "import_proof": "IMPORTED_FROM /home/zer0null/reserach extarctor/state/verify/V5.37/pin-copy/resextract/__init__.py - printed by a pytest plugin that prepends the copy to sys.path, purges resextract* from sys.modules and asserts resextract.__file__ startswith the copy path (reused from the state/verify/U8.31* pattern)",
+      "mutation_a": "assemble.py _preserve_item: 'excess = len(snaps) - (ITEM_SNAPSHOT_KEEP - 1)' -> 'excess = 0'",
+      "mutation_a_failure_verbatim": ">           assert len(after) == keep\nE           assert 6 == 5\nE            +  where 6 = len([1, 2, 3, 4, 5, 6])\n\ntests/test_docket_provenance.py:1286: AssertionError\nFAILED tests/test_docket_provenance.py::test_guard_u533_rotation_window_is_bounded_and_destructive\n1 failed in 0.22s",
+      "mutation_b": "assemble.py _append_history: inserted an early 'return' so HISTORY.md is never appended to",
+      "mutation_b_failure_verbatim": ">           assert sizes == sorted(set(sizes))  # HISTORY.md grew on every render\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE           assert [106, 106, 106, 106, 106] == [106]\nE             \nE             Left contains 4 more items, first extra item: 106\nE             Use -v to get more diff\n\ntests/test_docket_provenance.py:1280: AssertionError\nFAILED tests/test_docket_provenance.py::test_guard_u533_rotation_window_is_bounded_and_destructive\n1 failed in 0.22s",
+      "copy_deleted": true,
+      "copy_deletion_witness": "test -e state/verify/V5.37/pin-copy -> pin_copy_removed=OK; pin-copy.tar -> tar_removed=OK; v537plugin.py -> plugin_removed=OK; 0 leftover dirs under state/verify/U5.33/pin",
+      "assemble_sha_before": "be737a02844c055ecdbf21ee53e0c87467ea00fc990ac61ce3c0c5721b332b3c",
+      "assemble_sha_after": "be737a02844c055ecdbf21ee53e0c87467ea00fc990ac61ce3c0c5721b332b3c",
+      "real_tree_unchanged": true
+    },
+    "counts": {
+      "passed": 38,
+      "def_test": 32,
+      "assert_count": 195,
+      "assert_count_recipe": "grep -c 'assert ' tests/test_docket_provenance.py - count of LINES containing the token pair 'assert ' (not statement level). Cross-references on the same file: ast.Assert nodes = 178; a 'lines containing assert' recipe would give a fourth number.",
+      "assertions_deleted": 0,
+      "assertions_added": 11,
+      "method": "pre-image reconstructed as head -1198 (U5.33's own recorded lines_before); grep 'assert ' | LC_ALL=C sort on both sides; LC_ALL=C comm -23 -> 0 deleted, comm -13 -> 11 added; sed -n '1201,1297p' | grep -c 'assert ' -> 11; 184 + 11 = 195",
+      "test_cmd": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_provenance.py -q -p no:cacheprovider  ->  38 passed in 0.51s",
+      "test_file_sha256": "8eb9a623a01f2737669b8d7f33eeefde5a9b8adbf3fafd1add89db467bfb626e",
+      "test_file_git_state": "untracked (?? tests/test_docket_provenance.py) - git status cannot witness its drift, so it is hashed",
+      "pycache": "FULL purge first (find . -path ./.venv -prune -o -name __pycache__ -type d -exec rm -rf {} +) reported 0 directories; PYTHONDONTWRITEBYTECODE=1 throughout"
+    },
+    "docstring_forbids_renumbering": {
+      "quoted": "\"\"\"Preserve the current ``ITEM.md`` as ``ITEM.md.rN``, keeping the newest N.\n\nU5.22 ITEM 3.  The old allocator took the *first free* index and never\npruned, so every assembly added a file forever.  The index is now\n``max(existing) + 1`` -- deliberately **not** first-free: once the bound\nprunes the oldest snapshot, first-free would hand the *newest* content a low\nindex and the next round would classify it as oldest and delete the most\nrecent prior revision (silent loss of exactly what a reviewer wants).  Only\nthe newest :data:`ITEM_SNAPSHOT_KEEP` snapshots are kept.  ``ITEM.md``\nitself is never touched here -- the caller re-renders it afterwards -- so\nthe live document survives pruning by construction.\n\"\"\"",
+      "location": "assemble.py:1712-1724",
+      "confirmed": true
+    },
+    "deepest_real_chain": {
+      "claimed": 4,
+      "measured": 4,
+      "where": "dockets/duval/duval-replay-material holds ITEM.md.r1..r4 = 4 (deepest); dockets/duval/duval-u55-pinned holds r1..r3 = 3; dockets/_smoke = 0. Justification comment at assemble.py:1686-1695 ('5 is the smallest bound that prunes nothing that exists today (deepest real chain = 4)').",
+      "still_accurate": true,
+      "nested_render_paths_added_this_wave": "none found: _preserve_item has exactly 1 call site (assemble.py:1657); assemble_docket exactly 1 call site (materialize.py:2121); no self-recursive function in assemble.py; no other code writes ITEM.md.rN"
+    },
+    "overrun_judged": {
+      "work": 42,
+      "bound": 18,
+      "exploratory_unbatched_reads": 10,
+      "card_design_problem": "Partly. The mandated work (8-render measurement, a two-mutation throwaway-copy red, an AST-equality proof, a docket/store sweep, plus the handoff) genuinely needs roughly 15-20 calls, so an 18 bound was too tight for the card's own mandate. But the ~10 unbatched exploratory reads are author discipline: the card could have said 'batch all exploratory reads of assemble.py and the test into <=2 shell calls', which is what the next card in this wave did. Recommendation: state a ~28 work bound, or explicitly bound the reads. The overage damaged no artifact: assemble.py sha verified unchanged, counts reconcile, both mutations reproduced.",
+      "artifacts_affected": false
+    },
+    "not_reproduced": [
+      "U5.33's exact MANIFEST.json sha values (bd7fde86c93b / 933f27f9543a): generated_at is the real clock, so the values are run-dependent. The fixed-from-r1 shape did reproduce in both of my runs.",
+      "assemble.py pre-image sha fd722f7e72848e9fb1f24dce4b18c7036cd305c9a9397d9c2550c42ff32fba22: the pre-image is destroyed, so it cannot be re-derived; only the post-image be737a02... is verifiable.",
+      "The three docket rollup/tree shas are recipe-dependent and I did not attempt U5.33's recipe; I re-hashed MANIFEST.json per docket instead."
+    ],
+    "overstated": [
+      "U5.33 hand-up: 'while ITEM.md and MANIFEST.json -- the claim-bearing record -- do not change across re-renders.' True of ITEM.md (sha12 constant r0..r8), FALSE of MANIFEST.json as a general statement: a 1.2 s pause moves generated_at and the manifest sha (20d4a997cd1a -> 7643fa62f32b at r8).",
+      "Pin docstring tests/test_docket_provenance.py:1224: 'MANIFEST.json does not change at all after the first re-render' - same same-second artifact, stated as an absolute.",
+      "Comment clause 'while the manifest sha stayed fixed' is measurement-true but reads as a property of the render path; it is a property of sub-second timing.",
+      "U5.33's overage self-account blames 'my failure to batch' while also attributing the mandate ~18 calls; both are true, but the card's 18 bound was below the mandate's floor."
+    ],
+    "unverified": [
+      "Whether the pin's assertion 11 ever actually flakes in practice: 40/40 probe runs green. Only the mechanism (manifest embeds a second-resolution generated_at) is proven, by render 8.",
+      "Whether U5.33's own measurement run also stayed inside one clock second: its manifest shas are consistent with that, but its per-render timestamps were not recorded, so it is inference, not evidence."
+    ],
+    "corrections": [
+      {"relayed_claim": "The manifest sha is FIXED from r1 on (load-bearing fact).", "actually": "Fixed only while all renders fall inside one clock second; the manifest embeds generated_at (_now(), assemble.py:1542) at second resolution, and a 1.2 s gap changes the sha. Confirmed within a second, false across a second.", "evidence": "render 8 of state/verify/V5.37/measure_rotation.py: generated_at 2026-10-08T15:02:05Z, manifest sha12 7643fa62f32b vs 20d4a997cd1a at r1-r7; state/logs/V5.37-rotation-run2.txt", "unit": "U5.33"},
+      {"relayed_claim": "A previous verifier (V8.29) recorded the store's 'version 4' as not re-derivable without an open, which was forbidden.", "actually": "It IS re-derivable without opening the real store: copy state/state.sqlite to state/verify/V5.37/store_copy.sqlite and read the schema_version table - rows (1..4), max 4. user_version is 0 (unused).", "evidence": "state/verify/V5.37/store_copy.sqlite query output in the containment call", "unit": "V8.29"},
+      {"relayed_claim": "The pin's temp root is asserted under state/verify/U5.33 (as a safety scoping device).", "actually": "That is a previous unit's directory; a guard writing into another unit's path is a hygiene wart (it is cleaned up in finally, 0 dirs left after my runs). The safety intent is fine; the path should be the guard's own.", "evidence": "tests/test_docket_provenance.py:1240,1247; ls -A state/verify/U5.33/pin -> 0", "unit": "U5.33"}
+    ],
+    "tool_calls": 22,
+    "bound": 22,
+    "tool_calls_note": "22 work calls (bound 22); 23 total including the mandated report-back, which is not counted. One call was lost to a concurrent sibling append to orchestration/VERDICTS.md (edit refused with 'file changed since it was read'); the section was appended at EOF instead of re-read+edited.",
+    "containment": {
+      "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "outside_writes": 0,
+      "worktrees_reads": 0,
+      "store": {
+        "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+        "version": 4,
+        "version_source": "re-derived by me from a COPY (state/verify/V5.37/store_copy.sqlite): schema_version rows (1,'...10:28:58Z'),(2,...),(3,...),(4,...12:47:56Z), max 4; PRAGMA user_version = 0",
+        "read_by_any_command_of_mine": "not as a database: no command of mine opened state/state.sqlite as SQLite. I did sha256sum it and cp it (byte reads; neither creates sidecars). Every SQLite open was against state/verify/V5.37/store_copy.sqlite or the temp fixture store.",
+        "used_immutable": false,
+        "sidecars_observed": 2,
+        "sidecars_detail": "state/state.sqlite-shm 32768 B mtime 2026-10-08 09:54:49.382667509; state/state.sqlite-wal 0 B mtime 2026-10-08 09:29:14.666991008 - byte-identical timestamps before and after all my work, so attributed to other readers, not to me",
+        "sidecars_created_by_me": 0,
+        "real_store_mtime": "2026-10-08 07:47:56.009682763 -0500 (unchanged)"
+      },
+      "dockets": [
+        {"slug": "duval-replay-material", "sha": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4", "sha_of": "MANIFEST.json", "mtime_meaning": "directory", "mtime": "1791469731 (2026-10-08 09:28:51.303536743 -0500); MANIFEST.json mtime 1791469731 .302382844", "byte_identity_asserted": false, "note": "dockets/ is gitignored, so git status cannot witness drift; hashed the artifact instead. The two sub-second values differ within the same integer second - genuinely sub-second, as U5.33 resolved."},
+        {"slug": "duval-u55-pinned", "sha": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07", "sha_of": "MANIFEST.json", "mtime_meaning": "directory", "mtime": "1791466595 (2026-10-08 08:36:35.984233876 -0500)", "byte_identity_asserted": false},
+        {"slug": "_smoke", "sha": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6", "sha_of": "MANIFEST.json", "mtime_meaning": "directory", "mtime": "1791456549 (2026-10-08 05:49:09.151055969 -0500)", "verify_ok": false, "verify_docket_problem": "claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='unknown') -- reproduced, identical to U5.33's string"}
+      ],
+      "stray_processes": 0,
+      "workspace_writes": [
+        "orchestration/VERDICTS.md (V5.37 section appended at EOF)",
+        "orchestration/units/V5.37.md",
+        "orchestration/handoffs/V5.37.json",
+        "state/logs/V5.37-pycache.txt, -sha.txt, -rotation.txt, -rotation-run2.txt, -ast.txt, -green.txt, -deleted.txt, -pin-pristine.txt, -pin-keep7.txt, -red-a.txt, -red-b.txt, -flake.txt",
+        "state/verify/V5.37/measure_rotation.py, rotation_table.json, before_1198.py, asserts.before.sorted, asserts.after.sorted, store_copy.sqlite, rotation/** (temp fixture, never a real docket; all copies/tars/plugin deleted)"
+      ],
+      "temp_side_effect_disclosed": "the pinned test itself writes its temp root under state/verify/U5.33/pin/<uuid> (hardcoded in tests/test_docket_provenance.py:1240) - 41 dirs created and removed by my runs (1 green + 1 keep7 + 2 red + 40 flake, over 40 processes); 0 leftovers. I edited no test file."
+    }
+  }
+}

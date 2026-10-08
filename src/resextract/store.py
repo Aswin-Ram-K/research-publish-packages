@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 DEFAULT_DB_PATH = Path("state/state.sqlite")
 
 TABLES: tuple[str, ...] = (
@@ -42,13 +42,75 @@ LANE_TYPES: tuple[str, ...] = ("paper", "report", "blog", "benchmark_card", "mem
 LANE_STATUSES: tuple[str, ...] = ("draft", "ready", "stale", "needs_rework", "superseded")
 EVIDENCE_SOURCE_KINDS: tuple[str, ...] = ("local", "web")
 
-# Enumerated vocabulary for migration 3 (a CHECK on ``candidates.producer``).
+# Enumerated vocabulary for migration 3 (a CHECK on ``candidates.producer``),
+# reused verbatim by migration 4 for ``evidence.producer`` and
+# ``verdicts.producer`` -- and **the single definition in the codebase**:
+# ``assess.verdicts`` and ``assess.value`` import *this* object rather than
+# repeating the literal, so the vocabulary cannot drift.  (U2.5 wrote this claim
+# before it was true -- U2.6 made it true and proves it by object identity, not
+# by an equal copy: ``assess.verdicts.PRODUCER_VOCAB is store.PRODUCER_VOCAB``.)
 # ``unknown`` is the honest default: a candidate whose producer cannot be
 # established may not back a model-derived claim.
 PRODUCER_VOCAB: tuple[str, ...] = ("model", "replay", "fixture", "unknown")
+
+#: The only declaration that grants model standing -- exactly this string.
+MODEL_PRODUCER = "model"
+
+
+def producer_is_model(producer: Any) -> bool:
+    """True only for exactly ``model`` -- the **single** string-level comparison
+    **in :mod:`resextract.store`**.
+
+    Scope, stated exactly (U2.7): this predicate is the only place *this module*
+    compares a producer against the vocabulary, and :data:`MODEL_PRODUCER` above
+    is the only ``"model"`` string it compares against.  Other modules in
+    ``src/resextract`` still spell the literal themselves -- a tracked
+    vocabulary-drift finding, and *not* something this docstring claims away.
+    ``tests/test_store_v4.py`` pins both halves so this text cannot rot silently.
+
+    ``assess.verdicts.may_back_model_claim`` *is* this function object, so the
+    gate that decides whether a ``CONFIRMS`` may be published and the store
+    predicate that filters model-produced rows can never disagree.  (The
+    row-level :func:`may_back_model_claim` / :func:`may_back_model_claim_verdict`
+    keep their public names and delegate here, through
+    :func:`_producer_is_model`, which extracts the row's ``producer`` column.)
+    """
+    return producer == MODEL_PRODUCER
+
+
 REPLAY_TITLE_PREFIX = "REPLAY "
 
 _JSON_SUFFIX = "_json"
+
+
+class SchemaTooOldError(RuntimeError):
+    """A **write** path was handed a database older than :data:`SCHEMA_VERSION`.
+
+    This is the typed replacement for the obscure ``sqlite3.OperationalError:
+    table verdicts has no column named producer`` that a v3 database produced
+    when v4 code inserted into it (U2.5).  It is deliberately loud: an
+    under-migrated store must never silently degrade into "0 claims assessed".
+
+    Attributes
+    ----------
+    path, found, required, hint :
+        the database, the version found, the version required, and the exact
+        call that fixes it.
+    """
+
+    def __init__(self, path: Any, found: int, required: int = SCHEMA_VERSION) -> None:
+        self.path = str(path) if path is not None else "<open connection>"
+        self.found = int(found)
+        self.required = int(required)
+        self.hint = (
+            f"store.init_db({self.path!r}) to migrate it in place, or "
+            f"store.migrate_copy({self.path!r}, dst) to migrate a run-scoped "
+            "copy (backs the source up first)"
+        )
+        super().__init__(
+            f"schema too old: {self.path} is schema v{self.found} but this write "
+            f"needs v{self.required}; run {self.hint}"
+        )
 
 
 def utcnow() -> str:
@@ -432,7 +494,58 @@ _MIGRATION_3: list[Any] = [
     _backfill_run_identity,
 ]
 
-MIGRATIONS: list[tuple[int, list[Any]]] = [(1, _MIGRATION_1), (2, _MIGRATION_2), (3, _MIGRATION_3)]
+def _backfill_evidence_verdict_producer(con: sqlite3.Connection) -> None:
+    """Label every pre-existing evidence/verdict row honestly: always ``unknown``.
+
+    The conservative result, stated for the right reason (corrected by U2.6):
+    this backfill **joins nothing**.  It does not consult ``runs``, the replay
+    run tag, the ``REPLAY `` title prefix, ``report.json`` or ``verdicts.jsonl``
+    -- so although a replay signal *is* derivable in principle, it is **not
+    derived here**, and a backfill that inferred ``model`` (or even ``replay``)
+    from data it never read would be inventing provenance.  Refusing to infer
+    therefore leaves every old row at the fail-closed ``'unknown'`` default.
+    Half-evidence is not evidence -- exactly the migration-3 precedent (the
+    replay run tag *plus* the ``REPLAY `` title prefix).  A row must NEVER
+    become ``'model'`` by default: that is the whole point of this column.
+    """
+    for table, note_key in (("evidence", None), ("verdicts", "model")):
+        for row in con.execute(f"SELECT id FROM {table} ORDER BY id").fetchall():
+            con.execute(f"UPDATE {table} SET producer='unknown' WHERE id=?", (row["id"],))
+            note: dict[str, Any] = {
+                "migration": 4,
+                "table": table,
+                "id": int(row["id"]),
+                "producer": "unknown",
+                "basis": (
+                    "the schema-v4 backfill joins nothing, so it refuses to infer a "
+                    "producer; 'unknown' is the conservative, fail-closed result"
+                ),
+            }
+            if note_key is not None:
+                note["model"] = None
+            MIGRATION_NOTES_V4.append(note)
+
+
+_MIGRATION_4: list[Any] = [
+    # Producer identity for the *high-stakes* tables (verifier V4A: a verdict
+    # decides whether a research claim is novel, and had no producer at all).
+    # Additive only -- no v2/v3 object is altered or rebuilt.  The vocabulary is
+    # `candidates`' own, character for character; a differently-scoped value
+    # sharing a word is how fields get confused, so there is NO 'none'.
+    "ALTER TABLE evidence ADD COLUMN producer TEXT NOT NULL DEFAULT 'unknown' "
+    "CHECK (producer IN ('model', 'replay', 'fixture', 'unknown'))",
+    "ALTER TABLE verdicts ADD COLUMN producer TEXT NOT NULL DEFAULT 'unknown' "
+    "CHECK (producer IN ('model', 'replay', 'fixture', 'unknown'))",
+    "ALTER TABLE verdicts ADD COLUMN model TEXT",
+    _backfill_evidence_verdict_producer,
+]
+
+MIGRATIONS: list[tuple[int, list[Any]]] = [
+    (1, _MIGRATION_1),
+    (2, _MIGRATION_2),
+    (3, _MIGRATION_3),
+    (4, _MIGRATION_4),
+]
 
 # Populated by migration 2 when it detects/resolves duplicate docket dirs, so a
 # caller can report exactly what merged during an in-place upgrade.
@@ -442,6 +555,10 @@ MIGRATION_NOTES: list[dict[str, Any]] = []
 # stale-run repair it made.  Kept separate from MIGRATION_NOTES so migration 3
 # cannot displace a migration-2 note (callers index MIGRATION_NOTES[-1]).
 MIGRATION_NOTES_V3: list[dict[str, Any]] = []
+
+# Migration 4's per-row record: every v3 evidence/verdict row and the (always
+# ``unknown``) producer it was given.  Separate list for the same reason as v3's.
+MIGRATION_NOTES_V4: list[dict[str, Any]] = []
 
 
 # --------------------------------------------------------------------------- #
@@ -500,6 +617,193 @@ def init_db(path: str | os.PathLike[str] | None = None) -> Path:
 def schema_version(con: sqlite3.Connection) -> int:
     row = con.execute("SELECT COALESCE(MAX(version), 0) FROM schema_version").fetchone()
     return int(row[0])
+
+
+def assert_writable_schema(
+    con: sqlite3.Connection, path: str | os.PathLike[str] | None = None
+) -> int:
+    """Return the schema version, raising :class:`SchemaTooOldError` if too old.
+
+    Call this **once, before** a batch of writes: an under-migrated database must
+    fail immediately and loudly, not once per row where the first v4 ``INSERT``
+    raises an ``OperationalError`` that a per-item ``except Exception`` can
+    swallow into a silent "0 rows written".
+    """
+    version = schema_version(con)
+    if version < SCHEMA_VERSION:
+        raise SchemaTooOldError(path, version)
+    return version
+
+
+def _require_writable_schema(con: sqlite3.Connection) -> None:
+    """Fail-closed guard on the producer-path write helpers (see U2.5)."""
+    assert_writable_schema(con)
+
+
+#: Row counts are read dynamically (never hard-coded) so a future migration's
+def row_counts(path: str | os.PathLike[str] | None) -> dict[str, int]:
+    """Row counts for every user table in *path* (``{}`` if unreadable).
+
+    Every table is discovered from ``sqlite_master`` rather than a literal list,
+    so a table added by a later migration is counted too.
+    """
+    con = connect(path)
+    try:
+        names = [
+            r[0]
+            for r in con.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' "
+                "AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            )
+        ]
+        counts: dict[str, int] = {}
+        for name in names:
+            try:
+                counts[name] = int(con.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0])
+            except sqlite3.Error:
+                counts[name] = -1
+        return counts
+    finally:
+        con.close()
+
+
+def _producer_distribution(path: str | os.PathLike[str]) -> dict[str, dict[str, int]]:
+    """``{table: {producer: n}}`` for the v4 producer tables, best effort."""
+    out: dict[str, dict[str, int]] = {}
+    con = connect(path)
+    try:
+        for table in ("evidence", "verdicts"):
+            try:
+                rows = con.execute(
+                    f'SELECT producer, COUNT(*) AS n FROM "{table}" GROUP BY producer'
+                ).fetchall()
+            except sqlite3.Error:
+                continue
+            out[table] = {str(r[0]): int(r[1]) for r in rows}
+    finally:
+        con.close()
+    return out
+
+
+def migrate_copy(
+    src: str | os.PathLike[str],
+    dst: str | os.PathLike[str] | None = None,
+    *,
+    backup_dir: str | os.PathLike[str] | None = None,
+) -> dict[str, Any]:
+    """Migrate a **copy**: copy *src* to *dst*, then bring the copy to v4.
+
+    The supported way to get a migrated database without mutating the caller's
+    (U2.5 item 1).  ``src`` is **never written**: it is backed up (sha256
+    recorded) into *backup_dir* (default ``state/backups``), copied with
+    SQLite's own backup API so a WAL sidecar cannot be lost, and only the copy
+    is passed to :func:`init_db`.  An existing *dst* is backed up first as well.
+
+    Idempotent: run it twice and the second run reports the same version and the
+    same row counts with ``rows_lost == 0``.  Returns a report dict (also the
+    evidence the assessment path records on its report).
+    """
+    src_path = Path(src)
+    if not src_path.exists():
+        raise FileNotFoundError(f"no store to migrate: {src_path}")
+    dst_path = Path(dst) if dst is not None else src_path.with_name(
+        f"{src_path.stem}-v{SCHEMA_VERSION}{src_path.suffix}"
+    )
+    if Path(dst_path).resolve() == src_path.resolve():
+        raise ValueError(
+            "migrate_copy never migrates in place (that is init_db's job); "
+            "dst must differ from src"
+        )
+    backup_root = Path(backup_dir) if backup_dir is not None else Path("state/backups")
+    backup_root.mkdir(parents=True, exist_ok=True)
+
+    before = _producer_distribution(src_path) if _has_producer_columns(src_path) else {}
+    counts_before = row_counts(src_path)
+    version_before = _version_of(src_path)
+
+    backup_path = backup_root / f"{src_path.name}.v{version_before}.bak"
+    backup_paths: list[str] = []
+    if dst_path.exists():
+        extra = backup_root / f"{dst_path.name}.pre-migrate.bak"
+        _copy_db(dst_path, extra)
+        backup_paths.append(str(extra))
+    _copy_db(src_path, backup_path)  # source backup, taken before any write
+    backup_paths.append(str(backup_path))
+    _copy_db(src_path, dst_path)  # only the copy is ever migrated
+
+    init_db(dst_path)
+    version_after = _version_of(dst_path)
+    counts_after = row_counts(dst_path)
+    rows_lost = sum(
+        max(0, n - counts_after.get(t, 0)) for t, n in counts_before.items() if n >= 0
+    )
+    new_tables = sorted(set(counts_after) - set(counts_before))
+    return {
+        "src": str(src_path),
+        "dst": str(dst_path),
+        "backup": str(backup_path),
+        "backups": backup_paths,
+        "sha256_src": _sha256_file(src_path),
+        "sha256_backup": _sha256_file(backup_path),
+        "version_before": version_before,
+        "version_after": version_after,
+        "required_version": SCHEMA_VERSION,
+        "rows_before": counts_before,
+        "rows_after": counts_after,
+        "rows_lost": rows_lost,
+        "new_tables": new_tables,
+        "producers_before": before,
+        "producers_after": _producer_distribution(dst_path),
+        "migrated": version_after > version_before,
+    }
+
+
+def _copy_db(src: str | os.PathLike[str], dst: str | os.PathLike[str]) -> Path:
+    """Copy a SQLite database with the backup API (WAL-safe), creating parents."""
+    dst_path = Path(dst)
+    dst_path.parent.mkdir(parents=True, exist_ok=True)
+    src_con = connect(src)
+    try:
+        dst_con = sqlite3.connect(str(dst_path))
+        try:
+            src_con.backup(dst_con)
+            dst_con.commit()
+        finally:
+            dst_con.close()
+    finally:
+        src_con.close()
+    return dst_path
+
+
+def _has_producer_columns(path: str | os.PathLike[str]) -> bool:
+    con = connect(path)
+    try:
+        cols = {r[1] for r in con.execute("PRAGMA table_info(verdicts)")}
+        return "producer" in cols
+    except sqlite3.Error:
+        return False
+    finally:
+        con.close()
+
+
+def _version_of(path: str | os.PathLike[str]) -> int:
+    con = connect(path)
+    try:
+        return schema_version(con)
+    except sqlite3.Error:
+        return 0
+    finally:
+        con.close()
+
+
+def _sha256_file(path: str | os.PathLike[str]) -> str:
+    import hashlib
+
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 # --------------------------------------------------------------------------- #
@@ -815,18 +1119,51 @@ def candidates_by_producer(
     return _rows(con.execute(sql, params).fetchall())
 
 
+def _producer_is_model(row: Mapping[str, Any] | None) -> bool:
+    """True only when *row*'s producer is really ``model``.
+
+    One shared predicate for every table that carries a ``producer`` column, so
+    candidates, evidence and verdicts cannot drift into different readings of
+    the same vocabulary.  It extracts the row's ``producer`` and hands it to
+    :func:`producer_is_model`, so this module compares that string in exactly
+    one place.
+    """
+    return bool(row) and producer_is_model(row.get("producer"))
+
+
 def may_back_model_claim(candidate: Mapping[str, Any] | None) -> bool:
     """True only for a candidate whose producer is really ``model``.
 
     Replay, fixture and unknown rows are all refused: until real mining runs,
     no candidate may back a model-derived claim.
     """
-    return bool(candidate) and candidate.get("producer") == "model"
+    return _producer_is_model(candidate)
+
+
+def may_back_model_claim_verdict(verdict: Mapping[str, Any] | None) -> bool:
+    """True only for a *verdict* whose producer is really ``model``.
+
+    Mirrors :func:`may_back_model_claim` -- same vocabulary, same fail-closed
+    semantics -- and delegates to the same :func:`_producer_is_model` predicate
+    rather than duplicating the comparison, so the two can never diverge.  A
+    replay/fixture/unknown verdict may not back a model-derived claim, because
+    the artefact that decides novelty must not be mistakable for a model's own.
+    """
+    return _producer_is_model(verdict)
+
+
+# The name U2.3's card asks for, kept as an alias of the predicate above.
+verdict_may_back_model_claim = may_back_model_claim_verdict
 
 
 def model_produced_candidates(con: sqlite3.Connection) -> list[dict[str, Any]]:
     """Every candidate that may back a model-derived claim (usually none)."""
     return [c for c in candidates_by_producer(con) if may_back_model_claim(c)]
+
+
+def model_produced_verdicts(con: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Every verdict that may back a model-derived claim (usually none)."""
+    return [v for v in verdicts_by_producer(con) if may_back_model_claim_verdict(v)]
 
 
 def insert_claim(
@@ -869,13 +1206,19 @@ def insert_evidence(
     context: str | None = None,
     retrieved_at: str | None = None,
     copy_path: str | None = None,
+    producer: str = "unknown",
 ) -> int:
     if source_kind is not None and source_kind not in EVIDENCE_SOURCE_KINDS:
         raise ValueError(f"source_kind must be one of {EVIDENCE_SOURCE_KINDS}, got {source_kind!r}")
+    _require_writable_schema(con)  # U2.5: typed error, never an obscure INSERT failure
+    if producer not in PRODUCER_VOCAB:
+        raise ValueError(f"producer must be one of {PRODUCER_VOCAB}, got {producer!r}")
     return _insert(
         con,
-        "INSERT INTO evidence(claim_id, source_kind, source_ref, sha256, quote, context, retrieved_at, copy_path) "
-        "VALUES (:claim_id, :source_kind, :source_ref, :sha256, :quote, :context, :retrieved_at, :copy_path)",
+        "INSERT INTO evidence(claim_id, source_kind, source_ref, sha256, quote, context, retrieved_at, "
+        "copy_path, producer) "
+        "VALUES (:claim_id, :source_kind, :source_ref, :sha256, :quote, :context, :retrieved_at, "
+        ":copy_path, :producer)",
         {
             "claim_id": claim_id,
             "source_kind": source_kind,
@@ -885,12 +1228,38 @@ def insert_evidence(
             "context": context,
             "retrieved_at": retrieved_at or utcnow(),
             "copy_path": copy_path,
+            "producer": producer or "unknown",
         },
     )
 
 
 def get_evidence(con: sqlite3.Connection, evidence_id: int) -> dict[str, Any] | None:
     return _get(con, "evidence", "id", evidence_id)
+
+
+def evidence_by_producer(
+    con: sqlite3.Connection,
+    producer: str | None = None,
+    claim_id: int | None = None,
+) -> list[dict[str, Any]]:
+    """Read evidence, optionally filtered by producer and/or claim.
+
+    Mirrors :func:`candidates_by_producer`: ``evidence_by_producer(con)`` returns
+    every row; ``producer="model"`` returns only rows a model really produced.
+    """
+    sql = "SELECT * FROM evidence"
+    clauses: list[str] = []
+    params: list[Any] = []
+    if producer is not None:
+        clauses.append("producer = ?")
+        params.append(producer)
+    if claim_id is not None:
+        clauses.append("claim_id = ?")
+        params.append(claim_id)
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
+    sql += " ORDER BY id"
+    return _rows(con.execute(sql, params).fetchall())
 
 
 def insert_verdict(
@@ -901,25 +1270,66 @@ def insert_verdict(
     rationale: str | None = None,
     evidence_ids_json: Any = None,
     checked_at: str | None = None,
+    producer: str = "unknown",
+    model: str | None = None,
 ) -> int:
     if verdict is not None and verdict not in VERDICT_VOCAB:
         raise ValueError(f"verdict must be one of {VERDICT_VOCAB}, got {verdict!r}")
+    _require_writable_schema(con)  # U2.5: the boundary that broke every live claim
+    if producer not in PRODUCER_VOCAB:
+        raise ValueError(f"producer must be one of {PRODUCER_VOCAB}, got {producer!r}")
+    if model is not None and not producer_is_model(producer):
+        # Enforcement (U2.6): a model id on a non-model row is a provenance claim
+        # the producer does not support.  Refuse it rather than store a
+        # contradiction -- ``verdicts.model`` records the model id *only* when the
+        # producer really is ``model``.
+        raise ValueError(
+            f"model id {model!r} may only accompany producer={MODEL_PRODUCER!r}, "
+            f"not {producer!r}"
+        )
     return _insert(
         con,
-        "INSERT INTO verdicts(claim_id, verdict, rationale, evidence_ids_json, checked_at) "
-        "VALUES (:claim_id, :verdict, :rationale, :evidence_ids_json, :checked_at)",
+        "INSERT INTO verdicts(claim_id, verdict, rationale, evidence_ids_json, checked_at, producer, model) "
+        "VALUES (:claim_id, :verdict, :rationale, :evidence_ids_json, :checked_at, :producer, :model)",
         {
             "claim_id": claim_id,
             "verdict": verdict,
             "rationale": rationale,
             "evidence_ids_json": _dump(evidence_ids_json),
             "checked_at": checked_at or utcnow(),
+            "producer": producer or "unknown",
+            "model": model,
         },
     )
 
 
 def get_verdict(con: sqlite3.Connection, verdict_id: int) -> dict[str, Any] | None:
     return _get(con, "verdicts", "id", verdict_id)
+
+
+def verdicts_by_producer(
+    con: sqlite3.Connection,
+    producer: str | None = None,
+    claim_id: int | None = None,
+) -> list[dict[str, Any]]:
+    """Read verdicts, optionally filtered by producer and/or claim.
+
+    Mirrors :func:`candidates_by_producer`: ``verdicts_by_producer(con)`` returns
+    every row; ``producer="model"`` returns only rows a model really produced.
+    """
+    sql = "SELECT * FROM verdicts"
+    clauses: list[str] = []
+    params: list[Any] = []
+    if producer is not None:
+        clauses.append("producer = ?")
+        params.append(producer)
+    if claim_id is not None:
+        clauses.append("claim_id = ?")
+        params.append(claim_id)
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
+    sql += " ORDER BY id"
+    return _rows(con.execute(sql, params).fetchall())
 
 
 # --------------------------------------------------------------------------- #

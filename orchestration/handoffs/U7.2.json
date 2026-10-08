@@ -1,0 +1,123 @@
+{
+ "unit": "U7.2",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/refresh/writer.py",
+  "src/resextract/refresh/review.py",
+  "tests/test_writer_detection.py",
+  "tests/test_refresh_review.py",
+  "state/logs/U7.2-live.txt",
+  "state/logs/U7.2-tests.txt",
+  "orchestration/units/U7.2.md",
+  "orchestration/handoffs/U7.2.json"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "occamy_probe_note": "connection refused, 1 attempt, no restart, zero LLM calls",
+  "tests": {
+   "writer": "19 passed in 1.58s",
+   "review": "12 passed in 0.29s",
+   "staleness_regression": "7 passed in 0.17s"
+  },
+  "tests_command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_writer_detection.py tests/test_refresh_review.py tests/test_refresh_staleness.py",
+  "red_green": {
+   "a": "sha ok (818d4d982f6ea5b498f3776d7eac2db779ce2187a0883a36b099989214a16e31); revert dropped changed_untracked from the verdict -> 1 failed: assert 'quiescent' == 'active_writer'; restored bit-identical (cmp+sha) -> 1 passed; current writer.py sha256=818d4d982f6ea5b498f3776d7eac2db779ce2187a0883a36b099989214a16e31 (unchanged since the proof)",
+   "b": "sha ok (ea2a57941d482edc99f706a046294fd70a2652a45eedcca0605a74f013a0c90b); revert disabled the head-mismatch re-stage -> 1 failed: assert g2.restaged is True (False); restored bit-identical (cmp+sha) -> 1 passed; current review.py sha256=af63bcdd5b163cdcd6b571f686823c216997b465d8b43462bafefc2d6480d729 (docstring-only edit landed after the proof; guard B revert target line is unchanged)"
+  },
+  "defect1": {
+   "untracked_watched": 98,
+   "untracked_hashed": 93,
+   "caps_hit": [
+    "hash_size_cap"
+   ],
+   "existing_untracked_change_detected": true,
+   "policy_basis": "TargetPolicy.admit()",
+   "fixture_proof": "same-size content rewrite inside an existing untracked admitted dir -> active_writer, path named",
+   "bounds": {
+    "max_untracked_paths": 2000,
+    "max_untracked_bytes": 33554432,
+    "hash_size_cap": 1048576
+   },
+   "not_admitted_untracked": "not watched (config_exclude narrows admission); documented in test"
+  },
+  "defect2": {
+   "staged_from_head": "63cbc36d",
+   "observed_head": "63cbc36d",
+   "copy_head_ground_truth": true,
+   "restage_on_mismatch": true,
+   "reuse_noop_proven": true,
+   "proof": "clone of Duval: pass1 stages at 63cbc36d; pass2 restaged=False, 'update skipped', state bytes+mtime and whole state tree unchanged; refresh_target pass2 noop=True written=[] planned=[]; advancing the copy to a new head re-stages and the new file appears; a forged label contradicted by the copy's own .git HEAD is invalidated; schema-1 legacy state invalidated and migration recorded",
+   "schema": "resextract/refresh-graph/2"
+  },
+  "flagged_call": {
+   "review_passes_foreign_graph": false,
+   "action": "no fix needed: review.py never calls Graphify.update and passes no graph=/--graph; it spawns stdbuf+graphify update <copy_dir> directly. Stale '--graph' rationale in the docstring corrected. Bonus: graph sidecars now copy into the copy's graphify-out (were copied onto the source)."
+  },
+  "live": {
+   "verdict": "quiescent",
+   "files_touched": 0,
+   "untracked_watched": 98,
+   "untracked_hashed": 93,
+   "caps_hit": [
+    "hash_size_cap"
+   ],
+   "newest_mtime_utc": "2026-10-08T11:28:23Z",
+   "worktree_dirs_present": 1,
+   "anchor_files": [
+    {
+     "path": ".lane-j-scratch/monograph.txt",
+     "bytes": 83832,
+     "sha8": "033b1547",
+     "admitted": true
+    },
+    {
+     "path": ".lane-j-scratch/consonance-external-evidence-2026-10-07.md.txt",
+     "bytes": 159408,
+     "sha8": "d141f139",
+     "admitted": true
+    }
+   ],
+   "copy_head": "63cbc36d",
+   "duval_head_at_live": "63cbc36d"
+  },
+  "limitations_documented": [
+   "identical-rewrite within window undetectable",
+   "burst after window close"
+  ],
+  "duval_untouched": {
+   "head": "63cbc36d",
+   "head_unchanged": true,
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+   "porcelain_unchanged": true,
+   "note": "foreign-actor untracked entries left alone; never entered .worktrees/ for content (one top-level scandir to count run dirs only)"
+  },
+  "store_rows_unchanged": true,
+  "store_evidence": "state/state.sqlite read-only: runs=4 targets=0 candidates=10 lanes=5 dockets=2 lane_candidates=10; file mtime 06:25 predates the 06:30 live run; refresh_target used only store.get_target (read); persist_store=False",
+  "tool_calls": 27,
+  "bound": 35,
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> 000",
+   "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m pytest -q -p no:cacheprovider tests/test_writer_detection.py tests/test_refresh_review.py tests/test_refresh_staleness.py -> 38 passed",
+   "detect_concurrent_writer('/home/zer0null/Duval', window_s=5, policy=TargetPolicy.from_config('config/targets.toml','duval'))",
+   "git clone --no-hardlinks --depth 1 file:///home/zer0null/Duval state/verify/U7.2/duval-copy; _graph_refresh x2; refresh_target x2"
+  ],
+  "bytecode_discipline": "PYTHONDONTWRITEBYTECODE=1 + __pycache__ purge around every revert/restore; cmp + sha256 equal on both restores",
+  "file_sha256": {
+   "writer.py": "818d4d982f6ea5b498f3776d7eac2db779ce2187a0883a36b099989214a16e31",
+   "review.py": "af63bcdd5b163cdcd6b571f686823c216997b465d8b43462bafefc2d6480d729"
+  }
+ },
+ "blocker": "",
+ "next_unit_hint": "Verifier: re-run guard A (writer) and guard B (review) with the pasted reverts; then confirm the acceptance path adopts assert_pinned_quiescent + post-copy HEAD re-verification (sealed window) and consumes graph_state schema 2 (staged_from_head/copy_head). Duval HEAD moved within the session (config note says b2bade3/5cdc471a; live read 63cbc36d) \u2014 always re-read.",
+ "write_paths": [
+  "src/resextract/refresh/writer.py",
+  "src/resextract/refresh/review.py",
+  "tests/test_writer_detection.py",
+  "tests/test_refresh_review.py",
+  "tests/fixtures/refresh-repo/**",
+  "state/logs/U7.2*",
+  "state/verify/U7.2/**",
+  "orchestration/units/U7.2.md",
+  "orchestration/handoffs/U7.2.json"
+ ]
+}

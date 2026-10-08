@@ -1,0 +1,97 @@
+{
+ "unit": "U0.12",
+ "status": "done",
+ "artifacts": [
+  "tests/test_store_v2.py"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "occamy_probe_note": "curl exit 7 'Could not connect to 192.168.2.168:8012' -> DOWN as expected; probed once, restarted nothing.",
+  "classification": [
+   {
+    "line": 169,
+    "assertion": "assert store.schema_version(con) == 2",
+    "kind": "version_pin",
+    "relaxed_to": "assert store.schema_version(con) >= 2"
+   },
+   {
+    "line": 170,
+    "assertion": "assert store.SCHEMA_VERSION == 2",
+    "kind": "version_pin",
+    "relaxed_to": "assert store.SCHEMA_VERSION >= 2; assert store.schema_version(con) == store.SCHEMA_VERSION (latent: masked behind :169, same defect class)"
+   },
+   {
+    "line": 220,
+    "assertion": "assert [r[\"version\"] ...] == [1, 2]",
+    "kind": "version_pin",
+    "relaxed_to": "versions == sorted(set(versions)) and {1, 2} <= set(versions) (membership + ordering, not equality)"
+   },
+   {
+    "line": 221,
+    "assertion": "assert store.schema_version(con) == 2",
+    "kind": "version_pin",
+    "relaxed_to": "assert store.schema_version(con) >= 2"
+   },
+   {
+    "line": 252,
+    "assertion": "assert store.schema_version(con) == 2, \"schema_version must be 2 after the upgrade\"",
+    "kind": "version_pin",
+    "relaxed_to": "assert store.schema_version(con) >= 2, \"v1 db must reach at least v2 after the upgrade\""
+   },
+   {
+    "line": 537,
+    "assertion": "assert summary[\"schema_version\"] == 2",
+    "kind": "version_pin",
+    "relaxed_to": "assert summary[\"schema_version\"] >= 2; assert summary[\"schema_version\"] == store.schema_version(con)"
+   }
+  ],
+  "any_non_pin_failure": false,
+  "assertions_deleted": 0,
+  "assertion_changes": [
+   "pin -> migration-contract assertion at :169",
+   "latent pin -> migration-contract + consistency assertion at :170",
+   "version-list equality -> membership/ordering at :220",
+   "pin -> range at :221",
+   "pin -> range at :252",
+   "pin -> range + status_json==schema_version consistency at :537",
+   "each relaxed site carries a comment: 'the schema advances; this pins the migration's contract, not the current number. Do NOT re-tighten to == 2.'",
+   "assert count rose from 6 pinned sites to 10 assertions; 0 deleted, 0 row/CHECK/dedupe assertions touched"
+  ],
+  "migration_contract_guard": {
+   "disabled_migrations": "fails as expected",
+   "restored": "passes",
+   "how": "autouse plugin monkeypatches store.MIGRATIONS=[] (src/resextract/store.py never edited); plugin shipped at state/logs/U0.12_guard/migrations_off.py",
+   "transcript": "GUARD A disabled migrations (PYTHONPATH=state/logs/U0.12_guard, -p migrations_off):\nE   assert 0 >= 2\ntests/test_store_v2.py:174: assert 0 >= 2\nE   AssertionError: v1 db must reach at least v2 after the upgrade\n    assert 1 >= 2\ntests/test_store_v2.py:275: AssertionError: v1 db must reach at least v2 after the upgrade\n2 failed, 11 deselected in 0.03s\nstructure probe with MIGRATIONS=[]: lane_candidates cols=set() | dockets_dir_unique=False | schema_version=0\nGUARD B restored: 2 passed, 11 deselected in 0.03s"
+  },
+  "red_green": {
+   "pin_reverted": "fails (1 failed)",
+   "pin_restored": "passes (1 passed)",
+   "sha_before_after": "equal",
+   "sha": "40b343458bba6b52b687a670d1c147c0ea9392fafcc9c522d12741860a23bc1d",
+   "detail": "temporarily reverted the :537 relaxation back to `== 2` -> FAILED; restored from backup -> PASSED; sha256 before==after (bit-identical)"
+  },
+  "tests": {
+   "store_v1": 42,
+   "store_v2": 13,
+   "store_v3": 8
+  },
+  "tool_calls": 18,
+  "bound": 20,
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  # -> 000, exit 7",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_store_v2.py -q  # 4 failed, 9 passed",
+   "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=state/logs/U0.12_guard .venv/bin/python -m pytest tests/test_store_v2.py -q -p migrations_off -k 'fresh_db_is_v2 or v1_to_v2_preserves'  # 2 failed",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_store_v2.py -q -k 'fresh_db_is_v2 or v1_to_v2_preserves'  # 2 passed",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_store.py tests/test_store_v2.py tests/test_store_v3.py -q  # 42/13/8 passed"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Independent verifier (V2R-style) should re-run the four evidence commands and diff tests/test_store_v2.py against HEAD to confirm 0 assertions deleted; note :170 was a 5th latent pin of the same class, disclosed and relaxed \u2014 a re-tighten to == 2 anywhere must be rejected. Only tests/test_store_v2.py was touched; store.py and the miner were not read-modified (read-only inspection only).",
+ "write_paths": [
+  "tests/test_store_v2.py",
+  "state/logs/U0.12*",
+  "state/logs/U0.12_guard/migrations_off.py",
+  "orchestration/units/U0.12.md",
+  "orchestration/handoffs/U0.12.json"
+ ]
+}

@@ -1,0 +1,50 @@
+{
+  "unit": "U0.5",
+  "status": "failed",
+  "artifacts": [
+    "orchestration/STATUS.md",
+    "orchestration/units/U0.5.md",
+    "orchestration/handoffs/U0.5.json",
+    "(no commit created — none requested/withheld)"
+  ],
+  "evidence": {
+    "commit": "",
+    "files_committed": 0,
+    "staged_excluded_ok": true,
+    "staged_count": 30,
+    "staged_skipped_absent": ["orchestration/units/U0.1b.md"],
+    "bad_dir_paths": 0,
+    "bad_name_paths": 0,
+    "secret_scan": "NON-EMPTY: 10 pattern-matched diff lines (grep -cE): sk-[A-Za-z0-9_-]{20,} = 8 lines, okr_[A-Za-z0-9]{16,} = 2 lines. Per-file distinct hit lines: tests/test_journal.py 6, tests/test_occamy_client.py 1, orchestration/units/V0.md 1, orchestration/handoffs/V0.json 1. Zero hits: AKIA[0-9A-Z]{16}, -----BEGIN ... PRIVATE KEY-----, ghp_[A-Za-z0-9]{20,}, 'Authorization: Bearer '. Zero hits under src/**.",
+    "hit_assessment": "The matches are the secret-shaped fixtures the journal-redaction tests require (hunter2/topsecretvalue-style constants, api_key=sk-..., access_token=okr_...) plus V0's evidence quoting them. Almost certainly benign, but the unit hard bound forbids committing on any hit and this unit has no authority to self-exempt.",
+    "identity": "resextract build <resextract@localhost> (local; git config --global untouched — global user.email is empty)",
+    "excluded_from_commit": ["state/", "dockets/", ".venv/"],
+    "untracked_siblings": [
+      "src/resextract/kg/ (U1.1 in flight; U1.2 files untracked too — not in the batch-0 list)",
+      "src/resextract/mine/ (U2.1)",
+      "src/resextract/web/ (U3.1/U3.2/U3.3; U3.1/U3.2 done but not batch-0 paths)",
+      "src/resextract/docket/ (U5.1)",
+      "tests/fixtures/, tests/test_kg_*.py, tests/test_web_*.py, tests/test_docket_*.py",
+      ".pytest_cache/, src/resextract.egg-info/"
+    ],
+    "repo_state": "branch master still has NO commits (git rev-parse HEAD -> 'fatal: ambiguous argument HEAD'); the 30 batch-0 paths are left staged in the index.",
+    "commands": [
+      "git config user.name 'resextract build'; git config user.email 'resextract@localhost'  -> local only",
+      "git add -- <31 listed paths, 1 absent skipped>  -> 30 staged",
+      "git diff --cached --name-only | wc -l  -> 30",
+      "git diff --cached --name-only | grep -E '^(\\.venv/|state/|dockets/)'  -> empty",
+      "git diff --cached --name-only | grep -Ei '(\\.env|^\\.env|\\.pem$|\\.key$|id_rsa|credentials|secret)'  -> empty",
+      "git diff --cached | grep -nE '<secret shapes>'  -> NON-EMPTY (see secret_scan)",
+      "git ls-files --cached | wc -l  -> 30; du -sh .git -> 404K",
+      "git ls-files --cached | grep -cE '^(\\.venv/|state/|dockets/)'  -> 0"
+    ]
+  },
+  "blocker": "Step-3 content secret scan returned hits (sk- shapes: 8 diff lines; okr_ shapes: 2 diff lines) confined to journal-redaction test fixtures (tests/test_journal.py, tests/test_occamy_client.py) and V0's evidence quoting them (orchestration/units/V0.md, orchestration/handoffs/V0.json). Per the unit's hard bound ('if the secret scan finds anything, STOP and report failed — do not commit'), no commit was created. master still has zero commits; the index is staged. Decision needed from the parent: the four paths are all explicitly in the required batch-0 stage list, so no compliant commit exists without either (i) an explicitly recorded fixture allowlist for these two test files + V0 evidence, or (ii) scrubbing the secret-shaped fixtures.",
+  "next_unit_hint": "Re-delegate a fresh unit (U0.6) with an amended hard bound: commit the identical 30-path list once the scan is either waived with a written allowlist naming tests/test_journal.py, tests/test_occamy_client.py, orchestration/units/V0.md, orchestration/handoffs/V0.json, or the fixtures are replaced with obviously-non-secret-shaped sentinels. Do not run the full test suite while U1.1/U2.1/U3.3/U5.1 are mid-write; the commit itself needs no tests. Everything else in U0.5 is proven and ready: identity is local, staging is exactly the 30 batch-0 paths, path checks are clean, .venv/state/dockets are excluded.",
+  "write_paths": [
+    "orchestration/STATUS.md",
+    ".git/**",
+    "orchestration/units/U0.5.md",
+    "orchestration/handoffs/U0.5.json"
+  ]
+}

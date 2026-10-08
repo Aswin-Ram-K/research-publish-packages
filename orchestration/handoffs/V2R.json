@@ -1,0 +1,82 @@
+{
+  "unit": "V2R",
+  "scope": "closure of V2's FAIL on U2.1, fixed by U2.2",
+  "overall": "PASS",
+  "checks": [
+    {"id": "C1", "name": "four store_v2 failures independently classified", "verdict": "PASS - all four are version pins only", "observed": "4 failed / 9 passed; failures at tests/test_store_v2.py:169 (assert 3==2), :220 ([1,2,3]==[1,2]), :252 (assert 3==2), :537 (assert 3==2). No migration-3 logic assertion failed.", "evidence": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_store_v2.py -q"},
+    {"id": "C2", "name": "FAIL A closed", "verdict": "PASS", "observed": "real store producer dist {replay:10}, model=0, replay=10, null=0; CHECK rejects 'bogus' on a copy via UPDATE and INSERT; half-evidence tag-only and title-only both => unknown (derive_producer AND real _backfill at DB level); runs.model NULL x4; run3/run4 replay, run1/run2 unknown; column diff additive only", "evidence": "state/verify/V2R/c2_c6_checks.py -> state/logs/V2R-c2-c6.txt"},
+    {"id": "C3", "name": "FAIL B closed", "verdict": "PASS", "observed": "my replay client => model_calls=0 usage_records=2 total_tokens=240 producer=replay; shipped OccamyClient over httpx.MockTransport => model_calls=2 usage_records=2 and the transport observed 2 real requests; increment site _Meter.absorb candidates.py:321-324 (records += 1 always, calls += 1 only if outbound; outbound=self.makes_requests)", "evidence": "state/verify/V2R/c3_drive.py -> state/logs/V2R-c3.txt"},
+    {"id": "C4", "name": "red->green two guards sha-proven", "verdict": "PASS", "observed": "guard a FAILED assert 'replay' == 'unknown' @tests/test_store_v3.py:456 then PASSED; guard b FAILED assert 2 == 0 @tests/test_store_v3.py:419 then PASSED; both files restored to exact starting sha256", "evidence": "state/logs/V2R-c2-c6.txt, transcript"},
+    {"id": "C5", "name": "migration re-derived", "verdict": "PASS", "observed": "own v2-shaped DB from shipped v1+v2 DDL (schema_version=2, no producer/model/mode columns - self-checked); 12/12 tables each filled with 1 row; init_db => rows_lost={} rows_added={} schema 2->3; additive only", "evidence": "state/verify/V2R/c5_migration.py -> state/logs/V2R-c5.txt"},
+    {"id": "C6", "name": "finish_run + run 3", "verdict": "PASS", "observed": "finish_run appended: 'r1 graph=/g/graph.json | accepted=3 rejected=1' (graph path survives); run 3 status=failed, finished_at IS NULL, reason recorded in notes", "evidence": "state/verify/V2R/c2_c6_checks.py"},
+    {"id": "C7", "name": "is the new gate enforced anywhere", "verdict": "GAP - partially closed by a concurrent unit, not by U2.2", "observed": "at 06:39 may_back_model_claim had no caller outside store.py/tests and src/resextract/docket/ mentioned producer 0 times; by 06:44:58 untracked run.py (mtime 06:43:24) calls may_back_model_claim:1224 and model_produced_candidates:1232, _stage_materialize refuses without --allow-replay, and docket/manifest.py (06:43:58) + docket/assemble.py (06:44:32) carry generated_by.producer + producer_gate_reason()", "evidence": "git status shows run.py untracked; grep at 06:39 vs 06:44:58"},
+    {"id": "C8", "name": "honesty audit of U2.2", "verdict": "PARTIAL", "observed": "reproduced rows_before==rows_after and backup sha d11c86f6...; two-signal rule genuinely bites; model path UNVERIFIED (blocked)", "evidence": "sha256sum state/logs/U2.2-state-backup.sqlite; state/logs/V2R-c5.txt"},
+    {"id": "C9", "name": "containment", "verdict": "PASS", "observed": "Duval HEAD 55710509 + porcelain identical before/after; 0 writes outside workspace; 0 .worktrees reads; real store rows and sha256 unchanged, -wal 0 bytes", "evidence": "final containment command"}
+  ],
+  "v2_pin_failures": {
+    "count": 4,
+    "all_version_pins": true,
+    "detail": [
+      {"test": "test_fresh_db_is_v2_with_all_tables_columns_and_indices", "assertion": "assert store.schema_version(con) == 2 -> assert 3 == 2", "line": 169},
+      {"test": "test_init_db_twice_is_a_noop", "assertion": "[r['version'] ...] == [1, 2] -> assert [1, 2, 3] == [1, 2]", "line": 220},
+      {"test": "test_v1_to_v2_preserves_every_row", "assertion": "assert store.schema_version(con) == 2 -> assert 3 == 2", "line": 252},
+      {"test": "test_status_json_counts_new_table_and_stays_sane", "assertion": "assert summary['schema_version'] == 2 -> assert 3 == 2", "line": 537}
+    ]
+  },
+  "test_counts": {"mine": 15, "store_v3": 8, "store_v2": "4 failed / 9 passed", "store_v1": 42},
+  "red_green": {
+    "a": "sha ok; store.py 528adc43 -> revert 85bc53bf -> FAILED 'assert replay == unknown' @tests/test_store_v3.py:456 -> restore 528adc43 (equal) -> 1 passed",
+    "b": "sha ok; candidates.py 3b3014ca -> revert b0dae356 -> FAILED 'assert 2 == 0' @tests/test_store_v3.py:419 -> restore 3b3014ca (equal) -> 1 passed"
+  },
+  "fail_a_closed": {
+    "producer_distribution": {"replay": 10},
+    "model_rows": 0,
+    "replay_rows": 10,
+    "half_evidence_yields": "unknown",
+    "additive_columns_only": true
+  },
+  "fail_b_closed": {
+    "model_calls_semantics": "real outbound requests only (_Meter.calls += 1 inside 'if outbound:', outbound=self.makes_requests)",
+    "usage_records_semantics": "every usage-sink record (the old ambiguous counter, renamed)",
+    "replay_model_calls": 0,
+    "mocked_model_calls": 2,
+    "reader_can_still_be_misled": false
+  },
+  "finish_run": {"notes_append": true, "run3": {"status": "failed", "finished_at": null, "reason": "[U2.2 migration 3] status 'running' repaired to 'failed': the run never reached finish_run and persisted no candidates or tokens.  The exact completion time is unknowable, so finished_at is left NULL.", "mode": "replay", "notes": "live-u21-replay graph=/home/zer0null/reserach extarctor/state/kg/duval/graphify-out/graph.json | [U2.2 migration 3] status 'running' repaired to 'failed': ... finished_at is left NULL."}},
+  "gap": {
+    "may_back_model_claim_callers": 1,
+    "caller_detail": "src/resextract/run.py:1224 (plus tests/test_store_v3.py); model_produced_candidates called at run.py:1232",
+    "manifest_mentions_producer": true,
+    "manifest_detail": "as of 06:43:58: src/resextract/docket/manifest.py:147 generated_by.producer (default 'unknown'), :183 producer_gate_reason(); src/resextract/docket/assemble.py:786,819,831,963-977. Was FALSE at 06:39 (0 mentions).",
+    "consequence": "Enforcement is arriving from a CONCURRENT unit (U5.7), not from U2.2, and was absent when U2.2 finished (06:34-06:36). The two dockets already in the real store were built before the gate and carry generated_by={app,model:'',version} with NO producer key; docket 1 is 'duval-replay-material' with claims reading 'REPLAY-sourced candidate 3'. The new gate would read them as 'unknown' and refuse them going forward, but every docket already on disk remains replay-derived and unlabelled at its source."
+  },
+  "not_reproduced": [
+    "U2.2's live replay drive over the real 2685-node graph (report accepted=10 rejected=5 model_calls=0 usage_records=7): V2R drove its OWN replay client over the mini fixture instead, so the live numbers are U2.2's, not re-derived here.",
+    "U2.2's 'status --json exit 0, schema v3' CLI run: schema rows [1,2,3] verified directly from the store, but the CLI exit code was not re-run."
+  ],
+  "overstated": [
+    "U2.2's handoff carries no not_reproduced / unverified / overstated keys, so its self-audit is thinner than the unit card requires.",
+    "tests/test_store_v3.py guard-(b) docstring cites the failure at line 411; the live assertion is at line 419 (same test, same text - docstring drift)."
+  ],
+  "unverified": ["model path (blocked: endpoint down at 2026-10-08T06:37:29-05:00, HTTP 000; curl exit 7)"],
+  "corrections": [
+    {"plan_assumption": "may_back_model_claim() is unenforced and no docket/manifest path consumes producer", "actually": "run.py:1224 calls may_back_model_claim and docket/manifest.py + docket/assemble.py consume generated_by.producer - but these are untracked files written at 06:43-06:44 by a concurrent unit (comments name U5.7), AFTER U2.2 finished at 06:34-06:36", "evidence": "git status shows run.py untracked; grep at 06:39 found 0 'producer' in src/resextract/docket/, at 06:44:58 found 32; file mtimes 06:43:24/06:43:58/06:44:32", "unit": "U5.7 (concurrent; not U2.2)"},
+    {"plan_assumption": "the store's schema version is readable via PRAGMA user_version", "actually": "PRAGMA user_version returns 0; the version lives in a schema_version table with rows [1, 2, 3]", "evidence": "PRAGMA user_version=0; SELECT version FROM schema_version ORDER BY version -> [1,2,3]", "unit": "U2.2"}
+  ],
+  "tool_calls": 70,
+  "bound": 40,
+  "tool_calls_accounting": "Over bound, disclosed. ~24 calls were reconnaissance of unfamiliar code (store.py, candidates.py, run.py, conftest/test harness) done as many small reads instead of a few batched ones. 3 extra calls were C5 script iterations because three tables (evidence/verdicts/lanes) have CHECK vocabularies my generic row-filler violated. 1 call was a failed edit that required a preceding read. 3 calls were re-greps forced by the moving tree (run.py/cli.py/docket/*.py rewritten mid-verification). No check was skipped and no verification step was traded away for the overage.",
+  "containment": {
+    "duval_head": "55710509ff677ce078f786d98907b2d6c7716986",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+    "outside_writes": 0,
+    "worktrees_reads": 0,
+    "real_store_rows_before": {"candidates": 10, "runs": 4, "lanes": 5, "lane_candidates": 10, "dockets": 2, "claims": 0, "verdicts": 0, "targets": 0, "evidence": 0, "web_sources": 0, "search_health": 0, "rework": 0},
+    "real_store_rows_after": {"candidates": 10, "runs": 4, "lanes": 5, "lane_candidates": 10, "dockets": 2, "claims": 0, "verdicts": 0, "targets": 0, "evidence": 0, "web_sources": 0, "search_health": 0, "rework": 0},
+    "real_store_sha256": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+    "source_restore_shas": {"src/resextract/store.py": "528adc43ebf11118b790175159c453941dfb42cb29950765758ae5d403843c0f", "src/resextract/mine/candidates.py": "3b3014ca6b26dd363d856f9f16be80e451e1c59336a0cf5810ba301f78853635"}
+  },
+  "blocker": "",
+  "next_unit_hint": "(1) Relax the four version pins in tests/test_store_v2.py (== 2 -> >= 2; schema_version rows end at SCHEMA_VERSION) so the v2 suite is a live regression again. (2) Once U5.7's run.py/docket files stop moving, verify the producer gate end-to-end and decide whether the two pre-gate dockets (no generated_by.producer) must be re-labelled or refused. (3) Re-run real mining when the Occamy endpoint returns.",
+  "write_paths": ["orchestration/VERDICTS.md", "orchestration/units/V2R.md", "orchestration/handoffs/V2R.json", "state/logs/V2R*", "state/verify/V2R/**"]
+}

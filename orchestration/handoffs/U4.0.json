@@ -1,0 +1,90 @@
+{
+  "unit": "U4.0",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/claims/decompose.py",
+    "src/resextract/claims/__init__.py",
+    "tests/test_claims_decompose.py",
+    "tests/fixtures/claims-store/target/README.md",
+    "tests/fixtures/claims-store/target/src/alpha.py",
+    "tests/fixtures/claims-store/target/src/beta.py",
+    "tests/fixtures/claims-store/graph.json",
+    "state/claims/v1-replay-48578bcb8ae2/CLAIMS.md",
+    "state/claims/v1-replay-48578bcb8ae2/claims.jsonl",
+    "state/claims/v1-replay-48578bcb8ae2/report.json",
+    "state/claims/store-copy.sqlite",
+    "state/logs/U4.0-live.py",
+    "state/logs/U4.0-live.txt",
+    "state/logs/U4.0-redgreen.txt",
+    "orchestration/units/U4.0.md"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "probe_command": "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models -> curl: (7) Failed to connect ... ; 000",
+    "tests": "11 passed",
+    "tests_command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_claims_decompose.py -q -> 11 passed in 0.10s",
+    "red_green": {
+      "a": "sha ok (95a38b36c69dede75f062d5d1602b9926f60bf41db1199eb56c441d8d6a900e9 before==after, bit-identical restore); f=1 (test_guard_a_zero_verified_refs_rejected FAILED at tests/test_claims_decompose.py:155, 1 failed in 0.08s); p=1 (1 passed in 0.07s)",
+      "b": "sha ok (same sha, diff -q clean); f=1 (test_guard_b_empty_settled_by_rejected FAILED at tests/test_claims_decompose.py:171, 1 failed in 0.07s); p=1 (1 passed in 0.07s)"
+    },
+    "live": {
+      "candidates_processed": 10,
+      "claims_created": 9,
+      "rejected": 2,
+      "deduped": 0,
+      "model_calls": 0,
+      "usage_records": 0,
+      "producer": "replay",
+      "partial": false,
+      "degradations": ["truncation"],
+      "example_claims": [
+        {"text": "The miner ref tsconfig_compileroptions_types for candidate 1 (REPLAY novel-primitives-inventory: tsconfig_compileroptions_types) still resolves in the Duval tree.", "settled_by": "Re-read tsconfig_compileroptions_types and re-run verify_provenance against state/kg/duval/graphify-out/graph.json (sha256 4790bbb1...); it must resolve again.", "refs": ["tsconfig_compileroptions_types", "tsconfig.json#L24"]},
+        {"text": "The miner ref tools_derivation_projector_project for candidate 2 (REPLAY novel-primitives-inventory: tools_derivation_projector_project) still resolves in the Duval tree.", "settled_by": "Re-read tools_derivation_projector_project and re-run verify_provenance against state/kg/duval/graphify-out/graph.json (sha256 4790bbb1...); it must resolve again.", "refs": ["tools_derivation_projector_project", "tools/derivation/projector.ts#L49"]},
+        {"text": "The miner ref src_lease_hold for candidate 3 (REPLAY invariants-stated: src_lease_hold) still resolves in the Duval tree.", "settled_by": "Re-read src_lease_hold and re-run verify_provenance against state/kg/duval/graphify-out/graph.json (sha256 4790bbb1...); it must resolve again.", "refs": ["src_lease_hold", "src/lease.ts#L169"]}
+      ],
+      "example_rejected": {"text": "The Duval README documents the derivation pipeline at README.md line 99999.", "reason": "zero verified provenance refs: README.md#L99999-L100000 (span 99999-100000 beyond 275 lines)"},
+      "out_files": [
+        "state/claims/v1-replay-48578bcb8ae2/CLAIMS.md (4906 bytes)",
+        "state/claims/v1-replay-48578bcb8ae2/claims.jsonl (6971 bytes, 9 lines)",
+        "state/claims/v1-replay-48578bcb8ae2/report.json (10339 bytes)",
+        "state/claims/store-copy.sqlite (claims=9, candidates=10)"
+      ]
+    },
+    "vocabularies": {
+      "claim_kind": "measured|behavioural|architectural|comparative|negative|definitional (closed set defined in decompose.py: the store declares none)",
+      "verification_state": "unverified (initial state for a fresh claim; store declares no CHECK and docket/materialize already defaults to 'unverified')",
+      "source": "store DDL (sqlite_master.claims in state/state.sqlite): kind TEXT, verification_state TEXT, CHECK present = False"
+    },
+    "store_gap": "store.py exposes get_claim(id) but no all-claims reader; decompose.py runs its own SELECTs (_existing_claim_texts, _candidate_ids_in_store) against the same DB path for resume/dedupe seeding. store.py NOT edited (sibling U2.2 owns it).",
+    "real_store_untouched": {
+      "rows_before": {"candidates": 10, "claims": 0, "evidence": 0, "verdicts": 0},
+      "rows_after": {"candidates": 10, "claims": 0, "evidence": 0, "verdicts": 0}
+    },
+    "duval_untouched": {"head": "55710509ff677ce078f786d98907b2d6c7716986", "porcelain": "?? .ci-trunk.txt\\n?? .lane-j-scratch/ (foreign actor's untracked entries, unchanged before/after; HEAD unchanged)"},
+    "graph": {"path": "state/kg/duval/graphify-out/graph.json", "sha256": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b"},
+    "model_path": "UNVERIFIED (blocked: endpoint down at 2026-10-08T06:33:48-05:00, HTTP 000)",
+    "tool_calls": 30,
+    "bound": 35,
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models -> 000 (DOWN)",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_claims_decompose.py -q -> 11 passed",
+      "guard A revert+restore: sha 95a38b36...==95a38b36..., red 1 failed (:155), green 1 passed",
+      "guard B revert+restore: sha 95a38b36...==95a38b36... (diff -q clean), red 1 failed (:171), green 1 passed",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/logs/U4.0-live.py -> 10 candidates, 9 claims, 2 rejected, 0 deduped, model_calls 0, producer replay, partial False",
+      "python3 sqlite3 read-only counts state/state.sqlite -> candidates 10 / claims 0 / evidence 0 / verdicts 0 (before and after)",
+      "cd /home/zer0null/Duval && git rev-parse HEAD -> 55710509ff677ce078f786d98907b2d6c7716986 (before and after); git status --porcelain unchanged"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Wire decompose_candidates into the pipeline (CLI/refresh) so real mining feeds it once the endpoint is back; then assessment attaches evidence/verdicts to these claims. A verifier unit should re-run tests/test_claims_decompose.py and both red->green guards (guard A: `if verdict.verified == 0:`; guard B: `if not settled_by.strip():` in src/resextract/claims/decompose.py).",
+  "write_paths": [
+    "src/resextract/claims/__init__.py",
+    "src/resextract/claims/decompose.py",
+    "tests/test_claims_decompose.py",
+    "tests/fixtures/claims-store/**",
+    "state/claims/**",
+    "state/logs/U4.0*",
+    "orchestration/units/U4.0.md",
+    "orchestration/handoffs/U4.0.json"
+  ]
+}

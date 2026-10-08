@@ -1,0 +1,168 @@
+{
+  "unit": "U2.2",
+  "status": "partial",
+  "fixes": [
+    "FAIL A producer identity",
+    "FAIL B metering semantics",
+    "finish_run notes",
+    "stale running run"
+  ],
+  "artifacts": [
+    "src/resextract/store.py",
+    "src/resextract/mine/candidates.py",
+    "tests/test_store_v3.py",
+    "tests/test_mine_candidates.py",
+    "state/state.sqlite",
+    "state/logs/U2.2-state-backup.sqlite",
+    "state/logs/U2.2-migration.json",
+    "state/logs/U2.2-rows-before.json",
+    "state/logs/U2.2-rows-after.json",
+    "state/logs/U2.2-redgreen.txt",
+    "state/logs/U2.2-live-drive.py",
+    "state/logs/U2.2-live.log",
+    "state/logs/U2.2-live.sqlite",
+    "state/logs/U2.2-mine/",
+    "orchestration/units/U2.2.md",
+    "orchestration/handoffs/U2.2.json"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "occamy_probe_at": "2026-10-08T11:35:40Z",
+    "model_path": "UNVERIFIED (blocked: endpoint down at 2026-10-08T11:35:40Z, HTTP 000)",
+    "tests": {
+      "mine": "15 passed in 0.21s",
+      "store_v3": "8 passed in 0.07s",
+      "store_v1_regression": "42 passed in 0.10s",
+      "store_v2_regression": "4 failed, 9 passed in 0.08s",
+      "store_v2_failures": "4, all version pins: tests/test_store_v2.py:169 assert 3 == 2; :221 versions [1,2,3] not [1,2]; :252 'schema_version must be 2'; :537 summary assert 3 == 2"
+    },
+    "red_green": {
+      "a": "sha256(redgreen log)=05cd5c29a260d2f6; f: tests/test_store_v3.py:439 AssertionError: assert 'replay' == 'unknown' (revert: derive_producer final return 'unknown' -> 'replay'); p: 1 passed restored",
+      "b": "sha ok; f: tests/test_store_v3.py:411 AssertionError: a replay client made no outbound request / assert 2 == 0 (revert: _Meter.absorb counts every usage record as a call \u2014 the old candidates.py:307 self.calls += 1); p: 1 passed restored"
+    }
+  },
+  "migration": {
+    "schema_before": 2,
+    "schema_after": 3,
+    "rows_before": {
+      "candidates": 10,
+      "claims": 0,
+      "dockets": 2,
+      "evidence": 0,
+      "lane_candidates": 10,
+      "lanes": 5,
+      "rework": 0,
+      "runs": 4,
+      "schema_version": 2,
+      "search_health": 0,
+      "targets": 0,
+      "verdicts": 0,
+      "web_sources": 0
+    },
+    "rows_after": {
+      "candidates": 10,
+      "claims": 0,
+      "dockets": 2,
+      "evidence": 0,
+      "lane_candidates": 10,
+      "lanes": 5,
+      "rework": 0,
+      "runs": 4,
+      "schema_version": 3,
+      "search_health": 0,
+      "targets": 0,
+      "verdicts": 0,
+      "web_sources": 0
+    },
+    "rows_lost": {},
+    "rows_lost_total": 0,
+    "backup": "state/logs/U2.2-state-backup.sqlite",
+    "backup_sha8": "d11c86f6",
+    "backup_sha256": "d11c86f6e4c31cd2d866c2282813e9bc1c15c26cb34874a046247936beec6003",
+    "source_sha256_before": "51a3ff9515c291e8a65d449d7dd71af08d82bb1c88aa8ce758398c04df589c12",
+    "backfill": {
+      "replay": 10,
+      "unknown": 0,
+      "basis": "run tag 'live-u21-replay' at the head of runs.notes AND the 'REPLAY ' title prefix; both required, half-evidence -> unknown, never guessed"
+    },
+    "runs_backfill": {
+      "run1": "mode=unknown",
+      "run2": "mode=unknown",
+      "run3": "mode=replay",
+      "run4": "mode=replay",
+      "model": "NULL for every run: endpoint down, no attribution available"
+    },
+    "run3_repair": {
+      "from": "running",
+      "to": "failed",
+      "finished_at": null,
+      "basis": "started but never reached finish_run; no candidates and no tokens recorded; completion time unknowable, so finished_at left NULL"
+    },
+    "candidates_columns_added": [
+      "producer",
+      "model"
+    ],
+    "runs_columns_added": [
+      "model",
+      "mode"
+    ],
+    "table_rebuilt": false
+  },
+  "metering": {
+    "model_calls_semantics": "real outbound model requests",
+    "usage_records_semantics": "every usage-sink record (what the old counter counted)",
+    "change": "MineReport.model_calls counts only requests a self-declaring client admits to making; usage_records carries the old number. Client contract producer/mode/makes_requests: shipped OccamyClient = model/live/True, replay client = replay/replay/False, an undeclared object = unknown/unknown/False.",
+    "replay_model_calls": 0,
+    "replay_usage_records": 7,
+    "mocked_model_calls": 2,
+    "mocked_model_usage_records": 2
+  },
+  "live_report": {
+    "producer": "replay",
+    "mode": "replay",
+    "model": "replay-no-network",
+    "model_calls": 0,
+    "usage_records": 7,
+    "accepted": 10,
+    "rejected": 5,
+    "deduped": 0,
+    "graph_hash": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b"
+  },
+  "live_driver": "state/logs/U2.2-live-drive.py \u2014 U2.1's driver was not persisted, so I drove it myself: replayed the recorded journal state/journal/live-u21-replay.jsonl through a zero-I/O client declaring makes_requests=False, with the real graphify CLI over the real graph; the run wrote to a scratch store copy so the real store keeps its 10 migrated rows.",
+  "consumer_gate": {
+    "model_produced_rows": 0,
+    "replay_rows": 10,
+    "query": "SELECT id,title,producer FROM candidates WHERE producer='model' -> []",
+    "statement": "until real mining runs, no candidate may back a model-derived claim"
+  },
+  "status_json_exit": 0,
+  "status_json_schema_version": 3,
+  "duval_untouched": {
+    "head": "55710509ff677ce078f786d98907b2d6c7716986",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/"
+  },
+  "tool_calls": 38,
+  "bound": 35,
+  "commands": [
+    "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  # 000",
+    "sqlite3 backup API -> state/logs/U2.2-state-backup.sqlite + sha256 + per-table counts",
+    "store.init_db('state/state.sqlite')  # v2 -> v3, rows_lost = 0",
+    "pytest tests/test_mine_candidates.py tests/test_store_v3.py tests/test_store.py tests/test_store_v2.py -q",
+    "red->green re-runs (derive_producer revert; _Meter.absorb revert)",
+    ".venv/bin/resextract status --json",
+    ".venv/bin/python state/logs/U2.2-live-drive.py"
+  ],
+  "deviation": "tests/test_store_v2.py pins SCHEMA_VERSION==2 / schema_version==2 in four assertions and is on the do-not-touch list, so it cannot pass once the required v3 bump lands. U2.2 did not edit it; row preservation is re-proven in tests/test_store_v3.py against a v2-DDL database and on the real store (rows_lost=0). One-line fix for a follow-up unit.",
+  "blocker": "",
+  "next_unit_hint": "(1) Follow-up: relax the four version pins in tests/test_store_v2.py (== 2 -> >= 2; schema_version rows end at SCHEMA_VERSION) so the v2 suite is a live regression again. (2) Then build the downstream enforcement gate: every consumer that turns a candidate into a model-derived claim must filter producer='model' via store.may_back_model_claim(). (3) Re-run real mining when the Occamy endpoint returns.",
+  "write_paths": [
+    "src/resextract/mine/candidates.py",
+    "src/resextract/store.py",
+    "tests/test_mine_candidates.py",
+    "tests/test_store_v3.py",
+    "state/state.sqlite",
+    "state/logs/U2.2*",
+    "orchestration/units/U2.2.md",
+    "orchestration/handoffs/U2.2.json"
+  ]
+}

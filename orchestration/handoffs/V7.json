@@ -1,0 +1,58 @@
+{
+  "unit": "V7",
+  "batch": "7",
+  "overall": "PASS",
+  "checks": [
+    {"id": "1", "name": "four test files re-run", "verdict": "PASS", "expected": "48 passed (15 staleness+review, 33 git_source+writer)", "observed": "48 passed in 1.78s", "evidence": "state/verify/V7/check1-pytest.txt"},
+    {"id": "2", "name": "four red->green guards, sha-proven", "verdict": "PASS", "expected": "each guard red on revert, green on restore, sha256 equal after restore", "observed": "4/4: (a) 'stale' != 'needs_rework'; (b) second-pass noop False; (c) DID NOT RAISE PathNotFoundAtCommit; (d) DID NOT RAISE TargetBusyError; all four restored to original sha256", "evidence": "state/verify/V7/redgreen-summary.json, red-{a,b,c,d}.txt, green-{a,b,c,d}.txt"},
+    {"id": "3", "name": "noop + graph-copy caveat", "verdict": "PASS (noop claim); caveat quantified as reproducibility problem + latent correctness risk for graph-cited claims", "expected": "noop=true on second pass from a clean state; b44e0e1-staged copy does not change the invalidation verdict", "observed": "clean-state pass1 wrote 6 files, pass2 noop=true written=[] planned=[] and 0 docket files changed; freshness_for(graph=copy) == freshness_for(graph=None) byte-identical; copy tree lacks tools/selfbuild/{backlog,loop}.ts (added b44e0e1..b2bade3) while graph_state.json says observed_head=b2bade3", "evidence": "state/verify/V7/check3-noop.txt, state/verify/V7/check3-recompute.txt"},
+    {"id": "4", "name": "precedence proven directly", "verdict": "PASS", "expected": "needs_rework > stale > current with all contributing reasons returned", "observed": "all-conditions fixture -> needs_rework with 5 reasons (file+range+commit, TTL age, gone/changed/suspect links); stale-only -> stale; fresh -> current (); superseded preserved", "evidence": "state/verify/V7/check4-precedence.txt"},
+    {"id": "5", "name": "head_sha design consistency", "verdict": "PASS", "expected": "refresh does not bump target.head_sha; verify_docket accepts needs_rework with the older head", "observed": "head stayed 6deaed0 while freshness.state=needs_rework; verify_docket ok=true, problems=[]; no src consumer reads target.head_sha as current head", "evidence": "state/verify/V7/check3-noop.txt"},
+    {"id": "6", "name": "writer detection re-derived", "verdict": "PASS with new gap found", "expected": "two live windows reported; bursty claim checked against reflog", "observed": "5s and 25s both quiescent, files_touched=0, newest tracked mtime 11:04:38Z, worktree_dirs_present=1, 440/440 watched; reflog 8 HEAD moves in 11:01:38Z-11:04:38Z (claim said 9); modifying an existing untracked file reads quiescent (new untracked entry -> active_writer)", "evidence": "state/verify/V7/check6-writer.txt, state/verify/V7/check6b-reflog-gap.txt"},
+    {"id": "7", "name": "persistence gap", "verdict": "PASS (gap correctly stated by U7.1; still unwired)", "expected": "refresh does not persist rework today", "observed": "persist_store=False default, no caller sets True, cli.py has only a placeholder; persist_rework persists source_ref=None model_suggested=0 via legacy open_rework; schema v2 has add_rework/list_rework/upsert_docket_by_dir", "evidence": "state/verify/V7/check7-persistence.txt"},
+    {"id": "8", "name": "honesty audit", "verdict": "PASS with overstatements", "expected": "recompute 27 files, noop, 4929/10509, quiescent", "observed": "27 = 25 diff lines + 2 untracked porcelain entries (reproduced: kind both, 14 commits, 27 files); copy graph 4929/10509 confirmed but copy tree is b44e0e1 content labelled b2bade3; '9 HEAD moves' is 8; .worktrees 441-file figure UNVERIFIED", "evidence": "state/verify/V7/check3-recompute.txt, check6b-reflog-gap.txt, check8-u54-live.txt"},
+    {"id": "9", "name": "ledger entries", "verdict": "PASS", "expected": "new file docs/PLAN_CORRECTIONS_PART2.md, PLAN_CORRECTIONS.md untouched", "observed": "9 entries q-y written; PLAN_CORRECTIONS.md not touched", "evidence": "docs/PLAN_CORRECTIONS_PART2.md"},
+    {"id": "10", "name": "containment", "verdict": "PASS", "expected": "no writes to Duval, no .worktrees reads, nothing outside workspace", "observed": "Duval HEAD 5cdc471a... and 2-line porcelain identical before/after; all writes inside workspace; no .worktrees file contents read", "evidence": "state/verify/V7/bak/sha-before.txt (sha256sum -c all OK), check8-u54-live.txt"}
+  ],
+  "red_green": {
+    "a": "sha 873801e3->ff81fea1; RED 1 failed ('stale' == 'needs_rework'); restored sha 873801e3; GREEN 1 passed",
+    "b": "sha f14a0e88->140184bf; RED 1 failed (second-pass noop False); restored sha f14a0e88; GREEN 1 passed",
+    "c": "sha 2eb2c6be->79da97cc; RED 1 failed (DID NOT RAISE PathNotFoundAtCommit); restored sha 2eb2c6be; GREEN 1 passed",
+    "d": "sha 07bbf9ed->3a466b14; RED 1 failed (DID NOT RAISE TargetBusyError); restored sha 07bbf9ed; GREEN 1 passed"
+  },
+  "precedence": {"holds": true, "reasons_name_all_conditions": true},
+  "head_sha_design": {"bumped": false, "internally_consistent": true, "verify_docket_accepts": true},
+  "writer_windows": [
+    {"window_s": 5, "verdict": "quiescent", "files_touched": 0, "t_start": "2026-10-08T11:18:31Z", "t_end": "2026-10-08T11:18:36Z", "newest_mtime_utc": "2026-10-08T11:04:38Z", "worktree_dirs_present": 1},
+    {"window_s": 25, "verdict": "quiescent", "files_touched": 0, "t_start": "2026-10-08T11:18:36Z", "t_end": "2026-10-08T11:19:01Z", "newest_mtime_utc": "2026-10-08T11:04:38Z", "worktree_dirs_present": 1}
+  ],
+  "reflog_head_moves_in_window": 8,
+  "persistence_gap": "refresh does not persist rework; persist_store=False default and no caller (CLI/tests) enables it; cli.py carries only a placeholder 'refresh' entry. Schema v2 now unblocks it (add_rework dedupes on (docket_id, reason, source_ref), list_rework, upsert_docket_by_dir). Unwired: persist_rework->add_rework with source_ref/model_suggested; a caller enabling persistence; docket_id resolution uses dirs[0] only; persist_rework counts a deduplicated row as written.",
+  "not_reproduced": [
+    "U5.4's '.worktrees/: 1 run dir, 441 files live' file count (never read .worktrees/ contents; only the detector's name-only scandir ran, reporting 1 run* dir)",
+    "the full graphify update on the staged copy (clean-state noop repro ran with run_graph_update=False to stay bounded; the graph-axis write path was read, not re-executed)"
+  ],
+  "overstated": [
+    "U5.4: '9 HEAD moves 11:01:38Z-11:04:38Z' is 8 (reflog parsed with its -0500 offset)",
+    "graph_state.json records observed_head=b2bade3 for a copy tree that lacks files added in b44e0e1..b2bade3 - the recorded head is not a truthful provenance label",
+    "U7.1 card splits 15 tests as 'staleness 8 + review 7'; the real split is 7 + 8 (total correct)"
+  ],
+  "unverified": [
+    "the staged copy's graph reflects b44e0e1 content - inferred from absent files added after b44e0e1, not from a byte-for-byte tree diff against b44e0e1",
+    "the 4929/10509 counts' exact source commit - the copy tree is b44e0e1 content but the update ran at a later wall-clock time; counts are confirmed for the copy, provenance is not"
+  ],
+  "overage": {"tool_calls": 35, "bound": 45, "accounted": "1 orient, 1 baseline hash, 4 source reads, 1 live-script read, 6 test runs/collect, 1 backup+revert, 3 redgreen, 1 red excerpt, 12 evidence probes (check3/4/5/6/7/8 + containment), 1 plan grep, 1 ledger write, 1 verdicts read + 1 append, 1 unit card, 1 handoff, 1 report-back. No Occamy probe needed (no LLM call made at all); no full-suite run."},
+  "corrections_written": 9,
+  "ledger_file": "docs/PLAN_CORRECTIONS_PART2.md",
+  "containment": {"head": "5cdc471afb2a14934030d581a20f6a9bcffb727e", "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/", "outside_writes": 0, "worktrees_read": 0},
+  "blocker": "",
+  "next_unit_hint": "Advance Batch 7. Two follow-ups: (1) make refresh's acceptance runs sealed-window (assert quiescent before AND re-verify HEAD/porcelain after) and record that the detector cannot see writes inside existing untracked paths such as .lane-j-scratch/**; (2) fix the graph-copy provenance label - record the staged content's commit (or the staged tree's digest) in graph_state.json instead of the run's observed head, so the reuse guard cannot skip an update over a stale copy. Optionally wire persist_rework->store.add_rework with source_ref/model_suggested now that schema v2 exists.",
+  "write_paths": [
+    "docs/PLAN_CORRECTIONS_PART2.md",
+    "orchestration/VERDICTS.md",
+    "orchestration/units/V7.md",
+    "orchestration/handoffs/V7.json",
+    "state/verify/V7/**",
+    "state/refresh-verify/**"
+  ]
+}

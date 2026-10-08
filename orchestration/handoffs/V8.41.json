@@ -1,0 +1,192 @@
+{
+  "unit": "V8.41",
+  "overall": "PASS",
+  "checks": [
+    {"id": "C1", "name": "the four branches", "verdict": "PASS",
+     "observed": "All four branches present in _read_until_settled (real lines 227-263). (a) first read parses to dict -> returned at line 250 with pauses=0; (b) becomes readable inside the loop -> returned at line 260 judged on the bytes just read (raw=nxt); (c) exhaustion with moved=True or quiet=False -> status 'unstable' at line 262, caller skips at 289-292 with a reason; (d) exhaustion with moved=False and quiet=True -> status 'settled' at line 262, caller appends a hard failure at 295-296.",
+     "evidence": "tests/test_orchestration_handoffs.py sha 7d9c97ee95014c74845ed3a5af20d652dc849dbf73d7d81edebf33933ed3d70e; read at lines 227-263, 285-296; in-suite test_settled_invalid_file_still_fails_after_the_settle_loop (521-534)"},
+    {"id": "C2", "name": "the bound is real and bounded", "verdict": "PASS",
+     "observed": "SETTLE_DELAY_S = 0.2 and SETTLE_MAX_ATTEMPTS = 4 declared at lines 147-148 and confirmed by importing the module (repr 0.2 / 4). Measured on scratch fixtures: readable file 0.0002 s (retried []), never-settling unreadable file 0.8007 s (retried ['U9.92.json'], failures 1, mid_write []). Bound is 4x200ms=0.8s as claimed.",
+     "evidence": "state/logs/V8.41-probe.txt; state/verify/V8.41/probe.py"},
+    {"id": "C3", "name": "not weakened, both directions reproduced", "verdict": "PASS",
+     "observed": "(a) settled invalid (no writer) -> hard failure in BOTH guards with the IDENTICAL string {\"file\": \"U9.90.json\", \"error\": \"JSONDecodeError: Expecting ',' delimiter: line 1 column 47 (char 46)\"}; retried ['U9.90.json'] and 0.80 s elapsed, proving it waited the full bound. (b) same tear with completion at 0.5 s -> NEW failures [], gaps {}, mid_write [], retried ['U9.90.json'], judged on the settled doc (unit=U9.90); OLD hard-failed it with 'Unterminated string starting at: line 5 column 3 (char 62)' while the file was valid 0.5 s later. (c) writer still appending past the bound -> mid_write ['U9.90.json'], skip_reason {'U9.90.json': 'unstable: still changing after 4 pauses of 200 ms (unfinished write, not a defect)'}.",
+     "evidence": "state/logs/V8.41-driver.txt (driver: state/verify/U8.35/driver.py, run by me under full __pycache__ purge)"},
+    {"id": "C4", "name": "residuals stated, valid-truncated tested", "verdict": "PASS",
+     "observed": "Docstring lines 39-47 state the frozen-tear exposure and lines 49-53 the VALID-but-incomplete exposure. Tested: a valid-JSON document carrying all seven unit-contract keys (a field emptied / truncated value) is ACCEPTED on the first read -- cost 0.0001 s, failures [], gaps {}, mid_write [], retried [], and it appears in docs -> judged settled and NOT failed, and not even reported as a gap. A valid-JSON document that closes early (fewer keys) is likewise accepted on the first read (retried []) and reported only as a key gap.",
+     "evidence": "state/logs/V8.41-probe.txt (C4a, C4b); docstring quoted in evidence.residuals.docstring_quote"},
+    {"id": "C5", "name": "the tightenings", "verdict": "PASS with a wording correction",
+     "observed": "_regressions(gaps, baseline) at line 318 has NO shapes parameter; its 3 call sites (354, 355, 435) pass exactly 2 args. The token 'shapes' still occurs 11 times as the audit-record KEY (285, 280 docstring, 304, 308, 321 docstring, 351, 352, 419, 452, 453) -- that key is live and read, so 'shapes retired' is true of the parameter only. Assertion at 389-390 is now `err.startswith(\"JSONDecodeError: \")` AND `\"delimiter\" in err`; the version-fragile 'line 6 column 32' literal survives only in comments (5, 97, 382).",
+     "evidence": "grep -c shapes = 11; grep -n _regressions = 4 hits (def + 3 call sites); read lines 318-328, 381-390"},
+    {"id": "C6", "name": "the tripwire message", "verdict": "PASS",
+     "observed": "Message text at 464-471; REMEDY substring 'delete this entry and update BASELINE_GAPS_SHA256' present (checked True) and 'do NOT loosen and do NOT re-derive from live data' present (checked True). Fired by construction: injecting {'D1.json': ['blocker']} (a complete unit handoff) into a COPY of the unit baseline raised AssertionError whose text begins 'baseline exemption(s) now over-declare the live measurement ... {\\'unit:D1.json\\': {\\'exempted\\': [\\'blocker\\'], \\'measured\\': []}}'; the unmodified baseline does not fire (control).",
+     "evidence": "state/logs/V8.41-probe.txt C6 lines; read lines 440-471"},
+    {"id": "C7", "name": "counts on the busy corpus", "verdict": "PASS",
+     "observed": "13 tests, 13 passed, three independent runs: 2.46 s, 2.45 s, 2.46 s (full __pycache__ purge + PYTHONDONTWRITEBYTECODE=1 before each). Live audit: 182 handoffs, failures 0, gaps 9, mid_write [], retried []. Baselines untouched: 1a16e39d72f03d0272020f3b30c20b88d14a43ebc5650b33e69980d11316d716 and ad97c9061e924dd4929ff7ef74d2d76a9c60bfd02a4879a4383a8e8be6f5add4. Held-mid-write: a real handoff cannot be held mid-write without editing one (forbidden), so the driver's torn-write harness was used -- CASE B (torn prefix completed at 0.5 s, inside the bound) NOT failed, judged on settled bytes; CASE C (still appending) skipped as unstable. A FOURTH run at ~10:12 returned 12 passed / 1 failed: test_no_new_contract_key_gaps flagged a REAL settled new gap in a sibling's handoff -- orchestration/handoffs/U8.40.json (17231 B, mtime 2026-10-08 10:08:24, sha256 14c58316..., identical across 3 reads 1 s apart) carries only unit/status/artifacts/evidence and lacks blocker/next_unit_hint/write_paths. This is a genuine defect in U8.40's file (not mine, not the guard's), correctly reported at zero cost via the fast path; my three 13/13 runs bracket its arrival.",
+     "evidence": "state/logs/V8.41-driver.txt; pytest output captured in this transcript; sha256sum of the two baseline files"},
+    {"id": "C8", "name": "honesty audit + containment", "verdict": "PARTIAL",
+     "observed": "Reproduced: the 9 gap files cost nothing (LIVE any gap file retried? [] -- none of U0.22, U3.2, U6.16, U6.17, V2T, V4R, V5F, V6E, V6F was re-read); retried == [] on the live corpus; Duval HEAD 6c60da5a + porcelain = 2 pre-existing untracked entries; store sha 40e8aa0c, v4; 0 .worktrees/ reads; 0 stray processes; exactly one handoff written by me (V8.41.json). NOT reproduced: the 32/35 tool-call spend and the '11 single-file edits where 3 would do' account -- no call log exists on disk, so the figure is unverifiable by any verifier; judged credible in direction because the change spans >=6 distinct regions (module docstring, constants, _read_until_settled, _skip_reason, audit record, _regressions signature, the :389 assertion) plus 3 new tests, which a 3-edit claim cannot cover.",
+     "evidence": "state/logs/V8.41-probe.txt LIVE lines; git -C /home/zer0null/Duval rev-parse HEAD / status --porcelain; sha256sum state/state.sqlite; find orchestration/handoffs -newermt '-20 minutes'"}
+  ],
+  "blocker": "",
+  "next_unit_hint": "The fix is verified and safe to keep. If anyone wants to close the two disclosed residuals: (1) a frozen-beyond-window tear is unfixable by any finite window -- the only real cure is a writer-side temp-file+rename; (2) the VALID-but-incomplete exposure is invisible to the guard (accepted at zero cost, and if all 7 keys survive it is not even reported as a gap), so a distinct check -- e.g. requiring an 'updated_at'/self-hash field, or asserting the presence of a per-run marker -- would be needed rather than widening the pause. Do NOT lengthen SETTLE_DELAY_S: it is a latency budget and exhaustion-while-moving is already a skip.",
+  "write_paths": [
+    "orchestration/VERDICTS.md",
+    "orchestration/units/V8.41.md",
+    "orchestration/handoffs/V8.41.json",
+    "state/logs/V8.41-driver.txt",
+    "state/logs/V8.41-probe.txt",
+    "state/verify/V8.41/**"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "semantics": {
+      "quote": "def _read_until_settled(path, delay=SETTLE_DELAY_S, attempts=SETTLE_MAX_ATTEMPTS):\n    raw = path.read_bytes()\n    doc, err = _parse(raw)\n    if err is None and isinstance(doc, dict):\n        return accepted(raw, doc, None, 0, False, True)      # fast path: no pause paid\n    moved, quiet = False, True\n    for pause in range(attempts):\n        time.sleep(delay)\n        nxt = path.read_bytes()\n        quiet = nxt == raw\n        moved = moved or not quiet\n        raw = nxt\n        doc, err = _parse(raw)\n        if err is None and isinstance(doc, dict):\n            return accepted(raw, doc, None, pause + 1, moved, quiet)\n    return {\"raw\": raw, \"doc\": doc, \"error\": err,\n            \"status\": \"unstable\" if (moved or not quiet) else \"settled\",\n            \"pauses\": attempts, \"moved\": moved, \"quiet\": quiet, \"delay\": delay}",
+      "real_lines": ["227: def _read_until_settled(path, delay=SETTLE_DELAY_S, attempts=SETTLE_MAX_ATTEMPTS):",
+                     "247: raw = path.read_bytes()",
+                     "248: doc, err = _parse(raw)",
+                     "249: if err is None and isinstance(doc, dict):",
+                     "250: return accepted(raw, doc, None, 0, False, True)      # fast path: no pause paid",
+                     "252: for pause in range(attempts):",
+                     "253: time.sleep(delay)",
+                     "254: nxt = path.read_bytes()",
+                     "255: quiet = nxt == raw",
+                     "256: moved = moved or not quiet",
+                     "259: if err is None and isinstance(doc, dict):",
+                     "260: return accepted(raw, doc, None, pause + 1, moved, quiet)",
+                     "262: \"status\": \"unstable\" if (moved or not quiet) else \"settled\",",
+                     "289: if record[\"status\"] == \"unstable\":",
+                     "295: if record[\"error\"] is not None:",
+                     "296: failures.append({\"file\": name, \"error\": record[\"error\"]})"],
+      "parsed_first_read_no_pause": true,
+      "readable_within_window_settled": true,
+      "moved_but_unreadable_skipped": true,
+      "never_moved_unreadable_hard_failure": true
+    },
+    "bound": {
+      "pause_ms": 200,
+      "attempts": 4,
+      "readable_cost_ms": 0.2,
+      "never_settling_cost_ms": 800.7,
+      "latency_budget_frame_correct": true,
+      "my_view": "The framing is correct and honest. Only an unparseable file pays anything (fast path returns at line 250 with pauses=0), so the healthy 170+ corpus and the 9 known gap files cost exactly nothing -- measured: readable 0.0002 s, live audit retried []. Correctness of branch (d) does not depend on the window at all: a file that never moves is a settled defect at 0.8 s exactly as at 0 ms, and exhaustion-while-moving is already a skip. Two residual risks I would NOT call regressions: (i) a genuinely torn write frozen longer than 0.8 s on a loaded machine is still a hard failure -- that is disclosed, and only a writer-side temp+rename removes it; (ii) the cost is per-suspect-file, so an anomalous run with N unparseable files pays N*0.8 s wall clock, a latency cost never a false failure. The one place the wording could mislead: 'a slow writer is skipped, never failed' is true only for a writer that MOVES during the watch; one that pauses past it is failed, as the docstring itself says."
+    },
+    "not_weakened": {
+      "settled_invalid_hard_fails": true,
+      "failure_verbatim": "{\"file\": \"U9.90.json\", \"error\": \"JSONDecodeError: Expecting ',' delimiter: line 1 column 47 (char 46)\"}",
+      "identical_under_preimage": true,
+      "preimage_path": "state/verify/V8.21/test_orchestration_handoffs.py.V821-backup",
+      "preimage_sha": "d7f85e367736bc4b58c34a13b6c867d5c45e461e1af1844d5e5f9c22ff1c4953",
+      "torn_then_complete_not_failed": true,
+      "still_moving_skipped": true,
+      "skip_reason_verbatim": "unstable: still changing after 4 pauses of 200 ms (unfinished write, not a defect)"
+    },
+    "residuals": {
+      "docstring_quote": "THE OVERSTATEMENT THIS CORRECTS (U8.35).  The old claim -- \"a torn read is not [stable], so the guard does not flicker\" -- was too strong, for exactly V8.29's reason: a torn file whose writer pauses for longer than the window presents the same bytes to every read, looks settled, and is still reported as a defect.  The loop does NOT remove that exposure and this docstring no longer says it does; no finite window can outlast a writer that pauses longer than the window. ... SETTLE_DELAY_S and SETTLE_MAX_ATTEMPTS are therefore a LATENCY budget, not a correctness one.  ||  Recorded residual exposure (deliberate, not hidden): a tear that leaves a VALID but incomplete JSON object (so it parses and is accepted on the first read) is not caught by this loop.  It is not caught by the old one either, closing it would make every known baseline-gap file pay the pause on every run, and a truncation of a JSON document essentially never yields a parseable object.",
+      "frozen_beyond_window_stated": true,
+      "valid_but_incomplete_JSON_stated": true,
+      "valid_truncated_test": "accepted",
+      "what_actually_happens": "A tear yielding valid JSON is judged SETTLED on the first read (pauses=0, retried [], cost 0.0001 s) and is never a parse failure. Its fate then depends on the keys it kept: (i) if all seven unit-contract keys survive (my C4a: all keys present, a field emptied/truncated) it is accepted into docs with failures [] and gaps {} -- the guard and the whole suite pass it silently, which is strictly more than the docstring's 'not caught by this loop' wording; (ii) if the tear cut keys off (my C4b) it is still accepted on the first read but surfaces as a key GAP, so test_no_new_contract_key_gaps only catches it for a name not already frozen in a baseline -- for a baseline-known name it is absorbed. This is the sharpest residual and it is real, but it is DISCLOSED, and a genuine prefix tear of an indent=2 handoff is next to unable to yield balanced JSON (every prefix ends mid-nesting), so case (i) needs a contrived complete-but-stubbed document rather than a natural torn write."
+    },
+    "tightenings": {
+      "shapes_retired": true,
+      "shapes_remaining_refs": 11,
+      "assertion_after": "err = failures[0][\"error\"]\nassert err.startswith(\"JSONDecodeError: \"), err\nassert \"delimiter\" in err, err          # lines 388-390",
+      "version_fragile_literal_gone": true,
+      "genuinely_tighter": true,
+      "would_break_on": "A CPython release whose json message for the frozen U0.22 bytes stops containing the lowercase word 'delimiter' (the position literal is no longer load-bearing, so renumbering does NOT break it). It would then fail LOUDLY on the fixture, not silently pass: the new form is a conjunction requiring both the exception-class prefix (produced by _parse itself as '%s: %s' % (type(exc).__name__, exc), so stable) and the wording. The old disjunction could pass with the position evidence entirely absent, and would have kept passing after a renumber -- so this is strictly tighter at the cost of depending on one English word in a frozen input's message.",
+      "note": "The 11 remaining 'shapes' occurrences are the audit-record KEY (set at 304, consumed at 351/352/419/452/453, declared in the docstring at 280 and in the return at 308). Only the retired PARAMETER of _regressions (line 318) is gone; describing it as 'shapes retired, 0 refs' would be wrong."
+    },
+    "tripwire": {
+      "quote": "baseline exemption(s) now over-declare the live measurement (the handoff was repaired, so the exemption would silently tolerate the key being lost again): %s. REMEDY: delete this entry and update BASELINE_GAPS_SHA256 \u2014 do NOT loosen and do NOT re-derive from live data. (For a verifier-shape entry the pin to update is VERIFIER_BASELINE_SHA256. Re-deriving from the corpus would re-absolve every known gap, and loosening the check would stop it catching the next one.)",
+      "remedy_present": true,
+      "fires_by_construction": true
+    },
+    "counts": {
+      "tests": 13,
+      "passed": 13,
+      "runs": [13, 13, 13],
+      "run_seconds": [2.46, 2.45, 2.46],
+      "runs_note": "The three 13/13 runs measured the corpus at 10:07-10:10. A FOURTH run at ~10:12 read 12 passed / 1 failed: test_no_new_contract_key_gaps correctly flagged a real, settled NEW gap in a sibling's handoff (U8.40.json -- see evidence.live_finding). That is the guard working as designed, not a flicker and not a false failure; the guard did not flicker in any of my four runs.",
+      "file_sha": "7d9c97ee95014c74845ed3a5af20d652dc849dbf73d7d81edebf33933ed3d70e",
+      "baselines_untouched": true,
+      "baseline_shas": ["1a16e39d72f03d0272020f3b30c20b88d14a43ebc5650b33e69980d11316d716",
+                        "ad97c9061e924dd4929ff7ef74d2d76a9c60bfd02a4879a4383a8e8be6f5add4"],
+      "live_corpus_retried": 0,
+      "gap_files_cost_nothing": true,
+      "live_gap_files": ["U0.22.json", "U3.2.json", "U6.16.json", "U6.17.json", "V2T.json", "V4R.json", "V5F.json", "V6E.json", "V6F.json"],
+      "live_docs": 182,
+      "held_mid_write_run": "real-corpus hold is impossible without editing a real handoff (forbidden); driver torn-write harness used instead -- CASE B torn+completed at 0.5 s => failures [] / gaps {} / mid_write [] / retried ['U9.90.json']; CASE C still appending => mid_write ['U9.90.json'] with the unstable reason"
+    },
+    "live_finding": {
+      "file": "orchestration/handoffs/U8.40.json",
+      "sha256": "14c58316ef86745ad2fcedc553816b5617e23f3c34cfe8dc197e1033389b988d",
+      "size": 17231,
+      "mtime": "2026-10-08 10:08:24.572828678 -0500",
+      "keys_present": ["artifacts", "evidence", "status", "unit"],
+      "keys_missing": ["blocker", "next_unit_hint", "write_paths"],
+      "settled_not_torn": "identical bytes across three reads 1 s apart; mid_write [] in the audit, so it took the zero-pause fast path",
+      "effect": "tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps is now RED ('NEW unit-shape handoff contract gaps: {U8.40.json: [blocker, next_unit_hint, write_paths]}') until U8.40.json is repaired by its owner (a sibling write path I must not touch). U8.35 is not implicated; the guard behaved exactly as contracted.",
+      "reported_to_parent": true
+    },
+    "overrun_judged": {
+      "work": 32,
+      "bound": 18,
+      "single_file_edits": "11 where 3 would do",
+      "credible": "credible-in-direction, unverifiable",
+      "reason": "No tool-call log exists on disk, so nobody can re-check 32/35 or the '11 edits' split; my own run also overran the same bound, which shows the bound is optimistic for this class of change. Directionally credible: the U8.35 delta covers >=6 distinct regions (module docstring 14-55, constants 136-148, _read_until_settled 227-263, _skip_reason 266-274, the audit record 285-309, the _regressions signature 318-328), reworks the :389 assertion, and appends 3 tests -- a 3-edit claim cannot describe that, though '11' is the author's self-count and is itself unverifiable."
+    },
+    "not_reproduced": [
+      "The exact predecessor of the guard (sha 52fbceb7...) is not on disk, so 'identical under the pre-image' was checked against the U8.25-era near-antecedent d7f85e36 (state/verify/V8.21/test_orchestration_handoffs.py.V821-backup), which the unit itself admits. For the never-moves case the two guards must agree and the identical error string shows they do.",
+      "The 32/35 tool-call spend and the '11 single-file edits where 3 would do' account: no call log exists on disk, so no verifier can check either figure.",
+      "The claim that 'a truncation of a JSON document essentially never yields a parseable object' is an argument, not a measurement; I demonstrated the residual in its stated form (all keys present, valid JSON) rather than measuring the natural-torn-write probability, and noted that a genuine prefix tear of an indent=2 document is nearly unable to close balanced.",
+      "U8.35's assertion 'No handoff edited by it (count 174 -> 179)' cannot be re-checked retroactively (no write log); my own count is 182 with siblings in flight."
+    ],
+    "overstated": [
+      "'the unused shapes parameter was RETIRED' is accurate for the parameter but reads as 'shapes is gone from the file': the token still occurs 11 times as the live audit-record key. No defect -- the key is read, which is exactly why the parameter was the dead one -- but the summary needs that qualifier.",
+      "'the :257 assertion' -- the assertion is now at lines 388-390 (line drift only; the frozen fixture message it guards is \"Expecting ',' delimiter: line 6 column 32 (char 1165)\").",
+      "'a slow writer is skipped, never failed' is true only for a writer that MOVES during the watch; a writer that pauses longer than the whole window is still failed. The docstring says so plainly, but the one-line hand-up does not carry the qualifier."
+    ],
+    "unverified": [
+      "The exact 52fbceb7 predecessor's behaviour on the same tear (not on disk).",
+      "The 32/35 and '11 edits' accounting.",
+      "U8.35's claim that no handoff was edited by it (no write log to consult)."
+    ],
+    "corrections": [
+      {"relayed_claim": "'the unused shapes parameter was RETIRED' (implying shapes is gone)", "actually": "the PARAMETER of _regressions is gone (line 318 takes 2 args; call sites 354/355/435 updated); the 'shapes' KEY in the audit record remains and is consumed by 5 assertions -- 11 token occurrences, 0 of them the retired parameter", "evidence": "grep -c shapes tests/test_orchestration_handoffs.py = 11; grep -n _regressions = 4 hits; lines 304/308/351/352/419/452/453", "unit": "U8.35"},
+      {"relayed_claim": "'Store 40e8aa0c... v4'", "actually": "v4 is max(schema_version.version) = 4 (applied_at 2026-10-08T12:47:56.009Z, matching the store mtime); PRAGMA user_version is 0. Read from a COPY at state/verify/V8.41/storecopy.sqlite", "evidence": "sqlite3 on the copy: schema_version rows (1,2,3,4); PRAGMA user_version = 0; journal_mode wal; 13 tables", "unit": "U8.35"},
+      {"relayed_claim": "'the :257 assertion was tightened'", "actually": "the tightened assertion is at :389-390 (line numbers drifted); the version-fragile literal is genuinely gone from the assertion and survives only in comments", "evidence": "read lines 381-390", "unit": "U8.35"}
+    ],
+    "tool_calls": 37,
+    "bound": 18,
+    "work_calls": 27,
+    "work_calls_note": "25 instrumented verification calls vs the bound of 18 (+7) -- I overran the same way the unit under review did; reported rather than rounded down. 30 counts every invocation including the mandated STEP-0 handoff write+validate, this handoff write+validate, the units card, the VERDICTS append, and the final report-back (which the card excludes). No whole-suite run, one Occamy probe, zero live LLM calls, no graph build.",
+    "containment": {
+      "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "outside_writes": 0,
+      "worktrees_reads": 0,
+      "store": {
+        "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+        "version": 4,
+        "version_source": "max(schema_version.version)=4 applied_at 2026-10-08T12:47:56.009Z (NOT PRAGMA user_version, which is 0)",
+        "read_by_any_command_of_mine": "bytes only: sha256sum state/state.sqlite, and cp to state/verify/V8.41/storecopy.sqlite which was then opened by sqlite3. No command opened the LIVE store as a database; no immutable=1 anywhere.",
+        "used_immutable": false,
+        "sidecars_observed": 2,
+        "sidecars_detail": "state.sqlite-shm 32768 B mtime 09:54:49, state.sqlite-wal 0 B mtime 09:29:14 (both pre-existing)",
+        "sidecars_created_by_me": 0
+      },
+      "dockets": [
+        {"slug": "duval-replay-material", "sha": "ce45766d4ac845ed (MANIFEST.json)", "mtime_meaning": "directory", "mtime": "2026-10-08 09:28:51.303536743 -0500", "manifest_mtime": "2026-10-08 09:28:51.302382844 -0500", "mtime_delta_ms": 1.15, "byte_identity_asserted": false},
+        {"slug": "duval-u55-pinned", "sha": "445032f78851b817 (MANIFEST.json)", "mtime_meaning": "directory", "mtime": "2026-10-08 08:36:35.984233876 -0500", "manifest_mtime": "2026-10-08 08:36:35.984233876 -0500", "byte_identity_asserted": false},
+        {"slug": "_smoke", "sha": "41ec711a4324eb98 (MANIFEST.json)", "mtime_meaning": "directory", "mtime": "2026-10-08 05:49:09.151055969 -0500", "manifest_mtime": "2026-10-08 05:49:09.150312393 -0500", "byte_identity_asserted": false}
+      ],
+      "handoffs_edited_by_me": [],
+      "handoffs_created_by_me": ["orchestration/handoffs/V8.41.json"],
+      "handoff_count_before": 181,
+      "handoff_count_after": 182,
+      "handoff_count_method": "ls -1 orchestration/handoffs/*.json | wc -l (=182, mine included) plus find -newermt '-20 minutes'; siblings (U8.42/U8.43/U8.44/V8.38/V8.39/V8.40) wrote during my session, so the delta isolates only my own single creation",
+      "stray_processes": 0,
+      "pycache_purge": "FULL purge (find . -path ./.venv -prune -o -name __pycache__ -type d -exec rm -rf {} +) before each of the 3 pytest runs, with PYTHONDONTWRITEBYTECODE=1"
+    }
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "unit": "U8.25",
+  "status": "done",
+  "artifacts": [
+    "tests/test_orchestration_handoffs.py",
+    "state/logs/U8.15/baseline_gaps.json",
+    "state/logs/U8.18/verifier_shape_baseline.json",
+    "state/logs/U8.25/pristine/baseline_gaps.json",
+    "state/logs/U8.25/pristine/verifier_shape_baseline.json",
+    "state/verify/U8.25/scratch_missingkey/U9.99.json",
+    "state/verify/U8.25/scratch_unparseable/U9.98.json",
+    "state/verify/U8.25/scratch_u022bytes/U0.22.json",
+    "state/verify/U8.25/old_guard_HEAD.py",
+    "orchestration/units/U8.25.md"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "occamy_probe_note": "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models -> 000, 'Failed to connect to 192.168.2.168 port 8012'. Probed once (the card allowed at most twice); nothing restarted; zero live LLM calls in this unit.",
+    "flaw": {
+      "code_asserting_copy_eq_copy": "assert json.loads(BASELINE_GAPS_PATH.read_text()) == BASELINE_GAPS, (\"U8.15 baseline on disk disagrees with the inline frozen copy\")",
+      "line": 230,
+      "why_it_cannot_detect_transcription_error": "It compares two DERIVED artifacts -- the inline dict and the JSON file -- and never either one against the measurement they both claim to record. Two copies of a wrong value agree perfectly, so a transcription slip is satisfied by the assertion: a slip in the inline dict reads as 'the file disagrees' in the other direction, and a slip that was copied into both is agreed to by both. U8.22's V6E.json under-declaration is exactly that class of error. The identical shape recurred at line 233 (recorded['contract_verifier'] == VERIFIER_CONTRACT) and line 234 (recorded['gaps'] == VERIFIER_BASELINE_GAPS), and in purest form at line 236 (set(BASELINE_NO_STATUSISH) == set(BASELINE_NO_STATUSISH_FROZEN), whose right-hand side was frozenset(BASELINE_NO_STATUSISH): a value compared with a copy of itself, so it can never fail)."
+    },
+    "design": {
+      "chosen": "single-source + hash-pin (recommended (a)+(b)), plus a tightening-only re-derivation (c) of the OVER-declaration direction",
+      "justification": "The duplication is the hazard, so it is removed: each baseline JSON is now the sole source (no inline copy exists to compare against, and the verifier contract is read from the pinned record instead of being duplicated as a constant). Removing the copy would leave the file with no integrity check at all, so (b) is added to BOTH files -- U8.15's was already pinned, U8.18's was not. The pin makes a repair and a transcription slip the same kind of act: a visible change to two places (the file plus the pin), with a silent single-place change failing the suite. Rewriting the baseline from live data (the naive form of (c)) is REJECTED: it would re-absolve every recorded gap on every run -- a tautology that stops catching anything. What is re-derived is only the tightening direction: test_no_baseline_entry_over_declares re-measures the corpus and fails when an exemption claims MORE than the handoffs need (V5.25.json and U8.15's 41 dead V* entries were exactly this). That check cannot be vacuously satisfied by re-deriving the baseline because the baseline stays a pinned file while the measurement comes from disk, so the two can disagree -- and did.",
+      "what_it_proves": "A silent transcription slip into either baseline is impossible (any byte change fails the pin, including a semantically neutral byte). A deliberate one requires editing the file AND the pin: two visible acts, which is the design goal. A stale or over-declared exemption that would hide a now-fixed handoff is caught by measurement. New/worsened gaps in the live corpus are still compared against the frozen records (test_no_new_contract_key_gaps), so the guard still catches a newly incomplete handoff of either shape.",
+      "what_it_does_not_prove": "That the frozen exemptions were CORRECT when U8.15/U8.18 recorded them -- that historical measurement is relied on, not re-derived (deliberately). It does not prove a handoff's content is truthful, only that it parses and carries its contracted keys. It does not make a determined editor's change impossible, only visible and deliberate (file + pin + contract would all have to move together). And with the dead V* entries retired, the unit baseline holds only 4 entries, so it proves nothing about V* files -- by construction classify() never routes them there; the U8.18 record governs them."
+    },
+    "changes": [
+      {
+        "file": "tests/test_orchestration_handoffs.py",
+        "sha_before": "d00044f0fde9e260489f6bd9567a1bb282479e9d95795419ae88ec426a4d4d66",
+        "sha_after": "52fbceb74d09e59d69968a5892556689cc73b9a23b50a8dc77283c7d154ee3e4",
+        "before": "8 tests. Inline BASELINE_GAPS (46 entries) and VERIFIER_BASELINE_GAPS (6 entries) duplicated the two JSON files; the test asserted copy==copy at :230, :233 and :234; BASELINE_NO_STATUSISH exempted 13 files from carrying a status key, kept alive by the tautology at :236; U8.18's baseline had no sha pin.",
+        "after": "10 tests. _pinned_json() + frozen_baselines(): each JSON is the sole source, both sha-pinned in the guard (1a16e39d..., ad97c906...); the verifier contract is read from the pinned record instead of an inline copy; the 13-file exemption and its tautology are deleted (measured: ZERO handoffs lack a status/verdict/result/overall key, so it protected nothing while it would have silently tolerated one of the 13 losing its status); added test_no_baseline_entry_over_declares and test_unit_shape_baseline_still_catches_new_gaps. Two self-comparisons I introduced in my own first draft were removed before finishing (see same_flaw_elsewhere)."
+      },
+      {
+        "file": "state/logs/U8.15/baseline_gaps.json",
+        "sha_before": "9b0b0a715ce7d3ab951720d4ef678c699e8aed022e3169e6f8478593813fc234",
+        "sha_after": "1a16e39d72f03d0272020f3b30c20b88d14a43ebc5650b33e69980d11316d716",
+        "before": "Bare mapping of 46 entries: the 4 real unit files (U0.22, U3.2, U6.16, U6.17) plus 41 V*-prefixed entries that classify() can never route here.",
+        "after": "Record shape {frozen_by, restructured_by, purpose, rule, retired_dead_v_entries, retired_exemption_list, gaps}; gaps holds ONLY the 4 real unit entries. The 41 dead V* entries are gone and the file itself documents where they went, for a reader who remembers them. No non-V* entry was changed."
+      },
+      {
+        "file": "state/logs/U8.18/verifier_shape_baseline.json",
+        "sha_before": "e300a245de578e8d8e8d041093252674d314188baba3d7b716ee0a9fe497831a",
+        "sha_after": "ad97c9061e924dd4929ff7ef74d2d76a9c60bfd02a4879a4383a8e8be6f5add4",
+        "before": "6 gap entries including the over-declared \"V5.25.json\": [\"next_unit_hint\"]; no sha pin anywhere in the guard; contract_verifier duplicated inline.",
+        "after": "5 gap entries (V5.25 retired; V2T, V4R, V5F, V6E, V6F kept -- each re-measured live as still correct); revised_by/revised notes record the removal and its reason; this file is now the sole source of both the verifier gap map and the verifier contract, and it is sha-pinned."
+      }
+    ],
+    "pin_proof": {
+      "tampered_baseline_in_copy_fails": true,
+      "how": "The guard reads ROOT-relative paths, so a detached copy would not be read; tampering was therefore done in place and restored immediately (the card's second option), with pristine bytes kept at state/logs/U8.25/pristine/. Tamper 1 was a semantically NEUTRAL byte -- one appended newline to state/logs/U8.18/verifier_shape_baseline.json, leaving the parsed content identical. Tamper 2 was SEMANTIC: state/logs/U8.15/baseline_gaps.json with \"U6.17.json\" rewritten to [] (hiding a frozen gap).",
+      "failure_verbatim": "E           AssertionError: U8.18 verifier-shape baseline changed: 0d5d6d73c60d696b2df4feaf5b88c71fcd9af7a285067c20f521a6764eb844ad != pinned ad97c9061e924dd4929ff7ef74d2d76a9c60bfd02a4879a4383a8e8be6f5add4",
+      "failure_verbatim_u815": "AssertionError: U8.15 unit-shape baseline changed: <tampered digest> != pinned 1a16e39d72f03d0272020f3b30c20b88d14a43ebc5650b33e69980d11316d716 -- same code path (_pinned_json / the same assertion in test_frozen_baselines_are_untouched_and_recorded); the grep in that step printed the digest line and '1 failed'.",
+      "restored_sha_equal": true,
+      "restored_evidence": "cmp -s of state/logs/U8.25/pristine/*.json against the live files -> 'U8.15 == pristine: EQUAL' and 'U8.18 == pristine: EQUAL'; restored sha256 = 1a16e39d72f03d0272020f3b30c20b88d14a43ebc5650b33e69980d11316d716 and ad97c9061e924dd4929ff7ef74d2d76a9c60bfd02a4879a4383a8e8be6f5add4, both equal to the pins; the pin test re-ran -> 1 passed; both shas re-printed unchanged at the end of the unit, alongside the guard's 52fbceb7...",
+      "pinned_sha": "U8.15=1a16e39d72f03d0272020f3b30c20b88d14a43ebc5650b33e69980d11316d716 ; U8.18=ad97c9061e924dd4929ff7ef74d2d76a9c60bfd02a4879a4383a8e8be6f5add4",
+      "second_layer_proof": "With V6E.json's exemption removed in memory (a hidden gap), the live comparison independently reports it: _regressions(live_verifier_gaps, shapes, baseline_minus_V6E) -> {'V6E.json': ['blocker', 'next_unit_hint']}"
+    },
+    "not_weakened": {
+      "new_missing_key_fails": true,
+      "failure_verbatim": "scan_handoffs('state/verify/U8.25/scratch_missingkey') -> failures=[] gaps={'U9.99.json': ['evidence', 'blocker', 'next_unit_hint', 'write_paths']}   (scratch bytes: {\"unit\":\"U9.99\",\"status\":\"done\",\"artifacts\":[]})",
+      "unparseable_fails": true,
+      "failure_verbatim_2": "[{'file': 'U0.22.json', 'error': \"JSONDecodeError: Expecting ',' delimiter: line 6 column 32 (char 1165)\"}]  -- the ACTUAL U0.22 pre-repair bytes from state/logs/U8.15/repairs/U0.22.before.json, copied to state/verify/U8.25/scratch_u022bytes/; a purpose-built torn fixture at state/verify/U8.25/scratch_unparseable/ gives [{'file': 'U9.98.json', 'error': \"JSONDecodeError: Expecting ',' delimiter: line 1 column 90 (char 89)\"}]",
+      "suite_before_change": "8 passed / 0 failed",
+      "suite_after_change": "10 passed / 0 failed on my own runs (guard_tests 10, up from 8), measured at ~09:37 and ~09:41. CAUTION: the suite also goes red for minutes whenever a sibling handoff is truncated mid-write -- 9 passed / 1 failed was measured at ~09:39 and again at ~09:44, both times on files that are NOT mine. See suite_regression_external for U6.23.json. A later red run on a sibling file does not contradict these numbers; re-run to distinguish.",
+      "verifier_red_green_recipe": "Append one byte to state/logs/U8.18/verifier_shape_baseline.json -> test_frozen_baselines_are_untouched_and_recorded fails with the message quoted above; restore from state/logs/U8.25/pristine/ (shas above) -> green. To exercise the measurement layer instead, delete one entry from a pinned gaps map AND update that file's pin -> test_no_baseline_entry_over_declares names the file."
+    },
+    "suite_regression_external": {
+      "window": "~09:38:21 to ~09:40",
+      "observed": "9 passed / 1 failed, twice in a row and once more on a dedicated re-run (so not flaky)",
+      "failing_test": "test_every_handoff_parses_and_declares_a_unit",
+      "failure_verbatim": "E       AssertionError: unparseable handoff(s): [{'file': 'U6.23.json', 'error': \"JSONDecodeError: Expecting ',' delimiter: line 60 column 1 (char 15980)\"}] (mid-write skipped: [])",
+      "attribution": "orchestration/handoffs/U6.23.json -- mtime 2026-10-08 09:38:21, 15980 bytes, sha256 6c3e411521a0d94a2f39d5233d055ff6dedfc22fe80816515bc4b728d4bd17f5, byte-identical on two immediate reads (so the guard correctly classed it as a STABLE defect), error at char 15980 = EOF, and it does not mention U8.25. It is a sibling's file, outside my write paths, and the guard was doing the job it exists for: this is the U0.22 defect class recurring.",
+      "not_caused_by_my_change": "The failing assertion comes from scan_handoffs() (the parse path), whose body U8.25 did not touch: the diff is confined to baseline loading/pinning, required_keys, the exemption removal and the tests. My only edit inside that test was to SKIP names already reported as mid-write (which can only remove failures). The pre-change guard could not have passed this file either: U6.23.json is not one of the 13 frozen no-statusish exemptions, so the old clause `path.name in BASELINE_NO_STATUSISH or any(...)` would also have been false -- and the parse assert it fails on comes before that clause anyway.",
+      "provenance_note": "A git-based red/green against the pre-change guard was NOT possible: `git show HEAD:tests/test_orchestration_handoffs.py` reports 'fatal: path exists on disk, but not in HEAD' -- the guard file is untracked in HEAD (it is not committed), so the empty blob (e3b0c442... = sha256 of zero bytes) was written to state/verify/U8.25/old_guard_HEAD.py and the provenance check aborted. Attribution rests on the untouched parse path plus the recorded pre-change sha d00044f0...",
+      "resolution": "By the final run the suite was back to 10 passed / 0 failed: no file is stably unparseable now, so U6.23.json was completed or repaired by its owner (I neither wrote nor repaired it -- handoffs are explicitly outside my write paths). NOT fixed by me and NOT weakened by me."
+    },
+    "loose_ends": {
+      "v525_over_declaration": "REMOVED. Before: \"V5.25.json\": [\"next_unit_hint\"]. After: the entry is deleted (5 verifier entries remain) and a revised_by/revised note inside the pinned file records why. Reason: live measurement is [] because that handoff now carries next_unit_hint; an exemption the corpus no longer needs is not harmless -- it would silently tolerate the handoff LOSING the key again. Retiring it makes a future loss a loud NEW gap again. Because the file is pinned, the retirement was a deliberate two-place change (file + pin), which is the design working as intended.",
+      "u815_dead_v_entries": "RETIRED. 41 V*-prefixed entries removed from state/logs/U8.15/baseline_gaps.json (46 entries before, 4 unit entries after), documented in the file's retired_dead_v_entries note. Reason: classify() returns 'verifier' for ANY basename starting with 'V', so those unit-shaped key lists could never be consulted -- dead text that a future reader would take for enforced gaps (and they were measured stale besides: every key they listed is present in those files now). The 4 non-V entries are untouched, and no verifier gap is lost: V2T/V4R/V5F/V6E/V6F live in the U8.18 record and were re-measured live as correct.",
+      "unit_shape_still_catches_new_gaps": true,
+      "why_not_vacuous": "From the code: test_no_new_contract_key_gaps partitions audit()'s gaps by shape and calls _regressions(unit_gaps, shapes, BASELINE_GAPS_read_from_the_pinned_file). _regressions flags (i) any file ABSENT from the baseline as 'new' and (ii) any measured key beyond the frozen list as 'worsened'. Retiring the V* entries removes only entries that could never appear in unit_gaps (the shape partition excludes them), so the remaining 4 entries plus the new-file rule are unchanged in force. Demonstrated by the new fixture test test_unit_shape_baseline_still_catches_new_gaps: an unknown U9.99.json is reported as new with its full 5-key gap, and a U0.22.json wider than the frozen entry is reported as worsened (['artifacts','evidence']). A check with a SHORT baseline still catches new gaps because the catching power comes from the live corpus, not from the baseline's size; conversely an emptied baseline cannot be used to weaken the guard silently, because every formerly exempted gap would immediately fail as NEW (and the pin test asserts both maps are non-empty)."
+    },
+    "handoffs_edited_by_me": [],
+    "handoffs_created_by_me": ["orchestration/handoffs/U8.25.json"],
+    "handoffs_evidence": "Count at call 1: 159. During measurement: 162. At the final sweep: 164 (three sibling handoffs landed while I worked: U5.29, U5.31, V5.30, U8.24, U8.26 are all newer than my baseline-edit marker; none is mine). No EXISTING handoff was written by me: every write/edit call was confined to my declared paths, and the only handoff newer than my marker that is mine is U8.25.json itself. The drift 159 -> 164 is concurrent siblings, not me -- and the U6.23.json incident above is more evidence of that concurrency.",
+    "same_flaw_elsewhere": [
+      "tests/test_orchestration_handoffs.py:233 (pre-U8.25) `assert recorded[\"contract_verifier\"] == VERIFIER_CONTRACT` -- copy==copy between the inline constant and the recorded measurement. FIXED: the constant is gone; required_keys('verifier') reads the contract from the pinned record.",
+      "tests/test_orchestration_handoffs.py:234 (pre-U8.25) `assert {k: v for k, v in recorded[\"gaps\"].items()} == VERIFIER_BASELINE_GAPS` -- copy==copy for the verifier gap map. FIXED: the inline map is gone; the file is pinned and is the sole source.",
+      "tests/test_orchestration_handoffs.py:236 (pre-U8.25) `assert set(BASELINE_NO_STATUSISH) == set(BASELINE_NO_STATUSISH_FROZEN)`, with :67 `BASELINE_NO_STATUSISH_FROZEN = frozenset(BASELINE_NO_STATUSISH)` -- the flaw in its PURE form: a value compared with a copy of itself, so it can never fail, while it guarded a 13-file exemption set that live measurement shows is entirely stale (zero handoffs lack a status/verdict/result/overall key). It protected the same hidden-fixed-file hazard as V5.25, at 13x the scale. FIXED: list and exemption clause deleted; every handoff must now declare its outcome.",
+      "tests/test_orchestration_handoffs.py:140-145 (unchanged) `_regressions(gaps, shapes, baseline)` never reads its `shapes` argument, yet both call sites pass a shape map. A dead parameter of the same family as the dead V* entries: a reader assumes it filters by shape, and it does not. NOT changed (minimal blast radius; the partition is done correctly at the call sites) -- reported instead.",
+      "MY OWN first draft, caught before finishing: I wrote `assert verifier_contract == required_keys(\"verifier\") == list(verifier_contract)` and `assert required_keys(\"unit\") == CONTRACT` in the new pin test -- the first is a self-comparison through the loader cache, the second returns the same module object, so both were tautologies. They were REMOVED in the final version and replaced by non-vacuous checks that the contract is well-formed and that no baseline entry exempts a key the contract never requires (a DEAD exemption -- the same trap as the 41 dead V* entries). Reported because it shows how naturally this shape re-appears whenever a new check is written."
+    ],
+    "store_untouched": {
+      "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+      "version": 4,
+      "version_note": "sha256 re-measured at the end of the unit and identical to the pinned value. The 'v4' claim is RELIED ON, not re-derived: opening the store with sqlite3 would create/refresh -shm/-wal, so only the first 64 header bytes were read with plain Python open('rb') -- magic 'SQLite format 3', user_version field (offset 60) = 0. I therefore do not claim to have re-verified 'v4'.",
+      "rows_identical": true,
+      "used_immutable": false,
+      "sidecars_observed": 2,
+      "sidecars_created_by_me": 0,
+      "sidecar_detail": "state/state.sqlite-shm (32768 bytes, mtime 09:34:24) and state/state.sqlite-wal (0 bytes, mtime 09:29:14). Both already existed at my ~09:24 check; I never invoked sqlite3 or SQLite's VFS and never passed immutable=1, so I created neither. The 09:34:24 shm mtime falls inside the window in which siblings U5.29/U5.30/U5.31/U8.24/U8.26 and U6.23 were active; attribution is NOT claimed.",
+      "main_file_mtime": "2026-10-08 07:47:56 -0500 (unchanged, pre-dates this unit)"
+    },
+    "duval_untouched": {
+      "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "note": "Identical to the values recorded earlier in this build by V5.25/U5.3; no writes, no .worktrees/ reads, no git state change."
+    },
+    "hand_ups": {
+      "agents_md_wording_matches": true,
+      "wording_to_change": "",
+      "reason": "AGENTS.md rule 5 says the two shapes 'stay recorded gaps in the frozen baselines under state/logs/ (frozen by U8.15 for the unit shape, by U8.18 for the verifier shape); the guard fails on any new missing required key.' After U8.25 both statements are still literally true: the gaps are still recorded in exactly those two files, and the guard still fails on any new missing required key. AGENTS.md never described the baselines as duplicated inline, so nothing in it became false and no wording change is needed. (The verifier core keys it lists in prose are identical to the contract now read from the U8.18 record.)",
+      "other_stale_prose": "orchestration/VERDICTS.md:2011 still describes 'the guard's inline' copy of the verifier baseline. That prose is now stale -- the copy is gone. VERDICTS.md is outside my write paths, so it is reported, not edited.",
+      "guard_file_is_untracked": "`git show HEAD:tests/test_orchestration_handoffs.py` -> 'fatal: path exists on disk, but not in HEAD'. The guard file is NOT committed, so no git-based red/green against the previous revision is possible; the pre-change sha is known (d00044f0...) but the bytes are not recoverable from git. Worth a decision by whoever owns commits (not me: this unit must not commit).",
+      "concurrency_finding": "The guard's mid-write rule re-reads only IMMEDIATELY after a parse failure. A writer that pauses more than an instant (e.g. composing a large handoff in chunks) is indistinguishable from a committed broken file, so orchestration/handoffs/U6.23.json produced a genuine-looking hard failure for ~2 minutes (15980 bytes, stable across reads, error at EOF) before it was completed by its owner. That is the guard behaving as designed -- truncation is a real defect -- but it means the suite can legitimately be red while several units are writing. Do NOT 'fix' this with mtime windows or a retry loop; the docstring already rejects mtime windows for the same reason (a file that is old-but-broken must still be caught). The operational answer is that units write their handoff LAST and in one call."
+    },
+    "tool_calls": 38,
+    "bound": 18,
+    "tool_calls_accounting": "38 calls against a target of <=18: OVER BY 20, disclosed rather than hidden. The largest block is MY OWN fault: 11 calls recovering from writing THIS handoff badly twice over -- first an unbalanced brace (a stray '},' closed the evidence object early, so blocker/next_unit_hint/write_paths fell outside the root; json.loads said 'Extra data: line 147 column 4'), then, while repairing it, losing the comma that separated this very string from 'commands' (the same defect class the guard exists to catch, occurring twice inside the file that reports on the guard). Add 4 calls investigating a red suite caused by a sibling (diagnosing the offender, capturing the failure verbatim and U6.23.json's metadata, attempting git provenance) plus the extra final validation, and 3 self-report corrections like this one. The remaining ~20 are the work itself. Judgment call worth review: on a red suite I spent calls establishing whether MY change caused it rather than reporting a red suite of unknown cause -- or a false 'all green'.",
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  -> 000",
+      ".venv/bin/python -c \"import json;json.load(open('orchestration/handoffs/U8.25.json'))\"  -> U8.25 parses OK (after the first attempt with bare `python` failed: 'python: command not found'; the venv interpreter is the only one)",
+      "sha256sum tests/test_orchestration_handoffs.py state/logs/U8.15/baseline_gaps.json state/logs/U8.18/verifier_shape_baseline.json",
+      ".venv/bin/python -m pytest -q tests/test_orchestration_handoffs.py  -> 8 passed (before change) / 10 passed (final)",
+      ".venv/bin/python -m pytest --collect-only -q tests/test_orchestration_handoffs.py  -> 10 tests collected",
+      "find . -path ./.venv -prune -o -name __pycache__ -type d -print0 | xargs -0 rm -rf   (FULL purge; PYTHONDONTWRITEBYTECODE=1 exported for every run)",
+      ".venv/bin/python  (live sweep: classify() over the corpus, per-shape gaps, baseline STALE/SUPERSET, measured NO-statusish set) -> unit gaps = the 4 unit files; verifier gaps = V2T/V4R/V5F/V6E/V6F; verifier STALE = ['V5.25.json']; measured NO-statusish = []",
+      "printf '\\n' >> state/logs/U8.18/verifier_shape_baseline.json ; pytest -q ...::test_frozen_baselines_are_untouched_and_recorded  -> 1 failed (pin message quoted)",
+      "cp -p state/logs/U8.25/pristine/verifier_shape_baseline.json state/logs/U8.18/verifier_shape_baseline.json ; cmp -s ...  -> EQUAL, pin test 1 passed",
+      ".venv/bin/python rewrite U6.17.json -> [] in state/logs/U8.15/baseline_gaps.json ; pytest -q ...::test_frozen_baselines_are_untouched_and_recorded  -> 1 failed ; restored -> sha equal to pin",
+      ".venv/bin/python scan_handoffs('state/verify/U8.25/scratch_missingkey') -> gaps {'U9.99.json': ['evidence','blocker','next_unit_hint','write_paths']}",
+      ".venv/bin/python scan_handoffs('state/verify/U8.25/scratch_u022bytes') -> JSONDecodeError line 6 column 32 (char 1165)",
+      ".venv/bin/python scan_handoffs('state/verify/U8.25/scratch_unparseable') -> JSONDecodeError line 1 column 90 (char 89)",
+      ".venv/bin/python -c \"...list files with no statusish key...\"  -> OFFENDERS: [('U6.23.json', 'UNPARSEABLE: Expecting , delimiter: line 60 column 1 (char 15980)')], torn: none",
+      "stat -c '%y %s %n' orchestration/handoffs/U6.23.json ; sha256sum orchestration/handoffs/U6.23.json  -> 09:38:21, 15980 bytes, 6c3e411521a0d94a2f39d5233d055ff6dedfc22fe80816515bc4b728d4bd17f5",
+      "git show HEAD:tests/test_orchestration_handoffs.py  -> fatal: path ... not in HEAD (untracked; empty blob written to state/verify/U8.25/old_guard_HEAD.py)",
+      "git -C . status --porcelain ; git -C . diff --stat  (read-only; confirms the guard file is untracked and shows the tree is broadly modified by the build, not by me)",
+      "sha256sum state/state.sqlite  -> 40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3 (unchanged)",
+      "git -C /home/zer0null/Duval rev-parse HEAD ; git -C /home/zer0null/Duval status --porcelain  -> 6c60da5aa9240c0dcc2ff97b46f2a2cf37774951 ; ?? .ci-trunk.txt / ?? .lane-j-scratch/"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "The copy==copy flaw is closed in this guard: each baseline JSON is the sole, sha-pinned source, and the over-declaration direction is now measured (it would have caught both V5.25.json and U8.15's 41 dead V* entries). Three follow-ups: (1) orchestration/VERDICTS.md:2011 still describes the removed inline copy -- reword it or mark it superseded; (2) `_regressions(gaps, shapes, baseline)` still carries an unused `shapes` parameter at both call sites -- either use it for a shape assertion or drop it (same dead-text family as the retired V* entries); (3) the unit baseline now holds 4 entries, so a future REPAIR of U0.22/U3.2/U6.16/U6.17 will make test_no_baseline_entry_over_declares fail BY DESIGN -- that failure is the instruction to delete the entry and update the pin, not a test to loosen. Separately, orchestration/handoffs/U6.23.json was stably unparseable (15980 bytes, JSONDecodeError at EOF) from 09:38:21 for roughly two minutes while its owner finished writing; the suite was legitimately red 9/1 in that window and is 10/0 now -- do not paper over that class with mtime windows or retries. Red/green for a verifier: append one byte to state/logs/U8.18/verifier_shape_baseline.json -> pin failure verbatim above; restore from state/logs/U8.25/pristine/ (shas 1a16e39d... and ad97c906...).",
+  "write_paths": [
+    "tests/test_orchestration_handoffs.py",
+    "state/logs/U8.18/verifier_shape_baseline.json",
+    "state/logs/U8.15/baseline_gaps.json",
+    "state/logs/U8.25*",
+    "state/verify/U8.25/**",
+    "orchestration/units/U8.25.md",
+    "orchestration/handoffs/U8.25.json"
+  ]
+}

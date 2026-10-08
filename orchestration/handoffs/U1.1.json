@@ -1,0 +1,194 @@
+{
+  "unit": "U1.1",
+  "status": "partial",
+  "artifacts": [
+    "state/kg/duval/graphify-out/graph.json",
+    "state/kg/duval/graphify-out/manifest.json",
+    "state/kg/duval/graphify-out/.graphify_analysis.json",
+    "state/kg/tiny-occamy/graphify-out/graph.json",
+    "state/kg/probe2/",
+    "state/logs/U1.1-gateA.log",
+    "state/logs/U1.1-gateB.log",
+    "state/logs/U1.1-gateB-tiny.log",
+    "state/logs/U1.1-gateB-real.log",
+    "orchestration/units/U1.1.md"
+  ],
+  "decision": {
+    "fallback_needed": false,
+    "reason": "The graphify semantic path reaches Occamy end-to-end and returns a parsed graph. Gate A extraction works on the real repo with zero worktree pollution. No ~150-line in-repo fallback is required on the evidence available; only Gate C (cosmetic labelling) is unverified, blocked by the shared Occamy endpoint going down mid-session."
+  },
+  "evidence": {
+    "gate_a": {
+      "nodes": 2685,
+      "edges": 7102,
+      "edges_note": "node-link JSON stores edges under key 'links', not 'edges'",
+      "communities": 128,
+      "wall_s": 3,
+      "exit_code": 0,
+      "graph_path": "state/kg/duval/graphify-out/graph.json",
+      "out_dir_note": "graphify appends a graphify-out/ level: --out state/kg/duval -> state/kg/duval/graphify-out/graph.json",
+      "cluster_only_needed": false,
+      "top_dirs": {
+        "tools/": 836,
+        "src/": 804,
+        "tests/": 410,
+        "evals/": 184,
+        "scripts/": 169,
+        "(root) package.json": 96,
+        "docs/": 70,
+        "examples/": 31,
+        "(no source_file: external refs)": 26,
+        "(root) tsconfig.json": 24,
+        ".lane-j-scratch/": 23,
+        ".githooks/": 6,
+        "source-material/": 3
+      },
+      "worktrees_present": false,
+      "worktrees_nodes": 0,
+      "node_modules_nodes": 0,
+      "tmp_consonance_nodes": 0,
+      "consonance_nodes": 0,
+      "graphify_out_in_repo": false,
+      "graphifyignore_in_repo": false,
+      "pollution_note": ".worktrees/, node_modules/, .tmp-consonance/, .consonance/, scratch/, tmp/ are all honoured as ignored, so ZERO worktree pollution (verified from node source_file values, not from assumption). The single pollution source is .lane-j-scratch/ with 23 nodes (0.86%) - it is untracked and NOT gitignored (git check-ignore: NOT-ignored), so graphify cannot be blamed for including it.",
+      "extraction_stats": "227 code files AST-extracted, 226 non-code skipped (191 docs, 32 papers, 3 images), 80 unclassified skipped, 3 code files yielded no symbols",
+      "graph_records_commit": "graph.json 'built_at_commit' = 6deaed07af0d998d1672fe3f1ab1579e6ba0cdc4 (the pre-pull baseline HEAD)",
+      "file_type_distribution": {"code": 2636, "concept": 32, "rationale": 17},
+      "source_location_present": "2655/2685"
+    },
+    "gate_b": {
+      "verdict": "works",
+      "what_is_proven": "The LLM semantic pass does reach Occamy on the GX10: a real extraction ran to completion through graphify's openai backend against http://192.168.2.168:8012/v1 with model occamy-1.0, and produced a parsed, clustered graph with document and concept nodes.",
+      "dir_chosen": "/home/zer0null/Duval/docs/consolidation",
+      "dir_chosen_why": "Smallest markdown-bearing subdirectory of Duval: 6 files, 112 KB, 6 .md. constitution/ (5 files) and examples/ (4 files) contain 0 markdown so they cannot exercise the docs semantic path; source-material/ is 2.5 MB/53 files.",
+      "proven_success_run": {
+        "target": "state/kg/tiny/TINY.md (3-line synthetic markdown in this workspace)",
+        "exit_code": 0,
+        "wall_s": 54,
+        "llm_calls": 1,
+        "tokens": "913 in / 1,938 out",
+        "nodes": 6,
+        "edges": 6,
+        "communities": 2,
+        "semantic_nodes": 6,
+        "measured_output_rate": "1938 output tokens in 54 s => approx 36 output tok/s on Occamy",
+        "command": "OPENAI_BASE_URL=http://192.168.2.168:8012/v1 OPENAI_MODEL=occamy-1.0 OPENAI_API_KEY=local stdbuf -oL -eL .venv/bin/graphify extract state/kg/tiny --backend openai --model occamy-1.0 --max-concurrency 1 --token-budget 1500 --api-timeout 120 --out state/kg/tiny-occamy"
+      },
+      "semantic_markers": {
+        "file_type": "document present (tiny_capability_materialisation -> 'Capability Materialisation'); concept present (Grant, Resource, Subject, Absence Enforcement, Kernel)",
+        "source_location": "null on ALL 6 semantic nodes; code nodes carry L<n> (e.g. explain EvaluationDefinition -> src/experiment.ts L68)",
+        "confidence": "CARRIED ON EDGES, not nodes: every semantic edge has confidence='EXTRACTED' and confidence_score=1.0, relation='conceptually_related_to'. In 0.9.80 node-level 'source' and 'confidence' are null. This differs from the plan's assumption that nodes carry EXTRACTED/INFERRED."
+      },
+      "literal_step3_command_result": {
+        "command": "OPENAI_BASE_URL=http://192.168.2.168:8012/v1 OPENAI_MODEL=occamy-1.0 OPENAI_API_KEY=local .venv/bin/graphify extract /home/zer0null/Duval/docs/consolidation --backend openai --model occamy-1.0 --max-concurrency 1 --token-budget 8000 --api-timeout 300 --out state/kg/probe",
+        "exit_code": 124,
+        "wall_s": 600,
+        "llm_calls_completed": 0,
+        "evidence_of_zero_completions": "state/kg/probe/graphify-out/cache/semantic/p5e80268fecd6/ created but EMPTY; no graph.json written; log file 0 bytes",
+        "log_lost_reason": "graphify block-buffers stdout when not a TTY, so SIGTERM at the 600 s cap discarded all buffered progress. MUST wrap in `stdbuf -oL -eL` or run under a pty to see anything."
+      },
+      "second_real_run": {
+        "command": "same as above with --token-budget 2000 --api-timeout 300 --out state/kg/probe2, wrapped in stdbuf -oL -eL (420 s cap)",
+        "exit_code": 124,
+        "wall_s": 420,
+        "chunks_planned": 9,
+        "chunks_failed": 7,
+        "error_exact": "[graphify] chunk 1/9 failed: Connection error.\n[graphify] chunk 2/9 failed: Connection error.\n[graphify] chunk 3/9 failed: Connection error.\n[graphify] chunk 4/9 failed: Connection error.\n[graphify] chunk 5/9 failed: Connection error.\n[graphify] chunk 6/9 failed: Connection error.\n[graphify] chunk 7/9 failed: Connection error.",
+        "inconclusive_because": "environmental, not graphify: the Occamy endpoint went DOWN during the session"
+      },
+      "failure_diagnosis": {
+        "classification": "transport / endpoint availability - NOT a request-shape, auth, or JSON-parse problem",
+        "proof_endpoint_went_down": "curl -sS -m 30 http://192.168.2.168:8012/v1/chat/completions -> HTTP=000 in 2 ms, curl: (7) Failed to connect to 192.168.2.168 port 8012 after 1 ms: Could not connect to server. Failed for EVERY shape tested: max_tokens=8, max_completion_tokens=16, max_tokens=16, and a full graphify-shaped 7.5 KB system+user body with max_completion_tokens=8192.",
+        "timeline": "05:26 endpoint UP (HTTP 200, 0.114 s, reply 'ready'); 05:31 tiny semantic extraction SUCCEEDS (exit 0, 54 s); 05:36-05:43 real-docs runs fail with Connection error; 05:44 endpoint DOWN (connection refused). A sibling unit was running a live Occamy smoke test concurrently, so this is consistent with an endpoint restart outside this unit.",
+        "request_shape": "graphify's openai path was independently verified reachable BEFORE the outage: the identical tiny command succeeded at 05:31 and failed with the same 'Connection error' at 05:43, so the request shape is not the variable. graphify sends max_completion_tokens (llm.py:1409), stream=False, optional temperature/reasoning_effort and extra_body; llm.py:1417 already documents chat_template_kwargs.enable_thinking=false for self-hosted Qwen3.",
+        "control_experiment": "Pointing OPENAI_BASE_URL at a dead port (127.0.0.1:9) fails fast in 21 s with exit 1 and '[graphify] chunk 1/1 failed: Connection error.' plus '[graphify extract] error: all semantic chunks failed for backend openai' - graphify surfaces transport errors cleanly and writes NO partial graph. This is the same message seen during the real outage, confirming the outage (not the corpus) caused the failures.",
+        "writing_to_repo_check": "the probe wrote nothing into /home/zer0null/Duval/docs/consolidation - mtimes unchanged (Oct 1), no new files"
+      },
+      "llm_calls": 1
+    },
+    "gate_c": {
+      "exit_code": null,
+      "status": "skipped_endpoint_down",
+      "wall_s": 0,
+      "named": 0,
+      "placeholders": 128,
+      "examples": [],
+      "reason": "Pre-flight liveness check returned HTTP=000 (Occamy unreachable/connection refused) before any labelling attempt. No LLM call was issued, deliberately: the GX10 endpoint was down and a sibling unit owns the live smoke test. Per the unit bound (4 failed LLM attempts / keep Occamy work small) Gate C was not retried.",
+      "note": "Gate C is cosmetic (community naming) and explicitly NOT a pipeline blocker. The Gate-A graph retains 128 numeric community ids usable by query/explain/god-nodes."
+    },
+    "gate_d": {
+      "works": true,
+      "query_head": "Graph: state/kg/duval/graphify-out/graph.json (2685 nodes) | Traversal: BFS depth=2 | Start: ['capabilityAbsence', 'absence-probe.ts', 'absence-probe', 'CapabilityBroker', 'scope-enforcement.ts'] | 522 nodes found  ||  [!] TRUNCATED: showing 24 of 522 nodes (~500-token budget). The answer may be among the 498 cut nodes -- raise the token budget (CLI: --budget) or narrow the query.  ||  NODE capabilityAbsence [src=evals/invariants.ts loc=L64 community=8]  NODE absence-probe.ts [src=tools/absence-probe.ts loc=L1 community=65]  NODE CapabilityBroker [src=src/broker.ts loc=L213 community=74]  NODE scope-enforcement.ts [src=tests/scope-enforcement.ts loc=L1 community=62]",
+      "query_bytes": 2054,
+      "god_nodes": ["ContentHash (id src_hash_contenthash, degree 112)", "utf8() (id src_hash_utf8, degree 83)", "scripts (id package_scripts, degree 83)", "canonical() (id src_hash_canonical, degree 80)", "State (id src_state_state, degree 56)"],
+      "explain_notes": "explain accepts a bare LABEL and resolves it to an id: `explain EvaluationDefinition` -> ID src_experiment_evaluationdefinition, Source src/experiment.ts L68, Type code, Community 1, Degree 2, plus typed edges with confidence and file:line. Node ids are the stable key (id = path-derived, e.g. src_hash_contenthash); 26 nodes have no source_file (external refs such as node:fs).",
+      "surface_notes": "query takes free text and returns real code hits with file:line; --budget 500 truncates to 24 of 522 nodes, so the query battery needs either a larger --budget or narrower queries. god-nodes --json returns {id,label,degree}. No node-id-vs-label problem found: query and explain both accept labels; ids are needed only for direct graph lookups."
+    },
+    "repo_untouched": {
+      "head_before": "6deaed07af0d998d1672fe3f1ab1579e6ba0cdc4",
+      "head_after": "b44e0e111e0875029ed3cf932e60841f13956342",
+      "head_moved_explanation": "NOT caused by this unit. At 05:41:44 an external `git pull -q --ff-only origin main` fast-forwarded the repo (reflog: 'pull -q --ff-only origin main: Fast-forward'), landing 15 upstream commits by Aswin Ram K / Zer0null (PR #130 lane/k0-integration merged 05:41:26). 6deaed0 is a verified ancestor of b44e0e1 (merge-base --is-ancestor = YES), so this is a pure fast-forward advance of a repo under concurrent active development, not a rewrite and not a write by U1.1. graph.json's built_at_commit records the pre-pull 6deaed0, proving extraction read the baseline.",
+      "git_status_before": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "git_status_after": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "status_note": "byte-identical before and after; both entries were already untracked BEFORE this unit started, so neither is attributable to U1.1.",
+      "new_files": 0,
+      "mtime_sweep": "find /home/zer0null/Duval -newermt '-30 minutes' -not -path '*/.git/*' listed src/constitution.ts, src/generation.ts, src/invariants.ts, constitution/invariants.json, constitution/root.json, tests/selfbuild.ts, tests/generation.ts, tests/invariants.ts and .worktrees/engine-a/* - all products of the 05:41 external fast-forward checkout, none touched by this unit.",
+      "graphify_out_in_repo": false,
+      "graphifyignore_in_repo": false,
+      "git_hooks_installed": false,
+      "all_outputs_landed_in": "/home/zer0null/reserach extarctor/state/kg/",
+      "verdict": "repo untouched BY THIS UNIT: yes. Working tree identical to baseline; zero new files; all --out paths inside the workspace."
+    },
+    "proven_command_lines": [
+      "# Gate A - real repo, code-only, free/CPU, 3 s, 2685 nodes / 7102 edges / 128 communities:",
+      ".venv/bin/graphify extract /home/zer0null/Duval --code-only --out state/kg/duval",
+      "#   -> graph lands at state/kg/duval/graphify-out/graph.json (graphify appends graphify-out/); cluster-only NOT needed",
+      "",
+      "# Gate B - PROVEN WORKING semantic pass to Occamy (exit 0, 54 s, 1 LLM call, 913 in / 1938 out tokens):",
+      "OPENAI_BASE_URL=http://192.168.2.168:8012/v1 OPENAI_MODEL=occamy-1.0 OPENAI_API_KEY=local \\",
+      "  stdbuf -oL -eL .venv/bin/graphify extract <DIR> --backend openai --model occamy-1.0 \\",
+      "  --max-concurrency 1 --token-budget 1500 --api-timeout 120 --out state/kg/tiny-occamy",
+      "#   stdbuf -oL -eL is REQUIRED: without it graphify block-buffers stdout and a timeout discards all progress.",
+      "",
+      "# Cheapest liveness probe for Occamy before any semantic run (0.1 s when healthy):",
+      "curl -sS -m 30 http://192.168.2.168:8012/v1/chat/completions -H 'Content-Type: application/json' \\",
+      "  -H 'Authorization: Bearer local' -d '{\"model\":\"occamy-1.0\",\"messages\":[{\"role\":\"user\",\"content\":\"say ready\"}],\"max_tokens\":8,\"chat_template_kwargs\":{\"enable_thinking\":false}}'",
+      "",
+      "# Gate D - query surface (all work offline against the Gate-A graph):",
+      ".venv/bin/graphify query \"capability materialisation and absence enforcement\" --graph state/kg/duval/graphify-out/graph.json --budget 500",
+      ".venv/bin/graphify god-nodes --graph state/kg/duval/graphify-out/graph.json --top 10 --json",
+      ".venv/bin/graphify explain \"EvaluationDefinition\" --graph state/kg/duval/graphify-out/graph.json"
+    ],
+    "commands": [
+      "git -C /home/zer0null/Duval rev-parse HEAD",
+      "git -C /home/zer0null/Duval status --short",
+      "du -sh /home/zer0null/Duval",
+      "git -C /home/zer0null/Duval ls-files | wc -l",
+      "git -C /home/zer0null/Duval check-ignore -q <dir>  # per-dir ignore proof",
+      ".venv/bin/graphify extract /home/zer0null/Duval --code-only --out state/kg/duval",
+      "OPENAI_BASE_URL=... .venv/bin/graphify extract /home/zer0null/Duval/docs/consolidation --backend openai --model occamy-1.0 --max-concurrency 1 --token-budget 8000 --api-timeout 300 --out state/kg/probe",
+      "OPENAI_BASE_URL=... stdbuf -oL -eL .venv/bin/graphify extract state/kg/tiny --backend openai --model occamy-1.0 --max-concurrency 1 --token-budget 1500 --api-timeout 120 --out state/kg/tiny-occamy",
+      "OPENAI_BASE_URL=... stdbuf -oL -eL .venv/bin/graphify extract /home/zer0null/Duval/docs/consolidation --backend openai --model occamy-1.0 --max-concurrency 1 --token-budget 2000 --api-timeout 300 --out state/kg/probe2",
+      "OPENAI_BASE_URL=http://127.0.0.1:9/v1 .venv/bin/graphify extract state/kg/tiny --backend openai ... (dead-URL control)",
+      "curl ... /v1/chat/completions (liveness + request-shape isolation: max_tokens vs max_completion_tokens)",
+      ".venv/bin/graphify query ... / god-nodes ... / explain ...",
+      "find /home/zer0null/Duval -newermt '-30 minutes' -not -path '*/.git/*' | head -20",
+      "git -C /home/zer0null/Duval log --oneline -6 --date=iso --pretty='%h %cd %an %s'",
+      "git -C /home/zer0null/Duval reflog -8 --date=iso"
+    ],
+    "caveats": [
+      "Gate C (community labelling against Occamy) was NOT executed: the endpoint was down (connection refused) at pre-flight and no LLM call was made.",
+      "The real-Duval semantic run on docs/consolidation is INCONCLUSIVE, not failed-for-cause: it was destroyed by the endpoint outage, not by graphify.",
+      "The first 600 s run at --token-budget 8000 produced zero completed chunks, but its log was lost to stdout buffering, so throughput at that budget is unmeasured. Measured rate is ~36 output tok/s, so the 60000 default token budget is far too large to be practical on Occamy.",
+      "1 of 4 gates unrun, 1 inconclusive -> status is 'partial', although the integration question the unit exists to answer is answered: works."
+    ]
+  },
+  "blocker": "Occamy (192.168.2.168:8012) went down mid-session: connection refused at 05:44, curl (7) Failed to connect, every request shape including a trivial max_tokens=8 probe. Gate C could not run and the real-Duval semantic run could not be completed. This is a shared-endpoint availability problem outside this unit (a sibling unit was running a live Occamy smoke test concurrently). Re-run Gate C and the real-docs semantic pass once the endpoint is confirmed healthy.",
+  "next_unit_hint": "Adopt graphify, no fallback needed. For the semantic pass always: (1) pre-flight the curl liveness probe, abort if it is not HTTP 200 - that alone would have saved this unit 20 minutes; (2) wrap graphify in `stdbuf -oL -eL`, or a timeout silently discards every progress line (graphify block-buffers stdout off-TTY); (3) do NOT use the 60000 default --token-budget - output runs ~2x input tokens (913 in -> 1938 out) at ~36 output tok/s, so budget 1500-2000 per chunk and run the corpus in bounded background jobs, resuming (the semantic cache is resumable per chunk); (4) read graph.json edges from the 'links' key and use 'built_at_commit' as the provenance stamp; (5) expect confidence='EXTRACTED' on EDGES with confidence_score, and node-level file_type in {document,concept,rationale} with source_location null for semantic nodes vs L<n> for code nodes - a confidence filter must read edges, not nodes; (6) treat .lane-j-scratch/ (23 nodes, untracked and not gitignored) as the only pollution; .worktrees/ and node_modules/ are correctly excluded; (7) `explain` and `query` both accept bare labels, so the query battery needs no id lookup step.",
+  "write_paths": [
+    "state/kg/**",
+    "state/logs/U1.1*",
+    "orchestration/units/U1.1.md",
+    "orchestration/handoffs/U1.1.json"
+  ]
+}

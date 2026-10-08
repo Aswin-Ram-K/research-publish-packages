@@ -1,0 +1,86 @@
+{
+  "unit": "V3",
+  "batch": "3",
+  "overall": "PARTIAL",
+  "checks": [
+    {"id": "1", "name": "web suite", "verdict": "PASS", "observed": "78 passed (17 tests/test_web_search.py + 61 tests/test_web_fetch.py) in 15.37s", "evidence": ".venv/bin/python -m pytest tests/test_web_search.py tests/test_web_fetch.py -q -> '78 passed'; collection reports 78."},
+    {"id": "2", "name": "deleted-assertion / test-rewrite audit", "verdict": "PASS", "observed": "0 assertions deleted. search: 5 lines removed (2 assertions, both replaced by 3 stronger lines each; 1 test rename; degradation_evidence tuple->attribute), 164 added. fetch: 4 lines removed, 0 assertions, 3 check() 2-tuple unpacks in 2 tests -> 3-tuple, 1 test rename, 185 added.", "evidence": "git has no baseline (b4ea93c predates tests/test_web_*.py), so diffed author-supplied state/logs/U3.3-test_web_{search,fetch}.py.orig -> state/verify/V3/rewrite_{search,fetch}.diff. Removed search asserts: 'assert client.degraded is False' and 'assert stats.degraded is False'."},
+    {"id": "3", "name": "red->green four guards, sha-proven", "verdict": "PASS", "observed": "a,b,c,d each: sha256 -> revert -> single test FAILS -> restore -> sha256 equal -> test PASSES.", "evidence": "state/verify/V3/redgreen.log + rg_{a,b,c,d}_{fail,pass}.txt + redgreen_driver.py."},
+    {"id": "4", "name": "live SearXNG signature", "verdict": "PARTIAL", "observed": "fast_empty REPRODUCED (1.617 ms / 1.315 ms, latched on first with reason=fast_empty). Genuine paced queries: 3/3 returned ZERO results on google AND duckduckgo (latencies 2.1-340.0 ms), 3rd latched consecutive_empty. Raw GET: unresponsive_engines NON-EMPTY (brave suspended, duckduckgo+qwant CAPTCHA). Slow empty (340 ms) did NOT latch alone.", "evidence": "state/verify/V3/live_probe.json (genuine, rapid_identical_forced, rapid_evidence, raw_probe)."},
+    {"id": "5", "name": "live fetch SSRF + stub + cache", "verdict": "PASS", "observed": "arXiv /abs/2505.22954 -> 9408 stored chars, kind=crawl, page_date 2025-05-29, sha 0dde6e26..., refresh changed=false both digests 0dde6e26...; stub README -> ok=true kind=crawl usable_chars=22 suspect=true suspicion=short_payload, scrape fallback fired (2 bridge calls) found nothing longer; refresh stub suspect=true unchanged; cache-hit re-fetch from_cache=true 0 HTTP (counted); 4/4 SSRF blocked_url 0 HTTP; seeded cache entry for private URL still blocked_url from_cache=false.", "evidence": "state/verify/V3/live_probe.json (fetch, ssrf, ssrf_cache_hit)."},
+    {"id": "6", "name": "package surface", "verdict": "PASS", "observed": "web.__all__ = 13 names, all resolve, missing=[]; Result exists; SearchResult does NOT; Fetcher.check() returns tuple len 3 -> (False,'blocked_url',False).", "evidence": "state/verify/V3/live_probe.json (surface)."},
+    {"id": "7", "name": "honesty audit", "verdict": "PASS", "observed": "4 unasserted invariants (behaviour correct in code), 2 overstated claims, 4 not-reproduced live items; see lists below.", "evidence": "state/verify/V3/invariants_probe.json + live_probe.json."},
+    {"id": "8", "name": "corrections appended", "verdict": "PASS", "observed": "5 entries (l)-(p): 3 V3-verified, 2 reported-only U1.4. docs/PLAN_CORRECTIONS.md 202 -> 285 lines.", "evidence": "docs/PLAN_CORRECTIONS.md."},
+    {"id": "9", "name": "containment", "verdict": "PASS", "observed": "V3 wrote only inside the workspace. Duval porcelain unchanged (same 2 untracked entries as V1: .ci-trunk.txt, .lane-j-scratch/). Duval HEAD advanced to 5cdc471a at 06:04:38 by an EXTERNAL 'pull -q --ff-only origin main' + lane commits authored 06:03, not by V3.", "evidence": "git -C /home/zer0null/Duval rev-parse HEAD / status --porcelain / reflog --date=iso; find /home/zer0null -maxdepth 1 -mmin -90 shows only Duval + the workspace."}
+  ],
+  "invariants_unasserted": [
+    "transport failure is NOT cached as a negative result -> correct in code (probe: _negative_cache == {} and 2 HTTP calls after 2 ConnectErrors), but NO test in tests/test_web_search.py asserts it",
+    "HTTP 4xx/5xx -> ok=False -> code path exists (search.py:481-487; probe: 'HTTP 500 from SearXNG', negative cache empty), NO test exercises status>=400",
+    "empty body / malformed JSON at HTTP 200 -> ok=False -> code path exists (probe both give 'malformed JSON response: JSONDecodeError'), NO test exercises it",
+    "the degraded latch survives a later successful search -> correct in code (_degraded never reset; probe: client_still_degraded=true, outcome_degraded=true after a success), NO test asserts it"
+  ],
+  "test_rewrite": {
+    "lines_changed": 358,
+    "deletions": "none (0 assertions deleted; search: 2 assertions changed and strengthened; fetch: 0 removed)",
+    "provenance_caveat": "no git baseline exists for tests/test_web_*.py (b4ea93c predates them); the pre-rewrite side is the author-supplied state/logs/U3.3-test_web_*.py.orig, so this is a diff against the unit's own backup, not an independent baseline"
+  },
+  "red_green": {
+    "a": "sha 5d948ed202c8a8976237b02921d4a3d222b7e934553fa0253327f8acc9398ade -> reverted 64f86e251619e743af5ba316d73de512f03eb98703a87326006e4e44b957b44e -> restored 5d948ed2... (RESTORED-OK=true). FAILED tests/test_web_search.py:242 AssertionError '3rd consecutive distinct empty must latch' (1 failed in 0.02s); restored 1 passed in 0.01s.",
+    "b": "sha 35e89455a2e6163b9827a51d1125815cdee69a09c1e135765cc64dae676734ac -> reverted dd91df922d01a59f6c8557a6e230a3680c8bb64e2442c5cde8deb373aa2beac6 -> restored 35e89455... (RESTORED-OK=true). FAILED tests/test_web_fetch.py:578 AssertionError 'file:///etc/passwd' assert 'empty_response' == 'blocked_url' (1 failed in 0.03s); restored 1 passed. NOTE: the first restored run false-failed because the revert was byte-length-neutral, so a same-second stale .pyc was served; re-run under PYTHONDONTWRITEBYTECODE=1 + __pycache__ purge passed 3/3.",
+    "c": "sha 5d948ed2... -> reverted 90400ca4e75709c92038cf5eab25c284e9b42ed7341c3fac2c871dff0b653ee2 -> restored 5d948ed2... (RESTORED-OK=true). FAILED tests/test_web_search.py:394 AssertionError 'a sub-fast_empty_ms empty latches immediately' (1 failed in 0.02s); restored 1 passed in 0.01s.",
+    "d": "sha 35e89455... -> reverted fdc999be98ed15150019d29675a40d7f4f9a354f2b08767efc61cd590e5745da -> restored 35e89455... (RESTORED-OK=true). FAILED tests/test_web_fetch.py:843 assert result.suspect is True (1 failed in 0.03s); restored 1 passed in 0.02s."
+  },
+  "live_search": {
+    "attempts": [
+      {"query": "retrieval augmented generation evaluation benchmark", "latency_ms": 339.967, "results": 0, "degraded": false, "engine": "google", "second_engine_latency_ms": 126.164},
+      {"query": "attention is all you need transformer architecture", "latency_ms": 2.112, "results": 0, "degraded": false, "engine": "google", "second_engine_latency_ms": 59.725},
+      {"query": "Duval county Florida court records retrieval", "latency_ms": 2.07, "results": 0, "degraded": true, "reason": "consecutive_empty", "engine": "google", "second_engine_latency_ms": 59.776}
+    ],
+    "pacing_gaps_ms": [null, 1737.8, 3133.7],
+    "fast_empty_reproduced": true,
+    "rapid_identical_forced": [
+      {"query": "zzqq nonexistent token xyzzy 8731", "latency_ms": 1.617, "results": 0, "ok": true, "degraded": true, "reason": "fast_empty", "latched_on_this_call": true},
+      {"query": "zzqq nonexistent token xyzzy 8731", "latency_ms": 1.315, "results": 0, "ok": true, "degraded": true, "reason": "fast_empty", "latched_on_this_call": false}
+    ],
+    "slow_empty_alone_no_latch_live": true,
+    "raw_probe": {"status": 200, "latency_ms": 3239.7, "n_results": 0, "unresponsive_engines": [["brave", "Suspended: too many requests"], ["duckduckgo", "CAPTCHA"], ["qwant", "CAPTCHA"]]}
+  },
+  "live_fetch": {
+    "ssrf": ["file:///etc/passwd blocked_url (0 http)", "http://127.0.0.1/x blocked_url (0 http)", "http://169.254.169.254/latest/meta-data blocked_url (0 http)", "http://192.168.2.1/ blocked_url (0 http)"],
+    "ssrf_on_cache_hit": "seeded a real state/webcache entry for http://127.0.0.1:9/v3-seeded-cache-probe -> fetch still ok=false error=blocked_url from_cache=false http_calls=0",
+    "stub": {"url": "https://raw.githubusercontent.com/openai/gpt-2/main/README.md", "ok": true, "kind": "crawl", "usable_chars": 22, "stored_chars": 25, "suspect": true, "suspicion": "short_payload", "scrape_fallback_fired": true, "bridge_http_calls": 2, "first40": "\n```\n404: Not Found\n```\n\n"},
+    "refresh_arxiv": "changed=false, note=unchanged, old_sha256 == new_sha256 == 0dde6e267fe7f42d32b3b8d262c14f3dfbacb1f660c76959c43eb077584cf087; page_date 2025-05-29; stored 9408 chars",
+    "refresh_stub": "changed=false, note=unchanged, suspect=true, suspicion=short_payload, usable_chars=22",
+    "cache_hit_zero_calls": true,
+    "http_calls_total_bridge": 6
+  },
+  "not_reproduced": [
+    "U3.1 live: '8 distinct queries -> 5 with results (172-948 ms)'. Today 3/3 genuine paced queries returned 0 results on BOTH google and duckduckgo; SearXNG was heavily degraded (raw probe 3.24 s, 0 results, 3 unresponsive engines).",
+    "U3.1: 'unresponsive_engines: []' on empty pages. A raw JSON GET returned unresponsive_engines = [[brave,Suspended],[duckduckgo,CAPTCHA],[qwant,CAPTCHA]] - NON-empty. The '[]' is not a stable property.",
+    "Live engine rotation when the FIRST engine returns results: no query returned results today. Only covered by test_pacing_enforced_between_requests_without_real_sleeping (calls==2 for 2 searches => no rotation), plus V3's invariants probe (http_calls==1, attempts==1 on success).",
+    "U3.1's '4/4 rapid identical forced': V3 ran 2 (budget), both matched the signature."
+  ],
+  "overstated": [
+    "U3.1's latency dichotomy 'dead 1-7 ms vs genuine 500-950 ms': today dead empties also arrived at 59.7/126.2/340.0 ms, all above fast_empty_ms=50, so latency is a LOWER BOUND on deadness, not a classifier; those empties only latch via the 3-consecutive rule.",
+    "U3.3's 'the real hit class is Result, there is no SearchResult' is VERIFIED (SearchResult does not exist); this is a fair correction of an earlier handoff guess, not an overstatement.",
+    "'empty is never an error' holds only for a 200 with an empty RESULT SET; HTTP 4xx/5xx, empty body and malformed JSON are deliberately ok=False (correct design, over-broad shorthand).",
+    "U3.2's 'gpt-2 README returned 25 chars': 25 is the STORED length, 22 is usable_chars; the in-test fixture THIN ('short stub of exactly 25.') is an unrelated 25-char string, not the real payload."
+  ],
+  "unverified": [
+    "Occamy model endpoint: 0 probes, endpoint down; irrelevant to this layer.",
+    "U3.1's exact 4/4 rapid-query run (V3 ran 2 of <=8 permitted SearXNG queries).",
+    "graphify 0.9.80 FileType.OFFICE / 15.01% Duval blind fraction: reported-only from U1.4, not reproduced by V3 (corrections (o),(p))."
+  ],
+  "corrections_appended": 5,
+  "containment": {
+    "head": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+    "head_note": "advanced 06:04:38 by an EXTERNAL 'pull -q --ff-only origin main' (lane/engine-revert commits authored 06:03), not by V3; V1 recorded b44e0e1 at 05:55",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/ (identical to V1's recorded state)",
+    "outside_writes": 0,
+    "v3_write_paths_used": ["docs/PLAN_CORRECTIONS.md (append)", "orchestration/VERDICTS.md (append+row)", "orchestration/units/V3.md", "orchestration/handoffs/V3.json", "state/verify/V3/**", "state/webcache/** (fetcher cache + one seeded probe entry)"],
+    "tests_edited": "none"
+  },
+  "blocker": "",
+  "next_unit_hint": "Batch-3 web code is verified (4/4 guards, 78 tests, cache/SSRF/refresh live). Two follow-ups: (1) surface the bridge/searx raw 'unresponsive_engines' field, which today is non-empty and is a better degradation signal than latency; (2) add tests for the four unasserted search invariants (ok=False never negative-cached, 4xx/5xx, empty/malformed body, latch survives success). The live-search half is environmental (SearXNG currently returns 0 results for everything) - re-run the genuine-query battery when SearXNG answers again.",
+  "write_paths": ["docs/PLAN_CORRECTIONS.md", "orchestration/VERDICTS.md", "orchestration/units/V3.md", "orchestration/handoffs/V3.json", "state/logs/V3*", "state/verify/V3/**", "state/webcache/**"]
+}

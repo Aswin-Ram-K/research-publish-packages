@@ -1,0 +1,236 @@
+{
+ "unit": "U8.19",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/run.py",
+  "tests/test_run.py",
+  "orchestration/units/U8.19.md",
+  "state/logs/U8.19-table-before.txt",
+  "state/logs/U8.19-table-after.txt",
+  "state/logs/U8.19-live.txt",
+  "state/verify/U8.19/harness.py",
+  "state/verify/U8.19/live.py"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "run_before": 51,
+   "run_after": 60,
+   "deletions": 0,
+   "new_node_ids": 9,
+   "prefix_verified_no_original_line_changed": true,
+   "test_run_py_sha_after": "7682a3e24350906e1865b49d6e36c973e60a171615303a839e0dc6f33802f477"
+  },
+  "length_table": [
+   {
+    "len": 12,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 13,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 20,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 40,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 63,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 64,
+    "matches": true,
+    "notices": []
+   },
+   {
+    "len": 65,
+    "matches": false,
+    "notices": [
+     "PIN OVERLONG"
+    ]
+   },
+   {
+    "len": 100,
+    "matches": false,
+    "notices": [
+     "PIN OVERLONG"
+    ]
+   }
+  ],
+  "length_table_before": [
+   {
+    "len": 12,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 13,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 20,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 40,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 63,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 64,
+    "matches": true,
+    "notices": []
+   },
+   {
+    "len": 65,
+    "matches": true,
+    "notices": []
+   },
+   {
+    "len": 100,
+    "matches": true,
+    "notices": []
+   }
+  ],
+  "measurement_note": "measured with in-process _reuse_candidate against the REAL graph 4790bbb1...897b; scratch pin copies only; SHORT pins already warned at every length before the change, the defect was the silent over-long case",
+  "rule_short": "A pin is reported as reduced strength whenever it supplies fewer hex characters than the full 64-hex digest, at every such length (63 hex as loudly as 12) - there is no length threshold.",
+  "overlong_decision": "reject",
+  "overlong_justification": "A sha256 is exactly 64 hex, so a longer value is not an abbreviation of a digest but a corrupted or mis-edited one, and the old comparison honoured only its first 64 characters (65- and 100-hex pins matched with no notice and an unvalidated tail). It is refused exactly like a malformed/unreadable/empty pin - present-and-unusable, not a fresh setup. (b) validate-the-tail was rejected because it moves the comparison U8.11 fixed to the full digest; (c) accept-and-warn was rejected because a pin that 'matches' on a 64-char prefix while carrying corrupt trailing characters is the blessing this control exists to prevent.",
+  "overlong_what_caller_can_still_get_wrong": "A 65+-hex pin now causes a refusing run to BUILD a fresh graph on a real (non-dry) run rather than silently reuse - the fail-closed direction, but a behaviour change an operator will see as a rebuild.",
+  "preserved": {
+   "full_digest_comparison": true,
+   "fail_closed_default": true,
+   "override_cli_unreachable": true,
+   "pin_states_intact": true,
+   "require_fresh_graph_refuses_unverified": true,
+   "stale_path_unchanged": true,
+   "wrong_tail_still_no_match": true
+  },
+  "override_cli_unreachable_evidence": "grep -rn allow_graph_digest_mismatch src/ dashboard/ cli.py -> 0 hits outside src/resextract/run.py (only state/logs/*.py and state/verify/* scratch contain it)",
+  "red_green": {
+   "a": "revert (pre-U8.19 run.py, sha256 7f0b6a659102b9d56ec25f0d12e856324387efe72f0eceb1858ffd29346ccd35) -> 2 failed: test_overlong_pin_is_refused_never_silently_blessed[65] and [100], AssertionError on mode=='build' ('dry run: would reuse existing code-only graph'); restore -> cmp clean, sha256 106661a289b66d2885fad4fc5c1cebd9cfcb8db53fade8f85bfc52e601a1d26a bit-identical; 60 passed; FULL __pycache__ purge + PYTHONDONTWRITEBYTECODE=1 between every revert/restore"
+  },
+  "release_sha": {
+   "before": "7f0b6a659102b9d56ec25f0d12e856324387efe72f0eceb1858ffd29346ccd35",
+   "after": "106661a289b66d2885fad4fc5c1cebd9cfcb8db53fade8f85bfc52e601a1d26a",
+   "restored_bit_identical": true
+  },
+  "live": {
+   "dry_run": {
+    "exit_code": 0,
+    "sha256_is_full_64": true,
+    "graph_line": "dry run: would reuse existing code-only graph at state/kg/demo/graph.json (built at 6deaed07af0d, target head edbbb414847e - STALE; sha256 4790bbb1111b matches the pinned digest 4790bbb1111b; graphify not re-run: bounded, and a re-extract would write inside the target)",
+    "reported_sha256": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+    "reported_sha256_len": 64
+   },
+   "real_run": {
+    "exit_code": 1,
+    "blocked": [
+     "mine",
+     "claims",
+     "assess"
+    ],
+    "materialize": "skipped",
+    "no_build": true,
+    "graph_mode": "reuse",
+    "graphify_out_files_after": [],
+    "graph_line": "reused existing code-only graph at state/kg/demo/graph.json (built at 6deaed07af0d, target head edbbb414847e - STALE; sha256 4790bbb1111b matches the pinned digest 4790bbb1111b; graphify not re-run: bounded, and a re-extract would write inside the target)"
+   },
+   "harness_note": "in-process run_pipeline in scratch roots (state/verify/U8.19/live/*); the real graph was symlinked read-only; 2 live run invocations total, no server, no graph build"
+  },
+  "real_graph_sha_before": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+  "real_graph_sha_after": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+  "pin_sha_before": "52f491ed584b330a8ce468cf57a6c42cc4f7e2393a4435317709e9efa2ab4d1a",
+  "pin_sha_after": "52f491ed584b330a8ce468cf57a6c42cc4f7e2393a4435317709e9efa2ab4d1a",
+  "pin_mtime_observed": "2026-10-08 08:08:16.457768747 -0500 (unchanged; read only, never edited)",
+  "store_untouched": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows_identical": true,
+   "used_immutable": false,
+   "version_evidence": "schema_version table rows (1,2,3,4); PRAGMA user_version is 0 - version 4 is recorded in schema_version, not user_version",
+   "read_via": "cp to state/verify/U8.19/store_copy.sqlite then sqlite3 (no immutable=1, no WAL-ignoring open); 13 tables, 35 rows",
+   "immutable_grep": "immutable=1 appears 3x in src/resextract/dashboard/api.py ONLY, all in comments explaining why NOT to use it; never used by this unit"
+  },
+  "duval_untouched": {
+   "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+   "note": "the 2 porcelain entries are the foreign actor's, as expected; HEAD moves continuously and was not written by this unit"
+  },
+  "residual": "No: after this change every pin that MATCHES emits a notice unless it is exactly the full 64 hex - 0/empty and 1-11 hex are refused (empty pin state / _same_digest's width>=12 floor), 12-63 warn PIN ABBREVIATED + REDUCED STRENGTH, exactly 64 is the only silent match and is full strength, >64 is refused PIN OVERLONG. What a caller can still get wrong is not length but presentation and provenance: (1) the printed graph line shows only 12 hex via _digest12 (display-only), so an operator cannot eyeball the tail - the full value is in counts['sha256']; (2) the committed config/graph_pin.toml comment still says 'a >=12-hex prefix is accepted for readability' and does not say >64 is now refused - a documentation residual, and that file is outside this unit's write paths (its commit is a checkpoint action); (3) a 64-hex pin that is correct for a graph the operator did not intend is still 'match' (the pin attests bytes, not semantics) and (4) the case-insensitive, whitespace-stripped comparison is intentional and loses no strength.",
+  "cited_other_unit_file": {
+   "path": "src/resextract/dashboard/api.py",
+   "owner": "U6.20",
+   "sha256_prefix": "004d88fdbb61a2fc",
+   "mtime": "2026-10-08 09:17:04.730693182 -0500"
+  }
+ },
+ "tool_calls": 17,
+ "bound": 20,
+ "commands": [
+  "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  # 000 DOWN",
+  "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/verify/U8.19/harness.py  # length table, before and after",
+  "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/verify/U8.19/live.py  # dry exit 0, real exit 1",
+  "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_run.py -q  # 60 passed (was 51)",
+  "cp state/verify/U8.19/run.py.before src/resextract/run.py && find . -name __pycache__ -type d -prune -exec rm -rf {} + && pytest  # RED: 2 failed, then restore (cmp clean) GREEN: 60 passed",
+  "sha256sum src/resextract/run.py config/graph_pin.toml state/kg/duval/graphify-out/graph.json state/state.sqlite",
+  "git -C /home/zer0null/Duval rev-parse HEAD && git -C /home/zer0null/Duval status --porcelain"
+ ],
+ "blocker": "",
+ "next_unit_hint": "A verifier (fresh unit) should re-run state/verify/U8.19/harness.py and live.py, re-run the red->green revert on run.py, and confirm the 60/51 count. The one open documentation item: config/graph_pin.toml's comment still describes only the short-pin policy ('a >=12-hex prefix is accepted') and does not mention that >64 hex is now refused - that file is outside this unit's write paths and committing it is a checkpoint action, so a unit with that path could update the comment at the next re-pin.",
+ "write_paths": [
+  "src/resextract/run.py",
+  "tests/test_run.py",
+  "state/verify/U8.19/",
+  "state/logs/U8.19*",
+  "orchestration/units/U8.19.md",
+  "orchestration/handoffs/U8.19.json"
+ ]
+}

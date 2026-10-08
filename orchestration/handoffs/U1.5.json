@@ -1,0 +1,95 @@
+{
+  "unit": "U1.5",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/kg/staging.py",
+    "src/resextract/kg/__init__.py",
+    "tests/test_kg_staging.py",
+    "tests/fixtures/staging-repo/",
+    "state/staging/duval/MANIFEST.json",
+    "state/staging/duval/docs/",
+    "state/staging/duval/normalized/",
+    "state/kg/combined/graph.json",
+    "state/logs/U1.5_live.py",
+    "state/logs/U1.5_live.json",
+    "state/logs/U1.5_redgreen/test_redgreen.py",
+    "state/logs/U1.5_redgreen/output.txt",
+    "orchestration/units/U1.5.md"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "tests": "13 passed",
+    "red_green": "two guards, both pasted (state/logs/U1.5_redgreen/test_redgreen.py -> 2 failed)",
+    "live": {
+      "docs_copied": 221,
+      "normalized": {"jsonl": 38, "xml": 29},
+      "skipped_by_reason": {
+        "covered-by-graphify": 236,
+        "ignored_dir": 4,
+        "noise_dir": 3,
+        "skip_file": 1,
+        "unsupported-no-normalizer": 13
+      },
+      "staged_bytes": 22607550,
+      "coverage_before_pct": 84.99,
+      "coverage_after_note": "graph-reachable 97.58% (457 supported + 67 newly normalised of 537 files) at the moved HEAD; repo-native coverage_pct unchanged at 85.1%; remaining uncovered .rels 4, .cff 1, .patch 1 (no normaliser)",
+      "semantic": {
+        "status": "blocked_endpoint_down",
+        "command": "stdbuf -oL -eL '/home/zer0null/reserach extarctor/.venv/bin/graphify' extract '/home/zer0null/reserach extarctor/state/staging/duval' --backend openai --model occamy-1.0 --max-concurrency 1 --token-budget 1500 --api-timeout 300 --out '/home/zer0null/reserach extarctor/state/kg/semantic/duval'",
+        "graph_produced": false
+      },
+      "merge": {
+        "nodes": 2706,
+        "edges": 7129,
+        "communities": 133,
+        "code_sha8": "4790bbb1",
+        "fixture_sha8": "e674818b",
+        "code_graph_unchanged": true
+      }
+    },
+    "duval_head_at_live_run": "b44e0e111e0875029ed3cf932e60841f13956342",
+    "duval_head_now": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+    "duval_head_note": "Duval's HEAD moves concurrently under a sibling lane. Inside the live run, rev-parse HEAD and `git status --porcelain` were identical before and after (untouched=true). The only porcelain entries at both times were pre-existing untracked scratch: .ci-trunk.txt and .lane-j-scratch/ (not created by this unit).",
+    "duval_untouched": true,
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models",
+      "git -C /home/zer0null/Duval rev-parse HEAD && git -C /home/zer0null/Duval status --porcelain",
+      "PYTHONPATH=src .venv/bin/python -m pytest tests/test_kg_staging.py -q",
+      "PYTHONPATH=src .venv/bin/python -m pytest state/logs/U1.5_redgreen/test_redgreen.py",
+      "PYTHONPATH=src .venv/bin/python state/logs/U1.5_live.py",
+      "sha256sum state/kg/duval/graphify-out/graph.json"
+    ]
+  },
+  "exports_added": [
+    "staging",
+    "DOC_EXTENSIONS",
+    "MANIFEST_NAME",
+    "StagedFile",
+    "StagingCorpus",
+    "SemanticResult",
+    "MergedResult",
+    "build_staging_corpus",
+    "normalize_xml",
+    "resolve_provenance",
+    "staging_summary",
+    "semantic_argv",
+    "semantic_ingest",
+    "merge_with_code_graph",
+    "combined_graph_report"
+  ],
+  "duval_untouched": true,
+  "blocker": "LLM half externally blocked: Occamy endpoint http://192.168.2.168:8012/v1 crash-loops (probe HTTP 000). No partial semantic pass was run; state/kg/semantic/ was not created.",
+  "next_unit_hint": "When Occamy answers 200, run the exact argv in orchestration/units/U1.5.md once, then merge_with_code_graph(state/kg/duval/graphify-out/graph.json, state/kg/semantic/duval/graphify-out/graph.json, state/kg/combined). Verify with combined_graph_report(path, manifests=[state/staging/duval/MANIFEST.json]) that semantic nodes resolve back to real repo paths. Also decide at a higher level whether untracked sibling scratch under Duval (.ci-trunk.txt, .lane-j-scratch/**, 20 files) should be excluded from corpora.",
+  "write_paths": [
+    "src/resextract/kg/staging.py",
+    "src/resextract/kg/__init__.py",
+    "tests/test_kg_staging.py",
+    "tests/fixtures/staging-repo/**",
+    "state/staging/**",
+    "state/kg/semantic/**",
+    "state/kg/combined/**",
+    "state/logs/U1.5*",
+    "orchestration/units/U1.5.md",
+    "orchestration/handoffs/U1.5.json"
+  ]
+}

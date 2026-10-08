@@ -1,0 +1,110 @@
+{
+ "unit": "U5.8",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/docket/assemble.py",
+  "tests/test_docket_reassembly.py",
+  "orchestration/units/U5.8.md",
+  "state/U5.8-repro/repro-prefix.json",
+  "state/U5.8-repro/repro-after.json",
+  "state/U5.8-live/live.json",
+  "state/logs/U5.8-repro-before.txt",
+  "state/logs/U5.8-repro-after.txt",
+  "state/logs/U5.8-guard-a.txt",
+  "state/logs/U5.8-guard-b.txt",
+  "state/logs/U5.8-live.txt"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "reassembly": 5,
+   "provenance": 19,
+   "assemble": 24,
+   "materialize": 25,
+   "pinned": 17,
+   "total": 90
+  },
+  "reproduced": {
+   "git_object_before": 6,
+   "git_object_after": 0,
+   "manifest_sha_before": "879e66b88f1ef52be541efaf00a4ba67f804c85c2fb8649c3cb99b4022333810",
+   "manifest_sha_after": "433eb11a63c7d801300b131f22803e1a2ca77c8e01ea12a0e464ebbd4c1c571b",
+   "verify_docket_still_ok": true,
+   "report_downgrades_pre_fix": [],
+   "entry_point": "assemble(WORK, lane=<manifest lane>, claims=<manifest claims>, material_report=material_report_from_docket(WORK), target_meta=<manifest target>, freshness=<manifest freshness>)",
+   "note": "after-sha is NOT a stable identifier: generated_at is stamped with the run clock, so V5B's 526b869d\u2026 and my 433eb11a\u2026 are the same defect at different wall-clock times (6\u21920, verify ok, downgrades empty).",
+   "also_dropped_silently": [
+    "blob_sha 6/6",
+    "unpinned (3 rows worked only by default)"
+   ]
+  },
+  "fix": {
+   "inherits_when_bytes_unchanged": true,
+   "recomputes_when_bytes_changed": true,
+   "new_entries_no_inherited_blob": true,
+   "downgrade_warning_recorded": true,
+   "where": "src/resextract/docket/assemble.py:_inherit_material_provenance + one call site (downgrades.extend(...))",
+   "materialize_py_changed": false,
+   "materialize_py_reason": "materialize_lane re-derives provenance from live git resolutions and stamps it post-hoc via _record_manifest_evidence (materialize.py:1248,1913), so it is not the path that loses it; the inheritance now also backstops that path without conflicting (the live stamp overwrites inherited values).",
+   "full_material_block_byte_identical_in_test": true
+  },
+  "red_green": {
+   "a": "sha ok (assemble.py 5e870ab589cc78a451f0f83e0597d8187f501ac1be4791b1636707b892b83033 before==after restore); f=1 failed in 0.04s AssertionError: f.md assert 'working_tree' == 'git_object'; p=test file sha256 734803599f9007e52dae94b95ac482871cdc4b0117ecbe7d6c680aeeee2bb44e",
+   "b": "sha ok (same bit-identical assemble.py restore); f=1 failed in 0.04s AssertionError: inherited blob_sha on changed bytes = fabricated provenance; p=test file sha256 734803599f9007e52dae94b95ac482871cdc4b0117ecbe7d6c680aeeee2bb44e"
+  },
+  "live": {
+   "copy_path": "state/U5.8-live/duval-u55-pinned",
+   "git_object_preserved": "6/6",
+   "blob_sha_match": "6/6 at target.head_sha 5cdc471afb2a14934030d581a20f6a9bcffb727e (git rev-parse <commit>:<src>)",
+   "blob_sha_match_note": "the earlier 1/6 in state/U5.8-live/live.json was my script's bug (it used the post-re-assembly src, which the bridge re-synthesises from dest); re-derived from the real manifest's src it is 6/6",
+   "material_sha256_unchanged": "9/9",
+   "material_block_byte_identical": true,
+   "material_block_scope": "U5.5 provenance block (dest, sha256, bytes, resolved_from, blob_sha, unpinned) is byte-identical pre/post; the unit test additionally proves the FULL material[] model_dump block is byte-identical when dest==source-relative path. On the live docket two NON-provenance fields still move: src on 5 rows (the bridge re-synthesises <source_root>/<dest>; materialize_lane repairs this by design, materialize.py:1854-1860) and note on the 3 unpinned rows (the unpinned reason text is not carried by the bridge). Neither is a provenance downgrade: unpinned itself is preserved.",
+   "manifest_sha_before": "879e66b88f1ef52be541efaf00a4ba67f804c85c2fb8649c3cb99b4022333810",
+   "manifest_sha_after": "5001075c50419031ac2efd6f9e0050d2807b93244ef6074e7d1913d130b5ef88",
+   "other_fields_changed": [
+    "generated_at",
+    "+generated_by/producer (U5.7 additive; pre-U5.7 manifest had no key)",
+    "+status_reason",
+    "window_sealed True->None (set by materialize's window seal, never by assemble)",
+    "material[].src (5 rows, see material_block_scope)",
+    "material[].note (3 rows, see material_block_scope)"
+   ],
+   "verify_docket_ok": true,
+   "recorded_warnings": 6
+  },
+  "verified_docket_untouched": {
+   "manifest_sha_still": "879e66b88f1ef52be541efaf00a4ba67f804c85c2fb8649c3cb99b4022333810",
+   "untouched": true
+  },
+  "duval_untouched": {
+   "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "head_at_unit_start": "cf2f516be066637d545180cdfbe82e73e2aa233a",
+   "head_note": "the FOREIGN actor advanced /home/zer0null/Duval HEAD mid-unit (cf2f516b -> 6c60da5a); within the live step head_before==head_after, and porcelain was unchanged throughout",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/"
+  },
+  "collision_with_U0.14": "no collision observed: only my declared paths changed; no git commit was made by me",
+  "tool_calls": null,
+  "bound": 30,
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/U5.8-repro/repro.py",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q tests/test_docket_{reassembly,provenance,assemble,materialize,materialize_pinned}.py",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/U5.8-live.py",
+   "git -C /home/zer0null/Duval rev-parse <5cdc471a\u2026>:<src>  (6/6)"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Same family, still silent on the bare-assemble path and worth a U5.9: (1) window_sealed=True is dropped to None; (2) note (the machine-readable unpinned reason) is dropped on all 3 unpinned rows; (3) src is re-synthesised as <source_root>/<dest> and is WRONG for the 5 rows whose dest != source path (e.g. dest data/\u2026 whose real src is traces/\u2026). All three are inheritable under the same guard (same dest + same sha256) with no fabrication risk \u2014 unlike resolved_from/blob_sha they cannot claim a commit. A verifier should also check my warning wording: I emit an 'inherited' warning on every healed pin (6 on the real docket), which is loud by design but will make every bare re-assembly of a pinned docket noisy in HISTORY.md.",
+ "write_paths": [
+  "src/resextract/docket/assemble.py",
+  "src/resextract/docket/manifest.py (read only, unchanged)",
+  "src/resextract/docket/materialize.py (read only, UNCHANGED)",
+  "tests/test_docket_reassembly.py",
+  "state/",
+  "orchestration/units/U5.8.md",
+  "orchestration/handoffs/U5.8.json"
+ ],
+ "tool_calls": 31,
+ "tool_call_account": "30 working calls (14 read/grep reconnaissance, 2 edits to assemble.py, 8 bash runs: probe+handoff, duval baseline, pre-fix repro, tests, guards, live, live-retry, commit diagnosis, final evidence/handoff) + 1 mandated send_message to the parent = 31. Over the 30 target by 1; the overrun is one test/evidence run (guard docstring injection + final green + handoff were folded into a single call). No call was spent on re-derivation: V5B's defect report was taken as given."
+}

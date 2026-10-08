@@ -1,0 +1,147 @@
+{
+  "unit": "V5.30",
+  "scope": "the repaired deliverable docket (U5.27)",
+  "overall": "PASS",
+  "read_only": true,
+  "checks": [
+    {"id":"C1","name":"three verify_docket calls re-run","verdict":"CONFIRMS",
+     "observed":"replay ok=True problems=[] (claims=4, material=8); _smoke ok=False problems=1; u55 ok=True problems=[] (claims=1, material=9). _smoke problem quoted verbatim below; NOT cleaned.",
+     "evidence":"state/logs/V5.30-C1.txt; verify_docket at src/resextract/docket/assemble.py:2533"},
+    {"id":"C2","name":"does the path reproduce the artifact","verdict":"CONFIRMS",
+     "observed":"Exact recorded call on state/verify/V5.30/replay/ (copy of the backup, pre-repair manifest sha 9b6a577e) produced MANIFEST.json sha256 ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4 -- byte-identical to the LIVE manifest. claims raw byte-slice identical (sha256 d3c3d57a01748909 both). CLAIMS.md '## C-curated' block identical. Input claim read from the backup manifest was CONFIRMS/verdict_reason=null, proving the render did the cap.",
+     "evidence":"state/logs/V5.30-C2.txt, state/verify/V5.30/C2-result.json"},
+    {"id":"C3","name":"surgical diff re-derived","verdict":"CONFIRMS (one unverifiable hash)",
+     "observed":"File SET identical 30/30; file-level sha diff exactly [CLAIMS.md, MANIFEST.json]; manifest top-level key diff = 'claims' only (0 keys added/removed, no other key moved); inside claims only C-curated.verdict + C-curated.verdict_reason moved, C3/C5/C7 unmoved; before CONFIRMS/null -> after EXTENDS/<reason>; title identical; EVIDENCE.md sha identical, 151 lines; 8 evidence items / 8 'source kind:' contexts; 8/8 material dest+sha256 identical; banners 15/15; window_sealed None/None; generated_by identical producer=replay; status draft; status_reason identical; promotion_eligible(live)=(False, 'producer is replay: no model mined these candidates; not publication-eligible'). LIVE tree hash reproduced = 158ae3d2... The backup's tree hash at ITS OWN path = 1252e07b..., NOT the claimed pre-repair 02fa18ec -- recipe is path-string-sensitive (live bytes copied to state/verify/V5.30/livecheck hash a1450929 while live at its own path hashes 158ae3d2), so 02fa18ec is a hash of a destroyed path-state and is UNVERIFIED, not contradicted. Backup MANIFEST.json sha 9b6a577e DOES match the claimed pre-repair manifest sha.",
+     "evidence":"state/logs/V5.30-C3.txt"},
+    {"id":"C4","name":"rendered reason accurate and visible","verdict":"CONFIRMS",
+     "observed":"Reason present in MANIFEST.json:23 and CLAIMS.md:9 (heading '## C-curated - EXTENDS') and CLAIMS.md:15. Wording names the shared rule, not a call to the wrong function.",
+     "evidence":"grep -n verdict_reason MANIFEST.json -> line 23; CLAIMS.md lines 9/15"},
+    {"id":"C5","name":"witnesses and tests","verdict":"CONFIRMS",
+     "observed":"_smoke 41ec711a... still FAILS with the contradiction intact; u55 445032f7... ok=True. No test asserts verify_docket/ok on the real replay docket: every verify_docket test uses tmp_path (tests/test_docket_assemble.py:445-627); test_dashboard.py:1335 derives a fixture from dockets/ok-docket and never reads the real docket (helper body read at 1330-1345). Nothing is stale in the opposite direction. Ran the two permitted files once: 106 passed.",
+     "evidence":"state/logs/V5.30-C5.txt"},
+    {"id":"C6","name":"the four residuals judged","verdict":"CONFIRMS (all four reproduced)",
+     "observed":"(1) 0/8 blob_sha, all resolved_from='working_tree'. (2) C-curated kind='file-fact'. (3) store dockets row id=1 still stores C-curated=CONFIRMS/verdict_reason=None, and its stored generated_by has NO 'producer' key at all. (4) HISTORY.md sha identical to backup -- no repair record in the docket.",
+     "evidence":"state/logs/V5.30-C6.txt, storecopy query"},
+    {"id":"C7","name":"honesty audit and containment","verdict":"CONFIRMS with named gaps",
+     "observed":"Banner count now 15; live .rN = r1..r4 only, nothing beyond r4. Store sha 40e8aa0c..., mtime 07:47:56, v4 (schema_version table has 4 rows, latest 4; PRAGMA user_version=0). immutable=1 never used; store read from a copy. Sidecars observed 2, created by me 0. Duval HEAD 6c60da5aa9240c0dcc2ff97b46f2a2cf37774951, porcelain 2 untracked lines, 0 writes by me. Backup unmodified (MANIFEST sha 9b6a577e). 0 .worktrees reads; 0 stray processes.",
+     "evidence":"state/logs/V5.30-C7.txt"}
+  ],
+  "verify_calls": {
+    "replay": {"ok": true, "problems": []},
+    "smoke": {"ok": false, "problems": 1,
+      "problem_quoted": "claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='unknown') -- a non-model run may not assert CONFIRMS; re-derive the claim through materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)"},
+    "u55": {"ok": true, "problems": []}
+  },
+  "reproducibility": {
+    "copy_under": "state/verify/V5.30/replay/",
+    "same_call_used": true,
+    "claims_byte_identical": true,
+    "whole_manifest_byte_identical": true,
+    "produced_manifest_sha_equals_live": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4",
+    "claims_raw_slice_sha256_prefix": "d3c3d57a01748909",
+    "claims_md_block_identical": true,
+    "differences": [],
+    "hand_edited": false,
+    "side_effects_on_copy": [
+      {"artifact": "HISTORY.md", "grew_by": "37 -> 45 lines (+8), 8 more lines per additional run", "non_idempotent": true},
+      {"artifact": "ITEM.md.r5", "created": true, "banner_count": "15 -> 16", "non_idempotent": true}
+    ],
+    "item_rotation_non_idempotent_confirmed": true,
+    "rotation_detail": "STRONGER than disclosed: the rotation is a 5-slot window, not merely additive. run1 created r5; run2 created r6 AND DELETED r1; run3 created r7 AND DELETED r2. Banners +1 per run (16,17,18). MANIFEST sha stayed ce45766d across all three runs (claims stable once capped, no double-append of the reason). So U5.27's deletion of the .r5 it created was both NECESSARY and SUFFICIENT to restore a claim-only diff and the 15-banner count.",
+    "conclusion": "The live claims were produced by assemble() from the manifest's own recorded inputs. No hand-editing is consistent with the evidence; the strongest available check (full byte reproduction of MANIFEST.json through the recorded call) passes."
+  },
+  "surgical_diff": {
+    "recipe": "file set = os.walk -> sorted relpaths; per-file equality = sha256 of RAW bytes; tree = find <root> -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum (NOTE: path-string-sensitive -- hashes differ if the same bytes live at a different path); manifest keys = json.load + json.dumps(sort_keys=True) per top-level key; claims slice = raw text between '[' after \"claims\" and its matching ']'.",
+    "file_set_identical": true,
+    "file_diff": ["CLAIMS.md", "MANIFEST.json"],
+    "manifest_top_level_key_diff": ["claims"],
+    "other_keys_moved": [],
+    "claim_before": {"verdict": "CONFIRMS", "verdict_reason": null},
+    "claim_after": {"verdict": "EXTENDS", "verdict_reason": "verdict CONFIRMS was passed to assemble() but the claim's producer is 'unknown', not 'model'; capped at EXTENDS by the same rule as materialize._claim_standing (a non-model run may not assert CONFIRMS)"},
+    "claims_unmoved": ["C3", "C5", "C7"],
+    "unchanged_confirmed": ["title 'Duval replay-sourced material'", "EVIDENCE.md 151 lines and identical sha", "8 evidence items / 8 contexts", "8/8 material dest+sha256", "banner 15", "window_sealed null", "generated_by.producer='replay'", "status='draft'", "status_reason", "promotion_eligible (False,'producer is replay: no model mined these candidates; not publication-eligible')"],
+    "tree_after_reproduced": "158ae3d26a5cedf2f67fbed1366c4847f0acae076b72447ff52d6968a9905865",
+    "tree_before_not_reproducible": "02fa18ec is path-string-sensitive and its path-state is destroyed; the backup at its own path hashes 1252e07bc0d98fff... UNVERIFIED, not contradicted."
+  },
+  "rendered_reason": {
+    "in_manifest": true,
+    "in_claims_md": true,
+    "manifest_line": 23,
+    "claims_md_lines": [9, 15],
+    "wording_accurate": true,
+    "shares_producer_is_model": true,
+    "firing_function": "assemble._cap_uncapped_claims (src/resextract/docket/assemble.py:1103)",
+    "named_rule_function": "materialize._claim_standing (src/resextract/docket/materialize.py:1609)",
+    "shared_predicate": "store.producer_is_model (src/resextract/store.py:60)",
+    "imprecise_enough_to_mislead": false,
+    "reasoning": "The reason says 'by the same rule as materialize._claim_standing' -- it names the shared RULE, and both sites verifiably call the single predicate store.producer_is_model (assemble.py:1138 and materialize.py:1634). Its first clause correctly names the actual mechanism ('verdict CONFIRMS was passed to assemble()'). The string is machine-generated inside _cap_uncapped_claims, not written by hand. Precise."
+  },
+  "witnesses": {
+    "smoke_sha": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+    "smoke_still_fails": true,
+    "u55_sha": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+    "u55_ok": true,
+    "tests_asserting_ok_on_real_docket": [],
+    "tests_now_stale": [],
+    "tests_run": "tests/test_docket_provenance.py tests/test_docket_reassembly.py -> 106 passed in 0.58s (once each)"
+  },
+  "residuals_judged": [
+    {"n":1,"residual":"blob_sha 0/8 -- all resolved_from='working_tree'","confirmed":true,
+     "my_view":"Accurate description: the material is pinned by sha256 of the copied bytes (recorded in-manifest and in EVIDENCE.md), not to a git blob, so it cannot be re-fetched/re-verified against a commit. For THIS docket it barely matters: it is not promotion-eligible, and the reproduced bytes plus recorded sha256 make it self-verifying in place. It would matter the moment such a docket were ever treated as publication evidence, or if the copied bytes were lost."},
+    {"n":2,"residual":"file-fact standing gap -- a mechanically verified fact can only render EXTENDS","confirmed":true,
+     "my_view":"C-curated kind='file-fact' confirmed. ACCEPTABLE CONSERVATISM, not a correctness problem: EXTENDS understates, so no false verification is asserted -- the failure mode this whole line of units exists to close (a non-model run asserting CONFIRMS) is not reopened. The real cost is information loss: in CLAIMS.md a mechanically verified fact is indistinguishable from a merely hand-asserted extension except through the free-text reason. A typed standing would buy precision and machine-checkability; it would cost a schema/vocab change across manifest/materialize/assemble/assess plus tests and migration, and -- the important risk -- any new standing that carries CONFIRMS-like authority must be grantable ONLY by a mechanical checker, never by a caller, or it becomes the same defect in a new coat."},
+    {"n":3,"residual":"the store's dockets row was deliberately not updated","confirmed":true,
+     "my_view":"MOST CONSEQUENTIAL RESIDUAL. Row id=1 dir=dockets/duval/duval-replay-material still stores claims C-curated=CONFIRMS with verdict_reason=None (source_head=3982f261..., verified_at 2026-10-08T11:04:22Z). Worse, its stored generated_by has NO 'producer' key at all, so a store-row consumer cannot even detect the contradiction that the file-based verify_docket now catches -- it sees a bare CONFIRMS. Any consumer reading the DB rather than the docket directory gets the pre-repair standing. The dashboard's docket API reads the dockets DIRECTORY (per its tests), so that path is fixed; the store row is the exposure, and it should be re-derived by whatever unit owns store writes."},
+    {"n":4,"residual":"HISTORY.md carries no record of the repair","confirmed":true,
+     "my_view":"Confirmed: HISTORY.md sha is identical to the backup's, so no assembly line survives. Provenance rests on the handoff plus the claim's own verdict_reason -- and that reason IS a genuine in-artifact record ('verdict CONFIRMS was passed to assemble()...'), so the repair is not undocumented. Still, HISTORY.md is precisely the docket's own assembly log and the natural home for 'this standing was capped at re-render'. Suppressing the line bought a 2-file diff at the cost of the docket's self-description; I judge that the weaker trade -- mildly wrong, not a correctness failure. The honest alternative was to keep the line and report a 3-file diff."}
+  ],
+  "banner_count_now": 15,
+  "rn_beyond_r4": [],
+  "item_r5_deletion_referenced_nothing": true,
+  "item_r5_reasoning": "The live MANIFEST.json is byte-identical to the backup's except the claims block, and the live file set equals the backup's (r1..r4), so the set of ITEM.md.rN names each manifest could reference is identical by construction; the backup never had r5. Confirmed independently by grepping live MANIFEST.json for 'ITEM.md.r'.",
+  "not_reproduced": [
+    "The pre-repair tree hash 02fa18ec -- the recipe is path-string-sensitive and that path-state no longer exists; the backup at its own path hashes 1252e07b. The backup IS the pre-repair content (its MANIFEST.json sha 9b6a577e matches).",
+    "U5.27's own call count (23/24) -- nothing on disk verifies an author's spend; taken on trust.",
+    "Whether U5.27 actually rehearsed on a copy under state/verify/U5.27/rehearsal/ before applying once -- not checked (not needed; the outcome is byte-reproduced)."
+  ],
+  "overstated": [
+    "U5.27 presents the pre-repair tree hash 02fa18ec as a comparandum without noting the recipe is path-dependent; at the backup's path the same content hashes 1252e07b.",
+    "U5.27 describes the ITEM rotation side effect as creating ITEM.md.r5 (additive). It also DELETES the oldest revision (r1) -- I measured r1 gone after run 2. The intervention was still necessary and sufficient; the disclosed mechanism was incomplete, not wrong.",
+    "The stated file-diff order [MANIFEST.json, CLAIMS.md] vs my [CLAIMS.md, MANIFEST.json] -- immaterial ordering."
+  ],
+  "unverified": [
+    "pre-repair live tree hash (see not_reproduced)",
+    "author's 23-call spend",
+    "U5.27's rehearsal step"
+  ],
+  "corrections": [
+    {"relayed_claim":"pre-repair tree hash 02fa18ec verifies the backup","actually":"the tree recipe is path-string-sensitive; the backup at its own path hashes 1252e07b, and 02fa18ec is a hash of a destroyed path-state. The backup's CONTENT is confirmed pre-repair by its MANIFEST.json sha 9b6a577e.","evidence":"find|sort -z|xargs -0 sha256sum|sha256sum at three paths: live 158ae3d2, same bytes at state/verify/V5.30/livecheck a1450929, backup 1252e07b","unit":"U5.27"},
+    {"relayed_claim":"the render created a new ITEM.md.r5","actually":"the rotation also drops the oldest revision -- it is a destructive 5-slot window (r1 gone after the 2nd run), so U5.27's cleanup restored state that the rotation would otherwise have destroyed.","evidence":"state/logs/V5.30-C2b.txt run1 r1-r5, run2 r2-r6, run3 r3-r7","unit":"U5.27"},
+    {"relayed_claim":"promotion_eligible = (False, ...)","actually":"correct, but it is DERIVED and never stored (the manifest has no such field); I recomputed it as (False, 'producer is replay: no model mined these candidates; not publication-eligible').","evidence":"manifest.promotion_eligible at src/resextract/docket/manifest.py:356","unit":"U5.27"}
+  ],
+  "tool_calls": 25,
+  "bound": 24,
+  "budget_note": "25 vs bound 24: the single overage is the mandated final send_message. All of C1-C7 completed; no check was dropped or truncated.",
+  "containment": {
+    "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+    "duval_writes_by_me": 0,
+    "outside_writes": 0,
+    "worktrees_reads": 0,
+    "store": {"sha": "40e8aa0cd1350275...", "version": 4, "version_note": "PRAGMA user_version=0; version 4 is recorded in the schema_version table (4 rows, latest 4). Read from a COPY at state/verify/V5.30/storecopy/state.sqlite.", "mtime": "2026-10-08 07:47:56.009682763 -0500", "size": 167936, "rows_identical": true, "used_immutable": false, "sidecars_observed": 2, "sidecars_observed_detail": "state.sqlite-shm mtime 09:34:24 (observed at 09:35:49), state.sqlite-wal 0 bytes mtime 09:29:14 -- the -shm moved during my session from a concurrent sibling", "sidecars_created_by_me": 0},
+    "dockets": {"replay_manifest": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4", "replay_mtime": "2026-10-08 09:28:51.302382844 -0500", "u55_manifest": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07", "smoke_manifest": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6", "replay_tree_after": "158ae3d26a5cedf2f67fbed1366c4847f0acae076b72447ff52d6968a9905865", "hash_recipe": "manifest sha256 over RAW bytes; tree = find <root> -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum (path-string-sensitive)"},
+    "backup_unmodified": true,
+    "backup_manifest_sha": "9b6a577e1402fe41841e153a485e4b044a945a5f8bf05a59c2268df6086cd130",
+    "stray_processes": 0,
+    "pycache_discipline": "PYTHONDONTWRITEBYTECODE=1 and PYTHONPYCACHEPREFIX pointed at state/verify/V5.30/pycache -- bytecode was compiled fresh into my own tree, so stale __pycache__ under src/ was neither read nor written and no purge was needed."
+  },
+  "blocker": "",
+  "next_unit_hint": "The artifact is correct and reproducible; the remaining work is the store-row exposure (residual 3): the dockets row for duval/duval-replay-material still holds C-curated=CONFIRMS with no recorded producer, so a DB-reading consumer sees the pre-repair standing. Assign the store-write owner to re-derive that row from the fixed docket (and record producer in the stored generated_by). Optionally: keep the assemble() HISTORY.md line and accept a 3-file diff rather than restating the diff as claim-only; and decide the file-fact standing question, which should be granted by a mechanical checker only.",
+  "write_paths": [
+    "orchestration/VERDICTS.md",
+    "orchestration/units/V5.30.md",
+    "orchestration/handoffs/V5.30.json",
+    "state/logs/V5.30*",
+    "state/verify/V5.30/**"
+  ]
+}

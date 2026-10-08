@@ -1,0 +1,135 @@
+{
+  "unit": "U1.7R",
+  "status": "done",
+  "supersedes": "U1.7",
+  "recovery": {
+    "u17_files_present": [
+      "src/resextract/kg/policy.py (24920 B, sha256 f8f1f7db1559a0e9990801afd4e4d96a64bf73c40251432c9a126c7c8ca90c64)",
+      "tests/test_kg_policy.py (13110 B as found, sha256 524842fecdbb5e49cc84103f1a7dc0b345fc8c8c8aa56332c9511bf33906e062)",
+      "config/targets.toml (2438 B, sha256 70afb234da24c3cea0221c80de522c949d6b565800b42cf3ff6945f97e074158)",
+      "docs/TARGET_POLICY.md (4972 B, sha256 9340f70416fd188763f80bb87ef2f09bc0d65138466a11de514128bb684d292f)",
+      "tests/fixtures/policy-repo/** (10 files: .git/config, .gitignore, app.bundle.min.js, node_modules/x.js, .lane-j-scratch/monograph.md, .ci-trunk.txt, .worktrees/run-1/deep.py, tmp/scratch.md, docs/FINDINGS.md, README.md)",
+      "orchestration/units/U1.7.md (2026 B) — present",
+      "orchestration/handoffs/U1.7.json — MISSING (U1.7 died before report-back)"
+    ],
+    "tests_before": 12,
+    "guard_left_reverted": false,
+    "revert_markers_found": [],
+    "action_taken": "none",
+    "tests_after": 12,
+    "u17_claims_that_held": [
+      "'12 passed' — independently re-derived: 12 passed before any edit, and 12 passed after recovery.",
+      "Every U1.7-owned path exists and the fixture tree is complete (10 files).",
+      "No guard left reverted: guard A's violations.append(_not_admitted(...)) is present at policy.py:596; guard B's raise PolicyWideningError(...) is present at policy.py:327. Grep for 'if False', 'assert 1 == 0', 'assert False', 'return True  #', REVERT/TODO/XXX/FIXME in policy.py, test_kg_policy.py and config/targets.toml returned zero hits.",
+      "The red->green failure texts in the module docstring are authentic, not fabricated: I reverted both guards myself and reproduced the docstring text verbatim (guard A: 'AssertionError: excluded asserted material produced NO violation (silent loss)', 'assert []'; guard B: 'Failed: DID NOT RAISE PolicyWideningError').",
+      "policy.py was byte-identical before and after my revert/restore cycle (sha256 f8f1f7db… unchanged) — U1.7's restore had in fact succeeded."
+    ],
+    "u17_claims_that_failed": [
+      "The pasted failure texts carried STALE line numbers: module docstring said 'tests/test_kg_policy.py:185' (actual 197) and 'tests/test_kg_policy.py:144' (actual 156). The file was edited after those numbers were recorded.",
+      "Guard B's test docstring (test_config_cannot_widen) was left as an EMPTY reST literal block — 'Reverting the refusal (`raise` -> `pass`) must fail this test::' with no text. The spec demanded the failure text be pasted into the relevant tests' docstrings, not only the module docstring.",
+      "No handoff JSON was written, so U1.7's verdict was never persisted."
+    ]
+  },
+  "artifacts": [
+    "src/resextract/kg/policy.py",
+    "tests/test_kg_policy.py",
+    "tests/fixtures/policy-repo/**",
+    "config/targets.toml",
+    "docs/TARGET_POLICY.md",
+    "state/verify/U1.7R/sha-before.txt",
+    "state/verify/U1.7R/sha-after.txt",
+    "state/verify/U1.7R/policy.py.orig",
+    "state/verify/U1.7R/test_kg_policy.py.orig",
+    "state/verify/U1.7R/live-audit.json",
+    "state/logs/U1.7R-guard-a-red.txt",
+    "state/logs/U1.7R-guard-b-red.txt",
+    "state/logs/U1.7R-exclude-demo.toml",
+    "orchestration/units/U1.7R.md",
+    "orchestration/handoffs/U1.7R.json"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "tests": "12 passed",
+    "red_green": "two guards, both pasted with sha before/after. policy.py sha256 f8f1f7db1559a0e9990801afd4e4d96a64bf73c40251432c9a126c7c8ca90c64 before and after each capture; test_kg_policy.py as-found sha256 524842fe…, after (docstrings only) 3502c16e…. Guard A: violations.append -> pass, 'pytest -k silent_loss' => 1 failed, 11 deselected; restored => 1 passed, 11 deselected, then full file 12 passed. Guard B: raise PolicyWideningError -> pass, 'pytest -k cannot_widen' => 1 failed, 11 deselected (DID NOT RAISE PolicyWideningError at line 156); restored => full file 12 passed. Every run used PYTHONDONTWRITEBYTECODE=1 after a __pycache__ purge.",
+    "live": {
+      "assert_present": [
+        {"path": ".lane-j-scratch/monograph.txt", "admitted": true, "bytes": 83832, "ok": true, "source": "config_assert"},
+        {"path": ".lane-j-scratch/consonance-external-evidence-2026-10-07.md.txt", "admitted": true, "bytes": 159408, "ok": true, "source": "config_assert"},
+        {"path": "README.md", "admitted": true, "bytes": 19578, "ok": true, "source": "config_assert"},
+        {"path": "CITATION.cff", "admitted": true, "bytes": 973, "ok": true, "source": "config_assert"},
+        {"path": "docs/FINDINGS.md", "admitted": true, "bytes": 27401, "ok": true, "source": "config_assert"}
+      ],
+      "monograph": {"admitted": true, "bytes": 83832},
+      "evidence_review": {"admitted": true, "bytes": 159408},
+      "ci_trunk": {"admitted": true, "bytes": 281253, "reason": "admitted by graphify's predicate"},
+      "worktrees_rejected": 1,
+      "worktrees_note": ".worktrees/ is reported as ONE rejected directory entry (source=noise_dir, 'cache/vendor directory pruned by graphify's noise rules (_is_noise_dir); never walked'), because graphify prunes the whole subtree. Files under it are never enumerated and were never read. 3982f261-era phrase 'hundreds of files under .worktrees/run-1/' is a name-count, not an admission count.",
+      "rejected_by_reason": {"ignored_dir": 4, "noise_dir": 3, "skip_file": 1},
+      "totals": {"admitted": 537, "rejected": 8, "unreadable": 0},
+      "violations": []
+    },
+    "silent_loss_demo": {
+      "config": "state/logs/U1.7R-exclude-demo.toml",
+      "real_config_unmodified": true,
+      "monograph_now": "violation",
+      "violations": [
+        "asserted path '.lane-j-scratch/monograph.txt' EXISTS (83832 bytes) but is NOT admitted (config_exclude: excluded by [targets.duval].exclude glob '.lane-j-scratch/**' (config may narrow admission, never widen it)) — violation: the corpus would SILENTLY lose it",
+        "asserted path '.lane-j-scratch/consonance-external-evidence-2026-10-07.md.txt' EXISTS (159408 bytes) but is NOT admitted (config_exclude: excluded by [targets.duval].exclude glob '.lane-j-scratch/**' (config may narrow admission, never widen it)) — violation: the corpus would SILENTLY lose it"
+      ]
+    },
+    "duval_untouched": {
+      "head": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+      "head_before": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+      "head_after": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "note": "Only the foreign actor's untracked entries; nothing written by this unit and .worktrees/ never read."
+    },
+    "tool_calls": 27,
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  # 000",
+      "git -C . status --short; git -C . diff --stat; git rev-parse --short HEAD  # b4ea93c",
+      "stat/sha256sum on the five U1.7-owned paths; find tests/fixtures/policy-repo -type f",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_kg_policy.py -q  # 12 passed",
+      "grep -nE 'if False|assert 1 == 0|assert False|return True  #|REVERT|TODO|XXX|FIXME' policy.py test_kg_policy.py targets.toml  # none",
+      "revert guard A -> pytest -k silent_loss; restore; sha256sum -c; pytest -k silent_loss",
+      "revert guard B -> pytest -k cannot_widen; restore; sha256sum -c; pytest -q  # 12 passed",
+      "git -C /home/zer0null/Duval rev-parse HEAD / status --porcelain / stat of asserted paths",
+      "policy_audit('/home/zer0null/Duval', real duval policy); policy_audit with state/logs/U1.7R-exclude-demo.toml",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_kg_policy.py -q  # 12 passed after edits",
+      "diff state/verify/U1.7R/policy.py.orig src/resextract/kg/policy.py  # identical"
+    ]
+  },
+  "corrections": [
+    {
+      "plan_assumption": "The live evidence asks for 'the count of .worktrees/** files rejected with the reason string'.",
+      "actually": "The audit walk prunes .worktrees/ as a noise directory, so it yields exactly ONE rejected directory entry ('.worktrees/' source=noise_dir, 'never walked'). A per-file count of .worktrees/** is not derivable from policy_audit and would require descending into the subtree, which this unit is forbidden to read.",
+      "evidence": "state/verify/U1.7R/live-audit.json -> rejected['.worktrees/'].source == 'noise_dir'; rejected_by_reason == {ignored_dir:4, noise_dir:3, skip_file:1}",
+      "unit": "U1.7R"
+    },
+    {
+      "plan_assumption": "U1.7's module docstring red->green pastes were complete and could be trusted.",
+      "actually": "They were real but stale: the recorded failure line numbers (185, 144) do not match the file (197, 156), and guard B's per-test docstring was an empty literal block. Reverted and re-captured both; line numbers corrected and both failure texts now pasted into their own tests' docstrings.",
+      "evidence": "state/logs/U1.7R-guard-a-red.txt ('tests/test_kg_policy.py:197: AssertionError'), state/logs/U1.7R-guard-b-red.txt ('tests/test_kg_policy.py:156: Failed')",
+      "unit": "U1.7R"
+    },
+    {
+      "plan_assumption": "The Duval HEAD chain ended at 5cdc471a.",
+      "actually": "The session chain is 6deaed0 -> b44e0e1 -> b2bade3 -> 5cdc471a -> 3982f261 -> 5cdc471a; the target came back to 5cdc471a. This unit re-read HEAD immediately before and after its audit: 5cdc471afb2a14934030d581a20f6a9bcffb727e both times.",
+      "evidence": "config/targets.toml comment block; docs/TARGET_POLICY.md 'The target' section; git -C /home/zer0null/Duval rev-parse HEAD before and after",
+      "unit": "U1.7R"
+    }
+  ],
+  "blocker": "",
+  "next_unit_hint": "Verify U1.7 independently: (1) re-run the two red->green captures (violations.append at policy.py:596 -> pass; raise PolicyWideningError at policy.py:327 -> pass) with PYTHONDONTWRITEBYTECODE=1 and a __pycache__ purge, confirming 197 and 156 as the failure lines; (2) re-run policy_audit on /home/zer0null/Duval and check violations == [] and the five asserted byte sizes (83832/159408/19578/973/27401); (3) confirm .worktrees/ appears as a single noise_dir rejection, not a file list; (4) confirm the real config/targets.toml still has exclude = [] and that state/logs/U1.7R-exclude-demo.toml was never substituted for it.",
+  "write_paths": [
+    "src/resextract/kg/policy.py",
+    "tests/test_kg_policy.py",
+    "tests/fixtures/policy-repo/**",
+    "config/targets.toml",
+    "docs/TARGET_POLICY.md",
+    "state/verify/U1.7R/**",
+    "state/logs/U1.7R*",
+    "orchestration/units/U1.7R.md",
+    "orchestration/handoffs/U1.7R.json"
+  ]
+}

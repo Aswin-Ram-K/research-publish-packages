@@ -1,0 +1,268 @@
+{
+ "unit": "V8.45",
+ "overall": "PASS",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "the site and the citation drift",
+   "verdict": "PASS",
+   "observed": "sha 8b2a8685..., git-TRACKED, narrow call really at :520, :518 is the DocketManifest import",
+   "evidence": "git diff hunk @@ -513,9 +513,11 @@: old:518 pytest.raises(Exception) -> new:520 pytest.raises(ValidationError); lines 515-530 read"
+  },
+  {
+   "id": "C2",
+   "name": "is ValidationError the right class",
+   "verdict": "PASS",
+   "observed": "extra=forbid at manifest.py:96-97 and :301-302; constructed case raises pydantic ValidationError; no other type reaches that path",
+   "evidence": "in-process DocketManifest.model_validate({... typo_field:1}) -> pydantic_core._pydantic_core.ValidationError; module's only raise is ValueError:437 on the write path, never entered"
+  },
+  {
+   "id": "C3",
+   "name": "the type-preserving red",
+   "verdict": "PASS",
+   "observed": "mutant: 1 failed (narrow, RuntimeError verbatim) + 1 passed (broad, wrong reason); pristine control: 1 passed; copies deleted; real sha unchanged",
+   "evidence": "state/verify/V8.45/test_red_copy.py broad fn extracted from git show HEAD:, narrow from worktree; copyroot_mut/resextract/docket/manifest.py:308 raised RuntimeError"
+  },
+  {
+   "id": "C4",
+   "name": "counts",
+   "verdict": "PASS",
+   "observed": "27 collected / 79 ast.Assert / 26 test funcs / 0 deleted at sha 8b2a8685...",
+   "evidence": "recipes stated in VERDICTS V8.45 C4"
+  },
+  {
+   "id": "C5",
+   "name": "adjudicate the 1-site inconsistency",
+   "verdict": "PASS",
+   "observed": "33 excinfo-asserted and 34 non-blind are both correct; the extra is tests/test_occamy_client.py:785 (match=); 68 and buckets unchanged; 3+59+40=102",
+   "evidence": "my own tally over state/verify/U8.36/triage_final.json (sha ead3bb36...)"
+  },
+  {
+   "id": "C6",
+   "name": "the reconciliation, re-derived independently",
+   "verdict": "PASS",
+   "observed": "my detector: 102 sites, 770 test funcs, 22 assert-free funcs, 24 sites in assert-free; blind 68 at U8.36's corpus (56 today); 10 alias-taint sites real",
+   "evidence": "0 (file,line) mismatches vs the 102 records; the 12 residual disagreements are store sites that gained match= at 10:08:26"
+  },
+  {
+   "id": "C7",
+   "name": "the zeros",
+   "verdict": "PASS",
+   "observed": "pytest.raises=0 in test_docket_reassembly.py at dc09ea00... and in test_orchestration_handoffs.py at 7d9c97ee... (32483 B, mtime 10:00:29)",
+   "evidence": "sha256sum + grep -c in one call"
+  },
+  {
+   "id": "C8",
+   "name": "honesty audit and containment",
+   "verdict": "PASS",
+   "observed": "+5 overrun a good trade; no store read; no stray processes; no other handoff edited",
+   "evidence": "tooling spend bought the 101->68 correction; store only byte-hashed; 187 handoffs, mine is the only one I wrote"
+  }
+ ],
+ "blocker": "",
+ "next_unit_hint": "Re-run the blind triage against the CURRENT corpus sha if a live number is needed: it is 56 blind, not 68 (12 store sites gained match= at 10:08:26). Use one-level function-wide alias taint + match= detection; U8.36's site universe (102) is confirmed and can be reused.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V8.45.md",
+  "orchestration/handoffs/V8.45.json",
+  "state/logs/V8.45*",
+  "state/verify/V8.45/**"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "site": {
+   "file": "tests/test_docket_assemble.py",
+   "sha": "8b2a8685aab3b4d6eea613545c18a9564e94449cdce211de73fe727eb772e3d7",
+   "git_tracked": true,
+   "real_line_raises": 520,
+   "line_518_is": "    from resextract.docket.manifest import DocketManifest",
+   "quote_narrow": "    with pytest.raises(ValidationError):",
+   "quote_import": "    from pydantic import ValidationError",
+   "reported_line_correct": true,
+   "pre_fix_proof": "git diff shows '-    with pytest.raises(Exception):' at old line 518; file is tracked (git ls-files --error-unmatch ok, status ' M'), so no reconstruction was needed",
+   "overstatement": ":518 called 'an unrelated import'; it is the DocketManifest import the next statement uses"
+  },
+  "class_is_right": {
+   "manifest_sha": "0826f398add9f1c9b9831fc13be4cc1081b52c469c785cd35ded165382960b4c",
+   "real_lines": [
+    "301: class DocketManifest(_Forbid):",
+    "302:     model_config = ConfigDict(extra=\"forbid\", populate_by_name=True)"
+   ],
+   "extra_forbid_quoted": "model_config = ConfigDict(extra=\"forbid\", populate_by_name=True)  # also _Forbid:96-97",
+   "constructed_exception_type": "pydantic_core._pydantic_core.ValidationError",
+   "another_type_can_reach": false,
+   "note": "nested unknown key also raises ValidationError; the module's only raise is ValueError:437 on the write path, never entered here"
+  },
+  "red": {
+   "copy": "state/verify/V8.45/copyroot_mut (deleted); test file state/verify/V8.45/test_red_copy.py (retained)",
+   "copy_was_imported": true,
+   "imported_from": "state/verify/V8.45/copyroot_pristine/resextract/__init__.py (control) and copyroot_mut/resextract/docket/manifest.py:308 in the narrow traceback (mutant)",
+   "mutation": "RuntimeError from the same refusal: @model_validator(mode='before') on DocketManifest raising on typo_field",
+   "old_form_passed": true,
+   "new_form_failure_verbatim": "E           RuntimeError: U8.45-MUTANT (type-preserving of U8.36): refused unknown field with the WRONG exception type\nstate/verify/V8.45/copyroot_mut/resextract/docket/manifest.py:308: RuntimeError\n========================= 1 failed, 1 passed in 0.07s =========================",
+   "pristine_control_passed": true,
+   "copy_deleted": true,
+   "real_sha_before": "8b2a8685aab3b4d6eea613545c18a9564e94449cdce211de73fe727eb772e3d7",
+   "real_sha_after": "8b2a8685aab3b4d6eea613545c18a9564e94449cdce211de73fe727eb772e3d7",
+   "real_tree_unchanged": true,
+   "control_command": "pytest tests/test_docket_assemble.py -k test_manifest_forbids_unknown_fields -p dsh_identity_v845 (pristine copy) -> 1 passed, 26 deselected",
+   "purge": "FULL __pycache__ purge excluding .venv before running; PYTHONDONTWRITEBYTECODE=1"
+  },
+  "counts": {
+   "collected": 27,
+   "ast_assert": 79,
+   "test_funcs": 26,
+   "deleted": 0,
+   "sha": "8b2a8685aab3b4d6eea613545c18a9564e94449cdce211de73fe727eb772e3d7",
+   "recipes": {
+    "ast_assert": "len([n for n in ast.walk(ast.parse(bytes)) if isinstance(n, ast.Assert)]) -> 79",
+    "collected": "pytest --collect-only -q tests/test_docket_assemble.py -> '27 tests collected in 0.05s'",
+    "test_funcs": "module-level FunctionDef named test_* -> 26 (32 FunctionDef total)",
+    "deleted": "set(HEAD blob test_* names) - set(worktree test_* names) -> [] (HEAD 23, worktree 26)"
+   },
+   "note": "this wave produced four different assert counts for one file; the recipe above is the AST-walk one"
+  },
+  "inconsistency": {
+   "records": 102,
+   "blind_before": 33,
+   "blind_after": 68,
+   "assert_free": 23,
+   "which_is_right": "BOTH: 33 = excinfo_asserted=True (asserts on the caught exception); 34 = 102-68 = non-blind = those 33 plus one match=-only site",
+   "field_disagreeing": "excinfo_asserted (33) vs the derived complement 102-blind (34); the single extra record is tests/test_occamy_client.py:785 (has_match true, excinfo_asserted false, blind false), whose recommendation string wrongly says 'already asserts on the caught exception'",
+   "changes_68": false,
+   "bucket_total": "3+59+40 = 102; blind 68 = 3+59+6",
+   "assert_free_detail": "22 assert-free test functions (both audits agree); 24 sites inside them; blind_in_assert_free 23 at U8.36's sha, 11 today"
+  },
+  "reconciliation": {
+   "my_detector": "AST: pytest.raises Call sites; blind = no match= kwarg AND no assert in the enclosing test function referencing the as-binding or a function-wide one-level alias of it",
+   "sites": 102,
+   "blind": 56,
+   "blind_at_u836_corpus": 68,
+   "assert_free": 22,
+   "sites_in_assert_free": 24,
+   "blind_in_assert_free_today": 11,
+   "test_functions": 770,
+   "files_globbed": 41,
+   "files_holding_raises_sites": 26,
+   "site_universe_match": "0 (file,line) mismatches against the 102 triage records",
+   "alias_taint_sites_real": true,
+   "quotes": [
+    ":282 with pytest.raises(AssemblyRefused) as excinfo: / :284 message = str(excinfo.value) / :285 assert \"C1\" in message",
+    ":331 with pytest.raises(AssemblyRefused) as excinfo: / :333 message = str(excinfo.value) / :334 assert \"sha256 mismatch\" in message",
+    ":349 with pytest.raises(AssemblyRefused) as excinfo: / :351 message = str(excinfo.value) / :352 assert \"§3.6 guard\" in message"
+   ],
+   "blind_is_68": true,
+   "who_is_more_defensible": "U8.36's taint-aware detector, at a matched site universe: the earlier 75 was an overcount because it treated a match=/assert on the caught exception as blind. But 68 is a snapshot figure only: 12 store sites gained match= at 10:08:26 under sibling U8.42, so the live total is 56.",
+   "discrepancies": [
+    "12 blind disagreements = tests/test_store.py:88/101/114/127 + tests/test_store_v2.py:516/518/522/524/528/530/534/537, all now match=-bearing (git diff + mtime 10:08:26 > triage 10:01:01) => corpus drift, not a detector bug",
+    "10 further disagreements were MY first detector missing alias taint (assignment dedented outside the with) - corrected",
+    "counts.files_scanned=26 vs my 41 globbed: 26 is exactly the number of files holding >=1 raises site; U8.36 did not label the field that way, so the label is unverified"
+   ]
+  },
+  "zeros": {
+   "test_docket_reassembly": {
+    "sha": "dc09ea00be921ef1c17625479d9a6c7d85893a0f199ed9690d2b56d00b7b2966",
+    "size": 70240,
+    "mtime": "09:56:08",
+    "raises_sites": 0
+   },
+   "test_orchestration_handoffs": {
+    "sha": "7d9c97ee95014c74845ed3a5af20d652dc849dbf73d7d81edebf33933ed3d70e",
+    "size": 32483,
+    "mtime": "10:00:29",
+    "raises_sites": 0,
+    "moved_since_report": false,
+    "note": "sits at exactly U8.36's cited sha/mtime here, but it is sibling V8.41's write path so the zero is valid only at this sha"
+   }
+  },
+  "overrun_judged": {
+   "work": 23,
+   "bound": 18,
+   "spent_on_own_tooling": 3,
+   "good_trade": true,
+   "reason": "the tooling bugs were the difference between a 101/79-style figure and the corrected 68; fixing the denominator is the whole value of a triage"
+  },
+  "not_reproduced": [
+   "the earlier audit's 93-site / 75-blind corpus (its sha was not given and the corpus has moved): the direction of the reconciliation is supported, the numbers are not re-derivable",
+   "_smoke verify ok=False is relayed, not re-derived: dockets/_smoke contains no VERIFY.json",
+   "U8.36's own red transcript: I reproduced the red independently rather than replaying its output"
+  ],
+  "overstated": [
+   ":518 described as 'an unrelated import' - it is the DocketManifest import used by the next statement",
+   "bucket keep_broad described as '34 already assert on the caught exception': 33 assert on the object, 1 (occamy:785) asserts only via match=",
+   "'23 in assert-free tests' is blind_in_assert_free at U8.36's sha; the live figure is 11"
+  ],
+  "unverified": [
+   "counts.files_scanned=26 field label (value plausibly counts site-bearing files, which is also 26)",
+   "that no U8.36 command read the real store - consistent with the file I ran, but not provable from here"
+  ],
+  "corrections": [
+   {
+    "relayed_claim": "the blind total is 68",
+    "actually": "68 holds at U8.36's 10:01:01 corpus; the live corpus gives 56 because tests/test_store*.py gained 12 match= kwargs at 10:08:26",
+    "evidence": "git diff -U0 shows 12 '-pytest.raises(X)' -> '+pytest.raises(X, match=...)' pairs; file mtimes 10:08:26 > triage 10:01:01; my taint-corrected detector: 56 + 12 = 68",
+    "unit": "U8.36"
+   },
+   {
+    "relayed_claim": "tests/test_docket_assemble.py:518 is an unrelated import",
+    "actually": ":518 is 'from resextract.docket.manifest import DocketManifest', used by line 521",
+    "evidence": "read of lines 515-530 plus the git diff hunk",
+    "unit": "U8.36"
+   },
+   {
+    "relayed_claim": "34 sites already assert on the caught exception",
+    "actually": "33 do; the 34th (tests/test_occamy_client.py:785) is non-blind via match= only, and its recommendation string is wrong",
+    "evidence": "my tally over the 102 records",
+    "unit": "U8.36"
+   }
+  ],
+  "tool_calls": 17,
+  "bound": 20,
+  "containment": {
+   "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+   "outside_writes": 0,
+   "worktrees_reads": 0,
+   "store": {
+    "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+    "version": 4,
+    "read_by_any_command_of_mine": false,
+    "read_detail": "only a byte-level sha256sum; no SQLite open and no query; SCHEMA_VERSION=4 read from src/resextract/store.py:21, not from the DB",
+    "used_immutable": false,
+    "sidecars_observed": 2,
+    "sidecars_created_by_me": 0,
+    "sidecars": "state.sqlite-wal 0 B @09:29, state.sqlite-shm 32768 B @10:08 (pre-existing)"
+   },
+   "dockets": [
+    {
+     "slug": "duval-replay-material",
+     "sha": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4",
+     "mtime_meaning": "MANIFEST.json mtime (dir mtime 09:28:51.303537)",
+     "mtime": "2026-10-08T09:28:51.302383",
+     "byte_identity_asserted": false
+    },
+    {
+     "slug": "duval-u55-pinned",
+     "sha": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+     "mtime_meaning": "MANIFEST.json mtime",
+     "mtime": "2026-10-08T08:36:35.984234",
+     "byte_identity_asserted": false
+    },
+    {
+     "slug": "_smoke",
+     "sha": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+     "mtime_meaning": "MANIFEST.json mtime",
+     "mtime": "2026-10-08T05:49:09.150312",
+     "verify_ok": false,
+     "verify_ok_note": "relayed; no VERIFY.json present in dockets/_smoke"
+    }
+   ],
+   "handoffs_edited_by_me": [],
+   "own_handoff_created": "orchestration/handoffs/V8.45.json",
+   "handoff_count_before": 186,
+   "handoff_count_after": 187,
+   "handoff_count_method": "ls orchestration/handoffs/*.json | wc -l now = 187; before = 186 (mine is the only one I wrote; no write issued to any other handoff path)",
+   "stray_processes": 0
+  }
+ }
+}

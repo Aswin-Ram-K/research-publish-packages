@@ -1,0 +1,270 @@
+{
+ "unit": "V5.32",
+ "status": "partial",
+ "overall": "PARTIAL",
+ "artifacts": [
+  "orchestration/VERDICTS.md (appended V5.32 section)",
+  "orchestration/units/V5.32.md",
+  "orchestration/handoffs/V5.32.json",
+  "state/verify/V5.32/VERDICTS-section.md",
+  "state/verify/V5.32/names_pre_u529.txt",
+  "state/verify/V5.32/names_now.txt",
+  "state/verify/V5.32/names_now_minus_u531.txt",
+  "state/verify/V5.32/assemble.fd722f7e.bak",
+  "state/verify/V5.32/mutA.txt",
+  "state/verify/V5.32/mutB.txt"
+ ],
+ "checks": [
+  {
+   "id": "C1",
+   "name": "branch attribution by differential mutation",
+   "verdict": "PASS (CONFIRMS)",
+   "observed": "In a package copy (import identity asserted in-process; baseline 37 passed): mutate materialize.py:1641 phrase 'capped at EXTENDS by the' -> 'capped to EXTENDS by the' (1 site) gives 1 failed, 36 passed with the ONLY failure = test_guard_u531_replay_verdict_cap_reason_carries_the_cap_phrase. Mutate materialize.py:1630 sentence 'no verdicts row assesses' -> 'no verdict-record assesses' (1 site) gives 1 failed, 36 passed with the ONLY failure = test_guard_u515b_no_verdict_means_no_confirms. Failure sets disjoint; the U5.31 test does NOT fail on the :1631 mutation.",
+   "evidence": "state/verify/V5.32/mutA.txt, state/verify/V5.32/mutB.txt; IMPORTED_FROM=state/verify/V5.32/c1/resextract/docket/materialize.py; copies deleted (c1 absent); real tree materialize.py 5dbf520e4822f681... and assemble.py fd722f7e72848e9f... identical before and after; 0 mutation sites in the real tree"
+  },
+  {
+   "id": "C2",
+   "name": "coverage verdict (4 emitters; is assess/verdicts.py:404 observable)",
+   "verdict": "PASS with MATERIAL CORRECTION",
+   "observed": "4 emitters: docket/assemble.py:1143, docket/materialize.py:1631, docket/materialize.py:1641, assess/verdicts.py:404 (a 5th exact-phrase occurrence, docket/manifest.py:176, is a docstring mention; no 5th emitter exists). grep -rn rationale src/resextract/docket = 0, so Verdict.rationale never reaches Claim.verdict_reason (TRUE). BUT tests/test_assess_verdicts.py:311 (test_a_replay_client_cannot_assert_confirms) and :651 both drive the exact verdicts.py:402-407 branch and assert 'capped at EXTENDS' in verdict.rationale, so :404 IS driven+asserted+pinned at the assess layer: coverage is 4 of 4, not 3 of 4.",
+   "evidence": "grep -rn 'capped at EXTENDS' src -> 5 occurrences, 4 emitters; grep -rn rationale src/resextract/docket -> 0; tests/test_assess_verdicts.py:311 and :651 (read, not run: execution restricted to tests/test_docket_provenance.py)"
+  },
+  {
+   "id": "C3",
+   "name": "the new test's assertions",
+   "verdict": "PASS",
+   "observed": "Exact inputs as claimed (_store_with_assessed_member state=confirmed producer=replay verdict=CONFIRMS verdict_producer=replay; then _materialize_from_store). 5 asserts: :1152 verdict EXTENDS; :1154 reason not None; :1155 phrase presence; :1157 'no verdicts row' not in reason (branch discriminator); :1160 'is the *assessing* producer' not in reason (F2 absence). All three required properties pinned; not weaker than claimed.",
+   "evidence": "tests/test_docket_provenance.py:1110-1160; _materialize_and_read_claims (def :496) has no assemble/A. reference (grep exit 1), consistent with the claimed 0 assemble calls"
+  },
+  {
+   "id": "C4",
+   "name": "counts and insertion-only",
+   "verdict": "PASS",
+   "observed": "37 passed; 31 def test_; assert metric 184 = grep -c 'assert ' (substring recipe; statement-level ^\\s*assert = 167); new test contributes 5 (:1152,1154,1155,1157,1160); both recipes insertion-consistent (184=179+5, 167=162+5); 0 deleted. Genuine pre-image state/logs/U5.29/def_names_after.txt (30 names, mtime 09:34:27) vs names_now minus the U5.31 name (30): LC_ALL=C sort -u both sides then comm -> only-in-pre empty, only-in-now empty.",
+   "evidence": "state/verify/V5.32/names_pre_u529.txt, names_now_minus_u531.txt; pytest -q 37 passed; --deselect the U5.31 test -> 36 passed, 1 deselected; a first diff attempt failed on an unquoted path containing a space (ambiguous redirect) and was re-run, not counted"
+  },
+  {
+   "id": "C5",
+   "name": "the note: accurate and correctly placed",
+   "verdict": "PASS (one inherited imprecision)",
+   "observed": "Comment at assemble.py:1699-1709 immediately above def _preserve_item (:1710) names both effects (HISTORY.md append; DESTRUCTIVE ITEM.md.rN rotation), states the bound 5 (confirmed from code at assemble.py:1696), and cites V5.30 faithfully (its record: run2 created r6 AND DELETED r1; run3 created r7 AND DELETED r2. Banners +1 per run (16,17,18). MANIFEST sha stayed ce45766d). Imprecision: 'banner files +1 per run' conflates V5.30's banner count with file count (snapshot files net 0 per run once the window is full). Loud enough for a source-reading verifier (last sentence: byte identity across renders is not a contract), but it is a # comment with no machine-visible channel.",
+   "evidence": "sed-read src/resextract/docket/assemble.py:1690-1744; orchestration/handoffs/V5.30.json (rotation measurement, quoted in the unit card)"
+  },
+  {
+   "id": "C6",
+   "name": "documentation-only proof",
+   "verdict": "PASS",
+   "observed": "Stripping the contiguous 11-line comment block lines[1698:1709] (content-anchored from '# A re-render is **not byte-identical**' to just before 'def _preserve_item(') reproduces sha256 8cb9af52fa8fc94059f3ecf17146f2a89fe43383836725da5e9ada8dfaff1dc2 exactly. Control strips one blank too many (b2af4737...) and one line too few (d326226d...) do NOT match, so the only delta is those 11 comment lines. ast.dump equal True; compiled code objects 135 vs 135, all identical.",
+   "evidence": "state/verify/V5.32 script output (strip_exact/strip_plus_one_blank/strip_minus_one); sha_before 8cb9af52fa8fc94059f3ecf17146f2a89fe43383836725da5e9ada8dfaff1dc2 -> sha_after fd722f7e72848e9fb1f24dce4b18c7036cd305c9a9397d9c2550c42ff32fba22"
+  },
+  {
+   "id": "C7",
+   "name": "red->green",
+   "verdict": "NOT APPLICABLE to Item 2 (comments-only), stated plainly; no cycle manufactured",
+   "observed": "A comment admits no red->green. Item 1's red is C1's differential mutation. Additionally assemble.py was reverted IN PLACE, LAST, to the pre-edit 8cb9af52... (backup state/verify/V5.32/assemble.fd722f7e.bak, hard-stop check passed because the file was unchanged since my revert) and the file ran 37 passed, i.e. the comment changed no behaviour; restore asserted equal (RESTORE_SHA_EQUAL=true, fd722f7e...), tests/test_docket_provenance.py unchanged (0b9927e9...).",
+   "evidence": "sha256 before/after/restored; pytest 37 passed on the reverted revision"
+  },
+  {
+   "id": "C8",
+   "name": "honesty audit and containment",
+   "verdict": "audit recorded",
+   "observed": "Overall PARTIAL: both items survive, one relayed claim is wrong. Unverified: the 17 work-call spend (no spend log); the verdicts.py:404 mutation; 'store v4' (carried from V5.30; never opened); U5.31's red-copy existence. Overstated: 'assess/verdicts.py:404 is unobservable' and 'typed /2 is the only way to observe it' (both false), and '3 of 4 pinned' (actually 4 of 4). 4 emitters enumerated, no 5th. fd722f7e... verified.",
+   "evidence": "containment block below; orchestration/handoffs/V5.30.json; state/logs/U5.29/"
+  }
+ ],
+ "blocker": "",
+ "next_unit_hint": "U5.31's hand-up is superseded: the residual 'unobservable' emitter (assess/verdicts.py:404) is ALREADY driven+asserted by tests/test_assess_verdicts.py:311 and :651, so coverage is 4 of 4 and the typed /2 standing is a cleanup (one shared constant) rather than an observability requirement. If a follow-up unit wants execution-grade proof for the assess layer, run a differential mutation of verdicts.py:404 against tests/test_assess_verdicts.py (not done here: execution was restricted to tests/test_docket_provenance.py). The live open question is whether the re-render non-idempotence should be encoded in a machine-checkable channel (a test or a documented manifest field) instead of a source comment.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V5.32.md",
+  "orchestration/handoffs/V5.32.json",
+  "state/logs/V5.32*",
+  "state/verify/V5.32/**"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "branch_attribution": {
+   "mutate_1641_phrase": {
+    "tests_failing": [
+     "tests/test_docket_provenance.py::test_guard_u531_replay_verdict_cap_reason_carries_the_cap_phrase"
+    ]
+   },
+   "mutate_1631_sentence": {
+    "tests_failing": [
+     "tests/test_docket_provenance.py::test_guard_u515b_no_verdict_means_no_confirms"
+    ]
+   },
+   "overlap": false,
+   "u531_fails_on_1631_mutation": false,
+   "copies_deleted": true,
+   "real_tree_sha_before": {
+    "materialize": "5dbf520e4822f681b7f7bafbb37d2529ce3864dd81bbb6bd9daf433c627e9d56",
+    "assemble": "fd722f7e72848e9fb1f24dce4b18c7036cd305c9a9397d9c2550c42ff32fba22"
+   },
+   "real_tree_sha_after": {
+    "materialize": "5dbf520e4822f681b7f7bafbb37d2529ce3864dd81bbb6bd9daf433c627e9d56",
+    "assemble": "fd722f7e72848e9fb1f24dce4b18c7036cd305c9a9397d9c2550c42ff32fba22"
+   },
+   "real_tree_unchanged": true,
+   "copy_baseline": "37 passed; IMPORTED_FROM=state/verify/V5.32/c1/resextract/docket/materialize.py; mutation sites 1 each, verified by grep; card_expectation_corrected=the :1631 mutation fails test_guard_u515b_no_verdict_means_no_confirms, NOT the U5.29 cap-phrase test (which passed)"
+  },
+  "coverage": {
+   "capped_phrase_emitters_found": 4,
+   "where": [
+    "src/resextract/docket/assemble.py:1143",
+    "src/resextract/docket/materialize.py:1631",
+    "src/resextract/docket/materialize.py:1641",
+    "src/resextract/assess/verdicts.py:404"
+   ],
+   "exact_phrase_occurrences_in_src": 5,
+   "non_emitting_occurrence": "src/resextract/docket/manifest.py:176 (docstring mention)",
+   "fifth_emitter_exists": false,
+   "rationale_reaches_claim": false,
+   "grep_rationale_count": 0,
+   "unobservable_is_reachability_limit": true,
+   "reachability_limit_scope": "docket layer only",
+   "assess_layer_already_pins_it": true,
+   "assess_layer_evidence": [
+    "tests/test_assess_verdicts.py:311 test_a_replay_client_cannot_assert_confirms asserts 'capped at EXTENDS' in verdict.rationale",
+    "tests/test_assess_verdicts.py:651 asserts the same after driving the undeclared-client CONFIRMS branch"
+   ],
+   "typed_schema_only_instrument": false,
+   "coverage_pinned": "4 of 4 (3 docket-level + 1 assess-level)",
+   "my_view": "The relayed 'unobservable' claim is true only for docket-level assertions: the phrase is written to Verdict.rationale, which no docket module reads (grep rationale over src/resextract/docket = 0), so no Claim.verdict_reason can carry it. But it is NOT an unwritten test and the typed /2 standing is NOT the only instrument: an existing behavioural assess-layer test already asserts the phrase in verdict.rationale, and verdicts.py:404 is the only site in src/ that writes it there. The typed/shared-constant route is merely the cleanest maintenance choice (one site to pin, refactor-safe). Not execution-verified here: a differential mutation of verdicts.py:404 was not run because test execution was restricted to tests/test_docket_provenance.py."
+  },
+  "new_test_assertions": {
+   "pins_phrase_presence": true,
+   "pins_f2_absence": true,
+   "pins_branch_discriminator": true,
+   "weaker_than_claimed": false,
+   "exact_inputs": "_store_with_assessed_member(dir, state='confirmed', producer='replay', verdict='CONFIRMS', verdict_producer='replay') then _materialize_from_store; one candidate + one verdict row",
+   "assertions": [
+    "claims[0]['verdict'] == 'EXTENDS' (:1152)",
+    "cap_reason is not None (:1154)",
+    "'capped at EXTENDS' in cap_reason (:1155)",
+    "'no verdicts row' not in cap_reason (:1157)",
+    "'is the *assessing* producer' not in cap_reason (:1160)"
+   ],
+   "residual_weakness": "the branch discriminator is a negative check: it cannot detect a REWORD of the :1631 sentence (caught separately by test_guard_u515b per mutation B) and the test does not assert the :1641 text's own \"not 'model'\" wording",
+   "helper_claim_confirmed": "_materialize_and_read_claims (def tests/test_docket_provenance.py:496) contains no assemble/A. reference in its body (grep exit 1)"
+  },
+  "counts": {
+   "passed": 37,
+   "def_test": 31,
+   "asserts": 184,
+   "asserts_recipe": "grep -c 'assert ' (substring; includes prose such as 'may not assert CONFIRMS')",
+   "asserts_statement_level": 167,
+   "asserts_added_by_new_test": 5,
+   "assertions_deleted": 0,
+   "names_added": [
+    "test_guard_u531_replay_verdict_cap_reason_carries_the_cap_phrase"
+   ],
+   "names_removed": [],
+   "renames": [],
+   "method": "genuine pre-image diff: state/logs/U5.29/def_names_after.txt (30 names, mtime 2026-10-08 09:34:27, predating U5.31) vs current 31 names minus the U5.31 name; LC_ALL=C sort -u on BOTH sides before comm; only-in-pre empty and only-in-now empty; corroborated by --deselect of the new test -> 36 passed and by the assert arithmetic (184=179+5 under the substring recipe, 167=162+5 under the statement recipe)",
+   "comm_artifact_note": "a first attempt failed on an unquoted path containing a space (ambiguous redirect) and produced empty comparisons; that run was discarded and the diff re-run, so the documented unsorted-comm artifact did not fool this unit"
+  },
+  "note": {
+   "quote": "# A re-render is **not byte-identical**, by construction (U5.31).  Two\n# deliberate effects make it so: :func:`_append_history` *appends* a new block\n# to ``HISTORY.md`` (the append-only audit log -- never rewritten), and\n# :func:`_preserve_item` writes the outgoing ``ITEM.md`` as a fresh\n# ``ITEM.md.rN`` snapshot.  That rotation is **destructive**: it keeps only the\n# newest :data:`ITEM_SNAPSHOT_KEEP` = 5 snapshots, so once the window is full\n# each render also *deletes the oldest* ``ITEM.md.rN`` (V5.30 measured\n# r5 -> r6 (+ delete r1) -> r7 (+ delete r2), banner files +1 per run while the\n# manifest sha stayed fixed).  A verifier diffing a re-rendered docket must\n# therefore expect a new ``HISTORY.md`` block, one new ``ITEM.md.rN``, and the\n# loss of the oldest snapshot; byte identity across renders is not a contract.",
+   "names_history_append": true,
+   "names_destructive_rotation": true,
+   "states_bound": 5,
+   "bound_line": "assemble.py:1696 (comment cites it at :1704)",
+   "comment_lines": "assemble.py:1699-1709",
+   "def_line": "assemble.py:1710",
+   "precise": true,
+   "placement_sensible": true,
+   "loud_enough_for_a_byte_identity_expectation": true,
+   "imprecision": "'banner files +1 per run' conflates V5.30's provenance-banner count with file count; snapshot files added/removed net 0 per run once the window is full. Inherited from an explicitly attributed quote (V5.30's record: 'run2 created r6 AND DELETED r1; run3 created r7 AND DELETED r2. Banners +1 per run (16,17,18). MANIFEST sha stayed ce45766d across all three runs'), so a faithful paraphrase, not an overclaim.",
+   "loudness_caveat": "it is a # comment, invisible at runtime and reachable only by reading or grepping _preserve_item; no test or user-facing document encodes the non-idempotence"
+  },
+  "documentation_only": {
+   "strip_reproduces_pre_edit": true,
+   "stripped_sha": "8cb9af52fa8fc94059f3ecf17146f2a89fe43383836725da5e9ada8dfaff1dc2",
+   "ast_dump_equal": true,
+   "code_objects_identical": true,
+   "code_object_count": 135,
+   "sha_before": "8cb9af52fa8fc94059f3ecf17146f2a89fe43383836725da5e9ada8dfaff1dc2",
+   "sha_after": "fd722f7e72848e9fb1f24dce4b18c7036cd305c9a9397d9c2550c42ff32fba22",
+   "strip_method": "remove the contiguous 11-line comment block at lines[1698:1709] anchored by content: from the line starting '# A re-render is **not byte-identical**' up to but not including the line starting 'def _preserve_item('",
+   "strip_limits": "a strip that removes more than the comment would prove too much. Controls: strip_plus_one_blank -> b2af47374d2befcaedbc0d7f07a8f9b3e2f4d3691de5c6a8d0f5c6d34b408fe7 (no match); strip_minus_one -> d326226df4300f3b0de444754a2ce79ea1a40f8388faee38ac3ce1877e90c0bf (no match). Only the exact 11-line strip reproduces the recorded pre-edit sha, so the delta is neither broader nor narrower than the comment."
+  },
+  "red_green": {
+   "applicable_to_item2": false,
+   "why": "comments-only: a comment admits no red->green and none was manufactured",
+   "item1_red_from_C1": true,
+   "revert_assemble_red": "assemble.py reverted in place to the pre-edit 8cb9af52... (sha confirmed) -> 37 passed, proving the comment is behaviour-free (no red constructible); restored with sha256 equality asserted (RESTORE_SHA_EQUAL=true, fd722f7e...); tests/test_docket_provenance.py untouched (0b9927e9...); hard-stop check: the file was unchanged since my revert, so the restore could not overwrite newer content"
+  },
+  "overrun_judged": {
+   "work_calls": 17,
+   "bound": 16,
+   "excluding_reportback": 16,
+   "amendment_call": 1,
+   "my_judgement": "The 17 cannot be verified (no on-disk spend log), so the number is UNVERIFIED. Accounting-wise, excluding the mandated final report-back and the message-triggered amendment (a mandated correction, not discretionary work) leaves 16 <= bound 16: the overage is an artifact of counting a mandated amendment as a work call."
+  },
+  "not_reproduced": [
+   "U5.31's self-reported 17 work calls (no spend log on disk)",
+   "a differential mutation of assess/verdicts.py:404 (execution restricted to tests/test_docket_provenance.py; the C2 correction is read-verified)",
+   "'store is v4' (carried from V5.30's measured record; this unit never opened the store)",
+   "U5.31's red-copy history (the directory state/logs/U5.31-red is absent, so RED_COPY_ABSENT is confirmed but its existence cannot be)"
+  ],
+  "overstated": [
+   "U5.31: 'assess/verdicts.py:404 is unobservable' -- false in the unqualified form; it is driven and asserted by tests/test_assess_verdicts.py:311 and :651",
+   "U5.31: 'the typed /2 standing is the only way to observe it' -- false; an existing behavioural assess-layer test already observes it",
+   "U5.31: 'final coverage 3 of 4 pinned' -- undercounts; 4 of 4 are pinned (one at the assess layer)",
+   "U5.31 note: 'banner files +1 per run' -- ambiguous wording inherited from V5.30 (files net 0 per run once full)",
+   "the verification card's C1 expectation that the :1631 mutation fails 'the U5.29 test' -- corrected: it fails test_guard_u515b_no_verdict_means_no_confirms"
+  ],
+  "unverified": [
+   "U5.31's 17 work calls (unverifiable number; accounting judgement given above)",
+   "the assess-layer differential mutation (read-derived only)",
+   "store schema version 4 (carried from V5.30, not measured here)"
+  ],
+  "corrections": [
+   {
+    "relayed_claim": "U5.31: assess/verdicts.py:404 is unobservable and the typed /2 standing is the only way to observe it; coverage 3 of 4",
+    "actually": "The phrase is written to Verdict.rationale and read by no docket module (so it is unreachable from docket-level assertions), but it IS driven and asserted at the assess layer by tests/test_assess_verdicts.py:311 (test_a_replay_client_cannot_assert_confirms) and :651, which assert \"capped at EXTENDS\" in verdict.rationale after exercising exactly the verdicts.py:402-407 branch. Coverage is therefore 4 of 4 and the typed /2 standing is a cleanup, not an observability requirement.",
+    "evidence": "tests/test_assess_verdicts.py:311 and :651 read in full; grep -rn 'capped at EXTENDS' src shows verdicts.py:404 is the only site writing it into rationale; grep -rn rationale src/resextract/docket = 0",
+    "unit": "U5.31"
+   }
+  ],
+  "tool_calls": 25,
+  "bound": 22,
+  "overage": 3,
+  "overage_reason": "terminal count including the call that writes this field (the mandated final send_message is excluded). Items: (1) one environment probe -- the card's literal 'python -c ...' command failed with 'python: command not found', so every later call used .venv/bin/python; (2+3+4) three calls spent repairing and re-validating a structural JSON defect in my own handoff write (a stray key separator inside a string value) and then correcting its own tool_calls field -- the exact failure mode the card's 0b warning describes. No check was dropped and no evidence claim depends on the overage.",
+  "containment": {
+   "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt; ?? .lane-j-scratch/ (37 bytes; pre-existing, NOT mine; identical at first and last observation)",
+   "outside_writes": 0,
+   "worktrees_reads": 0,
+   "my_writes": [
+    "orchestration/VERDICTS.md",
+    "orchestration/units/V5.32.md",
+    "orchestration/handoffs/V5.32.json",
+    "state/verify/V5.32/**"
+   ],
+   "temporary_revert": "src/resextract/docket/assemble.py reverted in place to 8cb9af52... and restored to fd722f7e... with sha equality asserted; backup kept at state/verify/V5.32/assemble.fd722f7e.bak",
+   "cache_purge": "full __pycache__ purge excluding .venv (0 dirs remained) then PYTHONDONTWRITEBYTECODE=1; cache-only, mandated",
+   "store": {
+    "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+    "version": 4,
+    "version_source": "carried from V5.30's measured record; NOT measured by this unit",
+    "real_store_never_opened": true,
+    "immutable_1_never_used": true,
+    "sidecars_observed": 2,
+    "sidecar_detail": "state.sqlite-shm 32768 B mtime 09:34, state.sqlite-wal 0 B mtime 09:29 -- both pre-existing",
+    "sidecars_created_by_me": 0
+   },
+   "dockets": {
+    "replay": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4",
+    "replay_mtime": "2026-10-08 09:28:51.303536743 -0500 (card said .302382; 1.1 ms difference, a different measured object)",
+    "u55": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+    "smoke": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+    "hash_recipe": "the three values above are the MANIFEST.json sha256 (the recipe the card and V5.30 used). A whole-tree recipe (find -type f -exec sha256sum {} \\; | LC_ALL=C sort -k2 | sha256sum) is path-string-sensitive and gives different values: replay e52448c04227d90781f3e86aeeac10e7c78108b5b046f58d6685cacd01a2ee85, u55 6965533cd9a18dfd13921b3b8c7615c1ba8ba83928e1771901b8b9a955573e0d, smoke 0eda52ac42b3ae4c1ef316c216fa787d2e795d35ae42e789576c58648202d08e; not comparable to the manifest shas."
+   },
+   "stray_processes": 0,
+   "stray_processes_detail": "0 started by me; a mid-run grep printed 2 transient matches whose command lines contained the workspace path (sibling agents), 0 at the final check"
+  },
+  "emitter_census": "every other 'capped' use in src/ is unrelated (llm/occamy.py backoff cap, dashboard read caps, kg/staging.py XML element cap and bound flags, kg/ingest.py bounds, docstrings); the exact phrase 'capped at EXTENDS' occurs 5 times in src/, 4 of which emit; the variant spelling 'capped to EXTENDS' occurs 0 times in the real tree (the mutation introduced it only in the copy)"
+ }
+}

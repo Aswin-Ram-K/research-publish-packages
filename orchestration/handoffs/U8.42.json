@@ -1,0 +1,147 @@
+{
+  "unit": "U8.42",
+  "status": "done",
+  "artifacts": [
+    "tests/test_store.py",
+    "tests/test_store_v2.py",
+    "state/verify/U8.42/redgreen/logs/redgreen_report.json",
+    "state/verify/U8.42/probe_msg.py",
+    "orchestration/units/U8.42.md"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "occamy_probe_note": "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> curl: (7) Failed to connect ... port 8012; probed once, nothing restarted, zero live LLM calls",
+    "reported_vs_real_line_discrepancies": "NONE: all 12 reported lines (test_store.py 88/101/114/127; test_store_v2.py 516/518/522/524/528/530/534/537) matched the real lines exactly, and every reported exception class matched (sqlite3.IntegrityError x8, ValueError x4). The unit card's 'line numbers drift, nine+ measured' did NOT reproduce for this subset.",
+    "sites": [
+      {"file": "tests/test_store.py", "reported_line": 88, "real_line": 88, "before": "with pytest.raises(sqlite3.IntegrityError):", "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: verdict\"):", "rule_step": "step 1 NO (class sqlite3.IntegrityError cannot say CHECK-versus-FK/NOT NULL/UNIQUE) -> step 3 shortest stable match=", "in_assert_free_test": true},
+      {"file": "tests/test_store.py", "reported_line": 101, "real_line": 101, "before": "with pytest.raises(sqlite3.IntegrityError):", "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: type\"):", "rule_step": "step 1 NO -> step 3 shortest stable match=", "in_assert_free_test": true},
+      {"file": "tests/test_store.py", "reported_line": 114, "real_line": 114, "before": "with pytest.raises(sqlite3.IntegrityError):", "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: status\"):", "rule_step": "step 1 NO -> step 3 shortest stable match=", "in_assert_free_test": true},
+      {"file": "tests/test_store.py", "reported_line": 127, "real_line": 127, "before": "with pytest.raises(sqlite3.IntegrityError):", "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: source_kind\"):", "rule_step": "step 1 NO -> step 3 shortest stable match=", "in_assert_free_test": true},
+      {"file": "tests/test_store_v2.py", "reported_line": 516, "real_line": 516, "before": "with pytest.raises(ValueError):", "after": "with pytest.raises(ValueError, match=\"verdict must be one of\"):", "rule_step": "step 1 NO (builtin ValueError cannot discriminate) -> step 3 shortest stable match=", "in_assert_free_test": true},
+      {"file": "tests/test_store_v2.py", "reported_line": 518, "real_line": 518, "before": "with pytest.raises(sqlite3.IntegrityError):", "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: verdict\"):", "rule_step": "step 1 NO -> step 3 shortest stable match=", "in_assert_free_test": true},
+      {"file": "tests/test_store_v2.py", "reported_line": 522, "real_line": 522, "before": "with pytest.raises(ValueError):", "after": "with pytest.raises(ValueError, match=\"source_kind must be one of\"):", "rule_step": "step 1 NO -> step 3 shortest stable match=", "in_assert_free_test": true},
+      {"file": "tests/test_store_v2.py", "reported_line": 524, "real_line": 524, "before": "with pytest.raises(sqlite3.IntegrityError):", "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: source_kind\"):", "rule_step": "step 1 NO -> step 3 shortest stable match=", "in_assert_free_test": true},
+      {"file": "tests/test_store_v2.py", "reported_line": 528, "real_line": 528, "before": "with pytest.raises(ValueError):", "after": "with pytest.raises(ValueError, match=\"lane type must be one of\"):", "rule_step": "step 1 NO -> step 3 shortest stable match=", "in_assert_free_test": true},
+      {"file": "tests/test_store_v2.py", "reported_line": 530, "real_line": 530, "before": "with pytest.raises(sqlite3.IntegrityError):", "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: type\"):", "rule_step": "step 1 NO -> step 3 shortest stable match=", "in_assert_free_test": true},
+      {"file": "tests/test_store_v2.py", "reported_line": 534, "real_line": 534, "before": "with pytest.raises(ValueError):", "after": "with pytest.raises(ValueError, match=\"lane status must be one of\"):", "rule_step": "step 1 NO -> step 3 shortest stable match=", "in_assert_free_test": true},
+      {"file": "tests/test_store_v2.py", "reported_line": 537, "real_line": 537, "before": "with pytest.raises(sqlite3.IntegrityError):", "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: status\"):", "rule_step": "step 1 NO -> step 3 shortest stable match=", "in_assert_free_test": true}
+    ],
+    "measured_diagnostics_before_the_edit": {
+      "note": "measured on a throwaway tmp_path DB via .venv/bin/python state/verify/U8.42/probe_msg.py; sqlite3 3.46.1, python 3.14.4",
+      "test_store.py:88 and test_store_v2.py:518": "sqlite3.IntegrityError: CHECK constraint failed: verdict IN ('CONFIRMS', 'EXTENDS', 'CONTRADICTS', 'UNVERIFIED')",
+      "test_store.py:101 and test_store_v2.py:530": "sqlite3.IntegrityError: CHECK constraint failed: type  (SQLite echoes the CHECK source text; a QUOTED identifier collapses to the bare column name, so \"type\" IN (...) prints as 'type')",
+      "test_store.py:114 and test_store_v2.py:537": "sqlite3.IntegrityError: CHECK constraint failed: status IN ('draft', 'ready', 'stale', 'needs_rework', 'superseded')",
+      "test_store.py:127 and test_store_v2.py:524": "sqlite3.IntegrityError: CHECK constraint failed: source_kind IN ('local', 'web')",
+      "test_store_v2.py:516": "ValueError: verdict must be one of ('CONFIRMS', ...), got 'MAYBE'",
+      "test_store_v2.py:522": "ValueError: source_kind must be one of ('local', 'web'), got 'ftp'",
+      "test_store_v2.py:528": "ValueError: lane type must be one of ('paper', ...), got 'essay'",
+      "test_store_v2.py:534": "ValueError: lane status must be one of ('draft', ...), got 'wip'",
+      "match_choice_note": "each match= is the SQLite 'CHECK constraint failed: <column>' idiom plus the column name, or the store.py message's leading identifier phrase; none matches a vocabulary list, a full sentence, a line number or a 'char (N)' offset. The 'CHECK constraint failed: type' form is a prefix of BOTH the quoted-identifier form ('...: type') and a future unquoted form ('...: type IN (...)'), so it is robust to the deparser quirk."
+    },
+    "left_broad": [],
+    "unverified_fixes": [],
+    "reds": [
+      {"file": "tests/test_store.py", "real_line": 88, "mutation": "ddl: copy store.py CHECK (verdict IN ( -> CHECK (CAST(verdict AS TEXT) IN ( ; same type (sqlite3.IntegrityError), same refusal (acceptance identical for all parametrized bad values), different message", "prefix_form_passed": true, "fixed_form_failure_verbatim": "E AssertionError: Regex pattern did not match. | E Expected regex: 'CHECK constraint failed: verdict' | E Actual message: \"CHECK constraint failed: CAST(verdict AS TEXT) IN ('CONFIRMS', 'EXTENDS', 'CONTRADICTS', 'UNVERIFIED')\" | sites/test_store_L88_mutant_fixed.py:88: AssertionError", "pristine_control_passed": true, "copy_was_imported": true, "imported_from": "/home/zer0null/reserach extarctor/state/verify/U8.42/redgreen/copies/ddl/resextract/__init__.py"},
+      {"file": "tests/test_store.py", "real_line": 101, "mutation": "ddl: CHECK (\"type\" IN ( -> CHECK (CAST(\"type\" AS TEXT) IN ( ; same type, same refusal (the 'paper ' case is still refused because CAST is identity on TEXT), different message", "prefix_form_passed": true, "fixed_form_failure_verbatim": "E AssertionError: Regex pattern did not match. | E Expected regex: 'CHECK constraint failed: type' | E Actual message: 'CHECK constraint failed: CAST(\"type\" AS TEXT) IN (\\'paper\\', \\'report\\', \\'blog\\', \\'benchmark_card\\', \\'memo\\')' | sites/test_store_L101_mutant_fixed.py:101: AssertionError", "pristine_control_passed": true, "copy_was_imported": true, "imported_from": "/home/zer0null/reserach extarctor/state/verify/U8.42/redgreen/copies/ddl/resextract/__init__.py"},
+      {"file": "tests/test_store.py", "real_line": 114, "mutation": "ddl: CHECK (status IN ( -> CHECK (CAST(status AS TEXT) IN ( ; same type, same refusal ('stale ' still refused), different message", "prefix_form_passed": true, "fixed_form_failure_verbatim": "E AssertionError: Regex pattern did not match. | E Expected regex: 'CHECK constraint failed: status' | E Actual message: \"CHECK constraint failed: CAST(status AS TEXT) IN ('draft', 'ready', 'stale', 'needs_rework', 'superseded')\" | sites/test_store_L114_mutant_fixed.py:114: AssertionError", "pristine_control_passed": true, "copy_was_imported": true, "imported_from": "/home/zer0null/reserach extarctor/state/verify/U8.42/redgreen/copies/ddl/resextract/__init__.py"},
+      {"file": "tests/test_store.py", "real_line": 127, "mutation": "ddl: CHECK (source_kind IN ( -> CHECK (CAST(source_kind AS TEXT) IN ( ; same type, same refusal ('web ' still refused), different message", "prefix_form_passed": true, "fixed_form_failure_verbatim": "E AssertionError: Regex pattern did not match. | E Expected regex: 'CHECK constraint failed: source_kind' | E Actual message: \"CHECK constraint failed: CAST(source_kind AS TEXT) IN ('local', 'web')\" | sites/test_store_L127_mutant_fixed.py:127: AssertionError", "pristine_control_passed": true, "copy_was_imported": true, "imported_from": "/home/zer0null/reserach extarctor/state/verify/U8.42/redgreen/copies/ddl/resextract/__init__.py"},
+      {"file": "tests/test_store_v2.py", "real_line": 516, "mutation": "msg: copy store.py 'must be one of' -> 'must be among' (same ValueError type, same refusal condition, different message)", "prefix_form_passed": true, "fixed_form_failure_verbatim": "E AssertionError: Regex pattern did not match. | E Expected regex: 'verdict must be one of' | E Actual message: \"verdict must be among ('CONFIRMS', 'EXTENDS', 'CONTRADICTS', 'UNVERIFIED'), got 'MAYBE'\" | sites/test_store_v2_L516_mutant_fixed.py:516: AssertionError", "pristine_control_passed": true, "copy_was_imported": true, "imported_from": "/home/zer0null/reserach extarctor/state/verify/U8.42/redgreen/copies/msg/resextract/__init__.py"},
+      {"file": "tests/test_store_v2.py", "real_line": 518, "mutation": "ddl: CHECK (verdict IN ( -> CHECK (CAST(verdict AS TEXT) IN ( ; same type, same refusal, different message", "prefix_form_passed": true, "fixed_form_failure_verbatim": "E AssertionError: Regex pattern did not match. | E Expected regex: 'CHECK constraint failed: verdict' | E Actual message: \"CHECK constraint failed: CAST(verdict AS TEXT) IN ('CONFIRMS', 'EXTENDS', 'CONTRADICTS', 'UNVERIFIED')\" | sites/test_store_v2_L518_mutant_fixed.py:518: AssertionError", "pristine_control_passed": true, "copy_was_imported": true, "imported_from": "/home/zer0null/reserach extarctor/state/verify/U8.42/redgreen/copies/ddl/resextract/__init__.py"},
+      {"file": "tests/test_store_v2.py", "real_line": 522, "mutation": "msg: 'must be one of' -> 'must be among' (same ValueError type, same refusal, different message)", "prefix_form_passed": true, "fixed_form_failure_verbatim": "E AssertionError: Regex pattern did not match. | E Expected regex: 'source_kind must be one of' | E Actual message: \"source_kind must be among ('local', 'web'), got 'ftp'\" | sites/test_store_v2_L522_mutant_fixed.py:522: AssertionError", "pristine_control_passed": true, "copy_was_imported": true, "imported_from": "/home/zer0null/reserach extarctor/state/verify/U8.42/redgreen/copies/msg/resextract/__init__.py"},
+      {"file": "tests/test_store_v2.py", "real_line": 524, "mutation": "ddl: CHECK (source_kind IN ( -> CHECK (CAST(source_kind AS TEXT) IN ( ; same type, same refusal, different message", "prefix_form_passed": true, "fixed_form_failure_verbatim": "E AssertionError: Regex pattern did not match. | E Expected regex: 'CHECK constraint failed: source_kind' | E Actual message: \"CHECK constraint failed: CAST(source_kind AS TEXT) IN ('local', 'web')\" | sites/test_store_v2_L524_mutant_fixed.py:524: AssertionError", "pristine_control_passed": true, "copy_was_imported": true, "imported_from": "/home/zer0null/reserach extarctor/state/verify/U8.42/redgreen/copies/ddl/resextract/__init__.py"},
+      {"file": "tests/test_store_v2.py", "real_line": 528, "mutation": "msg: 'must be one of' -> 'must be among' (same ValueError type, same refusal, different message)", "prefix_form_passed": true, "fixed_form_failure_verbatim": "E AssertionError: Regex pattern did not match. | E Expected regex: 'lane type must be one of' | E Actual message: \"lane type must be among ('paper', 'report', 'blog', 'benchmark_card', 'memo'), got 'essay'\" | sites/test_store_v2_L528_mutant_fixed.py:528: AssertionError", "pristine_control_passed": true, "copy_was_imported": true, "imported_from": "/home/zer0null/reserach extarctor/state/verify/U8.42/redgreen/copies/msg/resextract/__init__.py"},
+      {"file": "tests/test_store_v2.py", "real_line": 530, "mutation": "ddl: CHECK (\"type\" IN ( -> CHECK (CAST(\"type\" AS TEXT) IN ( ; same type, same refusal, different message", "prefix_form_passed": true, "fixed_form_failure_verbatim": "E AssertionError: Regex pattern did not match. | E Expected regex: 'CHECK constraint failed: type' | E Actual message: 'CHECK constraint failed: CAST(\"type\" AS TEXT) IN (\\'paper\\', \\'report\\', \\'blog\\', \\'benchmark_card\\', \\'memo\\')' | sites/test_store_v2_L530_mutant_fixed.py:530: AssertionError", "pristine_control_passed": true, "copy_was_imported": true, "imported_from": "/home/zer0null/reserach extarctor/state/verify/U8.42/redgreen/copies/ddl/resextract/__init__.py"},
+      {"file": "tests/test_store_v2.py", "real_line": 534, "mutation": "msg: 'must be one of' -> 'must be among' (same ValueError type, same refusal, different message)", "prefix_form_passed": true, "fixed_form_failure_verbatim": "E AssertionError: Regex pattern did not match. | E Expected regex: 'lane status must be one of' | E Actual message: \"lane status must be among ('draft', 'ready', 'stale', 'needs_rework', 'superseded'), got 'wip'\" | sites/test_store_v2_L534_mutant_fixed.py:534: AssertionError", "pristine_control_passed": true, "copy_was_imported": true, "imported_from": "/home/zer0null/reserach extarctor/state/verify/U8.42/redgreen/copies/msg/resextract/__init__.py"},
+      {"file": "tests/test_store_v2.py", "real_line": 537, "mutation": "ddl: CHECK (status IN ( -> CHECK (CAST(status AS TEXT) IN ( ; same type, same refusal, different message", "prefix_form_passed": true, "fixed_form_failure_verbatim": "E AssertionError: Regex pattern did not match. | E Expected regex: 'CHECK constraint failed: status' | E Actual message: \"CHECK constraint failed: CAST(status AS TEXT) IN ('draft', 'ready', 'stale', 'needs_rework', 'superseded')\" | sites/test_store_v2_L537_mutant_fixed.py:537: AssertionError", "pristine_control_passed": true, "copy_was_imported": true, "imported_from": "/home/zer0null/reserach extarctor/state/verify/U8.42/redgreen/copies/ddl/resextract/__init__.py"}
+    ],
+    "red_method": {
+      "copies": "state/verify/U8.42/redgreen/copies/{pristine,msg,ddl}/resextract - throwaway copies of src/resextract; DELETED after the run (copies gone: YES)",
+      "import_injection": "state/verify/U8.42/redgreen/conftest.py strips the workspace src path, strips editable meta_path finders, purges sys.modules and prepends the copy, then asserts resextract.__file__ is under the copy. IMPORTED_FROM was written to state/verify/U8.42/redgreen/logs/imported_<run>.txt for every run; the reds above carry the per-site path.",
+      "per_site_isolation": "tests/test_store_v2.py's test_all_four_check_vocabularies_reject_bad_values contains 8 sites, so per-site variant modules were generated (all sites broad except the one under test); the failing traceback line reported by pytest equals the site's own line for all 12 sites.",
+      "aggregate": "ALL mutant_before pass: True / ALL mutant_fixed fail: True / ALL pristine_fixed pass: True",
+      "mutant_iterations_honest_note": "the first ddl mutant ('' || col) was acceptance-neutral but produced a DEGENERATE empty message tail ('CHECK constraint failed: '); the second (trim(col)) was non-degenerate but CHANGED ACCEPTANCE for 3 sites (it legitimately accepts 'paper ', 'stale ', 'web ') and was rejected because the pre-fix form failed; the reported mutant is CAST(col AS TEXT), which is both acceptance-neutral and non-degenerate. The rejected trim() run is retained in state/verify/U8.42/redgreen/logs/ (it is the reason mutant_before had to be re-verified).",
+      "copies_imported_assertion": "an explicit per-copy check printed IMPORTED_FROM=.../copies/{pristine,msg,ddl}/resextract/__init__.py for the three copies"
+    },
+    "counts": {
+      "files": [
+        {"file": "tests/test_store.py", "sha_before": "5fe048cb54c24bd3af87b848188a04bbe886ffa32040fa9f484a5b9e4bca1730", "sha_after": "6ede0d4a6597ac8db70a9e95bbf6974c42cb6c23eaf7955d7c740af687ce5d76", "passed_before": 42, "passed_after": 42, "collected_before": 42, "collected_after": 42, "def_test_before": 18, "def_test_after": 18, "deleted": 0},
+        {"file": "tests/test_store_v2.py", "sha_before": "40b343458bba6b52b687a670d1c147c0ea9392fafcc9c522d12741860a23bc1d", "sha_after": "7a8a09efc0d92d0cfefebfa41f2bac9a08ebedb9e3e7eec7669292ed9ee61537", "passed_before": 13, "passed_after": 13, "collected_before": 13, "collected_after": 13, "def_test_before": 13, "def_test_after": 13, "deleted": 0}
+      ],
+      "combined": "55 passed / 55 collected before, 55 passed / 55 collected after (the two files run together, and per file as above)",
+      "method": "LC_ALL=C sort + comm -3, twice: (a) line-numbered 'grep -n ^def test_' lists, (b) name-only 'grep -o ^def test_[a-zA-Z_0-9]*' lists; both sorted with LC_ALL=C before 'LC_ALL=C comm -3'. Both comparisons were EMPTY for both files. Sorting is explicit: 'LC_ALL=C sort -t: -k1,1n' and 'LC_ALL=C sort'.",
+      "assert_count_recipe": "three recipes reported side by side: (1) grep -c 'assert ' -> test_store.py 61, test_store_v2.py 87; (2) ast.walk counting ast.Assert nodes -> test_store.py 61, test_store_v2.py 84; (3) statement-level ast.Assert under FunctionDef only -> not separately reported. Note the two recipes AGREE for test_store.py and DIFFER by 3 for test_store_v2.py (grep counts the substring 'assert ' inside docstrings/comments/f-strings). ast.Assert is the trustworthy one: 61 -> 61 and 84 -> 84, i.e. 0 assertions deleted.",
+      "before_reconstruction": "the 'before' state was reconstructed from byte-identical scratch copies saved BEFORE editing (state/verify/U8.42/before/test_store.py, test_store_v2.py); the real tree was never reverted.",
+      "other_test_files": "no other tests/** file was changed by me. Proof: 'find tests -name *.py -newermt <mtime of my handoff's first write>' lists exactly tests/test_store.py and tests/test_store_v2.py as mine, plus tests/test_docket_provenance.py at 10:10:16 which belongs to the in-flight sibling V5.37 (never opened or written by this unit). tests/test_store_boundary.py, test_store_v3.py and test_store_v4.py shas are byte-identical before and after.",
+      "unchanged_store_test_files": {"tests/test_store_boundary.py": "98f2446a602b6ac8fd876acafd7473a7fedbcf74560ef395f0187c4abcbc2a55", "tests/test_store_v3.py": "36fe0f7c058d913980a5535ec31a1083312ce7c4b480d50ca6adf6341485914b", "tests/test_store_v4.py": "34880d795ab842ab2ea79bbc81150ad5e325311a55500563ebcede2beb334484"}
+    },
+    "store_tests_target": {
+      "real_state_sqlite": false,
+      "tmp_path": true,
+      "code_quoted": "tests/test_store.py:17-21 `@pytest.fixture()\\ndef db_path(tmp_path):\\n    path = tmp_path / \"state\" / \"state.sqlite\"\\n    store.init_db(path)\\n    return path`; tests/test_store_v2.py:150-152 `@pytest.fixture()\\ndef con(tmp_path: Path):\\n    path = tmp_path / \"state\" / \"state.sqlite\"`. Every other path literal in both files is the same tmp_path form (test_store_v2.py:143, 165, 289). tests/conftest.py contains no store/sqlite/autouse access at all (grep for autouse|store|sqlite|connect returns only an argparse 'store_true').",
+      "decisive_experiment": "recorded `stat -c %y state/state.sqlite-shm`, ran BOTH store test files (55 passed), re-read it: byte-identical timestamp before and after -> my runs do not read or touch the real store."
+    },
+    "preference_rule": "narrow the exception type first; shortest stable match= only when the class cannot discriminate; leave broad with a stated reason",
+    "hand_ups": {
+      "fixed_count": 12,
+      "left_broad_count": 0,
+      "unverified_count": 0,
+      "next_batch": [
+        {"file": "tests/test_store_v3.py", "lines": [218], "risk_score": 90, "why": "sqlite3.IntegrityError, assert-free, blind - the highest-risk remaining store site; same treatment as this unit (add the shortest stable 'CHECK constraint failed: <column>' match)"},
+        {"file": "tests/test_store_v2.py", "lines": [368, 447], "risk_score": 81, "why": "sqlite3.IntegrityError, blind (not assert-free); 368 is the raw CHECK insert, 447 the dockets_dir_unique index (message is 'UNIQUE constraint failed: dockets.dir' - a different idiom, so measure before matching)"},
+        {"file": "tests/test_store_v4.py", "lines": [279, 407, 409, 412], "risk_score": 81, "why": "sqlite3.IntegrityError, blind (not assert-free)"},
+        {"file": "tests/test_store.py", "lines": [58], "risk_score": 77, "why": "sqlite3.IntegrityError, blind; this is the FK path - measured message is 'FOREIGN KEY constraint failed', so match= alone is safe and short"},
+        {"file": "tests/test_store_v2.py", "lines": [373], "risk_score": 77, "why": "ValueError, blind (not assert-free)"},
+        {"file": "tests/test_store.py", "lines": [201, 209, 256, 258], "risk_score": 73, "why": "ValueError, blind (not assert-free) - measure each message first; set_lane_status/upsert_lane both raise 'lane status must be one of', so two of these sites may need the same match"},
+        {"file": "tests/test_docket_provenance.py", "lines": [378, 651, 885], "risk_score": 124, "why": "the suite-wide TOP-3 by risk_score (bare 'Exception', bucket narrow_type) - but this file is the in-flight sibling V5.37's, so a future unit must wait for V5.37 to land rather than editing it concurrently"}
+      ]
+    },
+    "not_reproduced": [
+      "The card's 'line numbers drift; nine+ measured' did not reproduce for this subset: all 12 reported lines and all 12 reported exception classes were exact.",
+      "U8.36's suite-wide tallies (102 sites, 68 blind, 40 keep-broad) were not re-derived; only the 12 named sites were independently re-measured.",
+      "triage_final.json's 'raises' text for test_store_v2.py:530 reads 'pytest.raises(sqlite3.IntegrityError)' which is correct, but its exc_type column gives no hint that the emitted message is the degenerate-looking 'CHECK constraint failed: type' rather than '... type IN (...)'. That is a SQLite span-naming quirk for quoted identifiers, not a triage error."
+    ],
+    "overstated": [
+      "The card describes sqlite3.IntegrityError as 'already fairly specific'. Within these tests it is NOT sufficient to discriminate: the class alone lets a CHECK-vocabulary refusal, an FK refusal and a NOT NULL refusal all satisfy the same assertion, so a match= was needed at all 8 IntegrityError sites. Treating the class as 'narrow enough' would have left all 8 blind.",
+      "Attributing line drift to this subset would be wrong; the drift is real elsewhere but zero here.",
+      "The card's expectation that the v2 lane-type message would contain 'type IN (...)' is not what the database emits: it is 'CHECK constraint failed: type'. A match= copied from an assumed full expression would not have matched."
+    ],
+    "unverified": [],
+    "tool_calls_work": 30,
+    "tool_calls_total": 31,
+    "bound": 18,
+    "tool_calls_note": "work calls 30 (the mandated final report-back is excluded from that count; total 31 includes it). Bound 18 exceeded by +12. Cause, stated plainly: 13 of the calls were single-purpose read/measure calls (DDL grep, message probe, two SQLite-quirk probes, baseline capture, two evidence sweeps, per-file counts, decisive store experiment) that could have been batched into about 4, plus 3 red-green iterations caused by two defective mutants (a degenerate '' || message and a trim() mutant that changed acceptance). No call was spent recovering handoff JSON - the handoff was written with the write tool and validated after every edit."
+  },
+  "blocker": "",
+  "next_unit_hint": "Take tests/test_store_v3.py:218 next (risk 90), then tests/test_store_v2.py:368,447 and tests/test_store_v4.py:279,407,409,412 (risk 81). Measure each emitted message on a tmp_path DB before writing match=: CHECK failures echo the CHECK source text ('CHECK constraint failed: <column>' when the identifier is unquoted; a QUOTED identifier collapses to the bare column name), UNIQUE failures read 'UNIQUE constraint failed: <table>.<column>' and FK failures read 'FOREIGN KEY constraint failed'. A mutation used for a red must be acceptance-neutral as well as message-changing - trim(col) is NOT (it accepts 'paper ' and friends) - CAST(col AS TEXT) is. Do not touch tests/test_docket_provenance.py while V5.37 is in flight.",
+  "write_paths": [
+    "tests/test_store.py",
+    "tests/test_store_v2.py",
+    "state/verify/U8.42/**",
+    "orchestration/units/U8.42.md",
+    "orchestration/handoffs/U8.42.json"
+  ],
+  "containment": {
+    "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+    "porcelain": "?? .ci-trunk.txt ; ?? .lane-j-scratch/ (2 untracked entries, identical at the start and the end of this unit)",
+    "outside_writes": 0,
+    "worktrees_reads": 0,
+    "store": {
+      "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+      "version": 4,
+      "read_by_any_command_of_mine": true,
+      "read_note": "the ONLY access was `sha256sum state/state.sqlite` (a byte-level hash, run 5 times for before/after comparison). No command of mine opened it with SQLite: no connect, no query, no PRAGMA, never immutable=1. The store tests are tmp_path-only, proven by a decisive before/after experiment on state.sqlite-shm.",
+      "used_immutable": false,
+      "sidecars_observed": 2,
+      "sidecars_created_by_me": 0,
+      "sidecar_note": "state.sqlite-shm (32768 B) and state.sqlite-wal (0 B) both already existed before this unit. state.sqlite (167936 B, mtime 07:47:56) and state.sqlite-wal (mtime 09:29:14) are byte- and mtime-identical before and after. state.sqlite-shm's mtime moved to 10:08:55 during the window, which I could NOT attribute to myself and therefore tested: a store-test run reproduced the identical shm timestamp before and after, proving another concurrent process in this workspace (a sibling unit) opened the real store, not me. Reported rather than hidden."
+    },
+    "dockets": [
+      {"slug": "duval", "hash": "e98113702041b86b", "note": "hash-of-hashes over the sorted file list; dockets/ is gitignored so git status was not trusted"},
+      {"slug": "_smoke", "hash": "0eda52ac42b3ae4c", "note": "hash-of-hashes over the sorted file list"}
+    ],
+    "dockets_slug_note": "the verdict template names the slugs duval-replay-material, duval-u55-pinned and _smoke; only duval/ and _smoke/ exist on disk, so the two real directories are reported rather than inventing the other names. Nothing under dockets/ was opened, written or hashed-in-place beyond read-only hashing.",
+    "handoffs_edited_by_me": ["orchestration/handoffs/U8.42.json"],
+    "stray_processes": 0,
+    "stray_processes_note": "pgrep -af pytest matched only this unit's own bwrap/bash wrapper command lines (the word pytest appears in the command text); no pytest, no server and no long-lived process was left running by this unit."
+  }
+}

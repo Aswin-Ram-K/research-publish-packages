@@ -1,0 +1,192 @@
+{
+  "unit": "U8.48",
+  "status": "done",
+  "artifacts": ["tests/test_docket_provenance.py"],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "occamy_probe_note": "DOWN as expected; probe run twice at most, nothing restarted, zero live LLM calls",
+    "sites": [
+      {
+        "reported_line": 378,
+        "real_line": 379,
+        "before": "    with pytest.raises(Exception):",
+        "after": "    with pytest.raises(M.ValidationError):",
+        "raise_site": "src/resextract/docket/manifest.py:298",
+        "raise_quote": "    producer: DProducer = \"unknown\"",
+        "raised_class": "pydantic.ValidationError (pydantic_core._pydantic_core.ValidationError; re-exported as manifest.ValidationError at manifest.py:49)",
+        "driven_call": "_manifest_obj(\"model-ish\") -> M.DocketManifest(generated_by={...,\"producer\":\"model-ish\"})",
+        "rule_step": "step 3, narrow the type first: the class alone discriminates (only ValidationError can fire from this path), so no match= was added",
+        "in_assert_free_test": false,
+        "asserts_in_test": 2,
+        "narrowing_rejected": "n/a"
+      },
+      {
+        "reported_line": 651,
+        "real_line": 652,
+        "before": "    with pytest.raises(Exception):",
+        "after": "    with pytest.raises(M.ValidationError):",
+        "raise_site": "src/resextract/docket/manifest.py:97",
+        "raise_quote": "    model_config = ConfigDict(extra=\"forbid\")",
+        "raised_class": "pydantic.ValidationError (pydantic_core._pydantic_core.ValidationError; extra_forbidden on the misspelled key)",
+        "raise_site_note": "manifest.py:97 is _Forbid.model_config, inherited by Claim (manifest.py:133); DocketManifest keeps extra=forbid at manifest.py:302",
+        "driven_call": "M.Claim.model_validate({\"id\":\"C1\",\"text\":\"t\",\"prodcer\":\"model\",\"verdict\":\"EXTENDS\"})",
+        "rule_step": "step 3, narrow the type first: the class alone discriminates, so no match= was added",
+        "in_assert_free_test": false,
+        "asserts_in_test": 6,
+        "narrowing_rejected": "n/a"
+      },
+      {
+        "reported_line": 885,
+        "real_line": 886,
+        "before": "        with pytest.raises(Exception):",
+        "after": "        with pytest.raises(sqlite3.IntegrityError):",
+        "raise_site": "src/resextract/store.py:846",
+        "raise_quote": "    cur = con.execute(sql, params)",
+        "raise_site_note": "store.py:846 is store._insert, called from insert_candidate at store.py:1041; insert_candidate performs NO python-side producer check, so the schema CHECK is what fires",
+        "raised_class": "sqlite3.IntegrityError (message: CHECK constraint failed: producer IN ('model', 'replay', 'fixture', 'unknown'))",
+        "driven_call": "store.insert_candidate(con, kind=\"claim\", producer=\"mixed\")",
+        "rule_step": "step 3, narrow the type first: the class alone discriminates (all other columns are nullable and none is populated), so no match= was added - a match= was deliberately NOT added despite being cheap, per U8.36's stated preference",
+        "in_assert_free_test": false,
+        "asserts_in_test": 4,
+        "narrowing_rejected": "n/a"
+      }
+    ],
+    "import_added": "import sqlite3 (tests/test_docket_provenance.py:32) - the only new line; sites 379/652 needed none because manifest.py already re-exports pydantic's ValidationError as M.ValidationError",
+    "left_broad": [],
+    "unverified_fixes": [],
+    "reds": [
+      {
+        "real_line": 379,
+        "mutation": "copy's manifest.py: GeneratedBy.producer changed from the DProducer Literal to a str plus @field_validator(\"producer\", mode=\"before\") raising RuntimeError when v not in PRODUCERS - the SAME refusal (\"model-ish\" still rejected) with a DIFFERENT type",
+        "mutant_type_probe": "mut378 site378: builtins.RuntimeError :: producer refused: 'model-ish' (mutant confirmed surgical: sites 651/885 still raise their pristine types)",
+        "prefix_form_passed": true,
+        "prefix_form_verbatim": "1 passed in 0.12s",
+        "fixed_form_failure_verbatim": "E           RuntimeError: producer refused: 'model-ish'\nstate/verify/U8.48/mut378/resextract/docket/manifest.py:304: RuntimeError\nFAILED tests/test_docket_provenance.py::test_producer_vocabulary_is_validated\n1 failed in 0.14s",
+        "pristine_control_passed": true,
+        "pristine_control_verbatim": "1 passed in 0.13s",
+        "copy_was_imported": true,
+        "imported_from": "state/verify/U8.48/mut378/resextract/__init__.py",
+        "copy_deleted": true
+      },
+      {
+        "real_line": 652,
+        "mutation": "copy's manifest.py: Claim gains @model_validator(mode=\"before\") refusing the same unknown key 'prodcer' with RuntimeError instead of pydantic's extra_forbidden ValidationError - same refusal, different type",
+        "mutant_type_probe": "mut651 site651: builtins.RuntimeError :: unknown field(s) refused: ['prodcer'] (surgical: sites 378/885 unchanged)",
+        "prefix_form_passed": true,
+        "prefix_form_verbatim": "1 passed in 0.11s",
+        "fixed_form_failure_verbatim": "E           RuntimeError: unknown field(s) refused: ['prodcer']\nstate/verify/U8.48/mut651/resextract/docket/manifest.py:140: RuntimeError\nFAILED tests/test_docket_provenance.py::test_u513_manifest_claim_additions_are_additive_and_optional\n1 failed in 0.13s",
+        "pristine_control_passed": true,
+        "pristine_control_verbatim": "1 passed in 0.12s",
+        "copy_was_imported": true,
+        "imported_from": "state/verify/U8.48/mut651/resextract/__init__.py",
+        "copy_deleted": true
+      },
+      {
+        "real_line": 886,
+        "mutation": "copy's store.py: insert_candidate guards `if producer not in PRODUCER_VOCAB: raise RuntimeError(...)` immediately before _insert - the row is still refused (same refusal) but with RuntimeError instead of the sqlite CHECK's IntegrityError",
+        "mutant_type_probe": "mut885 site885: builtins.RuntimeError :: producer refused: 'mixed' (surgical: sites 378/651 unchanged)",
+        "prefix_form_passed": true,
+        "prefix_form_verbatim": "1 passed in 0.11s",
+        "fixed_form_failure_verbatim": "E           RuntimeError: producer refused: 'mixed'\nstate/verify/U8.48/mut885/resextract/store.py:1042: RuntimeError\nFAILED tests/test_docket_provenance.py::test_docket_vocabulary_is_the_store_vocabulary_plus_mixed\n1 failed in 0.14s",
+        "pristine_control_passed": true,
+        "pristine_control_verbatim": "1 passed in 0.12s",
+        "copy_was_imported": true,
+        "imported_from": "state/verify/U8.48/mut885/resextract/__init__.py",
+        "copy_deleted": true
+      }
+    ],
+    "red_harness": "state/verify/U8.48/redgreen/u848_pin.py - a -p plugin reusing U8.42's proven pin: prepends the copy, strips the editable src path AND its editable meta-path finder, purges sys.modules, asserts resextract.__file__ is under the copy, and logs IMPORTED_FROM; state/verify/U8.48/build.py builds pristine + the three mutants",
+    "additional_full_file_checks": {
+      "full_file_vs_pristine_copy": "38 passed in 0.52s",
+      "full_file_vs_real_src": "38 passed in 0.51s"
+    },
+    "counts": {
+      "passed": 38,
+      "collected": 38,
+      "def_test": 32,
+      "asserts": 178,
+      "asserts_line_recipe": 195,
+      "assert_count_recipe": "two stated recipes, both unchanged before->after: (a) LINES containing the token 'assert ' = 195 via `grep -c 'assert ' tests/test_docket_provenance.py`; (b) ast.Assert NODES = 178 via ast.walk. This is exactly the 195/178 pair the card named. passed/collected = 38 (32 def test_ + 6 parametrized cases); def test_ counted with `grep -cE '^\\s*def test_'` = 32 = ast FunctionDefs named test_* = 32.",
+      "deleted_or_weakened": 0,
+      "file_sha_before": "49cea1063f2ae89b7198ea0c82e07af7b4e50f37c7c7e6511b63cec4c5601bd9",
+      "file_sha_after": "86cb1b0f3caa1108d7d672f888df44b63b28b6006b7377454645552d43f7baae",
+      "file_sha_after_copy_delete": "86cb1b0f3caa1108d7d672f888df44b63b28b6006b7377454645552d43f7baae",
+      "file_is_git_tracked": false,
+      "git_untracked_proof": "`git ls-files --error-unmatch tests/test_docket_provenance.py` -> \"Did you forget to 'git add'?\" (did not match) => NO git diff was claimed or run for this file",
+      "proof_method": "explicit before/after quote + sha256, PLUS a byte-level reconstruction proof: applying the exact inverse of my 4 edits to the current bytes reproduces the pre-edit sha 49cea106... byte-for-byte (196568 bytes in, identical digest out), which proves those 4 edits are the ONLY changes in the file - hence 0 assertions deleted or weakened",
+      "purge_discipline": "FULL __pycache__ purge (`find . -name __pycache__ -not -path './.venv/*' -type d -exec rm -rf {} +`) plus PYTHONDONTWRITEBYTECODE=1 before every run; no narrow purge was used, so the known 5-spurious-failure narrow-purge artifact cannot apply"
+    },
+    "real_store_read_by_my_commands": false,
+    "tests_use_tmp_path": true,
+    "store_access_proof": "store.py:569 `def connect(path=None)` defaults to DEFAULT_DB_PATH = Path(\"state/state.sqlite\") (store.py:22). Every store.init_db / store.connect in tests/test_docket_provenance.py passes an explicit path: lines 66/67, 499, 681/682, 718, 810, 883/884 - all `tmp_path`-derived (e.g. line 883 `db = tmp_path / \"vocab-store.sqlite\"`), and line 499 carries the in-file note 'a fresh fixture store: never the real state/state.sqlite'. tests/conftest.py imports no store. So no command of mine read the real store.",
+    "bucket_fixable_by_narrowing_now_empty": true,
+    "bucket_note": "U8.36's triage_final.json has bucket_narrow_type == 3 and all three are tests/test_docket_provenance.py:378/651/885 - the three I narrowed - so the fixable-by-narrowing-type bucket is now empty. U8.36 had already fixed the 4th member (tests/test_docket_assemble.py:518) inside its own unit.",
+    "blind_total_delta": "68 (U8.36 triage_final) -> 65 after my 3 narrowings; all three carried blind=true, in_assert_free_test=false, binds_excinfo=None, has_match=false",
+    "remaining_blind": {
+      "needs_match": 59,
+      "builtin_broad": 12,
+      "builtin_broad_definition": "the '(class) builtin-broad types' entry is a CLASS row, not a file: it lives in orchestration/handoffs/U8.36.json at .triage.passes_for_wrong_reason[2], where the `file` field literally holds the string '(class) builtin-broad types' and only a 12-element `lines` array is given - that is the never-file-attributed entry",
+      "attributed_to_files": [
+        "tests/test_store.py (4 lines: 88, 101, 114, 127)",
+        "tests/test_store_v2.py (8 lines: 516, 518, 522, 524, 528, 530, 534, 537)"
+      ],
+      "attribution_method": "joined the 12 class-entry line numbers against state/verify/U8.36/triage_final.json records with builtin_broad=true (each record carries file+line); 12/12 resolved, 0 unattributable; NO file was edited to do this",
+      "attribution_caveat": "triage_final.json's own builtin_broad boolean marks 49 sites across 14 files (45 of them blind, all bucket=needs_match). The handoff's 12 is a SUBSET presented as a class, so '12' is not a triage_final field and must not be quoted as one.",
+      "BUILTIN_BROAD_set": "state/verify/U8.36/audit3b.py:4 defines BUILTIN_BROAD as a set of 11 TYPE NAMES (ValueError, OSError, KeyError, RuntimeError, TypeError, sqlite3.IntegrityError, sqlite3.OperationalError, json.JSONDecodeError, UnicodeDecodeError, IndexError, AttributeError) - also not a count of 12 sites"
+    },
+    "not_reproduced": [],
+    "overstated": [],
+    "unverified": [
+      "No site was left unverified: all three narrowed sites have a demonstrated wrong-TYPE red against a mutant that preserves the refusal, plus a pristine control that passes.",
+      "Not claimed: that the 12 builtin-broad class lines were mutated or fixed - I only attributed them to files, as asked."
+    ],
+    "out_of_scope_observed": [
+      "state/state.sqlite-shm mtime had advanced to 10:13 during my window while state.sqlite and state.sqlite-wal did not change and the store sha stayed 40e8aa0c...; siblings U8.42/V8.45/U8.46/U8.47 are writing in this workspace concurrently. I created 0 sidecars and ran 0 store queries, so this is not attributable to me - recorded rather than asserted either way."
+    ],
+    "tool_calls_work": 46,
+    "tool_calls_total": 47,
+    "bound": 26,
+    "bound_overage_reason": "Measurement-heavy mandate (3 sites x {read path, prove type, build mutant copy, 3-way run matrix, controls} + baseline counts + reconstruction proof + containment sweep) and the 12-site builtin-broad reconciliation, which needed 7 calls because the card's phrase matches no field in triage_final.json and required finding U8.36.json's .triage.passes_for_wrong_reason[2]. One of those calls (dumping a nested 770-entry dict) was a genuine waste and I am recording it as such rather than hiding it.",
+    "containment": {
+      "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "",
+      "duval_porcelain_note": "2 pre-existing untracked entries (.ci-trunk.txt, .lane-j-scratch/) present before and after; I wrote nothing into /home/zer0null/Duval",
+      "outside_writes": 0,
+      "worktrees_reads": 0,
+      "store": {
+        "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+        "version": 4,
+        "version_source": "as stated by the unit card; I did NOT open the store to re-read user_version, in order to keep read_by_any_command_of_mine false",
+        "read_by_any_command_of_mine": false,
+        "used_immutable": false,
+        "sidecars_observed": 2,
+        "sidecars_observed_names": ["state/state.sqlite-shm", "state/state.sqlite-wal"],
+        "sidecars_created_by_me": 0
+      },
+      "dockets": [
+        {"slug": "duval-replay-material", "sha": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4", "mtime_meaning": "MANIFEST.json file mtime (docket dir mtime 2026-10-08 09:28:51.303536743 -0500)", "mtime": "2026-10-08 09:28:51.302382844 -0500", "byte_identity_asserted": false},
+        {"slug": "duval-u55-pinned", "sha": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07", "mtime_meaning": "MANIFEST.json file mtime (== docket dir mtime)", "mtime": "2026-10-08 08:36:35.984233876 -0500", "byte_identity_asserted": false},
+        {"slug": "_smoke", "sha": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6", "verify_ok": false, "mtime_meaning": "MANIFEST.json file mtime (docket dir mtime 2026-10-08 05:49:09.151055969 -0500)", "mtime": "2026-10-08 05:49:09.150312393 -0500", "byte_identity_asserted": false}
+      ],
+      "dockets_hashing_note": "hashed directly; dockets/ is gitignored so git status was not trusted (and not used) for them",
+      "handoffs_edited_by_me": ["orchestration/handoffs/U8.48.json"],
+      "handoffs_edited_by_me_note": "only my own; U8.40/U8.47 and every other handoff were read-only to me",
+      "siblings_untouched": ["tests/test_store*.py (U8.42)", "tests/test_docket_assemble.py (V8.45)", "src/resextract/run.py (U8.46)", "orchestration/handoffs/U8.40.json (U8.47)"],
+      "stray_processes": 0,
+      "server_started": false,
+      "committed": false
+    },
+    "verification_limits": [
+      "The card's reported sha for this file (49cea106...) matched my measurement exactly, so no re-take discrepancy had to be resolved; the 'all three have moved' expectation did not materialise against the pre-edit file (they still sat at 378/651/885) - they moved to 379/652/886 only because I added the import line myself."
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "The fixable-by-narrowing-type bucket is empty (3/3 done here, U8.36's own 4th done there). Next highest value per U8.36/U8.40 is the 59 needs_match sites, of which tests/test_store_v2.py (11), tests/test_store.py (9), tests/test_git_source.py (5) and tests/test_occamy_client.py (5) carry the most - a per-FILE unit with one mutant per file, not per site. Two caveats: (1) tests/test_store*.py is U8.42's write path, so do not start there until U8.42 lands; (2) do NOT quote '12 builtin-broad' as a triage_final count - the attributable population there is 49 sites/14 files, and the 12 is U8.36.json's class row already attributed to tests/test_store.py (4 lines) and tests/test_store_v2.py (8 lines). Docket tests read only tmp_path stores, so a store-touching needs_match unit must re-establish that independently.",
+  "write_paths": [
+    "tests/test_docket_provenance.py",
+    "state/verify/U8.48/**",
+    "state/logs/U8.48*",
+    "orchestration/units/U8.48.md",
+    "orchestration/handoffs/U8.48.json"
+  ]
+}

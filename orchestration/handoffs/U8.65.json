@@ -1,0 +1,449 @@
+{
+ "unit": "U8.65",
+ "status": "done",
+ "artifacts": [
+  "tests/test_store.py",
+  "tests/test_store_v2.py",
+  "tests/test_store_v3.py",
+  "tests/test_store_boundary.py",
+  "state/verify/U8.65/before/",
+  "state/verify/U8.65/probe_messages.json",
+  "state/verify/U8.65/counts.py",
+  "state/verify/U8.65/counts.json",
+  "state/verify/U8.65/reds/reds.py",
+  "state/verify/U8.65/reds/logs/redgreen_report.json",
+  "orchestration/units/U8.65.md"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "occamy_probe_cmd": "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> 000 (curl: (7) Failed to connect to 192.168.2.168 port 8012); probed once, nothing restarted, zero LLM calls",
+  "sites": [
+   {
+    "file": "tests/test_store_v2.py",
+    "real_line": 373,
+    "fixed_line": 373,
+    "before": "    with pytest.raises(ValueError):",
+    "after": "    with pytest.raises(ValueError, match=\"model_suggested must be 0 or 1\"):",
+    "loop_expected": null,
+    "rule_step": "step1 NO (ValueError is the narrowest type this path raises; int() on a non-int also raises ValueError, so the class cannot discriminate the 0/1 range check) -> step3: the whole message is the shortest stable discriminator",
+    "message_measured": "builtins.ValueError: model_suggested must be 0 or 1",
+    "left_broad": false
+   },
+   {
+    "file": "tests/test_store.py",
+    "real_line": 201,
+    "fixed_line": 201,
+    "before": "    with pytest.raises(ValueError):",
+    "after": "    with pytest.raises(ValueError, match=\"lane status must be one of\"):",
+    "loop_expected": null,
+    "rule_step": "step1 NO (store.py raises bare ValueError from 10 sites) -> step3; same token as the fixed U8.55 site test_store_v2.py:534",
+    "message_measured": "builtins.ValueError: lane status must be one of ('draft', 'ready', 'stale', 'needs_rework', 'superseded'), got 'wip'",
+    "left_broad": false
+   },
+   {
+    "file": "tests/test_store.py",
+    "real_line": 209,
+    "fixed_line": 209,
+    "before": "    with pytest.raises(ValueError):",
+    "after": "    with pytest.raises(ValueError, match=\"lane type must be one of\"):",
+    "loop_expected": null,
+    "rule_step": "step1 NO -> step3; upsert_lane itself raises two distinct ValueErrors (lane type, lane status), so the class alone cannot say which fired",
+    "message_measured": "builtins.ValueError: lane type must be one of ('paper', 'report', 'blog', 'benchmark_card', 'memo'), got 'essay'",
+    "left_broad": false
+   },
+   {
+    "file": "tests/test_store.py",
+    "real_line": 256,
+    "fixed_line": 256,
+    "before": "    with pytest.raises(ValueError):",
+    "after": "    with pytest.raises(ValueError, match=\"verdict must be one of\"):",
+    "loop_expected": null,
+    "rule_step": "step1 NO -> step3; insert_verdict raises TWO distinct ValueErrors (verdict vocab, model-id-on-non-model-producer), so the class alone is ambiguous",
+    "message_measured": "builtins.ValueError: verdict must be one of ('CONFIRMS', 'EXTENDS', 'CONTRADICTS', 'UNVERIFIED'), got 'MAYBE'",
+    "left_broad": false
+   },
+   {
+    "file": "tests/test_store.py",
+    "real_line": 258,
+    "fixed_line": 258,
+    "before": "    with pytest.raises(ValueError):",
+    "after": "    with pytest.raises(ValueError, match=\"source_kind must be one of\"):",
+    "loop_expected": null,
+    "rule_step": "step1 NO -> step3; same token as the fixed U8.55 site test_store_v2.py:522",
+    "message_measured": "builtins.ValueError: source_kind must be one of ('local', 'web'), got 'ftp'",
+    "left_broad": false
+   },
+   {
+    "file": "tests/test_store_v3.py",
+    "real_line": 287,
+    "fixed_line": 287,
+    "before": "            with pytest.raises(sqlite3.IntegrityError):",
+    "after": "            with pytest.raises(sqlite3.IntegrityError, match=expected):",
+    "loop_expected": [
+     "CHECK constraint failed: source_kind",
+     "CHECK constraint failed: verdict",
+     "CHECK constraint failed: type",
+     "CHECK constraint failed: status",
+     "CHECK constraint failed: producer"
+    ],
+    "rule_step": "step1 NO (sqlite3.IntegrityError is a builtin with no narrower class) -> step3; the loop covers 5 CHECKs so the expected echoed DDL source text is passed per row (measured: SQLite prints lanes.\"type\" as plain type, quotes dropped)",
+    "message_measured": "n/a",
+    "left_broad": false
+   },
+   {
+    "file": "tests/test_store_boundary.py",
+    "real_line": 256,
+    "fixed_line": 256,
+    "before": "        with pytest.raises(ValueError):",
+    "after": "        with pytest.raises(ValueError, match=\"may only accompany producer\"):",
+    "loop_expected": null,
+    "rule_step": "step1 NO -> step3; insert_verdict can also raise the verdict-vocab ValueError, so the class alone cannot discriminate the model-id rule",
+    "message_measured": "builtins.ValueError: model id 'occamy-1' may only accompany producer='model', not 'replay'",
+    "left_broad": false
+   }
+  ],
+  "already_tight": [
+   {
+    "file": "tests/test_store_boundary.py",
+    "real_line": 215,
+    "before": "        with pytest.raises(store.SchemaTooOldError):",
+    "after": "(unchanged)",
+    "reason": "step1 satisfied: SchemaTooOldError is a dedicated typed exception (store.py:86) raised only by _require_writable_schema, so the class alone already identifies the condition; no narrower class and no sibling exception on that path."
+   }
+  ],
+  "left_broad": [],
+  "unverified_fixes": [],
+  "reds": [
+   {
+    "file": "test_store.py",
+    "line": 201,
+    "mutation": "store.py message wording changed; same ValueError type, same accept/reject",
+    "mutant_acceptance_neutral": true,
+    "mutant_message_changing": true,
+    "pre_fix_passed": true,
+    "pre_fix_rc": 0,
+    "fixed_failed_verbatim": [
+     "E       AssertionError: Regex pattern did not match.",
+     "E         Expected regex: 'lane status must be one of'",
+     "E         Actual message: \"lane status is not permitted ('draft', 'ready', 'stale', 'needs_rework', 'superseded'), got 'wip'\""
+    ],
+    "failed_at_own_line": [
+     "L201_test_store_fixed/test_store.py:201: AssertionError"
+    ],
+    "pristine_passed": true,
+    "pristine_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/msgval/resextract/__init__.py"
+    ],
+    "imported_from_control": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/pristine/resextract/__init__.py"
+    ],
+    "import_ok": true,
+    "import_ctl_ok": true,
+    "exc_type": "ValueError",
+    "match": "lane status must be one of"
+   },
+   {
+    "file": "test_store.py",
+    "line": 209,
+    "mutation": "store.py message wording changed; same ValueError type, same accept/reject",
+    "mutant_acceptance_neutral": true,
+    "mutant_message_changing": true,
+    "pre_fix_passed": true,
+    "pre_fix_rc": 0,
+    "fixed_failed_verbatim": [
+     "E       AssertionError: Regex pattern did not match.",
+     "E         Expected regex: 'lane type must be one of'",
+     "E         Actual message: \"lane type is not permitted ('paper', 'report', 'blog', 'benchmark_card', 'memo'), got 'essay'\""
+    ],
+    "failed_at_own_line": [
+     "L209_test_store_fixed/test_store.py:209: AssertionError"
+    ],
+    "pristine_passed": true,
+    "pristine_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/msgval/resextract/__init__.py"
+    ],
+    "imported_from_control": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/pristine/resextract/__init__.py"
+    ],
+    "import_ok": true,
+    "import_ctl_ok": true,
+    "exc_type": "ValueError",
+    "match": "lane type must be one of"
+   },
+   {
+    "file": "test_store.py",
+    "line": 256,
+    "mutation": "store.py message wording changed; same ValueError type, same accept/reject",
+    "mutant_acceptance_neutral": true,
+    "mutant_message_changing": true,
+    "pre_fix_passed": true,
+    "pre_fix_rc": 0,
+    "fixed_failed_verbatim": [
+     "E       AssertionError: Regex pattern did not match.",
+     "E         Expected regex: 'verdict must be one of'",
+     "E         Actual message: \"verdict is not permitted ('CONFIRMS', 'EXTENDS', 'CONTRADICTS', 'UNVERIFIED'), got 'MAYBE'\""
+    ],
+    "failed_at_own_line": [
+     "L256_test_store_fixed/test_store.py:256: AssertionError"
+    ],
+    "pristine_passed": true,
+    "pristine_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/msgval/resextract/__init__.py"
+    ],
+    "imported_from_control": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/pristine/resextract/__init__.py"
+    ],
+    "import_ok": true,
+    "import_ctl_ok": true,
+    "exc_type": "ValueError",
+    "match": "verdict must be one of"
+   },
+   {
+    "file": "test_store.py",
+    "line": 258,
+    "mutation": "store.py message wording changed; same ValueError type, same accept/reject",
+    "mutant_acceptance_neutral": true,
+    "mutant_message_changing": true,
+    "pre_fix_passed": true,
+    "pre_fix_rc": 0,
+    "fixed_failed_verbatim": [
+     "E       AssertionError: Regex pattern did not match.",
+     "E         Expected regex: 'source_kind must be one of'",
+     "E         Actual message: \"source_kind is not permitted ('local', 'web'), got 'ftp'\""
+    ],
+    "failed_at_own_line": [
+     "L258_test_store_fixed/test_store.py:258: AssertionError"
+    ],
+    "pristine_passed": true,
+    "pristine_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/msgval/resextract/__init__.py"
+    ],
+    "imported_from_control": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/pristine/resextract/__init__.py"
+    ],
+    "import_ok": true,
+    "import_ctl_ok": true,
+    "exc_type": "ValueError",
+    "match": "source_kind must be one of"
+   },
+   {
+    "file": "test_store_v2.py",
+    "line": 373,
+    "mutation": "store.py message wording changed; same ValueError type, same accept/reject",
+    "mutant_acceptance_neutral": true,
+    "mutant_message_changing": true,
+    "pre_fix_passed": true,
+    "pre_fix_rc": 0,
+    "fixed_failed_verbatim": [
+     "E       AssertionError: Regex pattern did not match.",
+     "E         Expected regex: 'model_suggested must be 0 or 1'",
+     "E         Actual message: 'model_suggested out of range'"
+    ],
+    "failed_at_own_line": [
+     "L373_test_store_v2_fixed/test_store_v2.py:373: AssertionError"
+    ],
+    "pristine_passed": true,
+    "pristine_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/msgval/resextract/__init__.py"
+    ],
+    "imported_from_control": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/pristine/resextract/__init__.py"
+    ],
+    "import_ok": true,
+    "import_ctl_ok": true,
+    "exc_type": "ValueError",
+    "match": "model_suggested must be 0 or 1"
+   },
+   {
+    "file": "test_store_v3.py",
+    "line": 287,
+    "mutation": "connect() wrapped to install BEFORE UPDATE OF <col> ... RAISE(ABORT,'u865 rejected value') on the 5 CHECK columns",
+    "mutant_acceptance_neutral": true,
+    "mutant_message_changing": true,
+    "pre_fix_passed": true,
+    "pre_fix_rc": 0,
+    "fixed_failed_verbatim": [
+     "E               AssertionError: Regex pattern did not match.",
+     "E                 Expected regex: 'CHECK constraint failed: source_kind'",
+     "E                 Actual message: 'u865 rejected value'"
+    ],
+    "failed_at_own_line": [
+     "L287_test_store_v3_fixed/test_store_v3.py:287: AssertionError"
+    ],
+    "pristine_passed": true,
+    "pristine_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/trig/resextract/__init__.py"
+    ],
+    "imported_from_control": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/pristine/resextract/__init__.py"
+    ],
+    "import_ok": true,
+    "import_ctl_ok": true,
+    "exc_type": "sqlite3.IntegrityError",
+    "match": "per-row CHECK source text"
+   },
+   {
+    "file": "test_store_boundary.py",
+    "line": 256,
+    "mutation": "store.py message wording changed; same ValueError type, same accept/reject",
+    "mutant_acceptance_neutral": true,
+    "mutant_message_changing": true,
+    "pre_fix_passed": true,
+    "pre_fix_rc": 0,
+    "fixed_failed_verbatim": [
+     "E           AssertionError: Regex pattern did not match.",
+     "E             Expected regex: 'may only accompany producer'",
+     "E             Actual message: \"model id 'occamy-1' is incompatible with producer='model', not 'replay'\""
+    ],
+    "failed_at_own_line": [
+     "L256_test_store_boundary_fixed/test_store_boundary.py:256: AssertionError"
+    ],
+    "pristine_passed": true,
+    "pristine_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/msgval/resextract/__init__.py"
+    ],
+    "imported_from_control": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.65/reds/copies/pristine/resextract/__init__.py"
+    ],
+    "import_ok": true,
+    "import_ctl_ok": true,
+    "exc_type": "ValueError",
+    "match": "may only accompany producer"
+   }
+  ],
+  "counts": {
+   "test_store.py": {
+    "tracked": true,
+    "passed_before": 42,
+    "collected_before": 42,
+    "def_test_before": 18,
+    "passed_after": 42,
+    "collected_after": 42,
+    "def_test_after": 18,
+    "deleted": 0,
+    "comm3_numbered": "EMPTY",
+    "comm3_names": "EMPTY",
+    "summary_before": "42 passed in 0.12s",
+    "summary_after": "42 passed in 0.11s",
+    "sha256_before": "8306d9ef3a19a4f121c04905d2127e6da9626aac39d098d1609d62079a24660f",
+    "sha256_after": "f5c12d604b3b8eb144e42430087719de9564dfc60ecce284c5e388a160823576",
+    "tracked_status": "tracked",
+    "diff_method": "git diff -- tests/test_store.py",
+    "diff_bytes": 3666
+   },
+   "test_store_v2.py": {
+    "tracked": true,
+    "passed_before": 13,
+    "collected_before": 13,
+    "def_test_before": 13,
+    "passed_after": 13,
+    "collected_after": 13,
+    "def_test_after": 13,
+    "deleted": 0,
+    "comm3_numbered": "EMPTY",
+    "comm3_names": "EMPTY",
+    "summary_before": "13 passed in 0.07s",
+    "summary_after": "13 passed in 0.07s",
+    "sha256_before": "1108b96bff668a4fd1eb6231450d2b0014c055834e9b9f08aff5b7ddb7b4441a",
+    "sha256_after": "9309e98844070ab0be42cc8c016fa76f3c7555c276ff6141cca70b169b408783",
+    "tracked_status": "tracked",
+    "diff_method": "git diff -- tests/test_store_v2.py",
+    "diff_bytes": 3554
+   },
+   "test_store_v3.py": {
+    "tracked": true,
+    "passed_before": 8,
+    "collected_before": 8,
+    "def_test_before": 8,
+    "passed_after": 8,
+    "collected_after": 8,
+    "def_test_after": 8,
+    "deleted": 0,
+    "comm3_numbered": "EMPTY",
+    "comm3_names": "EMPTY",
+    "summary_before": "8 passed in 0.10s",
+    "summary_after": "8 passed in 0.10s",
+    "sha256_before": "6baecba6aa75a1c01b1a2eab814c472304e40c70ef91f940effdc589336bd315",
+    "sha256_after": "fc1944ee1259fae220d964a8a105a5cd75f5951fdad571455e85c15ad5ee1469",
+    "tracked_status": "tracked",
+    "diff_method": "git diff -- tests/test_store_v3.py",
+    "diff_bytes": 4180
+   },
+   "test_store_boundary.py": {
+    "tracked": false,
+    "passed_before": 9,
+    "collected_before": 9,
+    "def_test_before": 9,
+    "passed_after": 9,
+    "collected_after": 9,
+    "def_test_after": 9,
+    "deleted": 0,
+    "comm3_numbered": "EMPTY",
+    "comm3_names": "EMPTY",
+    "summary_before": "9 passed in 0.14s",
+    "summary_after": "9 passed in 0.13s",
+    "sha256_before": "98f2446a602b6ac8fd876acafd7473a7fedbcf74560ef395f0187c4abcbc2a55",
+    "sha256_after": "2fe057977b04eafea43a4b7ff9a8704de2c7643c8696cccd6a0d6d297ac899b9",
+    "tracked_status": "untracked",
+    "diff_method": "diff -u state/verify/U8.65/before/test_store_boundary.py tests/test_store_boundary.py",
+    "diff_bytes": 658
+   }
+  },
+  "recipes": {
+   "probe": "inline .venv/bin/python (see state/verify/U8.65/probe_messages.json); every DB under tempfile.mkdtemp(); never state/state.sqlite",
+   "before_snapshot": "cp -a tests/. state/verify/U8.65/before/  (pre-edit full tests/ copy; before counts run with cwd=state/verify/U8.65/before)",
+   "counts": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/verify/U8.65/counts.py -> passed/collected/def test_ per file + LC_ALL=C sort + LC_ALL=C comm -3 on numbered (grep -n 'def test_') and names forms",
+   "reds": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/verify/U8.65/reds/reds.py -> throwaway package copies under state/verify/U8.65/reds/copies/{pristine,msgval,trig}; conftest strips workspace src + editable finders, purges sys.modules['resextract*'], prepends the copy and ASSERTS resextract.__file__ under the copy (IMPORTED_FROM logged, import_ok checked); copies deleted at the end",
+   "mutants": "msgval = store.py message wording changed only (same ValueError type, same accept/reject) for the 6 ValueError sites; trig = copy __init__.py wraps store.connect to install BEFORE UPDATE OF <col> ... RAISE(ABORT,'u865 rejected value') triggers on the 5 CHECK columns (same sqlite3.IntegrityError, different message) for test_store_v3.py:287; pristine = unmutated copy for the control"
+  },
+  "tracked_status": {
+   "test_store.py": "tracked",
+   "test_store_v2.py": "tracked",
+   "test_store_v3.py": "tracked",
+   "test_store_boundary.py": "untracked"
+  },
+  "diff_method": {
+   "test_store.py": "git diff -- tests/test_store.py",
+   "test_store_v2.py": "git diff -- tests/test_store_v2.py",
+   "test_store_v3.py": "git diff -- tests/test_store_v3.py",
+   "test_store_boundary.py": "diff -u state/verify/U8.65/before/test_store_boundary.py tests/test_store_boundary.py"
+  },
+  "diff_bytes": {
+   "test_store.py": 3666,
+   "test_store_v2.py": 3554,
+   "test_store_v3.py": 4180,
+   "test_store_boundary.py": 658
+  },
+  "real_store_touched": false,
+  "real_store_note": "no command opened, read or hashed state/state.sqlite; every DB was tmp_path/tempfile.mkdtemp(); grep -c 'state/state.sqlite' over the U8.65 scripts = 0",
+  "remaining_batch_after": [
+   {
+    "file": "tests/test_store_boundary.py",
+    "line": 215,
+    "disposition": "already tight (SchemaTooOldError); not a fix site"
+   }
+  ],
+  "remaining_batch_note": "all 8 entries of state/verify/U8.55/remaining_batch.json are dispositioned (7 fixed, 1 already tight); no other batch file was assessed",
+  "tool_calls_work": 19,
+  "bound": 16,
+  "overage_note": "3 over bound (19 work calls vs 16): (1) counts harness had a cwd/arg mismatch plus a false-trip 'error' substring assert; (2) the trig mutant's escaped quotes collapsed into a SyntaxError in the copy, needing one diagnose call and one fix call; (3) one call corrected this accounting. All overage is harness/accounting only: no fix was weakened, no site left unverified, no write outside the declared paths."
+ },
+ "blocker": "",
+ "next_unit_hint": "raises batch closed: 7 sites narrowed, boundary:215 already tight. A verifier should re-run state/verify/U8.65/counts.py and state/verify/U8.65/reds/reds.py (both idempotent, both rebuild their own throwaway copies) and confirm 7/7 reds.",
+ "write_paths": [
+  "tests/test_store.py",
+  "tests/test_store_v2.py",
+  "tests/test_store_v3.py",
+  "tests/test_store_boundary.py",
+  "state/verify/U8.65/**",
+  "orchestration/units/U8.65.md",
+  "orchestration/handoffs/U8.65.json"
+ ]
+}

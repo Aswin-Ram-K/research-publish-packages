@@ -490,7 +490,12 @@ def _write_artifacts(report: ClaimReport, run_dir: Path, *, prompt_version: str)
         f"- claims: {len(report.claims)}  rejected: {len(report.rejected)}  deduped: {report.deduped}",
         "",
     ]
-    if report.producer != "model":
+    # Delegated (U2.10): `_producer_of` returns *any* declared string, so
+    # `report.producer` is NOT guaranteed to be a `store.PRODUCER_VOCAB` value;
+    # the predicate below decides, which keeps the model-standing rule exact and
+    # centralised. (Qualified: `store.producer_is_model` is the only *scalar
+    # bare-literal model-standing comparison* -- not the only `"model"` spelling.)
+    if not store_mod.producer_is_model(report.producer):
         lines += [
             f"> Model path UNVERIFIED: this run was produced by `{report.producer}` "
             "(no live model call). These claims must not back a model-derived "
@@ -653,7 +658,10 @@ def decompose_candidates(
             )
             report.calls_attempted += 1
             try:
-                if producer == "model":
+                # Delegated (U2.10): `producer` is merely a declared string, not
+                # guaranteed to be in `PRODUCER_VOCAB`; model standing is decided
+                # by `store.producer_is_model`, not a local literal.
+                if store_mod.producer_is_model(producer):
                     report.model_calls += 1
                 result = client.call_json(
                     messages,

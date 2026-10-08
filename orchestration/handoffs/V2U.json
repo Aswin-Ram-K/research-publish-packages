@@ -1,0 +1,289 @@
+{
+ "unit": "V2U",
+ "status": "done",
+ "supersedes": "V2T",
+ "scope": "U2.3 schema v4",
+ "liveness_probe": "DOWN (curl exit 7, http_code 000; 2 probes max, 0 LLM calls)",
+ "recovery": {
+  "predecessor_artifacts_found": [
+   "orchestration/handoffs/V2T.json size=3893 mtime=2026-10-08T07:18:06 sha256=a74ba0cea5b8d1c81254cd485ae3f57166be9544e61eb27b277be79bdc8de741",
+   "orchestration/VERDICTS.md size=70561 (pre-append) sha256=5bd1eabfa92aa00dd2717de2cc8bc371bd96f20d396ea3400fb2be190ce7175e (NO V2T section)",
+   "state/verify/V2T/c2c3c4.py size=15950",
+   "state/verify/V2T/followup.py size=7923",
+   "state/verify/V2T/followup_result.json size=2222",
+   "state/verify/V2T/store_v3_ref.py size=54257",
+   "state/verify/V2T/v2t_empty_migrations.py size=282",
+   "state/verify/V2T/*.sqlite x8 (c2_fresh,c2_v3,c2_v3_notes,c3_v2,c3_second,c3_signal,v3_probe,c6_live_copy) all integrity_check=ok",
+   "MISSING: orchestration/units/V2T.md",
+   "MISSING: state/logs/V2T*"
+  ],
+  "checks_recorded": [
+   "C1",
+   "C2",
+   "C2b",
+   "C3",
+   "C4"
+  ],
+  "checks_missing": [
+   "C5(claimed only in closing message, no artifact)",
+   "C6(started: c6_live_copy.sqlite exists, no result)",
+   "C7",
+   "C8",
+   "C9"
+  ],
+  "store_py_sha": {
+   "expected": "f23a9916c41b4c47",
+   "actual": "f23a9916c41b4c47515982edc386c7011f1ea34d02dab9f75c1cd3da4ad75361",
+   "match": true,
+   "note": "MATCH at the time of every R1-R3 check and after both guarded restores; a sibling unit (U2.5) rewrote src/resextract/store.py at 07:23:40, AFTER my checks, so the file no longer hashes to the release sha."
+  },
+  "revert_markers": [],
+  "tests_after": 72,
+  "scratch_left": "V2T scratch intact and not mid-migration (7 sqlite at v4, v3_probe.sqlite at v3, all integrity_check=ok); no state/logs/V2T*; no units/V2T.md; c3_v2.sqlite had already been migrated to v4 in place, so it cannot serve as a v2 input",
+  "action_taken": "none"
+ },
+ "overall": "PARTIAL",
+ "overall_rationale": "Every functional claim re-derived here PASSES (both red->green guards reproduced; live migration 3->4 rows_lost 0 and idempotent; real store untouched), but two written disclosures are false ('deleted 0'; the migration-4 note basis 'no producer evidence exists in a pre-v4 row'), the 'one shared predicate' claim is only true inside store.py, and verdicts.model is a column with no writer and no reader. FAIL would misrepresent working guards; PASS would whitewash the false disclosures.",
+ "checks": [
+  {
+   "id": "R1",
+   "name": "recovery of V2T's artifacts + store.py integrity",
+   "verdict": "PARTIAL",
+   "observed": "Artifacts exist and C1/C2/C2b/C3/C4 were recorded with usable evidence, but units/V2T.md and any V2T VERDICTS section are absent and C5 has no artifact. store.py sha matches the release sha; 0 revert tell-tales; 72 tests pass; real store untouched.",
+   "evidence": "sha256sum f23a9916c41b4c47\u2026 match; 72 passed (42/13/8/9); sqlite3 ro read of state/state.sqlite"
+  },
+  {
+   "id": "R2",
+   "name": "C6 live reality check on a fresh copy",
+   "verdict": "PASS",
+   "observed": "copy 3->4; rows_lost 0 for every table (only an appended schema_version record row, 3->4); col deltas evidence{+producer} verdicts{+producer,+model}; second init_db idempotent (identical counts/cols, 0 notes appended); real store still v3 sha unchanged; git diff +153/-7 confined to store.py",
+   "evidence": "state/logs/V2U-c6-live.log, state/verify/V2U/r2_live.py"
+  },
+  {
+   "id": "R3",
+   "name": "C7 red->green guards",
+   "verdict": "PASS",
+   "observed": "(a) backfill reverted to 'model' => 'At index 0 diff: model != unknown' REPRODUCED; (b) CHECK admitting 'none' => 'Failed: DID NOT RAISE IntegrityError' REPRODUCED; restored error verbatim 'CHECK constraint failed: producer IN (model, replay, fixture, unknown)'; sha bit-identical after both restores",
+   "evidence": "state/logs/V2U-* + state/verify/V2U/store.py.pre_a|pre_b"
+  },
+  {
+   "id": "R4",
+   "name": "C8 honesty audit",
+   "verdict": "FAIL (disclosure defects; code itself sound)",
+   "observed": "'deleted 0' false (4 assert lines deleted, 7 added, net +3); note basis text false (no join, derivable replay signal ignored, direction conservative); second same-named predicate at assess/verdicts.py:121 + 10 literal ==/'!= \"model\"' comparisons; verdicts.model has no writer (assess/verdicts.py:593 passes neither model= nor producer=) and no reader; 0 production callers for the four v4 accessors CONFIRMED but store.may_back_model_claim IS called at run.py:1278",
+   "evidence": "grep + git diff a62a8fc -- tests/test_store_v3.py (4 deleted asserts) + read of assess/verdicts.py:585-600 and :115-121"
+  },
+  {
+   "id": "R5",
+   "name": "C9 containment",
+   "verdict": "PASS",
+   "observed": "Duval HEAD 6c60da5a\u2026 and 2 foreign untracked entries identical before/after; 0 outside writes; 0 .worktrees reads; real store sha/version/counts identical before and after; scratch confined to state/verify/V2U/** + state/logs/V2U*; no stray processes",
+   "evidence": "git -C Duval rev-parse HEAD + status --porcelain; sha256sum; ls state/verify/V2U"
+  }
+ ],
+ "test_counts": {
+  "store": 42,
+  "store_v2": 13,
+  "store_v3": 8,
+  "store_v4": 9,
+  "total": 72
+ },
+ "conftest_attribution": "tests/conftest.py was rewritten mid-flight by U0.16 (46 insertions: live-skip rule now item.get_closest_marker('live') instead of 'live' in item.keywords, plus a loud-skip report hook). The four store suites contain no live tests: 72 passed, 0 skipped, 0 failed \u2014 the collection change did not alter this count.",
+ "migration": {
+  "version_before": 3,
+  "version_after": 4,
+  "rows_before": {
+   "candidates": 10,
+   "claims": 0,
+   "dockets": 2,
+   "evidence": 0,
+   "lane_candidates": 10,
+   "lanes": 5,
+   "rework": 0,
+   "runs": 4,
+   "search_health": 0,
+   "targets": 0,
+   "verdicts": 0,
+   "web_sources": 0,
+   "schema_version": 3
+  },
+  "rows_after": {
+   "candidates": 10,
+   "claims": 0,
+   "dockets": 2,
+   "evidence": 0,
+   "lane_candidates": 10,
+   "lanes": 5,
+   "rework": 0,
+   "runs": 4,
+   "search_health": 0,
+   "targets": 0,
+   "verdicts": 0,
+   "web_sources": 0,
+   "schema_version": 4
+  },
+  "rows_lost": 0,
+  "all_tables_intact": true,
+  "additive_only": true,
+  "idempotent_rerun": true,
+  "schema_version_note": "schema_version is a table of applied-migration records; its row count grew 3 -> 4 (one appended record). No table lost a row.",
+  "git_diff_scope": "src/resextract/store.py only: +153/-7. The 7 deletions are in-place expansions: SCHEMA_VERSION 3->4; the one-line MIGRATIONS gains (4,_MIGRATION_4); the inline candidate.get('producer')=='model' becomes the shared _producer_is_model; the evidence and verdicts INSERT column/value lists gain the new columns. No v3 object's semantics removed."
+ },
+ "backfill": {
+  "all_unknown": true,
+  "none_became_model": true,
+  "notes_durable_no_duplicates": true,
+  "v2_reaches_v4": true,
+  "v2_evidence": "genuine v2 built from shipped store.MIGRATIONS only (no producer column) + v2/v3 row shape => version 4, claims/evidence/verdicts 1/1/1, evidence.producer 'unknown', verdicts.producer 'unknown', verdicts.model NULL",
+  "v3_notes_evidence": "genuine v3 with 1 evidence + 1 verdict => 2 notes after 1st migrate (one per row, basis present), 0 notes appended by a re-run => durable, no duplicates",
+  "basis_text_false": true,
+  "basis_text_false_detail": "the backfill SELECTs only id from each table and joins nothing, yet candidates.producer='replay' and runs.mode are derivable via verdict->claim->candidate->run; the direction is conservative (never 'model') so fail-closed still holds"
+ },
+ "check_vocabulary": {
+  "rejected": [
+   "gpt",
+   "",
+   "none",
+   "Model",
+   "MODEL",
+   null
+  ],
+  "accepted": [
+   "model",
+   "replay",
+   "fixture",
+   "unknown"
+  ],
+  "default_when_omitted": "unknown",
+  "update_path_also_closed": true,
+  "not_null_enforced": true,
+  "real_error_verbatim": "IntegrityError: CHECK constraint failed: producer IN ('model', 'replay', 'fixture', 'unknown')"
+ },
+ "accessors": {
+  "predicate_only_model": true,
+  "single_predicate_shared": true,
+  "single_predicate_shared_scope": "true inside src/resextract/store.py: exactly one == \"model\" (line 878, _producer_is_model), shared by may_back_model_claim (887), may_back_model_claim_verdict (899) and the alias verdict_may_back_model_claim (903)",
+  "duplicate_comparison_found": true,
+  "duplicate_comparison_detail": "a second, same-named predicate with a different signature lives at src/resextract/assess/verdicts.py:115-121 (def may_back_model_claim(producer: str | None) -> bool: ... return producer == MODEL_PRODUCER), and 10 literal ==/'!= \"model\"' comparisons exist in run.py (775,820), claims/decompose.py (493,656), assess/value.py (448,457,474), docket/materialize.py (543,1602), docket/assemble.py (1169), docket/manifest.py (185) \u2014 so the vocabulary can still diverge system-wide",
+  "production_callers": 0,
+  "production_callers_detail": "0 for the four new v4 accessors (only store.py, tests/, and sibling scratch state/logs/U2.5_repro.py reference them). BUT store.may_back_model_claim HAS a production call site at src/resextract/run.py:1278, so U2.3's 'same unenforced state as may_back_model_claim' framing is inaccurate."
+ },
+ "enforcement_judgement": {
+  "acceptable_to_ship_without_enforcement": false,
+  "where_it_belongs": "Not in the schema. (1) WRITE boundary: src/resextract/store.py::insert_verdict (line 1011) should require/derive producer (and model) instead of letting every production verdict silently default to 'unknown' \u2014 its only production caller, src/resextract/assess/verdicts.py:593, currently passes neither model= nor producer=. (2) PROMOTION boundary: the publish decision in src/resextract/assess/verdicts.py (is_model = may_back_model_claim(client_producer), ~line 330) must consult ONE predicate \u2014 it should import store's _producer_is_model/may_back_model_claim rather than defining a second same-named predicate with a different signature. The store CHECK should keep guarding vocabulary; it cannot enforce who may promote a claim.",
+  "implemented": false
+ },
+ "red_green": {
+  "a": "reproduced; sha ok f23a9916c41b4c47\u2026 -> f23a9916c41b4c47\u2026; FAILED tests/test_store_v4.py::test_v3_to_v4_preserves_every_row_and_backfills_unknown with E AssertionError: assert ['model'] == ['unknown'] / E At index 0 diff: 'model' != 'unknown' / tests/test_store_v4.py:185: AssertionError / 1 failed in 0.04s; PASSED 1 passed in 0.03s after restore",
+  "b": "reproduced; sha ok f23a9916c41b4c47\u2026 -> f23a9916c41b4c47\u2026; FAILED tests/test_store_v4.py::test_producer_check_rejects_out_of_vocabulary_insert_and_update with E Failed: DID NOT RAISE IntegrityError / tests/test_store_v4.py:270: Failed / 1 failed in 0.04s; PASSED 1 passed in 0.03s after restore; restored real error: CHECK constraint failed: producer IN ('model', 'replay', 'fixture', 'unknown')"
+ },
+ "live": {
+  "copy_version_after": 4,
+  "real_store_sha": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+  "real_store_version_after": 3,
+  "head_store_blob": "5d9d3ec9b0c86dc2e840ab9ba55ae1a9fe7c48f2",
+  "head_store_blob_expected_in_card": "528adc43 (MISMATCH \u2014 not the blob at HEAD; HEAD's content is v3 with SCHEMA_VERSION = 3)",
+  "v4_committed": false,
+  "verdicts_model": "dead weight \u2014 declared and defaulted, but no writer (assess/verdicts.py:593 passes no model=) and no reader (the accessors ignore it)"
+ },
+ "not_reproduced": [
+  "C5's '8 failed emptied / 8 passed restored' \u2014 no artifact identifies what was emptied, so it is not reconstructible",
+  "V2T's own v2->v4 run \u2014 its c3_v2.sqlite artifact had already been migrated to v4 in place; replaced by my own genuine-v2 derivation from shipped MIGRATIONS"
+ ],
+ "overstated": [
+  "tests/test_store_v3.py 'deleted 0' \u2014 the diff deletes 4 assert lines (== 3 x3 and \"schema v3\" in status_text) and adds 7 relaxed contract pins (net +3)",
+  "migration-4 note basis 'no producer evidence exists in a pre-v4 row' \u2014 the backfill joins nothing while a replay signal is derivable",
+  "'one shared _producer_is_model' \u2014 true only inside store.py; a second same-named predicate exists at assess/verdicts.py:121 plus 10 literal comparisons",
+  "U2.3's 'same unenforced state as may_back_model_claim' \u2014 store.may_back_model_claim IS called in production at run.py:1278"
+ ],
+ "unverified": [
+  "C5 (no artifact)",
+  "MIGRATION_NOTES_V4 per-row coverage on the REAL store \u2014 evidence and verdicts are both empty there, so 0 notes is correct but untestable on it",
+  "live end-to-end promotion behaviour of the predicate (0 LLM calls, no network, 0 evidence/verdict rows in the real store)"
+ ],
+ "corrections": [
+  {
+   "plan_assumption": "tests/test_store_v3.py: 97 -> 100 assertion lines, deleted 0",
+   "actually": "100 vs 97 net (+3) but 4 assert lines were deleted and replaced by 7 relaxed contract assertions",
+   "evidence": "git diff a62a8fc -- tests/test_store_v3.py; grep -c 'assert ' = 100 (worktree) vs 97 (a62a8fc blob)",
+   "unit": "U2.3"
+  },
+  {
+   "plan_assumption": "the committed HEAD store.py blob is 528adc43 (v3)",
+   "actually": "HEAD (a62a8fc) store.py blob is 5d9d3ec9b0c86dc2e840ab9ba55ae1a9fe7c48f2, content v3 with SCHEMA_VERSION = 3; v4 is uncommitted as expected",
+   "evidence": "git rev-parse HEAD:src/resextract/store.py; grep ^SCHEMA_VERSION on the HEAD blob",
+   "unit": "orchestrator card"
+  },
+  {
+   "plan_assumption": "state/verify/V2T/c3_v2.sqlite is a v2-shaped artifact usable to re-derive v2->v4",
+   "actually": "it is already v4 (V2T migrated it in place); a genuine v2 had to be rebuilt from the shipped MIGRATIONS",
+   "evidence": "PRAGMA MAX(version) = 4; candidates has producer",
+   "unit": "V2T"
+  },
+  {
+   "plan_assumption": "verdicts.model is a genuinely used column",
+   "actually": "no writer and no reader in production; the sole insert_verdict call site passes neither model= nor producer=",
+   "evidence": "src/resextract/assess/verdicts.py:593-600",
+   "unit": "U2.3"
+  },
+  {
+   "plan_assumption": "the verifier would find units/V2T.md and a V2T section in VERDICTS.md",
+   "actually": "both absent; only the handoff JSON and state/verify/V2T/** survived",
+   "evidence": "file listing + grep -n V2T orchestration/VERDICTS.md (empty)",
+   "unit": "V2T"
+  }
+ ],
+ "tool_calls": 30,
+ "bound": 34,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951 (identical before and after)",
+  "porcelain": "?? .ci-trunk.txt / ?? .lane-j-scratch/ (foreign, identical before and after; not touched)",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "real_store_before": {
+   "sha256": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+   "version": 3,
+   "candidates": 10,
+   "claims": 0,
+   "evidence": 0,
+   "verdicts": 0,
+   "lanes": 5,
+   "lane_candidates": 10,
+   "dockets": 2,
+   "runs": 4
+  },
+  "real_store_after": {
+   "sha256": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+   "version": 3,
+   "candidates": 10,
+   "claims": 0,
+   "evidence": 0,
+   "verdicts": 0,
+   "lanes": 5,
+   "lane_candidates": 10,
+   "dockets": 2,
+   "runs": 4
+  },
+  "store_py_sha_final": "8632cde727fcba306c638900129365cd829323243760559781b951e512500525 (post-check sibling write; verified revision was f23a9916c41b4c47\u2026)",
+  "stray_processes": 0,
+  "scratch": "state/verify/V2U/{c6_live_copy.sqlite,c3_v2_from_V2T.sqlite,r2_genuine_v2.sqlite,r2_genuine_v3.sqlite,r2_live.py,r2_v2v3.py,store.py.pre_a,store.py.pre_b} + state/logs/V2U-{c6-live,v2v3}.log"
+ },
+ "blocker": "",
+ "next_unit_hint": "Schema v4 is functionally sound and V2T left no revert; the two red->green guards are independently reproduced. Before checkpoint 4: (1) fix the false 'deleted 0' claim in U2.3's report and the migration-4 note basis text; (2) either wire verdicts.model (writer + reader) or drop it; (3) close the predicate divergence by making assess/verdicts.py import store's _producer_is_model instead of defining a second may_back_model_claim, and enforce producer at insert_verdict + the assess publish gate; (4) commit v4 (working tree != HEAD) and correct the HEAD blob hash in the card to 5d9d3ec9.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V2U.md",
+  "orchestration/handoffs/V2U.json",
+  "state/logs/V2U*",
+  "state/verify/V2U/**"
+ ],
+ "post_verification_change": {
+  "when": "07:23:40 (after my R1-R5 checks; my last write was the sha-verified R3 restore)",
+  "what": "sibling unit U2.5 rewrote src/resextract/store.py: adds MODEL_PRODUCER, a single producer_is_model(), SchemaTooOldError, and migration-vocabulary comments",
+  "sha_after": "8632cde727fcba306c638900129365cd829323243760559781b951e512500525",
+  "not_a_revert": true,
+  "evidence": "SCHEMA_VERSION still 4; 0 revert markers; re-ran the four suites on the new revision => 72 passed; git diff HEAD -- store.py grew +153/-7 -> +394/-8",
+  "effect_on_this_verdict": "None on the U2.3 revision verified (f23a9916c41b4c47\u2026), but the working tree no longer matches the release sha and the diff is no longer scoped to the v4 addition alone \u2014 v4 and U2.5's schema-guard work are now bundled, so checkpoint 4 must be taken from a settled tree.",
+  "sibling_claim_check": "U2.5's in-file comment claims assess.verdicts and assess.value now import store's MODEL_PRODUCER object. NOT TRUE at 07:24: assess/verdicts.py:87 still defines its own MODEL_PRODUCER = \"model\", :121 still returns producer == MODEL_PRODUCER against that local, and assess/value.py:448/457/474 still compare == \"model\" literals. The divergence I flagged in R4 is therefore STILL open (assess/** belongs to sibling V4B and may be mid-edit)."
+ }
+}

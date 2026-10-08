@@ -1,0 +1,217 @@
+{
+ "unit": "U2.6",
+ "status": "done",
+ "supersedes": "U2.5",
+ "artifacts": [
+  "src/resextract/store.py",
+  "src/resextract/assess/verdicts.py",
+  "src/resextract/assess/value.py",
+  "tests/test_store_boundary.py",
+  "tests/test_assess_verdicts.py",
+  "state/backups/U2.6-claims-store-copy.sqlite",
+  "state/backups/U2.6-good-store.py",
+  "state/backups/U2.6-good-verdicts.py",
+  "state/claims/store-copy-v4.sqlite",
+  "state/logs/U2.6-assess-v4/report.json",
+  "orchestration/units/U2.6.md",
+  "orchestration/handoffs/U2.6.json"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "store": 42,
+   "store_v2": 13,
+   "store_v3": 8,
+   "store_v4": 9,
+   "assess_verdicts": 41,
+   "assess_evidence": 14,
+   "assess_value": 11,
+   "store_boundary": 9,
+   "total": 147
+  },
+  "inventory": {
+   "store_py_sha_start": "8632cde727fcba306c638900129365cd829323243760559781b951e512500525",
+   "store_py_sha_final": "f79ba0aba95d0c0c58a3b4fcdf38abd8e7561b7267f7d47f25b47d00dabf63d9",
+   "verdicts_py_sha_final": "754101b895f305458ae49eca5547c8034253e3e54a6377c0c51ba0d8164b98ea",
+   "value_py_sha_final": "3e6f72ef7da4c8bda2a111ed8478475bfdf99d8902be1d35d6072af317bb980f",
+   "u25_added": [
+    "MODEL_PRODUCER",
+    "producer_is_model",
+    "SchemaTooOldError",
+    "assert_writable_schema",
+    "_require_writable_schema",
+    "migrate_copy",
+    "MIGRATION_NOTES_V4",
+    "evidence_by_producer",
+    "verdicts_by_producer",
+    "may_back_model_claim_verdict",
+    "model_produced_verdicts"
+   ],
+   "schema_too_old_raised": true,
+   "schema_too_old_callers_u25": [
+    "store.insert_evidence:1198",
+    "store.insert_verdict:1263"
+   ],
+   "run_scoped_migrate": "present-but-unwired by U2.5 (migrate_copy had 0 callers); U2.6 wires it via assess_claims(migrate_store=True)",
+   "hint_bypass_still_open": true,
+   "comment_true": false,
+   "item_status_u25": {
+    "item1_boundary": "partial (typed error raised, but swallowed by the per-claim except into claims_assessed=0; migrate unwired)",
+    "item2_hint": "absent (producer_hint overrode the client declaration entirely)",
+    "item3_predicate": "absent (duplicate predicate + literal comparisons remained; comment asserted a fix that did not exist)"
+   }
+  },
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  => 000",
+   "git diff -U0 -- tests/test_store_v3.py  => 4 assert lines deleted, 7 assert pins added",
+   ".venv/bin/python -m pytest <8 allowed suites> -q  => 147 passed"
+  ]
+ },
+ "item1_boundary": {
+  "reproduced_error": "pre-fix: sqlite3.OperationalError: table verdicts has no column named producer (v3 store, claims_assessed 0)",
+  "typed_error": "store.SchemaTooOldError (store.py:621 via assert_writable_schema; also raised at assess_claims run start and re-raised out of the per-claim isolation)",
+  "typed_error_names_migration": "store.init_db(path) to migrate in place, or store.migrate_copy(path, dst) (backs the source up first)",
+  "migrate_idempotent": true,
+  "migrate_never_writes_source": true,
+  "live_reverify": {
+   "db": "state/claims/store-copy.sqlite (schema v3, 9 claims)",
+   "typed_error": "SchemaTooOldError found v3 required v4",
+   "claims_assessed": 9,
+   "by_verdict": {
+    "CONFIRMS": 0,
+    "EXTENDS": 0,
+    "CONTRADICTS": 0,
+    "UNVERIFIED": 9
+   },
+   "verdict_rows_written": 9,
+   "producer": "fixture",
+   "producer_distribution": {
+    "fixture": 9
+   },
+   "operational_error": false,
+   "migration": {
+    "version_before": 3,
+    "version_after": 4,
+    "rows_lost": 0,
+    "src_sha_unchanged": true,
+    "dst": "state/claims/store-copy-v4.sqlite"
+   },
+   "note": "stub gather (no live LLM, no network): the deterministic path caps at UNVERIFIED; the point proved is the boundary, not the verdict value"
+  }
+ },
+ "item2_hint": {
+  "semantics": "The client's own declaration is authoritative; producer_hint may never UPGRADE standing (it is ignored when it would grant model standing the client did not declare, and may otherwise only deny/downgrade).",
+  "replay_with_model_hint": "capped (declaring-replay client's replayed CONFIRMS => EXTENDS; client_producer stays replay)",
+  "undeclared_with_hint": "capped (client_producer 'unknown'; positive verdict => EXTENDS)",
+  "real_model_with_hint": "CONFIRMS (unchanged)",
+  "vocab_hint_error": true,
+  "also_fixed": "assess/value.py _client_producer now delegates to the verdicts one (same function object), so the rule holds on both halves of stage 5"
+ },
+ "item3_predicate": {
+  "single_definition": "store.producer_is_model (also re-exported by assess.verdicts as may_back_model_claim)",
+  "also_single_vocabulary": "store.PRODUCER_VOCAB / store.MODEL_PRODUCER imported by both assess.verdicts and assess.value",
+  "duplicate_removed": true,
+  "literal_comparisons_removed": 5,
+  "duplicate_constant_definitions_removed": 2,
+  "same_object": true,
+  "same_object_proof": "asserts in tests/test_store_boundary.py::test_single_vocabulary_and_predicate_by_object_identity: V.may_back_model_claim is store.producer_is_model; V.PRODUCER_VOCAB is store.PRODUCER_VOCAB; W.PRODUCER_VOCAB is store.PRODUCER_VOCAB",
+  "comment_made_true": true,
+  "comment": "store.py:45-51 and producer_is_model's docstring now assert what the identity test proves"
+ },
+ "verdicts_model": {
+  "decision": "wired",
+  "justification": "A model-produced verdict with no model id is the same provenance loss this build keeps finding; writing it is cheap and the column is only meaningful on a model row.",
+  "writer": "assess/verdicts.py assess_claims now passes producer=_verdict_db_producer(verdict) and model=client.model ONLY when producer_is_model(db_producer)",
+  "guard": "store.insert_verdict raises ValueError if model is given with a non-model producer (contradictory provenance refused)",
+  "test": "tests/test_store_boundary.py::test_model_id_recorded_only_for_a_model_producer"
+ },
+ "repairs": {
+  "test_store_v3": {
+   "claim_was": "deleted 0",
+   "actually": "4 assertion lines deleted, 7 assertion pins added (net +3 assertions; 16 added / 4 deleted non-context lines)",
+   "deleted_lines": [
+    "assert store.schema_version(con) == 3",
+    "assert store.SCHEMA_VERSION == 3",
+    "assert summary[\"schema_version\"] == 3",
+    "assert \"schema v3\" in store.status_text(con)"
+   ],
+   "substantive_deletions": 0,
+   "restored": 0,
+   "accurate_counts": "deleted 4 / added 16 lines; all 4 deletions were version-literal pins, each replaced by an equal-or-stricter contract pin (the added `== store.SCHEMA_VERSION` is a stronger invariant than the literal it replaced)",
+   "judgement": "nothing substantive was deleted; no re-tightening performed"
+  },
+  "migration_note": {
+   "old_basis": "no producer evidence exists in a pre-v4 row",
+   "corrected_basis": "the schema-v4 backfill joins nothing (it reads no runs/REPLAY-prefix/report.json/verdicts.jsonl), so it refuses to infer a producer; 'unknown' is the conservative, fail-closed result",
+   "fail_closed_unchanged": true,
+   "test": "tests/test_store_boundary.py::test_migration4_note_basis_is_join_nothing_not_no_evidence"
+  },
+  "caller_picture": {
+   "may_back_model_claim": "run.py:1278 (real production call: [c for c in ctx.all_candidates if store.may_back_model_claim(c)]; cross-checked at run.py:1289) -- ENFORCED, so the 'same unenforced state' framing is INACCURATE",
+   "v4_accessors_production_callers": 0,
+   "v4_accessors": {
+    "evidence_by_producer": 0,
+    "verdicts_by_producer": 0,
+    "may_back_model_claim_verdict": 0,
+    "model_produced_verdicts": 0
+   },
+   "genuinely_unenforced": "the four v4 accessors are test-only in production",
+   "model_produced_candidates": "run.py:1286 (has a caller)",
+   "producer_is_model": "enforced on the publish gate (assess/verdicts.py:339 via may_back_model_claim) and the verdict writer (assess/verdicts.py:648,919,923)"
+  },
+  "correction_note": "no doc outside U2.6's write paths was edited; this correction lives in this handoff"
+ },
+ "enforcement": {
+  "implemented": true,
+  "where": [
+   "store.insert_verdict (producer required in vocabulary; model id refused unless producer is model)",
+   "assess publish gate + writer (may_back_model_claim IS store.producer_is_model; producer derived by _verdict_db_producer; model id only for a model producer)"
+  ],
+  "or_pending": "nothing pending from the verifier's guidance"
+ },
+ "red_green": {
+  "a": "store.insert_verdict boundary: revert _require_writable_schema => 1 failed; restored => 1 passed",
+  "b": "producer_hint upgrade: revert _client_producer to hint-first => 1 failed; restored => 1 passed"
+ },
+ "real_store_untouched": {
+  "sha": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+  "version": 3,
+  "verdicts_columns": [
+   "id",
+   "claim_id",
+   "verdict",
+   "rationale",
+   "evidence_ids_json",
+   "checked_at"
+  ],
+  "rows_identical": true,
+  "method": "sha256 before and after, plus schema_version max == 3"
+ },
+ "claims_copy_untouched": {
+  "sha": "8f451fe022be1d3f0bd78edca1ee2af48b875ff1036821633ee7b083d3611ddf",
+  "backup": "state/backups/U2.6-claims-store-copy.sqlite",
+  "sha_equal": true
+ },
+ "follow_ups_not_done": [
+  "migrate the REAL state.sqlite (a later unit, after verification settles)",
+  "wire the four v4 accessors (evidence_by_producer / verdicts_by_producer / may_back_model_claim_verdict / model_produced_verdicts) into a production reader -- they still have 0 production callers",
+  "a caller that passes migrate_store=True in run.py/cli.py (U6.7 owns cli.py; assess_claims now supports it)"
+ ],
+ "tool_calls": 34,
+ "bound": 34,
+ "blocker": "",
+ "next_unit_hint": "Re-verify U2.6: (1) v3 insert_verdict => SchemaTooOldError and assess_claims(migrate_store=True) => claims_assessed 9 on state/claims/store-copy.sqlite; (2) producer_hint never upgrades; (3) V.may_back_model_claim is store.producer_is_model by identity. Then a later unit may migrate the real state.sqlite (sha 459e16cc..., v3) AFTER verification settles; and should wire the four v4 accessors.",
+ "write_paths": [
+  "src/resextract/store.py",
+  "src/resextract/assess/verdicts.py",
+  "src/resextract/assess/value.py",
+  "tests/test_store_v3.py",
+  "tests/test_store_v4.py",
+  "tests/test_assess_verdicts.py",
+  "tests/test_store_boundary.py",
+  "state/backups/**",
+  "state/logs/U2.6*",
+  "orchestration/units/U2.6.md",
+  "orchestration/handoffs/U2.6.json"
+ ]
+}

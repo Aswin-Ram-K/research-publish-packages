@@ -1,0 +1,224 @@
+{
+  "unit": "U5.23",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/docket/manifest.py",
+    "orchestration/units/U5.23.md",
+    "orchestration/handoffs/U5.23.json",
+    "state/verify/U5.23/manifest_before.py"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "consumer_sweep": [
+      {
+        "file": "src/resextract/docket/manifest.py",
+        "line": 185,
+        "does": "writes",
+        "verdict": "ok",
+        "note": "the field declaration itself; comment/docstring changed, no runtime semantics"
+      },
+      {
+        "file": "src/resextract/docket/materialize.py",
+        "line": 1660,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "unpacks (verdict, reason) from _claim_standing; the cap decision is made inside _claim_standing from verdict+producer, never from the reason"
+      },
+      {
+        "file": "src/resextract/docket/materialize.py",
+        "line": 1663,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "preserve-and-append: existing reason is kept, declaration note conjoined"
+      },
+      {
+        "file": "src/resextract/docket/materialize.py",
+        "line": 1690,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "preserve-and-append of the F2 divergence note (the U5.19 writer)"
+      },
+      {
+        "file": "src/resextract/docket/materialize.py",
+        "line": 1703,
+        "does": "writes",
+        "verdict": "ok",
+        "note": "emits verdict_reason into the claim dict"
+      },
+      {
+        "file": "src/resextract/docket/materialize.py",
+        "line": 1572,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "docstring reference only"
+      },
+      {
+        "file": "src/resextract/docket/assemble.py",
+        "line": 1134,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "THE ACTUAL CAP GATE -- keys on claim.verdict==CONFIRMS and store.producer_is_model(claim.producer); verdict_reason is not consulted"
+      },
+      {
+        "file": "src/resextract/docket/assemble.py",
+        "line": 1141,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "truthiness, but used to PRESERVE-AND-APPEND not to classify: at this point claim.verdict is still CONFIRMS, so any existing reason can only be a divergence note; conjoining it with the cap reason keeps both statements. Correct, and already overload-tolerant."
+      },
+      {
+        "file": "src/resextract/docket/assemble.py",
+        "line": 1142,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "string concat of the two statements"
+      },
+      {
+        "file": "src/resextract/docket/assemble.py",
+        "line": 1144,
+        "does": "writes",
+        "verdict": "ok",
+        "note": "model_copy sets verdict EXTENDS + conjoined reason"
+      },
+      {
+        "file": "src/resextract/docket/assemble.py",
+        "line": 2009,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "renders the value verbatim into CLAIMS.md"
+      },
+      {
+        "file": "src/resextract/docket/assemble.py",
+        "line": 2010,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "truthiness = 'is there anything to quote' -- a render-only presence check, not a downgrade test"
+      },
+      {
+        "file": "src/resextract/docket/assemble.py",
+        "line": 1127,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "docstring: calls it 'the field the manifest schema documents for exactly this' -- accurate for the cap case; wording is mildly stale now that the schema documents two meanings (patch handed up, file owned by U5.22)"
+      },
+      {
+        "file": "tests/test_docket_assemble.py",
+        "line": 593,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "'is not None' immediately corroborated by a content assert at :594; a cap fixture"
+      },
+      {
+        "file": "tests/test_docket_assemble.py",
+        "line": 615,
+        "does": "writes",
+        "verdict": "ok",
+        "note": "sets the key to None in a raw dict fixture"
+      },
+      {
+        "file": "tests/test_docket_provenance.py",
+        "line": 510,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "'is not None' + content asserts at :511-512"
+      },
+      {
+        "file": "tests/test_docket_provenance.py",
+        "line": 575,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "asserts None on a non-cap path"
+      },
+      {
+        "file": "tests/test_docket_provenance.py",
+        "line": 587,
+        "does": "reads-text",
+        "verdict": "ok"
+      },
+      {
+        "file": "tests/test_docket_provenance.py",
+        "line": 975,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "the U5.19 F2 guard: 'is not None' then 'mined by'/'assessing' content asserts; verdict stays CONFIRMS at :974, i.e. the test already encodes that non-None is not a downgrade"
+      },
+      {
+        "file": "tests/test_docket_reassembly.py",
+        "line": 1385,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "fixture reason string asserting the CLAIMS.md render frame"
+      },
+      {
+        "file": "tests/test_docket_reassembly.py",
+        "line": 1373,
+        "does": "reads-text",
+        "verdict": "ok",
+        "note": "test name/site for the render frame"
+      }
+    ],
+    "live_defect_found": false,
+    "defect_detail": "NONE. No consumer anywhere in src/ or tests/ keys on `verdict_reason is not None` to decide that a claim was downgraded. Every truthiness test of the field is either (a) preserve-and-append (materialize:1663,1690; assemble:1141 -- each keeps an existing note and conjoins the new one) or (b) render-only ('is there anything to quote': assemble:2010). The cap decision itself is taken from `verdict` + `producer` at assemble:1134 and inside materialize._claim_standing:1609-1644 -- never from the reason. No template/static/JS/HTML consumer exists (a repo-wide sweep over *.html/*.js/*.ts/*.j2/*.md/*.json/*.toml found only prose in docs/ and orchestration/). V5.21's finding is therefore a DOCUMENTATION defect, not a live behavioural one. Bonus: assemble:1141 is already overload-tolerant -- it runs while claim.verdict is still CONFIRMS, so it can only be conjoining a divergence note.",
+    "docstring": {
+      "line_reported": "155-163",
+      "actual_line": "151-185 (field at 185)",
+      "before": "    #: non-``None`` only when a *declared* standing was capped below\n    #: ``CONFIRMS`` because the backing producer was not a model.  This is how\n    #: the downgrade stays visible instead of silent: the reason travels with\n    #: the claim.  The cap is applied when a claim is **materialized**, never\n    #: when a manifest is **read** -- a pre-existing manifest whose claim says\n    #: ``CONFIRMS`` still loads (that is what ``_smoke`` witnesses); it is\n    #: re-materialized once, by a later unit, after the render fix.\n    verdict_reason: str | None = None",
+      "after": "    #: a free-text note about this claim's *standing* or its *attribution*;\n    #: ``None`` when there is nothing to record.  It carries **two distinct\n    #: meanings** (U5.19 added the second), so -- stated plainly -- since U5.19\n    #: a non-``None`` value does **not** imply that this claim was downgraded:\n    #:\n    #: 1. **cap reason** -- a *declared* standing was capped below ``CONFIRMS``\n    #:    because the backing producer was not a model.  This is how the\n    #:    downgrade stays visible instead of silent: the reason travels with\n    #:    the claim, and ``verdict`` reads ``EXTENDS`` beside it.\n    #: 2. **provenance-divergence note** (U5.19, F2) -- ``producer`` names the\n    #:    *assessing* authority (a model verdict) while the material was mined\n    #:    by a different producer, so the mining provenance is recorded here\n    #:    beside it.  This is **attribution, not permission**: ``verdict`` may\n    #:    legitimately remain ``CONFIRMS``.\n    #:\n    #: The two are **not mutually exclusive**: each writer *appends* rather\n    #: than overwrites (``materialize._claim_for``, and\n    #: ``assemble._cap_uncapped_claims``, which preserves an existing note when\n    #: it caps), so one field can carry both statements ``\"; \"``-joined.  A\n    #: consumer must therefore not read ``verdict_reason is not None`` as \"this\n    #: claim was downgraded\" -- the authoritative downgrade signal is\n    #: ``verdict`` itself.  Nor is the value structured: a clause may itself\n    #: contain ``\"; \"`` (the divergence note does, before ``the material was\n    #: mined by``), so splitting on ``\"; \"`` does **not** reliably recover\n    #: clauses.  What *is* reliable is substring detection of the known\n    #: writers: ``\"capped at EXTENDS\"`` is emitted by every cap site and by\n    #: nothing else, and ``\"is the *assessing* producer\"`` by the divergence\n    #: site alone.\n    #:\n    #: Invariant (unchanged): the cap is applied when a claim is\n    #: **materialized**, never when a manifest is **read** -- a pre-existing\n    #: manifest whose claim says ``CONFIRMS`` still loads (that is what\n    #: ``_smoke`` witnesses); it is re-materialized once, by a later unit,\n    #: after the render fix.\n    verdict_reason: str | None = None",
+      "states_non_none_is_not_a_downgrade": true,
+      "reliable_discriminator": "exists: (1) the substring 'capped at EXTENDS' appears in verdict_reason iff a cap contributed -- verified emitted by ALL FOUR cap writers (materialize.py:1631, materialize.py:1641, assemble.py:1138, assess/verdicts.py:404) and by nothing else; (2) the substring 'is the *assessing* producer' appears iff the U5.19 F2 divergence note contributed -- verified emitted by materialize.py:1686 alone. NOT reliable: (a) `verdict_reason is not None` as a downgrade marker (false after U5.19 -- F2 writes a note on a claim that stays CONFIRMS); (b) splitting on '; ' to recover clauses, because the divergence clause itself contains '; ' internally ('(verdict 7); the material was mined by'), so a two-clause reason splits into three."
+    },
+    "behaviour_changed": false,
+    "manifest_sha_before": "2099c15e39a3dae7c41815d0b2350265583a3331f12d83c13ce4412065964450",
+    "manifest_sha_after": "0826f398add9f1c9b9831fc13be4cc1081b52c469c785cd35ded165382960b4c",
+    "diff_is_comments_only": true,
+    "diff_proof": "Reconstructed the pre-edit file by substituting the recorded old comment block: its sha256 reproduces 2099c15e39a3dae7c41815d0b2350265583a3331f12d83c13ce4412065964450 exactly, and ast.dump(ast.parse(before)) == ast.dump(ast.parse(after)) is True. `#:` lines are comments, absent from the AST, so AST equality PROVES zero behavioural change. SCHEMA is still 'resextract/docket/1' (not bumped).",
+    "tests_run": {
+      "ran": "none (docstring-only)",
+      "reason": "The change is a `#:` comment block; ASTs are byte-identical (proved above), so no test can observe it. Running the docket suite would also collide with U5.22, which owns the five docket test files. Instead I ran a read-only load check on the three real manifests."
+    },
+    "real_dockets_unchanged": {
+      "replay": "9b6a577e1402fe41841e153a485e4b044a945a5f8bf05a59c2268df6086cd130",
+      "u55": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+      "smoke": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+      "verify_ok": true,
+      "detail": "manifest.validate_manifest(...) -> problems=[] for all three; each validates then dumps_manifest round-trips through DocketManifest.model_validate. `extra='forbid'` still rejects a typo key (ValidationError). verify_docket was NOT invoked: it lives in docket/assemble.py, owned by U5.22. Shas are byte-identical, so nothing was re-rendered."
+    },
+    "store_untouched": {
+      "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+      "version": 4,
+      "rows_identical": true,
+      "used_immutable": false,
+      "detail": "sha256 unchanged across the unit and the -wal sidecar is 0 bytes (quiescent). No SQLite connection was opened at all, so no WAL hazard and no immutable=1."
+    },
+    "duval_untouched": {
+      "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "?? .ci-trunk.txt\\n?? .lane-j-scratch/",
+      "detail": "HEAD and porcelain byte-identical before and after; the two untracked entries are PRE-EXISTING and not mine. .worktrees/ was never read."
+    },
+    "follow_ups": {
+      "schema_typed_field": "RECOMMEND a typed field, as a deliberate schema revision -- but NOT here. Proposal: `assessed_by: str` + `mined_by: str` (or a nested `provenance: {assessing, mining}` object), leaving `verdict_reason` as cap-reason text only (ideally renamed `cap_reason`). Argument: the discriminator today is SUBSTRING-MATCHING ENGLISH PROSE, which is a private implementation detail of two functions, not a contract -- and clause-parsing is impossible because a clause contains '; '. A typed field makes a consumer that must distinguish the two cases able to do so structurally. What it breaks: (a) `extra='forbid'` means a REQUIRED new field makes every existing manifest invalid -- the three real dockets (9b6a577e/445032f7/41ec711a) and every pre-U5.13 manifest would fail to load, and `_smoke` is precisely the backward-compat witness that tests this; so it must be additive-optional with a default (`assessed_by='unknown'`, `mined_by='unknown'`); (b) the schema string `resextract/docket/1` MUST NOT be bumped in this unit, so a typed field is only honest alongside a later deliberate bump to `/2` plus a reader that accepts both; (c) the writers and renderer live in docket/materialize.py and docket/assemble.py, and the tests in the five docket test files -- all outside this unit's write paths. Because a docstring cannot fix the overload and the typed field cannot be landed without a schema revision, this unit fixes the documentation and hands the type change up.",
+      "patch_text_for_other_files": "(1) docket/assemble.py is owned by U5.22 -- the stale-ish docstring at :1127-1128. Verbatim patch:\n@@ -1126,8 +1126,10 @@\n     claim, on ``Claim.verdict_reason`` -- the field the manifest schema\n-documents for exactly this, and the one ``CLAIMS.md`` renders verbatim.\n+documents for a cap reason, and the one ``CLAIMS.md`` renders verbatim.\n+That field now also carries the U5.19 provenance-divergence note, which\n+this function *preserves* when it appends its own reason below (it runs\n+while ``claim.verdict`` is still ``CONFIRMS``, so an existing note cannot\n+itself be a cap reason).\nThe same qualifier applies to the comment at :1241-1243.\n\n(2) A docket test for U5.22 to land in tests/test_docket_provenance.py, next to the F2 guard at :947. Verbatim:\n\ndef test_guard_u523_non_none_verdict_reason_is_not_a_downgrade_marker(tmp_path):\n    \"\"\"U5.23: ``verdict_reason is not None`` is NOT a downgrade marker.\n\n    The F2 note is written on a claim that legitimately stands at ``CONFIRMS``\n    (a model verdict blessed replay-mined material), so a consumer must key on\n    ``verdict``, not on the reason's presence.  Pins both meanings and the\n    reliable discriminators.\n    \"\"\"\n    mixed_dir = tmp_path / \"mixed\"\n    mixed_dir.mkdir()\n    db = _store_with_assessed_member(\n        mixed_dir,\n        state=\"confirmed\",\n        producer=\"replay\",\n        verdict=\"CONFIRMS\",\n        verdict_producer=\"model\",\n    )\n    result, claims = _materialize_from_store(mixed_dir, db)\n    reason = claims[0][\"verdict_reason\"]\n    assert reason is not None                      # present ...\n    assert claims[0][\"verdict\"] == \"CONFIRMS\"      # ... yet NOT a downgrade\n    assert \"capped at EXTENDS\" not in reason       # cap discriminator\n    assert \"is the *assessing* producer\" in reason # F2 discriminator\n    assert result.manifest.generated_by.producer == \"replay\"\n"
+    },
+    "tool_calls": 15,
+    "bound": 18,
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  # 000",
+      "sha256sum src/resextract/docket/manifest.py dockets/duval/*/MANIFEST.json dockets/_smoke/MANIFEST.json state/state.sqlite",
+      "grep -rn verdict_reason src/ tests/",
+      "grep -rn verdict_reason --include=*.html --include=*.js --include=*.ts --include=*.j2 --include=*.md --include=*.json .  # prose only",
+      "grep -rn 'capped at EXTENDS' src/ ; grep -rn assessing src/",
+      ".venv/bin/python -c 'ast.dump(ast.parse(before)) == ast.dump(ast.parse(after))'  # True",
+      ".venv/bin/python -c 'manifest.validate_manifest(...) for replay/u55/_smoke'  # problems=[] roundtrip=ok",
+      "find src tests -name __pycache__ -prune -exec rm -rf {} +  # 0 remaining"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Consumer sweep found NO truthiness-as-downgrade site: this is documentation-only, and no code fix is needed or made. The residual risk is that the only way a consumer can distinguish a cap from an F2 divergence note is substring-matching two English phrases ('capped at EXTENDS', 'is the *assessing* producer') -- a private implementation detail, not a contract. Hand up the typed provenance fields (assessed_by/mined_by) as a deliberate resextract/docket/2 schema revision with additive-optional defaults so _smoke and the three real manifests keep loading, and land the verbatim docket test text above in U5.22's test file.",
+  "write_paths": [
+    "src/resextract/docket/manifest.py",
+    "state/verify/U5.23/",
+    "state/logs/U5.23*",
+    "orchestration/units/U5.23.md",
+    "orchestration/handoffs/U5.23.json"
+  ]
+}

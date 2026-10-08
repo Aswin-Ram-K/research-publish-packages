@@ -1,0 +1,143 @@
+{
+ "unit": "U6.18",
+ "status": "partial",
+ "artifacts": [
+  "src/resextract/dashboard/api.py",
+  "tests/test_cli.py",
+  "orchestration/units/U6.18.md",
+  "state/logs/U6.18-api.bak",
+  "state/logs/U6.18-test_cli.bak"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "facts": {
+   "store_journal_mode": "wal",
+   "established_from": "header",
+   "established_detail": "header bytes 18/19 = 2/2 (WAL), confirmed with PRAGMA journal_mode on a copy at state/logs/U6.18-scratch/probe.sqlite; user_version=0 is NOT evidence, schema_version table = 4 rows",
+   "read_only_paths": [
+    "api.py:438 _connect (mode=ro open at :444)",
+    "_bounded_sections",
+    "runs_summary",
+    "_search_failures",
+    "reasoning_trace",
+    "_journal_rejections",
+    "findings",
+    "web_research_health",
+    "doctor_snapshot",
+    "refresh_backlog",
+    "status"
+   ],
+   "read_only_evidence": "every statement reachable from _connect is a SELECT; grep INSERT|UPDATE|DELETE|CREATE|DROP|PRAGMA over src/resextract/dashboard/ returns nothing",
+   "writing_paths": [
+    "src/resextract/store.py::connect (PRAGMA journal_mode=WAL + every INSERT)",
+    "src/resextract/run.py pipeline writes the same store"
+   ],
+   "concurrent_writes_in_normal_operation": true
+  },
+  "reproduced_side_effect": {
+   "created": [
+    "state/state.sqlite-wal",
+    "state/state.sqlite-shm"
+   ],
+   "sizes": [
+    0,
+    32768
+   ],
+   "mtime": "wal 2026-10-08 08:48:43.578899285 / shm 2026-10-08 08:48:43.579631691; real store mtime stayed 2026-10-08 07:47:56.009682763 and sha stayed 40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3; both sidecars removed afterwards"
+  },
+  "decision": {
+   "chosen": "documented-non-fix",
+   "justification": "The store is WAL and concurrently written, so a correct reader needs the -shm/-wal shared memory; measured on copies: mode=ro sees all 1000 committed WAL rows, mode=ro&immutable=1 answers 'no such table: t' (never reads the WAL) and mode=ro&nolock=1 cannot open the file at all. Nothing correctness-preserving suppresses the sidecars, so option (d) records them at the boundary instead of trading them for silent staleness/torn reads. While there, the non-URI fallback in _connect (api.py:451) was a read-WRITE open and now carries PRAGMA query_only=ON.",
+   "gives_up": "nothing correctness-wise; the two sidecars remain as the documented cost of a correct WAL read (not harmless for containment claims, hence recorded not ignored)",
+   "immutable_safe_here": false
+  },
+  "item2_isolation": {
+   "mechanism": "env",
+   "covers_all_constructions_in_file": true,
+   "env_restored_in_teardown": true,
+   "asserted_on": "app.state.dashboard (store_source/store_path/store_resolution) + DataLayer.resolution()",
+   "assertions_added": 6
+  },
+  "tests": {
+   "cli_before": 42,
+   "cli_after": 46,
+   "dashboard_after": 71,
+   "auth_after": 15,
+   "deletions": 0,
+   "existing_assertions_changed": []
+  },
+  "red_green": {
+   "a": "item2 isolation guard: RED (redirect disabled) E AssertionError: default / E assert 'default' == 'env', 1 failed; GREEN 2 passed; test_cli.py restored bit-identical sha 1beb687193187aca1060f66e526ddd071ab7c80c9853c4a630f614d1921032cd",
+   "b": "item1 read-only fallback guard: RED (query_only dropped) E assert 0 == 1, 1 failed; GREEN 2 passed; api.py restored bit-identical sha d5df9b08505189eceb0cb89021ae9b21685bf96dfb30dbeb07a30ef5ad24a511; full __pycache__ purge before every run"
+  },
+  "proof": {
+   "cli_alone_sidecars_after": 0,
+   "store_sha_unchanged": true,
+   "store_mtime_unchanged": true
+  },
+  "store_untouched": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows_identical": true,
+   "sidecars_left": 0,
+   "row_counts": {
+    "runs": 4,
+    "targets": 0,
+    "candidates": 10,
+    "claims": 0,
+    "evidence": 0,
+    "verdicts": 0,
+    "lanes": 5,
+    "dockets": 2,
+    "web_sources": 0,
+    "search_health": 0,
+    "rework": 0,
+    "lane_candidates": 10,
+    "schema_version": 4
+   }
+  },
+  "duval_untouched": {
+   "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/  (both pre-existing foreign-actor entries, not U6.18)"
+  },
+  "other_unisolated_callers": [
+   "src/resextract/cli.py::serve -> create_app(store_path=None)",
+   "src/resextract/dashboard/__main__.py::main -> create_app(store_path=None)",
+   "src/resextract/dashboard/app.py::create_app (store_path defaults to None)",
+   "stray untracked file src/resextract/dashboard/api.py.V6C-backup-B2 (not created by U6.18)"
+  ],
+  "recommendation_if_partial": "Writer-side, not applied: switching state/state.sqlite to journal_mode=DELETE removes reader -wal/-shm entirely (run.py already does exactly this for run-scoped copies and documents the rationale). Cost: DELETE takes an exclusive lock per write, so the pipeline loses the WAL's concurrent reader/writer capability and a dashboard read can block a running pipeline write. That is a store.py/run.py decision for a dedicated unit with a concurrency test; recommended only if the pipeline and dashboard must not run simultaneously, otherwise keep WAL and accept the documented sidecars.",
+  "tool_calls": 26,
+  "bound": 24,
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w %{http_code} http://192.168.2.168:8012/v1/models",
+   "sha256sum state/state.sqlite; stat -c %y state/state.sqlite",
+   "ls -la state/state.sqlite*",
+   "python3 header-bytes probe (bytes 18/19) on the real file + PRAGMA journal_mode on a copy",
+   "python3 WAL fixture on throwaway copies: mode=ro vs immutable=1 vs nolock=1",
+   "grep -rn INSERT|UPDATE|DELETE|CREATE|PRAGMA src/resextract/dashboard/",
+   "pytest tests/test_cli.py -q  (alone, forensics before/after)",
+   "pytest tests/test_dashboard.py -q",
+   "pytest tests/test_dashboard_auth.py -q",
+   "find src tests -name __pycache__ -type d -prune -exec rm -rf {} +",
+   "scripted red/green for both guards with bit-identical restores and sha256 verification",
+   "git -C /home/zer0null/Duval rev-parse HEAD; git -C /home/zer0null/Duval status --porcelain"
+  ],
+  "final_artifact_shas": {
+   "tests/test_cli.py": "4395af6c582b3f0a551dfc2cb8294bdab9fbc3b199a3fb92a177f09186d40c12",
+   "src/resextract/dashboard/api.py": "d5df9b08505189eceb0cb89021ae9b21685bf96dfb30dbeb07a30ef5ad24a511",
+   "src/resextract/dashboard/app.py": "a3da627a62d5d7d91265e1daddf710c945add2b123db0b7ed49017b290c207e8"
+  },
+  "sha_note": "The sha quoted inside the guard docstring (1beb6871...) is the sha at the red/green moment; the docstring text itself was patched afterwards, so the final file sha is 4395af6c... (docstring-only change, no executable code). Green re-verified on the final file: 46 passed, 0 sidecars."
+ },
+ "blocker": "",
+ "next_unit_hint": "Item 1 is a documented non-fix (option d) by evidence, not by omission: do NOT flip _connect to immutable=1 -- tests/test_cli.py::test_immutable_uri_would_silently_lose_committed_wal_rows is the guard that shows it returns an empty database for a WAL with pending commits. If the sidecars must go, a writer-side unit must move state/state.sqlite to journal_mode=DELETE (store.py/run.py) with a concurrency test. Item 2 is fully fixed (46 passed, 0 sidecars, sha+mtime unchanged).",
+ "write_paths": [
+  "src/resextract/dashboard/api.py",
+  "src/resextract/dashboard/app.py (NOT modified)",
+  "tests/test_cli.py",
+  "state/logs/U6.18*",
+  "orchestration/units/U6.18.md",
+  "orchestration/handoffs/U6.18.json"
+ ]
+}

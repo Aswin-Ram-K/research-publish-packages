@@ -1,0 +1,84 @@
+{
+  "unit": "V5B",
+  "scope": "U5.6 tree-first + U5.7 producer gate",
+  "status": "done",
+  "overall": "PARTIAL",
+  "author_of_verified_units": false,
+  "probe": "DOWN: curl exit 7 / http_code 000 on http://192.168.2.168:8012/v1/models (1 probe, no restart)",
+  "llm_calls": 0,
+  "checks": [
+    {"id":"C1","name":"four suites","verdict":"PASS","observed":"19/25/17/24 = 85 passed in 5.94s","evidence":"state/logs + pytest output"},
+    {"id":"C2","name":"live truth check","verdict":"PASS","observed":"real store 10 replay/0 model; may_back_model_claim False x10; scratch copy re-materialize lane claim-test-unreproduced -> replay/draft/derived-false; warning verbatim README+CHECKLIST; survives bare re-assembly; verify ok; copied 2 pinned 2 unpinned 0","evidence":"state/logs/V5B-c2c3.txt; state/verify/V5B/pristine"},
+    {"id":"C2b","name":"model case","verdict":"PASS (fixture-proven)","observed":"fixture producer=model -> status=ready, no PROVENANCE in either file, promotion_eligible True, verify ok; 0 real model rows","evidence":"state/logs/V5B-c2c3.txt"},
+    {"id":"C3","name":"gate bites adversarially","verdict":"PASS","observed":"explicit status=ready on replay -> PromotionRefused (producer=replay); store CHECK rejects 'bogus' (IntegrityError), manifest vocab rejects 'bogus' (ValidationError)","evidence":"state/logs/V5B-c2c3.txt"},
+    {"id":"C4","name":"red-green x3 sha-proven","verdict":"PASS","observed":"(a) tree-first reverted -> MaterializeRefused not_a_file_in_target; (b) gate reverted -> DID NOT RAISE PromotionRefused; (c) warning reverted -> warning missing from README.md; each restored bit-identical and green","evidence":"state/logs/V5B-redgreen.txt; backups in state/verify/V5B/backups"},
+    {"id":"C5","name":"backward compatibility","verdict":"PASS","observed":"_smoke validate [] + verify ok; U5.5-shaped loads producer='unknown' not eligible; schema still resextract/docket/1","evidence":"state/logs/V5B-roundtrip-c5.txt"},
+    {"id":"C6","name":"pinned bytes regression","verdict":"PASS","observed":"duval-u55-pinned manifest sha 879e66b8... unchanged; blob_sha == git rev-parse 6/6 pinned; docket sha256 == recorded","evidence":"state/logs/V5B-c6.txt"},
+    {"id":"C7","name":"honesty audit","verdict":"PARTIAL","observed":"see not_reproduced/overstated; precedence judged conservative-correct","evidence":"state/logs/V5B-audit-c8.txt"},
+    {"id":"C8","name":"containment","verdict":"PASS","observed":"Duval HEAD 55710509 + porcelain unchanged; real store rows unchanged; verified docket sha unchanged; no stray processes","evidence":"state/logs/V5B-audit-c8.txt"}
+  ],
+  "test_counts": {"provenance": 19, "materialize": 25, "pinned": 17, "assemble": 24, "total": 85},
+  "live_truth": {
+    "producer": "replay",
+    "model": null,
+    "status": "draft",
+    "status_reason": "producer is replay: no model mined these candidates; not publication-eligible",
+    "promotion_eligible": false,
+    "promotion_eligible_recomputed_independently": false,
+    "warning_readme": "> **PROVENANCE: replay-produced** \u2014 no model mined or assessed these candidates. Not eligible for publication until real mining runs.",
+    "warning_checklist": "> **PROVENANCE: replay-produced** \u2014 no model mined or assessed these candidates. Not eligible for publication until real mining runs.",
+    "survives_bare_reassembly": true,
+    "verify_ok": true,
+    "copied": 2,
+    "pinned": 2,
+    "unpinned": 0,
+    "refused": 0,
+    "unresolved": 0,
+    "model_case": "fixture-proven: ready, no warning, eligible"
+  },
+  "gate": {
+    "ready_blocked_for_non_model": true,
+    "PromotionRefused_raised": true,
+    "docket_still_built": false,
+    "docket_still_built_note": "FALSE for the explicit status='ready' call: the raise precedes any copy so no docket directory is created. The default (draft) path does build it labelled with status_reason + HISTORY block.",
+    "vocab_check": true,
+    "precedence": {"model+replay": "replay", "model+fixture": "mixed", "fixture_only": "unknown", "model+unknown": "mixed", "judgement": "conservative-correct", "argument": "A docket is the union of its members; if any member is replay-derived the artifact cannot attest model provenance (one producer field, at most one model id). 'mixed' would let a reader treat the model share as provable mined provenance it cannot prove. Mislabelling replay as mixed risks a false provenance claim; mislabelling a partly-model docket as replay only understates. Asymmetric error -> conservative."}
+  },
+  "red_green": {
+    "a": "materialize.py sha 6e768096ec401bd5 before+after restore EQUAL; RED: MaterializeRefused 'unresolved ref docs/TRACKED.md: not_a_file_in_target'; GREEN: 1 passed",
+    "b": "materialize.py sha 6e768096ec401bd5 EQUAL; RED: 'Failed: DID NOT RAISE PromotionRefused'; GREEN: 1 passed",
+    "c": "assemble.py sha 95c3f717cdba048d EQUAL; RED: \"AssertionError: replay: warning missing from README.md\"; GREEN: 1 passed"
+  },
+  "backward_compat": {"smoke_validates": true, "smoke_verify_ok": true, "u55_shaped_loads": true, "unknown_not_eligible": true, "schema_string_bumped": false},
+  "pinned_regression": {"manifest_sha_unchanged": true, "manifest_sha": "879e66b88f1ef52be541efaf00a4ba67f804c85c2fb8649c3cb99b4022333810", "blob_sha_match": "6/6"},
+  "not_reproduced": [
+    "dc25c257 sha claim: no file in src/resextract/docket/*.py or tests/test_docket_*.py hashes to it (6e768096=materialize.py and 95c3f717=assemble.py confirmed)",
+    "U5.6 live 'rerun unchanged 9' and U5.7 live 'unchanged' idempotency were not re-run live (covered only by green idempotency unit tests)",
+    "U5.6's own scratch docket 'copied 9' run not reproduced; its artifact composition was verified via the independently-pinned duval-u55-pinned docket (9 material / 6 pinned / 3 unpinned)"
+  ],
+  "overstated": [
+    "'an explicit status=ready raises PromotionRefused - the docket is still built, labelled': with explicit ready NO docket directory is created; 'still built' holds only for the default draft path",
+    "'a bare re-assembly cannot drop the warning' is true for the warning but NOT for U5.6's pinned provenance: bare re-assembly of a COPY of duval-u55-pinned converted 6 git_object entries to working_tree, dropped all blob_sha, manifest sha 879e66b8->526b869d (real docket untouched)",
+    "model path is fixture-only, not live-exercised (disclosed)"
+  ],
+  "unverified": ["model path (Occamy endpoint down; 0 real model rows)"],
+  "corrections": [
+    {"plan_assumption": "A bare re-assembly inherits the existing manifest and therefore preserves the docket's commit-verifiable material", "actually": "only the producer/warning is inherited; assemble's bare path rebuilds material entries from the working tree and drops resolved_from=git_object and blob_sha, so the pinned-byte provenance is lost on re-assembly", "evidence": "state/logs/V5B-roundtrip-c5.txt section C: blob_sha count 6 -> 0, resolved_from {git_object,working_tree} -> {working_tree}, manifest sha 879e66b8 -> 526b869d", "unit": "U5.6"}
+  ],
+  "tool_calls": 33,
+  "bound": 35,
+  "containment": {
+    "duval_head": "55710509ff677ce078f786d98907b2d6c7716986",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+    "outside_writes": 0,
+    "real_store_rows_before": {"candidates": 10, "claims": 0, "evidence": 0, "verdicts": 0, "lanes": 5, "lane_candidates": 10, "dockets": 2, "runs": 4},
+    "real_store_rows_after": {"candidates": 10, "claims": 0, "evidence": 0, "verdicts": 0, "lanes": 5, "lane_candidates": 10, "dockets": 2, "runs": 4},
+    "real_store_mtime": "2026-10-08 06:31:51 -0500 (untouched)",
+    "verified_docket_sha": "879e66b88f1ef52be541efaf00a4ba67f804c85c2fb8649c3cb99b4022333810",
+    "stray_processes": "none (only the invoking bash)"
+  },
+  "blocker": "",
+  "next_unit_hint": "Fix or disclose assemble's bare re-assembly dropping git_object/blob_sha (U5.6 commit-verifiability is not stable across re-assembly); re-word the 'docket is still built' claim for the explicit-ready path; re-verify the model path live once Occamy is up.",
+  "artifacts": ["orchestration/VERDICTS.md#v5b", "state/logs/V5B-c2c3.txt", "state/logs/V5B-c6.txt", "state/logs/V5B-roundtrip-c5.txt", "state/logs/V5B-redgreen.txt", "state/logs/V5B-audit-c8.txt", "state/verify/V5B/"],
+  "write_paths": ["orchestration/VERDICTS.md", "orchestration/units/V5B.md", "orchestration/handoffs/V5B.json", "state/logs/V5B*", "state/verify/V5B/**"]
+}

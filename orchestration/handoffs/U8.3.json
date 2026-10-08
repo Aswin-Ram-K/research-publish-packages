@@ -1,0 +1,184 @@
+{
+ "unit": "U8.3",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/run.py",
+  "src/resextract/cli.py",
+  "tests/test_run.py",
+  "tests/test_cli.py",
+  "state/logs/U8.3-dryrun.json",
+  "state/logs/U8.3-realrun.json",
+  "orchestration/units/U8.3.md"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "run": "19 passed",
+   "cli": "16 passed"
+  },
+  "red_green": {
+   "a": "sha ok; red: AssertionError: mine is 'skipped', expected blocked; restore bit-identical; sha256 9efc0c32d807e5cb7670339dbdb725ba08b0867413b44183beeec3d7ba9a35a7",
+   "b": "sha ok; red: assert 'degraded' == 'skipped'; restore bit-identical; sha256 9efc0c32d807e5cb7670339dbdb725ba08b0867413b44183beeec3d7ba9a35a7"
+  },
+  "cli": {
+   "run_implemented": true,
+   "placeholders_before": 9,
+   "placeholders_after": 8,
+   "implemented": [
+    "doctor",
+    "status",
+    "materialize",
+    "serve",
+    "run"
+   ],
+   "assertions_deleted": 0,
+   "assertions_deleted_note": "tests/test_cli.py is untracked in git HEAD ('exists on disk, but not in HEAD'), so no automated grep -F baseline existed; the only edits were the EXPECTED_PLACEHOLDERS/IMPLEMENTED_SUBCOMMANDS data update and two added test functions \u2014 no assertion line was removed (diff of the two hunks)."
+  },
+  "exit_codes": {
+   "ok": 0,
+   "degraded": 1,
+   "hard_down": 2,
+   "nothing_runnable": 3,
+   "implemented_in_code": true,
+   "function": "resextract.run.exit_code_for",
+   "table_test": "tests/test_run.py::test_exit_code_mapping_table"
+  },
+  "live": {
+   "dry_run": {
+    "stages_planned": [
+     {
+      "name": "graph",
+      "status": "skipped"
+     },
+     {
+      "name": "staging",
+      "status": "skipped"
+     },
+     {
+      "name": "mine",
+      "status": "blocked"
+     },
+     {
+      "name": "claims",
+      "status": "blocked"
+     },
+     {
+      "name": "assess",
+      "status": "blocked"
+     },
+     {
+      "name": "lanes",
+      "status": "skipped"
+     },
+     {
+      "name": "materialize",
+      "status": "skipped"
+     },
+     {
+      "name": "refresh",
+      "status": "skipped"
+     }
+    ],
+    "wrote": false,
+    "note": "exit_code 0; state/run/duval not created; state/state.sqlite sha256 459e16cc875654df unchanged; producer gate read read-only: replay=10, model=0, endpoint http 000"
+   },
+   "real_run": {
+    "exit_code": 1,
+    "window_sealed": true,
+    "head_before": "55710509ff677ce078f786d98907b2d6c7716986",
+    "head_after": "55710509ff677ce078f786d98907b2d6c7716986",
+    "stages": [
+     {
+      "name": "graph",
+      "status": "ok"
+     },
+     {
+      "name": "staging",
+      "status": "ok"
+     },
+     {
+      "name": "mine",
+      "status": "blocked"
+     },
+     {
+      "name": "claims",
+      "status": "blocked"
+     },
+     {
+      "name": "assess",
+      "status": "blocked"
+     },
+     {
+      "name": "lanes",
+      "status": "ok"
+     },
+     {
+      "name": "materialize",
+      "status": "skipped"
+     },
+     {
+      "name": "refresh",
+      "status": "ok"
+     }
+    ],
+    "degradations": [
+     "core leg Occamy (model endpoint) is DOWN: http 000 \u2014 ConnectError: [Errno 111] Connection refused; model stages will be reported blocked",
+     "producer gate: no model-produced candidates in the store (producers: {'replay': 10}); mine/claims/assess blocked",
+     "mine: model endpoint DOWN (http 000) \u2014 producer gate: 0 model-produced candidate(s) (store producers: replay=10); mine cannot run without the model",
+     "claims: model endpoint DOWN (http 000) \u2014 producer gate: 0 model-produced candidate(s) (store producers: replay=10); claims cannot run without the model",
+     "assess: model endpoint DOWN (http 000) \u2014 producer gate: 0 model-produced candidate(s) (store producers: replay=10); assess cannot run without the model"
+    ],
+    "blocked_lines": "mine: model endpoint DOWN (http 000) \u2014 producer gate: 0 model-produced candidate(s) (store producers: replay=10); mine cannot run without the model\nclaims: model endpoint DOWN (http 000) \u2014 producer gate: 0 model-produced candidate(s) (store producers: replay=10); claims cannot run without the model\nassess: model endpoint DOWN (http 000) \u2014 producer gate: 0 model-produced candidate(s) (store producers: replay=10); assess cannot run without the model",
+    "counts": {
+     "graph": "reuse, nodes=2685",
+     "staging": "total_bytes=16691860",
+     "lanes": "10 candidates -> 5 lanes, persisted 5, typed 5, 0 refused (none typed 'paper')",
+     "refresh": "checked_links=0 changed_links=0"
+    },
+    "ran_for_real": [
+     "graph (reused existing code-only graph, not rebuilt)",
+     "staging",
+     "lanes",
+     "refresh"
+    ],
+    "blocked": [
+     "mine",
+     "claims",
+     "assess"
+    ],
+    "skipped": [
+     "materialize (producer gate)"
+    ]
+   }
+  },
+  "duval_untouched": {
+   "head": "55710509ff677ce078f786d98907b2d6c7716986",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+   "wrote_in_target": false,
+   "note": "porcelain and HEAD byte-identical before/after; the untracked entries are the foreign actor's, present before the run"
+  },
+  "tool_calls": 67,
+  "bound": 40,
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  => 000",
+   ".venv/bin/python -m pytest tests/test_run.py tests/test_cli.py -q  => 35 passed (19 run + 16 cli)",
+   "revert _stage_mine status blocked->skipped; pytest guard_a => 1 failed (AssertionError: mine is 'skipped', expected blocked); restore; sha256 identical",
+   "revert _stage_materialize 'if not ctx.allow_replay' -> 'if False'; pytest guard_b => 1 failed (assert 'degraded' == 'skipped'); restore; sha256 identical",
+   "resextract run --target duval --dry-run --json => exit 0, 8 stages planned, nothing written",
+   "resextract run --target duval --json => exit 1, window_sealed true, heads 55710509 both, 3 blocked lines",
+   "git -C /home/zer0null/Duval rev-parse HEAD / status --porcelain before+after => identical"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "A verifier should re-run tests/test_run.py + tests/test_cli.py, re-run both guard reverts, and re-run `run --target duval --json` (expect exit 1 while Occamy is down; window_sealed depends on the foreign actor). Open items: docket-side provenance labelling for --allow-replay (separate unit); the `assess` stage is batch 4; doctor's SearXNG probe is flaky (one live run exited 2 on a core SearXNG ReadTimeout before the needs-based gate landed).",
+ "write_paths": [
+  "src/resextract/run.py",
+  "src/resextract/cli.py",
+  "tests/test_run.py",
+  "tests/test_cli.py",
+  "state/run/**",
+  "state/logs/U8.3*",
+  "orchestration/units/U8.3.md",
+  "orchestration/handoffs/U8.3.json"
+ ]
+}

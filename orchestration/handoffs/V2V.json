@@ -1,0 +1,139 @@
+{
+ "unit": "V2V",
+ "scope": "U2.6 (boundary, hint, one predicate, enforcement, repairs)",
+ "status": "done",
+ "overall": "PASS",
+ "checks": [
+  {"id":"C1","name":"the eight suites","verdict":"PASS","observed":"42/13/8/9/41/14/11/9 = 147, exactly as claimed","evidence":"pytest per-file after FULL __pycache__ purge + PYTHONDONTWRITEBYTECODE=1"},
+  {"id":"C2","name":"boundary re-derived from own setup","verdict":"PASS","observed":"typed SchemaTooOldError found-v3/required-v4 on my own v3 copy; source untouched; opt-in copy migrated v3->v4 rows_lost 0; 9 claims/9 verdict rows/producer fixture x9; migration reported; second migrate no-op","evidence":"state/verify/V2V/c2/result.json"},
+  {"id":"C2b","name":"not swallowed by per-claim isolation","verdict":"PASS","observed":"injected mid-loop SchemaTooOldError is re-raised out of isolation; the OLD obscure sqlite3.OperationalError IS swallowed -> claims_assessed 0 with 9 degradations (U2.5 failure mode reproduced for contrast)","evidence":"c2/result.json c2b_typed / c2b_obscure"},
+  {"id":"C3","name":"one predicate by identity","verdict":"PASS with correction","observed":"V.may_back_model_claim IS store.producer_is_model (module resextract.store); PRODUCER_VOCAB/MODEL_PRODUCER imported by identity in verdicts.py AND value.py; 0 duplicate constants; but 1 literal ==\"model\" REMAINS at store.py:1120 (_producer_is_model), so producer_is_model's docstring 'the single string-level comparison' is FALSE","evidence":"c2/result.json c3, c3_literals; c7/result.json c3_removed"},
+  {"id":"C4","name":"hint adversarial","verdict":"PASS","observed":"replay+model_hint -> EXTENDS (capped); undeclared+hint -> EXTENDS/unknown; model+hint -> CONFIRMS; MODEL/Model/gpt/''/'model ' -> ProducerDeclarationError; brute force of 25 (declaration,hint) pairs found ZERO upgrades","evidence":"c7/result.json c4_verdict_level, c4_upgrades_found=[]"},
+  {"id":"C5","name":"verdicts.model + enforcement","verdict":"PASS with correction","observed":"model row records model; replay row records None; insert_verdict raises ValueError on model+non-model; assess writer derives producer and passes model only when producer_is_model; publish gate consults the single predicate. NOTE store.insert_verdict defaults producer='unknown' when omitted (fail-closed default, not 'required')","evidence":"c2/result.json c5"},
+  {"id":"C6","name":"regeneration coherence","verdict":"PASS with 1 finding","observed":"store.py/verdicts.py/value.py are byte-identical (sha256) to state/backups/U2.6-good-*.py AND match the handoff shas; no duplicate top-level defs/assigns; no vanished helper; 1 comment overstatement (store.py:61)","evidence":"sha256sum + diff -q; AST duplicate scan"},
+  {"id":"C7","name":"red->green x3, sha-proven","verdict":"PASS","observed":"(a) remove _require_writable_schema -> OperationalError 'no column named producer' FAILED, restore sha equal, PASSED; (b) hint-first _client_producer -> FAILED (+model), restore sha equal, PASSED; (c) remove the insert_verdict model guard -> 'DID NOT RAISE ValueError' FAILED, restore sha equal, PASSED","evidence":"state/verify/V2V/c7/result.json c7"},
+  {"id":"C8","name":"three repairs","verdict":"PASS","observed":"test_store_v3.py vs HEAD a62a8fc: 4 deleted assert / 7 added assert, all 4 deletions are version literals replaced by >= pins plus stricter == store.SCHEMA_VERSION cross-checks, 0 substantive, nothing to restore; migration-4 note now reads 'the schema-v4 backfill joins nothing, so it refuses to infer a producer; unknown is the conservative, fail-closed result' and live spot-check gives producer unknown for both rows; may_back_model_claim IS called (run.py:1384, unit said 1278) and the 4 v4 accessors have 0 production callers","evidence":"state/verify/V2V/test_store_v3.diff; c7/result.json c8_note"},
+  {"id":"C9","name":"honesty audit","verdict":"PARTIAL disclosure","observed":"147, 9/9/fixture x9/rows_lost 0 all reproduced; '5 literals removed' is 3; value._client_producer is a delegating wrapper not the same object; store-level producer defaults to unknown","evidence":"this handoff not_reproduced/overstated"},
+  {"id":"C10","name":"containment","verdict":"PASS","observed":"real state/state.sqlite sha 459e16cc... v3, rows identical (candidates 10 all replay, claims/evidence/verdicts 0, lanes 5, lane_candidates 10, dockets 2, runs 4), verdicts columns unchanged; Duval HEAD 6c60da5a unchanged; 0 outside writes; 0 .worktrees reads; 0 stray processes","evidence":"sha256sum + sqlite3 + git -C Duval"}
+ ],
+ "test_counts": {"store":42,"store_v2":13,"store_v3":8,"store_v4":9,"assess_verdicts":41,"assess_evidence":14,"assess_value":11,"boundary":9,"total":147},
+ "boundary": {
+  "typed_error": "SchemaTooOldError",
+  "message": "schema too old: <path> is schema v3 but this write needs v4; run store.init_db('<path>') to migrate it in place, or store.migrate_copy('<path>', dst) to migrate a run-scoped copy (backs the source up first)",
+  "not_swallowed": true,
+  "source_untouched": true,
+  "copy_v4": true,
+  "rows_lost": 0,
+  "claims_assessed": 9,
+  "verdict_rows": 9,
+  "producer_populated": "fixture",
+  "migration_reported": true,
+  "idempotent": true,
+  "by_verdict": {"CONFIRMS":0,"EXTENDS":0,"CONTRADICTS":0,"UNVERIFIED":9},
+  "model_column": null
+ },
+ "predicate": {
+  "identity_same_object": true,
+  "identity_module": "resextract.store",
+  "vocab_imported_both": true,
+  "remaining_literal_comparisons": 1,
+  "remaining_literal_where": "src/resextract/store.py:1120 (_producer_is_model: row.get(\"producer\") == \"model\")",
+  "literals_removed_measured": 3,
+  "literals_removed_claimed": 5,
+  "duplicate_constants": 0,
+  "duplicate_constants_removed_measured": 2,
+  "comment_true": false,
+  "false_comment": "store.py:61 producer_is_model docstring 'the **single** string-level comparison' -- store.py:1120 is a second one",
+  "other_comments_true": ["store.py:47 single vocabulary definition", "verdicts.py:120 may_back_model_claim IS store.producer_is_model", "value.py:38 shared vocabulary"]
+ },
+ "hint": {
+  "replay_plus_model_hint": "capped: EXTENDS, client_producer replay, model_calls 0",
+  "undeclared_plus_hint": "capped: EXTENDS, client_producer unknown",
+  "model_plus_hint": "CONFIRMS (client_producer model)",
+  "model_plus_replay_hint": "replay (deny/downgrade allowed)",
+  "vocab_hint_error": true,
+  "vocab_errors": ["MODEL","Model","gpt","","model "],
+  "can_upgrade": "no",
+  "brute_force_pairs_tested": 25,
+  "value_delegates": "yes, via wrapper value.py:832-844 -> _verdicts_client_producer (NOT the same object)"
+ },
+ "verdicts_model": {
+  "model_records_model": true,
+  "non_model_records_no_model": true,
+  "insert_verdict_valueerror": true,
+  "valueerror_message": "model id 'occamy-1' may only accompany producer='model', not 'replay'",
+  "enforcement": "insert_verdict ValueError guard + assess writer derives producer (_verdict_db_producer) and passes model only when producer_is_model + publish gate consults the single predicate",
+  "store_level_default": "producer='unknown' when omitted (fail-closed, but not 'required')"
+ },
+ "accessors_callers": {
+  "may_back_model_claim": "run.py:1384 (unit reported 1278; run.py is concurrently edited by U8.5 so the line moved)",
+  "four_v4_accessors_production_callers": 0,
+  "judgement": "acceptable as public query API but currently dead in production and therefore exercised only by tests; wire evidence_by_producer/verdicts_by_producer into a production reader (or the dashboard) when a consumer exists, otherwise they are an unused surface"
+ },
+ "regeneration": {
+  "matches_good_backup": true,
+  "differences": [],
+  "shas": {"store.py":"f79ba0aba95d0c0c58a3b4fcdf38abd8e7561b7267f7d47f25b47d00dabf63d9","verdicts.py":"754101b895f305458ae49eca5547c8034253e3e54a6377c0c51ba0d8164b98ea","value.py":"3e6f72ef7da4c8bda2a111ed8478475bfdf99d8902be1d35d6072af317bb980f"},
+  "duplicate_definitions": [],
+  "vanished_helpers": [],
+  "orphaned_constants": [],
+  "accident_traces_found": [
+   "store.py:61 docstring overstates: 'the single string-level comparison' while store.py:1120 repeats == \"model\"",
+   "value._client_producer is a delegating wrapper, not the same function object as verdicts._client_producer (the unit's handoff says 'same function object')"
+  ],
+  "coherent": true,
+  "sufficient": "yes: 147/147 green plus byte-identical good backups plus a coherent read (identity predicate, single vocabulary, no dup defs) is enough to conclude the files are what U2.6 claims; the only gaps are wording-level, not behavioural"
+ },
+ "red_green": {
+  "a": "sha ok (f79ba0ab->cb96d4d0->f79ba0ab); red: sqlite3.OperationalError: table verdicts has no column named producer; green: 1 passed",
+  "b": "sha ok (754101b8->49aa684b->754101b8); red: hint upgraded the declaration (+ model) -> FAILED; green: 1 passed",
+  "c": "sha ok (f79ba0ab->9499cba8->f79ba0ab); red: Failed: DID NOT RAISE ValueError; green: 1 passed"
+ },
+ "repairs": {
+  "test_store_v3": {"deleted":4,"added":7,"added_non_context_total":16,"all_version_literals":true,"substantive":0,"agree_nothing_to_restore":true,
+   "note":"the 4 deletions are version literals; each is replaced by a looser >= pin PLUS a stricter '== store.SCHEMA_VERSION' / cross-check pair, so the net contract is stricter. 0 substantive assertions removed."},
+  "migration_note": "the schema-v4 backfill joins nothing, so it refuses to infer a producer; 'unknown' is the conservative, fail-closed result -- live spot-check on a fresh v3 copy gave 2 notes (evidence, verdicts), both producer 'unknown', both basis 'joins nothing', old 'no producer evidence exists' text absent, source sha unchanged",
+  "caller_picture_correct": true,
+  "caller_picture_note": "may_back_model_claim IS called in production at run.py:1384 (store.may_back_model_claim, the row-level predicate); the unit's 1278 is stale because run.py is being edited concurrently by U8.5. The four v4 accessors have 0 production callers."
+ },
+ "fixture_value_judgement": "correct: 'fixture' is the codebase's existing value for the deterministic non-model pass (assess/value.py:589,613,634 emit producer=\"fixture\"); 'replay' would be actively wrong here (no model response was replayed) and 'unknown' would discard the true fact that the deterministic pass produced the verdict. Mildly ambiguous in connotation only; recommend documenting it, or adding an explicit 'deterministic' at the next vocabulary migration -- NOT now (a vocab change needs a CHECK migration on the real store).",
+ "not_reproduced": [
+  "U2.5/U2.6 '5 literal comparisons removed' -- I measure 3 (all in assess/value.py) by counting ==/!= \"model\" in the pristine snapshots vs current",
+  "whether state/backups/U2.6-good-* are genuinely pre-accident-good rather than regenerated artifacts: they are self-consistent with the tree and with the handoff shas, nothing more is observable",
+  "U2.6's own 34/34 tool-call spend (not observable from the tree)"
+ ],
+ "overstated": [
+  "literal_comparisons_removed: claimed 5, measured 3",
+  "value._client_producer described as 'same function object': it is a delegating wrapper (value.py:832-844)",
+  "insert_verdict described as requiring/deriving producer: the store-level default is producer='unknown' (only the assess writer derives it)",
+  "producer_is_model docstring 'the single string-level comparison': store.py:1120 is a second"
+ ],
+ "unverified": [
+  "the real state.sqlite v3->v4 migration path (deliberately not run; a later unit owns it)",
+  "the full pre-U2.6 assess/** baseline (assess/ is untracked at HEAD a62a8fc; only the unit's own pristine snapshots exist)",
+  "behaviour of the hint rule through any client that wraps a model client behind a replay declaration beyond the 25 pairs and 3 nested shapes tested"
+ ],
+ "corrections": [
+  {"plan_assumption":"may_back_model_claim is called at run.py:1278","actually":"called at run.py:1384 (row-level store.may_back_model_claim)","evidence":"grep src/resextract/run.py:1384","unit":"U2.6"},
+  {"plan_assumption":"value._client_producer is the same object as verdicts._client_producer","actually":"a one-line delegating wrapper; identity is False","evidence":"W._client_producer is V._client_producer -> False","unit":"U2.6"},
+  {"plan_assumption":"5 literal comparisons removed","actually":"3 removed (all in assess/value.py); 1 remains in store.py:1120","evidence":"pristine-vs-current regex count","unit":"U2.6"},
+  {"plan_assumption":"insert_verdict requires/derives producer","actually":"store-level default producer='unknown' when omitted; derivation happens in the assess writer","evidence":"insert_verdict.__kwdefaults__['producer'] == 'unknown'","unit":"U2.6"}
+ ],
+ "tool_calls": 31,
+ "bound": 34,
+ "tool_call_note": "31 work calls (including one rejected write that had to be preceded by a read) + the final report-back send = 32; under the 34 bound.",
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "real_store": {"sha":"459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5","version":3,"rows_identical":true,
+   "rows":{"candidates":10,"claims":0,"evidence":0,"verdicts":0,"lanes":5,"lane_candidates":10,"dockets":2,"runs":4},
+   "verdicts_columns":["id","claim_id","verdict","rationale","evidence_ids_json","checked_at"]},
+  "stray_processes": 0
+ },
+ "occamy_probe": "DOWN (curl exit 7, connection refused; HTTP 000). Zero live LLM calls; all clients stubbed.",
+ "blocker": "",
+ "next_unit_hint": "U2.6 PASSES. Three non-blocking corrections for a later unit: (1) make store.py:1120 _producer_is_model delegate to producer_is_model, or soften the store.py:61 docstring; (2) the 4 v4 accessors still have 0 production callers -- wire or accept as public API; (3) run.py line drifted 1278->1384. Real state.sqlite is still v3 sha 459e16cc...; a later unit migrates it deliberately (assess_claims(migrate_store=True) is ready, but no production caller passes it -- run.py/cli.py wiring is still owed, U6.7 owns cli.py).",
+ "write_paths": ["orchestration/VERDICTS.md","orchestration/units/V2V.md","orchestration/handoffs/V2V.json","state/logs/V2V*","state/verify/V2V/**"]
+}

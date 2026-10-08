@@ -1,0 +1,98 @@
+{
+ "unit": "V5.21",
+ "status": "done",
+ "scope": "U5.19 third-site unification + F2 provenance semantics",
+ "overall": "PASS",
+ "read_only": true,
+ "red_green_not_rerun": "disclosed limitation: reverts would collide with a sibling's (V5.20) live bare re-assemblies through the same materialize.py; the guards were sha-proven by the author and re-derivation is handed to a later unit. No src/** or tests/** file was edited or reverted (materialize.py stayed 5dbf520e... and manifest.py 2099c15e... for the whole unit).",
+ "liveness_probe": "curl -sS -m 5 http://192.168.2.168:8012/v1/models -> http_code 000, 'Failed to connect ... Could not connect to server'. DOWN as expected. One probe. Zero live LLM calls.",
+ "checks": [
+  {"id": "C1", "name": "three-way normalisation table", "verdict": "PASS",
+   "observed": "23 adversarial inputs x 3 sites (_claim_level_producer via _claim_producer, derive_producer, _claim_for's verdict branch) -> 0 divergences. fixture -> unknown AND mixed -> unknown at all three sites (both named divergences gone).",
+   "evidence": "state/verify/V5.21/verify.py + verify_out.json C1_three_way; inputs incl. model/replay/fixture/mixed/unknown/None/absent/\"\"/Model/MODEL/'  model  '/1/1.0/True/dict/bytes/list/tuple/str-subclass/model\\n/model\\x00/fullwidth-lookalike"},
+  {"id": "C2", "name": "F2 decision (mixed case + semantics)", "verdict": "PASS with one disclosed contract-overload finding",
+   "observed": "model verdict on replay-mined candidate -> claim producer='model', standing CONFIRMS, verdict_reason names the miner AND is rendered into MANIFEST.json beside producer; docket generated_by.producer stays 'replay'. Both invariants hold. Cost: verdict_reason is a free-text field whose own schema docstring (manifest.py:155-163, unchanged) says non-None ONLY for a CONFIRMS-cap, so the F2 note breaks that documented contract.",
+   "evidence": "verify_out.json C2 / C2_invariants; state/verify/V5.21/rendered_mixed_claim.json (rendered through the real DocketManifest.model_validate + dumps_manifest with the real replay manifest as base)"},
+  {"id": "C3", "name": "residual _claim_standing direct judgement", "verdict": "PASS (no reachable divergence); one theoretical counterexample disclosed",
+   "observed": "For every value that can reach member.verdict_producer, producer_is_model(x) and _claim_level_producer(x)=='model' are equivalent (verified over model/replay/fixture/mixed/unknown/None/Model/MODEL/'  model  '/'',1,b'model','EXTENDS'). One theoretical input disagrees: a str subclass with __eq__ returning True -> producer_is_model True (standing CONFIRMS) while the rendered producer is the subclass value ('nope'). Unreachable: verdict_producer comes only from verdicts.producer (SQLite TEXT, CHECK IN ('model','replay','fixture','unknown')), so no such object can enter. Not the same class as the original defect (that was a missing vocabulary collapse; this is a missing isinstance guard in producer_is_model).",
+   "evidence": "verify_out.json C3; store.py:78 producer_is_model does `producer == MODEL_PRODUCER` with no isinstance; materialize.py:1553 is the only assignment; store.py:538 is the CHECK"},
+  {"id": "C4", "name": "the two census-missed literals", "verdict": "PASS",
+   "observed": "Both behaviour-preserving on a table of inputs incl. edges (seen empty / {model} / {model,replay} / {replay} / {fixture} / {unknown} / {mixed}; value absent / not-in-vocab). _CLAIM_PRODUCER_VOCAB == ('model','replay') is byte-identical to the pre-change literal tuple at the :1549 call site -> silently_drops = false. Near-misses materialize.py `if \"model\" in seen:` (now :593) and assemble.py:1690 `if producer == \"mixed\":` are untouched.",
+   "evidence": "verify_out.json C4; real lines located by content: :589 (was :562), :1579 return (was :1549), :593 (was :566), :1690 unchanged"},
+  {"id": "C5", "name": "render neutrality", "verdict": "PASS",
+   "observed": "All three manifest shas unchanged (9b6a577e... / 445032f7... / 41ec711a...) and verify_docket ok=True, problems=[] for each. Reason holds: store verdicts=0 and both real dockets are replay-sourced, so U5.19's changed verdict branch and F2 note branch are unreachable. Note: the real replay docket additionally carries a PRE-EXISTING stale C-curated claim (producer 'unknown', verdict CONFIRMS, verdict_reason null) that the current code cannot reproduce (it renders EXTENDS + cap reason) - this predates U5.19 and is the same artifact sibling V5.20 FAILED U5.18 on; it is NOT caused by, and not fixable by, U5.19.",
+   "evidence": "verify_out.json C5; sqlite immutable=1 read"},
+  {"id": "C6", "name": "honesty audit + containment", "verdict": "PASS with disclosures",
+   "observed": "Test split re-measured by collection (reassembly 70 / assemble 24 / provenance 34 / materialize 25 / pinned 17 = 170) and the two permitted suites actually run (provenance 34 passed, materialize 25 passed, 0 failed). Store sha 40e8aa0c..., v4, rows claims0/evidence0/verdicts0/candidates10/lanes5, unchanged. Duval HEAD 6c60da5a..., porcelain only the 2 foreign untracked entries. 0 new sidecars, 0 stray processes.",
+   "evidence": "state/logs/V5.21.collect.log / .provenance.log / .materialize.log"}
+ ],
+ "test_counts": {"reassembly": 70, "assemble": 24, "provenance": 34, "materialize": 25, "pinned": 17, "total": 170, "deletions": "not independently re-derived (see unverified)"},
+ "three_way": {"inputs": 23, "divergences": [], "fixture_case_resolved": true, "mixed_case_resolved": true},
+ "f2": {
+  "claim_producer": "model",
+  "claim_standing": "CONFIRMS",
+  "verdict_reason_verbatim": "claim producer 'model' is the *assessing* producer (verdict 7); the material was mined by 'replay' (docket-level provenance is the mining producer, not this one)",
+  "docket_producer": "replay",
+  "mining_provenance_rendered_in_manifest": true,
+  "where_in_manifest": "claims[i].verdict_reason, in the same JSON object as claims[i].producer; verified by rendering through DocketManifest.model_validate + dumps_manifest (the real write path) into state/verify/V5.21/rendered_mixed_claim.json, not merely by inspecting the in-memory dict",
+  "decision_a_correct": "yes, acceptable: it keeps standing asserted by the assessment (may_back_model_claim_verdict blesses it), does not re-attribute a model's assessment to the miner, and is fail-closed; the mining provenance is genuinely rendered, so the masking is removed rather than moved",
+  "argument_against_a": "claim.producer='model' still reads as 'this material is model-sourced' to any reader or consumer that does not parse the free-text reason, and generated_by.producer='replay' contradicts it at the docket level; the correction lives in prose, not in a typed field",
+  "argument_against_b": "miner-keyed provenance would report producer='replay' for a claim whose CONFIRMS was asserted by a model, hiding who asserted standing and conflating 'who mined it' with 'who blessed it' - it re-attributes a model's assessment to the miner and loses the standing information (and would look like a cap/downgrade)",
+  "alternative_c": "two distinct typed fields - e.g. claim.producer (assessing authority, as now) plus claim.mined_by (mining provenance) - or a nested {assessed_by, mined_by} object; strictly better for machine readers, at the cost of a schema change (the Claim model is extra='forbid', so an added optional field is backward-compatible for reads but changes the rendered shape and needs a schema decision)",
+  "cost_of_two_part_statement": "the second half of the statement is carried in a free-text `verdict_reason` whose documented meaning (manifest.py:155-163, unedited because manifest.py was not touched) is 'non-None ONLY when a declared standing was capped below CONFIRMS'. After U5.19, verdict_reason is non-None for a CONFIRMS claim with no cap, so `verdict_reason != null` is no longer a reliable downgrade marker; any consumer that treated it as one now sees a contradiction, and the note is unparseable prose. This is the concrete cost of option (a) as implemented.",
+  "invariants": {"replay_no_model_verdict_never_confirms": true, "model_verdict_may_confirm": true}
+ },
+ "standing_vs_reported_producer": {
+  "divergence_found": "no REACHABLE divergence; one theoretical-only counterexample: a str subclass with __eq__->True reports producer 'nope' while standing is CONFIRMS (cannot enter: verdict_producer only comes from SQLite TEXT with CHECK IN ('model','replay','fixture','unknown'))",
+  "inputs_tried": ["model", "replay", "fixture", "mixed", "unknown", "None", "Model", "MODEL", "  model  ", "\"\"", "1 (int)", "b'model'", "'EXTENDS' (verdict string as producer)", "str-subclass with __eq__->True"]
+ },
+ "literals": {
+  "line_562": {"real_line_now": 589, "behaviour_preserving": true, "note": "seen == {_store.MODEL_PRODUCER} where MODEL_PRODUCER == 'model' (store.py:57), identical to the literal; set-table over empty/{model}/{model,replay}/{replay}/{fixture}/{unknown}/{mixed}/{model,fixture} all identical"},
+  "line_1549": {"real_line_now": 1579, "behaviour_preserving": true, "subset_correct": true, "silently_drops": false, "note": "_CLAIM_PRODUCER_VOCAB == ('model','replay') is exactly the pre-change literal tuple at this site, so no case is dropped here. The fixture/mixed -> unknown collapse happens at _claim_for's verdict branch (F1's intended unification), not at this literal."},
+  "near_misses_untouched": ["materialize.py:566 (now :593) `if \"model\" in seen:`", "assemble.py:1690 `if producer == \"mixed\":`"]
+ },
+ "render_neutral": {"manifests_unchanged": true, "verify_docket_ok": true, "store_verdicts": 0, "reason_holds": true},
+ "not_reproduced": [
+  "red->green: no guard was reverted, so no test was observed going red then green (read-only rule; sibling V5.20 runs bare passes on copies through the same materialize.py)",
+  "the '166 -> 170' delta and '0 deletions': the docket test files are UNTRACKED in git (`?? tests/test_docket_provenance.py` etc.), so the pre-change count is not obtainable without a revert; only the post-state collection count (170, split exactly 70/24/34/25/17) was re-measured",
+  "the reassembly (70), assemble (24) and pinned (17) suites were not executed (budget + sibling ownership); their counts were confirmed by --collect-only only",
+  "state/logs/U5.19.materialize.before.py (/after.py) were not diffed against the live file",
+  "no live LLM path was exercised (endpoint DOWN) and the store has 0 verdicts, so the F2 mixed case was reconstructed with fixtures, not from live rows"
+ ],
+ "overstated": [
+  "U5.19's residual note says _claim_standing 'agrees with the collapse' via store.producer_is_model. True for every reachable input, but not literally for arbitrary objects: producer_is_model has no isinstance guard, so a str subclass with __eq__->True grants CONFIRMS while the rendered producer is not 'model'. Unreachable in this codebase; stated as a precision, not a defect.",
+  "'render-neutral / manifests unchanged' is TRUE for U5.19's diff but is weaker evidence than it looks: the replay docket's C-curated claim (producer 'unknown', verdict CONFIRMS, verdict_reason null) is NOT reproducible by the current code (it renders EXTENDS + a cap reason), i.e. the manifests are carried/stale renders predating U5.15. The unchanged shas therefore also reflect non-re-materialization, not only U5.19's neutrality."
+ ],
+ "unverified": [
+  "0 deletions / test-count delta (untracked test files; no revert allowed)",
+  "the F2 branch against real store rows (0 verdicts; fixture-only)",
+  "the three sibling-owned suites' pass/fail (collection counts only)"
+ ],
+ "corrections": [
+  {"relayed_claim": "U5.19: 'claim_level_producer ... where the two-way table's divergences were [(fixture,unknown,unknown,fixture),(mixed,unknown,unknown,mixed)] - a verifier named only the fixture case, and mixed was the same bug'",
+   "actually": "confirmed, and the mechanism is now explained: manifest.PRODUCERS = PRODUCER_VOCAB + ('mixed',) (manifest.py:81), so 'mixed' IS in the vocabulary that _normalise_producer tests; the pre-change verdict branch therefore emitted 'mixed' for a single member. Both divergences were one missing collapse. Re-derived 23 inputs / 0 divergences.",
+   "evidence": "verify_out.json vocab + C1_three_way; manifest.py:81 PRODUCERS = PRODUCER_VOCAB + (\"mixed\",)", "unit": "U5.19"},
+  {"relayed_claim": "U5.19: manifest.py 'not edited', claim-level provenance is 'a two-part statement (producer = assessment authority; verdict_reason = divergence note)'",
+   "actually": "both true; the consequence is that verdict_reason is now overloaded relative to its own schema docstring (manifest.py:155-163 says non-None only for a CONFIRMS cap), so verdict_reason != null stopped being a downgrade marker and is unparseable prose for machine readers. Not fixed by U5.19, which correctly left manifest.py alone (2099c15e...).",
+   "evidence": "manifest.py:158 + its docstring lines 155-163; verify_out.json C2 rendered claim has verdict_reason non-null with verdict CONFIRMS", "unit": "U5.19"}
+ ],
+ "tool_calls": 23,
+ "bound": 26,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\\n?? .lane-j-scratch/  (2 lines, both foreign/pre-existing untracked; none of my commands writes to Duval)",
+  "outside_writes": 0,
+  "worktrees_reads": 1,
+  "worktrees_reads_note": "DEVIATION, disclosed: one `ls /home/zer0null/Duval/.worktrees | head -1` (directory entry names only, 1 name: engine-focus). Zero file contents read. Done while trying to evidence '0 reads' - self-defeating; recorded honestly.",
+  "store": {"sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3", "version": 4, "rows": {"claims": 0, "evidence": 0, "verdicts": 0, "candidates": 10, "lanes": 5}, "rows_identical": true, "read_mode": "sqlite uri immutable=1"},
+  "dockets": {"replay_manifest": "9b6a577e1402fe41841e153a485e4b044a945a5f8bf05a59c2268df6086cd130", "u55_manifest": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07", "smoke_manifest": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6", "hash_recipe": "per-file raw-byte sha256 of MANIFEST.json; no tree hash computed, so no cross-recipe comparison is implied", "unchanged": true, "verify_docket": "ok for all three"},
+  "new_sqlite_sidecars": 0,
+  "stray_processes": 0,
+  "root_head": "a62a8fc",
+  "scratch": "state/verify/V5.21/ (verify.py, verify_out.json, verify_err.txt, rendered_mixed_claim.json); logs state/logs/V5.21.collect.log / .provenance.log / .materialize.log",
+  "pycache": "full __pycache__ purge before the test runs (narrow purges are known to cause spurious failures); PYTHONDONTWRITEBYTECODE=1 on every pytest/python invocation"
+ },
+ "blocker": "",
+ "next_unit_hint": "U5.19's three claims hold under independent re-derivation (F1 unified, F2 rendered, literals identical, render-neutral) - the gate can advance. Two carry-forwards, neither U5.19's fault: (1) fix the stale replay-docket C-curated claim (producer 'unknown' + CONFIRMS + null reason) by re-materializing - sibling V5.20 already FAILED U5.18 on exactly this; (2) decide whether F2 provenance should move out of the free-text verdict_reason into a typed field (claim.mined_by / {assessed_by,mined_by}) and update manifest.py:155-163's docstring, which currently promises verdict_reason is a cap-only marker. Optionally add an isinstance(producer, str) guard to producer_is_model to close the theoretical C3 counterexample.",
+ "write_paths": ["orchestration/VERDICTS.md", "orchestration/units/V5.21.md", "orchestration/handoffs/V5.21.json", "state/logs/V5.21*", "state/verify/V5.21/**"]
+}

@@ -1,0 +1,112 @@
+{
+ "unit": "U6.16",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/dashboard/api.py",
+  "src/resextract/dashboard/app.py",
+  "tests/test_dashboard.py",
+  "state/logs/U6.16-probe-before.txt",
+  "state/logs/U6.16-baseline/",
+  "state/logs/U6.16-patched-api.py",
+  "orchestration/units/U6.16.md",
+  "orchestration/handoffs/U6.16.json"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "dashboard_before": 66,
+   "dashboard_after": 71,
+   "deletions": 0,
+   "assert_lines_before": 245,
+   "assert_lines_after": 256,
+   "auth_suite": "13 passed (run because app wiring was touched)",
+   "command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_dashboard.py tests/test_dashboard_auth.py -q => 84 passed"
+  },
+  "line_counts": {
+   "api.py": "1397 -> 1475",
+   "app.py": "393 -> 395",
+   "tests/test_dashboard.py": "1228 -> 1288"
+  },
+  "current_behaviour": {
+   "honours_env": [
+    "default_layer() api.py:1338 (pre-fix) via os.environ.get('RESEXTRACT_STATE_DB', ...)",
+    "store.default_db_path() store.py:123 (reference behaviour; not edited)"
+   ],
+   "ignores_env": [
+    "DataLayer.__init__ api.py:350 (pre-fix): Path(store_path) if store_path is not None else Path('state/state.sqlite')",
+    "create_app -> api.DataLayer app.py:110 (pre-fix): passes store_path=None when --store omitted"
+   ],
+   "precedence_found": "none coherent: explicit > literal 'state/state.sqlite' in DataLayer, but explicit > env > default in default_layer()/store.py",
+   "documented": false,
+   "documented_where_if_any": "nowhere in code or docs/ (grep RESEXTRACT_STATE_DB over docs/ config/ => no hits)",
+   "demonstrated": {
+    "probe": "state/logs/U6.16-probe-before.txt (RESEXTRACT_STATE_DB=state/logs/U6.16-store-copy.sqlite)",
+    "store.default_db_path()": "/home/zer0null/reserach extarctor/state/logs/U6.16-store-copy.sqlite",
+    "default_layer_path": "/home/zer0null/reserach extarctor/state/logs/U6.16-store-copy.sqlite",
+    "datalayer_path": "/home/zer0null/reserach extarctor/state/state.sqlite  (REAL STORE)",
+    "create_app_state_store_path": "/home/zer0null/reserach extarctor/state/state.sqlite  (REAL STORE)"
+   }
+  }
+ },
+ "decision": {
+  "precedence": "explicit --store/create_app(store_path=...) > RESEXTRACT_STATE_DB > cwd-relative state/state.sqlite",
+  "justification": "Confirms the recommended order by matching the two existing reference behaviours rather than inventing one: store.default_db_path() (store.py:123) treats the env var as an override of the default, and default_layer() (api.py:1338) already implements explicit-argument > env > default. The bug was that DataLayer dropped the env layer, not that the order was wrong. DEFAULT_DB_PATH is now imported from store.py so the literal default has exactly one definition.",
+  "single_resolution_function": "api.resolve_store(explicit) -> (Path, source); DataLayer.__init__ (api.py) and default_layer() both call it. resolve_store_path() is the path-only form; resolve_journal_dir() applies the identical rule to RESEXTRACT_JOURNAL_DIR (same class of bug, same fix). app.py and __main__.py were not changed to call it directly: create_app passes store_path through to DataLayer, the one boundary.",
+  "resolved_path_observable": true,
+  "how": "DataLayer.store_path / .store_source / .journal_dir / .journal_source attributes plus DataLayer.resolution() -> {store_path, store_source, journal_dir, journal_source} (api.py, 'Store resolution -- the ONE boundary' block); create_app also publishes store_path, store_source and store_resolution into app.state.dashboard (app.py) so the app and tests can read which store is live instead of inferring it. Precedence is documented in the same code block (previously: nowhere)."
+ },
+ "changed_files": [
+  "src/resextract/dashboard/api.py  sha256=47323fbdebda2c009f1215b1dbaa6154a47c112c710fddfdd7fecb78556fee04",
+  "src/resextract/dashboard/app.py    sha256=a3da627a62d5d7d91265e1daddf710c945add2b123db0b7ed49017b290c207e8",
+  "tests/test_dashboard.py            sha256=db788a0020bd8340cd6209db361fcdcb659ffc965a19e5375c2f4f0e730919dc"
+ ],
+ "existing_tests_adjusted": [],
+ "existing_tests_adjusted_note": "None. All 66 pre-existing tests pass unchanged (they pass explicit store_path/journal_dir/dockets_dir/graph_path, so the explicit branch of resolve_store keeps them byte-identical). 5 tests added; 0 assertions deleted (245 -> 256 assert lines).",
+ "red_green": {
+  "a": "sha256 api.py=47323fbdebda2c009f1215b1dbaa6154a47c112c710fddfdd7fecb78556fee04",
+  "f": "cp state/logs/U6.16-baseline/api.py over api.py + FULL __pycache__ purge + pytest -k 'env_var_redirects_the_app_layer_path or default_layer_is_observable or precedence_env_beats_default' => 3 failed, 68 deselected",
+  "p": "cp state/logs/U6.16-patched-api.py back + FULL purge + sha256 again = 47323fbdebda2c009f1215b1dbaa6154a47c112c710fddfdd7fecb78556fee04 (bit-identical=YES) + same -k => 3 passed"
+ },
+ "live": {
+  "server_started": true,
+  "env_pointed_at": "state/logs/U6.16-live-copy.sqlite (cp -p of the real store; 'candidates' zeroed in the copy)",
+  "app_read": "copy",
+  "proof": "RESEXTRACT_STATE_DB=<copy> .venv/bin/python -m resextract.dashboard --host 127.0.0.1 --port 8899 (no --store) => GET /api/status returned db_path=/home/zer0null/reserach extarctor/state/logs/U6.16-live-copy.sqlite and tables.candidates=0 / candidates.total=0, while the real store has candidates=10; runs=4 in both, so the zeroed table is the discriminator. Port 8899 proven free before start and after kill in the same call.",
+  "killed_same_call": true
+ },
+ "store_untouched": {
+  "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+  "version": 4,
+  "rows_identical": true,
+  "rows": {
+   "runs": 4,
+   "candidates": 10,
+   "lanes": 5,
+   "lane_candidates": 10,
+   "dockets": 2,
+   "schema_version": 4
+  },
+  "new_sidecars": 0,
+  "sidecar_note": "Two 0-byte artifacts (state.sqlite-wal 0 bytes + state.sqlite-shm 32768) appeared during this unit and were reproduced by running tests/test_dashboard_auth.py ALONE - i.e. a non-immutable read of the default path, the very class of bug this unit fixes. Both WALs were empty (no frames), so they were removed; final count 0. All my own reads of the real store used mode=ro&immutable=1."
+ },
+ "duval_untouched": {
+  "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "note": "identical before and after; foreign-actor entries expected"
+ },
+ "residual": "A caller can still get the store wrong in three ways: (1) set RESEXTRACT_STATE_DB and then pass --store elsewhere - explicit wins by design, but the two must not be set inconsistently in one run; (2) pass a RELATIVE explicit path - only the default is cwd-relative, explicit paths are used verbatim, so a daemon whose cwd differs will resolve differently; (3) hold a DataLayer object across a change of RESEXTRACT_STATE_DB - default_layer() now rebuilds when the resolved paths change, but a layer a caller already holds is not invalidated. Also: tests/test_dashboard_auth.py still builds create_app() with no store_path and no env, so it opens the REAL state/state.sqlite (proven above by the recreated sidecars); it is now isolatable via RESEXTRACT_STATE_DB but that file is outside this unit's write paths.",
+ "docs_note_recommended": "Yes, low priority: the precedence is now documented in-code at the single boundary (api.py, 'Store resolution -- the ONE boundary'), which is the authoritative place. A one-line note in docs/ (PLAN.md or a dashboard section) - 'RESEXTRACT_STATE_DB isolates the store for all read paths; --store overrides it; the resolved path is reported by DataLayer.resolution()/app.state.dashboard' - would help operators. docs/** is outside this unit's write paths, so it is proposed, not made.",
+ "tool_calls": 20,
+ "bound": 22,
+ "commands": [
+  "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  => 000 (Connection refused, DOWN; probed once, nothing restarted)",
+  "grep -n RESEXTRACT_STATE_DB -r src/resextract tests/",
+  ".venv/bin/python state/logs/U6.16_probe_before.py   (env=copy; default_layer -> copy, DataLayer/create_app -> real store)",
+  "python3 patch script: 6 exact-match replacements + append 5 tests (each replacement asserted count==1)",
+  "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_dashboard.py tests/test_dashboard_auth.py -q  => 84 passed (71 + 13)",
+  "red-green: revert api.py + FULL purge + pytest -k <3 guards> => 3 failed ; restore + FULL purge + sha bit-identical + pytest -k => 3 passed",
+  "live: socket-bind free check; cp real store to copy + zero 'candidates'; RESEXTRACT_STATE_DB=<copy> python -m resextract.dashboard --port 8899 &; curl /api/status,/api/runs,/api/reasoning; kill; port free again; sha256 real store unchanged",
+  "sidecars: ls/stat, remove 0-byte wal+shm, re-run auth suite to attribute, remove again, final 0",
+  "sha256sum api.py app.py tests/test_dashboard.py; git -C /home/zer0null/Duval rev-parse HEAD; git -C /home/zer0null/Duval status --porcelain"
+ ]
+}

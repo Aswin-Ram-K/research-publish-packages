@@ -1,0 +1,99 @@
+{
+  "unit": "U6.1",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/dashboard/__init__.py",
+    "src/resextract/dashboard/api.py",
+    "src/resextract/dashboard/app.py",
+    "src/resextract/dashboard/__main__.py",
+    "src/resextract/dashboard/static/index.html",
+    "src/resextract/dashboard/static/style.css",
+    "src/resextract/dashboard/static/app.js",
+    "tests/test_dashboard.py",
+    "tests/fixtures/dashboard-store/build.py",
+    "tests/fixtures/dashboard-store/state.sqlite",
+    "tests/fixtures/dashboard-store/journal/fixture-run.jsonl",
+    "tests/fixtures/dashboard-store/journal/sparse-run.jsonl",
+    "tests/fixtures/dashboard-store/dockets/ok-docket/MANIFEST.json",
+    "tests/fixtures/dashboard-store/dockets/broken-docket/MANIFEST.json",
+    "tests/fixtures/dashboard-store/ok-docket/MANIFEST.json",
+    "tests/fixtures/dashboard-store/graph-mini.json",
+    "state/logs/U6.1-api.bak",
+    "state/logs/U6.1-app.bak",
+    "orchestration/units/U6.1.md",
+    "orchestration/handoffs/U6.1.json"
+  ],
+  "evidence": {
+    "tests": "48 passed",
+    "red_green": "two guards, both pasted",
+    "red_green_detail": {
+      "traversal": "safe_slug checks removed -> FAILED tests/test_dashboard.py::test_safe_slug_guard_blocks_traversal (AssertionError: ../../etc/passwd; assert '../../etc/passwd' is None) and FAILED tests/test_dashboard.py::test_dockets_traversal_is_404[/api/dockets/..%2fok-docket] (decoy docket outside dockets/ reachable -> 200); 2 failed, 4 passed",
+      "loopback": "check_bind_host refusal removed -> FAILED tests/test_dashboard.py::test_non_loopback_host_is_refused - Failed: DID NOT RAISE ValueError; 1 failed, 5 passed, 42 deselected",
+      "restored": "both guards restored, tests re-run: 48 passed"
+    },
+    "live": {
+      "routes": [
+        {"path": "/", "status": 200},
+        {"path": "/api/status", "status": 200},
+        {"path": "/api/runs", "status": 200},
+        {"path": "/api/reasoning", "status": 200},
+        {"path": "/api/findings", "status": 200},
+        {"path": "/api/dockets", "status": 200},
+        {"path": "/api/dockets/_smoke", "status": 200},
+        {"path": "/api/web-health", "status": 200},
+        {"path": "/api/graph", "status": 200},
+        {"path": "/api/doctor", "status": 200},
+        {"path": "/api/refresh", "status": 200},
+        {"path": "/api/dockets/..%2f..%2fetc%2fpasswd", "status": 404}
+      ],
+      "docket_smoke": {
+        "slug": "_smoke",
+        "status": "draft",
+        "type": "report",
+        "lane": "duval-trace-integrity",
+        "freshness": "current (age_days 0.0, verified_at 2026-10-08T00:00:00Z)",
+        "claims": 3,
+        "material": 6,
+        "material_bytes": 134236,
+        "verify": "ok (no problems)",
+        "open_questions": 2,
+        "rework_open": 1,
+        "note": "fixture-claims over real copied material (generated_by.model=fixture-claims-u5.2)"
+      },
+      "doctor_occamy": "down",
+      "doctor_detail": "Occamy core DOWN ConnectError: [Errno 111] Connection refused; optional down: docling bridge, dashboard port (port leg down because this dashboard holds 8901)",
+      "graph": "2685/7102/128",
+      "graph_sha256_prefix": "4790bbb1111b76ea",
+      "sse_events": 3,
+      "sse_detail": "curl -N -m 3 /api/events -> 3 heartbeat events in 3 s, each data line well-formed JSON carrying journals/dockets/doctor snapshots; content-type text/event-stream",
+      "no_external_origins": true,
+      "server_stopped": true,
+      "start_command": "cd '/home/zer0null/reserach extarctor' && .venv/bin/python -m resextract.dashboard --port 8901"
+    },
+    "commands": [
+      ".venv/bin/python tests/fixtures/dashboard-store/build.py",
+      ".venv/bin/python -m pytest tests/test_dashboard.py -q  # 48 passed",
+      ".venv/bin/python -m pytest tests/test_dashboard.py -k 'traversal or safe_slug or non_loopback' -q  # red proof with guards reverted",
+      "cd '/home/zer0null/reserach extarctor' && .venv/bin/python -m resextract.dashboard --port 8901  # managed background job",
+      "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8901/api/dockets",
+      "curl -sN -m 3 http://127.0.0.1:8901/api/events",
+      "grep -E 'https?://' src/resextract/dashboard/static/*  # no matches",
+      "ss -ltn | grep 8901  # empty after stop"
+    ]
+  },
+  "reasoning_capture_gap": "Today's journals (state/journal/*.jsonl) carry seq/ts/kind/prev/hash plus miner fields (query, title, refs, reason, confidence, model_calls, reasoning_tokens, status, accepted/rejected, wall_s). They do NOT carry the model's reasoning_content text: /api/reasoning on the real journal live-u21-replay reports fields_present without reasoning_content, reasoning_text_available=false, reasoning_tokens_recorded=true (run_end reasoning_tokens=0 on the replay path), note='the client captures reasoning_content but the miner does not journal it yet'. The UI labels this explicitly instead of paraphrasing reasoning the store does not contain.",
+  "blocker": "",
+  "next_unit_hint": "The Reasoning screen is structurally complete: when the miner journals reasoning_content (one field per model turn, e.g. kind=model_turn with reasoning_content + content + token split), the trace will render it with no API or UI change (fields_present/reasoning_text_available flip automatically). Add a serve subcommand in cli.py (U0.7's file). Durability (systemd user unit) is deliberately not installed - a user decision. If the doctor port leg should read 'free' while the dashboard runs, exclude the dashboard's own port from probe_dashboard_port in doctor.py.",
+  "write_paths": [
+    "src/resextract/dashboard/__init__.py",
+    "src/resextract/dashboard/api.py",
+    "src/resextract/dashboard/app.py",
+    "src/resextract/dashboard/__main__.py",
+    "src/resextract/dashboard/static/**",
+    "tests/test_dashboard.py",
+    "tests/fixtures/dashboard-store/**",
+    "state/logs/U6.1*",
+    "orchestration/units/U6.1.md",
+    "orchestration/handoffs/U6.1.json"
+  ]
+}

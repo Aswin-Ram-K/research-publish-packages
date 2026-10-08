@@ -755,6 +755,27 @@ class OccamyClient:
     model) or to the measured defaults in this module.
     """
 
+    #: This class genuinely issues outbound HTTP requests to the model endpoint,
+    #: so it may declare itself a ``model`` producer.  A replay/stub subclass
+    #: that answers locally MUST set this to ``False``; :attr:`producer` reads
+    #: this flag, so the declaration and the request-making cannot disagree.
+    makes_requests: bool = True
+
+    @property
+    def producer(self) -> str:
+        """Which producer value this client *declares* (see ``PRODUCER_VOCAB``).
+
+        ``model`` **only** for an instance that genuinely makes requests.  A
+        request-free subclass therefore inherits the *cap*, not the declaration:
+        its producer resolves to a non-model value.  The ``is_replay``/``is_stub``
+        shorthands win over the capability flag, so a replay client that
+        subclasses or wraps this class can never be read as model-produced.  An
+        undeclared client never returns ``model`` and there is no fallback.
+        """
+        if getattr(self, "is_replay", False) or getattr(self, "is_stub", False):
+            return "replay"
+        return "model" if self.makes_requests else "replay"
+
     def __init__(
         self,
         *,

@@ -365,12 +365,12 @@ def test_add_rework_dedupes_and_lists(con: sqlite3.Connection):
 
 
 def test_model_suggested_check_rejects_two(con: sqlite3.Connection):
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: model_suggested"):
         con.execute(
             "INSERT INTO rework(docket_id, reason, required_work, model_suggested) "
             "VALUES (NULL, 'r', 'w', 2)"
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="model_suggested must be 0 or 1"):
         store.add_rework(con, reason="r", required_work="w", model_suggested=7)
     # 0/1 both round-trip
     _, i0 = store.add_rework(con, reason="a", required_work="w", model_suggested=0)
@@ -444,7 +444,7 @@ def test_upsert_docket_by_dir_never_duplicates(con: sqlite3.Connection):
 def test_dockets_dir_unique_index_rejects_direct_duplicate(con: sqlite3.Connection):
     con.execute("INSERT INTO dockets(lane_id, dir) VALUES (NULL, 'dockets/x')")
     con.commit()
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(sqlite3.IntegrityError, match="UNIQUE constraint failed: dockets.dir"):
         con.execute("INSERT INTO dockets(lane_id, dir) VALUES (NULL, 'dockets/x')")
     con.rollback()
     assert store.count(con, "dockets") == 1
@@ -513,28 +513,28 @@ def test_all_four_check_vocabularies_reject_bad_values(con: sqlite3.Connection):
     candidate = store.insert_candidate(con, run_id=run, title="c")
     claim = store.insert_claim(con, candidate_id=candidate, text="x")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="verdict must be one of"):
         store.insert_verdict(con, claim_id=claim, verdict="MAYBE")
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: verdict"):
         con.execute("INSERT INTO verdicts(claim_id, verdict) VALUES (?, 'MAYBE')", (claim,))
     con.rollback()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="source_kind must be one of"):
         store.insert_evidence(con, claim_id=claim, source_kind="ftp")
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: source_kind"):
         con.execute("INSERT INTO evidence(claim_id, source_kind) VALUES (?, 'ftp')", (claim,))
     con.rollback()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="lane type must be one of"):
         store.upsert_lane(con, target="duval", slug="bad-type", type="essay")
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: type"):
         con.execute("INSERT INTO lanes(target, slug, \"type\") VALUES ('duval','bt','essay')")
     con.rollback()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="lane status must be one of"):
         store.set_lane_status(con, 1, "wip")
     lane_row = store.upsert_lane(con, target="duval", slug="ok-lane", type="report", status="draft")
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: status"):
         con.execute("UPDATE lanes SET status='wip' WHERE id=?", (lane_row,))
     con.rollback()
 

@@ -1,0 +1,142 @@
+{
+  "unit": "U5.28",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/docket/assemble.py",
+    "tests/test_docket_provenance.py",
+    "orchestration/units/U5.28.md",
+    "orchestration/handoffs/U5.28.json",
+    "state/logs/U5.28-testnames-before.txt",
+    "state/logs/U5.28-testnames-after.txt",
+    "state/logs/U5.28-names-before.txt",
+    "state/logs/U5.28-names-after.txt"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "tests": {
+      "provenance_before": 34,
+      "provenance_after": 35,
+      "def_test_before": 28,
+      "def_test_after": 29,
+      "test_defs_deleted": 0,
+      "added_names": ["test_guard_u523_non_none_verdict_reason_is_not_a_downgrade_marker"],
+      "deleted_names": [],
+      "run": "find src tests -name __pycache__ -prune -exec rm -rf {} + ; PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_provenance.py -q -p no:cacheprovider => '35 passed in 0.41s' (34 before = 28 def test_ with one 7-case parametrize)",
+      "purge": "full src+tests __pycache__ purge; 0 remaining",
+      "deletion_check": "comm -23 of the sorted 'def test_' name sets is empty (names only, not a count)"
+    },
+    "patches": [
+      {
+        "patch": "assemble.py docstring",
+        "verbatim_quote": "@@ -1126,8 +1126,10 @@\n     claim, on ``Claim.verdict_reason`` -- the field the manifest schema\n-documents for exactly this, and the one ``CLAIMS.md`` renders verbatim.\n+documents for a cap reason, and the one ``CLAIMS.md`` renders verbatim.\n+That field now also carries the U5.19 provenance-divergence note, which\n+this function *preserves* when it appends its own reason below (it runs\n+while ``claim.verdict`` is still ``CONFIRMS``, so an existing note cannot\n+itself be a cap reason).\nThe same qualifier applies to the comment at :1241-1243.",
+        "adaptation": "wording none. (a) no indentation normalisation: the handoff's added lines carry no leading whitespace and the line they replace at :1128 is itself dedented to column 0 in the file, so they were applied as written; (b) the trailing sentence 'The same qualifier applies to the comment at :1241-1243.' has no +/- prefix in the handoff diff text (context-style), so it is not literally a diff line - read as part of the ADDED docstring block because the card calls it 'a citation to a comment at :1241-1243', and placed immediately before the closing triple-quote (necessarily: text after the closing quote is not a docstring line). The comment at :1241-1243 itself was NOT edited: it is outside the recorded hunk and the card scopes patch 1 to the docstring at :1127-1128. Alternate reading (apply the qualifier to the :1241-1243 comment instead of citing it) is recorded here for the verifier.",
+        "before": "    claim, on ``Claim.verdict_reason`` -- the field the manifest schema\ndocuments for exactly this, and the one ``CLAIMS.md`` renders verbatim.\n    \"\"\"",
+        "after": "    claim, on ``Claim.verdict_reason`` -- the field the manifest schema\ndocuments for a cap reason, and the one ``CLAIMS.md`` renders verbatim.\nThat field now also carries the U5.19 provenance-divergence note, which\nthis function *preserves* when it appends its own reason below (it runs\nwhile ``claim.verdict`` is still ``CONFIRMS``, so an existing note cannot\nitself be a cap reason).\nThe same qualifier applies to the comment at :1241-1243.\n    \"\"\"",
+        "located_by_content": "the staleness was real at :1127-1128 exactly as reported (V5.25 confirmed); the line numbers had not drifted for this location"
+      },
+      {
+        "patch": "test_guard_u523_non_none_verdict_reason_is_not_a_downgrade_marker",
+        "verbatim_quote": "A docket test for U5.22 to land in tests/test_docket_provenance.py, next to the F2 guard at :947. Verbatim:\n\ndef test_guard_u523_non_none_verdict_reason_is_not_a_downgrade_marker(tmp_path):\n    \"\"\"U5.23: ``verdict_reason is not None`` is NOT a downgrade marker.\n\n    The F2 note is written on a claim that legitimately stands at ``CONFIRMS``\n    (a model verdict blessed replay-mined material), so a consumer must key on\n    ``verdict``, not on the reason's presence.  Pins both meanings and the\n    reliable discriminators.\n    \"\"\"\n    mixed_dir = tmp_path / \"mixed\"\n    mixed_dir.mkdir()\n    db = _store_with_assessed_member(\n        mixed_dir,\n        state=\"confirmed\",\n        producer=\"replay\",\n        verdict=\"CONFIRMS\",\n        verdict_producer=\"model\",\n    )\n    result, claims = _materialize_from_store(mixed_dir, db)\n    reason = claims[0][\"verdict_reason\"]\n    assert reason is not None                      # present ...\n    assert claims[0][\"verdict\"] == \"CONFIRMS\"      # ... yet NOT a downgrade\n    assert \"capped at EXTENDS\" not in reason       # cap discriminator\n    assert \"is the *assessing* producer\" in reason # F2 discriminator\n    assert result.manifest.generated_by.producer == \"replay\"",
+        "adaptation": "text byte-identical. Insertion POINT adapted: the handoff says 'next to the F2 guard at :947', but the F2 guard test_guard_u519_f2_model_verdict_on_replay_mined_candidate is actually at :975-1018 (line numbers moved), so the test was inserted immediately after it and before test_u519_producer_literal_sites_are_vocabulary_bound (now :1021). Helpers were NOT renamed or adapted: _store_with_assessed_member at :665 and _materialize_from_store at :716 are signature-compatible exactly as V5.25 found.",
+        "landed_text": "def test_guard_u523_non_none_verdict_reason_is_not_a_downgrade_marker(tmp_path):\n    \"\"\"U5.23: ``verdict_reason is not None`` is NOT a downgrade marker.\n\n    The F2 note is written on a claim that legitimately stands at ``CONFIRMS``\n    (a model verdict blessed replay-mined material), so a consumer must key on\n    ``verdict``, not on the reason's presence.  Pins both meanings and the\n    reliable discriminators.\n    \"\"\"\n    mixed_dir = tmp_path / \"mixed\"\n    mixed_dir.mkdir()\n    db = _store_with_assessed_member(\n        mixed_dir,\n        state=\"confirmed\",\n        producer=\"replay\",\n        verdict=\"CONFIRMS\",\n        verdict_producer=\"model\",\n    )\n    result, claims = _materialize_from_store(mixed_dir, db)\n    reason = claims[0][\"verdict_reason\"]\n    assert reason is not None                      # present ...\n    assert claims[0][\"verdict\"] == \"CONFIRMS\"      # ... yet NOT a downgrade\n    assert \"capped at EXTENDS\" not in reason       # cap discriminator\n    assert \"is the *assessing* producer\" in reason # F2 discriminator\n    assert result.manifest.generated_by.producer == \"replay\""
+      }
+    ],
+    "assemble_docstring_change": {
+      "sha_before": "0c8f7386394b2e92866aba0217c3bb9626dc12cc1707c6f2d474b124b95f1000",
+      "sha_after": "8cb9af52fa8fc94059f3ecf17146f2a89fe43383836725da5e9ada8dfaff1dc2",
+      "ast_identical": false,
+      "ast_identical_docstrings_nulled": true,
+      "bytecode_identical": true,
+      "ast_diff_line_count": 11,
+      "only_ast_delta": "the single str Constant that is _cap_uncapped_claims.__doc__",
+      "behaviour_changed": false,
+      "note": "The card prescribed ast.dump(ast.parse(before)) == ast.dump(ast.parse(after)). That is the COMMENTS-only proof (U5.23's `#:` change was AST-invisible) and it is FALSE here, because a docstring IS an AST node (a str Constant). Reported truthfully rather than copied: raw ast_identical=false. The no-behaviour-change proof used instead, all measured: (a) the indent=1 ast.dump unified diff contains exactly one changed Constant value; (b) ast.dump equality after nulling every docstring Constant value = True; (c) every code object's (co_code, co_names, co_varnames, co_flags) identical = True. The pre-image reconstructed by reversing the substitution reproduces sha_before exactly, so the pre-image is verified, not assumed."
+    },
+    "guard_can_fail": {
+      "reworded_literal": "is the *assessing* producer -> is the *assessor* producer at materialize.py:1686, the sole F2 emitter. Executed in a THROWAWAY COPY of the package (state/logs/U5.28-red/resextract) because docket/materialize.py is a forbidden write path in this unit; pytest was driven with PYTHONPATH pointing at the copy and the imported module path was verified to be the copy.",
+      "failure_verbatim": ">       assert \"is the *assessing* producer\" in reason # F2 discriminator\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       assert 'is the *assessing* producer' in \"claim producer 'model' is the *assessor* producer (verdict 1); the material was mined by 'replay' (docket-level provenance is the mining producer, not this one)\"\ntests/test_docket_provenance.py:1043: AssertionError\nFAILED tests/test_docket_provenance.py::test_guard_u523_non_none_verdict_reason_is_not_a_downgrade_marker\n1 failed, 34 deselected in 0.10s",
+      "restored_sha_equal": true,
+      "restore": "throwaway copy deleted (ls: no such directory); real src untouched - assemble.py 8cb9af52... and materialize.py mtime 2026-10-08 08:52:22 predating this unit (now=09:29); unmodified run: '1 passed, 34 deselected in 0.13s'",
+      "absence_case": "shown (constructed). Injecting the cap phrase into the F2-only reason => verbatim: '>       assert \"capped at EXTENDS\" not in reason       # cap discriminator / E       AssertionError: assert 'capped at EXTENDS' not in 'claim produ...ot this one)' / E         'capped at EXTENDS' is contained here: / E           producer (capped at EXTENDS) (verdict 1); the material was mined by 'replay' ... / tests/test_docket_provenance.py:1042: AssertionError / 1 failed, 34 deselected in 0.14s'",
+      "card_literal_tested": {
+        "reworded": "capped at EXTENDS -> capped to EXTENDS (the variant already present at tests/test_docket_reassembly.py:1385) at ALL FOUR cap emitters: materialize.py:1631, materialize.py:1641, assemble.py:1138, assess/verdicts.py:404 - in the same throwaway copy",
+        "observed": "1 passed, 34 deselected in 0.13s",
+        "meaning": "IMPORTANT and disclosed: the card's example red does NOT falsify this guard. Its cap assertion pins ABSENCE of the cap phrase in an F2-only (CONFIRMS) reason (specificity), not PRESENCE at the cap sites. What the guard does make fail loudly is the F2 discriminator string (reworded => 1 failed, verbatim above). The cap phrase's presence remains unpinned anywhere; see still_not_pinned."
+      }
+    },
+    "docstring_red_green": "not applicable (comments/docstring only: bytecode identical and AST identical once docstring values are nulled, so no test can observe it); stated plainly rather than manufacturing a cycle. The only red->green performed is on the guard (above).",
+    "real_dockets_unchanged": {
+      "replay": "NOT byte-identical across this unit: 9b6a577e1402fe41841e153a485e4b044a945a5f8bf05a59c2268df6086cd130 measured at unit start (before any edit) -> ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4 measured at unit end, mtime 2026-10-08 09:28:51, size 8926, whole folder rewritten. A FOREIGN actor did this during my unit (exactly the 'later unit re-materializes the replay docket after the render fix' the U5.24/_smoke restatement predicts). This unit performed no write under dockets/** at any point.",
+      "u55": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07 (identical start -> end)",
+      "smoke": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6 (identical start -> end; the frozen witness)",
+      "hash_recipe": "sha256sum dockets/duval/duval-replay-material/MANIFEST.json dockets/duval/duval-u55-pinned/MANIFEST.json dockets/_smoke/MANIFEST.json - run once before any edit and once after the final test run; plus stat -c '%y %s %n' on the replay manifest to date the drift",
+      "porcelain_dockets": "0 lines at both reads",
+      "porcelain_caveat": "dockets/ is gitignored, so `git status --porcelain -- dockets` CANNOT witness content drift; it is empty while the replay manifest's bytes changed. The sha256 pair is the real witness here."
+    },
+    "store_untouched": {
+      "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+      "version": 4,
+      "version_source": "the schema_version table holds rows 1,2,3,4 (PRAGMA user_version is 0 - the card's 'v4' is the schema_version table, not the pragma; measured, not assumed)",
+      "rows_identical": true,
+      "rows": {"lanes": 5, "candidates": 10, "claims": 0, "verdicts": 0},
+      "used_immutable": false,
+      "method": "cp state/state.sqlite state/logs/U5.28-store-copy.sqlite (sidecar-aware: ls showed NO -wal/-shm, so the main file was quiescent/complete), then a plain sqlite3.connect on the COPY, then the copy and any state/logs/U5.28-store-copy* sidecars deleted",
+      "sidecars_observed": 0,
+      "sidecars_created_by_me": 0,
+      "detail": "state/state.sqlite* matched exactly one file before and after; sha identical at unit end; the U6.16/U6.20/U6.21 store-copy leftovers in state/logs/ are other units' and were not touched. No SQLite connection was ever opened on state/state.sqlite itself."
+    },
+    "duval_untouched": {
+      "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "detail": "HEAD and porcelain identical at unit start and unit end; both untracked entries are PRE-EXISTING (U5.23 observed the same two). No write, no git state change. .worktrees/ was never read."
+    },
+    "changed_from_card": [
+      "raw ast.dump equality is FALSE for a docstring patch (true only for comments) - reported, with the correct equivalent proof",
+      "the card's example red literal (capped at EXTENDS -> capped to EXTENDS) does NOT fail this guard; measured GREEN. The red that bites is the F2 presence literal",
+      "the F2 guard is at :975-1018, not :947 (the card already warned that line numbers move)",
+      "the replay docket was re-materialized by a foreign actor mid-unit, so byte-identity holds only for u55 and _smoke; git porcelain cannot witness this because dockets/ is gitignored"
+    ],
+    "what_breaks_loudly_now": [
+      "The F2 discriminator substring is now a contract: renaming the sole emitter (materialize.py:1686) makes test_guard_u523_non_none_verdict_reason_is_not_a_downgrade_marker FAIL with the verbatim AssertionError captured above. Previously only the loose substring 'assessing' was asserted (F2 guard :975/:1006), so the exact discriminator U5.23 documented and V5.25 judged 'a hint, not a contract' had no test at all.",
+      "A wrong phrase in an F2-only reason now fails: the cap phrase appearing in a CONFIRMS claim's reason trips the absence assertion (constructed case above), so the F2-only reason can no longer silently absorb cap wording.",
+      "'verdict_reason is not None beside verdict == CONFIRMS' is now an asserted pair, so any future change that re-caps the model-verdict-on-replay-mined case fails loudly instead of silently re-using the field's presence as a downgrade marker."
+    ],
+    "still_not_pinned": [
+      "The CAP phrase 'capped at EXTENDS' is NOT pinned in the presence direction by anything: rewording it to the repo's existing variant 'capped to EXTENDS' (tests/test_docket_reassembly.py:1385) at ALL FOUR cap emitters (materialize.py:1631, materialize.py:1641, assemble.py:1138, assess/verdicts.py:404) leaves this guard GREEN (measured: 1 passed). A consumer that detects a cap by substring still breaks silently under that variant - the exact failure mode this unit set out to close, only half closed.",
+      "The emitter SET is not enumerated: a fifth cap site, or a second divergence-note site, would be detected by nothing; manifest.py:176-177 states 'emitted by every cap site and by nothing else' in prose only.",
+      "The joining format is not pinned: preserve-and-append order and the '; ' separator are unasserted, and clause-splitting on '; ' remains impossible (the divergence clause contains '; ' internally).",
+      "The reason matrix is partial: only F2-only (new guard) and cap-only (the pre-existing guards) are covered; the both-phrases case and the neither case are not pinned as a matrix.",
+      "No structural contract: typed assessed_by/mined_by fields (U5.23's follow-up; needs a deliberate resextract/docket/2 revision with additive-optional defaults so _smoke and the three real manifests keep loading) remain the only real fix."
+    ],
+    "tool_calls": 16,
+    "bound": 20,
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  # 000",
+      "read orchestration/handoffs/U5.23.json  # verbatim patch text, sha256 e96fa1c3c386d811dc1c5cd527387674fdb0aab74db950835a29680012ecc155, mtime 2026-10-08 09:16:09 -0500",
+      "sha256sum src/resextract/docket/assemble.py tests/test_docket_provenance.py dockets/duval/*/MANIFEST.json dockets/_smoke/MANIFEST.json state/state.sqlite  # assemble=0c8f7386..., docket shas 9b6a577e/445032f7/41ec711a, store=40e8aa0c",
+      "grep -c '^def test_' tests/test_docket_provenance.py  # 28 (34 collected)",
+      "grep -rn 'capped at EXTENDS' src/  # 4 emitters: verdicts.py:404, assemble.py:1138, materialize.py:1631, materialize.py:1641",
+      "grep -rn 'assessing\\* producer' src/  # single emitter: materialize.py:1686 (+ manifest.py:177 prose)",
+      "git -C /home/zer0null/Duval rev-parse HEAD ; git -C /home/zer0null/Duval status --porcelain  # 6c60da5a..., 2 pre-existing untracked",
+      "git status --porcelain -- dockets  # 0 lines",
+      "cp state/state.sqlite state/logs/U5.28-store-copy.sqlite + sqlite3 SELECT COUNT(*) on the copy  # lanes 5 / candidates 10 / claims 0 / verdicts 0",
+      "find src tests -name __pycache__ -prune -exec rm -rf {} + ; PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_provenance.py -q -p no:cacheprovider  # 35 passed in 0.41s, 0 pycache remaining",
+      ".venv/bin/python -c 'ast.dump(...)'  # raw False; docstrings-nulled True; bytecode_identical True; ast diff = 1 Constant",
+      "RED (throwaway copy, PYTHONPATH): sed 'is the *assessing* producer' -> 'is the *assessor* producer' on the copy's materialize.py; pytest -k u523  # 1 failed, 34 deselected (verbatim captured)",
+      "RED B (copy): sed 'capped at EXTENDS' -> 'capped to EXTENDS' at all 4 emitters; pytest -k u523  # 1 passed -- the card's example red does NOT bite",
+      "RED C (copy): cap phrase injected into the F2 reason; pytest -k u523  # 1 failed, 34 deselected (absence assertion)",
+      "rm -rf state/logs/U5.28-red ; sha256sum src/resextract/docket/assemble.py src/resextract/docket/materialize.py ; pytest -k u523  # 1 passed; copy gone",
+      "stat -c '%y %n' src/resextract/docket/materialize.py src/resextract/assess/verdicts.py  # 08:52:22 / 07:33:35, both predate this unit (now 09:29) -> not written by me",
+      ".venv/bin/python -c 'json.load(open(\"orchestration/handoffs/U5.28.json\"))'  # HANDOFF_STUB_PARSES_OK (the card's bare `python` is not on PATH; the venv interpreter was used)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Two live follow-ups. (1) The cap-side discriminator is still unpinned in the presence direction: add a guard asserting 'capped at EXTENDS' IS in a capped reason AND pin the emitter count (4 today), otherwise a reword to 'capped to EXTENDS' - already present at tests/test_docket_reassembly.py:1385 - is caught by nothing (measured). (2) Land typed assessed_by/mined_by provenance fields as a deliberate resextract/docket/2 revision with additive-optional defaults, so the discriminator stops being substring-matching English prose. Also: duval-replay-material/MANIFEST.json was re-materialized by another unit mid-flight (9b6a577e -> ce45766d at 09:28:51) and dockets/ is gitignored, so any future byte-identity claim about it needs a fresh sha baseline - and git porcelain will not warn you.",
+  "write_paths": [
+    "src/resextract/docket/assemble.py",
+    "tests/test_docket_provenance.py",
+    "state/logs/U5.28*",
+    "orchestration/units/U5.28.md",
+    "orchestration/handoffs/U5.28.json"
+  ]
+}

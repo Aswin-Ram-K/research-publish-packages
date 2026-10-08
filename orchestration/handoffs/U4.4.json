@@ -1,0 +1,152 @@
+{
+  "artifacts": [
+    "src/resextract/assess/value.py",
+    "src/resextract/assess/__init__.py",
+    "tests/test_assess_value.py",
+    "orchestration/units/U4.4.md",
+    "orchestration/handoffs/U4.4.json",
+    "state/logs/U4.4-live.json",
+    "state/assess/live-U4.4/no-client/",
+    "state/assess/live-U4.4/undeclared-stub/"
+  ],
+  "blocker": "",
+  "evidence": {
+    "axes": [
+      "affected_parties",
+      "unblocks",
+      "measured_delta",
+      "reproducibility",
+      "cost",
+      "licensing"
+    ],
+    "bound": 30,
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  -> 000 (2 probes max, none needed)",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q tests/test_assess_value.py  -> 11 passed",
+      "guard-a revert (sed guard + verifier empty-source) -> FAILED test_unsourced_axes_are_downgraded; restore sha256 6f60b282... bit-identical",
+      "guard-b revert (sed 'if not ok:' -> 'if False:') -> FAILED test_fabricated_span_is_rejected; restore sha256 6f60b282... bit-identical",
+      "python: assess_values(9 claims from state/claims/store-copy.sqlite, target_root=/home/zer0null/Duval, no client) -> 9 substantiated / 45 unknown",
+      "python: assess_values(..., undeclared stub) -> 0 substantiated / 54 unknown, producer unknown, 0 calls",
+      "sqlite read-only row counts of state/state.sqlite before+after -> unchanged",
+      "git --no-optional-locks -C /home/zer0null/Duval rev-parse HEAD + status --porcelain -> 6c60da5a..., 2 foreign untracked entries"
+    ],
+    "duval_untouched": {
+      "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "2 lines - the foreign actor's untracked entries (expected; its HEAD has been moving); no writes by this unit"
+    },
+    "live": {
+      "axes_by_name": {
+        "affected_parties": {
+          "substantiated": 0,
+          "unknown": 9
+        },
+        "cost": {
+          "substantiated": 0,
+          "unknown": 9
+        },
+        "licensing": {
+          "substantiated": 0,
+          "unknown": 9
+        },
+        "measured_delta": {
+          "substantiated": 0,
+          "unknown": 9
+        },
+        "reproducibility": {
+          "substantiated": 9,
+          "unknown": 0
+        },
+        "unblocks": {
+          "substantiated": 0,
+          "unknown": 9
+        }
+      },
+      "claims_assessed": 9,
+      "claims_source": "state/claims/store-copy.sqlite (a copy; the real store state/state.sqlite has claims=0, evidence=0, verdicts=0)",
+      "degradations": 0,
+      "example_substantiated": {
+        "axis": "reproducibility",
+        "source": "tsconfig.json#L24",
+        "value": "a third party can re-check this claim's own reference tsconfig.json#L24 (lines 24-24 of 29) and re-run the extractor against the same tree"
+      },
+      "example_unknown": {
+        "axis": "affected_parties",
+        "reason": "which parties a finding matters to requires a judgement the claim's own stored data does not contain; no client was available to make it"
+      },
+      "partial": false,
+      "producer": "fixture",
+      "substantiated": 9,
+      "undeclared_stub": {
+        "client_calls_made": 0,
+        "degradations": 9,
+        "note": "fail-closed: an undeclared client is 'unknown' and is not even called, so nothing it returns can substantiate an axis",
+        "partial": false,
+        "producer": "unknown",
+        "substantiated": 0,
+        "unknown": 54
+      },
+      "unknown": 45
+    },
+    "occamy_probe_http": "000",
+    "real_store_untouched": {
+      "rows_after": {
+        "candidates": 10,
+        "claims": 0,
+        "dockets": 2,
+        "evidence": 0,
+        "lane_candidates": 10,
+        "lanes": 5,
+        "rework": 0,
+        "runs": 4,
+        "schema_version": 3,
+        "search_health": 0,
+        "targets": 0,
+        "verdicts": 0,
+        "web_sources": 0
+      },
+      "rows_before": {
+        "candidates": 10,
+        "claims": 0,
+        "dockets": 2,
+        "evidence": 0,
+        "lane_candidates": 10,
+        "lanes": 5,
+        "rework": 0,
+        "runs": 4,
+        "schema_version": 3,
+        "search_health": 0,
+        "targets": 0,
+        "verdicts": 0,
+        "web_sources": 0
+      }
+    },
+    "red_green": {
+      "a": "sha before=6f60b282dc2c279c3242f296e9fda66116b39522baca92db65f2e792e5537300; revert=92aabda53b369b196de4a6e004fc5fd1fb567d7604d05915487a359de092da73; FAILED test_unsourced_axes_are_downgraded (assert 1 == 5: four unsourced axes accepted+substantiated); restored=6f60b282... bit-identical; green 11 passed",
+      "b": "sha before=6f60b282dc2c279c3242f296e9fda66116b39522baca92db65f2e792e5537300; revert=196b69368b228449af7059971d3cb56793d19cd6a52bcd312a797378d5a19290; FAILED test_fabricated_span_is_rejected (fabricated README.md#L99999-L100000 substantiated); restored=6f60b282... bit-identical; green 11 passed"
+    },
+    "rules": {
+      "all_six_always_present": true,
+      "deterministic": true,
+      "fabricated_ref_rejected": true,
+      "no_source_never_substantiated": true,
+      "truncation_all_unknown": true,
+      "undeclared_client_unknown": true
+    },
+    "stage5_status": "value half built; verdict half verified earlier; model path UNVERIFIED (blocked)",
+    "store_gap": "no value table in schema v3; axes kept in run artefacts (VALUE.md, values.jsonl, report.json), not dropped",
+    "tests": 11,
+    "tool_calls": 27
+  },
+  "next_unit_hint": "Independent verifier: re-run tests/test_assess_value.py, re-do both red->green reverts (guard-a needs BOTH the guard and verify_axis_source's empty-source rejection reverted - it is defence in depth), and re-run the no-client live pass over state/claims/store-copy.sqlite. The model path cannot be verified while Occamy 192.168.2.168:8012 is down; it is UNVERIFIED (blocked). A schema-v4 migration could add a value table to persist the axes (the store_gap).",
+  "status": "done",
+  "unit": "U4.4",
+  "write_paths": [
+    "src/resextract/assess/value.py",
+    "src/resextract/assess/__init__.py",
+    "tests/test_assess_value.py",
+    "state/assess/**",
+    "state/logs/U4.4*",
+    "orchestration/units/U4.4.md",
+    "orchestration/handoffs/U4.4.json"
+  ]
+}

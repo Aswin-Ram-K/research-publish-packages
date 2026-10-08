@@ -1,0 +1,123 @@
+{
+ "unit": "U8.10",
+ "status": "done",
+ "artifacts": [
+  "docs/PLAN_CORRECTIONS.md",
+  "orchestration/units/U8.10.md"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "entries": {
+   "before": 48,
+   "last_before": "av",
+   "appended": 8,
+   "after": 56,
+   "last_after": "bd",
+   "new_letters": [
+    "aw",
+    "ax",
+    "ay",
+    "az",
+    "ba",
+    "bb",
+    "bc",
+    "bd"
+   ]
+  },
+  "reported_only_preserved": 6,
+  "existing_entries_modified": 0,
+  "prefix_byte_identical": true,
+  "sha256_before": "823ced8796710e70fbf17afd94c8fc78aef5e8c9cfe7b2983e74a74e218aaf27",
+  "sha256_after": "ba3f8848b6a8eb956f01b5f81a82e54a359e935cc46b9751427c42fb7dfa8c10",
+  "bytes_before": 70445,
+  "bytes_after": 89452,
+  "bytes_appended": 19007,
+  "prefix_proof": "head -c 70445 docs/PLAN_CORRECTIONS.md > state/logs/U8.10.prefix.check; cmp state/logs/U8.10.prefix.bak state/logs/U8.10.prefix.check -> exit 0 (byte-identical)",
+  "sections": [
+   "A",
+   "B",
+   "C",
+   "D",
+   "E",
+   "F",
+   "G",
+   "H",
+   "I"
+  ],
+  "sections_marked_reported_only": [
+   "F (bb) - whole entry, no listener bound",
+   "B - the V8C arm",
+   "E - the U6.15 behavioural arm",
+   "G - the V5F and V5G arms",
+   "H - clause (4) die-with-parent"
+  ],
+  "claims_verified_on_disk": [
+   "aw: config/graph_pin.toml present (2331 B, -rw-------); run.py:326 allow_graph_digest_mismatch, :836 GRAPH_PIN_FILE, :848 _graph_pin, :956-:985 match/mismatch/unpinned, :1042-:1045",
+   "aw addendum (NEW): config/graph_pin.toml is UNTRACKED - git ls-files config/ returns only resextract.toml and targets.toml; git status --porcelain gives '?? config/graph_pin.toml'; git check-ignore says not ignored",
+   "ax: run.py:313-317 require_fresh_graph (report-only default), :783-822 stale/unverified, :903-904, :926-938, :1028-1029 stats.edges; U8.6 logs edges=7102 nodes=2685 sha256 4790bbb1111b",
+   "ay: run.py:183 exit_code; :200 and :210-217 @property ok/status derived from it",
+   "az: app.py has 14 @app.get/post sites (:173/:185/:189/:193/:198/:202/:206/:215/:219/:223/:227/:233/:253/:378); app.py:114 FastAPI(docs_url=None, redoc_url=None) with no openapi_url; app.py:388 app.mount('/static') => 14 + /openapi.json + /static = 16",
+   "ba: dashboard/__main__.py:53-92 refuses empty or auto on a non-loopback bind and resolves auto to secrets.token_urlsafe(32); :122-123 prints it; cli.py:421-433 same rule",
+   "bc: materialize.py:532-545 _normalise_producer exact membership with no strip/lower; :1485-1500 _verdicts_by_candidate ('no settled_by column', highest verdicts.id wins); :311-318; assess/verdicts.py:401-406 caps to EXTENDS with a recorded reason; manifest.py:81 PRODUCERS = PRODUCER_VOCAB + ('mixed',); cli.py:343-351 the curated --lane-file route",
+   "bc store (file:state/state.sqlite?immutable=1, sha 40e8aa0c, v4, NOT written): verdicts=0, claims=0, candidates=10; pragma table_info(claims) has no settled_by",
+   "bd: content-anchored relocation of every cited site; the store read used immutable=1 and left sha 40e8aa0c byte-identical"
+  ],
+  "claims_taken_on_report": [
+   "ay: V8B 'F1/F2/F3 PASS, red->green sha-proven, release sha 18d8bc32 matches'",
+   "az: V6G 'rule holds on every arm I could test ... sha-proven red->green'; U6.12/U6.9 live LAN runs",
+   "bc: U5.13/V5D/U5.15 test counts (154, 0 deletions) and the raw 'Model' -> CONFIRMS red run",
+   "bd clause (4): U6.15 env_note 'started+probed+killed inside one bash call (die-with-parent)'"
+  ],
+  "sections_marked_reported_only_reasons": {
+   "F": "whole entry is V6G-sourced; this unit ran zero network operations and no test suite, so the anonymous-LAN-200 was not re-bound",
+   "B": "V8C is partial (handoff next_unit_hint only 'starting C1') - its intended independent re-run has NOT landed",
+   "E": "U6.15 handoff is partial with empty fix/red_green/live; U6.14 partial blocker 'in flight'; guard text read but behaviour not re-bound",
+   "G": "V5F is partial ('in progress') and V5G.json does not exist on disk",
+   "H": "the die-with-parent clause is taken from U6.15 env_note"
+  },
+  "not_invented": [
+   "section I: already recorded as (av) by U8.9 - deliberately not duplicated",
+   "no correction was created for any claim lacking on-disk evidence; each such claim was marked reported-only and its unit named"
+  ],
+  "in_flight_siblings_untouched": [
+   "V8C (run.py)",
+   "U0.19 (doctor.py)",
+   "U6.15 (dashboard/__main__.py, cli.py, dashboard/app.py)",
+   "U5.17 (docket/assemble.py)"
+  ],
+  "tool_calls": 16,
+  "bound": 26,
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  # 000",
+   "sha256sum docs/PLAN_CORRECTIONS.md  # 823ced87... before",
+   "cp docs/PLAN_CORRECTIONS.md state/logs/U8.10.prefix.bak",
+   "git ls-files config/  # resextract.toml, targets.toml only",
+   "git status --porcelain config/graph_pin.toml  # ?? config/graph_pin.toml",
+   "grep -n 'allow_graph_digest_mismatch|graph_pin|digest_state' src/resextract/run.py",
+   "python sqlite3 immutable=1: verdicts=0 claims=0 candidates=10",
+   "grep -cE '@app[.](get|post|put|delete)' src/resextract/dashboard/app.py  # 14",
+   ".venv/bin/python append aw-bd (append-only write_bytes)",
+   "cmp state/logs/U8.10.prefix.bak <(head -c 70445 docs/PLAN_CORRECTIONS.md)  # exit 0"
+  ],
+  "invariants": {
+   "state_db_untouched": {
+    "sha": "40e8aa0c",
+    "version": 4,
+    "writes": 0,
+    "opened": "immutable=1"
+   },
+   "PLAN_md_untouched": true,
+   "duval_untouched": true,
+   "no_llm_calls": true,
+   "no_network_writes": true
+  }
+ },
+ "blocker": "",
+ "next_unit_hint": "ledger holds 56 (a-bd); next letter be. Section I was already (av). Still unlanded and worth a verifier: V8C (A/B graph arms, partial), V5G (G cap, file absent on disk), V5F (partial), U6.15 red_green/live (E behavioural arm), and U5.17 (assemble.py, no handoff on disk). OPEN ITEM: config/graph_pin.toml is untracked - it needs git add for the committed-pin durability that ledger entry (aw) describes; U8.10 could not commit (append-only write path).",
+ "write_paths": [
+  "docs/PLAN_CORRECTIONS.md",
+  "state/logs/U8.10*",
+  "orchestration/units/U8.10.md",
+  "orchestration/handoffs/U8.10.json"
+ ]
+}

@@ -1,0 +1,147 @@
+{
+ "unit": "U6.21",
+ "status": "done",
+ "artifacts": [
+  "tests/test_dashboard.py",
+  "orchestration/units/U6.21.md",
+  "state/logs/U6.21.test_dashboard.before.py",
+  "state/logs/U6.21.test_dashboard.fixed.py",
+  "state/logs/U6.21.test_dashboard.pre-edit-reconstructed.py"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "probe_note": "curl -sS -m 5 http://192.168.2.168:8012/v1/models -> exit 7 connection refused; one probe, no restart, zero LLM calls",
+  "before": {
+   "collected": 75,
+   "passed": 72,
+   "failed": 3,
+   "failures": [
+    {
+     "test": "test_dockets_board_lists_valid_and_corrupt",
+     "line": 275,
+     "artifact": "fixture ok-docket (tests/fixtures/dashboard-store/build.py::write_docket), via client/autouse _dashboard_fixture",
+     "assertion": "assert valid[\"verify\"][\"ok\"] is True",
+     "verbatim": "tests/test_dashboard.py:275: AssertionError\nE       assert False is True"
+    },
+    {
+     "test": "test_docket_detail_renders_headings",
+     "line": 304,
+     "artifact": "same fixture ok-docket, /api/dockets/ok-docket",
+     "assertion": "assert body[\"verify\"][\"ok\"] is True",
+     "verbatim": "tests/test_dashboard.py:304: AssertionError\nE       assert False is True"
+    },
+    {
+     "test": "test_nested_docket_detail_returns_manifest",
+     "line": 380,
+     "artifact": "a shutil.copytree COPY of the ok-docket fixture renamed duval/duval-u55-pinned under tmp_path (_nested_dockets_root) -- NOT the real dockets/duval/**",
+     "assertion": "assert payload[\"verify\"][\"ok\"] is True",
+     "verbatim": "tests/test_dashboard.py:380: AssertionError\nE       assert False is True"
+    }
+   ]
+  },
+  "classification": [
+   {
+    "test": "test_dockets_board_lists_valid_and_corrupt",
+    "exercises": "fixture",
+    "class": "fixture-wrong",
+    "evidence": "Reads the autouse session fixture tree (test_dashboard.py:64-82 rebinds DOCKETS to build.py's tmp_path output). verify_docket(built/dockets/ok-docket) returns ok=False with the single problem below, because build.py::write_docket builds Claim C1 with no producer -> manifest records producer 'unknown' and generated_by.producer 'unknown'. Correct check, invalid fixture: an artifact named ok-docket asserted to verify ok must BE valid. Neither dockets/_smoke nor duval-replay-material is involved (real dockets reached only by other tests)."
+   },
+   {
+    "test": "test_docket_detail_renders_headings",
+    "exercises": "fixture",
+    "class": "fixture-wrong",
+    "evidence": "Same fixture docket through /api/dockets/ok-docket; only the verify leg fails; every render assertion (headings, lane, documents) passes."
+   },
+   {
+    "test": "test_nested_docket_detail_returns_manifest",
+    "exercises": "fixture",
+    "class": "fixture-wrong",
+    "evidence": "test_dashboard.py:353-362 _nested_dockets_root does shutil.copytree(DOCKETS/'ok-docket', tmp/dockets/duval/duval-u55-pinned); DOCKETS is the rebound fixture root. The slug is duval/duval-u55-pinned but the artifact bytes are the ok-docket fixture, so it carries the same 'unknown' producer. Not transient: it does not touch dockets/duval/duval-replay-material, so no pending re-render changes it."
+   }
+  ],
+  "resolution": [
+   {
+    "test": "test_dockets_board_lists_valid_and_corrupt",
+    "mechanism": "fixture-fixed",
+    "before": "assert valid[\"verify\"][\"ok\"] is True  ->  assert False is True",
+    "after": "unchanged assertion; fixture C1 producer 'unknown'->'model' (and generated_by.producer) -> assert True passes",
+    "assertion_changed": false,
+    "why": "Fixture-wrong branch: give the fixture a model-backed claim so it exercises a valid docket. No assertion touched."
+   },
+   {
+    "test": "test_docket_detail_renders_headings",
+    "mechanism": "fixture-fixed",
+    "before": "assert body[\"verify\"][\"ok\"] is True  ->  assert False is True",
+    "after": "unchanged assertion; passes",
+    "assertion_changed": false,
+    "why": "Same fixture repair."
+   },
+   {
+    "test": "test_nested_docket_detail_returns_manifest",
+    "mechanism": "fixture-fixed",
+    "before": "assert payload[\"verify\"][\"ok\"] is True  ->  assert False is True",
+    "after": "unchanged assertion; passes (nested copytree inherits the repaired fixture)",
+    "assertion_changed": false,
+    "why": "Same fixture repair; the copy is taken from the repaired tree. Deliberately NOT xfail, because no repair to any real docket is pending for this test."
+   }
+  ],
+  "after": {
+   "collected": 75,
+   "passed": 75,
+   "failed": 0,
+   "xfailed": 0,
+   "remaining_failures": []
+  },
+  "problem_text_used": "claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='unknown') -- a non-model run may not assert CONFIRMS; re-derive the claim through materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)",
+  "red_green": {
+   "a": "tests/test_dashboard.py pre-edit sha256 0884b83868f08fa4c178b9ab92683e56c51363474265184dc93a37798e659f14 -> RUN: 3 failed, 72 passed (same 3 by name: board/headings/nested). fixed sha256 4195099c9f8d4366619f382a5ecbbf661bd187fbcb97e1dc9740d5102b99cbcd -> RUN: 75 passed. Restored file sha256 == 4195099c... bit-identical; full __pycache__ purge (pycache_left 0) before every run; PYTHONDONTWRITEBYTECODE=1. NOTE: git HEAD is 48 tests behind the working tree (U6.20's additions are uncommitted), so the pre-edit sha was reconstructed by inverse-applying this unit's edit and then PROVEN by behaviour (it reproduces the recorded 3/72 baseline exactly).",
+   "no_xfail_needed": "No xfail(strict=True) was used: none of the three failures is transient. The permanent (_smoke) and transient (duval-replay-material) artifacts named in the card are NOT exercised by any of the three failing tests."
+  },
+  "no_test_deleted": true,
+  "other_assertions_weakened": [],
+  "assertions_changed": [],
+  "dockets_untouched": {
+   "replay": "9b6a577e1402fe41841e153a485e4b044a945a5f8bf05a59c2268df6086cd130",
+   "u55": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+   "smoke": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+   "hash_recipe": "find dockets -name MANIFEST.json -exec sha256sum {} + (dockets/_smoke, dockets/duval/duval-replay-material, dockets/duval/duval-u55-pinned); all three match the card's shas before and after",
+   "porcelain_dockets": "0 lines"
+  },
+  "store_untouched": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": "schema_version table max(version)=4 (v4). PRAGMA user_version reads 0 -- this store versions via the schema_version table, not the pragma; reported as observed.",
+   "rows_identical": true,
+   "rows": "13 tables; candidates 10, runs 4, lanes 5, dockets 2, lane_candidates 10, claims/verdicts/evidence/rework/targets/search_health/web_sources 0",
+   "used_immutable": false,
+   "sidecars_observed": "2, both belonging to a DIFFERENT db (state/U2.5_realmirror_before.sqlite-wal and -shm); none beside state/state.sqlite",
+   "sidecars_created_by_me": 0,
+   "sidecars_created_by_me_note": "0 beside the store. Read the store ONLY through a copy (cp state/state.sqlite state/logs/U6.21-store-copy.sqlite, opened mode=ro, no immutable=1); that copy grew its own -wal/-shm inside state/logs/ (this unit's write path).",
+   "immutable_flag_used": false
+  },
+  "duval_untouched": {
+   "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "2 entries (the foreign actor's; expected). Read with git --no-optional-locks so no index write. .worktrees/ never read."
+  },
+  "residual": "None for this suite: 75/75 green, 0 failed, 0 xfailed, nothing deleted. Non-blocking follow-up: the canonical repair belongs in tests/fixtures/dashboard-store/build.py (Claim C1 needs producer='model'), which is outside U6.21's write paths, so the repair is applied in test_dashboard.py's own fixture builder instead. The suite's state is HONEST: the U5.22 check is untouched and still fails closed, and the fixture now encodes a valid docket rather than the suite blessing an invalid one.",
+  "tool_calls": 20,
+  "bound": 20,
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models (000, exit 7)",
+   "sha256sum src/resextract/docket/assemble.py -> 0c8f7386394b2e92866aba0217c3bb9626dc12cc1707c6f2d474b124b95f1000, mtime 2026-10-08 09:12:21 -0500 (unchanged at end: 0c8f7386394b2e92)",
+   "find . -name __pycache__ -prune -exec rm -rf {} + ; PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_dashboard.py -q --no-header -p no:cacheprovider",
+   "verify_docket(dataset ok-docket built by build.py) -> ok=False, 1 problem (text in problem_text_used)",
+   "diff <(git show HEAD:tests/test_dashboard.py) tests/test_dashboard.py",
+   "find dockets -name MANIFEST.json -exec sha256sum {} + ; git status --porcelain -- dockets",
+   "cp state/state.sqlite state/logs/U6.21-store-copy.sqlite; sqlite3 mode=ro copy -> schema_version max 4, 13 tables",
+   "git -C /home/zer0null/Duval --no-optional-locks rev-parse HEAD ; ... status --porcelain"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Optional hygiene unit: move the C1 producer='model' repair into tests/fixtures/dashboard-store/build.py and delete _make_fixture_docket_verifiable from test_dashboard.py. Real dockets (9b6a577e replay, 445032f7 u55, 41ec711a _smoke) are NOT exercised by this suite and remain legitimately non-ok under U5.22; if another suite asserts ok on them, classify per artifact: _smoke is permanent (restate ok is False + the problem text), duval-replay-material is transient (xfail strict=True naming the pending re-render).",
+ "write_paths": [
+  "tests/test_dashboard.py",
+  "state/logs/U6.21*",
+  "orchestration/units/U6.21.md",
+  "orchestration/handoffs/U6.21.json"
+ ]
+}

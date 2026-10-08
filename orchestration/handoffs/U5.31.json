@@ -1,0 +1,155 @@
+{
+ "unit": "U5.31",
+ "status": "done",
+ "artifacts": [
+  "tests/test_docket_provenance.py",
+  "src/resextract/docket/assemble.py",
+  "orchestration/units/U5.31.md"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "provenance_before": 36,
+   "provenance_after": 37,
+   "def_test_before": 30,
+   "def_test_after": 31,
+   "assertions_deleted": 0,
+   "count_method": "insertion-only: exactly ONE new `def test_` (test_guard_u531_replay_verdict_cap_reason_carries_the_cap_phrase, +5 asserts, +53 lines = 1145->1198); all 30 pre-existing test names unchanged so def_test_ 30->31; pytest 36->37 passed; `git` cannot witness this file (tests/ is not tracked in this workspace), so the count identity IS the evidence.",
+   "green_run": "37 passed in 0.43s"
+  }
+ },
+ "item1": {
+  "new_test": "test_guard_u531_replay_verdict_cap_reason_carries_the_cap_phrase",
+  "exact_inputs": "_store_with_assessed_member(dir, state='confirmed', producer='replay', verdict='CONFIRMS', verdict_producer='replay') -> one candidate (producer replay, state confirmed) + ONE verdict row (verdict CONFIRMS, producer replay), then _materialize_from_store()",
+  "reaches_emitter": "materialize.py:1641 (branch at :1638-1643)",
+  "emitter_branch_quoted": "if verdict == \"CONFIRMS\" and not _store.producer_is_model(member.verdict_producer): return \"EXTENDS\", (f\"verdict {member.verdict_id} says CONFIRMS but its producer is \" f\"{member.verdict_producer!r}, not 'model'; capped at EXTENDS by the \" \"same rule as assess.verdicts (a non-model run may not assert CONFIRMS)\")",
+  "why_that_emitter": "member.verdict is non-None (so the no-verdicts-row branch :1626-1633 / phrase at :1631 is NOT taken); verdict=='CONFIRMS' and producer_is_model('replay') is False -> the cap at :1639-1643 fires. producer(candidate)=='replay'==verdict_producer so _claim_for adds NO F2 note. Positive branch discriminator asserted: 'no verdicts row' not in reason (that sentence is :1631-only).",
+  "asserts_phrase_present": true,
+  "f2_phrase_absent": true,
+  "coverage": [
+   {
+    "emitter": "assemble.py:1143",
+    "driven": true,
+    "asserted": true,
+    "pinned": true,
+    "evidence": "U5.29 test part (2)"
+   },
+   {
+    "emitter": "materialize.py:1631",
+    "driven": true,
+    "asserted": true,
+    "pinned": true,
+    "evidence": "U5.29 test part (1)"
+   },
+   {
+    "emitter": "materialize.py:1641",
+    "driven": true,
+    "asserted": true,
+    "pinned": true,
+    "evidence": "this unit's test_guard_u531_..., RED bites in a copy"
+   },
+   {
+    "emitter": "assess/verdicts.py:404",
+    "driven": false,
+    "asserted": false,
+    "pinned": false,
+    "why": "writes Verdict.rationale; never reaches Claim.verdict_reason (U5.29 grep rationale over docket modules = 0)"
+   }
+  ],
+  "overclaim_flag": "none - the new path takes member.verdict non-None so :1631 is not taken; assemble._cap_uncapped_claims (:1143) is not reached because _materialize_and_read_claims contains 0 assemble() calls and the claim would arrive already at EXTENDS anyway"
+ },
+ "item1_red": {
+  "copy_location": "state/logs/U5.31-red (full-tree copy: src/ + tests/)",
+  "copy_was_imported": true,
+  "import_source_evidence": "IMPORTED_FROM=/home/zer0null/reserach extarctor/state/logs/U5.31-red/resextract/docket/materialize.py (PYTHONPATH + copy sitecustomize); the failure text itself proves it: the reason in the traceback reads 'capped to EXTENDS' which exists only in the copy",
+  "mutation": "capped at EXTENDS -> capped to EXTENDS (2 sites in the copy; 0 in the real tree)",
+  "failure_verbatim": "assert 'capped at EXTENDS' in \"verdict 1 says CONFIRMS but its producer is 'replay', not 'model'; capped to EXTENDS by the same rule as assess.verdicts (a non-model run may not assert CONFIRMS)\"  ->  tests/test_docket_provenance.py:1155: AssertionError  ->  1 failed in 0.15s",
+  "copy_deleted": true,
+  "real_tree_sha_before": {
+   "assemble": "8cb9af52fa8fc94059f3ecf17146f2a89fe43383836725da5e9ada8dfaff1dc2",
+   "materialize": "5dbf520e4822f681b7f7bafbb37d2529ce3864dd81bbb6bd9daf433c627e9d56"
+  },
+  "real_tree_sha_after": {
+   "assemble": "fd722f7e72848e9fb1f24dce4b18c7036cd305c9a9397d9c2550c42ff32fba22",
+   "materialize": "5dbf520e4822f681b7f7bafbb37d2529ce3864dd81bbb6bd9daf433c627e9d56"
+  },
+  "real_tree_unchanged": true
+ },
+ "item2": {
+  "note_text": "# A re-render is **not byte-identical**, by construction (U5.31).  Two\n# deliberate effects make it so: :func:`_append_history` *appends* a new block\n# to ``HISTORY.md`` (the append-only audit log -- never rewritten), and\n# :func:`_preserve_item` writes the outgoing ``ITEM.md`` as a fresh\n# ``ITEM.md.rN`` snapshot.  That rotation is **destructive**: it keeps only the\n# newest :data:`ITEM_SNAPSHOT_KEEP` = 5 snapshots, so once the window is full\n# each render also *deletes the oldest* ``ITEM.md.rN`` (V5.30 measured\n# r5 -> r6 (+ delete r1) -> r7 (+ delete r2), banner files +1 per run while the\n# manifest sha stayed fixed).  A verifier diffing a re-rendered docket must\n# therefore expect a new ``HISTORY.md`` block, one new ``ITEM.md.rN``, and the\n# loss of the oldest snapshot; byte identity across renders is not a contract.",
+  "file": "src/resextract/docket/assemble.py",
+  "line": 1699,
+  "item_snapshot_keep_confirmed": 5,
+  "node_type": "comment",
+  "proof_used": "ast-dump-equality",
+  "proof_result": true,
+  "proof_detail": "stripping the inserted # comment block reproduces the pre-edit bytes exactly (sha 8cb9af52...), ast.dump(parse(cur))==ast.dump(parse(stripped)) is True, and the compiled module code objects are identical (co_code/co_names/co_varnames/co_argcount/co_flags)",
+  "assemble_sha_before": "8cb9af52fa8fc94059f3ecf17146f2a89fe43383836725da5e9ada8dfaff1dc2",
+  "assemble_sha_after": "fd722f7e72848e9fb1f24dce4b18c7036cd305c9a9397d9c2550c42ff32fba22",
+  "behaviour_changed": false,
+  "should_be_idempotent_instead": "no - the append-only HISTORY.md audit log is deliberate; forcing byte-identity would either rewrite/lose the audit trail or drop the ITEM.md snapshot window, both changing delivery semantics on the real dockets. The destructive rotation is now documented instead (V5.30's measurement)."
+ },
+ "dockets_observed": [
+  {
+   "slug": "duval-replay-material",
+   "sha": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4",
+   "mtime": "2026-10-08 09:28:51.302382946",
+   "byte_identity_asserted": false,
+   "stable_across_sweeps": true
+  },
+  {
+   "slug": "duval-u55-pinned",
+   "sha": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+   "mtime": "2026-10-08 08:36:35.984233856",
+   "byte_identity_asserted": false,
+   "stable_across_sweeps": true
+  },
+  {
+   "slug": "_smoke",
+   "sha": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+   "mtime": "2026-10-08 05:49:09.150312424",
+   "byte_identity_asserted": false,
+   "stable_across_sweeps": true
+  }
+ ],
+ "store_untouched": {
+  "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+  "version": 4,
+  "rows_identical": true,
+  "real_store_never_opened": true,
+  "used_immutable": false,
+  "sidecars_observed": 2,
+  "sidecars_created_by_me": 0,
+  "note": "sha256 only (bytes identical => rows identical); version 4 is sha-anchored to the predecessor measurement, not re-read, because opening the store is forbidden; sidecars state.sqlite-shm/-wal observed at 09:34/09:29, predating my sweep"
+ },
+ "duval_untouched": {
+  "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "note": "both entries are pre-existing foreign untracked scratch (.ci-trunk.txt, .lane-j-scratch/); I created nothing there"
+ },
+ "hand_ups": {
+  "final_coverage_state": "3 of 4 pinned (assemble.py:1143, materialize.py:1631, materialize.py:1641); 1 unobservable (assess/verdicts.py:404 writes Verdict.rationale, never Claim.verdict_reason)",
+  "typed_schema_still_recommended": true,
+  "typed_schema_reason": "the remaining unreachable site is a typed Verdict.rationale string, not the untyped Claim.verdict_reason; the typed /2 standing (a non-model verdict may not assert CONFIRMS) is the only way to observe it, and no docket-level assertion can",
+  "ledger_append_owed": "cap-side presence pinned at 3/4 emitters; /2 typed-standing item unchanged"
+ },
+ "tool_calls": 17,
+ "bound": 16,
+ "commands": [
+  "curl probe x2 (000)",
+  "sha256sum/sha probes",
+  "pytest tests/test_docket_provenance.py (36->37)",
+  "red copy run",
+  "ast.dump + code-object proof"
+ ],
+ "blocker": "",
+ "next_unit_hint": "No further cap-emitter work is reachable at docket level; the only remaining item is the typed /2 standing for assess/verdicts.py:404 (Verdict.rationale), which needs a typed-verdict assertion, not a docket render.",
+ "write_paths": [
+  "tests/test_docket_provenance.py",
+  "src/resextract/docket/assemble.py",
+  "orchestration/units/U5.31.md",
+  "orchestration/handoffs/U5.31.json",
+  "state/logs/U5.31*",
+  "state/verify/U5.31/"
+ ]
+}

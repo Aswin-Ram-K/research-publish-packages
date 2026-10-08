@@ -1,0 +1,115 @@
+{
+ "unit": "U6.8",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/dashboard/api.py",
+  "tests/test_dashboard.py",
+  "state/U6.8/live/dockets",
+  "state/logs/U6.8-live.py",
+  "state/logs/U6.8-nonloopback.log",
+  "orchestration/units/U6.8.md"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "dashboard_before": 57,
+   "dashboard_after": 63,
+   "deletions": 0
+  },
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> 000",
+   "python -m pytest tests/test_dashboard.py --collect-only -q -> 57 tests",
+   "python -m pytest tests/test_dashboard.py -q -> 63 passed",
+   "sed guard reverts A/B/C with sha256 before/after + cmp (bit-identical)",
+   "python -m resextract.dashboard --host 127.0.0.1 --port 8931 ... (managed bg job) + python state/logs/U6.8-live.py",
+   "timeout 6 .venv/bin/python -m resextract.dashboard --host 0.0.0.0 --port 8932 -> exit 124 (BOUND, see divergence)"
+  ]
+ },
+ "residual_site": {
+  "file": "src/resextract/dashboard/api.py",
+  "line": 1237,
+  "roots": [
+   "dockets_dir",
+   "cwd"
+  ],
+  "reachable_from": "GET /api/refresh -> app.py:179 -> DataLayer.refresh_backlog (api.py:1097)",
+  "reproduced": "function-level"
+ },
+ "fix": {
+  "contained": true,
+  "refusal_payload": "{\"path\": \".../UPDATE_BACKLOG.md\", \"present\": false, \"bytes\": 0, \"truncated\": false, \"headings\": [], \"error\": \"refused: 'UPDATE_BACKLOG.md' resolves outside the docket root '...'\"}",
+  "cwd_decision": "dropped",
+  "cwd_justification": "cwd made the escape easiest: a single file NAMED UPDATE_BACKLOG.md anywhere in the process working directory was read back through /api/refresh with no docket, no slug and no docket-tree membership. Every genuine backlog file in this repo lives INSIDE a dockets tree (all 5 found by the recursive walk), so dropping cwd breaks no legitimate read; deployments that keep one elsewhere now pass it explicitly via the DataLayer backlog_dirs opt-in (contained like the root, no HTTP knob).",
+  "legit_reads_still_work": true
+ },
+ "toctou": {
+  "implementation": "fd-based",
+  "code": "fd = _open_readonly(path); st = os.fstat(fd); actual = Path(os.readlink(f'/proc/self/fd/{fd}')); if actual != expected_real: return '', False, 0, f'refused: the opened file descriptor is {actual!r}, not the validated path {expected_real!r} (swapped between check and use)'; raw = os.fdopen(fd,'rb').read(max_bytes)",
+  "safe": true,
+  "window": "_contained_realpath(path, root) (check) then _open_readonly(path) (use)",
+  "risk": "closed for Linux procfs: the read is taken FROM the descriptor whose identity is resolved AFTER the open, so a swap in the window is refused explicitly. Residual: hard links (in-root path to an outside inode has in-root fd identity) and platforms without /proc/self/fd (explicit refusal, not a silent read); loopback-only + local-write prerequisites still apply."
+ },
+ "red_green": {
+  "a": "sha256 cd34d8df9... -> revert(real = Path(os.path.realpath(str(path)))) 36f1e178b... -> FAILED test_refresh_backlog_symlink_escape_is_refused_not_served: assert RESIDUAL_MARKER not in response.text (marker present) -> restore bit-identical cd34d8df9...",
+  "b": "sha256 cd34d8df9... -> revert(if False and actual != expected_real) af8b8126f... -> FAILED test_refresh_backlog_fd_identity_survives_a_swap_in_the_window: assert ('# MARKER-U6.8-BACKLOG-LEAK-3f9a...' == '') -> restore bit-identical cd34d8df9...",
+  "c_extra": "cwd re-added 7bbc0f0... -> FAILED test_refresh_backlog_does_not_resolve_against_cwd: assert body['files'] == [] -> restore bit-identical"
+ },
+ "regression_confirmed": {
+  "listing_excludes_escapes": true,
+  "docket_detail_refuses": true,
+  "dockets_drops_escaped": true,
+  "verdotdot2_not_dead_code": true,
+  "segment_validation": true,
+  "escape_docket_refused": true,
+  "six_encodings_404": true
+ },
+ "live": {
+  "residual_path_no_longer_reads": true,
+  "dockets_200": 4,
+  "route_slugs_non_null": true,
+  "nested_detail": 200,
+  "truth_check_divergences": 0,
+  "reasoning_text_available": false,
+  "fabricated_reasoning": false,
+  "corrupt_manifest": "explicit, no 500: HTTP 404 {\"error\":\"MANIFEST.json unreadable: JSONDecodeError: ...\"}",
+  "control_gate": "401->200",
+  "non_loopback_refused": false,
+  "non_loopback_detail": "DIVERGENCE: `python -m resextract.dashboard --host 0.0.0.0 --port 8932` BOUND (exit 124 under timeout 6; log 'Uvicorn running on http://0.0.0.0:8932'); __main__.py makes an explicit --host imply allow_remote. Port released, nothing left bound. Library guard check_bind_host(host, allow_remote=False) still refuses and test_non_loopback_host_is_refused pins it. __main__.py is outside this unit's write paths.",
+  "external_origins": [],
+  "server_stopped": true,
+  "stray_processes": 0,
+  "start_command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m resextract.dashboard --host 127.0.0.1 --port 8931 --token U68TOK --store state/state.sqlite --journal-dir state/journal --dockets-dir state/U6.8/live/dockets"
+ },
+ "real_dockets_tree_unchanged": "0d08adbf0e99f7a7 (recipe: find dockets -type f | sort | xargs sha256sum | sha256sum; 0 symlinks; identical before/after). NOTE: the ec84099d pin came from the previous unit's recipe and could not be reproduced with this recipe; the tree is provably unchanged under mine.",
+ "state_store_untouched": true,
+ "duval_untouched": {
+  "head": "6c60da5aa924",
+  "porcelain": "?? .ci-trunk.txt;?? .lane-j-scratch/ (foreign actor's untracked entries; no writes by U6.8; HEAD unchanged before/after)"
+ },
+ "tool_calls": 36,
+ "bound": 26,
+ "blocker": "",
+ "next_unit_hint": "verify U6.8: re-run both guard reverts + the cwd guard with a FULL __pycache__ purge, then decide the non-loopback divergence: __main__.py's `allow_remote = args.allow_remote or (explicit_host and not is_loopback(host))` makes `--host 0.0.0.0` bind (exit 124, not exit 2) though the U6.8 checklist expects exit 2 / nothing bound; __main__.py was outside U6.8's write paths. Also: if a verifier needs the ec84099d tree pin, ask the previous unit for its exact hashing recipe.",
+ "write_paths": [
+  "src/resextract/dashboard/api.py",
+  "tests/test_dashboard.py",
+  "state/U6.8/**",
+  "state/logs/U6.8*",
+  "orchestration/units/U6.8.md",
+  "orchestration/handoffs/U6.8.json"
+ ],
+ "pending": [
+  {
+   "item": "doctor force is swallowed at the dashboard layer (U0.17 follow-up)",
+   "status": "pending",
+   "exact_location": "src/resextract/dashboard/api.py:1155  `report = doctor_mod.run_doctor()` inside `DataLayer.doctor_status(self, *, force: bool = False)` (def at api.py:1146). U0.17 saw this as api.py:1061 before U6.8's +94-line insertions; current numbering is 1155.",
+   "defect": "`force` is consumed only by the dashboard's own `_doctor_cache` TTL check (api.py:1149) and is NOT forwarded to run_doctor, so U0.17's new negative-TTL memory inside doctor.py still satisfies an explicit force -> the flag is decorative at the dashboard layer.",
+   "patch": "api.py:1155:  report = doctor_mod.run_doctor()  ->  report = doctor_mod.run_doctor(force=force)",
+   "app_py_audit": "app.py ALREADY forwards force correctly at both control call sites: app.py:187 (`_safe(layer.doctor_status, force=True)`, rescan) and app.py:207 (force=True). app.py:175 (`/api/doctor`) intentionally omits it (read route). No app.py change needed; the omission is api.py-only and consistent.",
+   "test_to_add_in": "tests/test_dashboard.py",
+   "test_sketch": "monkeypatch api.doctor_mod.run_doctor with a recording stub returning {\"ok\":True,\"legs\":{}}; layer.doctor_status(force=True) then layer.doctor_status(force=False) -> assert the FIRST recorded kwargs == {\"force\": True} and that only one probe ran (the second is served by _doctor_cache). Red before the patch: recorded force is None/absent.",
+   "cold_cost_precision": "The negative-TTL memory removes the REPEATED probe cost, not the COLD one: a cold control call (fresh process, or after the TTL expires) still pays the Occamy timeout ~5.0 s + ~0.6 s other legs, and SearXNG cold was 2.2-4.8 s on the forced path, so a 5 s client deadline can still abandon a cold FORCED call and report a false 000. U6.8 did NOT measure a cold call (this unit made zero network probes by design), so the false-000 risk is NOT claimed gone for cold calls - use a client timeout >=15 s.",
+   "note": "Not folded in because U6.8's tool-call budget was already spent (36/26) before this item arrived; per the delegating agent's instruction it is reported pending rather than stretching the bound."
+  }
+ ]
+}

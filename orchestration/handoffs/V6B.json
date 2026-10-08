@@ -1,0 +1,281 @@
+{
+ "unit": "V6B",
+ "status": "done",
+ "scope": "U6.5 nested-docket path validator",
+ "overall": "PARTIAL",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "dashboard suite + assertion diff",
+   "verdict": "PASS",
+   "observed": "52 passed in 19.55s; git diff --numstat tests/test_dashboard.py = 186 insertions / 0 deletions; 0 deleted lines contain assert; 4 new tests present",
+   "evidence": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_dashboard.py -q -> 52 passed; new tests: test_nested_docket_detail_returns_manifest, test_nested_traversal_encodings_are_404, test_dot_segment_is_refused_not_normalised, test_safe_docket_slug_pins_path_validation"
+  },
+  {
+   "id": "C2",
+   "name": "adversarial path attack",
+   "verdict": "PARTIAL",
+   "observed": "53 slug inputs through raw ASGI scope (no client-side dot-segment normalisation): 0 HTTP 500, 0 out-of-root 200; only 200s are the 3 legit dockets + 1 in-root symlink alias. escape (symlink inside root -> outside root) refused by REALPATH (404). Every traversal refused by SEGMENT validation. 1 handler-level gap found: a symlinked HEADING_FILE inside an accepted docket is opened through the symlink and its heading TEXT + size are served (out-of-root content read at 200).",
+   "evidence": "state/verify/V6B/attacks.json + printed matrix; probe3.log HEADING-TEXT-LEAK status 200 headings [SECRET-HEADING-V6B-9f3a, Another-Secret]; /api/dockets/_smoke/README.md (same symlink addressed directly) -> 404 refused by realpath"
+  },
+  {
+   "id": "C3",
+   "name": "masking re-derivation",
+   "verdict": "PASS",
+   "observed": "Neutralising api.py:122 condition (if \"/\" in candidate or \"\\\\\" in candidate or \"..\" in candidate) leaves -k \"traversal or safe_slug\" GREEN: 6 passed, 46 deselected. Remaining layers genuinely cover traversal: _SLUG_RE ^[A-Za-z0-9._-]+$ rejects / \\\\ and every %2f-decoded traversal, leading-dot rejects .. and every %2e-decoded form, NUL precheck, whole-string length cap.",
+   "evidence": "state/verify/V6B/reverts.py C3_line122 block; api.py sha restored 5b4de063..."
+  },
+  {
+   "id": "C4",
+   "name": "served-vs-disk producer nuance",
+   "verdict": "PASS",
+   "observed": "CONFIRMED at the correct level: disk MANIFEST.json generated_by = {app,model,version} (no producer); served generated_by = {app,version,model,producer:'unknown'}. Top level: disk keys == served keys minus status_reason (so producer is NOT a top-level field).",
+   "evidence": "state/verify/V6B/probe3.log + live-nested.json; manifest.py:147 producer: DProducer = \"unknown\""
+  },
+  {
+   "id": "C5",
+   "name": "red->green, two guards, sha-proven",
+   "verdict": "PASS",
+   "observed": "(a) realpath containment disabled -> escape ACCEPT and HTTP 200 (escape leak reproduced); pytest -k \"escape or nested or pins_path\" -> 1 failed (test_safe_docket_slug_pins_path_validation). (b) segment validation disabled -> duval/../_smoke ACCEPT and HTTP 200 (normalised inside root), duval//../_smoke 200, while duval/../../etc/passwd stays 404 via realpath; pytest -k \"dot_segment or nested_traversal or pins_path\" -> 2 failed. Both restores bit-identical.",
+   "evidence": "state/verify/V6B/reverts.py transcript; sha before/after each = 5b4de0639c4c73003c3e604b01dba9a9a5bdef07d558d7d3a8a65f9e41d44c68"
+  },
+  {
+   "id": "C6",
+   "name": "live re-verification",
+   "verdict": "PASS",
+   "observed": "/ + all 9 read routes 200; /api/dockets count 3, ALL route_slug non-null; nested detail 200 with status/generated_at/target matching disk; truth divergences 0 (3 vs 3); reasoning_text_available false, flag computed from a variable, 0 events with reasoning_text; control 401/401/200; 0.0.0.0 refused exit 2 nothing bound; served static external origins []; server stopped, ss empty, curl 000, 0 stray. Corrupt manifest explicit 404 JSON (ASGI layer, not a 3rd live server: serve has no --docket-root).",
+   "evidence": "state/verify/V6B/live-dockets.json, live-nested.json, state/logs/V6B-serve.log, V6B-serve2.log, control.py -> token (200, 5.61s)"
+  },
+  {
+   "id": "C7",
+   "name": "honesty audit",
+   "verdict": "PASS-with-notes",
+   "observed": "Release sha matches exactly. Refused-list essentially complete but missing: whitespace-normalisation acceptance (%20duval and 'duval\\n' are ACCEPTED as 'duval' rather than refused), trailing-dot 'duval.' accepted, and the symlinked-document read gap. 'ver..2' (internal '..') is refused only by line 122.",
+   "evidence": "attack matrix; probe_validate.py under C3 revert shows ver..2 -> 200"
+  },
+  {
+   "id": "C8",
+   "name": "containment",
+   "verdict": "PASS",
+   "observed": "Real dockets tree listing-hash and contents-hash identical before/after; Duval HEAD 6c60da5a... unchanged, porcelain unchanged; 0 outside writes; 0 .worktrees reads; store sha 459e16cc... (v3 checkpoint) unchanged; 0 strays.",
+   "evidence": "1de37a34.../49d749c5... both before and after; git -C /home/zer0null/Duval rev-parse HEAD"
+  }
+ ],
+ "test_counts": {
+  "dashboard": 52,
+  "assertions_deleted": 0,
+  "new_tests": 4
+ },
+ "attacks": [
+  {
+   "input": "duval/../../etc/passwd",
+   "outcome": "404",
+   "refused_by": "segment",
+   "note": "'..' segment caught by leading-dot check"
+  },
+  {
+   "input": "duval/../_smoke",
+   "outcome": "404",
+   "refused_by": "segment",
+   "note": "refused, NOT normalised"
+  },
+  {
+   "input": "escape (symlink inside root -> docket outside root)",
+   "outcome": "404",
+   "refused_by": "realpath",
+   "note": "the only case in the matrix where realpath, not segment validation, refuses; 200 + escaped dir when the layer is reverted"
+  },
+  {
+   "input": "alias-inside (symlink to another docket INSIDE root)",
+   "outcome": "200",
+   "refused_by": "none",
+   "note": "realpath stays in root; acceptable, both slugs name content already in root"
+  },
+  {
+   "input": "_smoke/README.md (symlink to file outside root)",
+   "outcome": "404",
+   "refused_by": "realpath",
+   "note": "direct path is contained correctly"
+  },
+  {
+   "input": "_smoke (docket containing the same symlinked README.md)",
+   "outcome": "200",
+   "refused_by": "none",
+   "note": "BYPASS: document read follows the symlink; heading text and byte size of the outside file are served"
+  },
+  {
+   "input": "/etc/passwd, ../etc/passwd, duval//../_smoke, //, ///, duval/, empty, '.', '..', '...'",
+   "outcome": "404",
+   "refused_by": "segment",
+   "note": "empty/'.'/leading-dot segments"
+  },
+  {
+   "input": "duval\\..\\_smoke (backslashes)",
+   "outcome": "404",
+   "refused_by": "segment",
+   "note": "precheck + regex"
+  },
+  {
+   "input": "%2e%2e, %2e%2e%2f, ..%2f, %2E%2E, duval/%2e%2e/%2e%2e/etc/passwd, %252e%252e%252f (double-encoded), %c0%ae (overlong), duval/%2e/_smoke",
+   "outcome": "404",
+   "refused_by": "segment",
+   "note": "all refused literally because the ASGI-decoded slug never re-decodes; decoded forms refused by regex/leading-dot"
+  },
+  {
+   "input": "duval%00, duval/\\x00",
+   "outcome": "404",
+   "refused_by": "segment",
+   "note": "NUL precheck"
+  },
+  {
+   "input": "duval\\uff0f_smoke (U+FF0F), e-acute composed and decomposed",
+   "outcome": "404",
+   "refused_by": "segment",
+   "note": "ASCII-only regex"
+  },
+  {
+   "input": "'x'*5000, 'x'*201",
+   "outcome": "404",
+   "refused_by": "segment",
+   "note": "200-char cap"
+  },
+  {
+   "input": "afile (a FILE), duval/duval-u55-pinned/MANIFEST.json (file as final segment)",
+   "outcome": "404",
+   "refused_by": "none",
+   "note": "validator accepts (chars are legal); handler refuses as not-a-docket, explicit error, no 500"
+  },
+  {
+   "input": "corrupt (dir with malformed MANIFEST.json)",
+   "outcome": "404",
+   "refused_by": "none",
+   "note": "explicit JSONDecodeError payload, never 500"
+  },
+  {
+   "input": "ver..2 (dir name with internal '..')",
+   "outcome": "404",
+   "refused_by": "segment",
+   "note": "only api.py:122 refuses it; routable (200) when that line is neutralised"
+  },
+  {
+   "input": "%20duval / 'duval\\n'",
+   "outcome": "404",
+   "refused_by": "none",
+   "note": "ACCEPTED after strip() -> 'duval' (normalisation, not refusal); not exploitable, but contradicts 'refusing is preferred to normalising' for whitespace"
+  },
+  {
+   "input": "duval/up",
+   "outcome": "404",
+   "refused_by": "none",
+   "note": "valid chars, no such docket -> explicit not-found"
+  }
+ ],
+ "bypasses_found": [
+  {
+   "input": "HEADING_FILES entry inside an accepted docket that is a symlink to a file outside the dockets root (e.g. _smoke/README.md -> ../outside/secret.md)",
+   "outcome": "200",
+   "why": "safe_docket_slug realpath-contains the docket DIRECTORY only. _read_text_capped reads directory/README.md, _headings() extracts markdown headings, and _docket_files lists the symlink (bytes = outside file size). So heading TEXT of an arbitrary outside file is served, and its size disclosed, while the direct path _smoke/README.md is correctly refused by realpath.",
+   "severity": "low-moderate: requires local write access to a docket directory (not reachable by URL alone) and the dashboard is loopback-only, but the read routes are unauthenticated on loopback and this is exactly the symlink escape the change exists to prevent."
+  }
+ ],
+ "layers": {
+  "segment_validation": "covers every traversal: separators, '..' anywhere, leading dots, empty/'.'/'...' segments, whitespace-padded segments, all %2f/%2e/%252e/%c0%ae/%2E forms, NUL, newline, unicode lookalikes, overlong names, backslashes. It is the layer that does the work for 52 of 53 inputs.",
+  "realpath_containment": "covers only the case segment validation cannot see: a segment that is a legal name but resolves outside the root via a symlink ('escape'). It also catches a direct file path (e.g. _smoke/README.md) that is a symlink out. It does NOT cover symlinks reached from inside an already-accepted docket directory.",
+  "redundant_line_pin": "not pinnable by any traversal input (POSIX needs a separator for '..' to traverse; the regex rejects separators and the leading-dot check rejects a bare '..'), BUT pinnable by a non-traversal refusal-semantics case: a docket directory named with an internal '..' (e.g. ver..2) is addressable only if api.py:122 is removed. Their honesty that the new tests do not pin the line is correct; 'cannot be pinned by design' would be too strong."
+ },
+ "masking_confirmed": true,
+ "served_vs_disk": {
+  "disk_has_producer": false,
+  "served_adds": "unknown",
+  "judgement": "honest but lossy",
+  "recommendation": "Leave the gate as-is ('unknown' and absent both mean 'no model mined these'), but stop implying provenance was recorded: either emit producer only when the key exists on disk, or add a sibling boolean (e.g. producer_recorded: false) so a downstream reader can distinguish 'field never written' from 'producer explicitly unknown'. Do not implement in this unit."
+ },
+ "red_green": {
+  "a": "sha ok 5b4de063...; F 1 failed: tests/test_dashboard.py::test_safe_docket_slug_pins_path_validation (AssertionError at tests/test_dashboard.py:465) with escape ACCEPT + HTTP 200 escaped dir; P 6 passed -k 'escape or nested or pins_path' after restore (sha ok)",
+  "b": "sha ok 5b4de063...; F 2 failed: test_dot_segment_is_refused_not_normalised (line 481) and test_safe_docket_slug_pins_path_validation, with duval/../_smoke ACCEPT + HTTP 200 (in-root normalisation) while duval/../../etc/passwd stays 404 via realpath; P after restore (sha ok). (b) DOES go red - segment validation is genuinely load-bearing."
+ },
+ "live": {
+  "nested_detail": 200,
+  "manifest_matches_disk": true,
+  "all_route_slugs_non_null": true,
+  "truth_check_divergences": 0,
+  "reasoning_text_available": false,
+  "reasoning_flag_computed": true,
+  "fabricated_reasoning": false,
+  "corrupt_manifest": "explicit 404 JSON error, never 500 (verified at ASGI layer with the real app; a live scratch-root server was impossible - serve exposes no --docket-root and the 2-server bound was spent)",
+  "control_gate": "401(no token) / 401(bad token) -> 200(correct token, 5.61s)",
+  "non_loopback_refused": true,
+  "external_origins": [],
+  "server_stopped": true,
+  "stray_processes": 0,
+  "start_command": ".venv/bin/resextract serve --port 8901 --no-browser ; token run: .venv/bin/resextract serve --port 8903 --token v6b-secret-9f3a --no-browser"
+ },
+ "release_sha_match": {
+  "claimed": "5b4de0639c4c73003c3e604b01dba9a9a5bdef07d558d7d3a8a65f9e41d44c68",
+  "actual": "5b4de0639c4c73003c3e604b01dba9a9a5bdef07d558d7d3a8a65f9e41d44c68",
+  "match": true,
+  "note": "also verified bit-identical AFTER the C3/C5a/C5b reverts and restores"
+ },
+ "not_reproduced": [
+  "The exact mutation they describe for red->green ('revert safe_docket_slug to return safe_slug(slug) => 3 failed, naming escape'): I used a narrower revert (realpath block only) which yields 1 failed. Their 3-failed figure for the full stub is plausible but was not reproduced as stated.",
+  "The 39-vs-30 tool-call overshoot itemisation: no transcript access, cannot audit.",
+  "Corrupt-manifest via a live HTTP server: verified at the ASGI layer with the real app object instead (2-server bound spent).",
+  "The masking count '5 passed': I measured 6 passed for the same -k expression (selection differs by one test)."
+ ],
+ "overstated": [
+  "The refused-list is presented as exhaustive but whitespace is NORMALISED rather than refused: '%20duval' and 'duval\\n' are accepted as 'duval' (404 only because no manifest sits there), and 'duval.' (trailing dot) is accepted. Harmless on Linux, but it is normalisation, which the change's own docstring says it prefers to avoid.",
+  "The symlinked-docket trade-off is disclosed as 'addressable, never routable', but the adjacent and more serious case is undisclosed: symlinked FILES inside a routable docket ARE reachable content (heading text) and their sizes are disclosed. Listing is a minor leak; the read-through is the real one.",
+  "api.py:122 is called redundant: true for traversal, but it is the ONLY layer that refuses a docket named with an internal '..' (e.g. ver..2), so it is not dead code."
+ ],
+ "unverified": [
+  "Whether _docket_files' rglob recurses INTO a directory symlink inside a docket (file-symlink listing is confirmed; dir-symlink recursion untested).",
+  "Whether a raw client (not my ASGI harness) could deliver a segment that the ASGI server leaves percent-encoded (uvicorn always decodes; I did not test alternative servers)."
+ ],
+ "corrections": [
+  {
+   "plan_assumption": "the served payload adds a top-level producer default",
+   "actually": "it is nested: served manifest.generated_by.producer == 'unknown' while disk generated_by has no producer key; top level differs only by a derived status_reason field",
+   "evidence": "state/verify/V6B/probe3.log + live-nested.json",
+   "unit": "U6.5"
+  },
+  {
+   "plan_assumption": "a corrupt manifest can be tested on a live server pointed at a scratch docket root",
+   "actually": "serve exposes no --docket-root/--dockets option (only --host/--port/--token/--no-browser/--allow-remote), so a scratch-root live server would need a config edit; tested at the ASGI layer instead",
+   "evidence": ".venv/bin/resextract serve --help",
+   "unit": "U6.5"
+  },
+  {
+   "plan_assumption": "control-token 200 can be observed with a 5s client timeout",
+   "actually": "the valid-token control call takes ~5.6s because doctor_status(force=True) probes the down Occamy/SearXNG; a short timeout reports a false failure. Gate itself is correct: 401/401/200",
+   "evidence": "state/verify/V6B/control.py -> (200, 5.61, {'ok':true,...'core_down':['Occamy','SearXNG']})",
+   "unit": "U6.5"
+  },
+  {
+   "plan_assumption": "pgrep -f 'resextract serve' is a valid stray check",
+   "actually": "it self-matches the invoking shell (reported 3 while ss showed no listener and curl was refused); ps -eo pid,cmd | grep -E 'uvicorn|resextract serve' is the correct check",
+   "evidence": "ss -ltn empty + curl 000 + ps showing no server process",
+   "unit": "V6B"
+  }
+ ],
+ "tool_calls": 27,
+ "bound": 34,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt / ?? .lane-j-scratch/ (identical before and after)",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "real_dockets_tree_unchanged": true,
+  "real_store_sha_before": "not hashed before first read (no write path ever opened; mtime 06:31 unchanged)",
+  "real_store_sha_after": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+  "stray_processes": 0
+ },
+ "blocker": "",
+ "next_unit_hint": "Close the document-read symlink gap: after safe_docket_slug accepts a docket directory, realpath-contain each file it reads (_read_text_capped targets and _docket_files entries) under realpath(dockets_dir), or refuse a docket whose HEADING_FILES resolve outside the root. Recommended new test (DO NOT add here): plant a symlinked README.md inside a fixture docket pointing at a file outside the root and assert its heading text is absent from the payload. Separately: a docket named with an internal '..' is the one input that pins api.py:122 - decide whether such names should be listable.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V6B.md",
+  "orchestration/handoffs/V6B.json",
+  "state/logs/V6B*",
+  "state/verify/V6B/**"
+ ]
+}

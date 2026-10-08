@@ -55,7 +55,7 @@ def test_wal_mode_is_enabled(db_path):
 
 def test_foreign_keys_enabled_on_connect(con):
     assert con.execute("PRAGMA foreign_keys").fetchone()[0] == 1
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(sqlite3.IntegrityError, match="FOREIGN KEY constraint failed"):
         con.execute(
             "INSERT INTO evidence(claim_id, source_kind) VALUES (99999, 'web')"
         )
@@ -85,7 +85,7 @@ _BAD_SOURCE_KIND = (
 
 @pytest.mark.parametrize("bad", ["MAYBE", "confirms", "SUPPORTED", ""])
 def test_verdict_check_rejects_bad_value(con, bad):
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: verdict"):
         con.execute(_BAD_VERDICT, (bad,))
     con.rollback()
 
@@ -98,7 +98,7 @@ def test_verdict_check_accepts_vocabulary(con, good):
 
 @pytest.mark.parametrize("bad", ["essay", "PAPER", "paper ", "poster"])
 def test_lane_type_check_rejects_bad_value(con, bad):
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: type"):
         con.execute(_BAD_LANE_TYPE, (f"slug-{bad!r}", bad))
     con.rollback()
 
@@ -111,7 +111,7 @@ def test_lane_type_check_accepts_vocabulary(con, good):
 
 @pytest.mark.parametrize("bad", ["wip", "READY", "done", "stale "])
 def test_lane_status_check_rejects_bad_value(con, bad):
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: status"):
         con.execute(_BAD_LANE_STATUS, (f"slug-{bad!r}", bad))
     con.rollback()
 
@@ -124,7 +124,7 @@ def test_lane_status_check_accepts_vocabulary(con, good):
 
 @pytest.mark.parametrize("bad", ["ftp", "LOCAL", "web ", "file"])
 def test_evidence_source_kind_check_rejects_bad_value(con, bad):
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: source_kind"):
         con.execute(_BAD_SOURCE_KIND, (bad,))
     con.rollback()
 
@@ -198,7 +198,7 @@ def test_lane_upsert_and_set_lane_status(con):
 
     assert store.set_lane_status(con, lane_id, "ready") is True
     assert store.get_lane(con, lane_id)["status"] == "ready"
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="lane status must be one of"):
         store.set_lane_status(con, lane_id, "wip")
 
     store.upsert_lane(con, id=lane_id, target="duval", slug="consonance", title="Consonance v2", status="stale")
@@ -206,7 +206,7 @@ def test_lane_upsert_and_set_lane_status(con):
     assert updated["title"] == "Consonance v2"
     assert updated["status"] == "stale"
     assert store.get_lane_by_slug(con, "duval", "consonance")["id"] == lane_id
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="lane type must be one of"):
         store.upsert_lane(con, target="duval", slug="bad", type="essay")
 
 
@@ -253,9 +253,9 @@ def test_evidence_verdict_search_health_and_rework_round_trip(con):
     assert store.get_rework(con, rework_id)["closed_at"] is not None
     assert store.close_rework(con, rework_id) is False  # already closed
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="verdict must be one of"):
         store.insert_verdict(con, verdict="MAYBE")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="source_kind must be one of"):
         store.insert_evidence(con, source_kind="ftp")
 
 

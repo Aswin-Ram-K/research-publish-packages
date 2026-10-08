@@ -1,0 +1,94 @@
+{
+  "unit": "U0.6",
+  "status": "done",
+  "artifacts": [
+    "docs/SECRET_SCAN_POLICY.md",
+    "b4ea93c457b39a1affa3e9efc63ab90abb234fc7"
+  ],
+  "evidence": {
+    "commit": "b4ea93c457b39a1affa3e9efc63ab90abb234fc7",
+    "files_committed": 31,
+    "scoped_tests": "43 passed, 1 skipped (tests/test_journal.py + tests/test_occamy_client.py)",
+    "literals_remediated": {
+      "tests/test_journal.py": 7,
+      "tests/test_occamy_client.py": 1
+    },
+    "literals_remediated_detail": {
+      "tests/test_journal.py": "2 distinct synthetic literals across 7 occurrences: sk-(23) x5 and okr_(24) x2, serving test_redaction_of_secret_named_keys (api_key/access_token args + needle tuple) and test_redaction_of_secret_shaped_values_under_innocent_keys (note=, assert not in x2). Now module constants _FAKE_API_KEY/_FAKE_ACCESS_TOKEN assembled at runtime; the note site interpolates via 'used ' + _FAKE_API_KEY + ' to login'.",
+      "tests/test_occamy_client.py": "1 literal, sk-(26), serving test_api_key_never_reaches_trace_or_metering (api_key= plus the wire Bearer equality check). Now module constant _FAKE_API_KEY assembled at runtime.",
+      "superseded_bytes": "the pre-U0.6 literal bytes are defined by no file and are deliberately NOT on the recorded set"
+    },
+    "regression_guard": "red->green pasted in test_test_sources_carry_no_literal_secret_shapes docstring; red run: 'AssertionError: literal secret shape(s) on disk: test_journal.py:219 shape[0] (values withheld)' -> 1 failed; restored (cmp byte-identical) -> 1 passed",
+    "scan": {
+      "total_matches": 8,
+      "distinct_values": 5,
+      "allowlisted_by_value": [
+        {
+          "value_descriptor": "sk- prefix, 39 chars (frozen V0 evidence fixture)",
+          "files": [
+            "orchestration/units/V0.md",
+            "orchestration/handoffs/V0.json"
+          ],
+          "reason": "synthetic fixture of the U0.3 store/docket redaction evidence; defined by the sibling tests/test_docket_copy.py + tests/fixtures/copy-src/config/api.txt; permitted by value only, V0 records never edited"
+        },
+        {
+          "value_descriptor": "sk- prefix, 23 chars",
+          "files": [
+            "docs/SECRET_SCAN_POLICY.md"
+          ],
+          "reason": "tests/test_journal.py _FAKE_API_KEY, runtime-assembled"
+        },
+        {
+          "value_descriptor": "okr_ prefix, 24 chars",
+          "files": [
+            "docs/SECRET_SCAN_POLICY.md"
+          ],
+          "reason": "tests/test_journal.py _FAKE_ACCESS_TOKEN, runtime-assembled"
+        },
+        {
+          "value_descriptor": "sk- prefix, 26 chars",
+          "files": [
+            "docs/SECRET_SCAN_POLICY.md"
+          ],
+          "reason": "tests/test_occamy_client.py _FAKE_API_KEY, runtime-assembled"
+        },
+        {
+          "value_descriptor": "'Authorization: Bearer ' 22 chars",
+          "files": [
+            "docs/SECRET_SCAN_POLICY.md"
+          ],
+          "reason": "structural marker (header name, not a credential); quoted by U0.5's untracked handoff/card"
+        }
+      ],
+      "non_allowlisted": 0,
+      "crosscheck": "per-pattern 5/1/0/0/0/2; git diff --cached yields the same 8"
+    },
+    "historical_records_untouched": [
+      "orchestration/units/V0.md",
+      "orchestration/handoffs/V0.json"
+    ],
+    "historical_records_proof": "staged blob hashes for both files identical before restage and after (rev-parse :path); never opened for write",
+    "exclusions_ok": true,
+    "exclusions_detail": "31 listed paths, all present, 31 staged; 0 under .venv/, state/, dockets/; 0 secret-shaped staged filenames; untracked sibling files left alone",
+    "commands": [
+      "python3 (in-place) remediate tests/test_journal.py + tests/test_occamy_client.py; fixtures assembled at runtime",
+      ".venv/bin/python -m pytest tests/test_journal.py::test_test_sources_carry_no_literal_secret_shapes -q   # RED 1 failed",
+      ".venv/bin/python -m pytest tests/test_journal.py tests/test_occamy_client.py -q   # 43 passed, 1 skipped",
+      "git reset; git add -- <31 explicit paths>",
+      "value-based staged scan (6 patterns, git cat-file blob :path per staged path) -> 8 matches / 5 distinct / 0 non-allowlisted",
+      "git commit -F .git/u06_msg.txt",
+      "git log -1 --format='%H%n%s%n%b'; git show --stat --oneline HEAD; git status --short"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Any commit that stages further handoffs should re-run the same value-based scan; the only synthetic value outside this commit's doc is the 39-char sk- fixture already on the recorded set. Left untouched and UNCOMMITTED on purpose: orchestration/units/U0.5.md, orchestration/handoffs/U0.5.json, the sibling fixtures (tests/test_docket_copy.py, tests/fixtures/copy-src/config/api.txt) and all other untracked sibling output. Promote only after the remaining Batch-0 siblings land and a separate verifier re-runs the guard red->green.",
+  "write_paths": [
+    "tests/test_journal.py",
+    "tests/test_occamy_client.py",
+    "docs/SECRET_SCAN_POLICY.md",
+    "orchestration/STATUS.md",
+    ".git/**",
+    "orchestration/units/U0.6.md",
+    "orchestration/handoffs/U0.6.json"
+  ]
+}

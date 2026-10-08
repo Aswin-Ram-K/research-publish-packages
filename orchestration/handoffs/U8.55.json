@@ -1,0 +1,400 @@
+{
+ "unit": "U8.55",
+ "status": "done",
+ "artifacts": [
+  "tests/test_store.py",
+  "tests/test_store_v2.py",
+  "tests/test_store_v3.py",
+  "tests/test_store_v4.py",
+  "state/verify/U8.55/redgreen/logs/redgreen_report.json",
+  "state/verify/U8.55/probe_msg.py",
+  "state/verify/U8.55/counts.json",
+  "orchestration/units/U8.55.md"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "occamy_probe_note": "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> curl: (7) Failed to connect ... port 8012; probed once, nothing restarted, zero LLM calls",
+  "real_line_numbers_verified": "every site asserted at its exact 1-based line in the real file before editing (script printed OK for all 8); the unit card's approximate numbers matched triage_final.json risk_score/line exactly for this batch",
+  "sites": [
+   {
+    "file": "tests/test_store_v3.py",
+    "real_line": 218,
+    "before": "with pytest.raises(sqlite3.IntegrityError):",
+    "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: producer\"):",
+    "rule_step": "step 1 NO (sqlite3.IntegrityError is a builtin; no narrower class) -> step 3 shortest stable match=",
+    "in_assert_free_test": true,
+    "measured_message": "CHECK constraint failed: producer IN ('model', 'replay', 'fixture', 'unknown')"
+   },
+   {
+    "file": "tests/test_store_v2.py",
+    "real_line": 368,
+    "before": "with pytest.raises(sqlite3.IntegrityError):",
+    "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: model_suggested\"):",
+    "rule_step": "step 1 NO -> step 3",
+    "in_assert_free_test": false,
+    "measured_message": "CHECK constraint failed: model_suggested IN (0, 1)"
+   },
+   {
+    "file": "tests/test_store_v2.py",
+    "real_line": 447,
+    "before": "with pytest.raises(sqlite3.IntegrityError):",
+    "after": "with pytest.raises(sqlite3.IntegrityError, match=\"UNIQUE constraint failed: dockets.dir\"):",
+    "rule_step": "step 1 NO -> step 3 (UNIQUE, distinguishable from CHECK/NOT NULL/FK)",
+    "in_assert_free_test": false,
+    "measured_message": "UNIQUE constraint failed: dockets.dir"
+   },
+   {
+    "file": "tests/test_store_v4.py",
+    "real_line": 279,
+    "before": "with pytest.raises(sqlite3.IntegrityError):",
+    "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: producer\"):",
+    "rule_step": "step 1 NO -> step 3",
+    "in_assert_free_test": false,
+    "measured_message": "CHECK constraint failed: producer IN ('model', 'replay', 'fixture', 'unknown')"
+   },
+   {
+    "file": "tests/test_store_v4.py",
+    "real_line": 407,
+    "before": "with pytest.raises(sqlite3.IntegrityError):",
+    "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: source_kind\"):",
+    "rule_step": "step 1 NO -> step 3",
+    "in_assert_free_test": false,
+    "measured_message": "CHECK constraint failed: source_kind IN ('local', 'web')"
+   },
+   {
+    "file": "tests/test_store_v4.py",
+    "real_line": 409,
+    "before": "with pytest.raises(sqlite3.IntegrityError):",
+    "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: verdict\"):",
+    "rule_step": "step 1 NO -> step 3",
+    "in_assert_free_test": false,
+    "measured_message": "CHECK constraint failed: verdict IN ('CONFIRMS', 'EXTENDS', 'CONTRADICTS', 'UNVERIFIED')"
+   },
+   {
+    "file": "tests/test_store_v4.py",
+    "real_line": 412,
+    "before": "with pytest.raises(sqlite3.IntegrityError):",
+    "after": "with pytest.raises(sqlite3.IntegrityError, match=\"CHECK constraint failed: producer\"):",
+    "rule_step": "step 1 NO -> step 3",
+    "in_assert_free_test": false,
+    "measured_message": "CHECK constraint failed: producer IN ('model', 'replay', 'fixture', 'unknown')"
+   },
+   {
+    "file": "tests/test_store.py",
+    "real_line": 58,
+    "before": "with pytest.raises(sqlite3.IntegrityError):",
+    "after": "with pytest.raises(sqlite3.IntegrityError, match=\"FOREIGN KEY constraint failed\"):",
+    "rule_step": "step 1 NO -> step 3 (whole FK message; SQLite appends no identifier)",
+    "in_assert_free_test": false,
+    "measured_message": "FOREIGN KEY constraint failed"
+   }
+  ],
+  "left_broad": [],
+  "unverified_fixes": [],
+  "left_broad_reason": "none left broad: all 8 are sqlite3.IntegrityError, a builtin with no narrower class, and each site's code path emits exactly one diagnostic kind, so the shortest stable match= discriminates",
+  "measured_messages": "measured on tmp_path/tempfile DBs via state/verify/U8.55/probe_msg.py; sqlite3 3.46.1, python 3.14.4; SQLite echoes CHECK source text, so a QUOTED identifier collapses ('CHECK constraint failed: type'); no site in this batch used a quoted identifier, and every match= is a strict prefix of both the current and a future unquoted form",
+  "reds": [
+   {
+    "file": "test_store_v3.py",
+    "real_line": 218,
+    "mutation_kind": "ddl",
+    "mutation": "CHECK (producer IN ( -> CHECK (CAST(producer AS TEXT) IN ( (3 occurrences in the copy)",
+    "pre_fix_form_passed": true,
+    "pre_fix_form_rc": 0,
+    "fixed_form_failed": true,
+    "fixed_form_rc": 1,
+    "fixed_form_failure_verbatim": "E               AssertionError: Regex pattern did not match. | E                 Expected regex: 'CHECK constraint failed: producer' | E                 Actual message: \"CHECK constraint failed: CAST(producer AS TEXT) IN ('model', 'replay', 'fixture', 'unknown')\" | L218_test_store_v3/test_store_v3.py:218: AssertionError",
+    "pristine_control_passed": true,
+    "pristine_control_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.55/redgreen/copies/ddl/resextract/__init__.py"
+    ],
+    "actual_mutant_message": "\"CHECK constraint failed: CAST(producer AS TEXT) IN ('model', 'replay', 'fixture', 'unknown')\""
+   },
+   {
+    "file": "test_store_v2.py",
+    "real_line": 368,
+    "mutation_kind": "ddl",
+    "mutation": "CHECK (model_suggested IN (0, 1)) -> CHECK (CAST(model_suggested AS TEXT) IN ('0', '1'))",
+    "pre_fix_form_passed": true,
+    "pre_fix_form_rc": 0,
+    "fixed_form_failed": true,
+    "fixed_form_rc": 1,
+    "fixed_form_failure_verbatim": "E       AssertionError: Regex pattern did not match. | E         Expected regex: 'CHECK constraint failed: model_suggested' | E         Actual message: \"CHECK constraint failed: CAST(model_suggested AS TEXT) IN ('0', '1')\" | L368_test_store_v2/test_store_v2.py:368: AssertionError",
+    "pristine_control_passed": true,
+    "pristine_control_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.55/redgreen/copies/ddl/resextract/__init__.py"
+    ],
+    "actual_mutant_message": "\"CHECK constraint failed: CAST(model_suggested AS TEXT) IN ('0', '1')\""
+   },
+   {
+    "file": "test_store_v2.py",
+    "real_line": 447,
+    "mutation_kind": "ddl",
+    "mutation": "CREATE UNIQUE INDEX IF NOT EXISTS dockets_dir_unique ON dockets(dir) -> ... ON dockets(CAST(dir AS TEXT)); same rows rejected, message becomes UNIQUE constraint failed: index 'dockets_dir_unique'",
+    "pre_fix_form_passed": true,
+    "pre_fix_form_rc": 0,
+    "fixed_form_failed": true,
+    "fixed_form_rc": 1,
+    "fixed_form_failure_verbatim": "E       AssertionError: Regex pattern did not match. | E         Expected regex: 'UNIQUE constraint failed: dockets.dir' | E         Actual message: \"UNIQUE constraint failed: index 'dockets_dir_unique'\" | L447_test_store_v2/test_store_v2.py:447: AssertionError",
+    "pristine_control_passed": true,
+    "pristine_control_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.55/redgreen/copies/ddl/resextract/__init__.py"
+    ],
+    "actual_mutant_message": "\"UNIQUE constraint failed: index 'dockets_dir_unique'\""
+   },
+   {
+    "file": "test_store_v4.py",
+    "real_line": 279,
+    "mutation_kind": "ddl",
+    "mutation": "CHECK (producer IN ( -> CHECK (CAST(producer AS TEXT) IN (",
+    "pre_fix_form_passed": true,
+    "pre_fix_form_rc": 0,
+    "fixed_form_failed": true,
+    "fixed_form_rc": 1,
+    "fixed_form_failure_verbatim": "E           AssertionError: Regex pattern did not match. | E             Expected regex: 'CHECK constraint failed: producer' | E             Actual message: \"CHECK constraint failed: CAST(producer AS TEXT) IN ('model', 'replay', 'fixture', 'unknown')\" | L279_test_store_v4/test_store_v4.py:279: AssertionError",
+    "pristine_control_passed": true,
+    "pristine_control_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.55/redgreen/copies/ddl/resextract/__init__.py"
+    ],
+    "actual_mutant_message": "\"CHECK constraint failed: CAST(producer AS TEXT) IN ('model', 'replay', 'fixture', 'unknown')\""
+   },
+   {
+    "file": "test_store_v4.py",
+    "real_line": 407,
+    "mutation_kind": "ddl",
+    "mutation": "CHECK (source_kind IN ( -> CHECK (CAST(source_kind AS TEXT) IN (",
+    "pre_fix_form_passed": true,
+    "pre_fix_form_rc": 0,
+    "fixed_form_failed": true,
+    "fixed_form_rc": 1,
+    "fixed_form_failure_verbatim": "E           AssertionError: Regex pattern did not match. | E             Expected regex: 'CHECK constraint failed: source_kind' | E             Actual message: \"CHECK constraint failed: CAST(source_kind AS TEXT) IN ('local', 'web')\" | L407_test_store_v4/test_store_v4.py:407: AssertionError",
+    "pristine_control_passed": true,
+    "pristine_control_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.55/redgreen/copies/ddl/resextract/__init__.py"
+    ],
+    "actual_mutant_message": "\"CHECK constraint failed: CAST(source_kind AS TEXT) IN ('local', 'web')\""
+   },
+   {
+    "file": "test_store_v4.py",
+    "real_line": 409,
+    "mutation_kind": "ddl",
+    "mutation": "CHECK (verdict IN ( -> CHECK (CAST(verdict AS TEXT) IN (",
+    "pre_fix_form_passed": true,
+    "pre_fix_form_rc": 0,
+    "fixed_form_failed": true,
+    "fixed_form_rc": 1,
+    "fixed_form_failure_verbatim": "E           AssertionError: Regex pattern did not match. | E             Expected regex: 'CHECK constraint failed: verdict' | E             Actual message: \"CHECK constraint failed: CAST(verdict AS TEXT) IN ('CONFIRMS', 'EXTENDS', 'CONTRADICTS', 'UNVERIFIED')\" | L409_test_store_v4/test_store_v4.py:409: AssertionError",
+    "pristine_control_passed": true,
+    "pristine_control_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.55/redgreen/copies/ddl/resextract/__init__.py"
+    ],
+    "actual_mutant_message": "\"CHECK constraint failed: CAST(verdict AS TEXT) IN ('CONFIRMS', 'EXTENDS', 'CONTRADICTS', 'UNVERIFIED')\""
+   },
+   {
+    "file": "test_store_v4.py",
+    "real_line": 412,
+    "mutation_kind": "ddl",
+    "mutation": "CHECK (producer IN ( -> CHECK (CAST(producer AS TEXT) IN (",
+    "pre_fix_form_passed": true,
+    "pre_fix_form_rc": 0,
+    "fixed_form_failed": true,
+    "fixed_form_rc": 1,
+    "fixed_form_failure_verbatim": "E           AssertionError: Regex pattern did not match. | E             Expected regex: 'CHECK constraint failed: producer' | E             Actual message: \"CHECK constraint failed: CAST(producer AS TEXT) IN ('model', 'replay', 'fixture', 'unknown')\" | L412_test_store_v4/test_store_v4.py:412: AssertionError",
+    "pristine_control_passed": true,
+    "pristine_control_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.55/redgreen/copies/ddl/resextract/__init__.py"
+    ],
+    "actual_mutant_message": "\"CHECK constraint failed: CAST(producer AS TEXT) IN ('model', 'replay', 'fixture', 'unknown')\""
+   },
+   {
+    "file": "test_store.py",
+    "real_line": 58,
+    "mutation_kind": "msg",
+    "mutation": "msg mutant in a throwaway copy: wrap store.init_db to add a BEFORE INSERT trigger on evidence WHEN NEW.claim_id NOT IN (SELECT id FROM claims) BEGIN SELECT RAISE(ABORT,'orphan claim_id rejected: no such claim'); END -- same refusal, same IntegrityError type, different message",
+    "pre_fix_form_passed": true,
+    "pre_fix_form_rc": 0,
+    "fixed_form_failed": true,
+    "fixed_form_rc": 1,
+    "fixed_form_failure_verbatim": "E       AssertionError: Regex pattern did not match. | E         Expected regex: 'FOREIGN KEY constraint failed' | E         Actual message: 'orphan claim_id rejected: no such claim' | L58_test_store/test_store.py:58: AssertionError",
+    "pristine_control_passed": true,
+    "pristine_control_rc": 0,
+    "imported_from": [
+     "/home/zer0null/reserach extarctor/state/verify/U8.55/redgreen/copies/msg/resextract/__init__.py"
+    ],
+    "actual_mutant_message": "'orphan claim_id rejected: no such claim'"
+   }
+  ],
+  "red_protocol": "throwaway package copies under state/verify/U8.55/redgreen/copies/{ddl,msg,pristine}/resextract, plus a conftest.py that strips the workspace src path, strips editable meta-path finders, purges sys.modules['resextract*'], prepends the copy and asserts str(resextract.__file__).startswith(COPY); per-site variant = before-content with ONLY that line promoted to strict. pre-fix form = all-broad before file (PASS, wrong reason); fixed form = variant (FAIL at its own line); control = variant vs pristine copy (PASS)",
+  "counts": {
+   "tests/test_store.py": {
+    "tracked": true,
+    "passed_before": 42,
+    "collected_before": 42,
+    "passed_after": 42,
+    "collected_after": 42,
+    "def_test_before": 18,
+    "def_test_after": 18,
+    "deleted": 0,
+    "sha256_before": "6ede0d4a6597ac8db70a9e95bbf6974c42cb6c23eaf7955d7c740af687ce5d76",
+    "sha256_after": "8306d9ef3a19a4f121c04905d2127e6da9626aac39d098d1609d62079a24660f",
+    "comm3_numbered": "EMPTY",
+    "comm3_names": "EMPTY",
+    "summary_before": "42 passed in 0.11s",
+    "summary_after": "42 passed in 0.11s"
+   },
+   "tests/test_store_v2.py": {
+    "tracked": true,
+    "passed_before": 13,
+    "collected_before": 13,
+    "passed_after": 13,
+    "collected_after": 13,
+    "def_test_before": 13,
+    "def_test_after": 13,
+    "deleted": 0,
+    "sha256_before": "7a8a09efc0d92d0cfefebfa41f2bac9a08ebedb9e3e7eec7669292ed9ee61537",
+    "sha256_after": "1108b96bff668a4fd1eb6231450d2b0014c055834e9b9f08aff5b7ddb7b4441a",
+    "comm3_numbered": "EMPTY",
+    "comm3_names": "EMPTY",
+    "summary_before": "13 passed in 0.06s",
+    "summary_after": "13 passed in 0.06s"
+   },
+   "tests/test_store_v3.py": {
+    "tracked": true,
+    "passed_before": 8,
+    "collected_before": 8,
+    "passed_after": 8,
+    "collected_after": 8,
+    "def_test_before": 8,
+    "def_test_after": 8,
+    "deleted": 0,
+    "sha256_before": "36fe0f7c058d913980a5535ec31a1083312ce7c4b480d50ca6adf6341485914b",
+    "sha256_after": "6baecba6aa75a1c01b1a2eab814c472304e40c70ef91f940effdc589336bd315",
+    "comm3_numbered": "EMPTY",
+    "comm3_names": "EMPTY",
+    "summary_before": "8 passed in 0.25s",
+    "summary_after": "8 passed in 0.10s"
+   },
+   "tests/test_store_v4.py": {
+    "tracked": false,
+    "passed_before": 10,
+    "collected_before": 10,
+    "passed_after": 10,
+    "collected_after": 10,
+    "def_test_before": 10,
+    "def_test_after": 10,
+    "deleted": 0,
+    "sha256_before": "34880d795ab842ab2ea79bbc81150ad5e325311a55500563ebcede2beb334484",
+    "sha256_after": "2286bfb97c4cf59862cb31d2d1bab10c4ad445abb8b95cf60b7336da3e090664",
+    "comm3_numbered": "EMPTY",
+    "comm3_names": "EMPTY",
+    "summary_before": "10 passed in 0.06s",
+    "summary_after": "10 passed in 0.05s"
+   }
+  },
+  "recipes": {
+   "comm_line_numbered": "LC_ALL=C grep -n '^def test_' <before|after file> | LC_ALL=C sort   then   LC_ALL=C comm -3 <before.lst> <after.lst>",
+   "comm_name_only": "LC_ALL=C grep -o '^def test_[A-Za-z0-9_]*' <before|after file> | LC_ALL=C sort   then   LC_ALL=C comm -3 <before.lst> <after.lst>",
+   "before_reconstruction": "never reverted the real tree; before-state snapshotted to state/verify/U8.55/before/ BEFORE the edits (cp), and counts re-run there; a fixtures symlink was added under before/ because one v3 test resolves fixtures relative to the test file (harness artifact, not a regression; with it, v3 before is 8/8)",
+   "pytest": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest <file> -q -p no:cacheprovider -rN",
+   "untracked_proof": "tests/test_store_v4.py is UNTRACKED, so git diff emits 0 bytes; diff proved by `diff -u state/verify/U8.55/before/test_store_v4.py tests/test_store_v4.py` (saved as state/verify/U8.55/v4_untracked_diff.txt, 27 lines, 4 hunks)"
+  },
+  "git_tracked": {
+   "tests/test_store.py": true,
+   "tests/test_store_v2.py": true,
+   "tests/test_store_v3.py": true,
+   "tests/test_store_v4.py": false
+  },
+  "real_store_read_by_my_commands": false,
+  "real_store_note": "no command opened state/state.sqlite; probe_msg.py used tempfile.mkdtemp DBs and every pytest run used pytest tmp_path. state/state.sqlite was only `ls -la`-stat'ed once (metadata, not contents). immutable=1 never used.",
+  "remaining_batch": [
+   {
+    "file": "tests/test_store_v2.py",
+    "line": 373,
+    "risk_score": 77,
+    "exc_type": "ValueError",
+    "test": "test_model_suggested_check_rejects_two"
+   },
+   {
+    "file": "tests/test_store.py",
+    "line": 201,
+    "risk_score": 73,
+    "exc_type": "ValueError",
+    "test": "test_lane_upsert_and_set_lane_status"
+   },
+   {
+    "file": "tests/test_store.py",
+    "line": 209,
+    "risk_score": 73,
+    "exc_type": "ValueError",
+    "test": "test_lane_upsert_and_set_lane_status"
+   },
+   {
+    "file": "tests/test_store.py",
+    "line": 256,
+    "risk_score": 73,
+    "exc_type": "ValueError",
+    "test": "test_evidence_verdict_search_health_and_rework_round_trip"
+   },
+   {
+    "file": "tests/test_store.py",
+    "line": 258,
+    "risk_score": 73,
+    "exc_type": "ValueError",
+    "test": "test_evidence_verdict_search_health_and_rework_round_trip"
+   },
+   {
+    "file": "tests/test_store_v3.py",
+    "line": 287,
+    "risk_score": 65,
+    "exc_type": "sqlite3.IntegrityError",
+    "test": "test_prior_check_vocabularies_still_hold"
+   },
+   {
+    "file": "tests/test_store_boundary.py",
+    "line": 256,
+    "risk_score": 61,
+    "exc_type": "ValueError",
+    "test": "test_model_id_recorded_only_for_a_model_producer"
+   },
+   {
+    "file": "tests/test_store_boundary.py",
+    "line": 215,
+    "risk_score": 20,
+    "exc_type": "store.SchemaTooOldError",
+    "test": "test_assess_refuses_v3_then_succeeds_on_a_migrated_copy"
+   }
+  ],
+  "tool_calls_work": 22,
+  "bound": 16,
+  "tool_calls_note": "+6 over bound. 3 calls were my own tooling bugs (variant builder missing 'with' in its assert; a v4 anchor that hit line 270 instead of 279 -- caught because the fixed-file line assert failed, then corrected to 279; unquoted paths broke the comm/diff recipes), 1 was diagnosing the v3 before-copy fixtures path artifact, and the rest was batched 2-calls-per-message. The wrong-anchor bug is why each site's line is now asserted before counting.",
+  "write_paths": [
+   "tests/test_store.py",
+   "tests/test_store_v2.py",
+   "tests/test_store_v3.py",
+   "tests/test_store_v4.py",
+   "state/verify/U8.55/**",
+   "orchestration/units/U8.55.md",
+   "orchestration/handoffs/U8.55.json"
+  ],
+  "cleanup": "state/verify/U8.55/redgreen/copies/ and redgreen/sites/ deleted after logging; before/fixtures symlink removed; full __pycache__ purge with PYTHONDONTWRITEBYTECODE=1.",
+  "not_touched": "tests/test_docket_provenance.py untouched (sibling-owned); no src/**, docs/**, dockets/**, config/**, state/state.sqlite, or other handoff written."
+ },
+ "blocker": "",
+ "next_unit_hint": "Next batch by risk (from state/verify/U8.55/remaining_batch.json): tests/test_store_v2.py:373 (77, ValueError -> 'model_suggested must be 0 or 1'), tests/test_store.py:201/209 (73, ValueError), tests/test_store.py:256/258 (73, ValueError), tests/test_store_v3.py:287 (65). Measure each message on a tmp DB first; the two ValueError sites in test_lane_upsert_and_set_lane_status and test_evidence_verdict_search_health_and_rework_round_trip need their own emitted strings (lane type/status and verdict vocabularies).",
+ "write_paths": [
+  "tests/test_store.py",
+  "tests/test_store_v2.py",
+  "tests/test_store_v3.py",
+  "tests/test_store_v4.py",
+  "state/verify/U8.55/**",
+  "orchestration/units/U8.55.md",
+  "orchestration/handoffs/U8.55.json"
+ ]
+}

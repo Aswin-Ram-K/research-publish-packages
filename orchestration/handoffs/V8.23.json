@@ -1,0 +1,299 @@
+{
+ "unit": "V8.23",
+ "scope": "U8.19 pin-strength reporting policy",
+ "overall": "PASS",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "length table re-derived",
+   "verdict": "PASS",
+   "observed": "AFTER: 0=refused(PIN_EMPTY), 1/11=refused(mismatch), 12/13/20/40/63=match+PIN ABBREVIATED+REDUCED STRENGTH, 64=match silent, 65/100/128=refused+PIN OVERLONG. BEFORE (pre-image 7f0b6a65, in-process): identical except 65/100/128 matched with NO notice.",
+   "evidence": "state/verify/V8.23/harness.py + harness.out"
+  },
+  {
+   "id": "C2",
+   "name": "adversarial boundary",
+   "verdict": "PASS",
+   "observed": "exactly-64 is the only silent match; 65-hex refused, not reused, pin file kept; no trimming accepts a longer value (1000 hex, 65+spaces, 64hex+internal space all refused); short path still matches-but-flagged; wrong tail no match; absent pin reuse+PIN DEGRADED",
+   "evidence": "state/verify/V8.23/harness.out variants block"
+  },
+  {
+   "id": "C3",
+   "name": "preserved list",
+   "verdict": "PASS",
+   "observed": "full-digest cmp; fail-closed mismatch (tampered file byte-identical, reason names tampering); override reuses+reports via _stage_graph, 0 refs outside run.py in src/ and tests/; 6 PIN_* states exercised; require_fresh_graph refuses unverified and stale; STALE unchanged",
+   "evidence": "state/verify/V8.23/c3fix.py output; grep -rn allow_graph_digest_mismatch src/ tests/"
+  },
+  {
+   "id": "C4",
+   "name": "tests + prefix claim",
+   "verdict": "PASS",
+   "observed": "tests/test_run.py collects 60; current startswith pre-image test_run.py.before (3cc4fa94) exactly, +8380 bytes; def test_ 39->43",
+   "evidence": "pytest --collect-only -q; python startswith check"
+  },
+  {
+   "id": "C5",
+   "name": "red->green",
+   "verdict": "PASS",
+   "observed": "2 failed, 58 passed on reverted 7f0b6a65; failures exactly overlong[65] and overlong[100]; restore bit-identical 106661a2; 60 passed",
+   "evidence": "pytest -q -rf on pre-image, then on restored"
+  },
+  {
+   "id": "C6",
+   "name": "honesty audit + containment",
+   "verdict": "PASS",
+   "observed": "1 overstatement ('every length below 64' false for 1-11, which are refused by min-width 12); pin comment stale re >64; store v4 schema_version, no immutable=1, 0 sidecars",
+   "evidence": "state/verify/V8.23/ harness + store copy"
+  }
+ ],
+ "length_table": [
+  {
+   "len": 0,
+   "matches": false,
+   "notices": [
+    "PIN_EMPTY refused"
+   ]
+  },
+  {
+   "len": 1,
+   "matches": false,
+   "notices": [
+    "mismatch refused"
+   ]
+  },
+  {
+   "len": 11,
+   "matches": false,
+   "notices": [
+    "mismatch refused"
+   ]
+  },
+  {
+   "len": 12,
+   "matches": true,
+   "notices": [
+    "PIN ABBREVIATED",
+    "REDUCED STRENGTH"
+   ]
+  },
+  {
+   "len": 13,
+   "matches": true,
+   "notices": [
+    "PIN ABBREVIATED",
+    "REDUCED STRENGTH"
+   ]
+  },
+  {
+   "len": 20,
+   "matches": true,
+   "notices": [
+    "PIN ABBREVIATED",
+    "REDUCED STRENGTH"
+   ]
+  },
+  {
+   "len": 40,
+   "matches": true,
+   "notices": [
+    "PIN ABBREVIATED",
+    "REDUCED STRENGTH"
+   ]
+  },
+  {
+   "len": 63,
+   "matches": true,
+   "notices": [
+    "PIN ABBREVIATED",
+    "REDUCED STRENGTH"
+   ]
+  },
+  {
+   "len": 64,
+   "matches": true,
+   "notices": []
+  },
+  {
+   "len": 65,
+   "matches": false,
+   "notices": [
+    "PIN OVERLONG refused"
+   ]
+  },
+  {
+   "len": 100,
+   "matches": false,
+   "notices": [
+    "PIN OVERLONG refused"
+   ]
+  },
+  {
+   "len": 128,
+   "matches": false,
+   "notices": [
+    "PIN OVERLONG refused"
+   ]
+  }
+ ],
+ "silent_match_only_at_64": true,
+ "before_inversion_confirmed": true,
+ "before_method": "pre-image reasoning (in-process load of state/verify/U8.19/run.py.before sha 7f0b6a65...; did NOT re-run U8.19's harness)",
+ "overlong": {
+  "len_65_refused": true,
+  "pin_file_kept": true,
+  "not_reused": true,
+  "notice_visible_where": "report.notes ('graph: PIN OVERLONG: ...pins 65 hex characters...'), rejected_candidates ('pin overlong: ...'), and the dry-run graph stage reason ('...unusable candidate(s) rejected: ...'); there is no reuse stage line",
+  "variants": [
+   {
+    "variant": "trailing newline/spaces in value",
+    "outcome": "match (whitespace-only, stripped)",
+    "truncation_accepts_longer": false
+   },
+   {
+    "variant": "65 hex + trailing spaces",
+    "outcome": "refused PIN OVERLONG",
+    "truncation_accepts_longer": false
+   },
+   {
+    "variant": "64 hex + internal space (65 chars)",
+    "outcome": "refused PIN OVERLONG",
+    "truncation_accepts_longer": false
+   },
+   {
+    "variant": "1000 hex",
+    "outcome": "refused PIN OVERLONG",
+    "truncation_accepts_longer": false
+   },
+   {
+    "variant": "uppercase 64",
+    "outcome": "match (case-insensitive, pre-existing .lower())",
+    "truncation_accepts_longer": false
+   },
+   {
+    "variant": "uppercase 65",
+    "outcome": "refused PIN OVERLONG",
+    "truncation_accepts_longer": false
+   },
+   {
+    "variant": "single quotes 64/65",
+    "outcome": "match / refused",
+    "truncation_accepts_longer": false
+   },
+   {
+    "variant": "bare unquoted 64",
+    "outcome": "PIN_MALFORMED refused",
+    "truncation_accepts_longer": false
+   },
+   {
+    "variant": "empty / whitespace-only value",
+    "outcome": "PIN_EMPTY refused",
+    "truncation_accepts_longer": false
+   },
+   {
+    "variant": "malformed TOML",
+    "outcome": "PIN_MALFORMED refused",
+    "truncation_accepts_longer": false
+   },
+   {
+    "variant": "chmod 000",
+    "outcome": "PIN_UNREADABLE refused",
+    "truncation_accepts_longer": false
+   },
+   {
+    "variant": "missing pin file",
+    "outcome": "reused + PIN DEGRADED",
+    "truncation_accepts_longer": false
+   },
+   {
+    "variant": "wrong tail 64 (same 12)",
+    "outcome": "no match (mismatch)",
+    "truncation_accepts_longer": false
+   }
+  ]
+ },
+ "short_path_still_usable": true,
+ "wrong_tail_still_no_match": true,
+ "preserved": {
+  "full_digest_comparison": true,
+  "fail_closed_default": true,
+  "tampered_file_byte_identical": true,
+  "override_cli_unreachable": true,
+  "override_ref_count": 0,
+  "pin_states": 6,
+  "require_fresh_graph_refuses_unverified": true,
+  "stale_unchanged": true
+ },
+ "tests": {
+  "run_before": 51,
+  "run_after": 60,
+  "prefix_bytes_unchanged": "verified",
+  "new_node_ids": 9
+ },
+ "red_green": {
+  "a": "reproduced; sha ok; 106661a2 -> 7f0b6a65 -> 106661a2 (equality asserted); f=2 (overlong[65], overlong[100]) on assert stage.counts['mode']=='build' at tests/test_run.py:1986; p=60 passed",
+  "red_was_exactly_the_two_overlong_cases": true
+ },
+ "release_sha": {
+  "expected": "106661a2",
+  "actual": "106661a289b66d2885fad4fc5c1cebd9cfcb8db53fade8f85bfc52e601a1d26a",
+  "restored_bit_identical": true
+ },
+ "own_view_on_overlong_refusal": "Refusal is right. A 65-hex value with a correct 64-prefix is likely a paste/typo artifact rather than an attack, but a pin is a rarely-edited control, honouring a prefix is exactly the failure mode this control exists to prevent, the refusal is fail-safe and keeps the file, and the note says what to do (re-pin with the full sha256). Accept-and-warn would re-open a silent gap between what the pin says and what was compared.",
+ "not_reproduced": [
+  "U8.19's 17/20 call spend (no per-call ledger on disk)",
+  "U8.19's live-run transcript (live.py not re-run; 0 live run invocations used)",
+  "tests/test_run.py's pre-image collection count of 51 (swapping tests/** is outside my write paths)"
+ ],
+ "overstated": [
+  "'reported as reduced at every length below 64 hex' - false for lengths 1-11, which are REFUSED as a mismatch because _same_digest requires width>=12 (pre-existing, fail-closed, but not what the sentence says)"
+ ],
+ "unverified": [
+  "run_before=51 is arithmetically consistent with 60 now + 9 additive node ids and byte-prefix identity, but was not collection-observed",
+  "the 65-hex refusal is right only under the assumption that a pin is deliberately edited; not a measurable property",
+  "tool_calls=23 counts the 21 verification calls plus the accounting-correction edit and the report-back send"
+ ],
+ "corrections": [
+  {
+   "relayed_claim": "'reported as reduced at every length below 64 hex - 63 as loudly as 12; no threshold'",
+   "actually": "true for 12<=len<64; len 1-11 do not match at all (refused as mismatch, no PIN ABBREVIATED note) because _same_digest requires width>=12",
+   "evidence": "state/verify/V8.23/harness.out AFTER+BEFORE tables len=1 and len=11",
+   "unit": "U8.19"
+  },
+  {
+   "relayed_claim": "U8.19 harness exercised the STALE path",
+   "actually": "its harness passed target_head = the graph's own built_at_commit, so the graph read 'fresh'; with the real Duval HEAD 6c60da5a it is STALE (reuse+STALE confirmed by me)",
+   "evidence": "state/verify/U8.19/harness.py make_ctx vs state/verify/V8.23/c3fix.py",
+   "unit": "U8.19"
+  }
+ ],
+ "tool_calls": 23,
+ "bound": 24,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "store": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows_identical": true,
+   "used_immutable": false,
+   "sidecars_observed": 0,
+   "sidecars_created_by_me": 0
+  },
+  "real_graph_sha_before": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+  "real_graph_sha_after": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+  "pin_sha_before": "52f491ed584b330a8ce468cf57a6c42cc4f7e2393a4435317709e9efa2ab4d1a",
+  "pin_sha_after": "52f491ed584b330a8ce468cf57a6c42cc4f7e2393a4435317709e9efa2ab4d1a",
+  "stray_processes": 0
+ },
+ "blocker": "",
+ "next_unit_hint": "Optional only: fix config/graph_pin.toml's POLICY comment to state that >64 hex is refused (untracked file, checkpoint-time edit), and consider a message-wording fix for a sub-12-hex pin currently reported as 'TAMPERED OR CORRUPT'. Neither blocks; U8.19's core claim survives.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V8.23.md",
+  "orchestration/handoffs/V8.23.json",
+  "state/logs/V8.23*",
+  "state/verify/V8.23/**"
+ ]
+}

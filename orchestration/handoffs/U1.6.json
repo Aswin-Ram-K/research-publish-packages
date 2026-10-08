@@ -1,0 +1,106 @@
+{
+  "unit": "U1.6",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/kg/graphify.py",
+    "tests/test_kg_graphify_flags.py",
+    "state/kg-update-test/duval/",
+    "state/kg-update-test/graphify.py.orig",
+    "state/logs/U1.6-red.txt",
+    "state/logs/U1.6-green.txt",
+    "state/logs/U1.6-live.txt",
+    "orchestration/units/U1.6.md",
+    "orchestration/handoffs/U1.6.json"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "llm_calls": 0,
+    "network_calls": 0,
+    "tests": "25 passed (13 new in tests/test_kg_graphify_flags.py + 12 existing in tests/test_kg_graphify.py, no regression)",
+    "red_green": "bound-flag guard: failure 'graphify flag guard failed: method update() emits --definitely-not-a-flag which graphify 'update' does not accept' (1 failed, 12 deselected in 0.03s); pass after revert (1 passed, 12 deselected in 0.02s); also in-process via test_guard_has_teeth_on_a_bogus_flag and test_no_viz_emitted_for_extract_would_be_caught (guard run with deviations={})",
+    "update_fix": {
+      "old_argv": "[\"update\", target, \"--graph\", \"<graph.json>\"]",
+      "old_exit": 2,
+      "old_stderr": "error: unknown update option: --graph",
+      "new_argv": "[\"update\", \"state/kg-update-test/duval\", \"--force\", \"--no-cluster\"]",
+      "new_exit": 0,
+      "foreign_graph_target": "typed UnsupportedGraphTarget (a GraphifyError) naming <target>/graphify-out/graph.json; implied default accepted as a no-op"
+    },
+    "stdbuf": "applied once in Graphify.run() via Graphify.spawn_argv_for(): CommandResult.spawn_argv[:3] == ('stdbuf','-oL','-eL') asserted for all 35 invocations / 28 methods; CommandResult.argv remains the logical graphify argv so tests/test_kg_graphify.py's argv-index contract is not regressed; PYTHONUNBUFFERED=1 also set on the child because stdbuf reaches only C stdio while a Python console script block-buffers its own TextIOWrapper off-TTY; opt-out via Graphify(line_buffer=False) or run(..., line_buffer=False); missing stdbuf fails soft into Graphify.notes",
+    "flag_audit": {
+      "methods_checked": 28,
+      "invocations_checked": 35,
+      "help_source": "state/logs/graphify-0.9.80-help.txt (authoritative surface)",
+      "other_argv_defects": [],
+      "ambiguous_help_entries": [
+        "clone: help declares 'clone <github-url>' (line 21) with no flag block of its own; its --branch / --out <dir> are printed inside the merge-graphs flag block (lines 28-29). Resolved by explicit override (clone += {branch,out}) and removal (merge-graphs -= {branch}) so --branch cannot falsely pass for merge-graphs.",
+        "merge-graphs: same lines 28-29 would be credited to it; its own --out <path> (line 24) and --previous (line 25) are genuine.",
+        "export <kind>: documents flags inline in [...] on command/continuation lines (lines 124-135) instead of an indented flag block; per-kind attribution is exact (--no-viz/--node-limit only for 'export html', --dir only for 'export obsidian', --labels for all but graphml/neo4j/falkordb, --push/--user/--password for neo4j/falkordb).",
+        "no command-independent global flags exist in 0.9.80: --graph is re-declared per command and is deliberately absent from 'update' - that absence is the defect.",
+        "install [--platform P] and uninstall --purge (lines 4-6) are parsed but unreachable from the wrapper, so not covered by the method matrix.",
+        "merge-driver, prs and watch document no flags at all."
+      ],
+      "known_deviations": [
+        {
+          "method": "extract",
+          "subcommand": "extract",
+          "flag": "--no-viz",
+          "reason": "0.9.80 documents --no-viz under cluster-only and extract rejects it, but a previous unit deliberately kept extract() forwarding it only when the caller explicitly passes no_viz=True. Explicit KNOWN_DEVIATIONS allowlist entry with a reason; the guard drives extract() with the default no_viz=False and two tests pin the opt-in (no regression)."
+        }
+      ]
+    },
+    "live": {
+      "copy_path": "state/kg-update-test/duval",
+      "layout": "state/kg-update-test/duval/graphify-out/graph.json (what `update <path>` expects) + two small .py files so it has code to re-extract",
+      "nodes_before": 2685,
+      "edges_before": 7102,
+      "communities_before": 128,
+      "nodes_after": 2689,
+      "edges_after": 7108,
+      "communities_after": 128,
+      "exit": 0,
+      "wall_s": 0.45,
+      "loadable": "2689 nodes / 7108 links, directed=false",
+      "duval_graph_sha_before": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+      "duval_graph_sha_after": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+      "duval_graph_sha_unchanged": true
+    },
+    "fixture_query": {
+      "graph": "state/kg-mini/graphify-out/graph.json",
+      "exit": 0,
+      "matched": true,
+      "node_count": 3,
+      "labels": ["main()", "Job", "run_job()"]
+    },
+    "duval_untouched": true,
+    "duval_head": "5cdc471afb2a14934030d581a20f6a9bcffb727e (moved from b2bade3 during this unit - an external change, not written by U1.6)",
+    "duval_status_porcelain_before_and_after": ["?? .ci-trunk.txt", "?? .lane-j-scratch/"],
+    "duval_status_hash_before": "f04ed3f506a543b13160db2827efcd9efc486e5b83e85a222972ae46218eae5a",
+    "duval_status_hash_after": "f04ed3f506a543b13160db2827efcd9efc486e5b83e85a222972ae46218eae5a",
+    "ready_facts_discrepancy": "The card quotes 2695 nodes / 7151 edges / 119 communities for state/kg/duval/graphify-out/graph.json. On the card's own sha256 (4790bbb...) the artifact actually holds 2685 nodes / 7102 links / 128 distinct non-null community values, confirmed by plain json.load AND by the wrapper's streaming graph_stats (they agree exactly); hyperedges = 0. The quoted counts belong to a different revision than the quoted sha, or to a different counter.",
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models   # -> 000",
+      ".venv/bin/graphify update /tmp --graph /tmp/x.json   # -> exit 2, 'error: unknown update option: --graph'",
+      ".venv/bin/python -m pytest tests/test_kg_graphify_flags.py -q   # -> 13 passed",
+      "sed -i 's/bools={\"force\": force, \"no_cluster\": no_cluster}/... \"definitely_not_a_flag\": True}/' src/resextract/kg/graphify.py && .venv/bin/python -m pytest tests/test_kg_graphify_flags.py -k flag_guard -q   # -> RED",
+      "cp state/kg-update-test/graphify.py.orig src/resextract/kg/graphify.py && .venv/bin/python -m pytest tests/test_kg_graphify_flags.py -k flag_guard -q   # -> GREEN",
+      ".venv/bin/python -m pytest tests/test_kg_graphify_flags.py tests/test_kg_graphify.py -q   # -> 25 passed",
+      "mkdir -p state/kg-update-test/duval && cp -r state/kg/duval/graphify-out state/kg-update-test/duval/graphify-out   # + src/demo/{__init__,core}.py",
+      ".venv/bin/python -c 'Graphify().update(\"state/kg-update-test/duval\", force=True, no_cluster=True, timeout=240)'   # -> exit 0, 0.45 s",
+      "sha256sum state/kg/duval/graphify-out/graph.json   # -> 4790bbb... before and after",
+      "git -C /home/zer0null/Duval rev-parse HEAD && git -C /home/zer0null/Duval status --porcelain"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Independent verifier: re-run `pytest tests/test_kg_graphify_flags.py tests/test_kg_graphify.py -q` (expect 25 passed), re-inject `definitely_not_a_flag` into update()'s bools dict and confirm the guard fails naming method/flag/subcommand, then re-run Graphify().update() on a fresh copy and re-check the duval graph sha256. U7.1 can now drop its own stdbuf prefix (run() supplies `stdbuf -oL -eL`) but must stop passing graph= to update() with any path other than <target>/graphify-out/graph.json, which now raises UnsupportedGraphTarget. Note also the ready-facts count discrepancy above before reusing 2695/7151/119 anywhere.",
+  "write_paths": [
+    "src/resextract/kg/graphify.py",
+    "tests/test_kg_graphify_flags.py",
+    "state/kg-update-test/**",
+    "state/logs/U1.6-red.txt",
+    "state/logs/U1.6-green.txt",
+    "state/logs/U1.6-live.txt",
+    "orchestration/units/U1.6.md",
+    "orchestration/handoffs/U1.6.json"
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "unit": "V4",
+  "batch": "4",
+  "overall": "PARTIAL",
+  "checks": [
+    {"id": "1", "name": "re-run the two lane test files", "verdict": "PASS",
+     "observed": "23 passed in 0.05s", "evidence": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_lanes_build.py tests/test_lanes_classify.py -q -> '.......................  [100%] 23 passed in 0.05s'"},
+    {"id": "2a", "name": "red->green anchor guard", "verdict": "PASS",
+     "observed": "revert classify.py:273 to 'if guards[\"measured_result\"]:' -> test_paper_ineligible_lane_is_downgraded_to_report fails (IndexError classify.py:277); restore sha equal; green",
+     "evidence": "sha before 783e75c1352a721577e9d52f40949349fee48ce7f2fbe1450c71f8e125c0c01e, after 783e75c1... SHA-A-OK; log state/logs/V4-redgreen.log"},
+    {"id": "2b", "name": "red->green split rule", "verdict": "PASS",
+     "observed": "revert split.py:91 to 'return True' -> test_lane_with_non_independent_members_is_never_split fails (flint-spark splits into flint-spark-high/flint-spark-medium); restore sha equal; green",
+     "evidence": "sha before/after 96a63ae15ce28c7e318512f007c56c87d092a460cec4cc66b9a6f637b862e465 SHA-B-OK; sha256sum -c state/verify/V4/sha-before.txt -> all 4 lane files OK"},
+    {"id": "3", "name": "section 3.6 truth table, rule by rule", "verdict": "PASS",
+     "observed": "paper needs anchor AND measured result; benchmark_card needs a result carrying a command; unknown kind/unverifiable -> memo, never paper; downgrade report -> blog -> memo applies in order; 216-case sweep -> 0 out-of-vocabulary types",
+     "evidence": "state/verify/V4/truth.py output; guards interrogated one at a time via guards_passed/guards_failed incl. KeyError on an unknown guard name"},
+    {"id": "4", "name": "determinism and stability", "verdict": "PASS",
+     "observed": "shuffled (seed 1234) and reversed inputs -> byte-identical lanes.json and LANES.md; slugs stable; persist twice on a DB copy -> ids [1,2,3,4,5], 5 rows both passes, no duplicates; no generated_at/timestamp key",
+     "evidence": "state/verify/V4/determinism.py; lanes.json sha256 d99672c7ded717e2..., LANES.md 8ff74d93ab9b5e95...; lanes.json keys = audience,kinds,maturity,member_ids,parent_slug,slug,split_reason,thesis,thesis_source,title"},
+    {"id": "5", "name": "lanes.json vs lane_candidates (U0.10 backfill)", "verdict": "PASS",
+     "observed": "all 5 per-lane sets equal; 0 candidates in two lanes; 0 members lost (union = ids 1..10); store slug/target/type match the JSON",
+     "evidence": "state/verify/V4/check56.py; state state.sqlite lane ids 1..5 -> claim-test-unreproduced [9,10], decision-superseded [7,8], delta-eval-measured [5,6], invariant-stated [3,4], inventory-novel [1,2]; lane_candidates 10 rows"},
+    {"id": "6", "name": "live refusal re-derived", "verdict": "PASS",
+     "observed": "5 lanes x 2 members, paper_refusals=5, all type=report, maturity=medium, audience=practitioners, thesis_source=derived; verbatim rationale reproduced exactly",
+     "evidence": "type=report: paper refused (external_anchor=false (no CONFIRMS/EXTENDS verdict); measured_result=false (no measured result)); downgrade report <- substantive_thesis=true."},
+    {"id": "7", "name": "honesty audit (maturity/audience/thesis_source/0 splits/timestamps)", "verdict": "PASS",
+     "observed": "maturity and audience are computed from evidence strength and kinds (fixture: 201=high, 202=medium, 205=low; 5 distinct audiences), thesis_source='derived' on every lane with no model path in lanes/**, 0 splits live is true but fixture-only, no timestamp leaks",
+     "evidence": "src/resextract/lanes/build.py:422-464, 561-586; split.py:168; tests/test_lanes_build.py:173-197; no occamy/openai/llm import or datetime/time() call in src/resextract/lanes/*.py"},
+    {"id": "8", "name": "containment", "verdict": "PASS",
+     "observed": "Duval read-only and untouched; real store unchanged (no WAL/SHM, same sha, lanes and lane_candidates rows identical); every V4 write inside the workspace and inside the declared paths",
+     "evidence": "git -C /home/zer0null/Duval rev-parse HEAD -> 5cdc471afb2a14934030d581a20f6a9bcffb727e; status --porcelain -> 2 foreign untracked lines (.ci-trunk.txt, .lane-j-scratch/); sha256(state/state.sqlite) 4fda29bb60144b63d4e0e19dd4cce9af9903f12f7a59dd285a7c322dd9f414fc before and after"}
+  ],
+  "red_green": {
+    "a": "sha 783e75c1... before; reverted classify.py:273 external_anchor conjunct; RED = tests/test_lanes_classify.py::test_paper_ineligible_lane_is_downgraded_to_report 1 failed (IndexError at classify.py:277, anchors[0] on empty list); restore -> sha 783e75c1... equal (SHA-A-OK); PASS = 1 passed. NOTE: the test docstring predicts 'AssertionError: assert paper == report'; the observed failure mode is IndexError.",
+    "b": "sha 96a63ae1... before; reverted split.py:91 'return not (left_files & right_files)' -> 'return True'; RED = tests/test_lanes_build.py::test_lane_with_non_independent_members_is_never_split 1 failed (flint-spark split into flint-spark-high + flint-spark-medium on the maturity axis); restore -> sha 96a63ae1... equal (SHA-B-OK); PASS = 1 passed. Full 23 green after restoration."
+  },
+  "truth_table": {
+    "paper": [
+      {"anchor": false, "result": false, "type": "memo", "note": "constructed at maturity=low with no evidence row, so verifiable=false short-circuits to memo; with a substantive thesis and maturity!=low this combo returns report. paper is never returned."},
+      {"anchor": true, "result": false, "type": "report", "note": "CONFIRMS verdict supplied, no result -> substantive_thesis=true decides report"},
+      {"anchor": false, "result": true, "type": "report", "note": "result supplied with NO command -> recomputable=false refuses benchmark_card -> report; the SAME combination WITH a command returns benchmark_card"},
+      {"anchor": true, "result": true, "type": "paper", "note": "guards external_anchor=true and measured_result=true both hold"}
+    ],
+    "benchmark_card_no_command": "report",
+    "benchmark_card_with_command": "benchmark_card",
+    "unknown_type": "memo (unknown kind 'weird_unknown_kind' at maturity=low with no evidence -> verifiable=false -> memo); the same unknown kind at maturity=medium returns report. No unknown input ever produced paper; a 216-case sweep returned only {paper,report,blog,benchmark_card,memo}.",
+    "downgrade_order": [
+      "report: measured_result=true (result present, or present without a command) OR substantive_thesis=true (>=8 words and >=40 chars)",
+      "blog: no measured result and no substantive thesis, but accessible_narrative=true (lane has kinds and a title)",
+      "memo: nothing above, or verifiable=false (no evidence row and maturity=low)"
+    ]
+  },
+  "determinism": {"byte_identical": true, "slug_stable": true, "timestamps_leak": false},
+  "membership": {
+    "per_lane": [
+      {"slug": "claim-test-unreproduced", "lane_id": 1, "json_ids": [9, 10], "store_ids": [9, 10], "equal": true},
+      {"slug": "decision-superseded", "lane_id": 2, "json_ids": [7, 8], "store_ids": [7, 8], "equal": true},
+      {"slug": "delta-eval-measured", "lane_id": 3, "json_ids": [5, 6], "store_ids": [5, 6], "equal": true},
+      {"slug": "invariant-stated", "lane_id": 4, "json_ids": [3, 4], "store_ids": [3, 4], "equal": true},
+      {"slug": "inventory-novel", "lane_id": 5, "json_ids": [1, 2], "store_ids": [1, 2], "equal": true}
+    ],
+    "in_two_lanes": 0,
+    "lost": 0,
+    "store_extra_slugs": 0,
+    "note": "candidates_for_lane(lane_id) returns the same 2 rows (join) for every lane; union of store member ids = all 10 candidates ids 1..10"
+  },
+  "maturity_audit": "computed from evidence strength, not constant. Member level (build.py maturity_for_members): low if verified_refs<=0; high if verified_refs>0 AND (has_measured_result OR has_external_verdict); else medium. Lane level: high if every member high; medium if at least half the members are non-low; else low. Live: all 10 candidates carry verified_refs=2 of 2 and no measured result / no CONFIRMS|EXTENDS verdict, so every member is medium and every lane is medium. The fixture in tests/test_lanes_build.py:173-197 proves the branches really differ (201=high, 202=medium, 205=low), and guard-b's red run showed 211=high vs 212=medium in the same lane. Caveat: the live 10-candidate store exercises only the 'verified-only' branch, so 'medium' x5 is a correct computed value that would be indistinguishable from a constant on this store alone.",
+  "audience_audit": "computed from the members' kinds, not hardcoded. audience_for_kind maps a kind through an ordered 19-marker table (measured|benchmark|eval|performance -> evaluators; unreproduced|unverified|unfalsifiable|claim|contradict -> verifiers; superseded|decision|regression -> maintainers; novel|primitive|invariant|enforcement|boundary|implementation -> practitioners; no marker -> 'technical readers'); audience_for_members takes the highest AUDIENCE_PRIORITY and forces evaluators when any member has a measured result. Live: all 10 real candidates are novel_primitive (x5) or invariant_or_enforcement (x5) -> practitioners for every lane, so only 1 of the 5 audience values is exercised live (fixture proves evaluators/practitioners variation).",
+  "thesis_source_all_derived": true,
+  "not_reproduced": [],
+  "overstated": [
+    "tests/test_lanes_classify.py module docstring claims the reverted anchor guard fails with 'AssertionError: assert paper == report'. The actual reverted failure is IndexError: list index out of range at classify.py:277 (the paper branch formats anchors[0] while the empty anchors list is never checked). The test does fail, so red->green is real, but the documented transcript is wrong.",
+    "The batch-4 gate in docs/PLAN.md line 291 ('>=3 lanes, >=2 types, split rule demonstrated on a real multi-claim lane') is not met live: the real store yields 5 lanes but a single type (report) and 0 live splits. The split rule is proven only against the synthetic fixture tests/fixtures/lanes-store (12 candidates). U4.2's own written claims do not overstate this, but a reader could take 'guards implemented exactly' as covering the plan gate."
+  ],
+  "unverified": [
+    "Plan section 3.6 requires the split rule over '>=2 independent primary claims'; split_lane uses candidate members' provenance_refs. The store has 0 claims rows, so the rule cannot be evaluated on claims at all today - the claims-based interpretation is UNVERIFIED.",
+    "Plan section 3.6 says every classification records its rationale in MANIFEST.json and HISTORY.md. lanes/** writes rationale into state/lanes/<target>/lanes.json and LANES.md only; propagation into MANIFEST.json/HISTORY.md is U5.5's materialize stage and was not verified here.",
+    "'Split rule demonstrated on a real multi-claim lane' (plan line 291) - no real lane in the 10-candidate store disagrees on audience or maturity, so no live split exists to observe.",
+    "Live coverage of types/audiences beyond report/practitioners - not reachable with the current candidate kinds (only novel_primitive and invariant_or_enforcement)."
+  ],
+  "corrections": [
+    {"plan_assumption": "section 3.6: the split rule is defined over '>=2 independent primary claims with different audiences or maturity'.", "actually": "src/resextract/lanes/split.py splits on candidate members' provenance_refs (independent = disjoint file identities), not on claims; the store currently has 0 claims rows, so the rule is evaluated on candidates as a proxy.", "evidence": "split.py:86-103 independent_members/_ref_files; store query 'select count(*) from claims' = 0", "unit": "U4.2"},
+    {"plan_assumption": "section 4 batch-4 verifier row: 'V4: >=3 lanes, >=2 types, split rule demonstrated on a real multi-claim lane, guards red->green'.", "actually": "Live the store yields 5 lanes but 1 type (report, 5/5) and 0 live splits; the split rule is proven only on the synthetic fixture tests/fixtures/lanes-store (dune-drift 207/208 -> evaluators/practitioners). The guards ARE red->green (both reproduced with sha proof).", "evidence": "state/verify/V4/check56.py; state/logs/V4-redgreen.log", "unit": "U4.2/V4"},
+    {"plan_assumption": "Plan/VERDICTS V3 record the Duval acceptance target at main 6deaed0.", "actually": "git -C /home/zer0null/Duval rev-parse HEAD now returns 5cdc471afb2a14934030d581a20f6a9bcffb727e with 2 foreign untracked files (.ci-trunk.txt, .lane-j-scratch/). Read-only observation; not caused by V4.", "evidence": "git -C /home/zer0null/Duval rev-parse HEAD; git -C /home/zer0null/Duval status --porcelain", "unit": "V4"}
+  ],
+  "tool_calls": 26,
+  "bound": 40,
+  "containment": {
+    "duval_head": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+    "outside_writes": 0,
+    "store_lane_rows_mutated": 0,
+    "store_sha_before_after": "4fda29bb60144b63d4e0e19dd4cce9af9903f12f7a59dd285a7c322dd9f414fc",
+    "notes": "persist idempotence was exercised on state/verify/V4/state-copy.sqlite only; no -wal/-shm beside the real DB; lane file reverts restored with matching sha256 (sha256sum -c state/verify/V4/sha-before.txt OK)"
+  },
+  "blocker": "",
+  "next_unit_hint": "Batch 4 can advance the lane code, but do not call the plan gate satisfied: (1) re-run lanes live once claims/verdicts exist to exercise >=2 types and a real split; (2) decide whether split should key off claims (section 3.6) or candidates (current); (3) fix the test_lanes_classify.py docstring red transcript and consider guarding anchors[0] in classify.py so a reverted anchor guard fails as an assertion rather than an IndexError.",
+  "write_paths": ["orchestration/VERDICTS.md", "orchestration/units/V4.md", "orchestration/handoffs/V4.json", "state/logs/V4-redgreen.log", "state/verify/V4/**"]
+}

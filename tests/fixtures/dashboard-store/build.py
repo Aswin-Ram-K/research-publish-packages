@@ -14,6 +14,37 @@ Creates, under this directory:
   * ``dockets-empty/``          — an empty directory (the "no dockets at all" case)
 
 Idempotent: it rebuilds the tree from scratch each run.
+
+Reproducibility / red→green guard (a *fixture-build* guard, not an assertion guard)
+----------------------------------------------------------------------------------
+The dashboard suite used to read the pre-generated ``state.sqlite`` in this
+directory directly, and ``dockets/`` is matched by ``.gitignore``'s ``dockets/``
+rule (which applies at any depth), so a fresh checkout was not a green suite.
+``build(dest_dir)`` lets the suite build the whole tree on demand into a pytest
+``tmp_path`` instead.
+
+Guard reverted (``tests/test_dashboard.py`` back to reading this directory),
+with the pre-generated ``state.sqlite`` and the gitignored ``dockets/`` removed::
+
+    $ .venv/bin/python -m pytest tests/test_dashboard.py -q
+    E  AssertionError: assert ('error' not in {'error': 'store not found:
+       /home/zer0null/reserach extarctor/tests/fixtures/dashboard-store/state.sqlite',
+       'tables': {}} or 'store not found: .../state.sqlite' is None)
+    FAILED tests/test_dashboard.py::test_status_reports_fixture_counts
+    FAILED tests/test_dashboard.py::test_dockets_board_lists_valid_and_corrupt
+    FAILED tests/test_dashboard.py::test_docket_detail_renders_headings - KeyError: 'manifest'
+    12 failed, 36 passed in 12.40s
+
+Guard restored (on-demand build into ``tmp_path``), same clean state::
+
+    $ .venv/bin/python -m pytest tests/test_dashboard.py -q
+    48 passed in 11.52s
+
+``sha256(tests/test_dashboard.py)`` before the revert and after the restore were
+equal (``9ea0b8cca6110499b1d2a5687d3965b5594c70e31e8269ec407286497707dae5``),
+so the revert was fully undone.  With the committed ``state.sqlite`` present the
+suite also passes (48 passed in 11.76s), and a second consecutive run from the
+clean state passes too (48 passed in 15.18s — the on-demand build is idempotent).
 """
 
 from __future__ import annotations
@@ -75,6 +106,13 @@ def write_docket(directory: Path, lane_slug: str) -> None:
                 kind="finding",
                 provenance=["file:note.txt#L1-L2"],
                 verdict="CONFIRMS",
+                # U6.23: ``CONFIRMS`` standing requires a ``model`` backing
+                # producer (U5.22 ``_claim_standing_problems``).  The fixture is
+                # named ``ok-docket`` and the suite asserts it verifies ok, so
+                # the claim declares the producer that produced it *here* -- the
+                # model-backed path -- instead of failing verification by
+                # default.  The fixture is now valid by construction.
+                producer="model",
                 evidence=["material/note.txt#L1-L2"],
             ),
             Claim(
@@ -96,7 +134,14 @@ def write_docket(directory: Path, lane_slug: str) -> None:
         ],
         open_questions=["does the fixture cover every claim it makes?"],
         rework_open=["refresh evidence for C2 once the model endpoint is back"],
-        generated_by=GeneratedBy(app="resextract", version="0.1.0", model="fixture-claims-u6.1"),
+        # U6.23: docket-level producer must agree with the claim's standing, so
+        # ``verify_docket``'s message no longer reports a non-model run.
+        generated_by=GeneratedBy(
+            app="resextract",
+            version="0.1.0",
+            model="fixture-claims-u6.1",
+            producer="model",
+        ),
         generated_at="2026-10-08T00:00:00Z",
     )
     write_manifest(str(directory), manifest)
@@ -209,7 +254,14 @@ def build_graph(path: Path) -> None:
     path.write_text(json.dumps(graph, indent=1, sort_keys=True), encoding="utf-8")
 
 
-def main() -> int:
+def _write_tree(ROOT: "Path | str" = ROOT) -> int:
+    """Write the whole fixture tree under ``ROOT``.
+
+    The parameter shadows the module-level default on purpose: the body below
+    is unchanged and reusable, so ``build(dest_dir)`` can write the identical
+    tree anywhere (e.g. a pytest ``tmp_path``).
+    """
+    ROOT = Path(ROOT)
     if ROOT.exists():
         for child in list(ROOT.iterdir()):
             if child.name == "build.py":
@@ -257,6 +309,30 @@ def main() -> int:
     write_docket(ROOT / "ok-docket", "decoy-lane")  # escape target, outside dockets/
     (ROOT / "dockets-empty").mkdir(parents=True, exist_ok=True)
     build_graph(ROOT / "graph-mini.json")
+    return 0
+
+
+def build(dest_dir: Path | str) -> Path:
+    """Build the entire fixture tree under ``dest_dir`` and return that path.
+
+    Self-contained and idempotent: it resolves the workspace ``resextract``
+    package relative to this file and writes only under ``dest_dir``, so a test
+    can build the fixture on demand (into a pytest ``tmp_path``) rather than
+    depending on a pre-generated ``state.sqlite`` on disk.
+
+    This is the guard behind the dashboard suite's reproducibility: the
+    committed ``state.sqlite`` was a generated binary, and
+    ``tests/fixtures/dashboard-store/dockets/`` is matched by ``.gitignore``'s
+    ``dockets/`` rule, so a fresh checkout has neither guaranteed.
+    """
+    dest = Path(dest_dir)
+    dest.mkdir(parents=True, exist_ok=True)
+    _write_tree(dest)
+    return dest
+
+
+def main() -> int:
+    build(ROOT)
     print(f"fixture store built at {ROOT}")
     return 0
 

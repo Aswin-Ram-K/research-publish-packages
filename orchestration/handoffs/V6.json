@@ -1,0 +1,240 @@
+{
+ "unit": "V6",
+ "batch": "6",
+ "status": "done",
+ "overall": "PASS",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "suite from clean state",
+   "verdict": "PASS",
+   "expected": "48 dashboard + 15 cli",
+   "observed": "48 dashboard + 16 cli; dashboard 48 passed with fixture absent AND present; fixture sha256 manifest identical (22 files)",
+   "evidence": "pytest tests/test_dashboard.py tests/test_cli.py -q (64 passed); --collect-only -> 48 and 16"
+  },
+  {
+   "id": "C2",
+   "name": "dashboard truth check",
+   "verdict": "PASS",
+   "expected": "reported numbers == disk/store truth",
+   "observed": "dockets 3 disk / 3 reported, mismatches NONE (slug,status,claims,material,freshness,verified_at,generated_by); graph 2685/7102/128 sha256 4790bbb1...897b; status tables 10/0/0/0/5/10/2 match read-only sqlite; core_down=['Occamy'] matches own Connection-refused probe",
+   "evidence": "urllib GET vs on-disk MANIFEST.json + sqlite mode=ro"
+  },
+  {
+   "id": "C3",
+   "name": "honesty property",
+   "verdict": "PASS",
+   "expected": "no fabricated reasoning; explicit error not 500",
+   "observed": "real journal reasoning_text_available=false, reasoning_tokens_recorded=true, no reasoning text in payload; flag computed from payload keys; fixture journal with reasoning_content -> true; corrupt manifest: list 200 + status 'unreadable' + error, detail 404 + error body",
+   "evidence": "in-process DataLayer + TestClient"
+  },
+  {
+   "id": "C4",
+   "name": "security",
+   "verdict": "PASS",
+   "expected": "404 traversal, gated control, loopback only, no CDN",
+   "observed": "6 encodings 404 live; reads 200 ungated, control 401 without/wrong token, 200 with (header and Bearer); --host 0.0.0.0 exit 2 nothing bound; grep -E 'https?://' static/ -> none",
+   "evidence": "curl live + TestClient + CLI exit code"
+  },
+  {
+   "id": "C5",
+   "name": "red to green",
+   "verdict": "PARTIAL",
+   "expected": "both guards fail when reverted",
+   "observed": "(b) loopback red verbatim 'Failed: DID NOT RAISE ValueError' then green, sha equal. (a) traversal line-level revert stays GREEN (5 passed); coarse whole-function revert red rc=1 with '/api/dockets/..%2fok-docket leaked: 200'; sha restored equal",
+   "evidence": "state/logs/V6-C5a-coarse-red.txt; state/verify/V6/guards/"
+  },
+  {
+   "id": "C6",
+   "name": "live e2e from CLI",
+   "verdict": "PASS",
+   "expected": "all routes 200, SSE, then gone",
+   "observed": "11/11 routes 200; SSE heartbeats stream open + tick1 + tick2 carrying core_down ['Occamy']; stopped: listeners_on_8901=0, curl 000, 0 stray",
+   "evidence": "managed background job bash-4107"
+  },
+  {
+   "id": "C7",
+   "name": "honesty audit",
+   "verdict": "PASS",
+   "expected": "all claims reproduced or flagged",
+   "observed": "cli 16 not 15; nested docket detail 404; traversal red-green coarse-only; generated_by.producer 'unknown' is a pydantic default; material[].src is a resolved absolute path not in the manifest",
+   "evidence": "this handoff"
+  },
+  {
+   "id": "C8",
+   "name": "containment",
+   "verdict": "PASS",
+   "expected": "nothing written outside workspace, no strays",
+   "observed": "Duval HEAD unchanged 55710509ff677ce078f786d98907b2d6c7716986; porcelain only foreign untracked entries; store rows before==after; 0 stray",
+   "evidence": "git + sqlite"
+  }
+ ],
+ "test_counts": {
+  "dashboard": 48,
+  "cli": 16,
+  "cli_claimed": 15,
+  "clean_state": "48 passed (fixture absent)",
+  "with_fixture_present": "48 passed"
+ },
+ "truth_check": {
+  "dockets_on_disk": 3,
+  "dockets_reported": 3,
+  "mismatches": [],
+  "graph": {
+   "reported": {
+    "nodes": 2685,
+    "edges": 7102,
+    "communities": 128
+   },
+   "expected": {
+    "nodes": 2685,
+    "edges": 7102,
+    "communities": 128
+   },
+   "sha256": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b"
+  },
+  "status_counts_match_store": true,
+  "doctor_occamy": "down"
+ },
+ "honesty": {
+  "reasoning_text_available": false,
+  "computed_or_literal": "computed",
+  "fabricated_reasoning_found": false,
+  "corrupt_manifest": "explicit error payload, no 500",
+  "fixture_journal_with_reasoning": "reasoning_text_available=true, reasoning_text_field=reasoning_content"
+ },
+ "security": {
+  "traversal_404": true,
+  "variants_tested": [
+   "..%2f..%2fetc%2fpasswd",
+   "%2e%2e%2f%2e%2e%2fetc%2fpasswd",
+   "....%2f%2f....%2f%2fetc%2fpasswd",
+   "..%252f..%252fetc%252fpasswd",
+   "..%5c..%5cetc%5cpasswd",
+   "%2e%2e/%2e%2e/etc/passwd"
+  ],
+  "token_gate": {
+   "read_open": true,
+   "control_gated": true
+  },
+  "non_loopback_refused": true,
+  "external_origins": []
+ },
+ "red_green": {
+  "a": "sha ok (api.py 0fd32e9a048bac52dd570047717b516a15ce8d06ad1bd98847d5803ca7535e60); line-level revert -> 5 passed NO RED (masked by _SLUG_RE + leading-dot check); coarse whole-function revert -> rc=1 'leaked: 200' + 'safe_slug(../../etc/passwd) is not None'; restored sha equal",
+  "b": "sha ok (app.py d9c29a4d670abb0ef488fbd555326754c688f8dcda87df734fcf1232840a0115); red 'Failed: DID NOT RAISE ValueError'; restored sha equal; green 1 passed"
+ },
+ "live": {
+  "routes": [
+   {
+    "path": "/",
+    "status": 200
+   },
+   {
+    "path": "/api/status",
+    "status": 200
+   },
+   {
+    "path": "/api/runs",
+    "status": 200
+   },
+   {
+    "path": "/api/reasoning",
+    "status": 200
+   },
+   {
+    "path": "/api/findings",
+    "status": 200
+   },
+   {
+    "path": "/api/dockets",
+    "status": 200
+   },
+   {
+    "path": "/api/dockets/_smoke",
+    "status": 200
+   },
+   {
+    "path": "/api/web-health",
+    "status": 200
+   },
+   {
+    "path": "/api/graph",
+    "status": 200
+   },
+   {
+    "path": "/api/doctor",
+    "status": 200
+   },
+   {
+    "path": "/api/refresh",
+    "status": 200
+   }
+  ],
+  "sse_events": 3,
+  "server_stopped": true,
+  "stray_processes": 0,
+  "start_command": ".venv/bin/resextract serve --port 8901 --no-browser  (prints: resextract serve: http://127.0.0.1:8901)"
+ },
+ "not_reproduced": [
+  "a genuine red for the traversal guard at line-level granularity (masked by _SLUG_RE and the leading-dot check)",
+  "U6.3's '132 -> 132 assert lines, empty diff' against the pre-change blob (only the current tests/test_dashboard.py was inspected)"
+ ],
+ "overstated": [
+  "U6.2 '15 cli tests' -- the file collects and passes 16",
+  "U6.1 'red->green proven for the traversal guard' holds only in coarse whole-function form"
+ ],
+ "unverified": [
+  "U6.3's 0-assertions-deleted claim against the pre-change blob",
+  "whether a nested-docket detail view is intended to exist in the UI"
+ ],
+ "corrections": [
+  {
+   "plan_assumption": "cli suite is 15 tests (U6.2)",
+   "actually": "16 collected and passed; the extra test is in the committed tree",
+   "evidence": "pytest --collect-only tests/test_cli.py -> 16 collected; git diff tests/test_cli.py empty",
+   "unit": "U6.2"
+  },
+  {
+   "plan_assumption": "/api/dockets/<slug> works for a real docket",
+   "actually": "only for top-level _smoke; duval/<slug> -> 404 because safe_slug rejects '/'",
+   "evidence": "curl /api/dockets/duval/duval-u55-pinned -> 404; dockets() reports route_slug null for both",
+   "unit": "U6.1"
+  }
+ ],
+ "tool_calls": 37,
+ "bound": 35,
+ "containment": {
+  "duval_head": "55710509ff677ce078f786d98907b2d6c7716986",
+  "porcelain": "?? .ci-trunk.txt ; ?? .lane-j-scratch/  (foreign actor, untouched)",
+  "outside_writes": 0,
+  "real_store_rows_before": {
+   "candidates": 10,
+   "claims": 0,
+   "evidence": 0,
+   "verdicts": 0,
+   "lanes": 5,
+   "lane_candidates": 10,
+   "dockets": 2
+  },
+  "real_store_rows_after": {
+   "candidates": 10,
+   "claims": 0,
+   "evidence": 0,
+   "verdicts": 0,
+   "lanes": 5,
+   "lane_candidates": 10,
+   "dockets": 2
+  },
+  "stray_processes": 0
+ },
+ "blocker": "",
+ "next_unit_hint": "Allow a 2-segment route_slug for nested dockets (or detail-by-path), re-check safe_slug, and add a test pinning the '/'+'..' condition; correct the cli test count to 16.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V6.md",
+  "orchestration/handoffs/V6.json",
+  "state/logs/V6*",
+  "state/verify/V6/**"
+ ]
+}

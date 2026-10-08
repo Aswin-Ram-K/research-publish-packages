@@ -1,0 +1,107 @@
+{
+ "unit": "U0.17",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/doctor.py",
+  "tests/test_doctor.py",
+  "state/logs/U0.17-measure.txt",
+  "state/logs/U0.17-redgreen.txt",
+  "state/logs/U0.17-pytest.txt",
+  "orchestration/units/U0.17.md",
+  "orchestration/handoffs/U0.17.json"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "probe_time_s": 0.001899,
+  "tests": {
+   "doctor_before": 13,
+   "doctor_after": 20,
+   "deletions": 0
+  },
+  "doctor_py_sha256": "db25ab608fb960fc62d4db01e9830ee27a771cdf326ebcd0efa876914b0384e0",
+  "tests_py_sha256": "a33396e6fb2afae6781d4c18b3e4eb6cd353a43b862e25d97b29890c8dcf7b9a",
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code} %{time_total}' http://192.168.2.168:8012/v1/models",
+   ".venv/bin/python -m pytest tests/test_doctor.py -q -p no:cacheprovider",
+   "bash state/logs/U0.17_redgreen.sh",
+   ".venv/bin/python <state/logs/U0.17-measure.txt producing script>",
+   "git -C /home/zer0null/Duval rev-parse HEAD; git -C /home/zer0null/Duval status --porcelain"
+  ]
+ },
+ "diagnosis": {
+  "force_probe_function": "doctor.py:86 probe_occamy - unconditional GET {base}/models under httpx.Client(timeout=HTTP_TIMEOUT) (HTTP_TIMEOUT=5.0 at doctor.py:26, used at doctor.py:93); returns DOWN at once, so the 30 s completion probe (doctor.py:104) is never reached while the endpoint is down",
+  "timeout_s": 5.0,
+  "control_caller": "dashboard/app.py:207 POST /api/control/doctor -> layer.doctor_status(force=True) -> api.py:1052 (doctor_ttl cache bypassed) -> api.py:1061 doctor_mod.run_doctor() with NO force argument; dashboard/app.py:187 /api/control/rescan does the same",
+  "measured_control_latency_s": 5.6,
+  "measured_control_latency_local_s": 7.113,
+  "false_000_at_5s": "reproduced",
+  "false_000_note": "local blackhole listener (host drops port 8012): fresh probe_occamy 5.0079 s; run_doctor(force=True) 7.113 s; layer.doctor_status(force=True) abandoned by a 5.00 s client deadline -> false 000. The same control call inside the TTL returned 200 in 2.236 s.",
+  "fix_belongs_in": "doctor.py"
+ },
+ "fix": {
+  "ttl_s": 30,
+  "configurable": true,
+  "config_channel": "RESEXTRACT_DOCTOR_NEGATIVE_TTL_S env > [doctor] negative_ttl_s in config/resextract.toml > DEFAULT_NEGATIVE_TTL_S = 30.0; 0 disables reuse",
+  "force_always_probes": true,
+  "directional_correctness": true,
+  "report_unchanged": true,
+  "narrow_or_full_purge_note": true,
+  "staleness_bound_sentence": "A DOWN Occamy verdict is reused for at most negative_ttl_s() seconds (default 30 s); no DOWN result survives its expiry and force=True never reuses one.",
+  "scope": "Occamy leg only (OCCAMY_CACHE_KEY); the other six legs stay semantics-identical"
+ },
+ "red_green": {
+  "a": "cache-reuse guard: revert A (reuse_down returns None) -> 3 failed incl. test_second_call_reuses_cached_down_without_a_new_probe; full src+tests __pycache__ purge at every revert; restore bit-identical, sha256 db25ab608fb960fc62d4db01e9830ee27a771cdf326ebcd0efa876914b0384e0",
+  "b": "force-bypass guard: revert B (reuse_down drops 'if force: return None') -> 1 failed, test_force_bypasses_negative_memory (assert 1 == 2); restore bit-identical, sha256 db25ab608fb960fc62d4db01e9830ee27a771cdf326ebcd0efa876914b0384e0",
+  "captured_output": "state/logs/U0.17-redgreen.txt; both excerpts pasted into the guard test docstrings"
+ },
+ "measured": {
+  "first_call_s": 5.0079,
+  "second_call_within_ttl_s": 0.0,
+  "probe_count_first": 1,
+  "probe_count_second": 0,
+  "real_refused_first_call_s": 0.1059,
+  "real_refused_second_call_s": 0.0,
+  "false_000_control_call_1": "abandoned at 5.00 s",
+  "control_call_2_within_ttl": "200 in 2.236 s (other six legs, not Occamy)"
+ },
+ "verdict_unchanged": {
+  "core_down_contains_model": true,
+  "legs": 7,
+  "core_down": [
+   "Occamy"
+  ],
+  "optional_down": [],
+  "exit_code": 2,
+  "occamy_detail": "ConnectError: [Errno 111] Connection refused"
+ },
+ "follow_up_if_dashboard": {
+  "where": "dashboard/api.py:1061",
+  "what": "call doctor_mod.run_doctor(force=force) so an operator's explicit force is not swallowed at the api-cache boundary, then decide whether app.py:207 keeps force=True (with the memory it is now a truly fresh probe). Residual for whichever unit owns dashboard/**: a cold control call (fresh process, or the first call after the 30 s TTL) still pays the Occamy 5 s timeout, and SearXNG's cold probe measured 2.2-4.8 s on the forced path."
+ },
+ "state_store_untouched": true,
+ "duval_untouched": {
+  "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain_count": 2,
+  "porcelain": [
+   "?? .ci-trunk.txt",
+   "?? .lane-j-scratch/"
+  ]
+ },
+ "state_sqlite": {
+  "mtime": "2026-10-08 06:31:51.796608277 -0500",
+  "size": 167936,
+  "sha16": "459e16cc875654df",
+  "porcelain": ""
+ },
+ "tool_calls": 24,
+ "bound": 20,
+ "blocker": "",
+ "next_unit_hint": "A verifier should re-run bash state/logs/U0.17_redgreen.sh (self-contained: baseline green, revert A, revert B, full purge, bit-identical restore) and confirm doctor.py sha256 db25ab608fb960fc62d4db01e9830ee27a771cdf326ebcd0efa876914b0384e0. U6.6 then forwards force at dashboard/api.py:1061.",
+ "write_paths": [
+  "src/resextract/doctor.py",
+  "tests/test_doctor.py",
+  "state/logs/U0.17*",
+  "orchestration/units/U0.17.md",
+  "orchestration/handoffs/U0.17.json"
+ ]
+}

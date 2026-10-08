@@ -1,0 +1,48 @@
+{"unit":"U6.3","status":"done",
+ "artifacts":[
+   "tests/test_dashboard.py (session-scoped autouse on-demand fixture; setup-only change)",
+   "tests/fixtures/dashboard-store/build.py (new build(dest_dir) callable + guard transcripts in docstring)",
+   "state/logs/U6.3-before-freshclone.log","state/logs/U6.3-before-nodb.log",
+   "state/logs/U6.3-after-run1.log","state/logs/U6.3-after-run2.log",
+   "state/logs/U6.3-guard-reverted.log","state/logs/U6.3-guard-restored.log",
+   "state/logs/U6.3-final.log","state/logs/U6.3-final2.log",
+   "state/logs/U6.3-original-test_dashboard.py","state/logs/U6.3-fixed-test_dashboard.py",
+   "orchestration/units/U6.3.md"],
+ "evidence":{
+   "occamy_probe_http":"000",
+   "diagnosis":"NOT gitignored and NOT missing: state.sqlite (+ its -shm/-wal sidecars) is committed at HEAD (git ls-tree -r HEAD) and was present on disk; git check-ignore says NOT-IGNORED. The earlier 'generated fixture missing from disk' report is stale. The reproducible fresh-checkout defect is that .gitignore line 3 is the unanchored rule 'dockets/', which matches tests/fixtures/dashboard-store/dockets/ at any depth, so the ok-docket and broken-docket trees are untracked and absent on a fresh clone. Emulating a fresh checkout (remove gitignored dockets/, keep tracked DB) => 5 failed/43 passed; additionally removing the committed DB => 12 failed/36 passed.",
+   "before":{
+     "command":".venv/bin/python -m pytest tests/test_dashboard.py -q  # after rm -rf tests/fixtures/dashboard-store/dockets (gitignored); second run also after rm state.sqlite*",
+     "result":"fresh-clone emulation: 5 failed, 43 passed; without the committed DB too: 12 failed, 36 passed",
+     "failure_text":"E AssertionError: assert ('error' not in {'error': 'store not found: /home/zer0null/reserach extarctor/tests/fixtures/dashboard-store/state.sqlite', 'tables': {}} or 'store not found: .../state.sqlite' is None) ; E KeyError: 'manifest' at tests/test_dashboard.py:252 ; FAILED ...::test_dockets_board_lists_valid_and_corrupt"},
+   "after":{
+     "command":".venv/bin/python -m pytest tests/test_dashboard.py -q  # same clean state: no state.sqlite, no dockets/",
+     "result":"48 passed","second_run":"48 passed","idempotent":true},
+   "tests_collected":48,"assertions_deleted":0,
+   "assertion_changes":[],
+   "setup_changes":[
+     "added importlib loader + session-scoped autouse _dashboard_fixture that builds the tree into tmp_path_factory.mktemp('dashboard-store') and rebinds STORE/JOURNALS/DOCKETS/EMPTY_DOCKETS/GRAPH",
+     "FIXTURES kept as-is; still used only for deliberately-missing paths (nope.json, does-not-exist.sqlite, no-dockets-here)",
+     "no test function body or assertion was edited"],
+   "fixture_strategy":"built on demand into a session-scoped pytest tmp_path via build(dest_dir); always rebuilt (strictly stronger than build-when-absent), so no repo artefact and immunity to the concurrent v2->v3 store migration",
+   "leftover_artifacts":{"fixture_dir_git_status":"M tests/fixtures/dashboard-store/build.py only; no untracked/generated file. state.sqlite/-shm/-wal and the gitignored dockets/ tree deleted for the baseline were restored: DB sha256 04bf0b0511d19ac8a3f14873a50b69ccbb15df03d66af7143d7a86917f1cbb6a identical to the pre-unit value"},
+   "red_green":{
+     "guard":"fixture-build guard (the on-demand fixture build), NOT an assertion guard",
+     "reverted":"12 failed, 36 passed - 'store not found: .../state.sqlite' and KeyError 'manifest'",
+     "restored":"48 passed",
+     "sha_before_after":"equal (tests/test_dashboard.py = 9ea0b8cca6110499b1d2a5687d3965b5594c70e31e8269ec407286497707dae5 before revert and after restore)"},
+   "tool_calls":23,"bound":25,
+   "commands":[
+     "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models",
+     "git check-ignore -v tests/fixtures/dashboard-store/state.sqlite",
+     "git ls-tree -r HEAD --name-only tests/fixtures/dashboard-store/",
+     "git check-ignore -v tests/fixtures/dashboard-store/dockets/ok-docket/MANIFEST.json",
+     "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_dashboard.py --collect-only -q",
+     "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_dashboard.py -q (before x2, after x2, final x2)",
+     "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_dashboard.py -q (guard: reverted, restored)",
+     "diff <(grep -o 'assert .*' state/logs/U6.3-original-test_dashboard.py) <(grep -o 'assert .*' tests/test_dashboard.py)",
+     "git status --porcelain --untracked-files=all tests/fixtures/dashboard-store/",
+     "sha256sum tests/fixtures/dashboard-store/state.sqlite  # 04bf0b05... after restore"]},
+ "blocker":"",
+ "next_unit_hint":"Verifier: reproduce the fresh checkout with `rm -rf tests/fixtures/dashboard-store/dockets tests/fixtures/dashboard-store/state.sqlite*` then `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_dashboard.py -q` -> expect 48 passed; and confirm the guard red by restoring state/logs/U6.3-original-test_dashboard.py over tests/test_dashboard.py in that clean state (expect 'store not found'). Repo hygiene for the owner (needs a commit, outside this unit): untrack state.sqlite/-shm/-wal and either anchor the .gitignore rule (/dockets/) or add an explicit negation for tests/fixtures/dashboard-store/dockets/ so the fixture subtree is reproducible from a clone.",
+ "write_paths":["tests/test_dashboard.py","tests/fixtures/dashboard-store/**","state/logs/U6.3*","orchestration/units/U6.3.md","orchestration/handoffs/U6.3.json"]}

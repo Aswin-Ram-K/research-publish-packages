@@ -1,0 +1,107 @@
+{
+  "unit": "U3.3",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/web/__init__.py",
+    "src/resextract/web/search.py",
+    "src/resextract/web/fetch.py",
+    "tests/test_web_search.py",
+    "tests/test_web_fetch.py",
+    "state/logs/U3.3-tests.txt",
+    "state/logs/U3.3-redgreen.txt",
+    "state/logs/U3.3-live-search.log",
+    "state/logs/U3.3-live-fetch.log",
+    "state/logs/U3.3-live-search.py",
+    "state/logs/U3.3-live-fetch.py",
+    "state/logs/U3.3-search.py.green",
+    "state/logs/U3.3-fetch.py.green",
+    "state/logs/U3.3-*.orig (pre-unit backups)",
+    "orchestration/units/U3.3.md"
+  ],
+  "evidence": {
+    "tests": "web package green: 78 passed (tests/test_web_search.py 17, tests/test_web_fetch.py 61). Whole suite at 05:47: 237 passed, 1 skipped, 13 failed -- every failure is in tests/test_docket_assemble.py (12) and tests/test_journal.py (1), both rewritten by a concurrent unit at 05:47, and 0 failures are in tests/test_web*; at 05:44 the same command gave 225 passed, 1 skipped, 1 failed (journal only), so the 12 docket failures landed while this unit was running.",
+    "red_green": "two guards, both pasted verbatim into the test docstrings and archived in state/logs/U3.3-redgreen.txt. (1) fast-empty escalation, reverting `if reason == \"fast_empty\" or len(self._pending_streak) >= DEGRADATION_THRESHOLD:` to the consecutive-only test: `AssertionError: a sub-fast_empty_ms empty latches immediately / assert False is True / + where False = SearchOutcome(query='dead searxng', results=[], ok=True, degraded=False, ... latency_ms=5.0), error='zero results (ok=True, not an error); consecutive distinct-empty streak 1/3', degradation_reason=None).degraded` -- 1 failed in 0.02s. (2) short-payload suspicion, reverting `suspect = usable < self.min_chars` to `suspect = False`: `assert False is True / + where False = FetchResult(ok=True, ..., suspect=False, suspicion=None, usable_chars=25).suspect` in tests/test_web_fetch.py:839 -- 1 failed in 0.03s. Both live files were restored immediately and sha256-verified identical to state/logs/U3.3-*.py.green (RESTORED-OK); the pair then re-ran 78 passed.",
+    "search_live": {
+      "attempts": [
+        {"query": "retrieval augmented generation evaluation benchmark", "engine": "google", "latency_ms": 535.713, "results": 0, "ok": true, "degraded": false},
+        {"query": "retrieval augmented generation evaluation benchmark", "engine": "duckduckgo", "latency_ms": 728.219, "results": 10, "ok": true, "degraded": false},
+        {"query": "Darwin Godel machine self-improving agents", "engine": "google", "latency_ms": 2.073, "results": 0, "ok": true, "degraded": false},
+        {"query": "Darwin Godel machine self-improving agents", "engine": "duckduckgo", "latency_ms": 725.568, "results": 10, "ok": true, "degraded": false},
+        {"query": "zzqq nonexistent token xyzzy 8731", "engine": "google", "latency_ms": 1.635, "results": 0, "ok": true, "degraded": true},
+        {"query": "zzqq nonexistent token xyzzy 8731", "engine": "google", "latency_ms": 1.124, "results": 0, "ok": true, "degraded": true}
+      ],
+      "fast_empty_reproduced": true,
+      "reproduction": "2 rapid identical forced queries both came back zero-result ok=True at 1.635 ms and 1.124 ms; the client latched degraded on the FIRST one with degradation_reason='fast_empty' (evidence latency 1.635 ms) instead of waiting for three consecutive empties. The sub-50 ms signature also appeared mid-run on a paced query (google, 2.073 ms) but rotation to duckduckgo returned 10 results, so that outcome was not empty and correctly did NOT latch -- the fast-empty path and the transport-failure path stay distinct. The 2 paced queries ran >=1.5 s apart (client limiter, min_interval_s=1.5, jitter_s=0.5) and the 2 rapid ones used a second client with min_interval_s=0.0.",
+      "budget": "4 probe queries + 1 liveness search = 5 of <=6"
+    },
+    "fetch_live": {
+      "stub_url": "https://raw.githubusercontent.com/openai/gpt-2/main/README.md",
+      "stub_text_head": "```\n404: Not Found\n```",
+      "usable_chars": 22,
+      "stored_chars": 25,
+      "suspect": true,
+      "suspicion": "short_payload",
+      "fallback_fired": true,
+      "fallback_detail": "fetch(force=True): the bridge crawl returned 25 raw chars (22 usable) and the scrape fallback DID fire (2 bridge HTTP calls for that fetch), but the scrape returned nothing longer, so 'longer wins' kept the crawl payload and kind stayed 'crawl'.",
+      "kind": "crawl",
+      "refresh_stub_still_suspect": true,
+      "refresh_stub": {"ok": true, "changed": false, "note": "unchanged", "suspect": true, "suspicion": "short_payload", "usable_chars": 22},
+      "refresh_normal": {"url": "https://raw.githubusercontent.com/karpathy/nanoGPT/master/README.md", "changed": false, "note": "unchanged", "suspect": false, "usable_chars": 11998, "stored_chars": 12000, "old_sha8": "baf31106", "new_sha8": "baf31106"},
+      "budget": "3 fetches (5 bridge HTTP calls) of <=6 fetches",
+      "finding": "The '25-character gpt-2 stub' is a literal GitHub raw 404 body, not a short README: the exact URL is https://raw.githubusercontent.com/openai/gpt-2/main/README.md and the crawl text is '```\\n404: Not Found\\n```'. U3.2 recorded it ok=True; with min_chars=200 it is now ok=True, suspect=True, usable_chars=22, and refresh() cannot upgrade it."
+    },
+    "surface_all": [
+      "DEFAULT_ENGINES",
+      "DEGRADATION_THRESHOLD",
+      "Attempt",
+      "ClientStats",
+      "DegradationEvidence",
+      "Result",
+      "SearchOutcome",
+      "SearXNGClient",
+      "FetchMeta",
+      "FetchResult",
+      "Fetcher",
+      "content_sha256",
+      "normalise_text"
+    ],
+    "surface_note": "The 7 required names are all covered; there is no SearchResult class in search.py, so the real hit type `Result` is exported instead (asserted by test_package_surface_exposes_exactly_the_declared_names, which also asserts every __all__ name resolves and every class is identical to the one in its defining module -- the guard against the import-coupling hazard).",
+    "behaviour_changes": [
+      "fetch: a crawl payload shorter than min_chars (default 200) now triggers the scrape fallback; the longer payload wins; a still-short final payload returns ok=True, suspect=True, suspicion='short_payload', usable_chars=N, or ok=False, error='short_payload' when suspect_is_error=True.",
+      "fetch: check() now returns a 3-tuple (ok, error, suspect). Two existing assertions in tests/test_web_fetch.py were rewritten to unpack three (no assertion deleted) and a stub case was added, so link-rot can tell 'gone' from 'stub'.",
+      "fetch: suspect/usable_chars are persisted in the cache JSON and recomputed on a cache hit, so a cached stub stays suspect and refresh() cannot launder it into evidence; a cached *failed* entry (e.g. a refused PDF) is not mislabeled as a short payload.",
+      "fetch: usable_chars is measured on the received payload before max_length truncation -- test_max_length_truncates_stored_text_but_bytes_in_reports_full now also pins usable_chars == 5000 for a 5000-char page stored as 100.",
+      "search: attempt latency is measured on the injected clock instead of time.perf_counter, which is what makes the latency escalation testable with fake time; the production default clock is still time.monotonic.",
+      "search: degradation_evidence elements changed from (query, ts) tuples to DegradationEvidence(query, reason, latency_ms, ts); the single test that unpacked two values was rewritten to attribute access with all its assertions kept.",
+      "search: because an instant empty now latches, test_zero_results_is_ok_not_an_error and test_client_stats_counts_attempts_and_degradation had their `degraded is False` assertions rewritten to the new contract (degraded True, reason 'fast_empty' -- kept assertions were not dropped), and test_degradation_latch_after_three_consecutive_distinct_slow_empties now injects 400 ms latencies because instant empties latch via the fast path."
+    ],
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_web_search.py tests/test_web_fetch.py -q   # 78 passed",
+      ".venv/bin/python -m pytest tests/ -q   # whole suite, saved to state/logs/U3.3-tests.txt",
+      ".venv/bin/python -m pytest tests/test_web_search.py::test_fast_empty_escalates_immediately_on_a_sub_threshold_latency -q --tb=short   # red with the branch reverted",
+      ".venv/bin/python -m pytest tests/test_web_fetch.py::test_short_payload_is_suspect_not_evidence -q --tb=short   # red with the comparison reverted",
+      ".venv/bin/python state/logs/U3.3-live-search.py   # 2 paced + 2 rapid forced queries",
+      ".venv/bin/python state/logs/U3.3-live-fetch.py    # stub fetch + refresh(stub) + refresh(normal)",
+      "sha256sum src/resextract/web/*.py tests/test_web_search.py tests/test_web_fetch.py"
+    ],
+    "checksums": {
+      "src/resextract/web/search.py": "5d948ed202c8a8976237b02921d4a3d222b7e934553fa0253327f8acc9398ade",
+      "src/resextract/web/fetch.py": "35e89455a2e6163b9827a51d1125815cdee69a09c1e135765cc64dae676734ac",
+      "src/resextract/web/__init__.py": "2ced643401c9d22d9a0d723dce454479a3e1e9d50a89f16003db6ee91a355515",
+      "tests/test_web_search.py": "da2567f644142abb2fdb667750b455b2e84d983ffd2ee653a8061b5e8f8027d2",
+      "tests/test_web_fetch.py": "796baf5fa67359cc95ac0e635572504a0aa5a5843b56ec8d1033e41d7866cfda"
+    }
+  },
+  "blocker": "",
+  "next_unit_hint": "Verifier (not the author): re-run `.venv/bin/python -m pytest tests/test_web_search.py tests/test_web_fetch.py -q` (expect 78 passed) and re-do both reverts independently -- search: drop `reason == \"fast_empty\" or` from _note_empty's latch test; fetch: `suspect = usable < self.min_chars` -> `suspect = False`. Live: the '25-char stub' is a raw.githubusercontent 404 body at https://raw.githubusercontent.com/openai/gpt-2/main/README.md, so a docket must never cite it -- consider making docket assembly reject suspect results (or defaulting Fetcher(suspect_is_error=True) there), and note check() now returns a 3-tuple. The whole-suite 13 failures at 05:47 (12 x tests/test_docket_assemble.py, 1 x tests/test_journal.py) belong to a concurrently-edited unit, not to U3.3: re-run the suite once that unit stops writing before judging the baseline. PDFs stay kind='pdf' + error='pdf_not_supported' until Docling is wired.",
+  "write_paths": [
+    "src/resextract/web/__init__.py",
+    "src/resextract/web/search.py",
+    "src/resextract/web/fetch.py",
+    "tests/test_web_search.py",
+    "tests/test_web_fetch.py",
+    "state/logs/U3.3*",
+    "orchestration/units/U3.3.md",
+    "orchestration/handoffs/U3.3.json"
+  ]
+}

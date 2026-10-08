@@ -1,0 +1,121 @@
+{
+ "unit": "U8.5",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/run.py",
+  "tests/test_run.py",
+  "orchestration/units/U8.5.md",
+  "orchestration/handoffs/U8.5.json",
+  "state/logs/U8.5_repro2.sh",
+  "state/logs/U8.5/dry2.json",
+  "state/logs/U8.5/real2.json"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "run_before": 19,
+   "run_after": 25,
+   "deletions": 0
+  },
+  "finding1_plan": {
+   "dry_run_graph_line_before": "dry run: would run `graphify extract --code-only --out state/run/duval/kg` (token-budget 200000, no model)  [counts mode=build]",
+   "real_run_graph_line": "reused existing code-only graph at state/kg/duval/graphify-out/graph.json (graphify not re-run: bounded, and a re-extract would write inside the target)  [counts mode=reuse]",
+   "divergence": true,
+   "fix": "_reuse_candidate(ctx) is now called by both the dry run and the real run; the decision (mode/nodes/edges/sha256) is computed once and described by both, so the plan predicts the run.",
+   "dry_run_graph_line_after": "dry run: would reuse existing code-only graph at state/kg/duval/graphify-out/graph.json (graphify not re-run: bounded, and a re-extract would write inside the target)  [counts mode=reuse, nodes/edges/sha256]",
+   "dry_run_writes_nothing": true,
+   "reuse_evidence": "state/kg/duval/graphify-out/graph.json mtime 2026-10-08 05:26:15 predates every run; sha256 prefix 4790bbb1111b76ea. Guard (c) red run: dry planned mode='build' vs real mode='reuse'.",
+   "live_note": "The live pre-fix and post-fix pairs were both refused at preflight (sibling v4 gate), so the exact live 'before' line is quoted from the pre-fix source (run.py L636-645) and the agreement is proven by guard (c) against a real graph + real run in a tmp target."
+  },
+  "finding2_sidecars": {
+   "left_before": [
+    "state/run/duval/state.sqlite (192512 B, WAL-mode copy left by the pre-fix U8.3 run)",
+    "state/run/duval/state.sqlite-shm (32768 B)",
+    "state/run/duval/state.sqlite-wal (0 B)"
+   ],
+   "harmful_or_untidy": "untidy, not harmful: the -wal was 0 bytes (no unflushed data), PRAGMA integrity_check was 'ok' and the copy read correctly without them; but while a connection is open the companions are REQUIRED, so deleting them under a live connection would be unsafe.",
+   "root_cause": "SQLite's backup API copies the database header, which records the WAL write-version; store.init_db sets the source to WAL, so the run-scoped copy was itself WAL and materialised -wal/-shm on any read/write. A stage connection left open (materialize/review call store.connect(ctx.db_path)) kept them after ctx.con.close().",
+   "integrity_check": "ok",
+   "copy_rows_match_source": true,
+   "copy_rows_match_source_note": "Proven by guard (d) on a fresh run whose stages do not write: all 12 table counts equal the source. The stale pre-fix copy differs on dockets (7 vs 2) because U8.3's run legitimately wrote dockets into its working copy; its own row counts were preserved exactly through the conversion.",
+   "fix": "_copy_store() now issues PRAGMA journal_mode=DELETE on the fresh copy (one self-contained file, no sidecars ever); _finalize_store() checkpoints and removes -wal/-shm ONLY when the copy no longer reports WAL, so a genuinely-WAL copy keeps its companions and says so in notes.",
+   "left_after": [
+    "state/run/duval/state.sqlite (rollback-journal mode, integrity_check ok, glob state.sqlite* == ['state.sqlite'])"
+   ],
+   "stale_cleanup_verified": {
+    "journal_mode_before": "wal",
+    "checkpoint": [
+     0,
+     0,
+     0
+    ],
+    "journal_mode_after": "delete",
+    "removed": "nothing needed manual unlinking: PRAGMA journal_mode=DELETE removed state.sqlite-wal/-shm itself (the -wal was 0 bytes)",
+    "integrity_after": "ok",
+    "rows_preserved": true,
+    "files_after_glob": [
+     "state.sqlite"
+    ]
+   }
+  },
+  "finding3_status": {
+   "exit_code_authoritative": true,
+   "decision": "added derived field",
+   "field": "ok",
+   "also": "status (word form)",
+   "cannot_disagree": true,
+   "how": "RunReport.ok/.status are @property values computed from self.exit_code via EXIT_STATUS/status_for(); they are not dataclass fields, so nothing can drift. as_dict() emits exit_code, ok and status. Test pins all four codes and asserts neither name is a stored field."
+  },
+  "red_green": {
+   "a": "sha 18d8bc32... before/after; revert (dry-run branch ignores _reuse_candidate) => test_plan_matches_run_for_the_graph_stage 1 failed; restore cmp-clean + bit-identical sha; full __pycache__ purge, PYTHONDONTWRITEBYTECODE=1",
+   "b": "sha 18d8bc32... before/after; revert (PRAGMA journal_mode=DELETE + _finalize_store removed, leaked stage connection reads the copy) => test_run_leaves_a_clean_self_contained_store_copy 1 failed (sidecars left behind); restore cmp-clean + bit-identical sha; full purge"
+  },
+  "live": {
+   "dry_run": {
+    "graph_line": "preflight failed: store schema v3 is not current (v4); refusing to run",
+    "exit_code": 2,
+    "wrote_nothing": true
+   },
+   "real_run": {
+    "graph_line": "preflight failed: store schema v3 is not current (v4); refusing to run",
+    "exit_code": 2,
+    "window_sealed": false,
+    "stages_not_run": 8
+   },
+   "store_copy_integrity": "ok",
+   "target_writes": false,
+   "blocked_by": "sibling U2.6 bumped store.SCHEMA_VERSION to 4 (uncommitted store.py); the authoritative store is v3, so run preflight refuses before any stage. The intended exit-1 shape (model stages blocked, materialize skipped, window_sealed) is pinned by tests/test_run.py instead.",
+   "status_field_live": "both JSONs now carry ok=false, status='hard_down' matching exit_code=2"
+  }
+ },
+ "real_store_untouched": {
+  "sha_before": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+  "sha_after": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+  "rows_identical": true
+ },
+ "duval_untouched": {
+  "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951 (identical before/after)",
+  "porcelain": "?? .ci-trunk.txt;?? .lane-j-scratch/ (identical before/after; both pre-existing untracked paths)",
+  "attributable_mtime_hits": "none in either sweep (maxdepth 2, and *.json/*.md/*.sqlite/*.toml) \u2014 but the foreign actor writes continuously, so this bounds only what we could plausibly have touched; a zero-hit sweep is not proof of global quiescence, it is proof our writes made no file look new in those scopes."
+ },
+ "sibling_attribution": "U2.6 (store.py, uncommitted) set SCHEMA_VERSION=4, so run preflight now refuses the v3 authoritative store: both live duval runs exit 2 with all 8 stages skipped and window_sealed false. No store.py change was made or fixed by this unit.",
+ "tool_calls": 29,
+ "bound": 24,
+ "commands": [
+  "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  # 000",
+  "resextract run --target duval --dry-run --json",
+  "resextract run --target duval --json",
+  ".venv/bin/python -m pytest tests/test_run.py -q  # 19 -> 25 passed, 0 deletions",
+  "revert/restore cycles with full __pycache__ purge + sha256 + cmp"
+ ],
+ "blocker": "",
+ "next_unit_hint": "Re-run the live duval pair once U2.6's v4 gate is resolved (store migrated to v4 or the gate reverted); then confirm exit_code 1 with the 3 blocked model stages + skipped materialize, window_sealed true, and state/run/duval containing only a sidecar-free rollback-journal state.sqlite. Also worth a look: pre-fix runs (U8.3) left a stale WAL copy that only a fresh run's _finalize_store would clean.",
+ "write_paths": [
+  "src/resextract/run.py",
+  "tests/test_run.py",
+  "state/run/duval/**",
+  "state/logs/U8.5*",
+  "orchestration/units/U8.5.md",
+  "orchestration/handoffs/U8.5.json"
+ ]
+}

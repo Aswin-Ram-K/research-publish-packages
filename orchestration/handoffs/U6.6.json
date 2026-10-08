@@ -1,0 +1,100 @@
+{
+ "unit": "U6.6",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/dashboard/api.py",
+  "tests/test_dashboard.py",
+  "orchestration/units/U6.6.md",
+  "state/logs/U6.6-api.fixed.py",
+  "state/logs/U6.6-live-smoke.json",
+  "state/U6.6-scratch/fixture/dockets/_smoke/README.md"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "dashboard_before": 52,
+   "dashboard_after": 57,
+   "deletions": 0
+  },
+  "reproduced": {
+   "direct_path_status": 404,
+   "docket_request_status": 200,
+   "leaked_text_verbatim": "MARKER-U6.6-LEAKED-OUTSIDE-HEADING - served at 200 as documents[README.md].headings[0].text with bytes:77, and _docket_files listed {path: README.md, bytes: 77} where 77 is the OUTSIDE file size",
+   "code_path": "both",
+   "legit_dockets_200": 2,
+   "code_path_lines": "_read_text_capped opened the unresolved path (path.open('rb') follows the symlink); _docket_files did directory.rglob('*') + p.is_file() + path.stat().st_size (both follow); docket_detail passed the raw directory/name into _read_text_capped."
+  },
+  "fix": {
+   "per_file_realpath_contained": true,
+   "listing_excludes_escapes": true,
+   "read_refuses_escapes": true,
+   "in_root_symlink": "allowed - realpath containment is the boundary, not a ban on symlinks; an alias whose realpath stays inside realpath(dockets_dir) is not an escape, and banning symlinks would break legitimate in-docket aliases for no security gain. Tested: alias.md -> material/note.txt is listed at the target's size.",
+   "dir_symlink_contained": true,
+   "broken_symlink": "explicit error",
+   "toctou_safe": false,
+   "toctou_note": "No: validate-then-read is two steps. realpath is resolved, then open() re-resolves the path, so a swap in between could still escape. Would need openat/O_NOFOLLOW-style fd pinning. Low threat: the dashboard is loopback-only and the swap needs local write access to a docket directory plus timing."
+  },
+  "layers_intact": {
+   "segment_validation": true,
+   "dir_realpath_containment": true,
+   "escape_refused_by": "realpath",
+   "in_root_dotdot_refused": true
+  },
+  "verdotdot2_pin": {
+   "refused": true,
+   "routable_without_line": true,
+   "not_dead_code": true,
+   "masking_count_measured": 6
+  },
+  "red_green": {
+   "a": "sha ok 81fe9dff10d6f9fd7decfb15b32ba6670f61198be36a31327d50153bdd33f8e4; f=test_docket_file_symlink_outside_is_refused_not_served AssertionError: assert 'MARKER-U6.6-LEAKED-OUTSIDE-HEADING' not in '...'; p=1 failed, 56 deselected; restore bit-identical, full __pycache__ purge",
+   "b": "sha ok 81fe9dff10d6f9fd7decfb15b32ba6670f61198be36a31327d50153bdd33f8e4; f=test_symlink_escape_is_excluded_from_the_file_listing AssertionError: ['CLAIMS.md', 'EVIDENCE.md', 'HISTORY.md', 'MANIFEST.json', 'README.md', 'UPDATE_BACKLOG.md', ...]; p=1 failed, 56 deselected; restore bit-identical, full __pycache__ purge"
+  },
+  "live": {
+   "docket_no_longer_serves_outside": true,
+   "legit_dockets_200": 4,
+   "nested_detail": 200,
+   "truth_check_divergences": 0,
+   "reasoning_text_available": false,
+   "fabricated_reasoning": false,
+   "corrupt_manifest": "explicit 404 payload, never a 500",
+   "control_gate": "401->200 (header: Authorization: Bearer <token>)",
+   "non_loopback_refused": true,
+   "external_origins": [],
+   "server_stopped": true,
+   "stray_processes": 0,
+   "start_command": "cd /home/zer0null/reserach extarctor && PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m resextract.cli serve --host 127.0.0.1 --port 8907 --token u6.6-token --no-browser --docket-root state/U6.6-scratch/fixture/dockets  (managed background job bash-4621, stopped with job_kill; --host 0.0.0.0 exited 2 with nothing bound; ss 8907 empty, curl 000, 0 stray)"
+  }
+ },
+ "real_dockets_tree_unchanged": true,
+ "state_store_untouched": true,
+ "duval_untouched": {
+  "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt / ?? .lane-j-scratch/ - pre-existing and identical before and after"
+ },
+ "hashes": {
+  "real_dockets_tree_sha256": "ec84099df03acb2f25ea24236001465752204a2b50064484fe9c0ceae7db3a50 (before == after, 0 symlinks)",
+  "state_sqlite_sha256": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5 (before == after)",
+  "api_py_final_sha256": "81fe9dff10d6f9fd7decfb15b32ba6670f61198be36a31327d50153bdd33f8e4",
+  "app_py_sha256": "16e7263a39afd3b10763e9424d5ef0bddbe32a564f9674225a9f6d73aa0a0052 (unchanged; no route change was needed)"
+ },
+ "tool_calls": 30,
+ "bound": 28,
+ "commands": [
+  ".venv/bin/python -m pytest tests/test_dashboard.py --collect-only -q -> 57 tests collected (52 before)",
+  ".venv/bin/python -m pytest tests/test_dashboard.py -q -> 57 passed",
+  "revert guard A (docket_detail realpath) ; pytest -k test_docket_file_symlink_outside -> 1 failed ; restore -> sha identical",
+  "revert guard B (_docket_files realpath) ; pytest -k test_symlink_escape_is_excluded -> 1 failed ; restore -> sha identical",
+  "delete the separator/dotdot line of safe_slug ; pytest -k 'traversal or safe_slug' -> 6 passed ; pytest -k ver_dotdot2 -> 1 failed (not dead code)"
+ ],
+ "blocker": "",
+ "next_unit_hint": "Residual, deliberately not fixed: (1) TOCTOU between realpath containment and open()/read(); (2) api.py refresh_backlog has a SECOND _read_text_capped call site (roots: dockets_dir, cwd) that is still uncontained, so a symlinked UPDATE_BACKLOG.md / WORK_SUGGESTIONS.md could still be disclosed; (3) the manifest is contained but read via read_manifest(directory), which re-derives the path (same TOCTOU class). A verifier should re-run both guard reverts and the ver..2 pin.",
+ "write_paths": [
+  "src/resextract/dashboard/api.py",
+  "tests/test_dashboard.py",
+  "state/U6.6-scratch/",
+  "state/logs/U6.6*",
+  "orchestration/units/U6.6.md",
+  "orchestration/handoffs/U6.6.json"
+ ]
+}

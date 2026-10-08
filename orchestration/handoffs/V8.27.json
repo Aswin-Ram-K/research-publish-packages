@@ -1,0 +1,389 @@
+{
+ "unit": "V8.27",
+ "overall": "PASS",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "behaviour re-derived (scratch pins, in-process, real graph)",
+   "verdict": "PASS (one minor deviation: 0-hex is PIN EMPTY, not mismatch)",
+   "observed": "len 0 refused(PIN EMPTY); 1 and 11 refused(mismatch) with NO PIN ABBREVIATED; 12,13,20,40,63 match + PIN ABBREVIATED + REDUCED STRENGTH; 64 match silent; 65,100,128 refused + PIN OVERLONG (checked before comparison)",
+   "evidence": "state/verify/V8.27/c1_table.json, c1_out.txt; _reuse_candidate driven directly per length against digest 4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b"
+  },
+  {
+   "id": "C2",
+   "name": "prose graded against behaviour",
+   "verdict": "PASS (no surviving overstatement in U8.24's six sites; no opposite error introduced; one declared overstatement survives in docs/)",
+   "observed": "run.py 888-894 accurate; 911-923 accurate; 939-953 accurate; 1243-1263 accurate (0-hex imprecision); tests/test_run.py 1877-1883 accurate; 1909+1912-1919 accurate",
+   "evidence": "see prose_grades; docs/PLAN_CORRECTIONS.md:1542-1543 still says a short pin is 'accepted but reported loudly' (false for 1-11 hex)"
+  },
+  {
+   "id": "C3",
+   "name": "rename and test accounting",
+   "verdict": "PASS",
+   "observed": "60 collected / 60 passed in 2.86s; def test_ 43; asserts 263; pre-image identical 43/263 (0 deleted); 0 old-name refs under tests/; node-id diff = exactly the 5 renamed ids, 0 added, 0 removed",
+   "evidence": "state/verify/V8.27/collect.txt, nodeids_pre_cache.txt; pytest -q -p no:cacheprovider after FULL __pycache__ purge"
+  },
+  {
+   "id": "C4",
+   "name": "pin file",
+   "verdict": "PASS",
+   "observed": "sha 8420547fe33da0b06d54632ae2f7785904cfb52e52e45cbfe57bf39e492d0785 (pre 52f491ed…, comment-only); tomllib digest byte-identical; comment accurate incl. full-64-hex re-pin guidance; dry decision digest_state=match, graph sha unchanged",
+   "evidence": "state/verify/V8.27/store-copy.sqlite for store; in-process _reuse_candidate with config_dir='config'"
+  },
+  {
+   "id": "C5",
+   "name": "red-green applicability and behaviour pinning",
+   "verdict": "PASS with FINDING",
+   "observed": "NOT applicable (comments-only: no test can fail from it). >64 PIN OVERLONG IS pinned (test_overlong_pin_is_refused_never_silently_blessed[65]/[100]); <12 mismatch is NOT pinned — no test supplies a 1-11-hex pin",
+   "evidence": "every _pin(...) sha256 arg enumerated: 0*64, digest, None, _file_sha(cand), wrong tail, digest[:12], digest[:length] for 12/13/20/40/63, digest+a*(length-64) for 65/100 — none below 12"
+  },
+  {
+   "id": "C6",
+   "name": "behaviour-preservation proof",
+   "verdict": "PASS",
+   "observed": "raw ast.dump equality False; docstring-blanked equality True; code objects identical 129/129 (co_code, co_names, co_varnames, co_argcount, co_flags, co_name)",
+   "evidence": "state/logs/U8.24/pre/run.py.pre (106661a2…) vs src/resextract/run.py (e778e967…)"
+  },
+  {
+   "id": "C7",
+   "name": "overrun and handoff damage, judged",
+   "verdict": "PASS with recommendation",
+   "observed": "itemisation credible in kind; no work artifact affected per C1-C6; handoff self-repair is the dominant overrun cause; recommend exempting the unit's OWN handoff from read-before-write + shipping the template as a copyable file, and excluding the terminal report-back from the bound",
+   "evidence": "final-state proof only: run.py docstring-only (129/129 identical code objects), tests 60/60 43 defs 263 asserts, pin digest byte-identical, graph sha unchanged; transient integrity during churn UNVERIFIED"
+  },
+  {
+   "id": "C8",
+   "name": "honesty audit + containment",
+   "verdict": "PASS",
+   "observed": "Duval HEAD 6c60da5aa9240c0dcc2ff97b46f2a2cf37774951, porcelain 2 pre-existing untracked entries; store v4 (schema_version rows 1,2,3,4) read from a COPY, real store never opened; graph/pin shas unchanged; 0 worktrees reads; 0 stray processes; 0 writes outside declared paths",
+   "evidence": "state/state.sqlite sha 40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3; sidecars observed 2, created by me 0"
+  }
+ ],
+ "blocker": "",
+ "next_unit_hint": "Add a parameterised guard to tests/test_run.py for a 1-11-hex pin (lengths 1 and 11): assert digest_state == 'mismatch', graph stage mode == 'build', and no 'PIN ABBREVIATED' note — the one behaviour U8.24's corrected prose documents accurately but which no test currently pins (C5 finding). Also, docs/PLAN_CORRECTIONS.md:1542-1543 still carries the old overstatement 'a short pin is accepted but reported loudly'; U8.26 owns that file. Do NOT add a red->green cycle for U8.24 itself: its change is comments/docstrings only, so none is applicable.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V8.27.md",
+  "orchestration/handoffs/V8.27.json",
+  "state/logs/V8.27*",
+  "state/verify/V8.27/**"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "length_table": [
+   {
+    "len": 0,
+    "matches": false,
+    "notices": [
+     "REFUSED(pin empty)"
+    ]
+   },
+   {
+    "len": 1,
+    "matches": false,
+    "notices": [
+     "REFUSED(mismatch)"
+    ]
+   },
+   {
+    "len": 11,
+    "matches": false,
+    "notices": [
+     "REFUSED(mismatch)"
+    ]
+   },
+   {
+    "len": 12,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 13,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 20,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 40,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 63,
+    "matches": true,
+    "notices": [
+     "PIN ABBREVIATED",
+     "REDUCED STRENGTH"
+    ]
+   },
+   {
+    "len": 64,
+    "matches": true,
+    "notices": []
+   },
+   {
+    "len": 65,
+    "matches": false,
+    "notices": [
+     "PIN OVERLONG",
+     "REFUSED(pin overlong)"
+    ]
+   },
+   {
+    "len": 100,
+    "matches": false,
+    "notices": [
+     "PIN OVERLONG",
+     "REFUSED(pin overlong)"
+    ]
+   },
+   {
+    "len": 128,
+    "matches": false,
+    "notices": [
+     "PIN OVERLONG",
+     "REFUSED(pin overlong)"
+    ]
+   }
+  ],
+  "sub12_refused_as_mismatch": true,
+  "sub12_has_no_abbreviated_note": true,
+  "len0_is_pin_empty_not_mismatch": true,
+  "measured_clauses": {
+   "len12": "; sha256 4790bbb1111b matches the pinned digest 4790bbb1111b — REDUCED STRENGTH: the pin supplies 12 of 64 hex chars",
+   "len63": "; sha256 4790bbb1111b matches the pinned digest 4790bbb1111b — REDUCED STRENGTH: the pin supplies 63 of 64 hex chars",
+   "len64": "; sha256 4790bbb1111b matches the pinned digest 4790bbb1111b"
+  },
+  "pin_is_abbreviated_predicate_true_for_1_to_11_but_note_unreachable": true,
+  "prose_grades": [
+   {
+    "site": "src/resextract/run.py:888-894",
+    "real_lines": "888-894",
+    "quote": "sha256 is 64 hex characters, and only in the 12-63 range can a short pin be *compared at all*: a pin there is an *abbreviation*, still honoured ... but reported loudly as reduced strength.  A pin of 1-11 hex is REFUSED as a mismatch: ``_same_digest`` requires ``width >= 12``, so it cannot be compared AT ALL (fail-closed) — never a weaker match, and with no ``PIN ABBREVIATED`` note.  A pin of 65+ hex is refused as over-long.",
+    "grade": "accurate"
+   },
+   {
+    "site": "src/resextract/run.py:911-923 (_pin_is_abbreviated)",
+    "real_lines": "911-923",
+    "quote": "The rule (U8.19, corrected by U8.24): in the *comparable* range a pin is reported at **every** such length, 63 hex exactly as loudly as 12 ... That range is 12-63 hex, not \"every length below 64\": below 12 hex the pin is not warned about but REFUSED, because ``_same_digest`` requires ``width >= 12``, so a 1-11-hex pin cannot be compared at all and lands in the mismatch branch (fail-closed, no ``PIN ABBREVIATED`` note).",
+    "grade": "accurate"
+   },
+   {
+    "site": "src/resextract/run.py:939-953 (_same_digest)",
+    "real_lines": "939-953",
+    "quote": "The trailing ``width >= 12`` is a floor, not a tolerance: a pin of 12-63 hex that matches is still honoured — 12 hex is the historical minimum ... A pin of 1-11 hex returns False here: it cannot be compared at all, so it is refused as a mismatch (fail-closed) rather than accepted at reduced strength.",
+    "grade": "accurate"
+   },
+   {
+    "site": "src/resextract/run.py:1243-1263 (_stage_graph)",
+    "real_lines": "1243-1263",
+    "quote": "an abbreviated pin of 12-63 hex characters is accepted only with a ``PIN ABBREVIATED`` note and a ``REDUCED STRENGTH`` clause, while a pin shorter than 12 hex cannot be compared at all (``_same_digest`` needs ``width >= 12``) and is therefore refused as a mismatch, fail-closed, without that note; and an over-long pin (more than 64 hex characters) is refused",
+    "grade": "accurate (minor imprecision: exactly 0 hex is refused as PIN EMPTY, not as a mismatch)"
+   },
+   {
+    "site": "tests/test_run.py:1877-1883",
+    "real_lines": "1877-1883",
+    "quote": "RULE (short pins, one sentence — corrected by U8.24): a pin is reported as reduced at EVERY length in the COMPARABLE range, 12-63 hex ... The range is *not* \"every length below 64\": ``_same_digest`` requires ``width >= 12``, so a 1-11-hex pin cannot be compared at all and is REFUSED as a mismatch (fail-closed, pre-existing, and with no ``PIN ABBREVIATED`` note — the note is emitted only on the match branch).",
+    "grade": "accurate"
+   },
+   {
+    "site": "tests/test_run.py:1909 (def) + 1912-1919 (docstring)",
+    "real_lines": "1909, 1912-1919",
+    "quote": "def test_abbreviated_pin_warns_at_every_length_from_12_to_63(...)  \"\"\"U8.19 step 1: a correct-prefix pin of 12-63 hex warns at EVERY such length.  Below 12 hex there is no warning to make: ``_same_digest`` needs ``width >= 12``, so a 1-11-hex pin is refused as a mismatch (U8.24).\"\"\"",
+    "grade": "accurate"
+   }
+  ],
+  "surviving_overstatements": [
+   {
+    "site": "docs/PLAN_CORRECTIONS.md:1542-1543",
+    "quote": "a short pin is **accepted but reported loudly** (`PIN ABBREVIATED`, `REDUCED STRENGTH`)",
+    "why": "false for 1-11 hex, which are refused as a mismatch — declared left by U8.24 (docs/ outside its write paths); U8.26 owns the file"
+   },
+   {
+    "site": "orchestration/units/U8.19.md:23",
+    "quote": "at every such length — 63 hex is exactly as weak a control as 12",
+    "why": "historical record, declared left by U8.24; unbounded 'every such length'"
+   },
+   {
+    "site": "orchestration/handoffs/U8.19.json:143",
+    "quote": "A pin is reported as reduced strength whenever it supplies fewer hex characters than the full 64-hex digest, at every such length ... there is no length threshold.",
+    "why": "historical record, declared left by U8.24; false for 1-11"
+   },
+   {
+    "site": ".pytest_cache/v/cache/nodeids",
+    "quote": "tests/test_run.py::test_abbreviated_pin_warns_at_every_length_below_the_digest[12..63]",
+    "why": "stale cache outside tests/ still lists the old node ids (not a source reference; I did not write it)"
+   }
+  ],
+  "opposite_errors": [
+   {
+    "claimed_by": "none",
+    "checked": "does any site now claim <12 is 'rejected as malformed' (a different state)?",
+    "finding": "NO site does. The only 'malformed' mention (run.py:1256) lists it as a separate broken-control state. The actual code path: 1-11 hex -> digest_state 'mismatch' -> _note_unusable 'digest mismatch' -> refused (fail-closed). 0 hex -> PIN_EMPTY -> refused as present-and-broken, never compared."
+   }
+  ],
+  "rename": {
+   "new_id": "test_abbreviated_pin_warns_at_every_length_from_12_to_63",
+   "param_ids": [
+    "[12]",
+    "[13]",
+    "[20]",
+    "[40]",
+    "[63]"
+   ],
+   "old_name_refs_remaining": 0,
+   "old_name_refs_scope": "0 anywhere under tests/; old ids persist only in the stale .pytest_cache/v/cache/nodeids",
+   "other_changes_besides_wording": [
+    "renamed 5 node ids: test_abbreviated_pin_warns_at_every_length_below_the_digest[12|13|20|40|63] -> test_abbreviated_pin_warns_at_every_length_from_12_to_63[12|13|20|40|63]",
+    "no node id added and none removed; full test_run.py diff is 2 hunks: one comment block + one def name/docstring"
+   ]
+  },
+  "tests": {
+   "collected": 60,
+   "def_test": 43,
+   "asserts": 263,
+   "passed": 60,
+   "runtime_s": 2.86,
+   "preimage_method": "state/logs/U8.24/pre/ holds source pre-images only (no node-id snapshot). I read the stale .pytest_cache/v/cache/nodeids BEFORE running pytest (snapshot saved to state/verify/V8.27/nodeids_pre_cache.txt) and ran pytest with -p no:cacheprovider. That cache is an accumulated set of 65 tests/test_run.py ids holding BOTH names; fresh collection = 60; removed = exactly the 5 old-name ids; added = none; common = 60. Cache is a shared, concurrently written artifact (mtime moved after my read), so it is a partial pre-image, not a clean pre-run snapshot."
+  },
+  "pin_file": {
+   "sha": "8420547fe33da0b06d54632ae2f7785904cfb52e52e45cbfe57bf39e492d0785",
+   "pre_sha": "52f491ed584b330a8ce468cf57a6c42cc4f7e2393a4435317709e9efa2ab4d1a",
+   "digest_value_identical": true,
+   "digest_value": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+   "comment_accurate": true,
+   "comment_grade": "accurate — states 12-63 accepted+loud, fewer than 12 refused as a mismatch (cannot be compared, no note), more than 64 refused PIN OVERLONG, 64 silent; and gives the full-64-hex re-pin guidance with the hashing command. Same 0-hex imprecision as C2.",
+   "dry_run": {
+    "exit_code": 0,
+    "graph_line": "built at 6deaed07af0d, target head unknown — UNVERIFIED (no recorded provenance); sha256 4790bbb1111b matches the pinned digest 4790bbb1111b",
+    "still_matches": true,
+    "reduced_strength_present": false,
+    "mode": "IN-PROCESS graph-stage dry decision (_reuse_candidate with config_dir='config', dry_run=True); the CLI was NOT invoked because the real store is read-only to me — the CLI's own exit code is UNVERIFIED"
+   }
+  },
+  "real_graph_sha_unchanged": true,
+  "real_graph_sha": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+  "red_green_applicable": false,
+  "why_not": "U8.24's change is comments/docstrings only, so no test can go red from it; no cycle was manufactured. Binding is done by measurement (C1 vs C2) plus the bytecode-identity proof (C6).",
+  "behaviour_pinned_by_tests": {
+   "sub12_mismatch_pinned": false,
+   "node_ids": [],
+   "overlong_pinned": true,
+   "node_ids_2": [
+    "tests/test_run.py::test_overlong_pin_is_refused_never_silently_blessed[65]",
+    "tests/test_run.py::test_overlong_pin_is_refused_never_silently_blessed[100]"
+   ],
+   "negative_control": "tests/test_run.py::test_exactly_full_pin_is_the_only_length_with_no_notice (asserts no PIN ABBREVIATED and no PIN OVERLONG at 64)",
+   "finding": "the <12 -> refused-as-mismatch behaviour U8.24's corrected prose now documents accurately is itself untested, so the prose can silently become false again (the U8.19 -> V8.23 failure mode)"
+  },
+  "behaviour_preservation": {
+   "raw_ast_dump_equal": false,
+   "docstring_blanked_equal": true,
+   "code_objects_identical": true,
+   "code_object_count": 129,
+   "compared_fields": [
+    "co_name",
+    "co_code",
+    "co_names",
+    "co_varnames",
+    "co_argcount",
+    "co_flags"
+   ],
+   "pre_image_present": true,
+   "pre_image": "state/logs/U8.24/pre/run.py.pre (sha256 106661a289b66d2885fad4fc5c1cebd9cfcb8db53fade8f85bfc52e601a1d26a)",
+   "correct_proof_rule": "ast.dump equality proves comments-only for '# comments' (comments are not AST nodes); a docstring IS an AST node, so a docstring edit requires the docstring-blanked dump comparison PLUS identical code objects. U8.24's card mandated raw ast.dump equality, which cannot hold for a docstring edit — a card bug, not a unit bug."
+  },
+  "overrun_judged": {
+   "spent": 33,
+   "bound": 16,
+   "work_calls_excluding_reportback": 32,
+   "itemisation_credible": true,
+   "itemisation_note": "The 33 figure is another unit's counter and is not reproducible by me. Each cause is structural and therefore credible in kind: a mandated raw-ast.dump proof that cannot hold (+1), shell inspection before a read-before-write edit (+2), and +12 self-inflicted handoff churn.",
+   "artifacts_affected": false,
+   "artifacts_affected_evidence": "run.py final state docstring-only with 129/129 identical code objects; tests 60/60 with 43 defs and 263 asserts (0 deleted); pin digest byte-identical; graph sha unchanged",
+   "transient_integrity": false,
+   "contract_recommendation": "(c)+(a): exempt a unit's OWN orchestration/handoffs/<UNIT>.json from the read-before-write rule (it is by contract single-owner, so a re-read adds zero clobber protection — the policy is for shared files), and ship the verifier template as a real copyable file (orchestration/templates/verifier.json) so the nesting is never hand-typed. Reject (b) 'relax changed-since-read': that weakens protection on genuinely shared files to fix a single-owner one.",
+   "reportback_excluded_from_bound": true,
+   "reportback_note": "Exclude the mandated terminal report-back, narrowly defined as the one final summary/message; it is a forced artifact, not a discretionary work call. Under that convention U8.24 is 32/16 and this unit is 30/22."
+  },
+  "not_reproduced": [
+   "U8.24's 33-call spend and its 16 bound — another unit's tool counter, not observable from disk",
+   "the CLI-level dry-run exit code (I measured the in-process graph-stage dry decision and exited 0; the CLI was not invoked because the real store is read-only to me)",
+   "transient integrity of run.py/tests/pin during U8.24's churn — only the final state is observable; the claim that nothing was even transiently affected is UNVERIFIED",
+   "V8.23's item (2) that an 11-hex pin is reported as 'TAMPERED OR CORRUPT' — I observed the refusal note label 'digest mismatch' and no live TAMPERED-OR-CORRUPT clause on a refused pin; neither confirmed nor contradicted here",
+   "U8.24's reported 2.89 s test runtime (I measured 2.86 s; immaterial)"
+  ],
+  "overstated": [
+   "docs/PLAN_CORRECTIONS.md:1542-1543 — 'a short pin is accepted but reported loudly (PIN ABBREVIATED, REDUCED STRENGTH)': false for 1-11 hex",
+   "orchestration/units/U8.19.md:23 and orchestration/handoffs/U8.19.json:143 — 'at every such length ... there is no length threshold': false for 1-11 hex",
+   "orchestration/handoffs/U8.24.json:27 — 'the old node-id set no longer exists': true of collection, false of the stale .pytest_cache/v/cache/nodeids",
+   "run.py:1258-1260 and the pin comment's 'shorter than 12 hex / fewer than 12 hex -> refused as a mismatch': imprecise at exactly 0 hex, which is PIN EMPTY (present-and-broken), never compared"
+  ],
+  "unverified": [
+   "U8.24's call spend (33) and card bound (16)",
+   "CLI dry-run exit code",
+   "that no artifact was transiently affected during the +12 churn",
+   "V8.23's TAMPERED-OR-CORRUPT observation",
+   "the exact identity of whichever concurrent sibling refreshed .pytest_cache at 09:44:34 (not me: I ran with -p no:cacheprovider)"
+  ],
+  "corrections": [
+   {
+    "relayed_claim": "the corrected sites are at run.py:888, :911, :937, :1245 and tests/test_run.py:1877, :1905, :1908",
+    "actually": "content located correctly, real lines are run.py 888-894, 911-923, 939-953, 1243-1263 and tests/test_run.py 1877-1883, 1909, 1912-1919 (line drift; nine drifts were already measured in this build)",
+    "evidence": "grep -n + read of the live files; the run.py diff has 4 hunks, the test file diff 2",
+    "unit": "U8.24"
+   },
+   {
+    "relayed_claim": "the overlong check is at run.py:1112-1136, before the comparison",
+    "actually": "the overlong block is run.py:1123-1147 and it is indeed reached before _same_digest (line 1169): a 65-hex pin has _same_digest == True yet is refused",
+    "evidence": "c1_table.json: len 65 shows _same_digest true but matches false + PIN OVERLONG",
+    "unit": "U8.24"
+   },
+   {
+    "relayed_claim": "the card's mandated raw ast.dump equality proves comments-only",
+    "actually": "raw ast.dump equality is False by construction for a docstring edit (a docstring is an AST node); the correct proof is docstring-blanked dump equality plus identical code objects — which does hold (True, 129/129)",
+    "evidence": "behaviour_preservation",
+    "unit": "U8.24"
+   }
+  ],
+  "tool_calls": 31,
+  "bound": 22,
+  "tool_call_account": "31 total tool calls; 30 work calls vs bound 22 (+8), the terminal report-back (call 31) excluded. Account: +1 a defect in my own C1 driver (absolute vs relative candidate path; decision columns unaffected, primitive columns re-measured); +4 the write-validate-repair loop on my own handoff (hand-typed nesting produced invalid JSON needing a brace repair, plus three reconciliations of the running count) - the very self-reference class that cost U8.24 +12, reproduced here in miniature; +2 the STEP-0 mandated handoff write + validate; the rest is C1-C8 evidence, the units card, the VERDICTS section, the final containment sweep and this patch.",
+  "containment": {
+   "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+   "porcelain_note": "2 pre-existing untracked entries; only read-only git commands were run, no writes to the target",
+   "outside_writes": 0,
+   "worktrees_reads": 0,
+   "store": {
+    "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+    "version": 4,
+    "version_evidence": "read from state/verify/V8.27/store-copy.sqlite (sha identical to the real file): table schema_version rows (1,2,3,4), journal_mode=wal; SQLite header user_version is 0, so the app-level table is the correct evidence",
+    "real_store_never_opened": true,
+    "sidecars_observed": 2,
+    "sidecars_created_by_me": 0,
+    "sidecars_observed_detail": "state/state.sqlite-shm (32768 B, mtime 09:34) and state/state.sqlite-wal (0 B, mtime 09:29) — not attributable to me; I only did a plain 100-byte read of the main file",
+    "sidecars_note": "I did create -shm/-wal for my own COPY under state/verify/V8.27/ (within my write paths)"
+   },
+   "handoffs_all_parse_after_repair": true
+  },
+  "self_reference_evidence": "Reproduced U8.24's failure mode in miniature: the mandated write-validate-repair loop on this unit's own handoff cost +4 calls (one invalid JSON from hand-typed nesting needing a brace repair, three count reconciliations). U8.24 lost +12 to the same class; a prior unit +38. Direct evidence for C7 (c)+(a).",
+  "sibling_handoff_parse_note": "failing=['orchestration/handoffs/U8.28.json'] midwrite=[False]"
+ }
+}

@@ -1,0 +1,242 @@
+{
+ "unit": "V8.16",
+ "scope": "U8.14 ledger append (bm-bq)",
+ "overall": "PASS",
+ "read_only": true,
+ "checks": [
+  {
+   "id": "C1",
+   "name": "additivity proven independently",
+   "verdict": "PASS",
+   "observed": "sha 55db3230493e.., 128295B, 1883 lines, cmp -n 109264 exit 0, diff 1620a1621,1883, 0 deletions, 69 entries, last bq",
+   "evidence": "state/logs/V8.16.C1 (sha256sum/cmp/diff/grep -c)"
+  },
+  {
+   "id": "C2",
+   "name": "no old entry edited",
+   "verdict": "PASS",
+   "observed": "au/bd/bg/bh/bi/bj all inside byte-identical prefix; supersessions live in bm, bo and the closing note (1871-1883)",
+   "evidence": "cmp exit 0 + grep -nE '^## \\((au|bd|bg|bh|bi|bj)\\)'"
+  },
+  {
+   "id": "C3",
+   "name": "immutable=1 caveat reproduced",
+   "verdict": "PASS",
+   "observed": "own WAL fixture (1000 rows, -wal 28872 B): mode=ro=1000; immutable=1='no such table: t'; nolock=1='unable to open database file'",
+   "evidence": "state/logs/V8.16.C3.txt, state/verify/V8.16/wal_probe.py"
+  },
+  {
+   "id": "C4",
+   "name": "spot-checks against disk",
+   "verdict": "PASS-with-drift",
+   "observed": "bo/bq claims confirmed; bn '1.747/3.50' prose not on disk now (file changed 71s after ledger write)",
+   "evidence": "grep/stat/git ls-files in transcript calls"
+  },
+  {
+   "id": "C5",
+   "name": "reported-only discipline",
+   "verdict": "PASS",
+   "observed": "bn names V0.23, bo names V8E, bp names V5.21 and states 'no clause is credited as verified'; bm torn-view names U6.18",
+   "evidence": "grep -nE '^## \\([a-z]+\\) \\[.*reported-only'"
+  },
+  {
+   "id": "C6",
+   "name": "honesty + containment",
+   "verdict": "PASS",
+   "observed": "store 40e8aa0c v4 via scratch copy; 0 sidecars created by this unit (2 appeared 09:11:15 from a sibling, store sha unchanged); no worktrees reads; no stray processes",
+   "evidence": "sha256sum/raw header/copy inspect/ps"
+  }
+ ],
+ "additivity": {
+  "sha": "55db3230493e86bd7b97d068abf328d2c8267c9a4a71a1274eb6acc7038fef22",
+  "bytes": 128295,
+  "lines": 1883,
+  "prefix_cmp_identical": true,
+  "diff_hunks": "1620a1621,1883",
+  "deletions": 0,
+  "entries": 69,
+  "last_letter": "bq",
+  "plan_md_unmodified": true
+ },
+ "no_entry_edited": {
+  "supersessions": [
+   {
+    "old": "au",
+    "new": "bm",
+    "old_text_unchanged": true
+   },
+   {
+    "old": "bd",
+    "new": "bm",
+    "old_text_unchanged": true
+   },
+   {
+    "old": "bj",
+    "new": "bo",
+    "old_text_unchanged": true
+   },
+   {
+    "old": "bi",
+    "new": "closing note lines 1871-1883 (verification in bn)",
+    "old_text_unchanged": true
+   },
+   {
+    "old": "bh",
+    "new": "closing note lines 1871-1883",
+    "old_text_unchanged": true
+   },
+   {
+    "old": "bg",
+    "new": "closing note lines 1871-1883",
+    "old_text_unchanged": true
+   }
+  ],
+  "original_reported_only_markings": 6,
+  "reported_only_occurrences": 56,
+  "counts_match_handoff": true
+ },
+ "immutable_entry": {
+  "clause_ro": "1000 rows",
+  "clause_immutable": "OperationalError: no such table: t",
+  "clause_nolock": "OperationalError: unable to open database file",
+  "all_clauses_reproduced": true,
+  "wording_conditions_the_convention": true,
+  "sqlite_version": "3.46.1",
+  "python_version": "3.14.4",
+  "guard": "tests/test_cli.py:228 test_immutable_uri_would_silently_lose_committed_wal_rows (:277 n_ro==1000, :282 n_imm!=1000) present; api.py:487 PRAGMA query_only=ON present"
+ },
+ "spot_checks": [
+  {
+   "entry": "bn",
+   "claim": "tests/test_cli.py:522 expected=0 if not core_down; :524 ok==(code==0)",
+   "evidence": "sed -n 520,526p tests/test_cli.py",
+   "confirmed": true
+  },
+  {
+   "entry": "bn",
+   "claim": "doctor.py core_slow at :571 and :580",
+   "evidence": "grep -n core_slow src/resextract/doctor.py",
+   "confirmed": true
+  },
+  {
+   "entry": "bn",
+   "claim": "1.747/3.50 survive as prose at test_doctor.py:21,:430,:590,:591",
+   "evidence": "grep -n '1\\.747\\|3\\.50' tests/test_doctor.py -> EMPTY; file mtime 09:04:25 > ledger 09:03:14",
+   "confirmed": false,
+   "note": "post-write drift, not a U8.14 falsehood"
+  },
+  {
+   "entry": "bo",
+   "claim": "test_run.py:815 _GENUINE_SHA, :818 _GENUINE_SHA12=[:12], :1020 sha256==_GENUINE_SHA",
+   "evidence": "grep -n _GENUINE_SHA tests/test_run.py",
+   "confirmed": true
+  },
+  {
+   "entry": "bo",
+   "claim": "allow_graph_digest_mismatch 7 refs, all in run.py; state/graph.json absent",
+   "evidence": "grep -rc=7; grep -rln -> only src/resextract/run.py; ls state/graph.json -> No such file",
+   "confirmed": true
+  },
+  {
+   "entry": "bq",
+   "claim": "U0.22.json not valid JSON (line 6 col 32)",
+   "evidence": "json.load -> JSONDecodeError Expecting ',' delimiter: line 6 column 32 (char 1165)",
+   "confirmed": true
+  },
+  {
+   "entry": "bq",
+   "claim": "c2stage = 195 files, 44 path components, longest path 347 chars",
+   "evidence": "find|wc -l=195; awk depth=44; maxlen=347 at state/verify/V8D/c2stage",
+   "confirmed": true
+  },
+  {
+   "entry": "bq",
+   "claim": "api.py.V6C-backup-B2 56700 B untracked; __SHA_A__/:238 __SHA_B__/:276",
+   "evidence": "ls -la=56700; git ls-files --error-unmatch fails; grep -n",
+   "confirmed": true
+  }
+ ],
+ "u022_current_parse_state": "still-broken",
+ "repaired_by": "nobody",
+ "debris_current_location": "state/verify/V8D/",
+ "debris_note": "state/debris/ exists but is EMPTY; c2stage NOT moved",
+ "reported_only_discipline": {
+  "unmarked_but_unverified": [],
+  "bp_clearly_marked": true,
+  "note": "(o),(p),(bb),(bi) headers say only [reported-only] with no unit, but they are pre-existing inside the byte-identical prefix, not authored by U8.14"
+ },
+ "not_reproduced": [
+  "(bn) 1.747/3.50 prose at tests/test_doctor.py:21,:430,:590,:591 \u2014 absent now; file mtime 2026-10-08 09:04:25 is 71s AFTER the ledger mtime 09:03:14 (digit literals scrubbed; 3.536 at :439/:440)"
+ ],
+ "overstated": [],
+ "unverified": [
+  "(bm) run.py line cites :502/:522 vs observed :507 (journal_mode=DELETE) and :527 (read-back) \u2014 run.py sha 7f0b6a659102b9d56ec25f0d12e856324387efe72f0eceb1858ffd29346ccd35 read once at 09:10:53 while V0.26 holds it in flux",
+  "(bm) comment :482-486 naming U6.18 not line-checked; docstring :441-458 confirms the same reasoning"
+ ],
+ "corrections": [
+  {
+   "relayed_claim": "(bm) run.py:502 applies journal_mode=DELETE; :522 reads the mode back",
+   "actually": "DELETE at :507, read-back at :527",
+   "evidence": "grep -n journal_mode src/resextract/run.py",
+   "unit": "U8.14"
+  },
+  {
+   "relayed_claim": "1.747/3.50 survive in 4 prose mentions",
+   "actually": "not present at those lines on the current disk; the file was rewritten after the ledger append",
+   "evidence": "grep + stat mtimes",
+   "unit": "U8.14"
+  },
+  {
+   "relayed_claim": "(bm) warns a plain mode=ro open creates -wal/-shm sidecars",
+   "actually": "observed live at 09:11:15 beside state/state.sqlite (0 B -wal, 32768 B -shm) while the store sha stayed 40e8aa0c \u2014 corroborates (bm)",
+   "evidence": "stat -c '%y %s %n' state/state.sqlite*",
+   "unit": "V8.16 observation"
+  }
+ ],
+ "tool_calls": 20,
+ "bound": 22,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "store": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows_identical": true,
+   "used_immutable": false,
+   "sidecars_left": 0,
+   "rows": {
+    "candidates": 10,
+    "claims": 0,
+    "dockets": 2,
+    "evidence": 0,
+    "lane_candidates": 10,
+    "lanes": 5,
+    "rework": 0,
+    "runs": 4,
+    "schema_version": 4,
+    "search_health": 0,
+    "targets": 0,
+    "verdicts": 0,
+    "web_sources": 0
+   },
+   "user_version": 0,
+   "journal_mode": "wal",
+   "note": "read from a scratch copy under state/verify/V8.16/, never opened immutable"
+  },
+  "new_sqlite_sidecars": 2,
+  "stray_processes": 0,
+  "new_sqlite_sidecars_mine": 0,
+  "sidecar_note": "state.sqlite-wal(0B)/-shm(32768B) appeared 09:11:15 mid-session; NOT created by this unit (only copies/own fixtures opened); store sha unchanged 40e8aa0c..; left in place as not mine"
+ },
+ "blocker": "",
+ "next_unit_hint": "Ledger append verified clean. (bp)/U5.19 semantics still rest on V5.21 in flight; U0.22.json remains unparseable and c2stage remains at state/verify/V8D/c2stage (state/debris/ is empty), so U8.15's debris move had not landed at 09:10.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V8.16.md",
+  "orchestration/handoffs/V8.16.json",
+  "state/logs/V8.16*",
+  "state/verify/V8.16/**"
+ ]
+}

@@ -1,0 +1,138 @@
+{
+ "unit": "U4.3",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/assess/verdicts.py",
+  "src/resextract/assess/__init__.py",
+  "tests/test_assess_verdicts.py",
+  "state/logs/U4.3_repro.py",
+  "state/logs/U4.3_baseline.txt",
+  "state/logs/U4.3_patch.py",
+  "state/logs/U4.3_tests.py",
+  "state/logs/U4.3-redgreen.sh",
+  "state/logs/U4.3-redgreen.txt",
+  "state/logs/U4.3_live.py",
+  "state/logs/U4.3-live.json",
+  "orchestration/units/U4.3.md",
+  "orchestration/handoffs/U4.3.json"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "verdicts": 41,
+   "evidence": 14,
+   "combined": 55
+  },
+  "verdicts_suite": "41 passed in 0.13s",
+  "evidence_suite": "14 passed in 0.09s"
+ },
+ "reproduced": {
+  "undeclared_client_before": "CONFIRMS accepted (producer=model, 1 call, uncapped)",
+  "capped_after": true,
+  "producer_after": "unknown",
+  "baseline_log": "state/logs/U4.3_baseline.txt",
+  "gates_that_already_held": {
+   "no client": "EXTENDS (capped)",
+   "self-declaring replay": "EXTENDS (capped)"
+  }
+ },
+ "fix": {
+  "fail_closed": true,
+  "only_model_grants_confirms": true,
+  "vocabulary": "model|replay|fixture|unknown",
+  "out_of_vocabulary": "typed rejection: ProducerDeclarationError (carries declared/source/allowed)",
+  "case_handling": "reject (exact, case-sensitive; no normalisation)",
+  "no_none_value": true,
+  "field_names": {
+   "run": "run_producer",
+   "client": "client_producer",
+   "legacy_alias": "producer (read-only, mirrors run_producer, still emitted in as_dict/report.json for out-of-scope readers)"
+  },
+  "function_under_repair": "_client_producer (default was producer='model')",
+  "predicate": "may_back_model_claim(p) is (p == 'model'), mirroring store.may_back_model_claim",
+  "not_reimplemented": "verdicts.py/evidence.py gate order untouched; vocabulary reused from store.PRODUCER_VOCAB",
+  "hint": "producer_hint is validated by the same rule and remains the explicit declaration channel for the (out-of-scope) real client"
+ },
+ "red_green": {
+  "green_sha256": "6581860afe54ac9a4cc24c4b44a593f2a4c64fe2132f9076fc9a8e1f74634762",
+  "a": "sha ok 6581860a...4762 before/after; revert DEFAULT_CLIENT_PRODUCER 'unknown'->'model' => test_undeclared_client_is_capped_and_recorded_unknown FAILED (1 failed); restored bit-identical; then 1 passed",
+  "b": "sha ok 6581860a...4762 before/after; revert _validate_declaration body to `return str(declared)` => test_out_of_vocabulary_declaration_is_rejected FAILED (6 failed: gpt/Model/MODEL/''/none/mixed); restored bit-identical; then 6 passed",
+  "transcript": "state/logs/U4.3-redgreen.txt"
+ },
+ "regressions_verified": [
+  "degraded UNVERIFIED",
+  "clean empty distinct",
+  "suspect excluded",
+  "zero-id rejected",
+  "fabricated id rejected",
+  "real+fabricated keeps real",
+  "no client capped",
+  "all-degraded before client"
+ ],
+ "live": {
+  "claims_assessed": 3,
+  "by_verdict": {
+   "CONFIRMS": 0,
+   "EXTENDS": 0,
+   "CONTRADICTS": 0,
+   "UNVERIFIED": 3
+  },
+  "evidence_rows": 0,
+  "searches": 3,
+  "degraded_searches": 3,
+  "model_calls": 0,
+  "producer": "unknown",
+  "run_producer": "none",
+  "positive_verdicts": 0,
+  "claims_source": "state/claims/store-copy.sqlite",
+  "claims_available": 9,
+  "example_rationale": "no evidence: no evidence records were gathered. 1 search(es) were degraded, so this absence proves nothing: search raised an exception before returning an outcome",
+  "example_verdict": "UNVERIFIED",
+  "client_declares_nothing": true
+ },
+ "real_store_untouched": {
+  "rows_before": {
+   "claims": 0,
+   "evidence": 0,
+   "verdicts": 0
+  },
+  "rows_after": {
+   "claims": 0,
+   "evidence": 0,
+   "verdicts": 0
+  }
+ },
+ "duval_untouched": {
+  "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/"
+ },
+ "model_path": "UNVERIFIED (blocked: endpoint down, HTTP 000)",
+ "collision_note": "src/resextract/assess/** is untracked in git (?? src/resextract/assess/verdicts.py); no U0.15 collision observed, and none expected since assess/** is excluded from its scope.",
+ "tool_calls": 33,
+ "bound": 28,
+ "bound_accounting": "33 vs 28: +1 failed edit (read-before-edit policy on the tests file), +1 patch-anchor failure and +1 indentation probe (a 12-space pattern matched inside 16-space lines), +1 handoff rewrite, +1 unit card / handoff correction. No work was redone; all 33 are accounted for in commands.",
+ "commands": [
+  "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models",
+  "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/logs/U4.3_repro.py",
+  "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/logs/U4.3_patch.py",
+  "find src tests -name __pycache__ -prune -exec rm -rf {} +",
+  "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_assess_verdicts.py tests/test_assess_evidence.py -q",
+  "bash state/logs/U4.3-redgreen.sh",
+  "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/logs/U4.3_live.py",
+  "git --no-optional-locks -C /home/zer0null/Duval rev-parse HEAD",
+  "git --no-optional-locks -C /home/zer0null/Duval status --porcelain",
+  "sqlite3 ro counts on state/state.sqlite via python"
+ ],
+ "blocker": "Real model path is capped by design until the client declares itself: resextract/llm/occamy.py has no `producer` attribute and no caller passes producer_hint, so no CONFIRMS can ship from the real client (fail-closed). Follow-up (outside U4.3 write scope): declare producer='model' on OccamyClient, or have the V8 wiring pass producer_hint='model'.",
+ "next_unit_hint": "Verify U4.3: (1) revert guard (c)/(d) per state/logs/U4.3-redgreen.sh and confirm red; (2) run tests/test_assess_verdicts.py + tests/test_assess_evidence.py; (3) the new adversarial case is a bare call_json-only client with supporting evidence => EXTENDS + client_producer='unknown'. Then a small unit (outside assess/**) must give the real Occamy client its explicit model declaration before any CONFIRMS ships.",
+ "write_paths": [
+  "src/resextract/assess/verdicts.py",
+  "src/resextract/assess/evidence.py (unchanged)",
+  "src/resextract/assess/__init__.py",
+  "tests/test_assess_verdicts.py",
+  "tests/test_assess_evidence.py (unchanged)",
+  "state/logs/U4.3*",
+  "orchestration/units/U4.3.md",
+  "orchestration/handoffs/U4.3.json"
+ ]
+}

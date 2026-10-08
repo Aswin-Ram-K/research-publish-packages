@@ -1,0 +1,98 @@
+{
+  "unit": "U8.7",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/run.py",
+    "tests/test_run.py",
+    "orchestration/units/U8.7.md",
+    "state/logs/U8.7/live.out",
+    "state/logs/U8.7/before.sha256",
+    "state/logs/U8.7/after.sha256"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "tests": {"run_before": 35, "run_after": 40, "deletions": 0},
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  # 000",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_run.py -q  # 35 passed (before)",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_run.py -q  # 40 passed (after)",
+      "python state/logs/U8.7/revert.py g  # red: KeyError: 'provenance'",
+      "python state/logs/U8.7/revert.py h  # red: AssertionError: unrecorded provenance was reported 'fresh'",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/logs/U8.7/live.py  # dry exit 0 + real exit 1"
+    ]
+  },
+  "reproduced": {
+    "graph_records_provenance_before": true,
+    "graph_records_provenance_before_note": "the artifact DOES self-describe: built_at_commit=6deaed07af0d998d1672fe3f1ab1579e6ba0cdc4 (a real Duval commit, stamped by graphify extract from the target HEAD) and graph.graphify_version=0.9.80; there is no build timestamp. The template expected false; the truth is that provenance existed but run.py never read or reported it.",
+    "stale_reused_silently": true,
+    "reader_can_tell": false,
+    "detail": "the live graph was ALREADY stale (built at 6deaed07..., target HEAD 6c60da5aa924...) and the pre-fix plan/run graph line said only 'would reuse/reused existing code-only graph at state/kg/duval/graphify-out/graph.json (graphify not re-run...)' with counts mode/nodes/edges/sha256 — no age, no origin, no commit; a graph built for another revision was indistinguishable from a fresh one."
+  },
+  "fix": {
+    "provenance_recorded_where": "run report: StageResult.counts['provenance'] + ctx.notes; durable provenance already lives inside graph.json (graphify writes built_at_commit/graphify_version). No sidecar: a sidecar would duplicate a drift-prone copy and writing one beside a REUSED artifact would break 'the dry run writes nothing' and the run-scoped-writes discipline. graphify.py NOT touched.",
+    "fields": ["built_at_head", "built_at", "tool_version", "sha256", "nodes", "edges", "observed_target_head", "state", "detail"],
+    "policy": "report-only",
+    "policy_note": "chosen because the acceptance target's HEAD is moved continuously by a foreign actor (observed 55710509 -> cf2f516b -> 6c60da5a); 'stale => rebuild' would rebuild on nearly every run, so a provably stale graph is reused with STALE stated loudly in the graph line and in the run notes. A graph build is never triggered silently.",
+    "default_is_safe": true,
+    "flag": "require_fresh_graph",
+    "flag_note": "run_pipeline(..., require_fresh_graph=True) passes over a provably stale candidate (reported in rejected_candidates with label 'stale', never deleted) and builds instead. Absence of the flag is the safe default: no silent rebuild, no silent trust. cli.py was not touched (owned by U6.12); the kwarg default keeps every existing caller unchanged.",
+    "missing_provenance_reported_as": "unverified",
+    "missing_provenance_note": "no recorded commit (or unreadable target HEAD) => state 'unverified', graph line 'UNVERIFIED (no recorded provenance)', a ctx.notes entry, and the graph is still reused — neither silently trusted nor needlessly refused.",
+    "plan_run_agree": true,
+    "single_decision_function_preserved": true,
+    "single_decision_function_note": "_graph_provenance is evaluated inside _reuse_candidate (the one function both the dry plan and the real run call; spy test still pins exactly 2 calls, and both return None for a stale graph when the flag is set). The graph line is built by the shared _provenance_stamp.",
+    "not_regressed": ["_graph_unusable_reason remains the single validity check, called only from _reuse_candidate", "unusable candidates still reported via ctx.graph_rejected + ctx.notes and never deleted", "planned_out still the real artifact path", "edge counts still from stats.edges"]
+  },
+  "red_green": {
+    "a": "guard (g) staleness-report: run.py sha256 before=9de685a36c52f10f677c6a6e5f3cd62f9d56c8c688386cc55a5a3879b67bc827 after=aa03d2412a8e4adae4ab64fd0c368b450addbee2dae997f52469771e5c436dfc; reverted (drop the provenance clause from _reuse_candidate and the reuse branch) => FAILED tests/test_run.py::test_stale_graph_is_reported_stale_by_plan_and_run - KeyError: 'provenance' (1 failed, 39 deselected): the stale graph is reused silently; restored => 40 passed, cmp clean, bit-identical",
+    "b": "guard (h) missing-provenance: reverted (_graph_provenance returns 'fresh' when no commit is recorded) => FAILED tests/test_run.py::test_unrecorded_provenance_is_reported_unverified_not_fresh - AssertionError: plan: unrecorded provenance was reported 'fresh' (1 failed, 39 deselected); restored => 40 passed, cmp clean, bit-identical. FULL __pycache__ purge + PYTHONDONTWRITEBYTECODE=1 between every revert/restore."
+  },
+  "live": {
+    "invocations": 2,
+    "doctor_note": "both invocations injected the offline doctor report (Occamy http 000 DOWN, graphify/docling legs up) so the run stayed strictly offline; no graph build was performed and graphify was never invoked.",
+    "dry_run": {
+      "exit_code": 0,
+      "graph_line": "dry run: would reuse existing code-only graph at state/kg/duval/graphify-out/graph.json (built at 6deaed07af0d, target head 6c60da5aa924 — STALE; graphify not re-run: bounded, and a re-extract would write inside the target)",
+      "nodes": 2685,
+      "edges": 7102,
+      "sha256": "4790bbb1111b",
+      "wrote_nothing": true,
+      "wrote_nothing_evidence": "state/run and state/kg file lists (path:size:mtime_ns) were byte-identical before and after the dry run; the store was opened read-only only."
+    },
+    "real_run": {
+      "exit_code": 1,
+      "graph_line": "reused existing code-only graph at state/kg/duval/graphify-out/graph.json (built at 6deaed07af0d, target head 6c60da5aa924 — STALE; graphify not re-run: bounded, and a re-extract would write inside the target)",
+      "blocked": ["mine", "claims", "assess"],
+      "materialize": "skipped",
+      "window_sealed": true,
+      "stages_not_run": 3,
+      "stages_not_run_note": "the three blocked model stages match the verified '3 of 8'; materialize is additionally skipped by the producer gate (no model-produced candidates), so 4 of 8 stages performed no work.",
+      "stage_table": [["graph", "ok"], ["staging", "ok"], ["mine", "blocked"], ["claims", "blocked"], ["assess", "blocked"], ["lanes", "ok"], ["materialize", "skipped"], ["refresh", "ok"]]
+    }
+  },
+  "store_untouched": {
+    "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+    "version": 4,
+    "rows_identical": true,
+    "rows_identical_evidence": "the sqlite file is byte-identical to the pre-unit snapshot (sha256 unchanged) and candidates count is still 10; the run wrote only into its run-scoped copy state/run/duval/state.sqlite"
+  },
+  "residual_after_fix": "Provenance makes staleness visible; it does not make the graph correct. Still undetectable: (1) a graph whose recorded built_at_commit matches the target HEAD but whose bytes were tampered with (the sha256 is reported but not pinned to an expected value); (2) semantic truncation that still yields a non-empty nodes array and a links array; (3) a graph recorded from the BUILDING repo rather than the target repo (it is reported stale/unverified rather than silently trusted — conservative, but not resolved); (4) a graph from a matching revision that is nonetheless the best available is reused without question, by design, because report-only is the proportionate default against a continuously moving HEAD.",
+  "duval_untouched": {
+    "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+    "porcelain_unchanged": true,
+    "moving_head_note": "the foreign actor had already advanced HEAD (55710509 -> cf2f516b -> 6c60da5a observed during this build) and left two untracked entries; both are unchanged across this unit and are exactly why 'stale => rebuild' is the wrong default. The only writes this unit made anywhere were in the workspace (state/logs/U8.7/, orchestration/)."
+  },
+  "tool_calls": 26,
+  "bound": 28,
+  "blocker": "",
+  "next_unit_hint": "Provenance is now reported but not pinned: a verifier should consider storing an expected sha256 for the authoritative graph (or checking it against the manifest) so a tampered-but-valid graph is detectable; that is the next residual, not solvable by built_at_commit alone. Also consider surfacing require_fresh_graph through cli.py once U6.12 lands.",
+  "write_paths": [
+    "src/resextract/run.py",
+    "tests/test_run.py",
+    "orchestration/units/U8.7.md",
+    "orchestration/handoffs/U8.7.json",
+    "state/logs/U8.7/",
+    "state/run/duval/"
+  ]
+}

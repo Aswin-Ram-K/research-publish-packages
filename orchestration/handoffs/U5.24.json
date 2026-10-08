@@ -1,0 +1,91 @@
+{
+ "unit": "U5.24",
+ "status": "done",
+ "artifacts": [
+  "tests/test_docket_provenance.py",
+  "orchestration/units/U5.24.md",
+  "state/logs/U5.24-single.txt",
+  "state/logs/U5.24-five.txt",
+  "state/logs/U5.24-split.txt",
+  "state/logs/U5.24-checks.txt",
+  "state/logs/U5.24-pinned.txt",
+  "orchestration/handoffs/U5.24.json"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "red_before": {
+   "test": "tests/test_docket_provenance.py::test_pre_u5_7_smoke_manifest_still_validates_and_verifies",
+   "verbatim": "E       AssertionError: [\"claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='u...hrough materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)\"]\nE       assert False is True\nE        +  where False = DocketVerification(ok=False, problems=[...]).ok\ntests/test_docket_provenance.py:396: AssertionError\n1 failed, 33 passed in 0.40s",
+   "suite": "1 failed / 172 passed"
+  },
+  "contradiction_quoted": "claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='unknown') -- a non-model run may not assert CONFIRMS; re-derive the claim through materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)",
+  "how_obtained": "called verify_docket directly on dockets/_smoke (read-only); string also embedded verbatim in the restated test",
+  "test_restated": {
+   "old_name": "test_pre_u5_7_smoke_manifest_still_validates_and_verifies",
+   "new_name": "test_pre_u5_7_smoke_manifest_still_loads_and_reports_uncapped_confirms",
+   "before": "def test_pre_u5_7_smoke_manifest_still_validates_and_verifies():\n    \"\"\"The older ``dockets/_smoke/MANIFEST.json`` keeps validating \u2014 no regression.\"\"\"\n    assert SMOKE.is_dir(), f\"fixture docket missing: {SMOKE}\"\n    assert M.validate_manifest(SMOKE / \"MANIFEST.json\") == []\n    verification = A.verify_docket(SMOKE)\n    assert verification.ok is True, verification.problems\n\n    raw = json.loads((SMOKE / \"MANIFEST.json\").read_text(encoding=\"utf-8\"))\n    assert \"producer\" not in json.dumps(raw.get(\"generated_by\", {}))\n    assert \"status_reason\" not in raw\n\n    loaded = M.read_manifest(SMOKE / \"MANIFEST.json\")\n    assert loaded.generated_by.producer == \"unknown\"  # safe default, never \"model\"\n    assert loaded.status_reason is None\n    assert M.promotion_eligible(loaded)[0] is False",
+   "after": "def test_pre_u5_7_smoke_manifest_still_loads_and_reports_uncapped_confirms():\n    \"\"\"A frozen pre-U5.7 docket still *loads*; it does **not** verify clean.\n\n    U5.24 restatement.  ``_smoke`` witnesses backward-compatible **loading** --\n    the guarantee ``manifest.py`` actually makes (\"a pre-existing manifest whose\n    claim says ``CONFIRMS`` still loads\").  It is *not* a witness that old\n    artifacts pass every honesty check: its claim ``C1`` asserts ``CONFIRMS``\n    while its assessor is ``'unknown'``, exactly the contradiction\n    ``verify_docket`` must now report.  So this test pins the *specific* problem\n    reported instead of a clean verdict, and pins the witness as frozen.\n    \"\"\"\n    assert SMOKE.is_dir(), f\"fixture docket missing: {SMOKE}\"\n\n    # 1. Load compatibility -- the promise to keep.  The old artifact is still\n    #    structurally valid and still reads back as a pre-U5.7 shape.\n    assert M.validate_manifest(SMOKE / \"MANIFEST.json\") == []\n    loaded = M.read_manifest(SMOKE / \"MANIFEST.json\")\n    assert loaded.generated_by.producer == \"unknown\"  # safe default, never \"model\"\n    assert loaded.status_reason is None\n    assert M.promotion_eligible(loaded)[0] is False\n    raw = json.loads((SMOKE / \"MANIFEST.json\").read_text(encoding=\"utf-8\"))\n    assert \"producer\" not in json.dumps(raw.get(\"generated_by\", {}))\n    assert \"status_reason\" not in raw\n\n    # 2. Honesty enforcement -- the new truth, pinned to the exact problem, so\n    #    this asserts *which* contradiction was found, not merely \"not ok\".\n    verification = A.verify_docket(SMOKE)\n    assert verification.ok is False, verification.problems\n    assert verification.problems == [\n        \"claim C1: standing CONFIRMS contradicts its backing producer \"\n        \"'unknown', not 'model' (docket generated_by.producer='unknown') -- \"\n        \"a non-model run may not assert CONFIRMS; re-derive the claim through \"\n        \"materialize so the cap applies, or record mechanically-verified facts \"\n        \"as a distinct standing (U5.22 follow-up)\"\n    ], verification.problems\n\n    # 3. The witness is frozen: byte-identical, and never rewritten here\n    #    (``dockets/_smoke/`` is read-only).\n    import hashlib\n\n    assert hashlib.sha256((SMOKE / \"MANIFEST.json\").read_bytes()).hexdigest() == (\n        \"41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6\"\n    )\n",
+   "asserts_load_compat": true,
+   "asserts_specific_problem": true,
+   "asserts_frozen": true,
+   "vacuous": false
+  },
+  "green_after": {
+   "reassembly": 70,
+   "assemble": 27,
+   "provenance": 34,
+   "materialize": 25,
+   "pinned": 17,
+   "total": 173,
+   "failed": 0,
+   "combined_run": "173 passed in 6.31s (one run, five files)"
+  },
+  "not_vacuous_proof": {
+   "compared_against": "(a) in-memory copy of the same _smoke manifest with ONLY C1.producer flipped 'unknown'->'model' (C1.verdict stays CONFIRMS); (b) the real on-disk docket dockets/duval/duval-u55-pinned",
+   "problem_reported_there": false,
+   "explanation": "(a) _claim_standing_problems(_smoke) == [contradiction] but the flipped copy returns [] while producer_is_model('unknown')==False / ('model')==True and the verdict is unchanged -- the reported problem depends on the real condition, not on the docket merely existing. (b) pinned docket output: === same check vs REAL artifact dockets/duval/duval-u55-pinned === | pinned verify_docket ok = True | pinned problems = [] |  claim M1 UNVERIFIED 'unknown'"
+  },
+  "smoke_frozen": {
+   "manifest_sha": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+   "expected": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+   "byte_identical": true
+  },
+  "dockets_untouched": true,
+  "store_untouched": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "expected": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows_identical": true,
+   "used_immutable": false,
+   "sidecars_observed": 2,
+   "sidecars_created_by_me": 0,
+   "note": "store never opened (no sqlite3 connection, no copy, no -wal/-shm created by me); byte-identical sha256 to the known-good value implies identical rows. The 2 sidecars observed predate this unit (mtime 09:11, sibling mode=ro opens); left in place."
+  },
+  "duval_untouched": {
+   "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/ (foreign actor, expected)"
+  },
+  "hand_ups": {
+   "docstring_promising_verify_cleanly": "None in src/**. Nearest: src/resextract/docket/manifest.py:182 -- 'a pre-existing manifest whose claim says ``CONFIRMS`` still loads (that is what ``_smoke`` witnesses)' -- promises LOAD, not a clean verify, and is still true. manifest.py:21,113,141,311,325,336 say 'still validates'/'keeps validating': also true, measured (validate_manifest(_smoke)==[]). The only surviving 'verify' lie was the TEST NAME, now renamed. NOT edited -- manifest.py is U5.23's.",
+   "assertion_home_judgement": "Keep it here. The subject of the assertion is the compat WITNESS, so the witness's own test file is the right home; U5.22's verifier tests already cover the CONDITION with synthetic fixtures. Splitting them would separate the frozen-artifact pin from the artifact. Cheap improvement for a later unit: manifest.py:182 could name verify_docket's report next to 'still loads'."
+  },
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models",
+   "find . -path ./.venv -prune -o -name __pycache__ -type d -exec rm -rf {} +   (full purge, before+after)",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_provenance.py -q  # red: 1 failed, 33 passed",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_provenance.py -q  # green: 34 passed",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_{reassembly,assemble,provenance,materialize,materialize_pinned}.py -q  # 173 passed",
+   "key-by-key reruns for the per-file split; direct _claim_standing_problems / verify_docket calls; sha256sum; git status"
+  ]
+ },
+ "tool_calls": 16,
+ "bound": 14,
+ "blocker": "",
+ "next_unit_hint": "No src/dockets change needed. Follow-up lives in U5.22's note: _smoke is frozen read-only, so rather than re-materializing it, either record uncapped claims as a distinct standing or leave the flagged witness as the deliberate pre-U5.7 exhibit. Verifier: re-run the 5-file suite (expect 173/0) and confirm `git diff --stat -- dockets` is empty.",
+ "write_paths": [
+  "tests/test_docket_provenance.py",
+  "state/logs/U5.24*",
+  "orchestration/units/U5.24.md",
+  "orchestration/handoffs/U5.24.json"
+ ]
+}

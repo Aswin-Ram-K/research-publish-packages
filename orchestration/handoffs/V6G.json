@@ -1,0 +1,149 @@
+{
+  "unit": "V6G",
+  "status": "done",
+  "scope": "U6.12 rule arms + the two guards",
+  "overall": "PASS",
+  "checks": [
+    {
+      "id": "C1",
+      "name": "rule arm-by-arm",
+      "verdict": "PASS (one arm-2 wording correction)",
+      "observed": "Remote bind on the verified LAN address 192.168.2.187 (ip -4 addr: wlp15s0 192.168.2.187/24). ARM1 operator token: anon /api/status 401 {\"error\":\"dashboard token required\"}; anon /,/api/dockets,/api/graph,/api/runs,/api/findings all 401; anon SSE /api/events 401; with x-dashboard-token: /api/status 200, /api/dockets 200, SSE /api/events 200 (curl exit 28 = streamed to the 15s cap, so the 200 is committed); control POST /api/control/rescan anon 401 -> token 200. ARM2: console script remote --token auto exit 2, port 8943 free; python -m resextract.dashboard remote with NO --token exit 2, port free. ARM3 loopback --token auto: printed token len 43 (auto generated), anon /api/status,/api/dockets,/ all 200, control anon 401 -> printed-token 200.",
+      "evidence": "state/logs/V6G-c1-remote.log, V6G-c1-auto-cli.log, V6G-c1-auto-module.log, V6G-c1-loopback.log; 401 body captured verbatim"
+    },
+    {
+      "id": "C2",
+      "name": "tests + what the guards pin",
+      "verdict": "PASS",
+      "observed": "Full __pycache__ purge (0 dirs remaining) + PYTHONDONTWRITEBYTECODE=1: tests/test_dashboard_auth.py 9 passed, tests/test_cli.py 42 passed, tests/test_dashboard.py 66 passed, all exit 0. No assertion deletions in U6.12's files: tests/test_dashboard_auth.py and tests/test_cli.py are both UNTRACKED (new files, no HEAD baseline) so nothing could be deleted from them; the only tracked removals in tests/ are 4 stale schema-v3 asserts from the earlier v3->v4 batches, not U6.12.",
+      "evidence": "pytest -q per-file summaries; git status --porcelain tests/; git diff HEAD -U0 -- tests/"
+    },
+    {
+      "id": "C3",
+      "name": "red-green re-derived",
+      "verdict": "PASS (both guards reproduced, sha-proven, restored bit-identical)",
+      "observed": "Release shas on disk matched: app.py f27645f3e7919fd6a8dd1061a65a2c2da405b88e2290a91e3a339e73f08f7f2e, src/resextract/cli.py 6ac4c039af2b00a40051c7e173fb7a379cb13dad2ed9e2d4f3f305f923ad394f, __main__.py a4a0875316305193eaf6384c57d351eb7001c80ac7e0048019b786be09ac384e. (a) app.py `if remote:` -> `if False:` (reverted sha c613a74688ab9d658d2d0e793d1df5f86022d81322b6befc82b215d0864fe6e0): test_remote_bind_reads_are_refused_without_the_token FAILED verbatim `AssertionError: ('/', 200)` / `assert 200 == 401`. (b) cli.py refusal -> `if False:` (4e0b10e44938d441896920b112fd15983147107c67eec6a3f1731cd78c8ca511) and __main__.py refusal -> `if False:` (987ce8c349b77612c7110183d794fe6bd99d8325f4a95aadc88c72f1cf5871ce): test_remote_bind_rejects_the_auto_token FAILED verbatim `Failed: DID NOT RAISE ValueError`. Restore from distinctly named backups with a hard-stop check on the reverted shas: all three files sha-equal to release again; green re-run after full purge = 2 passed.",
+      "evidence": "state/verify/V6G/reverts/*.V6G-C3-backup; sha256 before/after/restore; red and green pytest output"
+    }
+  ],
+  "test_counts": {
+    "auth": 9,
+    "cli": 42,
+    "dashboard": 66,
+    "deletions": 0
+  },
+  "rule": {
+    "remote_token_read_anon": 401,
+    "remote_token_read_authed": 200,
+    "remote_control_401_then_200": true,
+    "sse_anon_remote": "401",
+    "sse_authed_remote": 200,
+    "remote_auto_exit2_cli": true,
+    "remote_auto_exit2_module": "no-token: exit 2 true; literal `--token auto`: FALSE (module has no `auto` keyword - it binds with the literal secret \"auto\": anon 401, x-dashboard-token:auto 200)",
+    "remote_no_token_exit2_binds_nothing": true,
+    "loopback_anon_reads": 200,
+    "loopback_auto_ok": true,
+    "commands": [
+      "ip -4 addr show   # 192.168.2.187/24 on wlp15s0",
+      "setsid .venv/bin/resextract serve --host 192.168.2.187 --port 8941 --allow-remote --no-browser --token 'V6G-operator-chosen-secret'",
+      "curl -sS -m 15 -o /dev/null -w '%{http_code}' http://192.168.2.187:8941/api/status                       # 401",
+      "curl -sS -m 15 -o /dev/null -w '%{http_code}' -H 'x-dashboard-token: V6G-operator-chosen-secret' http://192.168.2.187:8941/api/status   # 200",
+      "curl -sS -m 15 -o /dev/null -w '%{http_code}' -H 'Accept: text/event-stream' http://192.168.2.187:8941/api/events                          # 401 anon",
+      "curl -sS -m 15 -X POST -o /dev/null -w '%{http_code}' http://192.168.2.187:8941/api/control/rescan        # 401 anon -> 200 with token",
+      ".venv/bin/resextract serve --host 192.168.2.187 --port 8943 --allow-remote --no-browser --token auto      # exit 2, port 8943 free",
+      ".venv/bin/python -m resextract.dashboard --host 192.168.2.187 --port 8943 --allow-remote                 # exit 2, port 8943 free",
+      ".venv/bin/resextract serve --port 8942 --no-browser                                                       # loopback auto: anon 200, control 401->200 with printed token"
+    ]
+  },
+  "tests_assert": {
+    "refusal_test_asserts": "status+body: for all 6 routes anon.status_code == 401 AND `\"token\" in anon.json()[\"error\"]`, then the same route with x-dashboard-token == 200; the companion test_remote_401_body_carries_no_data pins the body to exactly {\"error\"} (no store/docket payload). Stronger than 'not 200'.",
+    "auto_test_asserts": "pytest.raises(ValueError) from cli._resolve_serve(host=lan, token='auto', allow_remote=True); cli.main([...no --token]) exit == cli.EXIT_CORE_DOWN == 2; 'explicit --token' in stdout; dash_main.main([...]) == 2; and calls == [] where uvicorn.run is monkeypatched to a sentinel list.",
+    "weaker_than_claimed": false,
+    "caveat": "in the RED state the `calls == []` sentinel assert is never reached (pytest.raises fails first), and because uvicorn.run is stubbed the test can never bind either way - that assert is a green-state regression guard, not red-state exposure evidence."
+  },
+  "red_green": {
+    "a": "reproduced; sha ok (app.py f27645f3.. -> c613a746.. -> f27645f3..); failure verbatim `AssertionError: ('/', 200)` / `assert 200 == 401`; post-restore test passed",
+    "b": "reproduced; sha ok (cli.py 6ac4c039.. -> 4e0b10e4.. -> 6ac4c039..; __main__.py a4a08753.. -> 987ce8c3.. -> a4a08753..); failure verbatim `Failed: DID NOT RAISE ValueError`; post-restore test passed",
+    "release_shas_match": true,
+    "method_note": "both guards were reverted in one window (per-file shas recorded separately, separate backups, tests on disjoint code paths) and restored together with a hard-stop sha check; one live server start was spent on the red observation because the card caps real starts at 3 and C1 used 2."
+  },
+  "red_state_bound": {
+    "b": "never bound in the test (uvicorn sentinel + failure at pytest.raises before the sentinel assert) BUT the unguarded real code path DOES bind",
+    "proof_strength_for_b": "The unit's 'a uvicorn sentinel meant the red state never bound' is true only of the stubbed test. Proof of the refusal semantics is adequate (removing the guard makes ValueError disappear, cli.main return 0 and _resolve_serve return a generated token). Proof of exposure is not: the test cannot bind at all, so red(b) alone is a logic red, not an exposure red. I re-derived the exposure separately: with the refusal reverted, `resextract serve --host 192.168.2.187 --allow-remote --token auto` really bound 192.168.2.187:8944 (owner pid verified mine) and `_resolve_serve` returned a generated token without raising. In that combined red state anonymous GET /api/status answered 200 with the store payload (db_path, schema_version 4) and /api/dockets 200 - a live anonymous LAN leak. With guard (a) intact the same bind is gated (C1 in-process literal-'auto' app: anon 401 / 'auto' 200), so red(b) alone would bind a remote listener under a secret the operator did not choose, without an anonymous read leak."
+  },
+  "not_reproduced": [],
+  "overstated": [
+    "Card arm 2 as worded ('remote + --token auto => exit 2, both via the console script and python -m resextract.dashboard') does not hold for the module entry: python -m resextract.dashboard has no `auto` keyword, so `--token auto` is a literal secret and the app binds (rc 0, uvicorn.run reached with host 192.168.2.187). U6.12's own recorded claim ('python -m ... with no --token') is accurate and I verified that (exit 2). Not an anonymous leak: the literal-'auto' app answers anon 401 and x-dashboard-token:auto 200.",
+    "'a uvicorn sentinel meant the red state never bound' should not be read as 'red(b) cannot leak': the sentinel is a test-local stub, and the real unguarded path does bind (live-proven)."
+  ],
+  "unverified": [
+    "entry points `python -m resextract.cli serve` and `python -m resextract serve` (out of scope; card named two entry points and both were tested)",
+    "whether the pre-existing state/state.sqlite-shm and -wal sidecars belong to another live unit or to the foreign actor",
+    "dashboard SSE behaviour with no token on loopback (not part of the rule)",
+    "the exact original content of the 4 tracked schema-v3 asserts (other units' history, not U6.12)"
+  ],
+  "corrections": [
+    {
+      "plan_assumption": "release cli.py is at src/resextract/dashboard/cli.py",
+      "actually": "it is src/resextract/cli.py (sha 6ac4c039..); src/resextract/dashboard/ has no cli.py, and the console script is `resextract`, not `resextract-dashboard`",
+      "evidence": "sha256sum: No such file or directory; pyproject [project.scripts] resextract = \"resextract.cli:main\"",
+      "unit": "U6.12"
+    },
+    {
+      "plan_assumption": "python -m resextract.dashboard refuses `--token auto` on a remote bind like the CLI does",
+      "actually": "the module entry has no auto keyword; `--token auto` is taken literally and binds (anon 401, secret 'auto' 200). Only the absence of --token is refused (exit 2).",
+      "evidence": "in-process dash_main rc=0, uvicorn.run called host=192.168.2.187; TestClient create_app(token='auto') anon 401 / 'auto' 200",
+      "unit": "U6.12"
+    },
+    {
+      "plan_assumption": "RESEXTRACT_STATE_DB isolates a dashboard server from state/state.sqlite",
+      "actually": "it does not: the red-state server's /api/status reported db_path=/home/zer0null/reserach extarctor/state/state.sqlite although RESEXTRACT_STATE_DB pointed at my copy. All four servers read the real store. The main file's sha and row count are unchanged (40e8aa0c.., 35 rows), but the pre-existing -shm/-wal sidecar mtimes advanced 08:12 -> 08:14 from my read connections (left in place: they pre-date me and are not solely mine).",
+      "evidence": "RED anon GET /api/status body db_path; pre/post sha256sum + ls -la state/state.sqlite*",
+      "unit": "U6.12 verification method"
+    }
+  ],
+  "tool_calls": 19,
+  "bound": 16,
+  "containment": {
+    "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951 (identical before and after)",
+    "porcelain": "?? .ci-trunk.txt; ?? .lane-j-scratch/ (identical before and after; foreign actor's entries, HEAD did not move during this unit)",
+    "outside_writes": 0,
+    "worktrees_reads": 0,
+    "store": {
+      "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+      "version": 4,
+      "rows_identical": true,
+      "total_rows": 35,
+      "sidecar_note": "state.sqlite-shm/-wal pre-existed at mtime 08:12 and advanced to 08:14 via my read connections; main-file sha unchanged; sidecars not deleted (not solely mine)"
+    },
+    "listening_ports_observed": [
+      "127.0.0.1:8891,8792,8791,8790,8801,9091,631,33693,2019,18790,3220,3080,3091,3377,5433,8088,8090,8080",
+      "127.0.0.53:53",
+      "127.0.0.54:53",
+      "0.0.0.0:3090,3085,22",
+      "*:21115-21119,3389,443,80",
+      "[::1]:631",
+      "[::]:22",
+      "127.0.0.1:9091 (still listening after all suites - not mine)"
+    ],
+    "ports_that_were_mine": [
+      "192.168.2.187:8941 (C1 arm1, stopped+free)",
+      "127.0.0.1:8942 (C1 arm3, stopped+free)",
+      "192.168.2.187:8944 (C3 red, stopped+free)"
+    ],
+    "ports_never_bound": [
+      8943
+    ],
+    "stray_processes": 0
+  },
+  "blocker": "",
+  "next_unit_hint": "U6.12's rule holds on every arm I could test and both guards are sha-proven red->green, so U6.12 is safe to accept. Two follow-ups for a separate unit: (1) align entry-point semantics so `python -m resextract.dashboard --token auto` on a remote bind is refused or treated as the `auto` keyword - today it silently binds a remote listener under the literal weak secret 'auto'; (2) the module entry prints no token at all, so an operator who does pass a chosen --token gets no confirmation. Gotcha for any unit needing store isolation: RESEXTRACT_STATE_DB does NOT redirect the dashboard's DataLayer.",
+  "write_paths": [
+    "orchestration/VERDICTS.md",
+    "orchestration/units/V6G.md",
+    "orchestration/handoffs/V6G.json",
+    "state/logs/V6G*",
+    "state/verify/V6G/**"
+  ],
+  "tool_call_note": "19 total = 14 execution/verification calls (1 liveness+recon, 2 reads, 3 greps, 1 C1, 1 C2, 1 C3, 5 artifact/search) + 1 failed `write` of the handoff (file-observation policy required a read first; retried via bash) + 1 persistence call (handoff+card+verdicts) + 1 VERDICTS repair call (backtick command-substitution mangled the first append) + 1 required parent report. Over the target bound of 16 by 3; no step skipped, disclosed."
+}

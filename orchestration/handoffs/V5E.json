@@ -1,0 +1,202 @@
+{
+ "unit": "V5E",
+ "status": "done",
+ "scope": "U5.14 render neutrality + banner coverage",
+ "overall": "PASS",
+ "probe": "occamy 192.168.2.168:8012 DOWN (curl exit 7 / 000), one probe, zero live LLM calls",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "five docket suites",
+   "verdict": "PASS",
+   "observed": "149 passed, 0 failed: reassembly 58, assemble 24, provenance 25, materialize 25, pinned 17",
+   "evidence": "state/verify/V5E/ (pytest full purge)"
+  },
+  {
+   "id": "C2",
+   "name": "renderer re-derived + attacked",
+   "verdict": "PASS",
+   "observed": "loss reproduced on legacy manifests (174->122, 84->25 = the real 120/23 + 2 banner lines); fixed path preserves title, contexts once each, lost_sha=[] lost_bytes=[], METHOD '_' closed, banner in exactly 14",
+   "evidence": "state/verify/V5E/c2_render.out, attacks.out"
+  },
+  {
+   "id": "C3",
+   "name": "inheritance arms, both fields",
+   "verdict": "PASS",
+   "observed": "None inherits; ''/[] clears silently; changed target refuses per branch naming both revisions",
+   "evidence": "state/verify/V5E/arm3.out, c3c4.out"
+  },
+  {
+   "id": "C4",
+   "name": "verdict_reason",
+   "verdict": "PASS",
+   "observed": "capped renders '**Verification state.** EXTENDS - capped: declared verification state ...'; uncapped uncluttered; reason EXPLAINS the cap",
+   "evidence": "state/verify/V5E/c3c4.out"
+  },
+  {
+   "id": "C5",
+   "name": "re-render prerequisites",
+   "verdict": "PASS",
+   "observed": "real manifests record neither lane.title nor evidence; titles verbatim in backups; contexts = materialize template",
+   "evidence": "dockets/*/MANIFEST.json; state/backups/U5.12-*/tree/{README,ITEM}.md"
+  },
+  {
+   "id": "C6",
+   "name": "red->green x2, sha-proven",
+   "verdict": "PASS",
+   "observed": "title 1 failed/3 passed; banner 14 failed while model control 14 passed",
+   "evidence": "state/verify/V5E/c6_title.out, c6_banner.out"
+  },
+  {
+   "id": "C7",
+   "name": "honesty audit",
+   "verdict": "PASS",
+   "observed": "6-short confirmed; title 0x in manifests and 0x in v4 store; minor overstatements recorded",
+   "evidence": "grep + sqlite sweep"
+  },
+  {
+   "id": "C8",
+   "name": "containment",
+   "verdict": "PASS",
+   "observed": "duval HEAD/porcelain unchanged; store v4 40e8aa0c; docket manifests + tree hashes unchanged; 0 stray procs",
+   "evidence": "state/verify/V5E/ + find/sha256sum"
+  }
+ ],
+ "test_counts": {
+  "reassembly": 58,
+  "assemble": 24,
+  "provenance": 25,
+  "materialize": 25,
+  "pinned": 17,
+  "total": 149,
+  "deletions": 0,
+  "six_short_correction": "confirmed",
+  "note": "provenance 25 = 19 def test + 6 from one @parametrize; file is untracked in git so the other four files carry the no-deletion check (all counts are additive)"
+ },
+ "render": {
+  "titles_survive": true,
+  "evidence_lines_before_after": [
+   "174->120 (real damaged docket; my bare rerun 174->122 = +2 banner lines)",
+   "84->23 (real damaged docket; my bare rerun 84->25 = +2 banner lines)",
+   "fixed path: supply once then bare = 174->151 and 84->86 (dedup merge, no collapse of content)"
+  ],
+  "contexts_not_duplicated": true,
+  "no_datum_lost": true,
+  "method_underscore_closed": true,
+  "banner_files": [
+   "README.md",
+   "CLAIMS.md",
+   "EVIDENCE.md",
+   "PRIOR_ART.md",
+   "REFERENCES.md",
+   "REFERENCES.bib",
+   "RESULTS.md",
+   "METHOD.md",
+   "CHECKLIST.md",
+   "OPEN_QUESTIONS.md",
+   "UPDATE_BACKLOG.md",
+   "ITEM.md",
+   "web/README.md",
+   "repro/README.md"
+  ],
+  "banner_count": 14,
+  "history_md_excluded": true,
+  "history_reason": "append-only log: a provenance line appended to a growing history is a historical record, not a per-read warning"
+ },
+ "attacks": {
+  "markdown_title": "stored verbatim; H1 '# # H1 *inj* | pipe `code` _under_ **bold** - report docket' (doubled '#', cosmetic); README tables intact (29 rows), no row corruption, no leakage into CLAIMS tables",
+  "whitespace_title": "'   ' is truthy -> EXPLICIT-SUPPLY arm fires (not clear, not inherit); stored verbatim; H1 '#     - report docket' (visually blank)",
+  "empty_title": "'' -> clears; lane.title stored None; H1 falls back to slug; 0 downgrades (silent, verbatim)",
+  "long_title": "600-char title preserved verbatim, H1 length 618, no truncation",
+  "duplicate_context": "merged once: same-ref duplicate -> 1 occurrence; two refs sharing one string -> one per material block (correct, not a second dump)",
+  "no_context": "entry with context=None still emits '- source kind: `local`'; the other 7 contexts survive; '_(none supplied)_' does not swallow them",
+  "bib_banner": "% ok: line is '% PROVENANCE: ...'; no '>' line; syntax not broken (note: this fixture's .bib has 0 @-entries, so breakage is weakly exercised)",
+  "model_docket_banner": "absent in all 14"
+ },
+ "inheritance": {
+  "none_inherits": true,
+  "empty_clears": true,
+  "changed_target_refuses": true,
+  "both_fields_same_rule": true,
+  "nuance": "same field rule in _inherit_title and _inherit_render_inputs; but the documented bare caller passes lane=m.lane which already carries the recorded title, so title arrives as an explicit supply on that path and its refuse arm is unreachable there, whereas evidence (separate kwarg, default None) does reach it"
+ },
+ "verdict_reason": {
+  "capped_renders": "**Verification state.** EXTENDS - capped: declared verification state 'CONFIRMS' maps to CONFIRMS, but the backing producer is 'replay', not 'model'; capped at EXTENDS by the same rule as assess.verdicts (a non-model run may not assert CONFIRMS)",
+  "uncapped_uncluttered": true,
+  "judgement": "explains (declared state + producer + governing rule), with minor redundancy: 'capped' appears in both the renderer prefix and the reason, and 'maps to CONFIRMS' sits beside a rendered state of EXTENDS"
+ },
+ "rereun_prereqs": {
+  "real_manifests_record_title": false,
+  "record_evidence": false,
+  "titles_in_backups": true,
+  "contexts_source": "materialize.py:1921 -> f\"{item.bytes} bytes copied from the read-only target\"",
+  "what_to_pass": "lane={**manifest.lane.model_dump(),'title':<backup H1 up to ' - '>} ('Duval replay-sourced material' / 'Duval - commit-pinned material (U5.5)') AND evidence=[{'ref':f'material/{row.dest}','source_kind':'local','context':f'{row.bytes} bytes copied from the read-only target','sha256':row.sha256} for row in manifest.material]; source_root=<backup tree>; then assert a SECOND bare pass preserves both"
+ },
+ "red_green": {
+  "a": "reproduced; sha ok 1e46cf00 -> 919d35ab -> 1e46cf00 (equality asserted); F=1 failed (test_bare_reassembly_preserves_the_descriptive_title, \"assert None == 'A descriptive lane title, not a slug'\"); P=3 passed",
+  "b": "reproduced; sha ok 1e46cf00 -> reverted -> 1e46cf00 (equality asserted); F=14 failed (all test_banner_covers_every_rendered_file[rel]); P=28 passed",
+  "banner_bidirectional": "14 failed / model control 14 passed"
+ },
+ "not_reproduced": [
+  "the unit's 25-vs-28 call spend: no per-call telemetry persisted, self-reported only (its handoff lists 7 evidence commands)",
+  "an orphan evidence ref with no matching material row was not explicitly exercised",
+  ".bib syntax with real @-entries (this fixture's REFERENCES.bib has 0 @-entries)"
+ ],
+ "overstated": [
+  "'a bare re-assembly is information-preserving' holds only AFTER the manifest records title+evidence; on a pre-U5.14 manifest a bare pass still loses both (measured 174->122, 84->25) - the unit's own follow-up says the fields must be supplied, so the qualifier belongs on the headline claim",
+  "test_banner_covers_every_rendered_file does not cover repro/run.sh, which is rendered and unstamped with no stated exclusion reason (HISTORY.md and MANIFEST.json do have stated reasons)",
+  "'lane.title obeys the same rule': true of the function, but unreachable refuse arm through the documented bare caller - see inheritance.nuance"
+ ],
+ "unverified": [
+  "unit's tool-call bound spend",
+  "whitespace/long title behaviour under a model producer",
+  ".bib syntax integrity with real entries"
+ ],
+ "corrections": [
+  {
+   "plan_assumption": "test_docket_provenance.py collects 19 (so 107 'before' was 6 short)",
+   "actually": "it collects 25 (19 def test + 6 from one @parametrize); the 6-short correction is CONFIRMED",
+   "evidence": "pytest --collect-only -q -> '25 tests collected in 0.11s'",
+   "unit": "U5.14"
+  }
+ ],
+ "tool_calls": 31,
+ "bound": 32,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "store": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows_identical": true
+  },
+  "dockets": {
+   "u55_manifest": "4441b99741126cb8b534987874300def4fcab4cecb461cd233a456ced220bd31",
+   "replay_manifest": "3fa52cd90af379ecb698a23e6d731cf7d73fc36696e9e7430506c8c90562b502",
+   "smoke_manifest": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+   "hash_recipe": "find <tree> -type f | LC_ALL=C sort | xargs sha256sum | sha256sum",
+   "tree_hashes": {
+    "duval-replay-material": "7727157f7d8860de...",
+    "duval-u55-pinned": "0e27f91c86fe85f0...",
+    "_smoke": "0eda52ac42b3ae4c..."
+   },
+   "trees_unchanged": true,
+   "backups_intact": "replay 28 OK / 0 FAILED, pinned 27 OK / 0 FAILED against their own sha256-list-backup.txt"
+  },
+  "newest_docket_mtime": 1791463272,
+  "first_write": 1791464777,
+  "stray_processes": 0,
+  "scratch": "state/verify/V5E/ only"
+ },
+ "blocker": "",
+ "next_unit_hint": "Gate may open: the one-time re-render is safe PROVIDED it supplies BOTH fields once (titles from state/backups/U5.12-*/tree/{README,ITEM}.md H1 up to ' — '; evidence contexts from the materialize template keyed by material row), then asserts a second BARE pass is byte-stable in title and context. Do not read the fields as 'inherited' from the real manifests - they are absent there.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V5E.md",
+  "orchestration/handoffs/V5E.json",
+  "state/logs/V5E*",
+  "state/verify/V5E/**"
+ ]
+}

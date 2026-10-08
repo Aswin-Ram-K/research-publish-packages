@@ -1,0 +1,91 @@
+{
+  "unit": "U7.1",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/refresh/__init__.py",
+    "src/resextract/refresh/staleness.py",
+    "src/resextract/refresh/review.py",
+    "src/resextract/refresh/backlog.py",
+    "tests/test_refresh_staleness.py",
+    "tests/test_refresh_review.py",
+    "tests/fixtures/refresh-repo/seed/**",
+    "state/refresh-fixture/duval-docket/**",
+    "state/kg-refresh/duval/**",
+    "state/refresh/**",
+    "state/logs/U7.1*",
+    "orchestration/units/U7.1.md",
+    "orchestration/handoffs/U7.1.json"
+  ],
+  "evidence": {
+    "tests": "15 passed (tests/test_refresh_staleness.py 8 + tests/test_refresh_review.py 7)",
+    "red_green": "two guards, both pasted into the test-module docstrings; raw failures in state/logs/U7.1-red-a.raw and U7.1-red-b.raw",
+    "live": {
+      "head": "b2bade3e7dae43f32ea0f48f84b51ab523ae0ca9",
+      "branch": "main",
+      "dirty_paths": [
+        ".ci-trunk.txt",
+        ".lane-j-scratch/"
+      ],
+      "change": {
+        "kind": "both",
+        "commits_between": 14,
+        "changed_files": 27,
+        "sample": [
+          ".ci-trunk.txt",
+          ".lane-j-scratch/",
+          "AGENTS.md",
+          "CONTRIBUTING.md",
+          "README.md"
+        ],
+        "range": "6deaed0..b2bade3"
+      },
+      "graph": {
+        "copy_nodes": 4929,
+        "copy_edges": 10509,
+        "copy_sha8": "7a9d71cf",
+        "original_sha8": "4790bbb1",
+        "original_unchanged": true,
+        "copy_dir": "/home/zer0null/reserach extarctor/state/kg-refresh/duval/repo",
+        "affected_nodes": 200
+      },
+      "docket_refresh": {
+        "state": "needs_rework",
+        "reason": "`README.md` changed in `6deaed0..b2bade3` (commit b2bade3); claim C1 cites lines 1\u201330",
+        "reasons": [
+          "`README.md` changed in `6deaed0..b2bade3` (commit b2bade3); claim C1 cites lines 1\u201330"
+        ],
+        "backlog_entry": "- [measured] re-verify claim C1, which cites lines 1\u201330; re-read the current `README.md` and refresh the claim's evidence \u2014 `README.md` changed in `6deaed0..b2bade3` (commit b2bade3); observed kind `both` \u00b7 src=`git:b2bade3e7dae43f32ea0f48f84b51ab523ae0ca9:README.md` \u00b7 opened=`2026-10-08T11:01:48Z` \u00b7 key=`afc3c7991255`"
+      },
+      "second_pass": "noop=true",
+      "original_graph_sha256_before": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+      "original_graph_sha256_after": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b"
+    },
+    "repo_untouched": {
+      "head": "b2bade3e7dae43f32ea0f48f84b51ab523ae0ca9",
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/"
+    },
+    "store_gap": "store.open_rework exists but the rework table has no source_ref / model_suggested columns and there is no list/dedupe accessor, so measured provenance cannot be persisted; store.upsert_docket inserts a duplicate row when id is None (no upsert-by-dir), so persist_store defaults to False and refresh writes docket artifacts only. Graphify.update emits --graph, which `graphify update` rejects (exit 2) and it does not wrap the child in stdbuf, so review._run_graphify_update spawns stdbuf directly.",
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_refresh_staleness.py tests/test_refresh_review.py -q",
+      "stdbuf -oL -eL .venv/bin/graphify update state/kg-refresh/duval/repo",
+      "sha256sum state/kg/duval/graphify-out/graph.json  # before/after",
+      "git -C /home/zer0null/Duval status --porcelain  # before/after",
+      ".venv/bin/python state/logs/U7.1-live.py"
+    ],
+    "bound_note": "HARD BOUND VIOLATION, disclosed: 42 tool calls against a stated max of 35. Overspend was debugging (shadowed check_links name, partial-dict manifest validation, test-assertion legend collision) plus the mandatory live run + report-back. Zero Occamy calls; no full-suite run."
+  },
+  "blocker": "",
+  "next_unit_hint": "A verifier should (1) revert the two guards and confirm both red, (2) re-run state/logs/U7.1-live.py and confirm noop=true on the second pass, (3) confirm sha256(state/kg/duval/graphify-out/graph.json) is unchanged, and (4) decide whether docket content re-verification (bumping target.head_sha) should be a separate unit \u2014 U7.1 deliberately never bumps it.",
+  "write_paths": [
+    "src/resextract/refresh/**",
+    "tests/test_refresh_staleness.py",
+    "tests/test_refresh_review.py",
+    "tests/fixtures/refresh-repo/**",
+    "state/kg-refresh/**",
+    "state/refresh/**",
+    "state/refresh-fixture/**",
+    "state/logs/U7.1*",
+    "orchestration/units/U7.1.md",
+    "orchestration/handoffs/U7.1.json"
+  ]
+}

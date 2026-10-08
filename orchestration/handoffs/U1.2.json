@@ -1,0 +1,81 @@
+{
+  "unit": "U1.2",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/kg/__init__.py",
+    "src/resextract/kg/graphify.py",
+    "src/resextract/kg/queries.py",
+    "tests/fixtures/kg-mini/pkg/__init__.py",
+    "tests/fixtures/kg-mini/pkg/core.py",
+    "tests/fixtures/kg-mini/pkg/util.py",
+    "tests/fixtures/kg-mini/main.py",
+    "tests/fixtures/kg-mini/README.md",
+    "tests/fixtures/kg-mini/docs/notes.md",
+    "tests/fixtures/kg-mini/data.json",
+    "tests/test_kg_graphify.py",
+    "tests/test_kg_queries.py",
+    "state/kg-mini/graphify-out/graph.json",
+    "state/logs/U1.2-extract.log",
+    "state/logs/U1.2-evidence.txt",
+    "state/logs/U1.2-pytest-green.txt",
+    "state/logs/U1.2-pytest-red.txt",
+    "orchestration/units/U1.2.md",
+    "orchestration/handoffs/U1.2.json"
+  ],
+  "evidence": {
+    "tests": "22 passed (tests/test_kg_graphify.py + tests/test_kg_queries.py, 1.21s); whole suite 131 passed, 1 skipped",
+    "fixture_graph": {
+      "path": "state/kg-mini/graphify-out/graph.json",
+      "nodes": 21,
+      "edges": 27,
+      "communities": 5,
+      "directed": false,
+      "top_dirs": {"pkg": 18, "main.py": 3},
+      "node_kinds": {"code": 12, "rationale": 9},
+      "relations": {"rationale_for": 9, "calls": 5, "contains": 5, "imports": 3, "method": 3, "imports_from": 2}
+    },
+    "proven_forms": {
+      "extract": ".venv/bin/graphify extract <ABS_FIXTURE> --out <ABS_STATE> --code-only  -> exit 0, writes <out>/graphify-out/graph.json",
+      "query": ".venv/bin/graphify query \"how does main call run_job\" --graph <graph.json> --budget 200  -> BFS, 3 nodes, 2 edges",
+      "god_nodes": ".venv/bin/graphify god-nodes --top 5 --graph <graph.json> --json  -> JSON list of {id,label,degree}",
+      "explain": ".venv/bin/graphify explain \"run_job()\" --graph <graph.json>  -> node=pkg_core_run_job degree=5 connections=5",
+      "affected": ".venv/bin/graphify affected \"run_job()\" --graph <graph.json> --depth 2",
+      "import_edges": "imports: main.py->pkg/core.py (3 total); imports_from: main.py->pkg/core.py"
+    },
+    "red_green": "guard 1 (nonexistent path) failed when reverted: tests/test_kg_graphify.py:187 'Failed: DID NOT RAISE GraphifyError' (reverted 'if proc.returncode != 0 and check:' to 'if False and ...'); guard 2 (timeout) failed when reverted: tests/test_kg_graphify.py:209 'Failed: DID NOT RAISE GraphifyTimeout' (removed 'timeout=limit' from subprocess.run)",
+    "surprises": "1) AST nodes carry NO 'type' field in 0.9.80 - the kind field is 'file_type', whose values are {code, rationale}; docstring/rationale nodes are first-class graph nodes (9 of 21). node_kinds falls back to file_type when type is absent. 2) '--no-viz' is NOT listed under extract in the 0.9.80 help (only under cluster-only), although the U1.2 card's READY FACTS listed it for extract; the wrapper emits it only when explicitly requested. 3) 'path \"A\" \"B\"' matches LABELS, not ids, and exits 1 with an 'Ambiguous' warning when a label matches two nodes (main() hit both file node 'main' and function 'main_main'); the wrapper raises a typed GraphifyError and the method documents passing node ids. 4) Top-level graph.json keys are directed, multigraph, graph, nodes, links, hyperedges (extra 'hyperedges'), and 'directed' was FALSE for a pure-AST extraction, so direction must be read from the file. 5) An unmatched query exits 0 with 'No matching nodes found.' - not an error; QueryResult exposes matched/node_count. 6) extract writes TWO levels: <out>/graphify-out/graph.json plus a .graphify_analysis.json sibling. 7) On timeout there is no process exit code, so the wrapper records the sentinel -1 and raises GraphifyTimeout(argv, timeout_s).",
+    "commands": [
+      ".venv/bin/graphify extract tests/fixtures/kg-mini --code-only --out state/kg-mini",
+      ".venv/bin/python -m pytest tests/test_kg_graphify.py tests/test_kg_queries.py -q",
+      ".venv/bin/python -m pytest tests -q",
+      ".venv/bin/python -c \"from resextract.kg.graphify import Graphify, graph_stats; ...\" (see state/logs/U1.2-evidence.txt)"
+    ],
+    "write_paths_touched": [
+      "src/resextract/kg/__init__.py",
+      "src/resextract/kg/graphify.py",
+      "src/resextract/kg/queries.py",
+      "tests/fixtures/kg-mini/**",
+      "tests/test_kg_graphify.py",
+      "tests/test_kg_queries.py",
+      "state/kg-mini/**",
+      "state/logs/U1.2*",
+      "orchestration/units/U1.2.md",
+      "orchestration/handoffs/U1.2.json"
+    ],
+    "baseline_note": "No extraction from /home/zer0null/Duval; state/kg/duval/** and state/kg/probe/** untouched. Zero Occamy/LLM calls. No write outside the declared paths."
+  },
+  "blocker": "",
+  "next_unit_hint": "Import as `from resextract.kg import Graphify, all_queries, render`. For the Duval extraction use Graphify(cwd=workspace).extract(Duval, code_only=True, out=<state dir>) - read-only target is safe, the output lands under the state dir; do NOT pass --global. Read stats with graph_stats(<out dir>) (accepts the out dir directly). For `path`, pass node ids from read_graph().by_id(), not labels. query/god-nodes/explain argv forms above are proven; render templates with render(q.template, subject=...) before feeding them to query, and treat QueryResult.matched=False as 'no answer', not an error.",
+  "write_paths": [
+    "src/resextract/kg/__init__.py",
+    "src/resextract/kg/graphify.py",
+    "src/resextract/kg/queries.py",
+    "tests/fixtures/kg-mini/**",
+    "tests/test_kg_graphify.py",
+    "tests/test_kg_queries.py",
+    "state/kg-mini/**",
+    "state/logs/U1.2*",
+    "orchestration/units/U1.2.md",
+    "orchestration/handoffs/U1.2.json"
+  ]
+}

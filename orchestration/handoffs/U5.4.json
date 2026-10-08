@@ -1,0 +1,92 @@
+{
+  "unit": "U5.4",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/docket/git_source.py",
+    "src/resextract/refresh/writer.py",
+    "tests/test_git_source.py",
+    "tests/test_writer_detection.py",
+    "docs/LIVE_TARGET_NOTES.md",
+    "orchestration/units/U5.4.md",
+    "orchestration/handoffs/U5.4.json",
+    "state/logs/U5.4-live-evidence.txt",
+    "state/logs/U5.4-live-evidence-window2.txt",
+    "state/logs/U5.4-live-evidence-untracked.txt",
+    "state/logs/U5.4-red-guard-a.txt",
+    "state/logs/U5.4-red-guard-b.txt"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "tests": "33 passed (tests/test_git_source.py 21, tests/test_writer_detection.py 12)",
+    "red_green": "two guards, both pasted into the tests' docstrings; each failed when reverted and both files went green again after restore",
+    "git_source": {
+      "pinned_vs_working_differ": false,
+      "pinned_vs_working_differ_note": "README.md pinned at HEAD 5cdc471a equals the working tree (both 1f6bbdf6) because README is clean between bursts - reported as measured, not forced. The divergence is demonstrated live elsewhere: .ci-trunk.txt is working-tree-only (pinned -> PathNotFoundAtCommit, working -> 590e007e / 281253 bytes), and traces/2026-09-28-duval-m0.jsonl is working 431605e6 vs pinned@3982f26 ba6128bf (3982f26 is the commit HEAD pointed at during this unit's recon)",
+      "pinned_sha8": "1f6bbdf6",
+      "working_sha8": "1f6bbdf6",
+      "blob_sha8": "2c34d208",
+      "pinned_blob_sha8": "2c34d208",
+      "no_working_tree_fallback_proven": true,
+      "no_working_tree_fallback_how": "test_missing_at_commit_is_typed_error_and_never_falls_back (same typed error before and after deleting the disk file) + test_git_object_source_never_opens_the_working_tree (a spy on builtins.open records zero opens under the repo root)",
+      "divergence_demo_untracked": {
+        "path": ".ci-trunk.txt",
+        "pinned": "PathNotFoundAtCommit",
+        "working_sha8": "590e007e",
+        "working_bytes": 281253
+      },
+      "divergence_demo_stale_head": {
+        "path": "traces/2026-09-28-duval-m0.jsonl",
+        "working_sha8": "431605e6",
+        "pinned_at_head_sha8": "431605e6",
+        "pinned_at_3982f26_sha8": "ba6128bf"
+      }
+    },
+    "writer": {
+      "verdict": "quiescent",
+      "verdict_honesty_note": "Both live windows (5 s and 25 s) returned quiescent: HEAD stable, 0 tracked files touched, no new untracked entries. The foreign actor's burst ended at 11:04:38Z, ~3 min before the windows ran; its reflog shows 9 HEAD moves in ~3 min (11:01:38Z..11:04:38Z). Expected active_writer/head_moved was NOT observed in-window and is not being forced.",
+      "head_before": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+      "head_after": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+      "head_at_recon": "3982f261cc77e193890d442603e399fa0663d80c",
+      "files_touched": 0,
+      "newest_mtime_utc": "2026-10-08T11:04:38Z",
+      "newest_mtime_path": "traces/2026-09-28-duval-m0.jsonl",
+      "worktree_run_dirs": 1,
+      "worktree_run1_toplevel_entries_nonrecursive": 29,
+      "worktree_files_reported_by_sibling": 441,
+      "this_unit_walked_worktrees": false,
+      "tracked_files_watched": 440,
+      "tracked_files_total": 440,
+      "assert_quiescent_raises": true,
+      "assert_quiescent_raises_note": "proven on a busy synthetic target (red->green guard 2, TargetBusyError); the live call did NOT raise because the live window was quiescent - that is the measured answer"
+    },
+    "duval_untouched": {
+      "head": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+      "head_unchanged_before_and_after": true,
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "porcelain_is_foreign_writer_output_only": true,
+      "recursive_walk_of_worktrees": false
+    },
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models",
+      ".venv/bin/python -m pytest tests/test_git_source.py tests/test_writer_detection.py -q -p no:cacheprovider --basetemp=state/logs/U5.4-pytest-tmp",
+      "# guard A revert: GitObjectSource falls back to the working tree -> 2 failed, 19 passed; restored -> 21 passed",
+      "# guard B revert: assert_quiescent returns unconditionally -> 2 failed, 10 passed; restored -> 33 passed",
+      ".venv/bin/python - <<'PY' ... detect_concurrent_writer('/home/zer0null/Duval', window_s=5) ... PY",
+      "git -C /home/zer0null/Duval reflog --date=iso -n 8",
+      "git -C /home/zer0null/Duval rev-parse HEAD",
+      "git -C /home/zer0null/Duval status --porcelain"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Wire GitObjectSource into resextract/docket/materialize.py's reference resolver: record the pinned commit_sha in the manifest/target block, resolve every provenance file through GitObjectSource(commit_sha) instead of Copier's working-tree path, call verify_pinned on each material destination, and call assert_quiescent(target) at the start of an acceptance run (allow_active=False by default). Keep secret-path refusal on. U5.3 owns materialize.py - do not edit it from this unit.",
+  "write_paths": [
+    "src/resextract/docket/git_source.py",
+    "src/resextract/refresh/writer.py",
+    "tests/test_git_source.py",
+    "tests/test_writer_detection.py",
+    "docs/LIVE_TARGET_NOTES.md",
+    "state/logs/U5.4*",
+    "orchestration/units/U5.4.md",
+    "orchestration/handoffs/U5.4.json"
+  ]
+}

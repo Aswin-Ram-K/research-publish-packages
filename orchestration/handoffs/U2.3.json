@@ -1,0 +1,209 @@
+{
+ "unit": "U2.3",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/store.py",
+  "tests/test_store_v4.py",
+  "tests/test_store_v3.py",
+  "tests/test_store_v4.py",
+  "state/logs/U2.3-live.log",
+  "state/logs/U2.3_guard/migrations_off.py",
+  "state/logs/U2.3_store.py.green",
+  "state/logs/U2.3-live-copy.sqlite",
+  "orchestration/units/U2.3.md",
+  "orchestration/handoffs/U2.3.json"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "occamy_probe_note": "curl exit 7 'Failed to connect to 192.168.2.168 port 8012'; probed once, restarted nothing, zero LLM calls.",
+  "tests": {
+   "store": 42,
+   "store_v2": 13,
+   "store_v3": 8,
+   "store_v4": 9
+  },
+  "migration": {
+   "version_before": 3,
+   "version_after": 4,
+   "rows_lost": 0,
+   "additive_only": true,
+   "added": {
+    "evidence": [
+     "producer"
+    ],
+    "verdicts": [
+     "producer",
+     "model"
+    ]
+   },
+   "check_vocabulary": "model|replay|fixture|unknown",
+   "pre_columns": {
+    "evidence": [
+     "id",
+     "claim_id",
+     "source_kind",
+     "source_ref",
+     "sha256",
+     "quote",
+     "context",
+     "retrieved_at",
+     "copy_path"
+    ],
+    "verdicts": [
+     "id",
+     "claim_id",
+     "verdict",
+     "rationale",
+     "evidence_ids_json",
+     "checked_at"
+    ]
+   },
+   "post_columns": {
+    "evidence": [
+     "id",
+     "claim_id",
+     "source_kind",
+     "source_ref",
+     "sha256",
+     "quote",
+     "context",
+     "retrieved_at",
+     "copy_path",
+     "producer"
+    ],
+    "verdicts": [
+     "id",
+     "claim_id",
+     "verdict",
+     "rationale",
+     "evidence_ids_json",
+     "checked_at",
+     "producer",
+     "model"
+    ]
+   }
+  },
+  "backfill": {
+   "old_rows_became": "unknown",
+   "no_row_became_model": true,
+   "basis": "no pre-v4 evidence/verdict row carries producer evidence; MIGRATION_NOTES_V4 records 'unknown' per row, never 'model'"
+  },
+  "accessors": {
+   "evidence_by_producer": true,
+   "verdicts_by_producer": true,
+   "verdict_may_back_model_claim": true,
+   "predicate_name_in_card": "verdict_may_back_model_claim",
+   "shared_impl": "_producer_is_model == may_back_model_claim's own comparison (reused, not duplicated)",
+   "callers": 0,
+   "callers_note": "no src/ call site yet: same unenforced history as may_back_model_claim. Wiring belongs to the assess writers (follow-up)."
+  },
+  "pins_relaxed": {
+   "file": "tests/test_store_v3.py",
+   "assertions_before": 97,
+   "assertions_after": 100,
+   "deleted": 0,
+   "relaxed": [
+    "schema_version(con) == 3 -> >= 3",
+    "SCHEMA_VERSION == 3 -> >= 3",
+    "summary['schema_version'] == 3 -> >= 3",
+    "status_text 'schema v3' -> regex \\bschema v\\d+\\b + f'schema v{SCHEMA_VERSION}'",
+    "added latent pin schema_version(con) == SCHEMA_VERSION"
+   ],
+   "contract_guard": "MIGRATIONS emptied via monkeypatch (state/logs/U2.3_guard/migrations_off.py): tests/test_store_v3.py -> 8 failed; restored -> 8 passed. Contract test fails at 'assert store.schema_version(con) >= 3'.",
+   "structural_untouched": "dockets_dir_unique / lane_candidates assertions unchanged"
+  },
+  "red_green": {
+   "a": "sha ok (store.py f23a9916c41b4c47 before == after, bit-identical restore); reverted backfill to 'model' -> FAILED 'At index 0 diff: model != unknown' (tests/test_store_v4.py:179); restored -> 1 passed.",
+   "b": "sha ok (f23a9916c41b4c47 before == after); migration-4 CHECK vocabulary reverted to admit 'none' -> FAILED 'DID NOT RAISE IntegrityError' (tests/test_store_v4.py:259); restored -> 1 passed. Real CHECK error: \"CHECK constraint failed: producer IN ('model', 'replay', 'fixture', 'unknown')\""
+  },
+  "live": {
+   "copy_path": "/home/zer0null/reserach extarctor/state/logs/U2.3-live-copy.sqlite",
+   "copy_version_before": 3,
+   "copy_version_after": 4,
+   "rows_lost": 0,
+   "added_columns": {
+    "evidence": [
+     "producer"
+    ],
+    "verdicts": [
+     "model",
+     "producer"
+    ]
+   },
+   "producer_distribution": {
+    "evidence": {},
+    "verdicts": {}
+   },
+   "producer_distribution_note": "all rows are 0 today; nothing to label, hence {} not {'unknown':0}",
+   "real_store_sha_before": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+   "real_store_sha_after": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+   "real_store_version_before": 3,
+   "real_store_version_after": 3,
+   "rows_before": {
+    "runs": 4,
+    "targets": 0,
+    "candidates": 10,
+    "claims": 0,
+    "evidence": 0,
+    "verdicts": 0,
+    "lanes": 5,
+    "dockets": 2,
+    "web_sources": 0,
+    "search_health": 0,
+    "rework": 0,
+    "lane_candidates": 10
+   },
+   "rows_after": {
+    "runs": 4,
+    "targets": 0,
+    "candidates": 10,
+    "claims": 0,
+    "evidence": 0,
+    "verdicts": 0,
+    "lanes": 5,
+    "dockets": 2,
+    "web_sources": 0,
+    "search_health": 0,
+    "rework": 0,
+    "lane_candidates": 10
+   },
+   "real_store_untouched": true,
+   "duval": {
+    "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+    "porcelain": "?? .ci-trunk.txt\\n?? .lane-j-scratch/",
+    "note": "foreign actor's entries and moving HEAD expected; U2.3 wrote nothing there and read no .worktrees/ path"
+   }
+  },
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  # 000, exit 7",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_store.py tests/test_store_v2.py tests/test_store_v3.py tests/test_store_v4.py -q  # 72 passed",
+   "for f in test_store test_store_v2 test_store_v3 test_store_v4; do pytest tests/$f.py -q; done  # 42/13/8/9",
+   "PYTHONPATH=state/logs/U2.3_guard pytest -p migrations_off tests/test_store_v3.py -q  # 8 failed",
+   "pytest tests/test_store_v3.py -q  # 8 passed",
+   "python - <<patch backfill->model>>; pytest tests/test_store_v4.py::test_v3_to_v4_... -q  # 1 failed; restore; 1 passed; sha identical",
+   "python - <<extend migration-4 CHECK with 'none'>>; pytest tests/test_store_v4.py::test_producer_check_... -q  # 1 failed; restore; 1 passed; sha identical",
+   "python - <<copy real store via sqlite3 backup API; init_db(copy)>>  # 3 -> 4, rows_lost 0, real sha 459e16cc... unchanged"
+  ]
+ },
+ "follow_up_not_done": "assessment writers (src/resextract/assess/**, owned by siblings U4.3/U4.4 right now) must start populating producer/model on insert; until that lands the columns exist but every row stays 'unknown'. Do not touch those files.",
+ "corrections_entry": {
+  "letter": "aj",
+  "plan_assumption": "the plan adds a producer identity only to candidates (migration 3); evidence and verdicts need no producer field.",
+  "actually": "verdicts is the higher-stakes table -- it decides whether a research claim is novel -- and report.json/verdicts.jsonl are per-run artefacts, not the system of record. With no producer column, a model-produced verdict is stored indistinguishably from a replay-produced one: the same FAIL-A hazard as candidates, one table over.",
+  "evidence": "Verifier V4A verbatim: 'Store gap => RISK, not acceptable interim. No producer on evidence/verdicts, but candidates does have one from migration 3 for this exact FAIL-A hazard.' Fixed here by schema v4: evidence.producer + verdicts.producer, vocabulary reused verbatim (model|replay|fixture|unknown, NOT 'none'), plus nullable verdicts.model; fail-closed backfill leaves every old row 'unknown'.",
+  "unit": "U2.3"
+ },
+ "tool_calls": 40,
+ "bound": 32,
+ "bound_note": "OVERSHOOT (40 vs 32), disclosed per the card. Causes: 4 read calls to store.py and 3 to test_store_v3.py under the read-before-edit policy; the two mandated red->green revert/restore cycles (2 calls) plus the docstring back-fill of their real transcripts (1); the live copy + real-store + Duval verification (1). No wasted/duplicate run: each pytest invocation is a distinct artifact (baseline, per-file counts, guard, two red runs, two green runs, final).",
+ "blocker": "",
+ "next_unit_hint": "Wire producer/model into the assess writers (assess/**) and their callers, then add an enforcement point that refuses a model-derived claim backed by a non-model verdict (verdict_may_back_model_claim currently has 0 callers).",
+ "write_paths": [
+  "src/resextract/store.py",
+  "tests/test_store_v4.py",
+  "tests/test_store_v3.py",
+  "state/logs/U2.3*",
+  "orchestration/units/U2.3.md",
+  "orchestration/handoffs/U2.3.json"
+ ]
+}

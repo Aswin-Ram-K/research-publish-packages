@@ -1,0 +1,256 @@
+{
+ "unit": "V0.21",
+ "status": "done",
+ "scope": "U0.19/U0.20 doctor leg-cost batch ('change nothing')",
+ "overall": "PASS",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "state it left",
+   "verdict": "PASS",
+   "observed": "tests/test_doctor.py 612 lines, 23 collected / 23 passed; git diff --numstat 419/0 = 0 assert lines deleted, 56 added; HEAD version 193 lines; doctor.py sha db25ab60... == baseline; revert markers []",
+   "evidence": "sha256sum src/resextract/doctor.py; pytest tests/test_doctor.py -q; git diff -U0 -- tests/test_doctor.py"
+  },
+  {
+   "id": "C2",
+   "name": "measurement re-derived",
+   "verdict": "PASS (caveat: unstable)",
+   "observed": "fast sweep fresh totals 1.3774/1.2961/1.5032/1.7655/1.4308 s (agrees with U0.20 1.369 s); second sweep Occamy 0.0433, SearXNG 5.0085 (ReadTimeout, ok=false), crawl 0.0051, graphify 0.5005, docling 0.0033, renderers 0.0001, dashport 0.0 => six-leg share 5.5175 s; second-sweep fresh totals 2.7607/4.8363/3.9716/1.4697/3.4794; dominators SearXNG+graphify ~99%",
+   "evidence": "state/verify/V0.21/measure.json"
+  },
+  {
+   "id": "C3",
+   "name": "already-bounded verified by demonstration",
+   "verdict": "PASS",
+   "observed": "doctor.py:206 Occamy GET, :220 Occamy completion (OCCAMY_COMPLETION_TIMEOUT=30.0), :256 SearXNG, :281 crawl, :344 docling all httpx.Client(timeout=HTTP_TIMEOUT=5.0); :317 and :325-329 graphify subprocess.run(timeout=HTTP_TIMEOUT). Hang test: HTTP leg returned 5.0437 s vs bound 5.0 (ReadTimeout); subprocess leg 5.0058 s vs bound 5.0 (TimeoutExpired); stub torn down in-call (connect_ex=111, thread dead, ss 0, pgrep 0). Test asserts the effective (client-level) bound at tests/test_doctor.py:502-512",
+   "evidence": "state/verify/V0.21/hangtest.json"
+  },
+  {
+   "id": "C4",
+   "name": "masking argument tested",
+   "verdict": "PASS - argument demonstrated; basis partly falsified",
+   "observed": "service alive 8/8 with a 20 s client: min/median/max 0.75/1.7584/8.232 s; monkeypatched bound 2.0 s -> 2/6 flips to DOWN while alive; current bound 5.0 s -> 1/6 flips; run B SearXNG leg 5.0085 DOWN + 2/8 samples timed out",
+   "evidence": "state/verify/V0.21/tight.json + measure.json"
+  },
+  {
+   "id": "C5",
+   "name": "red-green re-derived",
+   "verdict": "REPRODUCED",
+   "observed": "probe_searxng:256 timeout=HTTP_TIMEOUT -> timeout=None gives sha e8329b97cf50bcf13185ad093a64718f161cf7a225ed42d4a2e6fef5e1874ff4; FAILED tests/test_doctor.py:504 'AssertionError: get http://127.0.0.1:8080/search passes no per-leg timeout (None): an unbounded leg can dominate every run_doctor call'; restore asserted db25ab60...; 23 passed",
+   "evidence": "state/verify/V0.21/doctor.py.V021-backup (sha db25ab60...)"
+  },
+  {
+   "id": "C6",
+   "name": "honesty audit",
+   "verdict": "corrections recorded",
+   "observed": "dashboard/api.py:1148-1155 has doctor_ttl=20.0 and serves _doctor_cache while now-_doctor_at<ttl else run_doctor(force=force) -- the call-frequency lever is checkable and already mitigated (<=3 sweeps/min/process)",
+   "evidence": "grep src/resextract/dashboard/api.py"
+  },
+  {
+   "id": "C7",
+   "name": "containment",
+   "verdict": "PASS",
+   "observed": "Duval HEAD 6c60da5aa9240c0dcc2ff97b46f2a2cf37774951 before and after, porcelain only ?? .ci-trunk.txt / ?? .lane-j-scratch/; store 40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3 before and after, schema_version table=4, row counts identical; 0 state.sqlite sidecars; 0 stray procs/listeners; 0 .worktrees reads",
+   "evidence": "git -C /home/zer0null/Duval; sqlite3 immutable=1; ss -ltnp"
+  }
+ ],
+ "test_counts": {
+  "doctor": 23,
+  "deletions": 0
+ },
+ "doctor_py_sha": {
+  "expected": "db25ab608fb960fc62d4db01e9830ee27a771cdf326ebcd0efa876914b0384e0",
+  "actual": "db25ab608fb960fc62d4db01e9830ee27a771cdf326ebcd0efa876914b0384e0",
+  "match": true,
+  "revert_markers": []
+ },
+ "kept_from_u019": {
+  "test_extension_lines": 599,
+  "false_red_repaired": true,
+  "repaired_assertion": "tests/test_doctor.py:503 `timeout = request_timeout if request_timeout is not None else client_timeout` followed by :504 `assert isinstance(timeout, (int, float)) and not isinstance(timeout, bool)` and :508/:512 pinning `0 < timeout <= OCCAMY_COMPLETION_TIMEOUT` and `timeout == (OCCAMY_COMPLETION_TIMEOUT if url.endswith('/chat/completions') else HTTP_TIMEOUT)`; recorder at :457 stores (per-request kwarg, Client kwarg)",
+  "weakened": false
+ },
+ "measurement": {
+  "legs": [
+   {
+    "name": "Occamy",
+    "core_or_optional": "core",
+    "cost_s": 0.0433,
+    "timeout_s": 30.0,
+    "service_state": "down"
+   },
+   {
+    "name": "SearXNG",
+    "core_or_optional": "core",
+    "cost_s": 5.0085,
+    "timeout_s": 5.0,
+    "service_state": "up-but-slow (timed out at the bound in sweep B; 0.6326-8.232 s across sweeps)"
+   },
+   {
+    "name": "crawl bridge",
+    "core_or_optional": "core",
+    "cost_s": 0.0051,
+    "timeout_s": 5.0,
+    "service_state": "up"
+   },
+   {
+    "name": "graphify",
+    "core_or_optional": "core",
+    "cost_s": 0.5005,
+    "timeout_s": 5.0,
+    "service_state": "up"
+   },
+   {
+    "name": "docling bridge",
+    "core_or_optional": "optional",
+    "cost_s": 0.0033,
+    "timeout_s": 5.0,
+    "service_state": "down"
+   },
+   {
+    "name": "renderers",
+    "core_or_optional": "optional",
+    "cost_s": 0.0001,
+    "timeout_s": null,
+    "service_state": "local"
+   },
+   {
+    "name": "dashboard port",
+    "core_or_optional": "optional",
+    "cost_s": 0.0,
+    "timeout_s": null,
+    "service_state": "local"
+   }
+  ],
+  "fresh_total_s": 1.3774,
+  "six_leg_share_s": 1.3341,
+  "six_leg_share_sweepB_s": 5.5175,
+  "dominators": [
+   "SearXNG",
+   "graphify"
+  ],
+  "searxng_samples_s": [
+   0.6326,
+   0.799,
+   0.8957,
+   0.9181,
+   1.1238,
+   1.1297,
+   1.1856,
+   1.5853,
+   1.878,
+   2.4192,
+   2.4601,
+   2.7552,
+   4.5681,
+   5.0079,
+   5.0085
+  ],
+  "stable_versus_u020": false,
+  "note": "fast-sweep fresh total agrees with U0.20 (1.3774 vs 1.369); the total is NOT stable -- the live SearXNG tail reaches 8.232 s and hits the 5 s bound"
+ },
+ "bound_effective": {
+  "construction_sites": [
+   "doctor.py:206 httpx.Client(timeout=HTTP_TIMEOUT) [Occamy models]",
+   "doctor.py:220 httpx.Client(timeout=OCCAMY_COMPLETION_TIMEOUT) [Occamy completion, 30.0]",
+   "doctor.py:256 httpx.Client(timeout=HTTP_TIMEOUT) [SearXNG]",
+   "doctor.py:281 httpx.Client(timeout=HTTP_TIMEOUT) [crawl bridge]",
+   "doctor.py:344 httpx.Client(timeout=HTTP_TIMEOUT) [docling bridge]",
+   "doctor.py:317 subprocess.run([exe,'--version'], timeout=HTTP_TIMEOUT) [graphify]",
+   "doctor.py:325-329 subprocess.run([python,'-c','import openai ...'], timeout=HTTP_TIMEOUT) [graphify]"
+  ],
+  "hang_test": "HTTP leg returned at 5.0437 s vs bound 5.0 s (ReadTimeout); subprocess leg at 5.0058 s vs bound 5.0 s (TimeoutExpired)",
+  "test_asserts_client_level_bound": true
+ },
+ "masking_argument": {
+  "searxng_min_median_max_s": [
+   0.75,
+   1.7584,
+   8.232
+  ],
+  "tighter_bound_flips_to_down": true,
+  "tighter_bound_flips": "bound=2.0 s -> 2/6 probes DOWN while the service answered 8/8 direct requests; the CURRENT bound=5.0 s already flips 1/6 (2/8 in sweep B)",
+  "conclusion": "change-nothing is right: tightening below the live latency reports a working core SearXNG DOWN and changes core_down to ['Occamy','SearXNG']. But U0.20's supporting sentence 'all below the existing 5 s bound' is falsified -- the current 5 s bound already sits inside the live tail.",
+  "smallest_change_if_any": "none for cost inside doctor.py (the dashboard already caches run_doctor for 20 s at api.py:1148-1155). Recommended only, not implemented: treat a read-timeout on the SearXNG leg as a distinct 'slow' state rather than DOWN -- a fidelity change that reduces false DOWNs; and/or tune doctor_ttl on the dashboard side."
+ },
+ "red_green": {
+  "a": "reproduced; sha ok; FAILED at tests/test_doctor.py:504 'get http://127.0.0.1:8080/search passes no per-leg timeout (None)' with revert sha e8329b97...; PASSED 23 after restore to db25ab60..."
+ },
+ "not_reproduced": [
+  "state/logs/U0.19-searxng.json (8-sample SearXNG distribution) -- cited at tests/test_doctor.py:607 but ABSENT",
+  "state/logs/U0.19-measure.json (the 4.041 s fresh run behind INFERRED_WORST_UP_S=3.50) -- cited at tests/test_doctor.py:611 but ABSENT",
+  "state/logs/U0.19-redgreen.txt -- cited at tests/test_doctor.py:582 but ABSENT (only U0.20-redgreen.txt exists)",
+  "U0.20's SearXNG range '0.68-4.30 s, all ok' -- my sweeps hit the 5 s bound (2/8 and 1/6)"
+ ],
+ "overstated": [
+  "U0.20: 'the measured ~1.45 s is real latency of a LIVE but slow SearXNG ... all below the existing 5 s bound' -- live tail up to 8.232 s; the 5 s bound already fires on a working service",
+  "U0.20 residual worst case '5 legs x 5 s + 30 s Occamy' = 55 s undercounts: doctor.py has 7 bounded blocking ops (5+30+5+5+5+5+5) = 60 s; graphify alone is two 5 s spawns",
+  "'assertion count 23 -> 23' mislabels: 23 is the TEST count (correct, 23 collected before and after); the file has 100 assert lines, 56 added by U0.19 and 0 deleted"
+ ],
+ "unverified": [
+  "U0.19's own measurement claims (handoff evidence {} EMPTY, no units file, no state/verify/U0.19) -- its numbers survive only in the two test constants SLOWEST_OBSERVED_UP_S=1.747 and INFERRED_WORST_UP_S=3.50, whose source JSONs are missing",
+  "U0.19-after.txt row 2 is internally inconsistent (fresh_total_s 1.203 < six_leg_share_s 3.256), so U0.19's raw cost log is not self-consistent"
+ ],
+ "corrections": [
+  {
+   "plan_assumption": "SearXNG 0.68-4.30 s, all ok, comfortably inside the 5 s bound",
+   "actually": "the live tail reaches 8.232 s and the 5 s bound fires on a working service (2/8 samples, 1/6 probes), transiently reporting a core leg DOWN",
+   "evidence": "state/verify/V0.21/tight.json, state/verify/V0.21/measure.json",
+   "unit": "U0.20"
+  },
+  {
+   "plan_assumption": "worst case 5 legs x 5 s + 30 s Occamy = 55 s",
+   "actually": "60 s: seven bounded blocking operations (Occamy models 5 + completion 30 + SearXNG 5 + crawl 5 + graphify 5 + graphify 5 + docling 5)",
+   "evidence": "doctor.py:206,220,256,281,317,325-329,344",
+   "unit": "U0.20"
+  },
+  {
+   "plan_assumption": "'assertion count 23 -> 23'",
+   "actually": "23 is the test count; assertion lines are 100 (56 added, 0 deleted)",
+   "evidence": "git diff -U0 -- tests/test_doctor.py; grep -c 'assert '",
+   "unit": "U0.20"
+  }
+ ],
+ "tool_calls": 20,
+ "bound": 24,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "store": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows_identical": true,
+   "rows": {
+    "candidates": 10,
+    "claims": 0,
+    "dockets": 2,
+    "evidence": 0,
+    "lane_candidates": 10,
+    "lanes": 5,
+    "rework": 0,
+    "runs": 4,
+    "schema_version": 4,
+    "search_health": 0,
+    "targets": 0,
+    "verdicts": 0,
+    "web_sources": 0
+   }
+  },
+  "new_sqlite_sidecars": 0,
+  "stray_processes": 0,
+  "stray_listeners": 0,
+  "sidecar_note": "transient state/state.sqlite-wal + state.sqlite-shm appeared mid-run (seen 13:37:35) and were gone by 13:37:46 -- a concurrent sibling's brief read-write open. The store sha 40e8aa0c... and its mtime 07:47:56 are unchanged, and V0.21 opened the store ONLY with immutable=1, so 0 sidecars are attributable to this unit.",
+  "listener_note": "the only 2 listeners on doctor ports are the pre-existing live dependencies 127.0.0.1:8080 (SearXNG) and 127.0.0.1:8891 (crawl bridge) -- both core legs the doctor correctly reports UP. The V0.21 hang stub bound an ephemeral port and is proven gone (connect_ex=111, 0 ss hits, 0 stray procs)."
+ },
+ "blocker": "",
+ "next_unit_hint": "No cost change is justified inside doctor.py: the bound exists (client-level, demonstrated to fire at 5.04 s) and tightening it only converts a live core SearXNG into a false DOWN. The remaining levers are (1) dashboard-side: dashboard/api.py:1148-1155 already caches run_doctor for doctor_ttl=20.0 s -- tune/coalesce there if fewer sweeps are wanted; (2) a CORRECTNESS follow-up: the current 5 s bound already false-DOWNs a live SearXNG under load (core_down transiently becomes ['Occamy','SearXNG']), so consider a distinct 'slow' state for a read-timeout instead of DOWN. Also note tests/test_doctor.py cites three state/logs/U0.19-*.json evidence files that do not exist -- either regenerate them or drop the citations.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V0.21.md",
+  "orchestration/handoffs/V0.21.json",
+  "state/logs/V0.21*",
+  "state/verify/V0.21/**"
+ ]
+}

@@ -1,0 +1,66 @@
+{
+  "unit": "U5.2",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/docket/manifest.py",
+    "src/resextract/docket/assemble.py",
+    "src/resextract/docket/__init__.py (exports added: assemble_docket, verify_docket, manifest models)",
+    "tests/test_docket_assemble.py",
+    "tests/fixtures/docket-store/{seed.json,README.md,sources/**}",
+    "dockets/_smoke/**",
+    "dockets/_smoke/_refusal/** (refusal-demo leftovers: material only, no MANIFEST.json)",
+    "state/logs/U5.2_live_smoke.py",
+    "state/logs/U5.2_live_smoke.txt",
+    "orchestration/units/U5.2.md",
+    "orchestration/handoffs/U5.2.json"
+  ],
+  "evidence": {
+    "tests": "24 passed (tests/test_docket_assemble.py in 0.09s); full suite: 250 passed, 1 skipped in 17.20s",
+    "red_green": "two guards, both pasted into the test docstrings: (1) orphan-claim gate reverted -> test_orphan_claim_refused fails with 'E ValueError: refusing to write an invalid MANIFEST.json: claims[C1]: no provenance' / '... no evidence' (write_manifest's second layer catches it, so AssemblyRefused is never raised); (2) sha256 gate reverted -> test_material_tampering_refused fails with 'ValueError: refusing to write an invalid MANIFEST.json: claims[C1].evidence: sha256 mismatch for material/docs/FINDINGS.md (manifest 1ac9f4239172…, disk 6c0e099667eb…)'. Both files restored; 'REVERTED' marker count 0 after the run.",
+    "live": {
+      "docket": "dockets/_smoke",
+      "files": [
+        "README.md", "ITEM.md", "MANIFEST.json", "CLAIMS.md", "EVIDENCE.md", "PRIOR_ART.md",
+        "REFERENCES.md", "REFERENCES.bib", "RESULTS.md", "METHOD.md", "CHECKLIST.md",
+        "OPEN_QUESTIONS.md", "UPDATE_BACKLOG.md", "HISTORY.md", "material/", "web/", "repro/"
+      ],
+      "material_files": ["CITATION.cff", "README.md", "docs/FINDINGS.md", "evals/baseline.json", "source-material/design-record/Consonance_Master_Architecture.docx", "src/adapter.ts"],
+      "verify_ok": true,
+      "claims": 3,
+      "material_count": 6,
+      "generated_at_frozen": "2026-10-08T00:00:00Z",
+      "evidence_quotes_copied_bytes": "EVIDENCE.md section '## material/docs/FINDINGS.md — lines 1-40' (sha256 47603939a74e1b6b7130d551e83bc220ba8ea8ffcf6d26de74759fd73c955015, 27401 bytes) quotes '# FINDINGS — the whole picture in one place' and the '**Current state (read 2026-10-07):** main @ **9b3ca96**' line, read from the copy inside the docket",
+      "refusal_demo": "claim C1 refused: line span 900-999 is outside material/docs/FINDINGS.md (379 lines); claim C1 refused: provenance ref 'graph:this_node_does_not_exist_u5_2' — graph node does not exist (fabricated provenance); MANIFEST.json left behind: False"
+    },
+    "interface_adaptations": [
+      "assemble() takes extra kwargs beyond the unit card's list: results (MeasuredResult list), prior_art, graph_path, licence, status, source_root — RESULTS.md, PRIOR_ART.md, METHOD.md graph anchors and the CHECKLIST licence/PDF gates need them.",
+      "material_report accepts CopyReport | CopyPlan | Mapping | docket path. The docket-path form goes through material_report_from_docket(), which reads material/EXCERPTS.md (spans) and material/LINKS.md (over-cap stubs) and hashes the docket's own copies — never the source repo. Used to reuse U5.1's real copies for the live smoke.",
+      "MANIFEST.json is a documented superset of the plan's key list, still extra='forbid': claims[].kind (CLAIMS.md kind column), generated_at (§5 timeline), material[].linked/excerpt_reason/note (linked=True marks a LINKS.md stub that deliberately has no file on disk, so the sha256 gate can skip it).",
+      "Package re-export is assemble_docket, not assemble: re-exporting the function as 'assemble' rebinds the package attribute and shadows the resextract.docket.assemble module (monkeypatching then patches a function). 'from resextract.docket.assemble import assemble' still works.",
+      "store.init_db(path) returns a Path, not a sqlite3.Connection — tests call store.connect(path) after it.",
+      "Evidence/provenance ref grammar: optional file:/graph:/web: prefix plus #L<lo>-L<hi>; 'material/x' and 'x' both normalise to the same material dest.",
+      "CopyItem.dest is material/-relative (U5.1 behaviour), so material files live at <docket>/material/<dest>."
+    ],
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_docket_assemble.py -q  ->  24 passed",
+      ".venv/bin/python -m pytest tests/ -q  ->  250 passed, 1 skipped",
+      ".venv/bin/python state/logs/U5.2_live_smoke.py  ->  17 top-level entries, verify_ok=True, 3 claims, 6 material files, refusal demo names C1, no MANIFEST.json left behind",
+      "revert experiment: orphan gate + sha256 gate removed one at a time, tests re-run, assemble.py restored (0 'REVERTED' markers)"
+    ],
+    "constraints_respected": "No network, no Occamy, no writes into state/verify-docket, /home/zer0null/Duval or any read-only fixture (copy.py read-only). Claims in the live docket and in fixtures are labelled fixtures (generated_by.model = 'fixture-claims-u5.2'); only the material copies are real."
+  },
+  "blocker": "",
+  "next_unit_hint": "Wire verify_docket()/read_manifest() into resextract status and the refresh engine (staleness: material sha drift -> needs_rework) and have the materialize stage call assemble_docket with a real CopyReport from U5.1 plus mined claims. Not implemented here (out of scope, name them in the next card if needed): ITEM.tex/PDF rendering, the §3.6 sibling-docket split rule, web/ page copying, and store upsert of the dockets row. A verifier should re-run the two revert experiments to confirm the pasted red output, tamper a copied byte and re-run verify_docket, and check that dockets/_smoke/EVIDENCE.md quotes match sha256_file(dockets/_smoke/material/docs/FINDINGS.md).",
+  "write_paths": [
+    "src/resextract/docket/manifest.py",
+    "src/resextract/docket/assemble.py",
+    "src/resextract/docket/__init__.py",
+    "tests/test_docket_assemble.py",
+    "tests/fixtures/docket-store/**",
+    "dockets/_smoke/**",
+    "state/logs/U5.2_live_smoke.py",
+    "state/logs/U5.2_live_smoke.txt",
+    "orchestration/units/U5.2.md",
+    "orchestration/handoffs/U5.2.json"
+  ]
+}

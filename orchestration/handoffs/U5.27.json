@@ -1,0 +1,119 @@
+{
+  "unit": "U5.27",
+  "status": "done",
+  "artifacts": [
+    "dockets/duval/duval-replay-material/MANIFEST.json",
+    "dockets/duval/duval-replay-material/CLAIMS.md",
+    "state/backups/U5.27-replay-material/duval-replay-material/",
+    "state/verify/U5.27/rehearsal/",
+    "state/verify/U5.27/storecopy/",
+    "orchestration/units/U5.27.md"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "preflight": {
+      "manifest_sha_before": "9b6a577e1402fe41841e153a485e4b044a945a5f8bf05a59c2268df6086cd130",
+      "tree_hash_before": "02fa18ecfe129f704d130e629e807122bb12b4f8a5726097341277c9af3fe7d5",
+      "hash_recipe": "manifest = sha256sum <docket>/MANIFEST.json over RAW bytes. tree = find <docket> -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum (every file, no exclusions, path+digest lines fed to one outer sha256). Both recipes stated because nine drifts were measured in this build.",
+      "claim_before": {"id": "C-curated", "verdict": "CONFIRMS", "producer": "unknown", "verdict_reason": null},
+      "verify_before": "ok=False; problems=[\"claim C-curated: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='replay') -- a non-model run may not assert CONFIRMS; re-derive the claim through materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)\"] -- re-run against state/backups/U5.27-replay-material/duval-replay-material after the repair, since the pre-repair bytes are preserved there",
+      "backup": "state/backups/U5.27-replay-material/duval-replay-material/ (30 files; MANIFEST.json sha 9b6a577e...)",
+      "restore_command": "rm -rf 'dockets/duval/duval-replay-material' && cp -a 'state/backups/U5.27-replay-material/duval-replay-material' 'dockets/duval/duval-replay-material'"
+    },
+    "repair": {
+      "mechanism": "assemble_docket == assemble() (src/resextract/docket/assemble.py:1150; imported as assemble_docket at src/resextract/docket/materialize.py:106, the entry point called at materialize.py:2121). Its render-side cap _cap_uncapped_claims (assemble.py:1103, invoked at assemble.py:1244) reads the passed CONFIRMS, sees producer='unknown' (store.producer_is_model False), and re-renders EXTENDS with the reason recorded on Claim.verdict_reason (assemble.py:1136-1145). materialize._claim_standing (materialize.py:1609) is the same rule but is MemberSpec-typed and cannot be called without fabricating a member row (assemble.py:1117-1119), so the render cap is the honest route. No store interaction in assemble().",
+      "exact_call": "from resextract.docket.assemble import assemble, material_report_from_docket; m=json.load(MANIFEST); lane={**m['lane'],'status':m['status']}; assemble(docket_dir, lane=lane, claims=m['claims'], material_report=material_report_from_docket(docket_dir), target_meta=m['target'], freshness=m['freshness'], generated_at=m['generated_at'], model='', status='draft', producer='replay', status_reason=m['status_reason']) -- every input is the manifest's own recorded value, so nothing else can move. Rehearsed on a copy under state/verify/U5.27/rehearsal/ before the single real application.",
+      "hand_edited": false,
+      "hand_edited_note": "MANIFEST.json and CLAIMS.md were written ONLY by assemble(); the standing was never edited by hand. After the path ran, the render had also appended an assembly line to HISTORY.md and created a NEW ITEM.md.r5 (assemble()'s own ITEM.md preservation rotation; r1-r4 already existed) -- the natural render raised the verified banner-file count 15->16. Those two bookkeeping side effects were reverted/removed (HISTORY.md restored from backup; ITEM.md.r5 deleted) so the artifact diff is claim-only. ITEM.md.r5 is referenced nowhere in the manifest ('ITEM.md.r' not in MANIFEST.json -> False), so no dangling reference was left."
+    },
+    "after": {
+      "claim_after": {"id": "C-curated", "verdict": "EXTENDS", "verdict_reason": "verdict CONFIRMS was passed to assemble() but the claim's producer is 'unknown', not 'model'; capped at EXTENDS by the same rule as materialize._claim_standing (a non-model run may not assert CONFIRMS)"},
+      "reason_where": "CLAIMS.md:9 -> '## C-curated — EXTENDS'; CLAIMS.md:15 -> '**Verification state.** EXTENDS — a standing note was recorded on write and is quoted verbatim: verdict CONFIRMS was passed to assemble() but the claim's producer is 'unknown', not 'model'; capped at EXTENDS by the same rule as materialize._claim_standing (a non-model run may not assert CONFIRMS)'; MANIFEST.json:23 -> \"verdict_reason\": <same text>",
+      "verify_after": "ok=True; problems=[]",
+      "manifest_sha_after": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4",
+      "tree_hash_after": "158ae3d26a5cedf2f67fbed1366c4847f0acae076b72447ff52d6968a9905865"
+    },
+    "unchanged_proof": {
+      "title_same": true,
+      "title": "Duval replay-sourced material (README.md H1 '# Duval replay-sourced material — report docket'; MANIFEST lane.title identical)",
+      "evidence_lines_same": 151,
+      "contexts_each_once": true,
+      "evidence_detail": "8 evidence items, 8 unique contexts, each context exactly once (EVIDENCE.md 151 lines before and after)",
+      "material_bytes_same": true,
+      "material_detail": "8/8 material dest+sha256 pairs identical to backup (sha256 field-by-field compare)",
+      "banner_files_same": 15,
+      "banner_pattern": "grep -rl 'PROVENANCE: replay-produced' (15 files; includes repro/run.sh; excludes HISTORY.md) -- held at 15 only because the new ITEM.md.r5 the render created was removed",
+      "window_sealed_still_null": true,
+      "producer_status_promotion_same": true,
+      "producer_status_detail": "generated_by.producer='replay', status='draft', status_reason identical, lane/target/freshness/generated_at/generated_by byte-identical -> promotion_eligible() output is unchanged (False, producer is replay)",
+      "manifest_diff_only_claim_fields": true,
+      "diff_summary": "File-level diff vs backup = exactly ['MANIFEST.json','CLAIMS.md']. MANIFEST top-level key diff = ['claims'] ONLY (all 18 other keys byte-identical). Inside claims, only C-curated moved: verdict 'CONFIRMS'->'EXTENDS' and verdict_reason null-><the cap reason>. C3/C5/C7 untouched (UNVERIFIED/null, as before); their evidence/provenance/producer/text identical.",
+      "git_status_dockets": "empty (unchanged; `git status --porcelain -- dockets` printed nothing after the repair)"
+    },
+    "smoke_frozen": {
+      "manifest_sha": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+      "byte_identical": true,
+      "still_reports_problem": true,
+      "problem_quoted": "ok=False; problems=[\"claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='unknown') -- a non-model run may not assert CONFIRMS; re-derive the claim through materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)\"] -- left exactly as it was; ACCEPT-BY-DESIGN per the ruling, not cleaned",
+      "touched": false
+    },
+    "u55_unchanged": {
+      "manifest_sha": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+      "verify_ok": true,
+      "problems": [],
+      "touched": false
+    },
+    "tests_referencing_real_dockets": [
+      {"file": "tests/test_docket_provenance.py", "line": 391, "asserts": "test_pre_u5_7_smoke_manifest_still_loads_and_reports_uncapped_confirms: verify_docket(dockets/_smoke).ok is False and problems == [the exact C1 CONFIRMS-vs-unknown contradiction]", "now_stale": false, "why": "_smoke is untouched and still fails exactly as asserted"},
+      {"file": "tests/test_dashboard.py", "line": 1335, "asserts": "a synthetic docket row built to hold the SHAPE the real duval-replay-material row holds (fixture generator, tmp_path root)", "now_stale": false, "why": "does not read or assert the on-disk real docket's claim standing"},
+      {"file": "tests/test_dashboard.py", "line": 69, "asserts": "module note: verify_docket correctly refuses a docket whose claim asserts standing its producer cannot back; the FIXTURE was corrected, not the check", "now_stale": false},
+      {"file": "tests/test_docket_reassembly.py", "line": 1144, "asserts": "dockets/_smoke/MANIFEST.json pinned bytes and duval-u55-pinned verify ok", "now_stale": false, "why": "both untouched (41ec711a..., 445032f7...)"},
+      {"file": "tests/test_dashboard.py", "line": 389, "asserts": "duval/duval-u55-pinned nested-slug routing (copy of the real docket into tmp_path)", "now_stale": false}
+    ],
+    "tests_note": "No test asserts verify_docket(dockets/duval/duval-replay-material).ok, so nothing became stale from this repair. No test was edited.",
+    "store_untouched": {
+      "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+      "version": 4,
+      "version_note": "sha matches the expected v4 store byte-for-byte. PRAGMA user_version on a COPY reads 0 (the 'v4' label is the store's own schema constant, not user_version); 13 tables. Row counts read from the COPY: dockets 2, candidates 10, verdicts 0, claims 0.",
+      "rows_identical": true,
+      "write_was_required": false,
+      "used_immutable": false,
+      "sidecars_observed": 2,
+      "sidecars_created_by_me": 0,
+      "sidecar_note": "state.sqlite-wal (0 bytes) and state.sqlite-shm (32768) predate this unit's read and were observed, not created, by U5.27; their mtime 2026-10-08T09:29:14 postdates session start (09:26:37) and is attributable to a concurrent sibling process, not to this unit. state.sqlite mtime is 07:47:56 (untouched). This unit never opened the real store for querying: it sha256sum'd it, cp'd it, and queried the COPY under state/verify/U5.27/storecopy/ with a normal (non-immutable) connection; a copy's sidecars belong to the copy."
+    },
+    "duval_untouched": {
+      "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "?? .ci-trunk.txt\\n?? .lane-j-scratch/  (2 foreign-actor entries, expected; HEAD moves on its own)",
+      "writes_by_this_unit": 0
+    },
+    "residual": "Three residuals, none a re-damage. (1) 0 of 8 material items record a non-null blob_sha: every one is resolved_from='working_tree', so the material is pinned by sha256 of the copied bytes but not to a git blob -- the bytes cannot be re-fetched from a commit. (2) The file-fact standing gap still applies and is now VISIBLE: C-curated is kind='file-fact' (five files copied from the target at a recorded HEAD) and its honest state is now 'EXTENDS with a cap note', because there is still no distinct standing for mechanically-verified facts -- the cap note says why CONFIRMS was refused but does not express 'these bytes were hash-verified'. The verify_docket message itself names this as the alternative remedy. (3) The state.sqlite `dockets` row for duval-replay-material was deliberately NOT updated (a store write was forbidden and would have invalidated four siblings); the dashboard reads MANIFEST.json from disk, so the artifact is honest, but if that row mirrors claim standing it is now stale relative to the manifest. Also: HISTORY.md carries no record of this repair, because that line was reverted to keep the artifact diff claim-only -- the repair's provenance is this handoff plus the claim's own verdict_reason.",
+    "tool_calls": 23,
+    "bound": 24,
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  -> 000 (DOWN, exit 7); probed once, no restart",
+      "sha256sum dockets/duval/duval-replay-material/MANIFEST.json ; find <docket> -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum",
+      "mkdir -p state/backups/U5.27-replay-material && cp -a <docket> <backup>/",
+      "grep -rn '_claim_standing|def assemble_docket|MODEL_PRODUCER|def producer_is_model' src/resextract/ ; read materialize.py:2100-2219, 1535-1714, 550-624, assemble.py:2488-2542, 1090-1269, 790-964",
+      "find . -path ./.git -prune -o -name __pycache__ -type d -print0 | xargs -0 rm -rf   (PYTHONDONTWRITEBYTECODE=1 exported first; 0 left)",
+      "python: copytree -> rederive(rehearsal) -> filediff/verify/diffkeys  (rehearsal only)",
+      "python: rederive(real) -> banner/snap diff -> delete new ITEM.md.r5, restore HISTORY.md -> verify_docket(real) -> manifest diff keys -> shas",
+      "python: verify_docket(backup), verify_docket(real), verify_docket(_smoke), verify_docket(u55-pinned)",
+      "python: EVIDENCE line count, evidence context uniqueness, material dest+sha compare, lane/target/freshness/generated_at compare, window_sealed/producer/status",
+      "sha256sum state/state.sqlite ; ls -l state.sqlite* ; cp store+sidecars to state/verify/U5.27/storecopy/ ; sqlite3 row counts on the COPY",
+      "git -C /home/zer0null/Duval rev-parse HEAD ; git -C /home/zer0null/Duval status --porcelain ; git status --porcelain -- dockets",
+      "grep tests for duval-replay-material|_smoke|duval-u55-pinned|verify_docket|problems"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Verifier: re-run verify_docket on dockets/duval/duval-replay-material (expect ok=True, problems=[]), confirm dockets/_smoke/MANIFEST.json is still 41ec711a... AND verify_docket(_smoke) still returns ok=False with the C1 contradiction (it must NOT be cleaned), confirm duval/duval-u55-pinned is still 445032f7... and ok, and confirm the manifest top-level diff vs state/backups/U5.27-replay-material/ is ['claims'] with only C-curated.verdict/verdict_reason moved. Note the disclosed hand-intervention: assemble()'s ITEM.md.rN rotation is non-idempotent (a bare re-render creates a new ITEM.md.rN and raises the banner-file count 15->16), so the new r5 was deleted and HISTORY.md restored to keep the artifact diff claim-only -- a future unit could make that rotation idempotent. Open gaps left for follow-ups: (a) the state.sqlite dockets row was not updated (store write forbidden here); (b) 8/8 material items have blob_sha=null (working_tree), so material is hash-pinned but not commit-pinned; (c) no distinct standing exists for mechanically-verified file-facts, which is why C-curated (kind=file-fact) can only render EXTENDS.",
+  "write_paths": [
+    "dockets/duval/duval-replay-material/MANIFEST.json",
+    "dockets/duval/duval-replay-material/CLAIMS.md",
+    "state/backups/U5.27-replay-material/duval-replay-material/",
+    "state/verify/U5.27/rehearsal/duval-replay-material/",
+    "state/verify/U5.27/storecopy/",
+    "orchestration/units/U5.27.md",
+    "orchestration/handoffs/U5.27.json"
+  ]
+}

@@ -36,13 +36,57 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "live: hits the real Occamy endpoint (:8012)")
 
 
+# --------------------------------------------------------------------------- #
+# The ``live`` convention: an explicit marker, never a name.
+#
+# ``live`` used to be decided by ``if "live" in item.keywords``.  That is not a
+# check of the test's name — pytest injects a *bare* keyword key for every
+# parametrisation id (and for module/class names and mark names), so
+# ``@pytest.mark.parametrize("mode", ["live"])``, or a class/module named
+# ``live``, silently skipped tests that never touch the network.  A silent skip
+# reports success, so it was a false-green generator.  Only an explicit
+# ``@pytest.mark.live`` marker skips anything now.
+# --------------------------------------------------------------------------- #
+
+LIVE_SKIP_REASON = "live test — run with --live or RESEXTRACT_LIVE=1"
+
+
+def _live_enabled(config: pytest.Config) -> bool:
+    """``--live`` (CLI) and ``RESEXTRACT_LIVE=1`` (env) both mean "run live tests"."""
+    return bool(config.getoption("--live")) or os.environ.get("RESEXTRACT_LIVE") == "1"
+
+
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    if config.getoption("--live") or os.environ.get("RESEXTRACT_LIVE") == "1":
+    if _live_enabled(config):
         return
-    skip = pytest.mark.skip(reason="live test — run with --live or RESEXTRACT_LIVE=1")
+    skip = pytest.mark.skip(reason=LIVE_SKIP_REASON)
     for item in items:
-        if "live" in item.keywords:
+        # Explicit marker only — item.get_closest_marker also honours
+        # ``pytestmark``/class/module-level marking, but not names or ids.
+        if item.get_closest_marker("live") is not None:
             item.add_marker(skip)
+
+
+def pytest_terminal_summary(
+    terminalreporter: Any, exitstatus: int, config: pytest.Config
+) -> None:
+    """Make skipped live tests loud, so "N skipped" is never read as "N passed"."""
+    if _live_enabled(config):
+        return
+    skipped = 0
+    for report in terminalreporter.stats.get("skipped", []):
+        longrepr = getattr(report, "longrepr", None)
+        reason = longrepr[2] if isinstance(longrepr, tuple) and len(longrepr) >= 3 else ""
+        # The report repr is prefixed ("Skipped: <reason>"); match on the reason.
+        if LIVE_SKIP_REASON in str(reason):
+            skipped += 1
+    if skipped:
+        terminalreporter.write_sep(
+            "=",
+            f"{skipped} live test(s) SKIPPED — NOT run and NOT passed; "
+            "rerun with --live or RESEXTRACT_LIVE=1",
+            red=True,
+        )
 
 
 class FakeSleep:

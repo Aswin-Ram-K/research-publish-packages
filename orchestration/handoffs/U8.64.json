@@ -1,0 +1,247 @@
+{
+ "unit": "U8.64",
+ "status": "done",
+ "artifacts": [
+  "orchestration/units/U8.64.md",
+  "orchestration/handoffs/U8.64.json"
+ ],
+ "evidence": {
+  "probe": "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models -> 000 (exit 7, connection refused); zero LLM calls",
+  "sha256sum": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3  state/backups/U8.61-state-pre/state.sqlite | ae9b23b176ae40ee1043c4bcbb7e671db25250de0bdd9a0916d660ec9341c5be  state/state.sqlite",
+  "backup_dir": "state.sqlite (167936 B, mtime 2026-10-08 07:47:56), state.sqlite.orig (identical sha), pre-store.sha256.txt records pre-state sha 40e8aa0c... = the backup copy",
+  "live_stat": "state/state.sqlite size=172032 mtime=2026-10-08 10:34:34.609748319 -0500 -> net change vs backup (+4096 B); earlier change NOT attributable by this unit (only read-write SELECT opens were performed here, and sha was stable across them)",
+  "keying": "dockets row is keyed by dir TEXT; SELECT ... WHERE id LIKE '%duval-replay-material%' matched 0 because id is INTEGER -- matched via dir",
+  "no_immutable": "sqlite3.connect(path) only; immutable=1 never used",
+  "commands": [
+   "sha256sum + stat on backup and live store",
+   ".venv/bin/python sqlite3 read-write: PRAGMA table_info(dockets), per-table counts, SELECT * FROM dockets ORDER BY id",
+   "grep -rn manifest_json / verify_docket / dockets consumers",
+   ".venv/bin/python verify_docket() on the three dockets"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "No write needed: id=1 dockets row for duval-replay-material is already corrected in state/state.sqlite (C-curated=EXTENDS + reason, generated_by.producer=replay). If mirror/store sync is still wanted, the remaining candidate is id=2 'dockets/duval/duval-u55-pinned', whose stored generated_by lacks the producer key that its disk MANIFEST carries (producer:'replay') -- deliberately left untouched as out of U8.64 scope; delegate a narrow unit for it. Residual non-goal diffs on id=1 (status_reason null, generated_at 11:04:22Z vs disk 12:00:00Z) are formatting/staleness only. Note the store already differed from the U8.61 backup (ae9b23b1 vs 40e8aa0c, +1 page) and that earlier change cannot be attributed from this unit's evidence.",
+ "write_paths": [
+  "orchestration/units/U8.64.md",
+  "orchestration/handoffs/U8.64.json"
+ ],
+ "backup_vs_live": {
+  "backup_sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+  "live_sha": "ae9b23b176ae40ee1043c4bcbb7e671db25250de0bdd9a0916d660ec9341c5be",
+  "equal": false,
+  "backup_bytes": 167936,
+  "live_bytes": 172032,
+  "backup_mtime": "2026-10-08 07:47:56.009682763 -0500",
+  "live_mtime": "2026-10-08 10:34:34.609748319 -0500",
+  "note": "not equal -> a net change was made since the backup; +4096 B is consistent with an in-page manifest_json text update. This unit cannot attribute the earlier change (it made no write)."
+ },
+ "schema": {
+  "table": "dockets",
+  "columns": [
+   {
+    "name": "id",
+    "type": "INTEGER",
+    "pk": 1
+   },
+   {
+    "name": "lane_id",
+    "type": "INTEGER"
+   },
+   {
+    "name": "dir",
+    "type": "TEXT"
+   },
+   {
+    "name": "manifest_json",
+    "type": "TEXT"
+   },
+   {
+    "name": "source_head",
+    "type": "TEXT"
+   },
+   {
+    "name": "graph_hash",
+    "type": "TEXT"
+   },
+   {
+    "name": "freshness",
+    "type": "TEXT"
+   },
+   {
+    "name": "verified_at",
+    "type": "TEXT"
+   },
+   {
+    "name": "last_refresh_at",
+    "type": "TEXT"
+   }
+  ],
+  "keying": "ROW KEYED BY dir TEXT, not by an id string; target row id=1. manifest_json holds the whole manifest, so the schema CAN express the fix (not refused)."
+ },
+ "row_before": {
+  "id": 1,
+  "lane_id": null,
+  "dir": "dockets/duval/duval-replay-material",
+  "source_head": "3982f261cc77e193890d442603e399fa0663d80c",
+  "graph_hash": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+  "freshness": "current",
+  "verified_at": "2026-10-08T11:04:22.359Z",
+  "last_refresh_at": "2026-10-08T11:04:22.476Z",
+  "manifest_json_len": 4701,
+  "manifest_json_C_curated": {
+   "id": "C-curated",
+   "producer": "unknown",
+   "verdict": "EXTENDS",
+   "verdict_reason": "verdict CONFIRMS was passed to assemble() but the claim's producer is 'unknown', not 'model'; capped at EXTENDS by the same rule as materialize._claim_standing (a non-model run may not assert CONFIRMS)"
+  },
+  "manifest_json_generated_by": {
+   "app": "resextract",
+   "model": "",
+   "producer": "replay",
+   "version": "0.1.0"
+  },
+  "manifest_json_freshness": {
+   "age_days": 0.0,
+   "prior_art_checked_at": null,
+   "state": "current",
+   "verified_at": "2026-10-08T11:04:22.359Z"
+  }
+ },
+ "row_state_found": "already_corrected",
+ "exact_sql": "none \u2014 already correct",
+ "exact_sql_would_be": "UPDATE dockets SET manifest_json=? WHERE id=1  (values taken verbatim from dockets/duval/duval-replay-material/MANIFEST.json; NOT executed because the row already matched)",
+ "row_after": {
+  "id": 1,
+  "dir": "dockets/duval/duval-replay-material",
+  "manifest_json_C_curated": {
+   "verdict": "EXTENDS",
+   "verdict_reason": "verdict CONFIRMS was passed to assemble() but the claim's producer is 'unknown', not 'model'; capped at EXTENDS by the same rule as materialize._claim_standing (a non-model run may not assert CONFIRMS)"
+  },
+  "manifest_json_generated_by": {
+   "app": "resextract",
+   "model": "",
+   "producer": "replay",
+   "version": "0.1.0"
+  },
+  "identical_to_row_before": true
+ },
+ "tables_row_counts_before": {
+  "candidates": 10,
+  "claims": 0,
+  "dockets": 2,
+  "evidence": 0,
+  "lane_candidates": 10,
+  "lanes": 5,
+  "rework": 0,
+  "runs": 4,
+  "schema_version": 4,
+  "search_health": 0,
+  "targets": 0,
+  "verdicts": 0,
+  "web_sources": 0
+ },
+ "tables_row_counts_after": {
+  "candidates": 10,
+  "claims": 0,
+  "dockets": 2,
+  "evidence": 0,
+  "lane_candidates": 10,
+  "lanes": 5,
+  "rework": 0,
+  "runs": 4,
+  "schema_version": 4,
+  "search_health": 0,
+  "targets": 0,
+  "verdicts": 0,
+  "web_sources": 0
+ },
+ "all_table_counts_identical": true,
+ "store_sha_before": "ae9b23b176ae40ee1043c4bcbb7e671db25250de0bdd9a0916d660ec9341c5be",
+ "store_sha_after": "ae9b23b176ae40ee1043c4bcbb7e671db25250de0bdd9a0916d660ec9341c5be",
+ "store_already_differed_from_backup": {
+  "differed": true,
+  "live_sha": "ae9b23b176ae40ee1043c4bcbb7e671db25250de0bdd9a0916d660ec9341c5be",
+  "backup_sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+  "delta_bytes": 4096,
+  "attributable": false,
+  "why": "the change predates this unit (live mtime 10:34:34 equals backup creation time; this unit issued only read-only SELECT opens and the sha was bit-identical across them), so U8.64 cannot attribute it"
+ },
+ "sidecars_before": [],
+ "sidecars_after": [],
+ "sidecar_note": "no -wal or -shm existed before or after; nothing was created or deleted by this unit (no empty-wal-on-close recurrence observed)",
+ "consumers": [
+  {
+   "path": "src/resextract/dashboard/api.py",
+   "lines": "1031-1236 (Layer.dockets), 964-992, 1530",
+   "reads": "MANIFEST.json from disk as SOURCE OF TRUTH; the dockets.manifest_json store rows are an explicit FALLBACK used only when the on-disk manifest is absent/unreadable (comment at 964-966 says so)"
+  },
+  {
+   "path": "src/resextract/store.py",
+   "lines": "221, 1493-1601",
+   "role": "writer/upsert of dockets.manifest_json"
+  },
+  {
+   "path": "src/resextract/docket/materialize.py",
+   "lines": "1732-1755, 2172",
+   "role": "materializes manifest_json into the store; calls verify_docket"
+  },
+  {
+   "path": "src/resextract/docket/assemble.py",
+   "lines": "2552",
+   "role": "def verify_docket(docket_dir)"
+  }
+ ],
+ "verify_docket_after": {
+  "dockets/duval/duval-replay-material": {
+   "ok": true,
+   "problems": []
+  },
+  "dockets/duval/duval-u55-pinned": {
+   "ok": true,
+   "problems": []
+  },
+  "dockets/_smoke": {
+   "ok": false,
+   "problems": [
+    "claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='unknown') -- a non-model run may not assert CONFIRMS; re-derive the claim through m..."
+   ],
+   "by_design": true
+  }
+ },
+ "idempotence_proof": "No write was applied, so the second application is trivially a no-op. Proven concretely: two consecutive read-write sqlite3.connect() passes over the target row returned byte-identical row content (C=EXTENDS, reason_len=201, gen_by.producer=replay) and left the store at the same sha256 ae9b23b1... before pass 1, after pass 1 and after pass 2. Applying the would-be UPDATE twice would likewise be a fixed-point: its value is a constant derived from the unchanged disk MANIFEST.json.",
+ "other_stale_mirrors_found": [
+  {
+   "id": 2,
+   "dir": "dockets/duval/duval-u55-pinned",
+   "stale_field": "manifest_json.generated_by.producer",
+   "stored": {
+    "app": "resextract",
+    "model": "",
+    "version": "0.1.0"
+   },
+   "disk": {
+    "app": "resextract",
+    "model": "",
+    "producer": "replay",
+    "version": "0.1.0"
+   },
+   "disk_path": "dockets/duval/duval-u55-pinned/MANIFEST.json",
+   "action": "reported only; left untouched (out of U8.64 scope; the write scope was the single id=1 row)"
+  }
+ ],
+ "residual_non_goal_diffs_on_id1": {
+  "status_reason": {
+   "stored": null,
+   "disk": "producer is replay: no model mined these candidates; not publication-eligible"
+  },
+  "generated_at": {
+   "stored": "2026-10-08T11:04:22Z",
+   "disk": "2026-10-08T12:00:00Z"
+  },
+  "action": "reported only; left untouched \u2014 the goal fields (C-curated verdict/reason, generated_by.producer) already match"
+ },
+ "refused": false,
+ "refused_reason": "",
+ "tool_calls_work": 11,
+ "bound": 14
+}

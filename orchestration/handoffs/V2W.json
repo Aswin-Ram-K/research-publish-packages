@@ -1,0 +1,304 @@
+{
+ "unit": "V2W",
+ "scope": "live v4 store migration (U0.18) + predicate consolidation (U2.7)",
+ "overall": "PASS",
+ "status": "done",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "live store as-is",
+   "verdict": "PASS",
+   "observed": "sha=40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3 (not 459e16cc), 13 tables, schema_version rows 1,2,3,4 (v4 applied_at 2026-10-08T12:47:56.009Z), integrity_check ok, rows candidates 10/claims 0/evidence 0/verdicts 0/lanes 5/lane_candidates 10/dockets 2/runs 4, candidates.producer=replay:10, evidence +producer, verdicts +producer,+model",
+   "evidence": "state/logs/V2W_*; live_store below"
+  },
+  {
+   "id": "C2",
+   "name": "migration honesty",
+   "verdict": "PASS",
+   "observed": "CHECK rejected 'gpt','','none','Model','MODEL' on INSERT and UPDATE in both tables; NULL rejected by NOT NULL; only model/replay/fixture/unknown accepted. Backfill exercised on a v3-shaped copy WITH ROWS (2 evidence+1 verdict) -> all 'unknown', 0 'model', 3 notes. Idempotent: sha identical before/after second init_db, 0 new notes. Additive: exactly the 3 claimed columns added, none removed. Migrating a copy of the byte-exact pre-image reproduces the live store logically for every table (only time-dependent v4 applied_at differs) => rows_lost=0 every table",
+   "evidence": "state/logs/V2W_C2_check.txt, V2W_C2_backfill.txt, V2W_C3_rollback.txt"
+  },
+  {
+   "id": "C3",
+   "name": "rollback by hashing",
+   "verdict": "PASS",
+   "observed": "retained backup state/backups/U0.18-state-pre-v4/state.sqlite = 459e16cc (byte-exact, == U2.5_realmirror_before.sqlite), ro-open ok, integrity ok, 13 tables, v3, pre-migration counts; c0a56928 is the separate .online-backup-api file and is logically identical (same counts, same sqlite_master SQL, 0 differing rows). Not executed",
+   "evidence": "state/logs/V2W_C3_rollback.txt"
+  },
+  {
+   "id": "C4",
+   "name": "acceptance shape live",
+   "verdict": "PASS",
+   "observed": "dry exit 0, 8 stages, graph nodes=2685 edges=7102 sha256=4790bbb1111b mode=reuse path state/kg/duval/graphify-out/graph.json, all write stages skipped with 'dry run: would...' reasons, 203 files before/after, store sha unchanged. real exit 1, window_sealed true, 4 ok/3 blocked/1 skipped, mine+claims+assess blocked naming endpoint http 000 AND producer gate, materialize skipped, store unchanged, Duval HEAD 6c60da5a unchanged",
+   "evidence": "state/logs/V2W_dryrun.json, V2W_dry_detail.txt, V2W_realrun.json, V2W_real_detail.txt"
+  },
+  {
+   "id": "C5",
+   "name": "predicate by scope",
+   "verdict": "PASS",
+   "observed": "assess.value imports MODEL_PRODUCER/PRODUCER_VOCAB/producer_is_model from store; assess.verdicts imports from ..store and 'from .. import store as store_mod'; identity True. Literals [!=]= \"model\" over src/ = 8 (store.py 0): run.py 2, docket/materialize.py 2, claims/decompose.py 2, docket/manifest.py 1, docket/assemble.py 1. Scoped docstring claim true (store.py's one comparison is producer == MODEL_PRODUCER at :78). Guard scans module source via re.findall and asserts [] ; re-run 1 passed. Named eight all real, but 4 line numbers stale from sibling edits",
+   "evidence": "state/logs/V2W_literals_lines.txt, V2W_identity.txt, V2W_testnames.txt"
+  },
+  {
+   "id": "C6",
+   "name": "red-green x2",
+   "verdict": "PASS",
+   "observed": "(a) backfill revert -> RED AssertionError: assert ['model'] == ['unknown'] at tests/test_store_v4.py:185; restore sha-equal; GREEN 1 passed. (b) evidence CHECK dropped (valid SQL) -> RED Failed: DID NOT RAISE IntegrityError at tests/test_store_v4.py:270; restore sha-equal; GREEN 1 passed. store.py sha b7e1f5be before and after both",
+   "evidence": "state/logs/V2W_C6a_red.txt, V2W_C6a_green.txt, V2W_C6b_red.txt, V2W_C6b_green.txt"
+  },
+  {
+   "id": "C7",
+   "name": "honesty audit",
+   "verdict": "PASS",
+   "observed": "13-table claim verified both stores; rows_lost=0 every table verified by logical diff; empty MIGRATION_NOTES_V4 legitimate (path exercised on v3-shaped copy with rows); migrate_copy in-place refusal confirmed: ValueError 'migrate_copy never migrates in place (that is init_db's job); dst must differ from src'; live acceptance shape genuinely restored (live run reproduced it, not merely test-pinned); 4 corrections and 3 UNVERIFIED recorded",
+   "evidence": "orchestration/VERDICTS.md V2W section"
+  },
+  {
+   "id": "C8",
+   "name": "containment",
+   "verdict": "PASS",
+   "observed": "scratch confined to state/verify/V2W/; outside_writes 0; .worktrees reads 0; stray processes 0; test subset 122 passed; live store sha/version/counts unchanged by V2W (mtime still 07:47:56); Duval HEAD 6c60da5a + porcelain identical. Disclosed: mode=ro opens created two SQLite sidecars in the protected backups dir; only V2W-created files deleted, all four protected DB shas re-verified unchanged",
+   "evidence": "state/logs/V2W_suite.txt; VERDICTS.md V2W C8"
+  }
+ ],
+ "live_store": {
+  "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+  "version": 4,
+  "schema_version_rows": [
+   1,
+   2,
+   3,
+   4
+  ],
+  "integrity_check": "ok",
+  "rows": {
+   "candidates": 10,
+   "claims": 0,
+   "evidence": 0,
+   "verdicts": 0,
+   "lanes": 5,
+   "lane_candidates": 10,
+   "dockets": 2,
+   "runs": 4,
+   "rework": 0,
+   "targets": 0,
+   "web_sources": 0,
+   "search_health": 0,
+   "schema_version": 4
+  },
+  "columns_added": {
+   "evidence": [
+    "producer"
+   ],
+   "verdicts": [
+    "producer",
+    "model"
+   ]
+  }
+ },
+ "check_vocabulary": {
+  "rejected": [
+   "gpt",
+   "",
+   "none",
+   "Model",
+   "MODEL",
+   null
+  ],
+  "accepted": [
+   "model",
+   "replay",
+   "fixture",
+   "unknown"
+  ],
+  "nothing_else_accepted": true,
+  "note": "NULL rejected by the NOT NULL clause, not by the CHECK (NULL IN (...) is NULL, which a bare CHECK admits)"
+ },
+ "backfill": {
+  "no_row_became_model": true,
+  "notes_empty_legitimate": "yes",
+  "untested_path": false,
+  "exercised_on_a_v3_shaped_copy": true,
+  "v3_copy_result": "2 evidence + 1 verdict rows -> all producer='unknown', 0 'model', 3 MIGRATION_NOTES_V4 entries, integrity ok"
+ },
+ "idempotent": true,
+ "purely_additive": true,
+ "code_diff_matches": true,
+ "rollback": {
+  "api_backup_sha": "c0a56928d67c44f9a5fa81b105cfb141a470ee120708e1a7754198e510db0e75",
+  "byte_exact_preimage_sha": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+  "both_verified": true,
+  "which_to_use": "byte-exact pre-image",
+  "procedure": "cp state/backups/U0.18-state-pre-v4/state.sqlite state/state.sqlite && rm -f state/state.sqlite-wal state/state.sqlite-shm",
+  "executed": false,
+  "note": "the retained backup state/backups/U0.18-state-pre-v4/state.sqlite IS byte-exact 459e16cc (== state/U2.5_realmirror_before.sqlite); c0a56928 is the separate .online-backup-api file, page-normalized but logically identical (0 differing rows)"
+ },
+ "acceptance_shape": {
+  "dry_run": {
+   "exit_code": 0,
+   "stages": 8,
+   "graph_line": "dry run: would reuse existing code-only graph at state/kg/duval/graphify-out/graph.json (graphify not re-run: bounded, and a re-extract would write inside the target)",
+   "graph_counts": {
+    "nodes": 2685,
+    "edges": 7102,
+    "sha256": "4790bbb1111b",
+    "mode": "reuse"
+   },
+   "wrote_nothing": true
+  },
+  "real_run": {
+   "exit_code": 1,
+   "blocked": [
+    "mine",
+    "claims",
+    "assess"
+   ],
+   "materialize": "skipped",
+   "window_sealed": true,
+   "stages_not_run": 3,
+   "status_counts": {
+    "ok": 4,
+    "blocked": 3,
+    "skipped": 1
+   },
+   "blocked_lines": [
+    "model endpoint DOWN (http 000) \u2014 producer gate: 0 model-produced candidate(s) (store producers: replay=10); mine cannot run without the model",
+    "model endpoint DOWN (http 000) \u2014 producer gate: 0 model-produced candidate(s) (store producers: replay=10); claims cannot run without the model",
+    "model endpoint DOWN (http 000) \u2014 producer gate: 0 model-produced candidate(s) (store producers: replay=10); assess cannot run without the model"
+   ]
+  },
+  "store_unchanged_by_runs": true,
+  "duval_head_unchanged": true,
+  "run_py_sibling_note": "graph reason carries new provenance/staleness text '(graphify not re-run: bounded, and a re-extract would write inside the target)' attributed to U8.7's concurrent run.py edits; not treated as a failure"
+ },
+ "predicate": {
+  "identity_imports": true,
+  "literal_counts_per_file": {
+   "src/resextract/run.py": 2,
+   "src/resextract/docket/materialize.py": 2,
+   "src/resextract/claims/decompose.py": 2,
+   "src/resextract/docket/manifest.py": 1,
+   "src/resextract/docket/assemble.py": 1,
+   "src/resextract/store.py": 0
+  },
+  "total_literals_in_src": 8,
+  "docstring_scoped_claim_true": true,
+  "store_py_single_comparison": "producer == MODEL_PRODUCER at store.py:78 (a constant, not a literal)",
+  "named_eight_accurate": "files all correct and real; 4 line numbers stale from concurrent sibling edits (manifest.py 255->309, materialize.py 543->549 and 1602->1645, assemble.py 1601->1703); run.py 970,1015 and decompose.py 493,656 exact",
+  "guard_scans_source": true,
+  "guard_rerun": "1 passed"
+ },
+ "red_green": {
+  "a": "reproduced; sha ok (b7e1f5be before/after, revert d02fadf6); f=AssertionError: assert ['model'] == ['unknown'] at tests/test_store_v4.py:185; p=1 passed",
+  "b": "reproduced; sha ok (b7e1f5be before/after, revert f1ec354a); f=Failed: DID NOT RAISE IntegrityError at tests/test_store_v4.py:270; p=1 passed",
+  "note": "two earlier C6b revert attempts were botched (shell-quoting no-op, then a DDL syntax error that made the test ERROR); neither was counted as evidence"
+ },
+ "not_reproduced": [],
+ "overstated": [
+  "C3 plan phrasing 'the backup's sha is c0a56928' - the retained backup is byte-exact 459e16cc; c0a56928 is the .online-backup-api file"
+ ],
+ "unverified": [
+  "the exact pre-U2.7 count of 9 literals was not observed live (U2.6 pristine snapshot shows 1 literal in _producer_is_model at its :1109, corroborating the 9->8 delta; the cited store.py:1120 was not independently seen)",
+  "a full mtime manifest proving the dry run wrote nothing (foreclosed by the <=2-run bound; stage table + filename set + store sha stand instead)",
+  "byte-level provenance that the live store was migrated from that exact file (logical identity for every table is proven)"
+ ],
+ "corrections": [
+  {
+   "plan_assumption": "the backup's sha is c0a56928 (page-normalized) and the byte-exact pre-image must be taken from the sibling",
+   "actually": "state/backups/U0.18-state-pre-v4/state.sqlite is byte-exact 459e16cc; c0a56928 is the separate .online-backup-api sidecar, logically identical",
+   "evidence": "sha256sum + sqlite row/schema diff: 0 differing rows",
+   "unit": "U0.18"
+  },
+  {
+   "plan_assumption": "empty MIGRATION_NOTES_V4 may hide an untested backfill path",
+   "actually": "legitimate (0 rows to backfill) AND the path was exercised on a v3-shaped copy with rows -> all 'unknown', none 'model'",
+   "evidence": "state/logs/V2W_C2_backfill.txt",
+   "unit": "U0.18"
+  },
+  {
+   "plan_assumption": "U2.7's named eight literals cited by line",
+   "actually": "all 8 real and in the named files, but 4 line numbers shifted under concurrent sibling edits (manifest 255->309, materialize 543->549/1602->1645, assemble 1601->1703)",
+   "evidence": "state/logs/V2W_literals_lines.txt",
+   "unit": "U2.7"
+  },
+  {
+   "plan_assumption": "the store.py v4/predicate change may be inspected via the committed blob",
+   "actually": "store.py is uncommitted (git diff HEAD: 418 insertions, 8 deletions); the committed blob is pre-v4",
+   "evidence": "git status --porcelain src/resextract/store.py = ' M'",
+   "unit": "U2.7"
+  }
+ ],
+ "tool_calls": 26,
+ "bound": 30,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "store_before": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows": {
+    "candidates": 10,
+    "claims": 0,
+    "evidence": 0,
+    "verdicts": 0,
+    "lanes": 5,
+    "lane_candidates": 10,
+    "dockets": 2,
+    "runs": 4
+   }
+  },
+  "store_after": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows": {
+    "candidates": 10,
+    "claims": 0,
+    "evidence": 0,
+    "verdicts": 0,
+    "lanes": 5,
+    "lane_candidates": 10,
+    "dockets": 2,
+    "runs": 4
+   }
+  },
+  "stray_processes": 0,
+  "sidecar_event": "opening the protected backups mode=ro made SQLite create state.sqlite.online-backup-api-shm/-wal and refresh state.sqlite-shm mtime; only the two V2W-created files were deleted; all four protected DB shas re-verified unchanged (459e16cc, c0a56928, 459e16cc, 40e8aa0c). Next unit: use immutable=1 or copy first",
+  "test_subset": "122 passed (tests/test_store.py, test_store_v2.py, test_store_v3.py, test_store_v4.py, test_store_boundary.py, test_run.py)"
+ },
+ "artifacts": [
+  "orchestration/VERDICTS.md#V2W",
+  "orchestration/units/V2W.md",
+  "orchestration/handoffs/V2W.json",
+  "state/logs/V2W_C2_check.txt",
+  "state/logs/V2W_C2_backfill.txt",
+  "state/logs/V2W_C3_rollback.txt",
+  "state/logs/V2W_dryrun.json",
+  "state/logs/V2W_realrun.json",
+  "state/logs/V2W_C6a_red.txt",
+  "state/logs/V2W_C6b_red.txt",
+  "state/logs/V2W_suite.txt"
+ ],
+ "evidence": {
+  "liveness_probe": "000 DOWN (curl exit 7, connection refused; 1 probe)",
+  "live_llm_calls": 0,
+  "run_invocations": 2,
+  "commands": [
+   "sha256sum state/state.sqlite state/U2.5_realmirror_before.sqlite state/backups/U0.18-state-pre-v4/state.sqlite",
+   "python3 -c 'sqlite3 ro: integrity_check/schema_version/table_info/counts'",
+   "resextract run --target duval --dry-run --json (exit 0)",
+   "resextract run --target duval --json (exit 1)",
+   "pytest tests/test_store*.py tests/test_run.py -q -> 122 passed"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "delegate the 8 surviving literals (run.py:970,1015; claims/decompose.py:493,656; docket/manifest.py:309; docket/materialize.py:549,1645; docket/assemble.py:1703) in fresh units AFTER U5.13/U5.14/U8.7 land, since those line numbers are moving; only then may a codebase-wide uniqueness claim be made. When opening WAL-mode stores read-only, use immutable=1 or copy first to avoid creating sidecars in protected dirs.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V2W.md",
+  "orchestration/handoffs/V2W.json",
+  "state/logs/V2W*",
+  "state/verify/V2W/**"
+ ]
+}

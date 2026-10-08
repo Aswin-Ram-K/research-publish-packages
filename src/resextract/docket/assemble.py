@@ -17,6 +17,12 @@ Honesty rules baked in here:
   measurement with ``model-suggested``.
 * ``HISTORY.md`` is append-only; a prior ``ITEM.md`` survives as
   ``ITEM.md.r<N>``.
+* **Qualifier (U5.16).**  A bare re-assembly is information-preserving *only
+  once the fields are recorded*.  ``lane.title`` and ``evidence`` became
+  manifest fields only in U5.14; a manifest written before that records
+  neither, so a bare pass over it still loses both (V5E reproduced exactly
+  that).  The caller must supply them **once**; after that a bare pass is
+  stable and lossless.
 * Gates run *before* a single byte is written, so a refusal leaves no
   ``MANIFEST.json`` behind.
 """
@@ -37,7 +43,9 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 import resextract
 from resextract.docket.copy import CopyItem, CopyPlan, CopyReport, sha256_file
 from resextract.docket.manifest import (
+    EvidenceRecord,
     DOCKET_TYPES,
+    PRODUCERS,
     SCHEMA,
     Claim,
     DocketManifest,
@@ -49,10 +57,13 @@ from resextract.docket.manifest import (
     WebSource,
     docket_material_path,
     material_dest,
+    producer_gate_reason,
     read_manifest,
     split_ref,
     validate_manifest,
     write_manifest,
+    PriorArtRecord,
+    ResultRecord,
 )
 
 APP = "resextract"
@@ -218,6 +229,11 @@ class AssembledDocket:
     claims: int = 0
     material: int = 0
     downgrades: list[str] = field(default_factory=list)
+    #: U5.9 — one line per *healed* provenance class, e.g. ``material provenance
+    #: preserved for 9/9 entries``.  Healing is the normal, good outcome, so it is
+    #: summarised (not alarmed per entry); an entry that could NOT be preserved
+    #: stays loud per-entry in ``downgrades``.
+    preserved: list[str] = field(default_factory=list)
     preserved_item: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -227,6 +243,7 @@ class AssembledDocket:
             "claims": self.claims,
             "material": self.material,
             "downgrades": list(self.downgrades),
+            "preserved": list(self.preserved),
             "preserved_item": self.preserved_item,
             "type": self.manifest.lane.type,
             "status": self.manifest.status,
@@ -435,6 +452,547 @@ def _material_items(report: CopyReport, docket_dir: str) -> list[MaterialItem]:
     return [items[d] for d in sorted(items)]
 
 
+def _inherit_material_provenance(
+    material: list[MaterialItem],
+    previous: DocketManifest | None,
+) -> tuple[list[str], list[str], bool]:
+    """U5.8 + U5.9: keep the material *record* across a *bare* re-assembly.
+
+    ``_material_items`` rebuilds every row from the current copy report, and a
+    report bridged from a docket's own copies
+    (:func:`material_report_from_docket`) carries no provenance at all.  So a
+    bare re-assembly used to rewrite ``git_object``/``blob_sha`` rows as
+    ``working_tree``, re-synthesise ``src`` as ``<source_root>/<dest>``, and drop
+    the machine-readable ``note`` — with no error, no ``downgrades`` entry, and
+    ``verify_docket`` still ``ok``.  Silently dissolving the docket's central
+    promise ("this material is verifiable at commit X, and came from path Y").
+
+    Same discipline U5.7 applied to ``generated_by.producer``: inherit from the
+    *existing manifest* rather than regenerating from scratch.  Never blind,
+    though — carried only when the row still refers to the same bytes (same
+    ``dest`` **and** same ``sha256``).  A row whose bytes changed is
+    **recomputed**, because any inherited field on different bytes is a
+    fabricated claim, which is worse than the loss being fixed here.  A row with
+    no counterpart is new and keeps whatever the current resolution produced
+    (nothing is invented).
+
+    ``src`` is the one that is *not* merely inheritance but **preference for the
+    authoritative record**: the manifest's recorded ``src`` is the ledger of
+    where the bytes actually came from, while the value the bridge re-synthesises
+    is ``<source_root>/<dest>`` — a *fallback* that is WRONG whenever ``dest`` and
+    the source-relative path differ (``materialize_lane`` repairs exactly this by
+    hand at ``materialize.py:1854-1860``, which is the tell that synthesis is the
+    lossy direction).  So a bare re-assembly must never overwrite a known-good
+    recorded source path with a re-synthesised one; only a row with no matching
+    predecessor is left with the synthesised value.  A wrong ``src`` is a *false*
+    fact, not merely a missing one.
+
+    ``note`` (the machine-readable unpinned reason) is inherited under the same
+    guard; dropping it downgrades an explainable unpinned entry to an unexplained
+    one.
+
+    Every entry that could *not* be preserved is returned as a per-entry warning,
+    so it is recorded in the assembly report and appended to ``HISTORY.md`` —
+    loud, never silent again.  Healed entries are instead summarised in one line
+    (the third return value's ``preserved`` line) because healing is the normal
+    outcome, not an anomaly.
+
+    Returns ``(warnings, preserved_lines, bytes_preserved)``; ``bytes_preserved``
+    is ``True`` only when every previously recorded row is still present with
+    byte-identical ``sha256`` (the guard the sealed-window inheritance needs).
+    """
+    warnings: list[str] = []
+    if previous is None:
+        return warnings, [], False
+    prior = {row.dest: row for row in previous.material}
+    healed = 0
+    lost = 0
+    for item in material:
+        old = prior.get(item.dest)
+        if old is None:  # new entry: invented provenance is the one thing to avoid
+            continue
+        if old.sha256 != item.sha256:
+            # The bytes moved; every field of the old record describes a different
+            # artifact, so nothing may be carried onto this row.
+            lost += 1
+            dropped: list[str] = []
+            if old.src and item.src != old.src:
+                dropped.append("src")
+            if old.note and not item.note:
+                dropped.append("note")
+            if old.resolved_from == "git_object" or old.blob_sha:
+                dropped.append(f"{old.resolved_from}/blob_sha {old.blob_sha}")
+            if old.unpinned:
+                dropped.append("unpinned")
+            warnings.append(
+                f"material/{item.dest}: bytes changed (sha256 "
+                f"{old.sha256[:12]}\u2026 \u2192 {item.sha256[:12]}\u2026), provenance recomputed \u2014 "
+                f"the previous record was NOT inherited (inheriting it would be a "
+                f"fabricated pin on different bytes): {', '.join(dropped) or '(no provenance fields)'}"
+            )
+            continue
+        # Same dest **and** same sha256: the previous record describes exactly
+        # these bytes, so its src/note are authoritative, not re-synthesised.
+        if old.src and item.src != old.src:
+            item.src = old.src
+        if old.note and not item.note:
+            item.note = old.note
+        pinned = old.resolved_from == "git_object"
+        if pinned and not old.blob_sha:
+            lost += 1
+            warnings.append(
+                f"material/{item.dest}: previous manifest claimed resolved_from="
+                "'git_object' with no blob_sha — not inherited, provenance recomputed"
+            )
+            continue
+        if pinned:
+            if item.blob_sha is not None and item.blob_sha != old.blob_sha:
+                # Identical bytes, two different pins: pick neither, say so.
+                lost += 1
+                warnings.append(
+                    f"material/{item.dest}: identical bytes but blob_sha disagrees "
+                    f"(manifest {old.blob_sha}\u2026 vs resolved {item.blob_sha}\u2026) \u2014 previous "
+                    "claim dropped, provenance recomputed"
+                )
+                continue
+            item.resolved_from = "git_object"
+            item.blob_sha = old.blob_sha
+            item.unpinned = False
+        elif old.unpinned and not (item.resolved_from == "git_object" and item.blob_sha):
+            # No pin to inherit: keep the current resolution, but do not drop the
+            # honest "no commit backs these bytes" flag either.
+            item.unpinned = True
+        healed += 1
+    preserved = (
+        [f"material provenance preserved for {healed}/{len(material)} entries"]
+        if healed
+        else []
+    )
+    dests = {i.dest: i.sha256 for i in material}
+    bytes_preserved = set(prior) == set(dests) and all(
+        prior[d].sha256 == dests[d] for d in prior
+    )
+    return warnings, preserved, bytes_preserved
+
+
+def _inherit_sealed_window(
+    manifest: DocketManifest,
+    previous: DocketManifest | None,
+    *,
+    bytes_preserved: bool,
+) -> tuple[list[str], list[str]]:
+    """U5.9: keep a verified ``window_sealed`` across a *bare* re-assembly.
+
+    **Deliberate decision: inherited, as a historical fact.**  ``window_sealed``
+    records whether the target's HEAD did not move while the material was copied
+    (``_seal_window`` / ``materialize.py:1906``).  A bare re-assembly performs
+    **no window check at all** — it only re-renders facts from the docket's own
+    copies — so writing ``None`` there claims "no check was done" when the check
+    *was* done and passed, and *that verified quiescence is precisely the property
+    the sealed-window work exists to establish*.  Carrying the historical value
+    is therefore informative, not misleading, **provided it can never be
+    fabricated**: the value is inherited only when (a) the previous manifest
+    recorded a non-``None`` value (never invent one), (b) this assembly did not
+    establish a new one, and (c) every previously recorded material row is still
+    present with byte-identical ``sha256`` — if the bytes moved, the sealed window
+    no longer describes this docket and is *not* carried.
+
+    The alternative (record ``None`` = "this run verified nothing") was rejected:
+    it would silently delete a verified property from the artifact on every
+    refresh, which is the same silent-provenance-loss family this unit closes.
+    The inheritance is summarised once, never alarmed per entry; a value that
+    could not be carried IS loud.
+
+    Returns ``(preserved_lines, warning_lines)``.
+    """
+    if previous is None or previous.window_sealed is None:
+        return [], []
+    if manifest.window_sealed is not None:  # pragma: no cover - no caller sets it
+        return [], []
+    if not bytes_preserved:
+        return [], [
+            f"window_sealed={previous.window_sealed} NOT inherited: material bytes "
+            "changed since that window was verified, so the seal no longer "
+            "describes this docket (re-run materialization to re-seal)"
+        ]
+    manifest.window_sealed = previous.window_sealed
+    return [
+        f"window_sealed={previous.window_sealed} preserved from the previous manifest "
+        "(historical fact \u2014 a bare re-assembly performs no window check)"
+    ], []
+
+
+def _same_target(previous_target: Target, current_target: Target) -> bool:
+    """Do two ``target`` blocks name the same revision of the same target?"""
+    return (
+        previous_target.slug,
+        previous_target.head_sha,
+        previous_target.graph_hash,
+    ) == (
+        current_target.slug,
+        current_target.head_sha,
+        current_target.graph_hash,
+    )
+
+
+def _describe_target(target: Target) -> str:
+    return (
+        f"{target.slug}@{target.head_sha or '(no head)'}"
+        f"/{target.graph_hash or '(no graph)'}"
+    )
+
+
+def _inherit_title(
+    previous: DocketManifest | None,
+    lane_in: _LaneIn,
+    *,
+    target: Target,
+) -> tuple[str | None, list[str], list[str]]:
+    """U5.14: the descriptive lane title is a *stored* fact, inherited.
+
+    The same discipline as :func:`_inherit_render_inputs` -- deliberately not a
+    parallel scheme:
+
+    * an explicitly supplied ``title`` is used verbatim (``""`` included: an
+      explicit empty title is a deliberate **clear**, honoured silently);
+    * ``None`` (not supplied) inherits the previous manifest's own
+      ``lane.title`` when the target is unchanged;
+    * a changed target **refuses** and says so, dropping the stale title rather
+      than carrying it;
+    * a previous manifest that never recorded a title (every pre-U5.14
+      manifest, ``_smoke``) has nothing to inherit and nothing is invented.
+
+    Returns ``(title, preserved_lines, warning_lines)``.
+    """
+    if lane_in.title is not None:
+        return (lane_in.title or None), [], []
+    if previous is None or previous.lane.title is None:
+        return None, [], []
+    if not _same_target(previous.target, target):
+        return None, [], [
+            "lane.title: NOT inherited -- the target changed "
+            f"({_describe_target(previous.target)} -> {_describe_target(target)}); "
+            f"the recorded title {previous.lane.title!r} described the previous "
+            "target and was dropped rather than carried as stale"
+        ]
+    return previous.lane.title, [
+        f"lane.title preserved from the previous manifest: {previous.lane.title!r}"
+    ], []
+
+
+def _inherit_manifest_lists(
+    previous: DocketManifest | None,
+    *,
+    target: Target,
+    supplied_open_questions: Iterable[str] | None,
+    supplied_rework: Iterable[Any] | None,
+    supplied_web_sources: Iterable[Any] | None,
+    current_open_questions: list[str],
+    current_rework: list[BacklogItem],
+    current_web: list[WebSource],
+) -> tuple[list[str], list[BacklogItem], list[WebSource], list[str], list[str]]:
+    """U5.10: keep the manifest's *lists* across a bare re-assembly.
+
+    **The hole.**  ``assemble`` built ``open_questions``/``rework_open``/
+    ``web_sources`` from its *arguments* only.  A bare re-assembly -- the
+    documented refresh entry point (re-render from the docket's own copies;
+    ``state/U5.9_bare.py``) -- supplies none of them, so every list was
+    rewritten ``[...] -> []`` with no error, no ``downgrades`` entry and
+    ``verify_docket`` still ``ok``.  Measured on the fixture docket
+    (``state/U5.10-fixture/dock``, manifest sha ``60223b55...`` before the bare
+    re-assembly): ``open_questions 2->0``, ``rework_open 1->0``,
+    ``web_sources 2->0`` -- the same silent-loss family as U5.8/U5.9.
+
+    **Empty vs absent (the deliberate rule).**  A caller CAN tell the two apart,
+    and this function requires it to.  ``None`` means "not supplied -- inherit
+    the previous manifest's own recorded value"; an explicit empty iterable
+    (``[]``) means "replace it with nothing", i.e. a deliberate **clear**, used
+    verbatim, not a downgrade, and raising no alarm.  That is why the
+    parameters default to ``None`` rather than ``()``: with ``()`` a bare
+    re-assembly and a deliberate clear were the same call, so a genuine clear
+    could not be expressed at all.
+
+    **Changed target (the deliberate rule): REFUSE, and say so.**  If the
+    previous manifest's target (``slug``/``head_sha``/``graph_hash``) differs
+    from the one being assembled, the recorded lists may describe a different
+    revision, so they are NOT carried; each non-empty list that could not be
+    carried gets its own loud warning naming both revisions, and the list is
+    emptied rather than quietly kept stale.  Inheriting them *marked* was
+    rejected: marking would either mutate the recorded text of
+    ``open_questions``/``rework_open`` (they are ``list[str]``, and this unit
+    guarantees inherited values are byte-identical) or add an ``inherited``
+    field to ``WebSource`` in a contract that is ``extra="forbid"`` with a
+    deliberately un-bumped schema.  To keep the lists across a target change,
+    re-supply them for the new target.
+
+    **No fabrication.**  An inherited list is a copy of the previous manifest's
+    own values -- never a merge, never a guess, never re-derived from rendered
+    markdown.  A list the previous manifest did not record (empty) stays as the
+    current assembly produced it.
+
+    Returns ``(open_questions, rework, web, preserved_lines, warning_lines)``;
+    healing collapses into ONE summary line, refusals stay per-list and loud.
+    """
+    preserved: list[str] = []
+    warnings: list[str] = []
+    if previous is None:
+        return current_open_questions, current_rework, current_web, preserved, warnings
+    same_target = _same_target(previous.target, target)
+    effective: dict[str, Any] = {
+        "open_questions": current_open_questions,
+        "rework_open": current_rework,
+        "web_sources": current_web,
+    }
+    #: the previous manifest's own values -- byte-identical copies, never aliases
+    recorded: dict[str, Any] = {
+        "open_questions": list(previous.open_questions),
+        "rework_open": [BacklogItem(text=text) for text in previous.rework_open],
+        "web_sources": [w.model_copy(deep=True) for w in previous.web_sources],
+    }
+    supplied: dict[str, Any] = {
+        "open_questions": supplied_open_questions,
+        "rework_open": supplied_rework,
+        "web_sources": supplied_web_sources,
+    }
+    healed: list[str] = []
+    for name in ("open_questions", "rework_open", "web_sources"):
+        if supplied[name] is not None:
+            continue  # explicit replacement -- INCLUDING an explicit [] (a clear)
+        if not recorded[name]:
+            continue  # nothing recorded: nothing to preserve, nothing to invent
+        if not same_target:
+            warnings.append(
+                f"{name}: NOT inherited -- the target changed "
+                f"({_describe_target(previous.target)} -> {_describe_target(target)}); "
+                f"{len(recorded[name])} recorded value(s) describe the previous target and "
+                "were dropped rather than carried as stale (re-supply them for the new "
+                "target to keep them)"
+            )
+            continue
+        effective[name] = recorded[name]
+        healed.append(f"{name} {len(recorded[name])}/{len(recorded[name])}")
+    if healed:
+        preserved.append(
+            "manifest lists preserved from the previous manifest for target "
+            + _describe_target(target)
+            + ": "
+            + ", ".join(healed)
+        )
+    return (
+        effective["open_questions"],
+        effective["rework_open"],
+        effective["web_sources"],
+        preserved,
+        warnings,
+    )
+
+
+def _inherit_render_inputs(
+    previous: DocketManifest | None,
+    *,
+    target: Target,
+    supplied_results: Iterable[Any] | None,
+    supplied_prior_art: Iterable[Any] | None,
+    supplied_evidence: Iterable[Any] | None,
+    current_results: list[MeasuredResult],
+    current_prior_art: list[PriorArt],
+    current_evidence: list[EvidenceItem],
+) -> tuple[
+    list[MeasuredResult], list[PriorArt], list[EvidenceItem], list[str], list[str], list[str]
+]:
+    """U5.11: the two *render inputs* are manifest fields now -- store + inherit.
+
+    ``results``/``prior_art`` were the last members of the silent re-assembly
+    family: rendered to ``RESULTS.md``/``PRIOR_ART.md`` but stored nowhere, so a
+    bare re-assembly could only *alarm* about them (U5.10).  ``DocketManifest``
+    now carries them as additive, optional records, and this function gives them
+    the same discipline as :func:`_inherit_manifest_lists`:
+
+    * ``None`` (not supplied) -> inherit the previous manifest's own records,
+      byte-identical, when the target is unchanged; both rendered files then
+      round-trip and no alarm is raised.
+    * an explicit ``[]`` -> a deliberate **clear**, used verbatim, silent.
+    * a changed target -> **REFUSE** per branch with a loud warning naming both
+      revisions; stale records are dropped rather than carried.
+    * a previous manifest that never recorded them (``None``: every pre-U5.11
+      manifest, ``dockets/_smoke`` and ``duval-u55-pinned``) -> nothing to
+      inherit; the U5.10 alarm still fires and nothing is re-derived from the
+      rendered markdown.
+
+    The ``None``/``[]`` distinction survives on the way *out* too: whether a
+    record list is stored at all depends on it (see ``assemble``), so a legacy
+    docket does not silently acquire a "deliberately empty" record that would
+    later silence the alarm.
+
+    **No fabrication.**  An inherited record is a copy of the previous manifest's
+    own values -- never a merge, a guess, or a parse of rendered markdown.
+
+    Returns ``(results, prior_art, preserved_lines, warning_lines,
+    recorded_files)``.  ``recorded_files`` names the *manifest* branches the
+    previous manifest had recorded (even when empty), which is what lets the
+    U5.10 alarm stay silent for them without inventing anything.
+    """
+    preserved: list[str] = []
+    warnings: list[str] = []
+    recorded_files: list[str] = []
+    if previous is None:
+        return (
+            current_results,
+            current_prior_art,
+            current_evidence,
+            preserved,
+            warnings,
+            recorded_files,
+        )
+    same_target = _same_target(previous.target, target)
+    #: the previous manifest's own values -- byte-identical copies, never aliases
+    recorder: dict[str, list[Any]] = {
+        "results": [
+            MeasuredResult(
+                name=r.name,
+                value=r.value,
+                unit=r.unit,
+                command=r.command,
+                source_ref=r.source_ref,
+            )
+            for r in (previous.results or [])
+        ],
+        "prior_art": [
+            PriorArt(
+                url=a.url,
+                title=a.title,
+                page_date=a.page_date,
+                quote=a.quote,
+                verdict=a.verdict,
+                sha256=a.sha256,
+            )
+            for a in (previous.prior_art or [])
+        ],
+        "evidence": [
+            EvidenceItem(
+                ref=e.ref,
+                source_kind=e.source_kind,
+                quote=e.quote,
+                context=e.context,
+                sha256=e.sha256,
+            )
+            for e in (previous.evidence or [])
+        ],
+    }
+    #: ``False`` = the previous manifest never recorded this branch at all
+    recorded_at_all: dict[str, bool] = {
+        "results": previous.results is not None,
+        "prior_art": previous.prior_art is not None,
+        "evidence": previous.evidence is not None,
+    }
+    supplied: dict[str, Any] = {
+        "results": supplied_results,
+        "prior_art": supplied_prior_art,
+        "evidence": supplied_evidence,
+    }
+    effective: dict[str, list[Any]] = {
+        "results": current_results,
+        "prior_art": current_prior_art,
+        "evidence": current_evidence,
+    }
+    healed: list[str] = []
+    for name in ("results", "prior_art", "evidence"):
+        if supplied[name] is not None:
+            continue  # explicit replacement -- INCLUDING an explicit [] (a clear)
+        if not recorded_at_all[name]:
+            continue  # never recorded: nothing to inherit, nothing to invent
+        recorded_files.append(name)
+        if not same_target:
+            if recorder[name]:
+                warnings.append(
+                    f"{name}: NOT inherited -- the target changed "
+                    f"({_describe_target(previous.target)} -> {_describe_target(target)}); "
+                    f"{len(recorder[name])} recorded value(s) describe the previous target and "
+                    "were dropped rather than carried as stale (re-supply them for the new "
+                    "target to keep them)"
+                )
+            continue
+        effective[name] = recorder[name]
+        if recorder[name]:
+            healed.append(f"{name} {len(recorder[name])}/{len(recorder[name])}")
+    if healed:
+        preserved.append(
+            "render inputs preserved from the previous manifest for target "
+            + _describe_target(target)
+            + ": "
+            + ", ".join(healed)
+        )
+    return (
+        effective["results"],
+        effective["prior_art"],
+        effective["evidence"],
+        preserved,
+        warnings,
+        recorded_files,
+    )
+
+
+#: The exact stubs the renderers emit when there is nothing to render -- their
+#: ABSENCE in an existing docket file is the tell that it held real content.
+_NO_RESULTS_STUB = "**No measured results recorded.**"
+_NO_PRIOR_ART_STUB = "**No external prior art was supplied.**"
+
+
+def _warn_unsupplied_render_inputs(
+    docket: str,
+    *,
+    supplied_results: Iterable[Any] | None,
+    supplied_prior_art: Iterable[Any] | None,
+    rendered_results: list[MeasuredResult],
+    rendered_prior_art: list[PriorArt],
+    recorded_files: Iterable[str] = (),
+) -> list[str]:
+    """U5.10's alarm, kept for the UNRECORDED case only (U5.11 narrowed it).
+
+    Before U5.11 ``DocketManifest`` was ``extra="forbid"`` and carried no
+    ``results``/``prior_art`` key, so those two assembly *inputs* -- rendered to
+    ``RESULTS.md``/``PRIOR_ART.md`` and otherwise not persisted -- were
+    unrecoverable: a bare re-assembly rewrote real measured numbers to the
+    renderer's "No measured results recorded" stub, and no part of the manifest
+    could restore them.  U5.11 records them (:func:`_inherit_render_inputs`), so
+    this alarm is **suppressed** for a branch the manifest recorded
+    (``recorded_files``): those are either healed (silent, one summary line) or
+    refused per branch, loudly.  It stays exactly as before for the *unrecorded*
+    docket -- every pre-U5.11 manifest, ``dockets/_smoke`` and
+    ``dockets/duval/duval-u55-pinned`` included -- which still cannot inherit and
+    must still alarm rather than be invented back from rendered markdown.
+
+    This unit does not invent those values back from rendered markdown (that
+    would be fabrication, and lossy).  It makes the loss **loud** instead: when
+    the existing file held content (detected by the absence of the renderer's
+    own stub) and this assembly supplies none, one warning per file is recorded
+    in the assembly report and ``HISTORY.md``.  ``None`` (absent) alarms; an
+    explicit empty list is a deliberate clear and stays silent -- the same
+    empty-vs-absent rule as :func:`_inherit_manifest_lists`.
+    """
+    warnings: list[str] = []
+    recorded = set(recorded_files)
+    # the *branch* name (not the file name) is what a recorded manifest holds
+    for name, supplied, rendered, stub, branch in (
+        ("RESULTS.md", supplied_results, rendered_results, _NO_RESULTS_STUB, "results"),
+        ("PRIOR_ART.md", supplied_prior_art, rendered_prior_art, _NO_PRIOR_ART_STUB, "prior_art"),
+    ):
+        if supplied is not None or rendered or branch in recorded:
+            continue  # replaced on purpose, rendered now, or recorded (inherited/refused)
+        try:
+            existing = Path(os.path.join(docket, name)).read_text(encoding="utf-8")
+        except OSError:
+            continue  # no previous file: nothing was lost
+        if stub not in existing:
+            warnings.append(
+                f"{name}: NOT preserved -- this docket previously rendered content here "
+                "and a bare re-assembly supplies none; 'results'/'prior_art' are not "
+                'manifest fields (extra="forbid"), so the values cannot be inherited and '
+                "are NOT re-derived from the rendered markdown (re-supply them to re-render)"
+            )
+    return warnings
+
+
 def _read_span(docket_dir: str, dest: str, lo: int, hi: int) -> list[str]:
     path = docket_material_path(docket_dir, dest)
     try:
@@ -542,35 +1100,111 @@ def _freshness_label(freshness: Freshness) -> str:
 # --------------------------------------------------------------------------- #
 
 
+def _cap_uncapped_claims(claims: list[Claim]) -> list[str]:
+    """Cap a passed-in ``CONFIRMS`` whose own producer is not ``model``.
+
+    U5.22 ITEM 1.  The honesty rule already held where a claim is *made*:
+    :func:`materialize._claim_standing` caps a verdict-row ``CONFIRMS`` whose
+    producer is not exactly ``model``.  It did **not** hold where a claim is
+    *written*: ``assemble(claims=...)`` copied the caller's verdict verbatim,
+    so a re-render that re-supplied a pre-damage manifest's claims wrote
+    ``C-curated -- CONFIRMS`` beside ``generated_by.producer = "replay"``.
+
+    This reuses -- it does not restate -- the permission rule: the single
+    predicate :func:`store.producer_is_model`, which is exactly what
+    :func:`materialize._claim_standing` calls at its own cap site.  A second
+    string comparison against ``"model"`` here would be the very defect this
+    unit exists to remove.  ``materialize._claim_standing`` is
+    ``MemberSpec``-typed and cannot be called from here without fabricating a
+    member row, so the reuse is at the level the two sites genuinely share: the
+    predicate, plus the cap-and-record-the-reason shape (never a raise --
+    ``materialize`` notes that a typed error would make a rendering typo abort
+    a whole docket).
+
+    Fail-closed, as in ``materialize``: ``Claim.producer`` defaults to
+    ``"unknown"``, which grants no model standing, so an unattributed
+    ``CONFIRMS`` is capped rather than trusted.  Returns one reason per capped
+    claim, on ``Claim.verdict_reason`` -- the field the manifest schema
+documents for a cap reason, and the one ``CLAIMS.md`` renders verbatim.
+That field now also carries the U5.19 provenance-divergence note, which
+this function *preserves* when it appends its own reason below (it runs
+while ``claim.verdict`` is still ``CONFIRMS``, so an existing note cannot
+itself be a cap reason).
+The same qualifier applies to the comment at :1241-1243.
+    """
+    from resextract import store as _store
+
+    recorded: list[str] = []
+    for i, claim in enumerate(claims):
+        if claim.verdict != "CONFIRMS" or _store.producer_is_model(claim.producer):
+            continue
+        reason = (
+            f"verdict CONFIRMS was passed to assemble() but the claim's producer is "
+            f"{claim.producer!r}, not 'model'; capped at EXTENDS by the same rule as "
+            "materialize._claim_standing (a non-model run may not assert CONFIRMS)"
+        )
+        if claim.verdict_reason:
+            reason = f"{claim.verdict_reason}; {reason}"
+        claims[i] = claim.model_copy(
+            update={"verdict": "EXTENDS", "verdict_reason": reason}
+        )
+        recorded.append(f"claim {claim.id}: {reason}")
+    return recorded
+
+
 def assemble(
     docket_dir: str | os.PathLike[str],
     *,
     lane: Any,
     claims: Iterable[Any],
-    evidence: Iterable[Any] = (),
+    #: U5.14 -- ``None`` = not supplied, so it *inherits* the previous
+    #: manifest's recorded evidence (a bare re-assembly must not empty it);
+    #: an explicit empty iterable is a deliberate clear.  Same rule as the five
+    #: below, which it now matches instead of being the one silent hole.
+    evidence: Iterable[Any] | None = None,
     material_report: Any,
-    web_sources: Iterable[Any] = (),
+    #: U5.10 — these five default to ``None`` (= "not supplied"), NOT to ``()``.
+    #: The distinction is load-bearing and deliberate: ``None`` means *inherit
+    #: what the existing manifest already recorded* (a bare re-assembly passes
+    #: nothing and must not empty the lists), while an explicit empty iterable
+    #: means *replace it with nothing* — a deliberate clear.  With a default of
+    #: ``()`` the two were indistinguishable and a deliberate clear could not be
+    #: expressed at all.  See :func:`_inherit_manifest_lists`.
+    web_sources: Iterable[Any] | None = None,
     target_meta: Any,
     freshness: Any,
-    open_questions: Iterable[str] = (),
-    rework: Iterable[Any] = (),
+    open_questions: Iterable[str] | None = None,
+    rework: Iterable[Any] | None = None,
     model: str = "",
     generated_at: str | None = None,
-    results: Iterable[Any] = (),
-    prior_art: Iterable[Any] = (),
+    results: Iterable[Any] | None = None,
+    prior_art: Iterable[Any] | None = None,
     graph_path: str | None = None,
     licence: str | None = None,
     status: str | None = None,
+    producer: str | None = None,
+    status_reason: str | None = None,
     source_root: str | None = None,
 ) -> AssembledDocket:
     """Render a docket folder, or raise :class:`AssemblyRefused`.
 
     Every gate is evaluated before anything is written, so a refusal never
     leaves a ``MANIFEST.json`` (or any other file) behind.
+
+    **Empty vs absent (U5.10, deliberate).**  ``web_sources``,
+    ``open_questions``, ``rework``, ``results`` and ``prior_art`` default to
+    ``None``, which means "not supplied — inherit the existing manifest's own
+    value where it recorded one (and the target is unchanged)".  An explicit
+    empty iterable means "replace it with nothing", i.e. a **deliberate clear**;
+    that is honoured verbatim and raises no alarm.  A caller can therefore tell
+    the two apart, and a genuine clear is possible — but it must be *said*.
+    Inheritance across a **changed target** is refused and recorded, never
+    silent: see :func:`_inherit_manifest_lists`.
     """
     docket = os.path.abspath(os.fspath(docket_dir))
     reasons: list[str] = []
     downgrades: list[str] = []
+    preserved_notes: list[str] = []
 
     # -- inputs ---------------------------------------------------------------
     try:
@@ -587,6 +1221,7 @@ def assemble(
             "downgraded to 'memo' (§3.6: anything unverifiable defaults to memo, never paper)"
         )
 
+    target: Target | None = None
     try:
         target = target_meta if isinstance(target_meta, Target) else Target.model_validate(dict(target_meta))
     except (ValidationError, TypeError, ValueError) as exc:
@@ -605,8 +1240,15 @@ def assemble(
             cid = raw.get("id", "?") if isinstance(raw, Mapping) else "?"
             reasons.append(f"claim {cid}: invalid claim structure: {exc}")
     parsed_claims.sort(key=lambda c: c.id)
+    # U5.22 ITEM 1 -- the cap is enforced where claims are *written*, not only
+    # where they are made: a caller-supplied standing that its own producer
+    # cannot back is normalised here, exactly as materialize would.  Like
+    # materialize._claim_standing, the reason travels ON the claim
+    # (Claim.verdict_reason) rather than through a second, assemble-only
+    # channel -- that field is what the manifest schema documents for it.
+    _cap_uncapped_claims(parsed_claims)
 
-    evidence_items = _as_evidence(evidence)
+    evidence_items = _as_evidence(evidence or ())
     measured = _as_results(results)
     backlog = _as_backlog(rework)
     art = _as_prior_art(prior_art)
@@ -645,6 +1287,138 @@ def assemble(
                     f"refusing to overwrite it with lane {lane_in.slug!r} "
                     "(one lane = one folder = one publishable item)"
                 )
+
+    # -- U5.10 manifest-list inheritance (bare re-assembly keeps the lists) ----
+    # ``None`` = "not supplied" => inherit the existing manifest's own recorded
+    # lists (target unchanged); an explicit ``[]`` = a deliberate clear.  A
+    # changed target refuses inheritance per list, loudly (never quietly stale).
+    _effective_open = list(open_questions) if open_questions is not None else []
+    _effective_web = web
+    _effective_rework = backlog
+    _lq_preserved: list[str] = []
+    _lq_warnings: list[str] = []
+    if previous is not None and target is not None:
+        (
+            _effective_open,
+            _effective_rework,
+            _effective_web,
+            _lq_preserved,
+            _lq_warnings,
+        ) = _inherit_manifest_lists(
+            previous,
+            target=target,
+            supplied_open_questions=open_questions,
+            supplied_rework=rework,
+            supplied_web_sources=web_sources,
+            current_open_questions=_effective_open,
+            current_rework=_effective_rework,
+            current_web=_effective_web,
+        )
+    web = _effective_web
+    backlog = _effective_rework
+    web_urls = {w.url for w in web}
+    downgrades.extend(_lq_warnings)
+    preserved_notes.extend(_lq_preserved)
+    # -- U5.11 render-input inheritance (results/prior_art are manifest fields) --
+    # Same discipline as the lists above: ``None`` inherits (unchanged target
+    # only), an explicit ``[]`` is a deliberate clear, a changed target refuses
+    # per branch naming both revisions.  ``_ri_recorded`` names the branches the
+    # *previous* manifest recorded, which is what silences the U5.10 alarm for
+    # them -- and what keeps it firing for an unrecorded (pre-U5.11) docket.
+    _ri_preserved: list[str] = []
+    _ri_warnings: list[str] = []
+    _ri_recorded: list[str] = []
+    if previous is not None and target is not None:
+        (
+            measured,
+            art,
+            evidence_items,
+            _ri_preserved,
+            _ri_warnings,
+            _ri_recorded,
+        ) = _inherit_render_inputs(
+            previous,
+            target=target,
+            supplied_results=results,
+            supplied_prior_art=prior_art,
+            supplied_evidence=evidence,
+            current_results=measured,
+            current_prior_art=art,
+            current_evidence=evidence_items,
+        )
+    downgrades.extend(_ri_warnings)
+    preserved_notes.extend(_ri_preserved)
+
+    # Store exactly what was rendered -- but only when it *was* recorded (an
+    # explicit clear, or an inherited record).  A legacy bare re-assembly stores
+    # ``None``, which keeps "never recorded" distinct from "deliberately empty"
+    # and keeps the U5.10 alarm honest instead of silencing it with a fake ``[]``.
+    stored_results: list[ResultRecord] | None = None
+    stored_prior_art: list[PriorArtRecord] | None = None
+    stored_evidence: list[EvidenceRecord] | None = None
+    try:
+        if results is not None or "results" in _ri_recorded:
+            stored_results = [
+                ResultRecord(
+                    name=r.name,
+                    value=r.value,
+                    unit=r.unit,
+                    command=r.command,
+                    source_ref=r.source_ref,
+                )
+                for r in measured
+            ]
+        if prior_art is not None or "prior_art" in _ri_recorded:
+            stored_prior_art = [
+                PriorArtRecord(
+                    url=a.url,
+                    title=a.title,
+                    page_date=a.page_date,
+                    quote=a.quote,
+                    verdict=a.verdict,
+                    sha256=a.sha256,
+                )
+                for a in art
+            ]
+        if evidence is not None or "evidence" in _ri_recorded:
+            stored_evidence = [
+                EvidenceRecord(
+                    ref=e.ref,
+                    source_kind=e.source_kind,
+                    sha256=e.sha256,
+                    context=e.context,
+                    quote=e.quote,
+                )
+                for e in evidence_items
+            ]
+    except ValidationError as exc:
+        reasons.append(
+            f"results/prior_art/evidence: cannot be recorded in MANIFEST.json: {exc}"
+        )
+
+    downgrades.extend(
+        _warn_unsupplied_render_inputs(
+            docket,
+            supplied_results=results,
+            supplied_prior_art=prior_art,
+            rendered_results=measured,
+            rendered_prior_art=art,
+            recorded_files=_ri_recorded,
+        )
+    )
+
+    # -- U5.8/U5.9 material provenance inheritance (U5.7 discipline, applied) --
+    # A bare re-assembly must not dissolve the material record: each row that
+    # still describes the same bytes takes its src/note/resolved_from/blob_sha/
+    # unpinned back from the existing manifest (src by *preference for the
+    # authoritative record*, never re-synthesis from dest); a row whose bytes
+    # changed keeps nothing from the old record and is reported per-entry; and
+    # healed rows are summarised in one line (report + HISTORY.md), never silent.
+    _mp_warnings, _mp_preserved, _bytes_preserved = _inherit_material_provenance(
+        material, previous
+    )
+    downgrades.extend(_mp_warnings)
+    preserved_notes.extend(_mp_preserved)
 
     # -- gates: claims --------------------------------------------------------
     for claim in parsed_claims:
@@ -768,19 +1542,88 @@ def assemble(
     generated_at = generated_at or _now()
     version = getattr(resextract, "__version__", "0.1.0")
     final_type: Any = ctype
+    # U5.14: the descriptive title is inherited on the render-input discipline,
+    # so a bare re-assembly keeps "Duval replay-sourced material" instead of
+    # collapsing to the lane slug -- *once the title is recorded*: a pre-U5.14
+    # manifest recorded none, so that first pass must supply it.
+    effective_title, _title_preserved, _title_warnings = _inherit_title(
+        previous, lane_in, target=target
+    )
+    preserved_notes.extend(_title_preserved)
+    downgrades.extend(_title_warnings)
     lane_model = Lane(
         slug=lane_in.slug,
         type=final_type,
+        title=effective_title,
         thesis=lane_in.thesis,
         audience=lane_in.audience,
     )
+    # -- U5.7 producer gate (derived from the manifest, never ad hoc) ---------
+    # The effective producer is taken from the *existing manifest* whenever the
+    # caller does not state one, so re-assembling a docket cannot drop its
+    # provenance line and cannot silently upgrade itself to `model`.  With no
+    # prior manifest the default is `unknown`, and unknown never promotes.
+    effective_producer = (
+        producer
+        if producer is not None
+        else (previous.generated_by.producer if previous is not None else "unknown")
+    )
+    if effective_producer not in PRODUCERS:  # pragma: no cover - defensive
+        raise AssemblyRefused(
+            [f"producer {effective_producer!r} is not one of {list(PRODUCERS)}"]
+        )
+    requested_status = status or lane_in.status or "draft"
+    gate_reason = producer_gate_reason(effective_producer)
+    effective_reason = status_reason
+    final_status = requested_status
+    if gate_reason is not None:
+        # assemble is a writer, so the gate holds here too: a non-`model` docket
+        # is *never* rendered `ready`, whatever the caller asked for.
+        if requested_status == "ready":
+            final_status = "draft"
+        effective_reason = effective_reason or gate_reason
+
+    manifest = DocketManifest(
+        schema_=SCHEMA,
+        lane=lane_model,
+        target=target,
+        status=final_status,
+        status_reason=effective_reason,
+        freshness=fresh,
+        claims=parsed_claims,
+        material=material,
+        web_sources=web,
+        open_questions=_effective_open,
+        rework_open=[b.text for b in backlog],
+        generated_by=GeneratedBy(
+            app=APP, version=version, model=model, producer=effective_producer
+        ),
+        generated_at=generated_at,
+        results=stored_results,
+        prior_art=stored_prior_art,
+        evidence=stored_evidence,
+    )
+    # -- U5.9 sealed-window inheritance (historical fact, never fabricated) ----
+    _ws_preserved, _ws_warnings = _inherit_sealed_window(
+        manifest, previous, bytes_preserved=_bytes_preserved
+    )
+    preserved_notes.extend(_ws_preserved)
+    downgrades.extend(_ws_warnings)
+    if preserved_notes:
+        # Healing is the normal outcome: ONE summary line, not an alarm per entry.
+        preserved_notes = ["; ".join(preserved_notes)]
+
     ctx = {
         "docket": docket,
         "lane": lane_in,
+        "title": effective_title,
         "lane_model": lane_model,
         "target": target,
         "freshness": fresh,
-        "status": status or lane_in.status or "draft",
+        "manifest": manifest,
+        "producer": effective_producer,
+        "status": final_status,
+        "status_reason": effective_reason,
         "claims": parsed_claims,
         "material": material,
         "by_dest": by_dest,
@@ -788,7 +1631,7 @@ def assemble(
         "evidence": evidence_items,
         "results": measured,
         "prior_art": art,
-        "open_questions": list(open_questions or ()),
+        "open_questions": list(_effective_open),
         "backlog": backlog,
         "model": model,
         "generated_at": generated_at,
@@ -796,58 +1639,28 @@ def assemble(
         "ctype": ctype,
         "requested_type": requested_type,
         "downgrades": downgrades,
+        "preserved_notes": preserved_notes,
         "licence": licence,
         "graph_nodes": graph_nodes,
         "excerpts": parse_excerpts(os.path.join(docket, "material", "EXCERPTS.md")),
         "links": parse_links(os.path.join(docket, "material", "LINKS.md")),
     }
 
-    files: dict[str, str] = {
-        "README.md": _render_readme(ctx),
-        "CLAIMS.md": _render_claims(ctx),
-        "EVIDENCE.md": _render_evidence(ctx),
-        "PRIOR_ART.md": _render_prior_art(ctx),
-        "REFERENCES.md": _render_references(ctx),
-        "REFERENCES.bib": _render_references_bib(ctx),
-        "RESULTS.md": _render_results(ctx),
-        "METHOD.md": _render_method(ctx),
-        "CHECKLIST.md": _render_checklist(ctx),
-        "OPEN_QUESTIONS.md": _render_open_questions(ctx),
-        "UPDATE_BACKLOG.md": _render_backlog(ctx),
-    }
-    item_text = _render_item(ctx)
-    web_readme = _render_web_readme(ctx)
-    repro_readme = _render_repro(ctx)
-
-    manifest = DocketManifest(
-        schema_=SCHEMA,
-        lane=lane_model,
-        target=target,
-        status=ctx["status"],
-        freshness=fresh,
-        claims=parsed_claims,
-        material=material,
-        web_sources=web,
-        open_questions=ctx["open_questions"],
-        rework_open=[b.text for b in backlog],
-        generated_by=GeneratedBy(app=APP, version=version, model=model),
-        generated_at=generated_at,
-    )
+    # U5.14: one provenance line near the top of EVERY rendered file -- a reader
+    # may open RESULTS.md, CLAIMS.md or repro/run.sh first, not only README.md.
+    # U5.16: this mapping is the renderer's own list (``BANNER_FILES``) and IS
+    # what is written below, so coverage cannot drift from the write path.
+    rendered = rendered_banner_texts(ctx)
 
     # -- writes (all gates passed) -------------------------------------------
     os.makedirs(docket, exist_ok=True)
     preserved = _preserve_item(docket)
     written: list[str] = []
-    for name in sorted(files):
-        _write_text(os.path.join(docket, name), files[name])
+    for name in sorted(rendered):
+        dest = os.path.join(docket, *name.split("/"))
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        _write_text(dest, rendered[name])
         written.append(name)
-    _write_text(os.path.join(docket, "ITEM.md"), item_text)
-    written.append("ITEM.md")
-    os.makedirs(os.path.join(docket, "web"), exist_ok=True)
-    _write_text(os.path.join(docket, "web", "README.md"), web_readme)
-    os.makedirs(os.path.join(docket, "repro"), exist_ok=True)
-    _write_text(os.path.join(docket, "repro", "README.md"), repro_readme)
-    _write_text(os.path.join(docket, "repro", "run.sh"), _render_run_sh(ctx))
     history_block = _history_block(ctx, preserved)
     _append_history(docket, history_block)
     write_manifest(docket, manifest)
@@ -860,6 +1673,7 @@ def assemble(
         claims=len(parsed_claims),
         material=len(material),
         downgrades=downgrades,
+        preserved=preserved_notes,
         preserved_item=preserved,
     )
 
@@ -869,16 +1683,68 @@ def assemble(
 # --------------------------------------------------------------------------- #
 
 
+#: U5.22 ITEM 3 -- how many prior ``ITEM.md`` snapshots a docket keeps.
+#:
+#: Justification (not "it has always been like that"): this rotation is the only
+#: unbounded growth in a docket tree -- every assembly appends one file forever
+#: (the two real dockets already hold 4 and 3).  ``5`` is the smallest bound
+#: that prunes nothing that exists today (deepest real chain = 4), so it stops
+#: the growth without destroying any snapshot currently on disk, while still
+#: leaving a reviewer the five most recent ``ITEM.md`` revisions.  ``HISTORY.md``
+#: stays append-only and unbounded *by design* -- it is the audit log -- so the
+#: snapshots are redundant copies of a record that is still kept in full.
+ITEM_SNAPSHOT_KEEP = 5
+
+
+# A re-render is **not byte-identical**, by construction (U5.31).  Two
+# deliberate effects make it so: :func:`_append_history` *appends* a new block
+# to ``HISTORY.md`` (the append-only audit log -- never rewritten), and
+# :func:`_preserve_item` writes the outgoing ``ITEM.md`` as a fresh
+# ``ITEM.md.rN`` snapshot.  That rotation is **destructive**: it keeps only the
+# newest :data:`ITEM_SNAPSHOT_KEEP` = 5 snapshots, so once the window is full
+# each render also *deletes the oldest* ``ITEM.md.rN`` (V5.30 measured
+# r5 -> r6 (+ delete r1) -> r7 (+ delete r2); U5.33 measured the file counts:
+# banner-marked files +1 per render **while the window fills**, **net 0 once it
+# is full** -- one new snapshot added, the oldest deleted).  What *is* stable is
+# ``ITEM.md``'s own content: its sha256 is constant across re-renders (U8.43
+# measured it unchanged at every render r0-r7, on both sides of a clock second).
+# ``MANIFEST.json`` is **not** stable -- it is rewritten on every render and its
+# bytes move as soon as ``generated_at`` (the real clock, :func:`_now`) crosses a
+# second (U8.43: identical sha within one second, different across the
+# boundary).  A verifier diffing a re-rendered docket must therefore expect a new
+# ``HISTORY.md`` block, one new ``ITEM.md.rN``, the loss of the oldest snapshot,
+# and a possibly-new ``MANIFEST.json``; byte identity across renders is not a
+# contract.
 def _preserve_item(docket: str) -> str | None:
+    """Preserve the current ``ITEM.md`` as ``ITEM.md.rN``, keeping the newest N.
+
+    U5.22 ITEM 3.  The old allocator took the *first free* index and never
+    pruned, so every assembly added a file forever.  The index is now
+    ``max(existing) + 1`` -- deliberately **not** first-free: once the bound
+    prunes the oldest snapshot, first-free would hand the *newest* content a low
+    index and the next round would classify it as oldest and delete the most
+    recent prior revision (silent loss of exactly what a reviewer wants).  Only
+    the newest :data:`ITEM_SNAPSHOT_KEEP` snapshots are kept.  ``ITEM.md``
+    itself is never touched here -- the caller re-renders it afterwards -- so
+    the live document survives pruning by construction.
+    """
     item = os.path.join(docket, "ITEM.md")
     if not os.path.isfile(item):
         return None
-    n = 1
-    while os.path.exists(os.path.join(docket, f"ITEM.md.r{n}")):
-        n += 1
     prior = Path(item).read_text(encoding="utf-8")
-    _write_text(os.path.join(docket, f"ITEM.md.r{n}"), prior)
-    return f"ITEM.md.r{n}"
+    snaps = sorted(
+        (int(m.group(1)), name)
+        for name in os.listdir(docket)
+        if (m := re.match(r"^ITEM\.md\.r(\d+)$", name))
+    )
+    n = snaps[-1][0] + 1 if snaps else 1
+    dest = f"ITEM.md.r{n}"
+    _write_text(os.path.join(docket, dest), prior)
+    # Keep at most ITEM_SNAPSHOT_KEEP snapshots *including* the one just written.
+    excess = len(snaps) - (ITEM_SNAPSHOT_KEEP - 1)
+    for _index, name in snaps[: max(0, excess)]:
+        os.remove(os.path.join(docket, name))
+    return dest
 
 
 def _history_block(ctx: Mapping[str, Any], preserved: str | None) -> str:
@@ -892,6 +1758,9 @@ def _history_block(ctx: Mapping[str, Any], preserved: str | None) -> str:
     if ctx["downgrades"]:
         for note in ctx["downgrades"]:
             lines.append(f"- **downgrade** — {note}")
+    if ctx["preserved_notes"]:
+        for note in ctx["preserved_notes"]:
+            lines.append(f"- **preserved** — {note}")
     if preserved:
         lines.append(f"- previous `ITEM.md` preserved as `{preserved}`")
     return "\n".join(lines) + "\n"
@@ -916,30 +1785,201 @@ def _append_history(docket: str, block: str) -> None:
 # --------------------------------------------------------------------------- #
 
 
+def provenance_warning(ctx: Mapping[str, Any]) -> str | None:
+    """The visible provenance line for a docket, or ``None`` for a model docket.
+
+    Derived from the manifest that *is being written* — ``ctx["manifest"]`` —
+    never from a caller-supplied string, so re-assembly cannot drop it: the same
+    manifest field that gates promotion drives the warning.  ``model`` returns
+    ``None`` deliberately: a warning shown on every docket would be trained away
+    by its readers.
+    """
+    producer = getattr(ctx.get("manifest"), "generated_by", None)
+    producer = getattr(producer, "producer", "unknown") or "unknown"
+    if producer == "model":
+        return None
+    if producer == "mixed":
+        detail = (
+            "these candidates are **mixed** — at least one was mined by a model "
+            "and at least one was not (replay/fixture)"
+        )
+    elif producer == "unknown":
+        detail = "no producer was recorded for these candidates"
+    else:
+        detail = "no model mined or assessed these candidates"
+    return (
+        f"> **PROVENANCE: {producer}-produced** — {detail}. "
+        "Not eligible for publication until real mining runs."
+    )
+
+
+def _stamp_banner(
+    text: str,
+    ctx: Mapping[str, Any],
+    *,
+    bib: bool = False,
+    hash_comment: bool = False,
+) -> str:
+    """U5.14: put the one-line provenance warning near the top of a file.
+
+    V5C measured the warning in ``README.md`` and ``CHECKLIST.md`` **only**, so a
+    reader opening ``RESULTS.md`` (or ``EVIDENCE.md``/``CLAIMS.md``/
+    ``PRIOR_ART.md``/``ITEM.md``/``METHOD.md``/``UPDATE_BACKLOG.md``/
+    ``REFERENCES.*``) first saw no provenance warning at all.  Stamping at the
+    single write point makes coverage total and keeps it honest: exactly one
+    line, immediately after the H1, and ``None`` for a ``model`` producer -- a
+    warning shown on every docket would be trained away by its readers.
+    """
+    warning = provenance_warning(ctx)
+    if not warning:
+        return text
+    plain = warning.lstrip("> ").replace("**", "")
+    if bib:
+        # A blockquote is not valid BibTeX; a ``%`` line is the same one line.
+        return "% " + plain + "\n" + text
+    if hash_comment:
+        # U5.16: ``repro/run.sh`` is rendered too and is the file an operator
+        # runs first, so it carries the same one line as a ``#`` comment -- a
+        # ``>`` blockquote there is a shell syntax error.  It goes *after* the
+        # shebang: line 1 must stay ``#!/usr/bin/env bash`` or the script stops
+        # being directly executable.
+        lines = text.splitlines()
+        at = 1 if lines and lines[0].startswith("#!") else 0
+        body = "\n".join(lines[:at] + ["# " + plain, ""] + lines[at:])
+        return body + ("\n" if text.endswith("\n") else "")
+    lines = text.splitlines()
+    at = 1
+    while at < len(lines) and not lines[at].strip():
+        at += 1
+    body = "\n".join(lines[:at] + [warning, ""] + lines[at:])
+    return body + ("\n" if text.endswith("\n") else "")
+
+
+#: U5.16 -- the rendered files that DO carry the provenance line.  ``assemble``
+#: writes exactly these keys (through :func:`rendered_banner_texts`), so this
+#: table and what lands on disk cannot drift: a rendered file must be listed
+#: here to be written at all, and ``test_banner_covers_every_rendered_file``
+#: parametrises over this same tuple instead of a hand-kept copy.  The previous
+#: silent omission was ``repro/run.sh`` (rendered, and the file an operator
+#: opens first); ``HISTORY.md`` was, and stays, exempt *with a stated reason*.
+BANNER_FILES: tuple[str, ...] = (
+    "README.md",
+    "CLAIMS.md",
+    "EVIDENCE.md",
+    "PRIOR_ART.md",
+    "REFERENCES.md",
+    "REFERENCES.bib",
+    "RESULTS.md",
+    "METHOD.md",
+    "CHECKLIST.md",
+    "OPEN_QUESTIONS.md",
+    "UPDATE_BACKLOG.md",
+    "ITEM.md",
+    "web/README.md",
+    "repro/README.md",
+    "repro/run.sh",
+)
+
+#: Rendered-but-deliberately-exempt files, each with the reason it is exempt
+#: (U5.16: an unexplained omission is how coverage silently rots).
+BANNER_EXEMPT: Mapping[str, str] = {
+    "HISTORY.md": (
+        "append-only: _append_history only ever appends, so a stamped line "
+        "would be re-added on every re-assembly and accumulate"
+    ),
+    "MANIFEST.json": (
+        "machine-readable record, not prose; generated_by.producer already IS "
+        "the provenance field the banner only reports"
+    ),
+}
+
+#: A title made only of markdown punctuation / whitespace -- no heading text.
+_PUNCT_ONLY_RE = re.compile(r"""^[\s#*_`|>~=+\-\[\]()!.,:;"\'/\\{}]+$""")
+
+
+def _h1_text(title: str) -> str:
+    """U5.16: a title placed directly after the one ``# `` H1 marker.
+
+    A markdown title beginning with ``#`` used to render ``# # ...`` -- the
+    second marker is stray.  Exactly one *leading* run of ``#`` (and the spaces
+    after it) is removed; everything else is passed through verbatim: V5E
+    confirmed ``|``, backticks, ``_``, ``**`` and the 600-char title survive
+    intact and no table breaks.  A title that is *only* markdown punctuation
+    (or empty after that strip) cannot form a heading, so it renders as a
+    visible placeholder rather than a silently invented value.
+    """
+    text = re.sub(r"^#+\s*", "", title.strip())
+    if text.strip() and not _PUNCT_ONLY_RE.match(text):
+        return text
+    return "_(untitled)_"
+
+
+def rendered_banner_texts(ctx: Mapping[str, Any]) -> dict[str, str]:
+    """U5.16: the single source of truth for every banner-carrying rendered file.
+
+    Returns ``{docket-relative path: stamped text}`` for exactly
+    :data:`BANNER_FILES`.  :func:`assemble` writes this mapping and
+    ``tests/test_docket_reassembly.py`` imports :data:`BANNER_FILES`, so the
+    coverage list and the renderer share one source and cannot drift.
+    """
+    bodies: dict[str, str] = {
+        "README.md": _render_readme(ctx),
+        "CLAIMS.md": _render_claims(ctx),
+        "EVIDENCE.md": _render_evidence(ctx),
+        "PRIOR_ART.md": _render_prior_art(ctx),
+        "REFERENCES.md": _render_references(ctx),
+        "REFERENCES.bib": _render_references_bib(ctx),
+        "RESULTS.md": _render_results(ctx),
+        "METHOD.md": _render_method(ctx),
+        "CHECKLIST.md": _render_checklist(ctx),
+        "OPEN_QUESTIONS.md": _render_open_questions(ctx),
+        "UPDATE_BACKLOG.md": _render_backlog(ctx),
+        "ITEM.md": _render_item(ctx),
+        "web/README.md": _render_web_readme(ctx),
+        "repro/README.md": _render_repro(ctx),
+        "repro/run.sh": _render_run_sh(ctx),
+    }
+    return {
+        name: _stamp_banner(
+            bodies[name],
+            ctx,
+            bib=name.endswith(".bib"),
+            hash_comment=name.endswith(".sh"),
+        )
+        for name in BANNER_FILES
+    }
+
+
 def _render_readme(ctx: Mapping[str, Any]) -> str:
     lane = ctx["lane"]
     target = ctx["target"]
     pitch = lane.thesis.strip() or "TODO: one paragraph on what this item claims and why it matters."
     head = target.head_sha or "(unknown)"
-    title = lane.title or lane.slug
+    title = ctx.get("title") or lane.title or lane.slug
     lines = [
-        f"# {title} — {ctx['ctype']} docket",
+        f"# {_h1_text(title)} — {ctx['ctype']} docket",
         "",
         f"**Status:** {ctx['status']} · **Type:** {ctx['ctype']} · **Target:** `{target.slug}` @ `{head}`",
         f"**Freshness:** {_freshness_label(ctx['freshness'])} · **Generated:** {ctx['generated_at']} "
         f"by {APP} {ctx['version']}"
         + (f" (model: `{ctx['model']}`)" if ctx["model"] else ""),
         "",
-        "## What this is",
-        "",
-        pitch,
-        "",
-        f"**Audience.** {lane.audience.strip() or 'TODO: name the reader.'}",
-        "",
-        "One lane = one folder = one publishable item. Every claim below is backed by a",
-        "byte-copy inside `material/`; nothing here links only to the source repository.",
-        "",
     ]
+    if ctx.get("status_reason"):
+        lines.extend([f"**Why not `ready`:** {ctx['status_reason']}", ""])
+    lines.extend(
+        [
+            "## What this is",
+            "",
+            pitch,
+            "",
+            f"**Audience.** {lane.audience.strip() or 'TODO: name the reader.'}",
+            "",
+            "One lane = one folder = one publishable item. Every claim below is backed by a",
+            "byte-copy inside `material/`; nothing here links only to the source repository.",
+            "",
+        ]
+    )
     if ctx["downgrades"]:
         lines.extend(["## Downgrades recorded", ""])
         lines.extend(f"- {note}" for note in ctx["downgrades"])
@@ -978,7 +2018,22 @@ def _render_claims(ctx: Mapping[str, Any]) -> str:
                 "",
                 f"**Kind.** {claim.kind or '(unspecified)'}",
                 "",
-                f"**Verification state.** {claim.verdict}",
+                f"**Verification state.** {claim.verdict}"
+                # U5.13/U5.14: a *capped* standing must be legible -- the reason
+                # travels with the state, on the same line, and an uncapped claim
+                # prints no empty reason line.  U5.16 (V5E): the old label read
+                # "— capped: <reason>" beside a reason that itself said "capped at
+                # EXTENDS", so the word appeared twice and the reason's "maps to
+                # CONFIRMS" sat next to a rendered EXTENDS.  The frame no longer
+                # restates the cap: it says a note was recorded on write (true for
+                # a cap and for a producer note alike) and quotes it once,
+                # verbatim -- the *declared* value stays visibly declared.
+                + (
+                    " — a standing note was recorded on write and is quoted "
+                    f"verbatim: {claim.verdict_reason}"
+                    if getattr(claim, "verdict_reason", None)
+                    else ""
+                ),
                 "",
                 "**Provenance.** " + ", ".join(f"`{p}`" for p in claim.provenance),
                 "",
@@ -991,6 +2046,38 @@ def _render_claims(ctx: Mapping[str, Any]) -> str:
 
 def _render_evidence(ctx: Mapping[str, Any]) -> str:
     docket = ctx["docket"]
+    # U5.14: ``evidence`` is a *stored* render input now, so its source-kind /
+    # sha256 / context prose survives a bare re-assembly -- *once the field is
+    # recorded*.  A manifest written before U5.14 recorded none, so a bare pass
+    # over it still loses this prose; the caller must supply ``evidence`` once
+    # (V5E reproduced exactly that).  It is **merged** into
+    # the per-material block for the same ref rather than printed a second time:
+    # the de-duplication the verifier saw is kept, the prose is not dropped.
+    by_ref: dict[str, list[Any]] = {}
+    for ev in ctx["evidence"]:
+        by_ref.setdefault(ev.ref, []).append(ev)
+
+    def _context_lines(ref: str) -> list[str]:
+        entries = by_ref.get(ref) or []
+        if not entries:
+            return []
+        kinds = sorted({e.source_kind for e in entries})
+        shas = sorted({e.sha256 for e in entries if e.sha256})
+        contexts: list[str] = []
+        for e in entries:
+            if e.context and e.context not in contexts:
+                contexts.append(e.context)
+        line = "- source kind: " + ", ".join(f"`{k}`" for k in kinds)
+        if shas:
+            line += " · sha256 " + ", ".join(f"`{s}`" for s in shas)
+        if contexts:
+            line += " · context: " + " · ".join(contexts)
+        out = [line, ""]
+        for e in entries:
+            if e.quote:
+                out.extend(["```text", e.quote.rstrip("\n"), "```", ""])
+        return out
+
     lines = [
         "# EVIDENCE — verbatim excerpts from this docket's own `material/`",
         "",
@@ -1010,7 +2097,9 @@ def _render_evidence(ctx: Mapping[str, Any]) -> str:
     if not ctx["material"]:
         lines.append("| _(no material copied)_ | — | — | — |")
     lines.append("")
+    covered: set[str] = set()
     for item in ctx["material"]:
+        ref = f"material/{item.dest}"
         if item.linked:
             lines.extend(
                 [
@@ -1023,8 +2112,12 @@ def _render_evidence(ctx: Mapping[str, Any]) -> str:
             )
             if item.note:
                 lines.extend(["```sh", item.note, "```", ""])
+            lines.extend(_context_lines(ref))
+            covered.add(ref)
             continue
         if not item.excerpt:
+            # no block is emitted for this ref, so its evidence prose stays in
+            # the "Other evidence entries" section below rather than vanishing
             continue
         lo, hi = item.excerpt
         excerpt = _read_span(docket, item.dest, lo, hi)
@@ -1037,15 +2130,24 @@ def _render_evidence(ctx: Mapping[str, Any]) -> str:
                 "",
             ]
         )
+        lines.extend(_context_lines(ref))
         if not excerpt:
             lines.extend(["> **WARNING:** the span could not be read from the copied file.", ""])
-            continue
-        lines.extend(["```text", *excerpt, "```", ""])
+        else:
+            lines.extend(["```text", *excerpt, "```", ""])
+        covered.add(ref)
     lines.extend(["## Other evidence entries", ""])
+    unmerged = [ev for ev in ctx["evidence"] if ev.ref not in covered]
     if not ctx["evidence"]:
         lines.append("_(none supplied)_")
         lines.append("")
-    for ev in ctx["evidence"]:
+    elif not unmerged:
+        lines.append(
+            "_(none unmerged — every entry's source kind, sha256 and context is merged "
+            "into its `material/` block above; no datum is printed twice)_"
+        )
+        lines.append("")
+    for ev in unmerged:
         lines.extend(
             [
                 f"### `{ev.ref}`",
@@ -1119,7 +2221,7 @@ def _render_method(ctx: Mapping[str, Any]) -> str:
     else:
         lines.append(
             "_No knowledge graph was supplied, so graph node ids below are recorded as"
-            " unverified (they were not checked against a graph)."
+            " unverified (they were not checked against a graph)._"
         )
     lines.append("")
     lines.extend(["## File anchors", "", "| claim | ref | material dest | sha256 |", "| --- | --- | --- | --- |"])
@@ -1257,7 +2359,7 @@ def _render_item(ctx: Mapping[str, Any]) -> str:
     title, sections = ITEM_SKELETONS.get(ctx["ctype"], ITEM_SKELETONS["memo"])
     lane = ctx["lane"]
     lines = [
-        f"# {lane.title or lane.slug} — {title}",
+        f"# {_h1_text(ctx.get('title') or lane.title or lane.slug)} — {title}",
         "",
         ITEM_RULE,
         f"> **Skeleton.** Type `{ctx['ctype']}`; every heading below still carries a `TODO`.",
@@ -1296,6 +2398,8 @@ def _installed_renderers() -> dict[str, str | None]:
 def _render_checklist(ctx: Mapping[str, Any]) -> str:
     ctype = ctx["ctype"]
     lines = [f"# CHECKLIST — {ctype}", ""]
+    if ctx.get("status_reason"):
+        lines.extend([f"> **Status reason:** {ctx['status_reason']}", ""])
     if ctx["requested_type"] != ctype:
         lines.extend(
             [
@@ -1405,8 +2509,53 @@ def _render_run_sh(ctx: Mapping[str, Any]) -> str:
 # --------------------------------------------------------------------------- #
 
 
+def _claim_standing_problems(manifest: DocketManifest) -> list[str]:
+    """U5.22 ITEM 2 -- claims whose standing contradicts their backing producer.
+
+    Condition checked, exactly::
+
+        claim.verdict == "CONFIRMS" and not store.producer_is_model(claim.producer)
+
+    ``claim.producer`` is the *assessing* producer (``materialize._claim_for``
+    records the verdict row's producer when a verdict assesses the claim, the
+    candidate's otherwise -- U5.15/U5.19), so it is the value the cap is judged
+    on and the only value that can contradict the standing.  The docket-level
+    ``generated_by.producer`` is deliberately **not** the gate: a model verdict
+    may legitimately bless replay-mined material
+    (``store.may_back_model_claim_verdict``, recorded as ``materialize`` F2), so
+    gating on it would flag a correct docket.  It is quoted as context only.
+
+    Fail-closed: ``producer`` defaults to ``"unknown"``, which grants no model
+    standing, so a claim that recorded no assessor is flagged rather than
+    trusted.  A pre-existing manifest is **flagged, never rewritten** -- this
+    is a reader; the render-side cap is :func:`_cap_uncapped_claims`.  Together
+    they are the two-sided fix: the writer can no longer *produce* the
+    contradiction and the verifier can no longer *pass* it.
+    """
+    from resextract import store as _store
+
+    mine = manifest.generated_by.producer
+    problems: list[str] = []
+    for claim in manifest.claims:
+        if claim.verdict != "CONFIRMS" or _store.producer_is_model(claim.producer):
+            continue
+        problems.append(
+            f"claim {claim.id}: standing CONFIRMS contradicts its backing producer "
+            f"{claim.producer!r}, not 'model' (docket generated_by.producer={mine!r}) "
+            "-- a non-model run may not assert CONFIRMS; re-derive the claim through "
+            "materialize so the cap applies, or record mechanically-verified facts as "
+            "a distinct standing (U5.22 follow-up)"
+        )
+    return problems
+
+
 def verify_docket(docket_dir: str | os.PathLike[str]) -> DocketVerification:
-    """Re-read ``MANIFEST.json`` and verify it against what is on disk."""
+    """Re-read ``MANIFEST.json`` and verify it against what is on disk.
+
+    U5.22 ITEM 2: the structural check in :func:`validate_manifest` is
+    extended with :func:`_claim_standing_problems`, so a docket whose claim
+    asserts a standing its own producer cannot back is **not** reported ok.
+    """
     docket = os.path.abspath(os.fspath(docket_dir))
     path = os.path.join(docket, "MANIFEST.json")
     if not os.path.isfile(path):
@@ -1415,7 +2564,8 @@ def verify_docket(docket_dir: str | os.PathLike[str]) -> DocketVerification:
         manifest = read_manifest(path)
     except Exception as exc:  # noqa: BLE001
         return DocketVerification(False, [f"MANIFEST.json is invalid: {exc}"], 0, 0, None)
-    problems = validate_manifest(manifest, docket_dir=docket)
+    problems = list(validate_manifest(manifest, docket_dir=docket))
+    problems.extend(_claim_standing_problems(manifest))
     return DocketVerification(
         ok=not problems,
         problems=problems,

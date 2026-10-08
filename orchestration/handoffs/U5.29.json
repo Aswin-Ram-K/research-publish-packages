@@ -1,0 +1,122 @@
+{
+  "unit": "U5.29",
+  "status": "done",
+  "artifacts": [
+    "tests/test_docket_provenance.py",
+    "orchestration/units/U5.29.md",
+    "state/logs/U5.29/baseline.txt",
+    "state/logs/U5.29/green.txt",
+    "state/logs/U5.29/red_failure.txt",
+    "orchestration/handoffs/U5.29.json"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "occamy_probe_detail": "curl exit 7, 'Failed to connect to 192.168.2.168 port 8012'; probed once, nothing restarted, zero live LLM calls in this unit",
+    "tests": {
+      "provenance_before": 35,
+      "provenance_after": 36,
+      "def_test_before": 29,
+      "def_test_after": 30,
+      "assertions_deleted": 0,
+      "how_measured": "grep -c '^def test_' + 'pytest -q tests/test_docket_provenance.py' (35 passed before, 36 passed after); def_test_after minus the one new name = 29, i.e. the delta is exactly the added test; the edit was a pure insertion (old_string was a sub-sequence of new_string). 'git diff --numstat -- tests/test_docket_provenance.py' printed NOTHING, so git cannot witness this file (untracked/ignored) -- the count identity plus pure-insertion is the evidence, not a comm run."
+    },
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  -> 000",
+      "find . -path ./.venv -prune -o -name '__pycache__' -type d -print -exec rm -rf {} +   # FULL purge, .venv excluded",
+      "PYTHONDONTWRITEBYTECODE=1 /home/zer0null/reserach extarctor/.venv/bin/python -m pytest tests/test_docket_provenance.py -q  -> 36 passed in 0.42s",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH-free, cwd=state/logs/U5.29-red: .venv/bin/python -m pytest tests/test_docket_provenance.py -q -k u529  -> 1 failed, 35 deselected",
+      "sha256sum src/resextract/docket/assemble.py src/resextract/docket/materialize.py  (before == after)",
+      "grep -rn 'rationale' src/resextract/docket/materialize.py src/resextract/docket/assemble.py src/resextract/docket/manifest.py  -> 0 hits"
+    ]
+  },
+  "gap": {
+    "unpinned_half": "cap-side presence",
+    "in_my_own_words": "verdict_reason carries two meanings: a CONFIRMS-cap reason and an F2 provenance-divergence note, told apart by substring. U5.28 pinned the F2 half (presence at materialize.py:1686 via test_guard_u519_f2..., and absence via test_guard_u523...). The cap half was pinned only in the ABSENCE direction: line 1042 asserts \"capped at EXTENDS\" not in reason on an F2 reason. Nothing anywhere asserted the phrase is PRESENT on a reason that IS a cap, so rewording a cap emitter changed the documented discriminator while the suite stayed green -- a cap-detecting consumer could break silently.",
+    "current_assertions": [
+      {"file": "tests/test_docket_provenance.py", "line": 1005, "asserts": "assert \"mined by 'replay'\" in reason  -- F2 note PRESENCE (U5.28's half)"},
+      {"file": "tests/test_docket_provenance.py", "line": 1006, "asserts": "assert \"assessing\" in reason  -- F2 note PRESENCE"},
+      {"file": "tests/test_docket_provenance.py", "line": 1042, "asserts": "assert \"capped at EXTENDS\" not in reason  -- cap phrase ABSENCE on an F2 reason (the only cap-phrase assertion that existed)"},
+      {"file": "tests/test_docket_provenance.py", "line": 1043, "asserts": "assert \"is the *assessing* producer\" in reason  -- F2 discriminator PRESENCE"},
+      {"file": "tests/test_docket_provenance.py", "line": 818, "asserts": "assert \"no verdicts row\" in claims[0][\"verdict_reason\"]  -- a cap reason is present, but NOT the documented discriminator phrase"}
+    ]
+  },
+  "new_assertion": {
+    "test": "test_guard_u529_cap_reason_carries_the_cap_phrase",
+    "def_line": 1047,
+    "drives": "two real cap paths, both of which write Claim.verdict_reason: (a) materialize._claim_standing branch :1631 -- declared CONFIRMS ('confirmed') with ZERO verdicts rows; (b) assemble._cap_uncapped_claims :1141-1145 -- a caller-supplied CONFIRMS whose own producer is 'replay' (not exactly 'model')",
+    "phrase": "capped at EXTENDS",
+    "present": true,
+    "also_asserts": "the driven cap reason contains the cap phrase AND does NOT contain \"is the *assessing* producer\", so the two halves of the discriminator stay separable in both directions",
+    "existing_f2_assertions_kept": true
+  },
+  "coverage": [
+    {"emitter": "assess/verdicts.py:404", "reaches_claim_verdict_reason": false, "pinned": false, "why": "it appends '[capped at EXTENDS: ...]' to Verdict.rationale, and rationale is never copied into Claim.verdict_reason: grep -rn 'rationale' over materialize.py + assemble.py + manifest.py returns 0 hits. No docket-level observation is possible without new plumbing; a unit test of Verdict.rationale could pin it, but that is a different field and would not make the claim-field discriminator safer."},
+    {"emitter": "assemble.py:1143", "line_note": "the loop head is :1138; the phrase is emitted at :1141-1145", "reaches_claim_verdict_reason": true, "pinned": true, "driven_by": "A._cap_uncapped_claims([Claim(verdict='CONFIRMS', producer='replay')])"},
+    {"emitter": "materialize.py:1631", "reaches_claim_verdict_reason": true, "pinned": true, "driven_by": "_store_with_assessed_member(state='confirmed', producer='model', no verdict) -> _materialize_from_store -> Claim.verdict_reason"},
+    {"emitter": "materialize.py:1641", "reaches_claim_verdict_reason": true, "pinned": false, "why": "same function, the OTHER branch (a CONFIRMS verdict whose own producer is not model). Its path IS reachable and is in fact driven by test_standing_follows_the_verdict_not_the_candidate (:841-847, replay verdict producer), but that test asserts only \"replay\" in reason -- it does not assert the cap phrase, so the phrase at :1641 is NOT pinned by this unit. Remainder is one small block: producer='replay', verdict='CONFIRMS', verdict_producer='replay' (mining==assessing, so no F2 note) then assert the phrase."}
+  ],
+  "literal_count_proxy_used": false,
+  "literal_count_proxy_justification": "NOT used. A census of the 'capped at EXTENDS' source literals (which is 4 in src/: verdicts.py:404, assemble.py:1143, materialize.py:1631, materialize.py:1641 -- plus a prose mention in manifest.py:176) would be a CHARACTERIZATION proxy: it passes on any refactor that extracts the phrase into a constant (the very refactor that would make behaviour correct and the census wrong), fails on any legitimate new cap site, and in every case proves nothing about what a consumer actually observes. I asserted the observable property instead: a DRIVEN cap produces the phrase on Claim.verdict_reason, so rewording the emitter fails the suite.",
+  "red_green": {
+    "copy_location": "state/logs/U5.29-red (package copied to state/logs/U5.29-red/resextract, test file to state/logs/U5.29-red/tests; pytest run with cwd=state/logs/U5.29-red so 'python -m pytest' resolves resextract to the copy -- proved by IMPORTED_FROM=/home/zer0null/reserach extarctor/state/logs/U5.29-red/resextract/docket/materialize.py)",
+    "mutation": "sed -i 's/capped at EXTENDS/capped to EXTENDS/g' on the COPY only: state/logs/U5.29-red/resextract/docket/materialize.py (2 occurrences) and .../assemble.py (1 occurrence). No mutation of any kind applied to src/**.",
+    "failure_verbatim": ">       assert \"capped at EXTENDS\" in cap_reason\nE       assert 'capped at EXTENDS' in \"declared verification state 'confirmed' maps to CONFIRMS, but no verdicts row assesses this claim (candidate producer 'model'); capped to EXTENDS (a candidate row's state is not an assessment)\"\ntests/test_docket_provenance.py:1093: AssertionError\nFAILED tests/test_docket_provenance.py::test_guard_u529_cap_reason_carries_the_cap_phrase\n1 failed, 35 deselected in 0.30s",
+    "copy_deleted": true,
+    "real_tree_sha_before": {"assemble": "8cb9af52fa8fc94059f3ecf17146f2a89fe43383836725da5e9ada8dfaff1dc2", "materialize": "5dbf520e4822f681b7f7bafbb37d2529ce3864dd81bbb6bd9daf433c627e9d56"},
+    "real_tree_sha_after": {"assemble": "8cb9af52fa8fc94059f3ecf17146f2a89fe43383836725da5e9ada8dfaff1dc2", "materialize": "5dbf520e4822f681b7f7bafbb37d2529ce3864dd81bbb6bd9daf433c627e9d56"},
+    "real_tree_unchanged": true,
+    "green": "36 passed in 0.42s against the unmutated real tree after a FULL __pycache__ purge (.venv excluded) with PYTHONDONTWRITEBYTECODE=1"
+  },
+  "dockets_observed": [
+    {"slug": "duval-replay-material", "file": "MANIFEST.json", "sha": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4", "mtime": "2026-10-08 09:28:51.302382844 -0500", "byte_identity_asserted": false, "note": "a sibling (U5.27) is rewriting this docket right now, so I assert nothing about byte-identity; this is what I observed, with the tree's newest mtime also 2026-10-08T09:28:51.302382844 -0500, at 2026-10-08T14:33:19Z"},
+    {"slug": "duval-u55-pinned", "file": "MANIFEST.json", "sha": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07", "mtime": "2026-10-08 08:36:35.984233876 -0500", "byte_identical": true, "note": "same sha at first and last observation within this unit"},
+    {"slug": "_smoke", "file": "MANIFEST.json", "sha": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6", "mtime": "2026-10-08 05:49:09.150312393 -0500", "byte_identical": true, "note": "frozen; same sha at first and last observation"}
+  ],
+  "store_untouched": {
+    "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+    "version": 4,
+    "version_note": "4 is carried from the unit card, not re-derived; the file is byte-identical (sha unchanged) so no migration could have happened in this unit. A read-only query of a COPY (state/verify/U5.29/state.sqlite, with -wal/-shm copied alongside) reports PRAGMA user_version = 0 and 13 tables -- user_version is simply not where the store tags its schema.",
+    "rows_identical": true,
+    "used_immutable": false,
+    "immutable_note": "grep -rn 'immutable=1' src/ returns only three hits, all inside dashboard/api.py comments (:477, :491, :977) that ARGUE AGAINST it; no code path in this unit used it. I never opened the real store at all -- I only cp'd it.",
+    "sidecars_observed": 2,
+    "sidecars_created_by_me": 0,
+    "sidecar_detail": "state.sqlite-shm (32768 B) and state.sqlite-wal (0 B) already existed before I started; the -shm mtime moved 09:31 -> 09:34 during my unit and the -wal stayed 09:29, which is another process (a concurrent dashboard/sibling holding the real store open), not me: my only store access was 'cp' of the three files into state/verify/U5.29/."
+  },
+  "duval_untouched": {
+    "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+    "note": "identical porcelain in the opening and closing sweeps; both untracked entries pre-existed my unit and are not mine. Read-only access only (rev-parse, status)."
+  },
+  "cap_side_now": "partial: the cap-side PRESENCE is now a contract for the two paths the guard drives -- materialize._claim_standing :1631 and assemble._cap_uncapped_claims :1143 -- so rewording the phrase at either FAILS the suite (verbatim red captured). It is NOT pinned at materialize.py:1641 (reachable; its path is driven by test_standing_follows_the_verdict_not_the_candidate but that test never asserts the phrase) and CANNOT be pinned from the docket layer at assess/verdicts.py:404 (writes Verdict.rationale, which is never copied into Claim.verdict_reason). So the documented substring discriminator is a contract for 2 of 4 emitters, a hint for 1, and unobservable for 1.",
+  "hand_ups": {
+    "remaining_unpinned": [
+      "materialize.py:1641 -- reachable and cheap: one block with producer='replay', verdict='CONFIRMS', verdict_producer='replay' (mining == assessing, so no F2 note interferes) then assert the phrase present; that would make all three claim-field cap emitters a contract.",
+      "assess/verdicts.py:404 -- only reachable by asserting on Verdict.rationale directly (a different field), or by adding plumbing that surfaces rationale into the claim; do not pretend a docket-level assertion covers it.",
+      "The literal emitter count (4) is deliberately NOT asserted anywhere; see literal_count_proxy_justification."
+    ],
+    "typed_schema_still_preferred": "Yes, and more strongly after this unit. Both halves of this discriminator are prose told apart by substring inside ONE string field; every fix is another substring assertion, and substring assertions are exactly what a reword defeats. Typed assessed_by/mined_by (or a discriminated reason kind) under a deliberate /2 schema revision makes 'why is this reason here' structural and machine-checkable instead of conventional, and would retire both this guard and U5.28's. Adding more substring pins is a stopgap, not the fix."
+  },
+  "tool_calls": 18,
+  "bound": 18,
+  "commands": [
+    "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models",
+    "python -c \"import json;json.load(open('orchestration/handoffs/U5.29.json'))\" (via .venv/bin/python)",
+    "find . -path ./.venv -prune -o -name '__pycache__' -type d -print -exec rm -rf {} +",
+    "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_provenance.py -q",
+    "cp -r src/resextract state/logs/U5.29-red/resextract && sed -i 's/capped at EXTENDS/capped to EXTENDS/g' <copy>/materialize.py <copy>/assemble.py",
+    "cd state/logs/U5.29-red && .venv/bin/python -m pytest tests/test_docket_provenance.py -q -k u529",
+    "rm -rf state/logs/U5.29-red",
+    "sha256sum src/resextract/docket/assemble.py src/resextract/docket/materialize.py state/state.sqlite dockets/*/MANIFEST.json"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Extend the same test with the materialize.py:1641 branch (producer='replay', verdict='CONFIRMS', verdict_producer='replay') to convert the last reachable cap emitter into a contract; then propose the typed assessed_by/mined_by schema revision (/2) that retires the substring discriminator entirely rather than pinning it a fourth time.",
+  "write_paths": [
+    "tests/test_docket_provenance.py",
+    "state/verify/U5.29/",
+    "state/logs/U5.29/",
+    "state/logs/U5.29-red",
+    "orchestration/units/U5.29.md",
+    "orchestration/handoffs/U5.29.json"
+  ]
+}

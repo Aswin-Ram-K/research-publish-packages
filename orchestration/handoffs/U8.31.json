@@ -1,0 +1,125 @@
+{
+  "unit": "U8.31",
+  "status": "done",
+  "artifacts": [
+    "tests/test_run.py",
+    "state/verify/U8.31/measured_table.json",
+    "state/verify/U8.31/measure_pin_lengths.py",
+    "state/verify/U8.31/dryrun.txt",
+    "state/verify/U8.31/test_run.before.py",
+    "orchestration/units/U8.31.md"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "measured_table": [
+      {"len": 0, "pin_head": "", "matches": false, "mode": "build", "digest_state": null, "pin_state_from_graph_pin": "empty", "notices": ["pin empty (rejected_candidates reason + note) — refused BEFORE any comparison: NO digest mismatch", "no PIN ABBREVIATED"], "same_digest_direct": false},
+      {"len": 1, "pin_head": "c", "matches": false, "mode": "build", "digest_state": null, "notices": ["digest mismatch (refused)", "no PIN ABBREVIATED", "no REDUCED STRENGTH"], "same_digest_direct": false},
+      {"len": 11, "pin_head": "f28a4ca41a9", "matches": false, "mode": "build", "digest_state": null, "notices": ["digest mismatch (refused)", "no PIN ABBREVIATED", "no REDUCED STRENGTH"], "same_digest_direct": false},
+      {"len": 12, "pin_head": "f28a4ca41a96", "matches": true, "mode": "reuse", "digest_state": "match", "notices": ["PIN ABBREVIATED", "REDUCED STRENGTH"], "same_digest_direct": true},
+      {"len": 64, "pin_head": "f28a4ca41a96…", "matches": true, "mode": "reuse", "digest_state": "match", "notices": [], "same_digest_direct": true},
+      {"len": 65, "pin_head": "f28a4ca41a96…", "matches": false, "mode": "build", "notices": ["PIN OVERLONG (refused before the comparison)"], "same_digest_direct": true}
+    ],
+    "same_digest_on_real_digest_4790bbb1": {"0": false, "1": false, "11": false, "12": true, "64": true, "65": true},
+    "card_vs_code_disagreement": "ONE. The card says the 0-hex notice is `PIN EMPTY`; the code emits lowercase `pin empty` (the `PIN_EMPTY` state is rendered by `_note_unusable` as f\"pin {pin_state}: …\", and no uppercase `PIN EMPTY` string exists in run.py). The distinct `PIN_EMPTY` state itself is real and is what was pinned. Otherwise the card matched the code exactly on every measured row.",
+    "measurement_method": "In-process via state/verify/U8.31/measure_pin_lengths.py: loads the real tests/test_run.py helpers and runs the REAL graph stage (run_pipeline with staging/refresh faked) for scratch pins of len 0/1/11/12/64/65 under state/verify/U8.31/run-<len>/ against the real resextract (src). Direct `_same_digest` probe also run against the real graph digest 4790bbb1…897b. Full rows in state/verify/U8.31/measured_table.json.",
+    "new_tests": [
+      {"node_id": "tests/test_run.py::test_sub12_hex_pin_is_refused_as_a_mismatch_not_abbreviated[1]", "asserts": "mode==build; 'digest mismatch' in rejected_candidates; NO 'PIN ABBREVIATED' note; no REDUCED STRENGTH; no 'matches the pinned digest'"},
+      {"node_id": "tests/test_run.py::test_sub12_hex_pin_is_refused_as_a_mismatch_not_abbreviated[11]", "asserts": "same, at 11 hex"},
+      {"node_id": "tests/test_run.py::test_zero_hex_pin_is_the_distinct_empty_state_never_a_mismatch", "asserts": "mode==build; 'pin empty' in rejected_candidates; 'digest mismatch' NOT in rejected_candidates (the distinct never-compared state); 'pin overlong' not present; no 'PIN ABBREVIATED'; no REDUCED STRENGTH"},
+      {"node_id": "tests/test_run.py::test_overlong_refusal_precedes_a_comparison_that_would_have_matched", "asserts": "run_mod._same_digest(digest, digest+'a') is True AND run_mod._pin_is_overlong(overlong) is True, yet the stage refuses: mode==build, 'PIN OVERLONG' note present, 'pin overlong' in rejected_candidates, no 'matches the pinned digest'"}
+    ],
+    "ordering_already_pinned": {"pinned": false, "where": "test_overlong_pin_is_refused_never_silently_blessed[65]/[100] (tests/test_run.py, section U8.19) asserts only the refusal — mode==build, 'pin overlong', 'PIN OVERLONG' — and never that _same_digest is True for the same value, so the precedence was implicit. V8.27 proved it as a fact only.", "added_by_me": true},
+    "zero_hex_pre_existing_coverage": "Partial: test_broken_pin_is_refused_and_absent_pin_is_loudly_unverified case (d) already asserted 'pin empty' in rejected_candidates. What was NOT pinned is the distinctness (never compared => no 'digest mismatch') and the absence of a PIN ABBREVIATED note; the new test pins both.",
+    "red_green": {
+      "copy_location": "state/verify/U8.31-red",
+      "copy_was_imported": true,
+      "import_proof": "pytest -p u831copy (plugin prepends the copy, strips the editable src path, purges sys.modules) printed IMPORTED_FROM=/home/zer0null/reserach extarctor/state/verify/U8.31-red/resextract/run.py for BOTH red runs, and the plugin asserts the copy path is in resextract.run.__file__",
+      "mutations": ["width >= 12 -> width >= 1 (in the copy's _same_digest)", "neutralise the empty branch: PIN_EMPTY dropped from the refusal tuple (in the copy)", "disable the over-long branch: `if pin is not None and _pin_is_overlong(pin):` -> `if False and ...` (in the copy)"],
+      "failures_verbatim": [
+        "IMPORTED_FROM=/home/zer0null/reserach extarctor/state/verify/U8.31-red/resextract/run.py",
+        "E   AssertionError: (1, {'name': 'graph', 'status': 'ok', 'reason': 'reused existing code-only graph at state/kg/demo/graph.json (built at...4 hex chars; graphify not re-run: bounded, and a re-extract would write inside the target)', 'duration_s': 0.001, ...})",
+        "E   AssertionError: (11, {'name': 'graph', 'status': 'ok', 'reason': 'reused existing code-only graph at state/kg/demo/graph.json (built a... 64 hex chars; graphify not re-run: bounded, and a re-extract would write inside the target)', 'duration_s': 0.0, ...})",
+        "E   AssertionError: {'name': 'graph', 'status': 'ok', 'reason': 'reused existing code-only graph at state/kg/demo/graph.json (built at 69f...erified match); graphify not re-run: bounded, and a re-extract would write inside the target)', 'duration_s': 0.0, ...}",
+        "FAILED tests/test_run.py::test_sub12_hex_pin_is_refused_as_a_mismatch_not_abbreviated[1]",
+        "FAILED tests/test_run.py::test_sub12_hex_pin_is_refused_as_a_mismatch_not_abbreviated[11]",
+        "FAILED tests/test_run.py::test_zero_hex_pin_is_the_distinct_empty_state_never_a_mismatch",
+        "3 failed, 61 deselected in 0.29s",
+        "=== RED RUN 2 (mutation 3: over-long branch disabled) ===",
+        "IMPORTED_FROM=/home/zer0null/reserach extarctor/state/verify/U8.31-red/resextract/run.py",
+        "E   AssertionError: {'name': 'graph', 'status': 'ok', 'reason': 'reused existing code-only graph at state/kg/demo/graph.json (built at 342...t 667e5800113f; graphify not re-run: bounded, and a re-extract would write inside the target)', 'duration_s': 0.0, ...}",
+        "FAILED tests/test_run.py::test_overlong_refusal_precedes_a_comparison_that_would_have_matched",
+        "1 failed, 63 deselected in 0.20s"
+      ],
+      "copy_deleted": true,
+      "run_py_sha_before": "e778e9678cf1fdbcfb14fe3716ece0527a22cf0f661442ce5e61c3f7c57a2b48",
+      "run_py_sha_after": "e778e9678cf1fdbcfb14fe3716ece0527a22cf0f661442ce5e61c3f7c57a2b48",
+      "real_tree_unchanged": true
+    },
+    "counts": {
+      "collected_before": 60,
+      "collected_after": 64,
+      "def_test_before": 43,
+      "def_test_after": 46,
+      "asserts_before": 263,
+      "asserts_after": 280,
+      "passed": 64,
+      "assertions_deleted": 0,
+      "method": "counts on tests/test_run.py: collected = `pytest --collect-only -q`; def test_ = `grep -c '^def test_'`; asserts = `grep -c 'assert '`; passed = full-file `pytest -q`. Deletion check = `grep -h 'assert ' before| LC_ALL=C sort` vs after, then `comm -23`; the LC_ALL=C sort is required (a locale sort gave a spurious 16 deleted and comm warned 'input is not in sorted order'). Pure append proven: `head -n 2027` of the new file byte-identical to test_run.before.py (cmp)."
+    },
+    "dry_run": {
+      "exit_code": 0,
+      "command": ".venv/bin/python -m resextract run --target duval --dry-run --stages graph",
+      "graph_line": "graph        skipped  dry run: would reuse existing code-only graph at state/kg/duval/graphify-out/graph.json (built at 6deaed07af0d, target head 6c60da5aa924 — STALE; sha256 4790bbb1111b matches the pinned digest 4790bbb1111b; graphify not re-run: bounded, and a re-extract would write inside the target)",
+      "still_matches": true,
+      "digest_state": "match",
+      "note": "the first probe (`.venv/bin/python -m resextract.run --dry-run --stages graph`) exited 0 but printed nothing because run.py has no CLI entry point; the CLI lives in resextract.cli (`run --target SLUG --stages ...`). Full output persisted in state/verify/U8.31/dryrun.txt."
+    },
+    "real_graph_sha_unchanged": true,
+    "real_graph_sha": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+    "store_untouched": {
+      "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+      "version": 4,
+      "real_store_never_opened": false,
+      "opened_read_only_by_mandated_dry_run": true,
+      "opened_by_measurement_harness": false,
+      "used_immutable": false,
+      "sidecars_observed": 2,
+      "sidecars_detail": "state.sqlite-wal (0 bytes, mtime 09:29:14) and state.sqlite-shm (32768 bytes, mtime 09:34:24); both mtimes PREDATE this unit's first test/measurement run (09:52+)",
+      "sidecars_created_by_me": 0,
+      "note": "the measurement harness used throwaway copies of the store under state/verify/U8.31/run-*/. The mandated dry run read the real store read-only (it reported producers {'replay': 10}); the main file's sha256 is unchanged at 40e8aa0c and the WAL is 0 bytes, so no un-checkpointed rows."
+    },
+    "duval_untouched": {
+      "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+      "porcelain": "?? .ci-trunk.txt; ?? .lane-j-scratch/ — byte-identical to the status observed BEFORE any work in this unit (both untracked entries pre-existed)"
+    },
+    "hand_ups": {
+      "record_correction_verbatim": "CORRECTED PIN RULE (three parts + the 0-hex clause) for docs/PLAN_CORRECTIONS.md:1542-1543, which still says a short pin is 'accepted but reported loudly' (FALSE for 1-11 hex). Correct wording: The pin's enforced policy (_same_digest: width = min(len(a), len(b), 64); True iff width >= 12 and a[:width] == b[:width]; _pin_is_overlong and the PIN_EMPTY state are both checked BEFORE the comparison): (1) an entry that exists but carries NO value — exactly 0 hex — is the DISTINCT state `PIN_EMPTY`: REFUSED before any comparison, reported as `pin empty` (lowercase), never a mismatch and with NO `PIN ABBREVIATED` note; (2) 1-11 hex is REFUSED as a mismatch: _same_digest cannot compare it at all under the width >= 12 floor, so it is fail-closed, never a 'reduced strength' match, and carries NO `PIN ABBREVIATED` note; (3) 12-63 hex that matches is accepted at reduced strength and reported loudly (`PIN ABBREVIATED` run note + `REDUCED STRENGTH` stage clause); (4) exactly 64 hex that matches is accepted silently; (5) more than 64 hex is REFUSED as `PIN OVERLONG` before the comparison, even though _same_digest would return True on its first 64 characters. 'Shorter than 12 -> mismatch' is imprecise at 0; 'short pin accepted but reported loudly' is false for 1-11.",
+      "other_unpinned_prose_checked": "Checked every clause of the corrected pin rule against tests/test_run.py. Already pinned: 12-63 by test_abbreviated_pin_warns_at_every_length_from_12_to_63; exactly 64 by test_exactly_full_pin_is_the_only_length_with_no_notice; >64 by test_overlong_pin_is_refused_never_silently_blessed; the 0-hex refusal text by test_broken_pin_is_refused_and_absent_pin_is_loudly_unverified case (d). Unpinned (now pinned by this unit): 1-11 refusal-without-ABBREVIATED; the 0-hex DISTINCT never-compared state; the over-long ordering precedence. Record-only gap NOT mine to edit: config/graph_pin.toml's own prose states the 12-63 / fewer-than-12 / more-than-64 rule but does NOT mention the distinct 0-hex `pin empty` state — same correction applies if that file is ever re-appended."
+    },
+    "tool_calls_work": 33,
+    "tool_calls_total": 36,
+    "bound": 18,
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  -> 000",
+      "sha256sum src/resextract/run.py state/kg/duval/graphify-out/graph.json  (before and after)",
+      ".venv/bin/python state/verify/U8.31/measure_pin_lengths.py  (full __pycache__ purge + PYTHONDONTWRITEBYTECODE=1)",
+      "cat state/verify/U8.31/new_tests_block.py >> tests/test_run.py  (clean append)",
+      ".venv/bin/python -m pytest tests/test_run.py --collect-only -q | grep -oE '[0-9]+ tests? collected'",
+      ".venv/bin/python -m pytest tests/test_run.py -q",
+      "LC_ALL=C sort + comm -23 on the before/after assert lines  -> 0 deleted, 17 added",
+      "PYTHONPATH=state/verify/U8.31-red .venv/bin/python -m pytest tests/test_run.py -p u831copy -p no:cacheprovider -k 'sub12_hex_pin or zero_hex_pin' -q --tb=short",
+      "PYTHONPATH=state/verify/U8.31-red .venv/bin/python -m pytest tests/test_run.py -p u831copy -p no:cacheprovider -k 'overlong_refusal_precedes' -q --tb=short",
+      ".venv/bin/python -m resextract run --target duval --dry-run --stages graph",
+      "git -C /home/zer0null/Duval rev-parse HEAD; git -C /home/zer0null/Duval status --porcelain"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "The pin rule is now fully pinned at 0/1/11/12/64/65. A future append to docs/PLAN_CORRECTIONS.md (not U8.31's file) should replace the 'accepted but reported loudly' sentence at ~1542-1543 with hand_ups.record_correction_verbatim; the same 0-hex clause is missing from config/graph_pin.toml's prose (read-only here). No behaviour changed; run.py sha stays e778e967…",
+  "write_paths": [
+    "tests/test_run.py",
+    "state/verify/U8.31/**",
+    "state/logs/U8.31*",
+    "orchestration/units/U8.31.md",
+    "orchestration/handoffs/U8.31.json"
+  ]
+}

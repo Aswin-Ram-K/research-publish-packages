@@ -1,0 +1,68 @@
+{
+  "unit": "U3.1",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/web/search.py",
+    "src/resextract/web/__init__.py",
+    "tests/test_web_search.py",
+    "state/logs/U3.1-live-probe.py",
+    "state/logs/U3.1-live.json",
+    "state/logs/U3.1-live.log",
+    "state/logs/U3.1-tests.txt",
+    "state/logs/U3.1-redgreen.txt",
+    "orchestration/units/U3.1.md"
+  ],
+  "evidence": {
+    "tests": "12 passed in 19.84s",
+    "red_green": "Reverted latch (`if not self._degraded and len(self._pending_streak) >= DEGRADATION_THRESHOLD` -> `if False and ...`) => `1 failed, 1 passed, 10 deselected in 6.02s`; AssertionError: 3rd consecutive distinct empty must latch / assert False is True. Latch restored => `2 passed, 10 deselected in 7.51s`. Verbatim text is pasted into the degradation test docstring.",
+    "live": {
+      "queries": 8,
+      "with_results": 5,
+      "empty": 3,
+      "errors": 0,
+      "degraded": false,
+      "probe_rapid": {
+        "empty_seen": true,
+        "note": "4/4 identical forced queries (force=True, bypassing the negative cache) returned 0 results with ok=True, latencies 2.0-2.6ms; unresponsive_engines stayed []. By contrast every answered request took 172-948ms. Zero-result pages return faster than any real search can run, so latency is a second, independent degradation signal."
+      },
+      "budget": {
+        "real_queries_total": 12,
+        "breakdown": "1 curl field-probe (sandboxing LLM agents survey) + 7 distinct client queries + 4 rapid identical forced queries",
+        "pace": "min_interval_s=1.5, jitter_s=0.5, max_attempts=1 (one HTTP request per query)",
+        "engines_covered": ["google", "duckduckgo", "bing", "arxiv"],
+        "mean_latency_ms": 276.2
+      },
+      "distinct_detail": [
+        {"query": "capability-based security agent isolation", "engine": "google", "results": 0, "latency_ms": 469.1},
+        {"query": "content-addressed state machine", "engine": "duckduckgo", "results": 10, "latency_ms": 948.0},
+        {"query": "hash-chained audit log tamper detection", "engine": "bing", "results": 10, "latency_ms": 220.9},
+        {"query": "Darwin Godel Machine self-improving agents", "engine": "arxiv", "results": 10, "latency_ms": 555.7},
+        {"query": "retrieval nDCG hybrid BM25 evaluation", "engine": "google", "results": 0, "latency_ms": 6.7},
+        {"query": "MCP tool permission model", "engine": "duckduckgo", "results": 10, "latency_ms": 657.0},
+        {"query": "tuplespace coordination agents", "engine": "bing", "results": 10, "latency_ms": 172.3},
+        {"query": "sandboxing LLM agents survey", "engine": "searxng-default", "results": 0, "latency_ms": null}
+      ]
+    },
+    "observed_fields": {
+      "snippet": "content",
+      "published": "publishedDate",
+      "notes": "Result objects are sparse and conditional: duckduckgo hits carried no `engine`, `engines` or `score`; several carried `publishedDate: null` and `pubdate: ''`; bing hits carried engine='bing', engines=['bing'], score=1.0. Parser accepts `content` (primary) then `snippet`, and `publishedDate` then `published_date` then `pubdate`, falling back to the requested engine when `engine` is absent. Full key set seen: title, url, content, engine, engines, score, publishedDate, pubdate, parsed_url, category, template, positions, priority, thumbnail, img_src, iframe_src, audio_src, length, author, metadata, views, open_group, close_group. Envelope keys: query, results, answers, corrections, infoboxes, suggestions, unresponsive_engines. NOTE: `unresponsive_engines` was [] on every empty response - the service does not self-report the failure."
+    },
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_web_search.py -q",
+      ".venv/bin/python state/logs/U3.1-live-probe.py",
+      "curl -s -m 8 'http://127.0.0.1:8080/search?q=sandboxing+LLM+agents+survey&format=json'",
+      "sed-style revert of the degradation latch + pytest -k degradation (red), restore, pytest -k degradation (green)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Wire SearXNGClient(sink=...) into a `search_health` table and have the doctor surface client.degraded. Add the latency signal found live: an ok=True empty response arriving in <~50ms while answered requests take 100-1000ms is engine-level failure, not absence - escalate to degraded immediately instead of waiting for 3 consecutive distinct empties (the rapid probe produced 4/4 empties at 2ms with no other warning). Keep max_attempts=1 for health probes to protect the shared box. fetch.py (later unit) should parse `content`/`publishedDate` and tolerate their absence, per the sparse field sets above.",
+  "write_paths": [
+    "src/resextract/web/__init__.py",
+    "src/resextract/web/search.py",
+    "tests/test_web_search.py",
+    "state/logs/U3.1*",
+    "orchestration/units/U3.1.md",
+    "orchestration/handoffs/U3.1.json"
+  ]
+}

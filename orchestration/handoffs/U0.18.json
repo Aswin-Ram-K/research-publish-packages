@@ -1,0 +1,294 @@
+{
+ "unit": "U0.18",
+ "status": "done",
+ "artifacts": [
+  "orchestration/handoffs/U0.18.json",
+  "orchestration/units/U0.18.md",
+  "state/backups/U0.18-state-pre-v4/state.sqlite",
+  "state/backups/U0.18-state-pre-v4/state.sqlite.online-backup-api",
+  "state/logs/U0.18-phase0.json",
+  "state/logs/U0.18-phase1.json",
+  "state/logs/U0.18-phase2.json",
+  "state/logs/U0.18-phase2b.json",
+  "state/logs/U0.18-phase3.json",
+  "state/logs/U0.18-dryrun.json",
+  "state/logs/U0.18-realrun.json",
+  "state/verify/U0.18/phase0.py",
+  "state/verify/U0.18/phase1.py",
+  "state/verify/U0.18/phase2.py",
+  "state/verify/U0.18/phase2b.py",
+  "state/verify/U0.18/phase3.py"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "occamy_probe_time_s": 0,
+  "backup": {
+   "path": "state/backups/U0.18-state-pre-v4/state.sqlite",
+   "sha256": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+   "opens": true,
+   "integrity_ok": true,
+   "tables_match": true,
+   "rows_match": true,
+   "version": 3,
+   "pre_sha256": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+   "byte_exact_source": "state/U2.5_realmirror_before.sqlite (sha256-identical to the PHASE 0 store; the online-backup API copy is not byte-identical, so it is kept separately as state.sqlite.online-backup-api sha c0a56928...)",
+   "api_backup_sha256": "c0a56928d67c44f9a5fa81b105cfb141a470ee120708e1a7754198e510db0e75",
+   "companions": [
+    "state.sqlite-wal",
+    "state.sqlite-shm"
+   ],
+   "rollback_command": "cp state/backups/U0.18-state-pre-v4/state.sqlite state/state.sqlite && rm -f state/state.sqlite-wal state/state.sqlite-shm"
+  },
+  "migration": {
+   "method": "resextract.store.init_db('state/state.sqlite') \u2014 the shipped in-place migration path (migrate_copy refuses in-place by design)",
+   "version_before": 3,
+   "version_after": 4,
+   "rows_before": {
+    "candidates": 10,
+    "claims": 0,
+    "dockets": 2,
+    "evidence": 0,
+    "lane_candidates": 10,
+    "lanes": 5,
+    "rework": 0,
+    "runs": 4,
+    "schema_version": 3,
+    "search_health": 0,
+    "targets": 0,
+    "verdicts": 0,
+    "web_sources": 0
+   },
+   "rows_after": {
+    "candidates": 10,
+    "claims": 0,
+    "dockets": 2,
+    "evidence": 0,
+    "lane_candidates": 10,
+    "lanes": 5,
+    "rework": 0,
+    "runs": 4,
+    "schema_version": 4,
+    "search_health": 0,
+    "targets": 0,
+    "verdicts": 0,
+    "web_sources": 0
+   },
+   "rows_lost": 0,
+   "columns_added": {
+    "evidence": [
+     "producer"
+    ],
+    "verdicts": [
+     "producer",
+     "model"
+    ]
+   },
+   "integrity_check": "ok",
+   "columns_evidence": [
+    "id",
+    "claim_id",
+    "source_kind",
+    "source_ref",
+    "sha256",
+    "quote",
+    "context",
+    "retrieved_at",
+    "copy_path",
+    "producer"
+   ],
+   "columns_verdicts": [
+    "id",
+    "claim_id",
+    "verdict",
+    "rationale",
+    "evidence_ids_json",
+    "checked_at",
+    "producer",
+    "model"
+   ]
+  },
+  "honesty": {
+   "check_vocabulary": "model|replay|fixture|unknown",
+   "check_rejects_bad_value": true,
+   "check_reject_errors": {
+    "evidence": "rejected: CHECK constraint failed: producer IN ('model', 'replay', 'fixture', 'unknown')",
+    "verdicts": "rejected: CHECK constraint failed: producer IN ('model', 'replay', 'fixture', 'unknown')"
+   },
+   "check_accepts_whole_vocabulary": {
+    "model": "accepted",
+    "replay": "accepted",
+    "fixture": "accepted",
+    "unknown": "accepted"
+   },
+   "no_row_became_model": true,
+   "producer_distribution": {
+    "candidates": {
+     "replay": 10
+    },
+    "evidence": {},
+    "verdicts": {}
+   },
+   "notes_verbatim": "the schema-v4 backfill joins nothing, so it refuses to infer a producer; 'unknown' is the conservative, fail-closed result",
+   "notes_v4_populated": [],
+   "notes_reason": "evidence=0 and verdicts=0 rows, so the per-row note list is legitimately empty; the note text below is the migration's stated basis",
+   "idempotent_second_run": true
+  },
+  "rollback_proof": {
+   "backup_sha_matches_pre": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+   "would_reproduce": true,
+   "restored": false,
+   "backup_integrity": "ok",
+   "backup_version": 3
+  },
+  "new_store_sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+  "old_sha_deliberately_superseded": true,
+  "live": {
+   "dry_run": {
+    "exit_code": 0,
+    "stages_planned": 8,
+    "stage_names": [
+     "graph",
+     "staging",
+     "mine",
+     "claims",
+     "assess",
+     "lanes",
+     "materialize",
+     "refresh"
+    ],
+    "graph_line": "dry run: would reuse existing code-only graph at state/kg/duval/graphify-out/graph.json (graphify not re-run: bounded, and a re-extract would write inside the target)",
+    "graph_path_ok": "state/kg/duval/graphify-out/graph.json (real path, NOT <run_dir>/kg/graph.json \u2014 the sibling's planned_out bug is NOT visible in the graph line)",
+    "wrote_nothing": true,
+    "wrote_nothing_evidence": "state/run/duval pre-existed, so absence is not proof; 0 files under state/run/duval have mtime >= dry-run start (12:49:28Z) and the store sha was unchanged"
+   },
+   "real_run": {
+    "exit_code": 1,
+    "status": "degraded",
+    "blocked": [
+     "mine",
+     "claims",
+     "assess"
+    ],
+    "materialize": "skipped",
+    "window_sealed": true,
+    "stages_not_run": 3,
+    "stage_status_counts": {
+     "ok": 4,
+     "blocked": 3,
+     "skipped": 1
+    },
+    "ok_stages": [
+     "graph",
+     "staging",
+     "lanes",
+     "refresh"
+    ],
+    "blocked_lines_verbatim": "mine: blocked \u2014 model endpoint DOWN (http 000) \u2014 producer gate: 0 model-produced candidate(s) (store producers: replay=10); mine cannot run without the model\nclaims: blocked \u2014 model endpoint DOWN (http 000) \u2014 producer gate: 0 model-produced candidate(s) (store producers: replay=10); claims cannot run without the model\nassess: blocked \u2014 model endpoint DOWN (http 000) \u2014 producer gate: 0 model-produced candidate(s) (store producers: replay=10); assess cannot run without the model",
+    "materialize_line_verbatim": "materialize: skipped \u2014 no model-produced candidates (producer gate; endpoint http 000); pass --allow-replay to build a replay-derived docket anyway"
+   },
+   "still_exit_2": false,
+   "write_path_no_operational_error": true,
+   "write_path_detail": {
+    "insert_evidence_default": {
+     "kwargs": [],
+     "returned": "1",
+     "error": null
+    },
+    "insert_verdict_producer_fixture": {
+     "kwargs": [
+      "producer"
+     ],
+     "returned": "1",
+     "error": null
+    },
+    "producer_model_coherence_guard": "ValueError: model id 'm' may only accompany producer='model', not 'fixture'",
+    "schema_too_old_raised": false,
+    "operational_error_raised": false,
+    "stored_rows": {
+     "evidence": [
+      {
+       "id": 1,
+       "claim_id": null,
+       "source_kind": null,
+       "source_ref": null,
+       "sha256": null,
+       "quote": null,
+       "context": null,
+       "retrieved_at": "2026-10-08T12:50:31.541Z",
+       "copy_path": null,
+       "producer": "unknown"
+      }
+     ],
+     "verdicts": [
+      {
+       "id": 1,
+       "claim_id": null,
+       "verdict": null,
+       "rationale": null,
+       "evidence_ids_json": null,
+       "checked_at": "2026-10-08T12:50:31.544Z",
+       "producer": "fixture",
+       "model": null
+      }
+     ]
+    },
+    "evidence_producer_defaulted_to_unknown": true
+   }
+  },
+  "store_unchanged_by_runs": {
+   "sha_before": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "sha_after": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "rows_identical": true,
+   "rows_after_runs": {
+    "candidates": 10,
+    "claims": 0,
+    "dockets": 2,
+    "evidence": 0,
+    "lane_candidates": 10,
+    "lanes": 5,
+    "rework": 0,
+    "runs": 4,
+    "schema_version": 4,
+    "search_health": 0,
+    "targets": 0,
+    "verdicts": 0,
+    "web_sources": 0
+   }
+  },
+  "duval_untouched": {
+   "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": [
+    "?? .ci-trunk.txt",
+    "?? .lane-j-scratch/"
+   ],
+   "files_newer_than_run_start": 0,
+   "writer_signal_verdict": "quiescent",
+   "writer_signal_files_touched_in_window": 0,
+   "mtime_note": "a concurrent foreign writer means a 0-hit sweep bounds only plausible paths"
+  },
+  "tool_calls": 22,
+  "bound": 28,
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/verify/U0.18/phase0.py",
+   "find . -name __pycache__ -type d -exec rm -rf {} +   # FULL purge",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -c \"import resextract.store as s; s.init_db('state/state.sqlite')\"",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/verify/U0.18/phase2.py",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/verify/U0.18/phase2b.py",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/resextract run --target duval --dry-run --json",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/resextract run --target duval --json",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/verify/U0.18/phase3.py",
+   "git -C /home/zer0null/Duval rev-parse HEAD; git -C /home/zer0null/Duval status --porcelain"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Store is v4 (40e8aa0c...); v3 459e16cc... deliberately superseded, rollback = cp state/backups/U0.18-state-pre-v4/state.sqlite state/state.sqlite && rm -f state/state.sqlite-wal state/state.sqlite-shm. Live exit-1 degraded shape is now demonstrable: blocked mine/claims/assess (endpoint 000 + producer gate), materialize skipped, window_sealed true, 3/8 not run. Remaining for a later unit: state/claims/store-copy.sqlite is STILL v3 (9 claims) and is out of U0.18 scope; assess_claims(migrate_store=True) still has no production caller (do not wire). Sibling units should re-run against the v4 store rather than re-migrating.",
+ "write_paths": [
+  "state/state.sqlite",
+  "state/backups/U0.18-state-pre-v4/",
+  "state/logs/U0.18*",
+  "state/verify/U0.18/",
+  "orchestration/units/U0.18.md",
+  "orchestration/handoffs/U0.18.json"
+ ]
+}

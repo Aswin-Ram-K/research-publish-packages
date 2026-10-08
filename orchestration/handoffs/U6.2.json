@@ -1,0 +1,134 @@
+{
+ "unit": "U6.2",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/cli.py",
+  "tests/test_cli.py",
+  "state/logs/U6.2_live.txt",
+  "orchestration/units/U6.2.md"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "cli": "15 passed",
+   "dashboard": "46 passed, 2 failed (environmental: tests/fixtures/dashboard-store/state.sqlite missing)"
+  },
+  "cli": {
+   "serve": "implemented",
+   "placeholders_before": 10,
+   "placeholders_after": 9,
+   "implemented": [
+    "doctor",
+    "status",
+    "materialize",
+    "serve"
+   ],
+   "test_changes": "serve removed from EXPECTED_PLACEHOLDERS (10->9) and added to IMPLEMENTED_SUBCOMMANDS; added test_serve_is_a_real_subcommand_with_real_flags (--host/--port/--token/--no-browser/--allow-remote; token default 'auto') and test_serve_refuses_non_loopback_without_explicit_override (exit 2, 'refusing to start', check_bind_host override contract); added 'import argparse'; docstring notes appended",
+   "assertions_deleted": 0,
+   "assertions_checked": "all 14 original assertion lines still present via grep -F; assert count 18 -> 37"
+  },
+  "live": {
+   "start_command": ".venv/bin/resextract serve --port 8901 --no-browser  (human: .venv/bin/resextract serve  -> http://127.0.0.1:8901)",
+   "routes": [
+    {
+     "path": "/",
+     "status": 200
+    },
+    {
+     "path": "/api/status",
+     "status": 200
+    },
+    {
+     "path": "/api/runs",
+     "status": 200
+    },
+    {
+     "path": "/api/reasoning",
+     "status": 200
+    },
+    {
+     "path": "/api/findings",
+     "status": 200
+    },
+    {
+     "path": "/api/dockets",
+     "status": 200
+    },
+    {
+     "path": "/api/dockets/_smoke",
+     "status": 200
+    },
+    {
+     "path": "/api/web-health",
+     "status": 200
+    },
+    {
+     "path": "/api/graph",
+     "status": 200
+    },
+    {
+     "path": "/api/refresh",
+     "status": 200
+    },
+    {
+     "path": "/api/doctor",
+     "status": 200,
+     "note": "cold probe exceeded a 5s curl timeout (000); re-probe 200 in 0.0009s"
+    }
+   ],
+   "dockets": [
+    {
+     "slug": "_smoke",
+     "status": "draft",
+     "type": "report",
+     "lane": "duval-trace-integrity",
+     "target": "duval",
+     "freshness": "current (age_days 0.0, verified_at 2026-10-08T00:00:00Z)",
+     "claims": 3,
+     "material": 6,
+     "material_bytes": 134236,
+     "rework_open": 1,
+     "open_questions": 2
+    }
+   ],
+   "dockets_count": 3,
+   "doctor_occamy": "down (core_down=[Occamy], ConnectError Errno 111)",
+   "graph": "state/kg/duval/graphify-out/graph.json nodes=2685 edges=7102 communities=128",
+   "sse_events": 2,
+   "sse_note": "event: heartbeat + data JSON at t=0 and t=1s; content-type text/event-stream",
+   "reasoning_text_available": false,
+   "reasoning_note": "the client captures reasoning_content but the miner does not journal it yet",
+   "traversal_404": true,
+   "no_external_origins": true,
+   "loopback_refusal": true,
+   "server_stopped": true,
+   "stray_processes": 0
+  },
+  "duval_untouched": {
+   "head": "63cbc36d94492098e515f9a70a8433bd5f924aae",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+   "unchanged_before_after": true
+  },
+  "tool_calls": 41,
+  "bound": 30,
+  "bound_exceeded": true,
+  "commands": [
+   ".venv/bin/resextract serve --port 8901 --no-browser",
+   "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8901/<route>",
+   "curl -sN -m 3 http://127.0.0.1:8901/api/events",
+   ".venv/bin/resextract serve --host 0.0.0.0 --port 8902",
+   "ss -ltn | grep 8901",
+   ".venv/bin/python -m pytest tests/test_cli.py tests/test_dashboard.py -q"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Verifier: re-run tests/test_cli.py (expect 15 passed) and confirm placeholders=9 / implemented=4; start '.venv/bin/resextract serve --port 8901', probe the routes + SSE + traversal 404 + no external origins, confirm loopback refusal exit 2, then stop it. Restore the missing generated fixture tests/fixtures/dashboard-store/state.sqlite via 'tests/fixtures/dashboard-store/build.py' (owner: dashboard/batch-6 unit, NOT U6.2 - fixture writes were outside U6.2 write paths) before trusting the dashboard count. Red->green: make cli._resolve_serve pass allow_remote=True and test_serve_refuses_non_loopback_without_explicit_override must go red.",
+ "write_paths": [
+  "src/resextract/cli.py",
+  "tests/test_cli.py",
+  "tests/test_dashboard.py",
+  "state/logs/U6.2*",
+  "orchestration/units/U6.2.md",
+  "orchestration/handoffs/U6.2.json"
+ ]
+}

@@ -1,0 +1,179 @@
+{
+ "unit": "U5.11",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/docket/manifest.py",
+  "src/resextract/docket/assemble.py",
+  "tests/test_docket_reassembly.py",
+  "state/U5.11-live/report.json",
+  "state/logs/U5.11-guards.txt",
+  "orchestration/units/U5.11.md"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000 (DOWN, 2 probes max: 1 used)",
+  "no_llm_calls": true,
+  "no_network": true,
+  "tests": {
+   "reassembly": 21,
+   "assemble": 24,
+   "provenance": 19,
+   "materialize": 25,
+   "pinned": 17,
+   "total": 106
+  },
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> 000",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q tests/test_docket_{reassembly,assemble,provenance,materialize,materialize_pinned}.py -> 106 passed",
+   "guard(a) revert inheritance -> 1 failed ; restore sha == before ; 1 passed",
+   "guard(b) revert target-change refusal -> 1 failed ; restore sha == before ; 1 passed",
+   "sha256sum dockets/duval/duval-u55-pinned/MANIFEST.json",
+   "git status --porcelain -- dockets -> (empty)",
+   "git -C /home/zer0null/Duval rev-parse HEAD / status --porcelain",
+   "sha256sum state/state.sqlite"
+  ]
+ },
+ "record_shape": {
+  "results": "list[ResultRecord] | None = None; ResultRecord{name:str, value:bool|float|int|str, unit:str='', command:str='', source_ref:str=''} -- exactly the 5 fields _render_results prints per row ('| name | `value` | unit | `command` | `source_ref` |'); provenance = command (the exact command that produced the number) + source_ref (the docket-local ref), carried verbatim; empty both = the renderer's own (none)/(\u2014) marker, never an invented one",
+  "prior_art": "list[PriorArtRecord] | None = None; PriorArtRecord{url:str, title:str|None, page_date:str|None, quote:str|None, verdict:str='UNVERIFIED', sha256:str|None} -- exactly the 6 fields _render_prior_art prints (table row url/page_date/verdict/sha256 + per-entry title/url/page_date/verdict/quote); provenance = url + sha256 of the fetched bytes. verdict is str (mirrors PriorArt.verdict) so recording a previously-renderable value can never become a new refusal",
+  "derived_from_renderers": "assemble.py:1585-1606 (_render_results ctx['results'] row) and assemble.py:1666-1705 (_render_prior_art table + sections); also used by _render_references/_render_references_bib/_render_repro",
+  "schema_bumped": false,
+  "extra_forbid_kept": true,
+  "backward_compat_proof": "dockets/_smoke/MANIFEST.json (pre-U5.7) validates+loads with results/prior_art absent -> None (pinned by test_docket_provenance.py::test_pre_u5_7_smoke_manifest_still_validates_and_verifies, still green); a U5.5-shaped dict loads (test_u511_schema_unchanged_and_pre_u511_manifests_still_load)"
+ },
+ "stored_and_inherited": {
+  "stores_on_write": true,
+  "inherits_on_reassembly": true,
+  "none_inherits": true,
+  "empty_list_clears": true,
+  "target_changed_refuses": true,
+  "note": "None (unrecorded) stores None -- never a fake [] -- so the legacy alarm stays honest; [] stores [] and does not decay to None on a later bare re-assembly"
+ },
+ "round_trip": {
+  "RESULTS_md_byte_identical": true,
+  "PRIOR_ART_md_byte_identical": true,
+  "sha_before": {
+   "RESULTS.md": "50a096daf82cacf1f54b4ea917ac637585fd35b7504a7907b487eda8f18713a5",
+   "PRIOR_ART.md": "31bcc1f94669a0be2c3512b04eb0fb1edc7a7d0e3d61900115aabcc5df17a85e"
+  },
+  "sha_after": {
+   "RESULTS.md": "50a096daf82cacf1f54b4ea917ac637585fd35b7504a7907b487eda8f18713a5",
+   "PRIOR_ART.md": "31bcc1f94669a0be2c3512b04eb0fb1edc7a7d0e3d61900115aabcc5df17a85e"
+  }
+ },
+ "legacy_docket": {
+  "behaviour": "alarm",
+  "nothing_fabricated": true,
+  "rendered_files_emptied": true,
+  "justification": "an unrecorded (pre-U5.11) manifest cannot inherit, so U5.10's per-file alarm is kept and NOT re-derived from rendered markdown: recovering structure from prose would be lossy fabrication (no delimiter contract, no field provenance). Measured live on a legacy-stripped fixture: alarm fires, rendered files fall back to the renderers' own stubs, and the manifest still holds NO records (None). Nothing is fabricated."
+ },
+ "materialize_head_check": {
+  "unchanged_head_sha": "SEALS the window, silently: _seal_window returns (True,'',head_end) and nothing is alarmed -- materialize_lane never reads a previous manifest at all, so there is NO inheritance path to verify",
+  "moved_head": "does NOT refuse: window_sealed=False -> freshness.state='needs_rework', WARNING note, the reason naming BOTH shas appended to rework_open AND HISTORY.md, and the manifest is still written ('honest about being mid-move, not discarded')",
+  "code_cited": "materialize.py:1201-1229 (_seal_window decision), materialize.py:1907-1925 (call site + effects), materialize.py:1245-1284 (_record_manifest_evidence)",
+  "test_exists": true,
+  "test_cited": "tests/test_docket_materialize_pinned.py:424 test_window_sealed_false_marks_needs_rework_and_still_produces_the_docket (asserts window_sealed False, needs_rework, both shas in the reason + HISTORY.md); :465 the quiet-target counterpart",
+  "finding": "the verifier's phrasing 'refuses loudly on a HEAD move' is inaccurate: the behaviour is an alarm + downgrade, not a refusal. Not plainly wrong (deliberate and pinned), so NOT changed here"
+ },
+ "red_green": {
+  "a": "sha ok (cafb62a8ca6e/91939ff49856 before==after, bit-identical restore; FULL __pycache__ purge both ways); f: [\"E       AssertionError: assert [] == [{'name': 'p9.../m0.py', ...}]\", 'E         ', \"E         Right contains one more item: {'name': 'p95_latency_ms', 'value': 503, 'unit': 'ms', 'command': 'python repro/m0.py', ...}\"]; p: 1 passed in 0.06s",
+  "b": "sha ok (cafb62a8ca6e/91939ff49856 before==after, bit-identical restore; FULL purge); f: [\"E           AssertionError: ('results', ['open_questions: NOT inherited -- the target changed (u58-target@0000000000000000000000000000000000000000...e\", 'E           assert 0 == 1', 'E            +  where 0 = len([])']; p: 1 passed in 0.06s"
+ },
+ "live": {
+  "fixture_preserved": "records {'results': 1, 'prior_art': 1} -> {'results': 1, 'prior_art': 1}; RESULTS.md/PRIOR_ART.md byte-identical (see round_trip)",
+  "summary_line_verbatim": [
+   "manifest lists preserved from the previous manifest for target u58-target@0000000000000000000000000000000000000000/deadbeef: open_questions 2/2, rework_open 1/1, web_sources 2/2; render inputs preserved from the previous manifest for target u58-target@0000000000000000000000000000000000000000/deadbeef: results 1/1, prior_art 1/1; material provenance preserved for 2/2 entries"
+  ],
+  "verify_ok": true,
+  "real_docket": {
+   "_smoke": {
+    "records_keys_present": {
+     "results": false,
+     "prior_art": false
+    },
+    "rendered_had_content": {
+     "RESULTS.md": true,
+     "PRIOR_ART.md": false
+    },
+    "rendered_file_changed": {
+     "RESULTS.md": true,
+     "PRIOR_ART.md": false
+    },
+    "alarms": [
+     "RESULTS.md: NOT preserved -- this docket previously rendered content here and a bare re-as"
+    ],
+    "refused": "",
+    "verify_ok": true
+   },
+   "duval/duval-u55-pinned": {
+    "records_keys_present": {
+     "results": false,
+     "prior_art": false
+    },
+    "rendered_had_content": {
+     "RESULTS.md": false,
+     "PRIOR_ART.md": false
+    },
+    "rendered_file_changed": {
+     "RESULTS.md": false,
+     "PRIOR_ART.md": false
+    },
+    "alarms": [],
+    "refused": "",
+    "verify_ok": true
+   },
+   "duval/duval-replay-material": {
+    "records_keys_present": {
+     "results": false,
+     "prior_art": false
+    },
+    "rendered_had_content": {
+     "RESULTS.md": false,
+     "PRIOR_ART.md": false
+    },
+    "rendered_file_changed": {
+     "RESULTS.md": false,
+     "PRIOR_ART.md": false
+    },
+    "alarms": [],
+    "refused": "",
+    "verify_ok": true
+   }
+  },
+  "real_docket_summary": "STATED PLAINLY: neither real docket has records. duval-u55-pinned's RESULTS.md/PRIOR_ART.md already held the renderer stubs, so NO alarm fired and NOTHING changed (0 bytes lost). dockets/_smoke DID hold real content in RESULTS.md -> the U5.10 alarm fired ('RESULTS.md: NOT preserved ...'), the copy's RESULTS.md fell back to the '**No measured results recorded.**' stub, and the re-written manifest still holds NO records (results/prior_art == None) -- i.e. nothing was fabricated back from the rendered prose. PRIOR_ART.md was already a stub in all three real dockets."
+ },
+ "backward_compat": {
+  "smoke_validates": true,
+  "u55_shaped_loads": true,
+  "schema_string": "resextract/docket/1"
+ },
+ "verified_docket_untouched": {
+  "manifest_sha_still": "879e66b88f1ef52be541efaf00a4ba67f804c85c2fb8649c3cb99b4022333810",
+  "expected_prefix": "879e66b8",
+  "matches": true,
+  "dockets_porcelain": ""
+ },
+ "duval_untouched": {
+  "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/"
+ },
+ "state_store_untouched": {
+  "sha256": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+  "expected_prefix": "459e16cc",
+  "matches": true,
+  "note": "no unit of mine opened or wrote state/state.sqlite"
+ },
+ "tool_calls": 31,
+ "bound": 28,
+ "blocker": "",
+ "next_unit_hint": "The whole silent re-assembly family is now stored+inherited (claims/material/web_sources/open_questions/rework_open/results/prior_art). Remaining known gap: the *derived* rendered files (METHOD/REFERENCES/CHECKLIST/OPEN_QUESTIONS/UPDATE_BACKLOG) are pure functions of inherited inputs and round-trip too, but a verifier should confirm REFERENCES.md/REFERENCES.bib byte-identity on a bare re-assembly (prior_art now heals them) -- it was not asserted here. Also: assemble() still writes all 11 rendered files unconditionally; consider whether a bare re-assembly should be able to *only* re-render.",
+ "write_paths": [
+  "src/resextract/docket/manifest.py",
+  "src/resextract/docket/assemble.py",
+  "tests/test_docket_reassembly.py",
+  "state/U5.11-live/**",
+  "state/logs/U5.11*",
+  "orchestration/units/U5.11.md",
+  "orchestration/handoffs/U5.11.json"
+ ],
+ "over_bound": "3 over: one test-patch call aborted on an import-style check (nothing written) and two read-back/patch calls to recover exact evidence values after the live script's output was tail-truncated; the work itself needed one source patch, one test patch, one fix, one run, one guard run, one live run."
+}

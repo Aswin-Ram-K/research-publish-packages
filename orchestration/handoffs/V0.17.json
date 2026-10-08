@@ -1,0 +1,148 @@
+{
+ "unit": "V0.17",
+ "scope": "U0.16 live-skip convention fix",
+ "overall": "PASS",
+ "checks": [
+  {
+   "id": "C0",
+   "name": "liveness probe",
+   "verdict": "PASS (as expected)",
+   "observed": "HTTP 000, curl rc=7 connection refused; probed once; nothing restarted",
+   "evidence": "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> 000"
+  },
+  {
+   "id": "C1",
+   "name": "guard suite and counts",
+   "verdict": "PASS",
+   "observed": "guard file 10 passed; collected 727 first, 739 minutes later (sibling churn); exactly 1 skip-marked item without --live and 0 with --live",
+   "evidence": "pytest tests/test_live_marker_convention.py -q -> 10 passed; collect-only -q -> 727 then 739 tests collected; count_plugin: SKIPMARKED=1 TOTAL=727; with --live SKIPMARKED=0 TOTAL=727; RESEXTRACT_LIVE=1 SKIPMARKED=0"
+  },
+  {
+   "id": "C2",
+   "name": "premise audit",
+   "verdict": "PASS",
+   "observed": "Old rule verbatim from a62a8fc lines 39-44. Probe under verbatim old rule: 6 passed, 3 skipped; matched = param id 'live' (value-derived and ids=), and @pytest.mark.live; NOT matched = test_lively/test_livewire/test_olive/class TestOliveClass. Whole suite under old rule SKIPMARKED=2 (guard's own [live] param + the one genuinely marked live test) => skipped_only_by_name=0 for pre-existing tests; latent; sibling rename live->cached is why",
+   "evidence": "state/verify/V0.17/conftest.a62a8fc.py; state/verify/V0.17/oldrule probe run; state/logs/V0.17-c5a.log"
+  },
+  {
+   "id": "C3",
+   "name": "fix inspected and stressed",
+   "verdict": "PASS",
+   "observed": "rule is get_closest_marker('live') only, no name/keyword fallback; only skip mechanism in tests/conftest.py is pytest.mark.skip under that marker (no skipif/importorskip/xfail/pytest.skip); terminal summary prints red above the result line; marker registered in pyproject [tool.pytest.ini_options].markers; failing unmarked tests still run and fail while only the explicitly marked failing test is skipped",
+   "evidence": "grep -nE 'skipif|importorskip|xfail|pytest.skip|add_marker' tests/conftest.py; pytest tests/test_occamy_client.py -q -k live_thinking; pytest --markers; state/verify/V0.17/newrule -> 2 failed, 1 passed, 1 skipped"
+  },
+  {
+   "id": "C4",
+   "name": "stale follow-up",
+   "verdict": "PASS (finding confirmed; not fixed)",
+   "observed": "NOTE at tests/test_occamy_producer.py:250-251 still claims a param literally named live is silently skipped by conftest, while the param list at :252 uses 'cached'; rename happened, note not updated => genuinely stale",
+   "evidence": "read tests/test_occamy_producer.py:238-259"
+  },
+  {
+   "id": "C5",
+   "name": "red-green re-derived",
+   "verdict": "PASS (both reproduced)",
+   "observed": "(a) keyword rule restored -> 3 failed, 6 passed, 1 skipped, with test_parametrised_id_live_is_not_a_marker[live] silently skipped and AssertionError naming it; (b) get_closest_marker branch deleted with the literal string removed -> 2 failed, 8 passed, 'a live-marked item was NOT skipped without --live'. Restore bit-identical after each; green 10 passed after each",
+   "evidence": "state/logs/V0.17-c5a.log; state/logs/V0.17-c5b2.log; sha256 before=after=72ac7401ff18a7b790e9060ccaca63e85f42c732e5671114ede5934bb82214aa; full __pycache__ purge before every run"
+  },
+  {
+   "id": "C6",
+   "name": "honesty audit",
+   "verdict": "PARTIAL",
+   "observed": "One arithmetic overstatement: tests/conftest.py is +47/-3, not +50/-3 (50 is --stat's total-changed column). Absolute 711->721 collected not reproducible (sibling test churn; measured 727 then 739). Guard genuinely bites; 'markers added: NONE' plausible",
+   "evidence": "git diff --numstat a62a8fc -- tests/conftest.py pyproject.toml -> 47 3 / 9 0; git status --porcelain tests/"
+  },
+  {
+   "id": "C7",
+   "name": "containment",
+   "verdict": "PASS",
+   "observed": "Duval HEAD unchanged and porcelain identical before/after (foreign ?? .ci-trunk.txt, ?? .lane-j-scratch/); state.sqlite sha unchanged; 0 .worktrees reads; no stray processes; scratch confined to state/verify/V0.17, nothing left in tests/; tests/conftest.py final sha 72ac7401...",
+   "evidence": "git -C /home/zer0null/Duval rev-parse HEAD / status --porcelain; sha256sum state/state.sqlite; ps census"
+  }
+ ],
+ "counts": {
+  "guard_tests": 10,
+  "collected": 727,
+  "collected_second_measurement": 739,
+  "collected_claimed": 721,
+  "skipped": 1,
+  "with_live_skipped": 0,
+  "delta": 0,
+  "skip_marked_under_old_rule": 2,
+  "skipped_only_by_name_pre_existing": 0
+ },
+ "premise": {
+  "old_rule_verbatim": "def pytest_collection_modifyitems(config, items):\n    if config.getoption(\"--live\") or os.environ.get(\"RESEXTRACT_LIVE\") == \"1\":\n        return\n    skip = pytest.mark.skip(reason=\"live test — run with --live or RESEXTRACT_LIVE=1\")\n    for item in items:\n        if \"live\" in item.keywords:\n            item.add_marker(skip)   # a62a8fc:tests/conftest.py lines 39-44",
+  "matches_on": "bare keyword/param id (NOT name substring)",
+  "u016_correction": "correct",
+  "name_containing_live_matched": false,
+  "param_id_live_matched": true,
+  "mark_live_matched": true,
+  "skipped_only_by_name": 0
+ },
+ "fix": {
+  "get_closest_marker_only": true,
+  "name_fallback_present": false,
+  "other_skip_mechanisms": [
+   "none in tests/conftest.py: no skipif/importorskip/xfail/pytest.skip; the sole skip is pytest.mark.skip applied iff item.get_closest_marker('live') is not None",
+   "pytest_configure also registers 'live' via addinivalue_line — belt-and-braces alongside the pyproject registration (pyproject is not the sole guard)"
+  ],
+  "terminal_summary_verbatim": "= 1 live test(s) SKIPPED — NOT run and NOT passed; rerun with --live or RESEXTRACT_LIVE=1 =",
+  "marker_registered": "pyproject.toml:33 [tool.pytest.ini_options], :38 markers = [, :39 'live: hits the real Occamy endpoint (:8012) — skipped without --live'",
+  "failure_cannot_become_skip": true
+ },
+ "stale_followup": {
+  "file": "tests/test_occamy_producer.py:250-251",
+  "verbatim": "# NOTE: a param literally named \"live\" is silently skipped by conftest (its live-smoke\n# rule), which would leave this guard unrun -- use non-\"live\" out-of-vocabulary values.",
+  "still_stale": true,
+  "fixed": false
+ },
+ "red_green": {
+  "a": "reproduced; sha ok (72ac7401 before=after); 3 failed, 6 passed, 1 skipped; test_parametrised_id_live_is_not_a_marker[live] silently skipped",
+  "b": "reproduced; sha ok (72ac7401 before=after); 2 failed, 8 passed; 'a live-marked item was NOT skipped without --live'"
+ },
+ "not_reproduced": [
+  "absolute collected figures 711 -> 721 (+10); siblings added multiple test files/params concurrently (measured 727 then 739)",
+  "the guard docstring's phrasing that --collect-only --live 'reports 0 skipped' — pytest 9.1.1 collect-only reports no skip figure at all and prints no terminal summary; the 0/1 distinction was measured via skip-marked item accounting and a real run"
+ ],
+ "overstated": [
+  "tests/conftest.py +50/-3 — actually +47/-3 (50 is --stat's total changed lines); pyproject +9/-0 confirmed"
+ ],
+ "unverified": [
+  "that the live-marked test passes under --live against the live endpoint (endpoint DOWN; no network/LLM calls permitted in this unit)",
+  "whether restoring \"live\" to tests/test_occamy_producer.py's out-of-vocabulary param list would add real coverage (deliberate cosmetic follow-up, not fixed by this unit)"
+ ],
+ "corrections": [
+  {
+   "plan_assumption": "a sibling described the old rule as a name-substring match ('name contains live')",
+   "actually": "item.keywords membership is a BARE-key check: test_lively/test_livewire/test_olive/TestOliveClass are NOT matched, but a parametrisation id 'live' IS (silent skip)",
+   "evidence": "state/verify/V0.17/oldrule probe under the verbatim committed rule: 6 passed, 3 skipped; SKIPPED = test_param[live], test_ids[live], test_marked",
+   "unit": "U0.16"
+  },
+  {
+   "plan_assumption": "U0.16 reported tests/conftest.py as +50/-3",
+   "actually": "+47/-3 insertions/deletions (50 is the combined changed-line column)",
+   "evidence": "git diff --numstat a62a8fc -- tests/conftest.py -> 47 3",
+   "unit": "U0.16"
+  }
+ ],
+ "tool_calls": 14,
+ "bound": 28,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951 (unchanged)",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/ (identical before and after)",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "real_store_sha": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5 (unchanged, never written)",
+  "scratch_confined": true
+ },
+ "blocker": "",
+ "next_unit_hint": "U0.16 is sound and can be accepted; the only follow-up is the cosmetic stale NOTE at tests/test_occamy_producer.py:250-251 (and the optional question of restoring the \"live\" param value). No unit should be re-run.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V0.17.md",
+  "orchestration/handoffs/V0.17.json",
+  "state/logs/V0.17*",
+  "state/verify/V0.17/**"
+ ]
+}

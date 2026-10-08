@@ -1,0 +1,75 @@
+{
+  "unit": "U1.4",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/kg/ingest.py",
+    "tests/test_kg_ingest.py",
+    "tests/fixtures/ingest-repo/experiment.ipynb",
+    "tests/fixtures/ingest-repo/empty.ipynb",
+    "tests/fixtures/ingest-repo/malformed.ipynb",
+    "tests/fixtures/ingest-repo/records.jsonl",
+    "tests/fixtures/ingest-repo/big.jsonl",
+    "tests/fixtures/ingest-repo/data.csv",
+    "tests/fixtures/ingest-repo/data.tsv",
+    "tests/fixtures/ingest-repo/paper.tex",
+    "tests/fixtures/ingest-repo/figure.bmp",
+    "tests/fixtures/ingest-repo/notes.md",
+    "tests/fixtures/ingest-repo/script.py",
+    "tests/fixtures/ingest-repo/LICENSE",
+    "state/ingest/duval/audit.json",
+    "state/ingest/duval/decider-rows.md",
+    "state/ingest/duval/imajev-rows.md",
+    "state/logs/U1.4_redgreen/test_redgreen.py",
+    "orchestration/units/U1.4.md"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "tests": "34 passed",
+    "red_green": "two guards, both pasted: revert _record_unsupported -> 'AssertionError: .ipynb vanished from the report: {}'; revert _render_code_cell -> 'AssertionError: code cell input lost: no ```python fence in the markdown'; harness run: 2 failed",
+    "live": {
+      "total_files": 533,
+      "supported": 453,
+      "unsupported": 80,
+      "coverage_pct": 84.99,
+      "top_gaps": [["jsonl", 38], ["xml", 29], ["rels", 4], ["cff", 1], ["patch", 1]],
+      "jsonl_present": true,
+      "jsonl_count": 38,
+      "docx_supported": true,
+      "images_supported": true,
+      "images_detail": "png/jpeg/gif/webp/svg supported; .bmp unsupported",
+      "no_extension_types": [".rels", ".gitignore", ".write-scope", "CODEOWNERS", "LICENSE", "tmpf"],
+      "notes_highlights": [
+        "3 cache/vendor dirs pruned by graphify noise rules: .git/, .worktrees/, node_modules/ (never walked)",
+        "4 dirs excluded by .gitignore/info-exclude: .consonance/, .tmp-consonance/, scratch/, tmp/",
+        "no symlinks, no unreadable paths",
+        "ignored_predicate reused from graphify.detect (real machinery, not reimplemented)"
+      ],
+      "normalized": [
+        {"file": "docs/research/EXP#11-evidence/decider-rows.jsonl", "kind": "jsonl", "records": 4090, "sampled": 200, "src_bytes": 3792620, "bytes_out": 11773},
+        {"file": "docs/research/EXP#11-evidence/imajev-rows.jsonl", "kind": "jsonl", "records": 3690, "sampled": 200, "src_bytes": 3693151, "bytes_out": 13716}
+      ],
+      "csv_present": false,
+      "fallback_second_type": ".xml (29 files) has no normaliser -> returned kind 'unsupported'"
+    },
+    "gap_statement": "graphify cannot see 15.01% of Duval (80 of 533 files); the top three types that would close the most of the gap are .jsonl (38 files - the evals/traces measured results), .xml (29) and .rels (4)",
+    "duval_untouched": true,
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  # -> 000",
+      ".venv/bin/python -m pytest tests/test_kg_ingest.py -q --no-header -p no:cacheprovider  # 34 passed",
+      ".venv/bin/python -m pytest state/logs/U1.4_redgreen/test_redgreen.py -q -p no:cacheprovider  # 2 failed (reverts)",
+      ".venv/bin/python -c 'from resextract.kg import ingest; r=ingest.coverage_audit(\"/home/zer0null/Duval\"); ...'  # live audit",
+      "git -C /home/zer0null/Duval status --porcelain  # identical before/after"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Export the new API from src/resextract/kg/__init__.py (deliberately NOT edited by U1.4): add `from .ingest import CoverageReport, NormalizedFile, coverage_audit, ingest_uncovered, normalize, normalize_csv, normalize_jsonl, normalize_notebook` plus those names in __all__. Then wire `ingest_uncovered`/`normalize` into the docs pass of the refresh pipeline for .jsonl (38 files in Duval, the measured eval/trace results - the single largest invisible block). Still uncovered after U1.4: .xml (29) and .rels (4) - both OOXML internals - and extensionless files; a .xml normaliser (stdlib xml.etree, bounded) is the next cheapest win. Note Duval contains zero .ipynb, so the notebook normaliser is fixture-proven only.",
+  "write_paths": [
+    "src/resextract/kg/ingest.py",
+    "tests/test_kg_ingest.py",
+    "tests/fixtures/ingest-repo/**",
+    "state/ingest/**",
+    "state/logs/U1.4*",
+    "orchestration/units/U1.4.md",
+    "orchestration/handoffs/U1.4.json"
+  ]
+}

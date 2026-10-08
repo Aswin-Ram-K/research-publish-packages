@@ -1,0 +1,240 @@
+{
+ "unit": "V5C",
+ "scope": "U5.12 re-labelling of the two real dockets",
+ "overall": "PARTIAL",
+ "status": "done",
+ "liveness": {
+  "url": "http://192.168.2.168:8012/v1/models",
+  "observed": "curl exit 7, HTTP 000",
+  "attempts": 1,
+  "restarted": false,
+  "llm_calls": 0
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "name": "five docket test files",
+   "verdict": "PASS",
+   "observed": "107 passed in 6.04s; reassembly 22, assemble 24, provenance 19, materialize 25, pinned 17; 0 skipped/xfailed",
+   "evidence": "pytest -q on the five files; --collect-only per file"
+  },
+  {
+   "id": "C2",
+   "name": "re-label re-derived from the artifacts",
+   "verdict": "PASS",
+   "observed": "manifest shas exactly 4441b99741126cb8b534987874300def4fcab4cecb461cd233a456ced220bd31 / 3fa52cd90af379ecb698a23e6d731cf7d73fc36696e9e7430506c8c90562b502; blob_sha 6/6 and 0/0 against the commit in target.head_sha; material 9/9 and 9/9 identical to backup (0 missing/extra/differing); producer replay, model '', status draft, status_reason present; promotion_eligible recomputed = (False, reason); window_sealed True (u55) and absent-before/now-null (replay); notes 3/3 and 0/0; src 9/9 and 8/8 real source paths; banner verbatim L6 README / L3 CHECKLIST; verify_docket ok=True both; schema resextract/docket/1",
+   "evidence": "state/verify/V5C/*, /tmp-free inline python; git rev-parse <commit>:<relpath>"
+  },
+  {
+   "id": "C3",
+   "name": "_smoke backward-compat witness",
+   "verdict": "PASS",
+   "observed": "sha still 41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6; lacks generated_by.producer, status_reason, results, prior_art, window_sealed; validate_manifest -> [] and verify_docket ok=True",
+   "evidence": "read_manifest + validate_manifest + verify_docket on dockets/_smoke"
+  },
+  {
+   "id": "C4",
+   "name": "rollback point verified by hashing only",
+   "verdict": "PASS",
+   "observed": "tree file counts 27 (u55) and 28 (replay) == listing entry counts; both listings verify 27/27 and 28/28 (0 missing, 0 mismatch); sha256-list.txt == sha256-list-backup.txt (diff exit 0); tree/MANIFEST.json shas 879e66b88f1e... and 9931ec676731... are exactly the claimed originals; NOT restored",
+   "evidence": "hash-only comparison against state/backups/U5.12-*"
+  },
+  {
+   "id": "C5",
+   "name": "adversarial",
+   "verdict": "PARTIAL",
+   "observed": "No model-provenance claim (only model values are '' and the fixture's 'fixture-claims-u5.2'; HISTORY says model: (none); UPDATE_BACKLOG is '_(nothing open)_'). No status 'ready' anywhere (only 'already' inside quoted material). promotion_eligible True is unreachable (predicate needs producer=model AND status=ready; plus materialize.PromotionRefused). FINDING: duval-replay-material claim C-curated carries verdict CONFIRMS while assess/verdicts.py:401 caps a non-model run's CONFIRMS to EXTENDS, and docket/materialize.py:211-213 maps declared 'confirmed/confirms/verified' straight to CONFIRMS with no model check; no claim field records who assessed it. FINDING: the banner is in README.md and CHECKLIST.md only - absent from RESULTS/EVIDENCE/CLAIMS/PRIOR_ART/ITEM/METHOD/HISTORY/UPDATE_BACKLOG/REFERENCES.*/MANIFEST.json. model=='' judged honest but the unit's justification is wrong (field is str|None=None, so JSON null IS representable and is the documented sentinel)",
+   "evidence": "term scan over all rendered files + manifest; verdicts.py:401; materialize.py:211"
+  },
+  {
+   "id": "C6",
+   "name": "red->green re-derived, sha-guarded",
+   "verdict": "PASS",
+   "observed": "Reverting assemble.py:846 (effective[name] = recorder[name], the U5.11 render-input inheritance under 'for name in (\"results\", \"prior_art\")' at :830) -> 1 failed: 'E   AssertionError: RESULTS.md changed across a bare re-assembly' (tests/test_docket_reassembly.py:1048); restore asserted sha256 == cafb62a8ca6e95b7e514b2f8ba66f77cb90434097a0cccb83ab3cf4917b3be87; re-run 1 passed. NOTE the symbol the unit names, _reconcile_render_inputs, does not exist in src/ (only in a test docstring); the unit's quoted PRIOR_ART.md message was not reproduced by the single-site revert because RESULTS.md is asserted first",
+   "evidence": "state/logs/V5C-c6c-redgreen.log; state/verify/V5C/assemble.py.V5C-C6c-bak"
+  },
+  {
+   "id": "C7",
+   "name": "honesty audit",
+   "verdict": "PARTIAL",
+   "observed": "HISTORY.md APPENDED (backup_is_prefix_of_current True) with an honest new entry 'model: (none)' and 'previous ITEM.md preserved as ITEM.md.r2/.r3'; generated_at advanced by design; freshness stayed current. NOT information-neutral: README.md/ITEM.md titles replaced the descriptive 'Duval - commit-pinned material (U5.5)' with the lane slug; EVIDENCE.md 84->23 and 174->120 lines (removed duplicate per-material blocks; every sha256/bytes still in the Copied-material table and MANIFEST material[].sha256, but the 'source kind: local' + 'context: N bytes copied' prose is gone); METHOD.md graph table replaced by a note with unbalanced '_' emphasis. 33-vs-30 overage not auditable from artifacts (UNVERIFIED)",
+   "evidence": "rendered-tree diff vs state/backups/U5.12-*/tree"
+  },
+  {
+   "id": "C8",
+   "name": "containment",
+   "verdict": "PARTIAL",
+   "observed": "Duval HEAD 6c60da5aa9240c0dcc2ff97b46f2a2cf37774951 with only the foreign actor's two porcelain entries; docket tree hashes unchanged (recipe stated); 0 .worktrees reads; 0 outside writes; 0 stray processes. DEVIATION I did not cause: state/state.sqlite is NOT unchanged across my run - baseline (my call 6) was sha 459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5 with 3 schema_version rows, now sha 40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3 with schema_version rows [1, 2, 3, 4] (max 4). Every access of mine was read-only (file:...?mode=ro); a concurrent sibling migrated the store to v4 mid-run",
+   "evidence": "state/logs/V5C-final.log"
+  }
+ ],
+ "test_counts": {
+  "reassembly": 22,
+  "assemble": 24,
+  "provenance": 19,
+  "materialize": 25,
+  "pinned": 17,
+  "total": 107,
+  "deletions": 0
+ },
+ "relabel": {
+  "duval-u55-pinned": {
+   "manifest_sha": "4441b99741126cb8b534987874300def4fcab4cecb461cd233a456ced220bd31",
+   "blob_sha_match": "6/6",
+   "commit": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+   "material_unchanged": "9/9",
+   "producer": "replay",
+   "model": "",
+   "status": "draft",
+   "status_reason": "producer is replay: no model mined these candidates; not publication-eligible",
+   "promotion_eligible": [
+    false,
+    "producer is replay: no model mined these candidates; not publication-eligible"
+   ],
+   "window_sealed": true,
+   "notes": "3/3",
+   "src_correct": "9/9",
+   "banner_readme": "> **PROVENANCE: replay-produced** \u2014 no model mined or assessed these candidates. Not eligible for publication until real mining runs.",
+   "banner_checklist": "> **PROVENANCE: replay-produced** \u2014 no model mined or assessed these candidates. Not eligible for publication until real mining runs.",
+   "verify_ok": true
+  },
+  "duval-replay-material": {
+   "manifest_sha": "3fa52cd90af379ecb698a23e6d731cf7d73fc36696e9e7430506c8c90562b502",
+   "blob_sha_match": "0/0",
+   "commit": "3982f261cc77e193890d442603e399fa0663d80c",
+   "material_unchanged": "9/9",
+   "producer": "replay",
+   "model": "",
+   "status": "draft",
+   "status_reason": "producer is replay: no model mined these candidates; not publication-eligible",
+   "promotion_eligible": [
+    false,
+    "producer is replay: no model mined these candidates; not publication-eligible"
+   ],
+   "window_sealed": "absent before, explicitly null after",
+   "notes": "0/0",
+   "src_correct": "8/8",
+   "banner_readme": "> **PROVENANCE: replay-produced** \u2014 no model mined or assessed these candidates. Not eligible for publication until real mining runs.",
+   "banner_checklist": "> **PROVENANCE: replay-produced** \u2014 no model mined or assessed these candidates. Not eligible for publication until real mining runs.",
+   "verify_ok": true
+  }
+ },
+ "smoke_witness": {
+  "manifest_sha": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+  "lacks_new_keys": true,
+  "validates": true,
+  "verify_ok": true
+ },
+ "rollback": {
+  "backups_present": true,
+  "file_counts": [
+   28,
+   27
+  ],
+  "listings_match": true,
+  "would_reproduce_originals": true,
+  "restored": false
+ },
+ "adversarial": {
+  "model_provenance_claims_found": [],
+  "ready_anywhere": false,
+  "banner_files": [
+   "README.md",
+   "CHECKLIST.md"
+  ],
+  "files_missing_banner": [
+   "RESULTS.md",
+   "EVIDENCE.md",
+   "CLAIMS.md",
+   "PRIOR_ART.md",
+   "ITEM.md",
+   "METHOD.md",
+   "HISTORY.md",
+   "UPDATE_BACKLOG.md",
+   "REFERENCES.md",
+   "REFERENCES.bib",
+   "MANIFEST.json",
+   "ITEM.md.r1",
+   "ITEM.md.r2",
+   "ITEM.md.r3"
+  ],
+  "promotion_eligible_cannot_be_true": true,
+  "model_empty_string_judgement": "honest but the unit's stated reason is wrong: manifest.py:203 types model as 'str | None = None' and manifest.py:24-25 documents None as the no-model sentinel, so JSON null IS representable; '' is merely accepted. Not misleading, but null would be the documented and more informative value.",
+  "conforms_verdict_in_non_model_docket": "claim C-curated in duval-replay-material asserts verdict CONFIRMS (CLAIMS.md:7,13; MANIFEST.json:21) while assess/verdicts.py:401 caps CONFIRMS to EXTENDS for any non-model run; docket/materialize.py:211-213 maps declared states to CONFIRMS with no model check and claims carry no assessor field"
+ },
+ "red_green": {
+  "a": "assemble.py:846 reverts -> 1 failed, verbatim 'E   AssertionError: RESULTS.md changed across a bare re-assembly' (tests/test_docket_reassembly.py:1048); restore sha256 == cafb62a8...; re-run 1 passed",
+  "b": "same single site (the terminal 'results'/'prior_art' inheritance loop at :830); the symbol _reconcile_render_inputs named by the unit does not exist in src/ - floating naming error; two earlier mis-targeted reverts (IndentationError / no site) were sha-restored with no net change"
+ },
+ "assemble_sha_after": "cafb62a8ca6e95b7e514b2f8ba66f77cb90434097a0cccb83ab3cf4917b3be87",
+ "not_reproduced": [
+  "the unit's verbatim failure text 'AssertionError: PRIOR_ART.md changed across a bare re-assembly' (the single-site revert fails on RESULTS.md first)",
+  "the 33-vs-30 tool-call overage (no artifact records the unit's call count)",
+  "the claim that _reconcile_render_inputs is the mechanism (no such symbol exists)"
+ ],
+ "overstated": [
+  "failure message quoted as PRIOR_ART.md when a single-site revert yields RESULTS.md",
+  "window_sealed 'absent->absent' for duval-replay-material: it went absent -> explicit JSON null",
+  "the harness report's window_sealed_preserved: true for duval-replay-material while nothing was present to preserve",
+  "'the schema types it str, so JSON null is unrepresentable' - the field is str | None = None with null documented as the sentinel"
+ ],
+ "unverified": [
+  "which producer (curator vs replayed model verdict) authored the CONFIRMS verdict in duval-replay-material",
+  "whether state/backups/U5.12-src/assemble.py equals any particular revision (file exists, 86219 bytes, not compared)",
+  "the unit's internal tool-call count"
+ ],
+ "corrections": [
+  {
+   "plan_assumption": "the unit's 'dest!=src' counts are 8 (u55) and 7 (replay)",
+   "actually": "raw dest != src is 9 and 8; the unit's figures are its harness's src_dest_ne_src, which excludes the docs/FINDINGS.md row whose src legitimately coincides with <source_root>/<dest>",
+   "evidence": "state/logs/U5.12-relabel-report.json src_dest_ne_src; row-by-row comparison",
+   "unit": "U5.12"
+  },
+  {
+   "plan_assumption": "reverting the REFERENCES guard is a separate mechanism from the prior_art inheritance guard",
+   "actually": "they are the same single site, assemble.py:846, inside the for name in ('results','prior_art') loop at :830",
+   "evidence": "state/logs/V5C-c6c-redgreen.log",
+   "unit": "U5.12"
+  }
+ ],
+ "tool_calls": 30,
+ "bound": 30,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "real_store": {
+   "sha_before": "459e16cc875654df0fa0b5a4dc5480de3c861de75a53eaceea54fafde3f2faf5",
+   "sha_after": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version_before": "3 (schema_version rows 1,2,3)",
+   "version_after": "4 (rows [1, 2, 3, 4])",
+   "rows_identical": false,
+   "written_by_me": false,
+   "access_mode": "file:state/state.sqlite?mode=ro only"
+  },
+  "dockets_tree_hash_recipe": "sha256 over the text of `cd <root> && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum` (paths relative to root)",
+  "dockets_unchanged": true,
+  "dockets_after": {
+   "duval-u55-pinned": "f72310f958280ca77cf4ff7568f175477fe835a2771e6fade10ebe49a76383a5",
+   "duval-replay-material": "17acc29be924e0ab7e1a9879816b6dae3ba8e5acb23d2dc1318d079fc34d9b8b",
+   "_smoke": "4aa9aca441bbfb51abc759447ff9c4659740e1da87c86dbd3b9be78d94556c98"
+  },
+  "dockets_before": {
+   "duval-u55-pinned": "f72310f958280ca77cf4ff7568f175477fe835a2771e6fade10ebe49a76383a5",
+   "duval-replay-material": "17acc29be924e0ab7e1a9879816b6dae3ba8e5acb23d2dc1318d079fc34d9b8b",
+   "_smoke": "4aa9aca441bbfb51abc759447ff9c4659740e1da87c86dbd3b9be78d94556c98"
+  },
+  "stray_processes": 0,
+  "enclosing_def_of_assemble_line_846": "745: def _inherit_render_inputs("
+ },
+ "blocker": "",
+ "next_unit_hint": "Close the two advisories this verification opened: (1) add a one-line provenance marker to RESULTS/EVIDENCE/CLAIMS/PRIOR_ART (the banner is in README+CHECKLIST only); (2) make docket/materialize.py apply the same CONFIRMS cap assess/verdicts.py:401 applies to non-model runs, or record the verdict's producer on the claim. Also fix the two real render regressions a bare re-assembly causes on live dockets: the descriptive README/ITEM title is replaced by the lane slug, and EVIDENCE.md's 'source kind/context' prose disappears - both fall out of the still-open 'assemble() writes all 11 rendered files unconditionally' gap (a render-only re-assembly mode).",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V5C.md",
+  "orchestration/handoffs/V5C.json",
+  "state/logs/V5C*",
+  "state/verify/V5C/**"
+ ]
+}

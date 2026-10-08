@@ -1,0 +1,94 @@
+{
+  "unit": "U2.1",
+  "status": "partial",
+  "artifacts": [
+    "src/resextract/mine/provenance.py",
+    "src/resextract/mine/candidates.py",
+    "src/resextract/mine/__init__.py",
+    "tests/test_mine_candidates.py",
+    "tests/fixtures/mine-mini/graph.json",
+    "tests/fixtures/mine-mini/graph-b.json",
+    "state/mine/live-u21-replay/CANDIDATES.md",
+    "state/mine/live-u21-replay/report.json",
+    "state/mine/live-u21-replay/candidates.jsonl",
+    "state/journal/live-u21-replay.jsonl",
+    "state/logs/U2.1-live.log",
+    "state/logs/U2.1-replay.log",
+    "state/logs/U2.1-tests.log",
+    "orchestration/units/U2.1.md"
+  ],
+  "evidence": {
+    "tests": "13 passed (tests/test_mine_candidates.py); full offline suite 198 passed, 1 skipped before the final path fix; mine suite re-run 13 passed after it",
+    "red_green": "two guards, both pasted into test docstrings: (1) candidates.py `if not good:` reverted -> test_miner_rejects_candidate_with_all_refs_invalid fails `assert 1 == 0`; (2) provenance.py `if end > total:` reverted -> test_provenance_file_lines_spans fails `assert True is False` (detail='lines 900-999 of 38')",
+    "live": {
+      "graph_used": "/home/zer0null/reserach extarctor/state/kg/duval/graphify-out/graph.json (U1.1's graph, byte-identical copy untouched; sha256 4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b unchanged before/after)",
+      "graph_owner": "U1.1",
+      "graph_hash_changed": false,
+      "nodes": 2685,
+      "edges": 7102,
+      "mode": "replay (model endpoint down): real graphify queries + real provenance verification against /home/zer0null/Duval + real store rows; candidate *selection* synthetic",
+      "queries_run": 5,
+      "unmatched": 1,
+      "accepted": 10,
+      "rejected": 5,
+      "deduped": 0,
+      "model_calls": 5,
+      "reasoning_tokens": 0,
+      "wall_s": 1.527,
+      "partial": false,
+      "example_candidates": [
+        {
+          "kind": "novel_primitive",
+          "title": "REPLAY novel-primitives-inventory: tsconfig_compileroptions_types",
+          "confidence": "high",
+          "refs": [
+            "tsconfig_compileroptions_types",
+            "tsconfig.json#L24"
+          ]
+        },
+        {
+          "kind": "invariant_or_enforcement",
+          "title": "REPLAY novel-primitives-inventory: tools_derivation_projector_project",
+          "confidence": "medium",
+          "refs": [
+            "tools_derivation_projector_project",
+            "tools/derivation/projector.ts#L49"
+          ]
+        }
+      ],
+      "example_rejected": {
+        "title": "REPLAY novel-primitives-inventory: ghost candidate",
+        "reason": "all provenance refs failed verification: ghost_node_9f (node id not found in graph); src/definitely_missing.ts#L1-L2 (file not found: src/definitely_missing.ts)"
+      },
+      "model_stage_blocked": "http://192.168.2.168:8012/v1 refused all connections (curl http=000 x5 probes over ~2 min, 10:45-10:50 UTC); OccamyClient reported 'All connection attempts failed' after 4 attempts for all 5 matched queries"
+    },
+    "repo_untouched": {
+      "head": "b44e0e111e0875029ed3cf932e60841f13956342",
+      "head_at_unit_start": "6deaed07af0d998d1672fe3f1ab1579e6ba0cdc4",
+      "head_changed_by": "external: reflog shows 'pull -q --ff-only origin main: Fast-forward' at 2026-10-08 05:41:44 -0500; U2.1 only ever ran rev-parse/status/reflog (read-only) and wrote nothing inside /home/zer0null/Duval",
+      "git_status": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "git_status_at_unit_start": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+      "graph_cache_note": "graph.json and .graphify_analysis.json under state/kg/duval/graphify-out/ are byte-identical before and after (sha256 4790bbb1111b76ea\u2026); the graphify CLI itself bumps cache/last_query_stamp inside that out-dir when it runs a query (mtime 10:47:14Z, my queries). U2.1 wrote no graph artifact."
+    },
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_mine_candidates.py -q -p no:randomly  # 13 passed",
+      ".venv/bin/python -m pytest tests/ -q -p no:randomly --ignore=tests/test_mine_candidates.py  # 198 passed, 1 skipped",
+      "git -C /home/zer0null/Duval rev-parse HEAD; git -C /home/zer0null/Duval status --short",
+      "sha256sum state/kg/duval/graphify-out/graph.json  # 4790bbb1\u2026 before and after",
+      "Miner(...).mine(run_id='live-u21-replay')  # 5 queries run, 15 found, 10 accepted, 5 rejected"
+    ]
+  },
+  "blocker": "Occamy endpoint http://192.168.2.168:8012/v1 unreachable (connection refused, http=000 across 5 probes over ~2 min). Live model calls therefore produced 0 candidates; the live numbers above come from a clearly-labelled replay client over the REAL graph, REAL graphify queries and REAL provenance checks. Re-run `Miner(...).mine(run_id=...)` unchanged once the endpoint is back to obtain genuine model-mined candidates.",
+  "next_unit_hint": "When :8012 is up, re-run U2.1's live driver with max_queries=6: it will re-mine because state/mine/index/<hash>.json holds no keys for the replay run. Then check candidate quality (kind mix, reasoning_tokens>0) and consider raising max_queries. Also note Miner now resolves graph_path to an absolute path \u2014 the earlier relative-path + cwd=target_root combination made every graphify query fail with exit 1; keep passing an absolute --graph. Verifier should re-run the two red\u2192green reverts and confirm the fixture dir tests/fixtures/mine-mini/ has no graphify cache/ left behind.",
+  "write_paths": [
+    "src/resextract/mine/__init__.py",
+    "src/resextract/mine/candidates.py",
+    "src/resextract/mine/provenance.py",
+    "tests/test_mine_candidates.py",
+    "tests/fixtures/mine-mini/**",
+    "state/mine/**",
+    "state/logs/U2.1*",
+    "orchestration/units/U2.1.md",
+    "orchestration/handoffs/U2.1.json"
+  ]
+}

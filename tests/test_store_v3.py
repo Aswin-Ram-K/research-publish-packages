@@ -150,8 +150,14 @@ def _rows(con: sqlite3.Connection, table: str) -> list[dict]:
 def test_v2_to_v3_preserves_every_row_and_backfills_honestly(v2_path: Path):
     con = store.connect(v2_path)
     try:
-        assert store.schema_version(con) == 3
-        assert store.SCHEMA_VERSION == 3
+        # MIGRATION CONTRACT, not the current number: the schema advances (it is
+        # now 4), so pin "at least v3" plus "fresh DB == the module's declared
+        # version".  Do NOT re-tighten to `== 3`.
+        assert store.schema_version(con) >= 3
+        assert store.SCHEMA_VERSION >= 3
+        # latent pin, masked behind the line above until U2.3: a fresh DB must
+        # land exactly on whatever version the module declares.
+        assert store.schema_version(con) == store.SCHEMA_VERSION
 
         # every v2 row still there, table by table
         for table, expected in {
@@ -209,7 +215,7 @@ def test_producer_check_rejects_out_of_vocabulary(v2_path: Path):
     con = store.connect(v2_path)
     try:
         for bad in ("bogus", "MODEL", ""):
-            with pytest.raises(sqlite3.IntegrityError):
+            with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: producer"):
                 con.execute("UPDATE candidates SET producer=? WHERE id=1", (bad,))
             con.rollback()
         # every vocabulary value is accepted
@@ -270,15 +276,15 @@ def test_producer_filters_and_model_claim_helper(v2_path: Path):
 def test_prior_check_vocabularies_still_hold(v2_path: Path):
     con = store.connect(v2_path)
     try:
-        for table, column, good, bad in (
-            ("evidence", "source_kind", "web", "ftp"),
-            ("verdicts", "verdict", "EXTENDS", "MAYBE"),
-            ("lanes", "type", "memo", "tweet"),
-            ("lanes", "status", "stale", "wip"),
-            ("candidates", "producer", "fixture", "guessed"),
+        for table, column, good, bad, expected in (
+            ("evidence", "source_kind", "web", "ftp", "CHECK constraint failed: source_kind"),
+            ("verdicts", "verdict", "EXTENDS", "MAYBE", "CHECK constraint failed: verdict"),
+            ("lanes", "type", "memo", "tweet", "CHECK constraint failed: type"),
+            ("lanes", "status", "stale", "wip", "CHECK constraint failed: status"),
+            ("candidates", "producer", "fixture", "guessed", "CHECK constraint failed: producer"),
         ):
             con.execute(f'UPDATE "{table}" SET "{column}"=?', (good,))
-            with pytest.raises(sqlite3.IntegrityError):
+            with pytest.raises(sqlite3.IntegrityError, match=expected):
                 con.execute(f'UPDATE "{table}" SET "{column}"=?', (bad,))
             con.rollback()
         assert store.VERDICT_VOCAB == ("CONFIRMS", "EXTENDS", "CONTRADICTS", "UNVERIFIED")
@@ -321,12 +327,18 @@ def test_prior_accessors_still_behave(v2_path: Path):
 
         assert store.count(con, "candidates") == 2
         summary = store.status_json(con)
-        assert summary["schema_version"] == 3
+        # contract, not the current number.  Do NOT re-tighten to `== 3`.
+        assert summary["schema_version"] >= 3
+        assert summary["schema_version"] == store.schema_version(con)
         assert summary["candidates"]["by_producer"] == {"replay": 1, "unknown": 1}
         assert summary["candidates"]["by_state"] == {"mined": 2}
         assert summary["runs"]["by_status"] == {"failed": 1, "partial": 1}
         assert set(summary["tables"]) == set(store.TABLES)
-        assert "schema v3" in store.status_text(con)
+        # the renderer names the version it is on; pinned as a shape, not a
+        # number, so a v4 bump does not need this line edited.  Do NOT
+        # re-tighten to `"schema v3"`.
+        assert re.search(r"\bschema v\d+\b", store.status_text(con)), "status_text names its schema version"
+        assert f"schema v{store.SCHEMA_VERSION}" in store.status_text(con)
         assert not store.find_duplicate_dockets(con)
     finally:
         con.close()

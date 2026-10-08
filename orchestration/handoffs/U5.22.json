@@ -1,0 +1,165 @@
+{
+ "unit": "U5.22",
+ "status": "partial",
+ "artifacts": [
+  "src/resextract/docket/assemble.py",
+  "tests/test_docket_assemble.py",
+  "orchestration/handoffs/U5.22.json",
+  "orchestration/units/U5.22.md",
+  "state/logs/U5.22/repro_bypass.py"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "assemble_before": 24,
+   "reassembly": 70,
+   "provenance": 34,
+   "materialize": 25,
+   "pinned": 17,
+   "total_before": 170,
+   "assemble_after": 27,
+   "total_after": 173,
+   "deletions": 0,
+   "full_run": "1 failed, 172 passed in 6.35s",
+   "diffstat": "1195\t73\tsrc/resextract/docket/assemble.py\n92\t0\ttests/test_docket_assemble.py",
+   "tracked_note": "test_docket_assemble.py is the ONLY one of the five tracked by git (git ls-files returns it alone); the other four are untracked, so weakening them via git is structurally impossible and the diffstat covers the tracked one (additions only, 0 deletions)",
+   "newly_red_by_design": {
+    "count": 1,
+    "tests": [
+     "FAILED tests/test_docket_provenance.py::test_pre_u5_7_smoke_manifest_still_validates_and_verifies"
+    ],
+    "why": "these two assertions pinned the OLD contract. (1) tests/test_docket_assemble.py:221 asserts the returned downgrades list == []; my first cut pushed the cap note into that assemble-only channel, which materialize does NOT do -- removed, so the reason now travels on Claim.verdict_reason exactly as the rule it reuses does, and this test is GREEN again. (2) tests/test_docket_provenance.py::test_pre_u5_7_smoke_manifest_still_validates_and_verifies asserts a pre-U5.7 manifest (claim CONFIRMS, no producer recorded) verifies ok -- that is precisely the contradiction item 2 now detects, so it is RED BY DESIGN and NOT weakened: read_manifest still LOADS such a manifest (the Claim docstring's 'still loads' promise is kept); only verify_docket no longer certifies it."
+   }
+  },
+  "item1_repro": {
+   "bypass_constructed": true,
+   "how": "re-rendered the real replay docket's own claims verbatim (claims=[c.model_dump() ...]) into a COPY under state/logs/U5.22/repro/replay; dockets/** was never written",
+   "injected": "('C-curated','CONFIRMS','unknown')",
+   "producer": "replay (generated_by.producer)",
+   "rendered_standing_before": "CONFIRMS",
+   "quoted": "RENDERED: [('C-curated', 'CONFIRMS', 'unknown', None), ...] | CLAIMS.md>> ['## C-curated - CONFIRMS', '**Verification state.** CONFIRMS'] | verify_docket ok= True problems= []",
+   "matches_v520": "claims[0].verdict=CONFIRMS, verdict_reason null, verify ok problems==[] -- reproduced exactly"
+  },
+  "item1_fix": {
+   "mechanism": "cap-on-input",
+   "reused_rule": "store.producer_is_model -- the single predicate materialize._claim_standing itself calls at its cap site (materialize.py:1638)",
+   "rule_duplicated": false,
+   "why_not_claim_standing": "materialize._claim_standing is MemberSpec-typed; calling it from assemble() would require fabricating a member row. The reuse is at the level the two sites genuinely share: the predicate plus the cap-and-record-the-reason shape (never a raise). No second string comparison against 'model' was written.",
+   "file_fact_conclusion": "cap-is-right (fail-closed)",
+   "file_fact_argument": "A file-fact verified by hashing IS mechanically verified, so CONFIRMS is arguably overloaded -- but resextract/docket/1 has no standing for that, and the schema must not be bumped here. Fail-closed choice taken: cap to EXTENDS with the reason recorded. Leaving it unenforced while debating the vocabulary was not an option.",
+   "rendered_standing_after": "EXTENDS",
+   "reason_recorded": true,
+   "reason_text": "verdict CONFIRMS was passed to assemble() but the claim's producer is 'replay', not 'model'; capped at EXTENDS by the same rule as materialize._claim_standing (a non-model run may not assert CONFIRMS)",
+   "also": "the cap note is recorded on Claim.verdict_reason and rendered verbatim in CLAIMS.md/MANIFEST.json; it is deliberately NOT pushed into assemble's downgrades list, because materialize._claim_standing does not do that either (that was my own first-cut embellishment and it is what broke test_docket_assemble.py:221)"
+  },
+  "item2_verifier": {
+   "module": "src/resextract/docket/assemble.py -- verify_docket (def at :2401) plus new _claim_standing_problems; validate_manifest stays in manifest.py and was NOT touched (manifest.py is off-limits to this unit)",
+   "condition_checked": "for every manifest claim: claim.verdict == 'CONFIRMS' and not store.producer_is_model(claim.producer)",
+   "deliberately_not_checked": "docket-level generated_by.producer is NOT the gate: a model verdict may legitimately bless replay-mined material (store.may_back_model_claim_verdict / materialize F2), so gating on it would flag a correct docket; it is quoted as context only",
+   "contradiction_now_detected": true,
+   "new_test": "test_verify_docket_flags_confirms_without_model_producer -- also asserts the no-false-positive half (same standing with producer='model' gives problems == [])",
+   "real_replay_docket_now": "problem: claim C-curated: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='replay') -- a non-model run may not assert CONFIRMS; re-derive the claim through materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)",
+   "expected": true,
+   "real_u55_docket_now": "ok",
+   "real_smoke_docket_now": "problem: claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='unknown') -- a non-model run may not assert CONFIRMS; re-derive the claim through materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)",
+   "smoke_note": "EXPECTED, reported and NOT repaired: _smoke C1 also asserts CONFIRMS with producer absent (=> 'unknown'), the same uncapped authored value. No docket was edited."
+  },
+  "item3_rotation": {
+   "chosen_bound": 5,
+   "justified": "the .rN rotation is the only unbounded growth in a docket tree (real chains: replay r1-r4, u55 r1-r3). 5 is the smallest bound that prunes NOTHING that exists today (deepest real chain = 4) while stopping growth; HISTORY.md stays the unbounded append-only audit log, so the snapshots are redundant copies of a record still kept in full.",
+   "prunes_older": true,
+   "current_item_survives": true,
+   "unbounded_is_acceptable": false,
+   "allocator_change": "first-free -> max(existing)+1: after a prune, first-free would hand the NEWEST content a low index and the next round would delete it as oldest",
+   "test": "test_item_rotation_bounded_and_current_item_survives -- 8 assemblies end with exactly r4..r8, the newest snapshot holds the most recent prior ITEM.md, and live ITEM.md survives"
+  },
+  "existing_uncapped_callers": [
+   "none in src/: the single in-repo caller is materialize.py:2121, which derives claims through _claim_for/_claim_standing (already capped)"
+  ],
+  "refusal_option_viable": true,
+  "refusal_option_note": "Technically viable: no in-repo caller legitimately passes an uncapped CONFIRMS, so option (ii) would not have broken a caller. Rejected anyway because materialize documents the cap-not-raise choice (a typed error would abort a whole docket on a rendering typo) and a renderer that normalises a bad standing REPAIRS the artifact where a raise only refuses to; the loud failure is delivered by the new verifier instead.",
+  "red_green": {
+   "a": "RED 1 failed (test_assembled_confirms_capped_when_claim_producer_is_replay) with _cap_uncapped_claims reverted; GREEN 1 passed restored; sha256 f3f2cfed.. -> 0c8f7386.., restore bit-identical (sha256 == state/logs/U5.22/assemble.py.new)",
+   "b": "RED 3 failed (incl. test_verify_docket_flags_confirms_without_model_producer); GREEN passed; measured with the pre-fidelity-fix build; the guard is unaffected by the fidelity fix",
+   "c": "RED 3 failed (incl. test_item_rotation_bounded_and_current_item_survives); GREEN passed; unaffected by the fidelity fix",
+   "purge": "FULL __pycache__ purge (excluding .venv/.git) before every red and green run; PYTHONDONTWRITEBYTECODE=1 throughout; red output persisted at state/logs/U5.22/red.txt"
+  },
+  "release_shas": {
+   "assemble_before": "f3f2cfed1245f6aaafe4a75a5baa7eb7ef7a3bbbb6da214554a9bedddd890aa1",
+   "assemble_after": "0c8f7386394b2e92866aba0217c3bb9626dc12cc1707c6f2d474b124b95f1000",
+   "verifier_after": "0c8f7386394b2e92866aba0217c3bb9626dc12cc1707c6f2d474b124b95f1000",
+   "materialize_readonly": "5dbf520e4822f681b7f7bafbb37d2529ce3864dd81bbb6bd9daf433c627e9d56",
+   "store_readonly": "b7e1f5be8bfae59370ed20b42905f9aaac7043d6f310e152bf6b9c38489f9e7f",
+   "test_after": "85f7b4d5fd0f6a2e0605a1e47ed506f6ab64a0214030c14cff2a555dc0dabf40"
+  },
+  "real_dockets_untouched": {
+   "replay_manifest": "9b6a577e1402fe41841e153a485e4b044a945a5f8bf05a59c2268df6086cd130",
+   "u55_manifest": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+   "smoke_manifest": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+   "hash_recipe": "per tree: walk every file under the docket, sort by path relative to the docket root, sha256 over the concatenation of (relpath + NUL + file bytes); manifests: plain sha256 of MANIFEST.json",
+   "trees": {
+    "replay": {
+     "tree": "14719646c001464901a3e80d6067ef84bc1797c340c670c4d8c05bff811f31cb",
+     "files": 30
+    },
+    "u55": {
+     "tree": "6e8128bc12b5a8652cbe7c1ae8a7536c7d61b424ef65ffe0f027fc6439e98d21",
+     "files": 29
+    },
+    "smoke": {
+     "tree": "121e34869d7d37b390732b51ce4aa0892b95a5e289f408f91e673bd5a1630412",
+     "files": 31
+    }
+   },
+   "trees_unchanged": true,
+   "proof": "the three manifest shas match the card's stated 9b6a577e../445032f7../41ec711a.. exactly; nothing under dockets/** was written; newest mtime under dockets/ (1791466595) predates this unit's first write watermark (1791468468), containment=True",
+   "verify_status": {
+    "replay": "problem: claim C-curated: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='replay') -- a non-model run may not assert CONFIRMS; re-derive the claim through materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)",
+    "u55": "ok",
+    "smoke": "problem: claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='unknown') -- a non-model run may not assert CONFIRMS; re-derive the claim through materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)"
+   },
+   "repro_copies": "the only re-render happened in state/logs/U5.22/repro/replay, a copy"
+  },
+  "store_untouched": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "rows": 35,
+   "rows_identical": true,
+   "used_immutable": false,
+   "method": "copied state.sqlite (plus any -wal/-shm; none existed) to state/logs/U5.22/storecopy and opened the COPY with mode=ro; the live db was never opened and immutable=1 was never used",
+   "sidecars_left": 2,
+   "version_source": "store.SCHEMA_VERSION = 4 (src/resextract/store.py:21) and the schema_version table; note PRAGMA user_version is 0 -- this store does not use it, so the first measurement of 'v0' was the wrong probe and is corrected here",
+   "sidecars_note": "sidecars_left = 2 (state.sqlite-wal, state.sqlite-shm), reported as observed and NOT as 0. They were absent at this unit's first measurement ([] -> []) and their mtime (1791468675) falls INSIDE this unit's wall-clock window (first-write watermark 1791468468, +207s), so I cannot prove a sibling created them. What I can prove: my only store access was sqlite3.connect('file:<copy under state/logs/U5.22/>?mode=ro') on a COPY of state.sqlite -- the live file was never opened by my code -- and state.sqlite's sha is byte-identical to the expected 40e8aa0c.. throughout, so no row changed. immutable=1 was never used (the card's WAL hazard). The verifier should treat the sidecars as unattributed, not as this unit's."
+  },
+  "duval_untouched": {
+   "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/\n",
+   "note": "NOT empty, and NOT mine: two untracked entries (.ci-trunk.txt, .lane-j-scratch/) with mtimes 1791439181/1791444778, both predating this unit's first write watermark 1791468468. I made no write to /home/zer0null/Duval (.worktrees never read)."
+  },
+  "follow_ups": {
+   "artifact_repair": "Re-derive duval-replay-material's claims through materialize -- the path where _claim_standing applies the cap -- and re-render, so C-curated lands as EXTENDS with a reason. Recommended over 'let a file-fact keep CONFIRMS' because the replay manifest's own status_reason already reads 'producer is replay: no model mined these candidates; not publication-eligible', which directly contradicts CONFIRMS. Route: copy the docket to scratch, re-run the replay materialisation for lane duval-replay-material through materialize (assemble_docket at materialize.py:2121), diff CLAIMS.md/MANIFEST.json, then copy back. Do NOT hand-edit MANIFEST.json -- the cap must come from the rule, and the new verifier will flag a hand-edit anyway.",
+   "vocabulary": "CONFIRMS is overloaded: it is used both for 'a model assessed this' and by authors for 'a file at a commit was verified by hashing'. A distinct standing (e.g. VERIFIED-MECHANICAL) for mechanically verified file-facts is the honest long-term fix, but it needs a manifest-schema change and resextract/docket/1 must not be bumped in this unit -- so it was NOT implemented here. Until then the fail-closed cap stands and the verifier flags the contradiction.",
+   "smoke": "dockets/_smoke C1 is the same authored defect (CONFIRMS, no producer recorded) and should be repaired by the same route in the same follow-up."
+  },
+  "tool_calls": 32,
+  "bound": 26,
+  "overrun_note": "4 over the <=26 target. All self-inflicted and disclosed: (1) my test edit contained a malformed generator expression (one extra red/green cycle); (2) the first handoff-builder heredoc had an unbalanced dict literal, aborting the call before verification ran (one re-run); (3) the full 5-file run surfaced 2 red tests that had to be attributed before reporting, and one of them was my own redundant downgrades channel -- attributing and fixing it took two more calls. I stopped authoring new semantics at the budget wall rather than invent a narrower condition to turn the remaining red test green.",
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  # 000",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/logs/U5.22/repro_bypass.py   # before + after",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_assemble.py -k '<3 new tests>' -q --tb=line -rf   # red: 3 failed",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest <five docket test files> -q   # 2 failed, 171 passed in 6.32s",
+   "sha256sum src/resextract/docket/assemble.py tests/test_docket_assemble.py state/state.sqlite"
+  ],
+  "my_own_delta_vs_baseline": "7 deletions / 136 insertions against state/logs/U5.22/assemble.py.orig (the git diff --numstat vs HEAD shows 73 deletions, but those are earlier units' uncommitted changes, not this unit's)"
+ },
+ "blocker": "",
+ "next_unit_hint": "Decision needed (not a code bug): tests/test_docket_provenance.py::test_pre_u5_7_smoke_manifest_still_validates_and_verifies is RED BY DESIGN after U5.22 -- it asserts a pre-U5.7 manifest whose claim says CONFIRMS with no producer verifies ok, which is the contradiction item 2 now detects. Either repair the artifacts (dockets/_smoke + duval-replay-material, via materialize re-derivation) or explicitly restate that backward-compat test's contract. Do NOT weaken it silently, and do NOT hand-edit MANIFEST.json.",
+ "write_paths": [
+  "src/resextract/docket/assemble.py",
+  "tests/test_docket_assemble.py",
+  "state/logs/U5.22*",
+  "orchestration/units/U5.22.md",
+  "orchestration/handoffs/U5.22.json"
+ ]
+}

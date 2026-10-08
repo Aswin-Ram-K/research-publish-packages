@@ -1,0 +1,80 @@
+{
+  "unit": "D1",
+  "status": "done",
+  "artifacts": [
+    "state/logs/D1-occamy-diagnosis.log",
+    "orchestration/units/D1.md",
+    "orchestration/handoffs/D1.json"
+  ],
+  "evidence": {
+    "workstation": {
+      "models_8012": [
+        "[05:48:57] curl: (7) Failed to connect to 192.168.2.168 port 8012 after 1 ms: Could not connect to server / HTTP 000 in 0.001907s",
+        "[05:49:24] curl: (7) Failed to connect to 192.168.2.168 port 8012 after 1 ms: Could not connect to server / HTTP 000 in 0.001919s",
+        "[05:49:44] curl: (7) Failed to connect to 192.168.2.168 port 8012 after 1 ms: Could not connect to server / HTTP 000 in 0.001585s"
+      ],
+      "tcp_8012": "CLOSED (bash: connect: Connection refused) at 05:48:57 and 05:49:44; re-probed 05:50:06 and 05:51:16 still refused",
+      "ping": "3 packets transmitted, 3 received, 0% packet loss, ttl=64, rtt min/avg/max = 1.083/1.290/1.437 ms"
+    },
+    "other_services": {
+      "8000": "HTTP 200 - {\"data\":[{\"id\":\"ornith-1.5-35b\",\"object\":\"model\",...}],\"object\":\"list\"} (LiteLLM ingress, node pid 791454)",
+      "8013": "HTTP 200 - plano-orchestrator-4b (vLLM); re-checked 05:51:16 HTTP 200 while :8012 was still refused",
+      "8010": "HTTP 401 - {\"error\":{\"message\":\"bearer token required\"}} (alive)",
+      "8090": "HTTP 200 (SGLang telemetry dashboard, node pid 811982)",
+      "22": "SSH-OPEN"
+    },
+    "ssh": "worked (after bypassing a WORKSTATION-LOCAL fault: `ssh gx10` failed with 'Bad owner or permissions on /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf'; retried with `ssh -F /dev/null -i ~/.ssh/id_ed25519 -o BatchMode=yes zer0null@192.168.2.168`, which writes nothing. ~/.ssh/config Host gx10 -> 192.168.2.168, User zer0null)",
+    "inside_box": {
+      "local_8012": "curl http://127.0.0.1:8012/v1/models -> Connection refused (EXPECTED, NOT diagnostic: the publish is `--publish 192.168.2.168:8012:30000`, host-IP-only, so 127.0.0.1 has no listener even when healthy). DECISIVE probe: `curl http://192.168.2.168:8012/v1/models` FROM INSIDE THE BOX -> curl: (7) Couldn't connect to server => the LAN-bound socket is dead from inside too, so this is NOT a network/firewall/interface/bind issue and NOT a workstation-side network fault.",
+      "units": [
+        "gx10-occamy-nvfp4.service  loaded active running  GX10 Occamy-1.0 NVFP4 agent model (SGLang, OpenAI-compatible, LAN 8012)  <-- OWNS :8012",
+        "gx10-plano-orchestrator.service  loaded active running  (vLLM, LAN 8013)",
+        "gx10-agent-ingress.service  loaded active running  (Flash-Next LiteLLM router / :8000)",
+        "gx10-agent-router.service  loaded active running  (:8005 loopback)",
+        "gx10-specialist-models.service  loaded active running  (:8010)",
+        "gx10-sglang-dashboard.service  loaded active running  (:8090)",
+        "gx10-ornith15-dflash2.service  loaded inactive dead",
+        "gx10-qwen38-flashnext.service  loaded inactive dead",
+        "gx10-qwen38-flashnext-guard.service  loaded inactive dead",
+        "gx10-qwen38-effort-adapter.service / gx10-needle3.service / gx10-gpu-clock-lock.service  active",
+        "Restart=on-failure  RestartSec=20  TimeoutStartSec=45min  MemoryMax=infinity  NRestarts=3"
+      ],
+      "ports": [
+        "LISTEN 192.168.2.168:8000 node pid=791454",
+        "LISTEN 192.168.2.168:8012 (no process attribution as non-root - transient docker-proxy socket during a container start window, no backend yet)",
+        "LISTEN 192.168.2.168:8013",
+        "LISTEN 192.168.2.168:8010 node pid=1022065",
+        "LISTEN 192.168.2.168:8090 node pid=811982"
+      ],
+      "docker": [
+        "gx10-occamy-nvfp4|Up 21 seconds|192.168.2.168:8012->30000/tcp   <-- RESTARTING, uptime 21s on a box up 35 days",
+        "gx10-plano-orchestrator|Up 20 hours|192.168.2.168:8013->30000/tcp"
+      ],
+      "gpu": "NVIDIA GB10, driver 580.159.03, CUDA 13.0, GPU-Util 0%, 48C, Memory-Usage 'Not Supported' (UMA part); sglang log: 'Failed to get GPU memory capacity from nvidia-smi. Falling back to torch.cuda.mem_get_info(). Reported total GPU memory per device (MiB): [124546]'. free -g: total 121, used 71, free 30, buff/cache 21, available 49; swap 47 total, 7 used. Co-tenant on the same UMA part: gx10-plano-orchestrator (--memory=48g, --gpu-memory-utilization 0.18).",
+      "last_errors": [
+        "ValueError: Loaded weights leave no GPU memory for the KV cache under --mem-fraction-static=0.5. Raise --mem-fraction-static above 0.500 (minimum viable = 1 - available/pre = 0.4993). If using speculative decoding, draft weights are now counted.",
+        "05:49:12 Scheduler hit an exception: Traceback ... kv_cache_configurator.py line 1860 in _profile_available_bytes -> raise ValueError",
+        "05:49:12 Received sigquit from a child process. It usually means the child failed.",
+        "05:49:12 kill_process_tree called: parent_pid=7, include_parent=True, pid=7",
+        "05:49:13 gx10-occamy-nvfp4.service: Main process exited, code=exited, status=137/n/a",
+        "05:49:13 gx10-occamy-nvfp4.service: Failed with result 'exit-code'.",
+        "05:49:33 Scheduled restart job, restart counter is at 3.",
+        "05:49:11 Load weight end. elapsed=145.67 s, type=Qwen3_5MoeForConditionalGeneration, quant=modelopt_fp4, quant_algo=NVFP4, avail mem=24.63 GB, mem usage=23.70 GB.",
+        "Earlier identical cycles: 05:43:14 exit 137 -> counter 1; 05:46:00 ValueError (minimum viable = 0.4929) -> exit 137 -> counter 2; 05:49:12 ValueError (minimum viable = 0.4993) -> exit 137 -> counter 3.",
+        "Unit-file comment (verbatim): 'on this platform: it profiles free memory via cudaMemGetInfo, which the GX10 research states UNDER-REPORTS allocatable memory on this UMA part. Do not tune from that hint.'"
+      ]
+    },
+    "diagnosis": "gpu_or_oom",
+    "owning_unit": "gx10-occamy-nvfp4.service (systemd --user user-unit; container gx10-occamy-nvfp4; publish 192.168.2.168:8012->30000; image sha256:72457f09d20efcd34cdf005f71811a25efe771ccc5dd0c93f8ac112569e00ad7)",
+    "restore_command": "systemctl --user restart gx10-occamy-nvfp4.service  (NOT executed). Note: restart alone is a coin-flip - the failing guard is deterministic with unchanged args, so the durable fix is to raise `--mem-fraction-static 0.50` to ~0.60 in that unit's ExecStart, then restart.",
+    "recurrence_risk": "HIGH. Restart=on-failure with RestartSec=20 and a ~2min47s failing cycle (145 s weight load + 20 s backoff + startup) means :8012 is dead for the large majority of every cycle and self-restarts forever - it already reached restart counter 3 unattended. The trigger is marginal, not fixed: the guard's own 'minimum viable' drifts upward across cycles (0.4929 -> 0.4993) toward the configured 0.500, a 0.0007 margin, on a GB10 UMA part where the unit's own comment admits cudaMemGetInfo under-reports allocatable memory. Any change in unified-memory pressure from the co-tenant model servers (gx10-plano-orchestrator holds --memory=48g / gpu-memory-utilization 0.18 on the same UMA part) will re-trip it. Expect this to recur on the next memory-pressure change or cold start until --mem-fraction-static is raised.",
+    "timeline": "Box uptime 35 days 6:59 and workstation uptime 29 days 8:57 => neither was rebooted, so this is NOT a boot-time-only launch failure. The same endpoint answered a live completion earlier the same session (thinking off, 327-414 ms). First observed failure in this window: exit 137 at 05:43:14, i.e. the loop was already ~3 cycles deep before the sibling unit's probes at ~05:48."
+  },
+  "blocker": "",
+  "next_unit_hint": "Do not spend a unit re-diagnosing this: the cause is settled and quoted. The decision gate is the USER's (restarting a shared model server). If a pipeline unit needs a live LLM now, either (a) route to a GX10 endpoint that is up (:8013 plano-orchestrator-4b HTTP 200, :8000 ornith-1.5-35b via LiteLLM HTTP 200, :8010 401 = alive-but-authenticated), or (b) ask the user to authorise raising `--mem-fraction-static` 0.50 -> ~0.60 in gx10-occamy-nvfp4.service's ExecStart and restarting it. Also worth surfacing separately: plain `ssh gx10` is broken on THIS workstation by a permissions fault on /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf ('Bad owner or permissions'), which will break any other unit that shells into the GX10; the workaround that needs no write is `ssh -F /dev/null -i ~/.ssh/id_ed25519 -o BatchMode=yes zer0null@192.168.2.168`.",
+  "write_paths": [
+    "state/logs/D1-occamy-diagnosis.log",
+    "orchestration/units/D1.md",
+    "orchestration/handoffs/D1.json"
+  ]
+}

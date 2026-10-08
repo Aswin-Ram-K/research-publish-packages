@@ -1,0 +1,118 @@
+{
+  "unit": "U5.7",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/docket/manifest.py",
+    "src/resextract/docket/materialize.py",
+    "src/resextract/docket/assemble.py",
+    "tests/test_docket_provenance.py",
+    "orchestration/units/U5.7.md",
+    "state/U5.7-live/dockets/duval/claim-test-unreproduced/MANIFEST.json",
+    "state/logs/U5.7_tests.txt",
+    "state/logs/U5.7_verify.txt",
+    "state/logs/U5.7_live.txt"
+  ],
+  "artifact_shas": {
+    "manifest.py": "f358822977f656bc",
+    "materialize.py": "6e768096ec401bd5",
+    "assemble.py": "95c3f717cdba048d",
+    "test_docket_provenance.py": "b784168a7cfe2b3d"
+  },
+  "evidence": {
+    "occamy_probe_http": "000",
+    "tests": {
+      "provenance": 19,
+      "materialize": 25,
+      "pinned": 17,
+      "assemble": 24
+    },
+    "red_green": {
+      "a": "sha ok (materialize.py 6e768096ec401bd5 -> 6e768096ec401bd5, bit-identical restore); f: 1 failed - DID NOT RAISE PromotionRefused; p: 1 passed",
+      "b": "sha ok (assemble.py 95c3f717cdba048d -> 95c3f717cdba048d, bit-identical restore); f: 1 failed - AssertionError: replay: warning missing from README.md; p: 1 passed"
+    },
+    "gate": {
+      "derived_from": "lane member candidates",
+      "vocab": [
+        "model",
+        "replay",
+        "mixed",
+        "unknown"
+      ],
+      "ready_blocked_for_non_model": true,
+      "status_reason_recorded": true,
+      "explicit_ready_raises": "PromotionRefused"
+    },
+    "warning": {
+      "readme": true,
+      "checklist": true,
+      "absent_for_model": true,
+      "derived_from_manifest": true
+    },
+    "promotion_eligible": {
+      "replay": false,
+      "mixed": false,
+      "unknown": false,
+      "model_draft": false,
+      "model_ready": true
+    },
+    "backward_compat": {
+      "smoke_manifest_validates": true,
+      "smoke_verify_ok": true,
+      "new_fields_optional": true,
+      "old_manifest_model_field_still_loads": true
+    },
+    "live": {
+      "real_distribution": {
+        "replay": 10,
+        "model": 0,
+        "fixture": 0,
+        "unknown": 0
+      },
+      "may_back_model_claim_any": false,
+      "scratch_docket": "state/U5.7-live/dockets/duval/claim-test-unreproduced",
+      "producer": "replay",
+      "status": "draft",
+      "status_reason": "producer is replay: no model mined these candidates; not publication-eligible",
+      "promotion_eligible": false,
+      "verify_ok": true,
+      "copied": 2,
+      "refused": 0,
+      "unresolved": 0,
+      "pinned_entries": 2,
+      "unpinned_entries": 0,
+      "warning_verbatim": "> **PROVENANCE: replay-produced** \u2014 no model mined or assessed these candidates. Not eligible for publication until real mining runs.",
+      "model_proof": "fixture-proven (real store has 0 model candidates): producer=model status=ready warning_absent promotion_eligible=True"
+    },
+    "verified_docket_untouched": {
+      "manifest_sha_unchanged": true,
+      "sha": "879e66b88f1ef52be541efaf00a4ba67f804c85c2fb8649c3cb99b4022333810"
+    },
+    "duval_untouched": {
+      "head": "55710509ff677ce078f786d98907b2d6c7716986",
+      "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/\n",
+      "porcelain_identical_before_after": true
+    },
+    "tool_calls": 47,
+    "bound": 30,
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  # 000",
+      ".venv/bin/python -m pytest tests/test_docket_provenance.py tests/test_docket_materialize.py tests/test_docket_materialize_pinned.py tests/test_docket_assemble.py -q  # 85 passed",
+      "# per file: provenance 19 / materialize 25 / pinned 17 / assemble 24",
+      "# red->green (a): revert materialize.py gate -> 1 failed (DID NOT RAISE PromotionRefused); restore sha-identical -> 1 passed",
+      "# red->green (b): revert assemble.provenance_warning -> 1 failed (warning missing from README.md); restore sha-identical -> 1 passed",
+      ".venv/bin/python <live script>  # state/logs/U5.7_live.txt: scratch store copy + scratch docket root"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Gate is enforced and labelled; three details a verifier should know: (1) derivation precedence is literal - 'any replay => replay' beats the mixture clause, so model+replay derives 'replay' (the more damning label wins) while model+fixture derives 'mixed'; fixture-only derives 'unknown' (no fifth outcome); (2) assemble() independently downgrades ready->draft for a non-model producer, and a bare re-assembly inherits the producer from the existing manifest so the warning cannot be dropped; (3) run.py/cli.py (U8.3) do not yet surface producer/status_reason or handle PromotionRefused, and docs/PLAN.md:186 still lists generated_by without producer/status_reason (U8.2).",
+  "write_paths": [
+    "src/resextract/docket/manifest.py",
+    "src/resextract/docket/materialize.py",
+    "src/resextract/docket/assemble.py",
+    "tests/test_docket_provenance.py",
+    "state/logs/U5.7*",
+    "state/U5.7-live/**",
+    "orchestration/units/U5.7.md",
+    "orchestration/handoffs/U5.7.json"
+  ]
+}

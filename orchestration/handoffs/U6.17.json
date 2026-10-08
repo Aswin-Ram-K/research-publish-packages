@@ -1,0 +1,113 @@
+{
+  "unit": "U6.17",
+  "status": "done",
+  "artifacts": [
+    "tests/test_dashboard_auth.py",
+    "orchestration/units/U6.17.md",
+    "state/logs/U6.17-isolation.log",
+    "state/logs/U6.17-final.log",
+    "state/logs/U6.17-final2.log",
+    "state/logs/U6.17-final3.log",
+    "state/logs/U6.17-storecopy.sqlite",
+    "state/logs/U6.17-schemalog.txt"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "occamy_probe_note": "curl -sS -m 5 http://192.168.2.168:8012/v1/models -> exit 7, connection refused. DOWN, as expected. Probed once. Zero LLM calls in this unit.",
+    "tests": {
+      "auth_before": 13,
+      "auth_after": 15,
+      "deletions": 0,
+      "dashboard_after": 71,
+      "assert_lines_before": 30,
+      "assert_lines_after": 45,
+      "assert_lines_added": 15,
+      "protected_assertion_lines_still_present": 20
+    }
+  },
+  "repro": {
+    "sidecars_before": [],
+    "sidecars_before_note": "At 08:41 (start of unit) state/state.sqlite-wal and state/state.sqlite-shm were BOTH ABSENT - U6.16 had already cleaned up the pair it reported. The pre-existing -wal 0 B / -shm 32768 B pair named in the brief is therefore not present; the only -wal/-shm in state/ belong to state/U2.5_realmirror_before.sqlite (a different db, another unit's scratch).",
+    "reproduced_on_run_alone": true,
+    "created_by_run_alone": [
+      {"path": "state/state.sqlite-wal", "size": 0, "mtime": "2026-10-08 08:42:01.625589586 -0500"},
+      {"path": "state/state.sqlite-shm", "size": 32768, "mtime": "2026-10-08 08:42:06.025751310 -0500"}
+    ],
+    "real_store_mtime_changed": false,
+    "real_store_sha_before_run": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+    "real_store_mtime_before_run": "2026-10-08 07:47:56.009682763 -0500",
+    "why_not_isolated": "tests/test_dashboard_auth.py:123 `return app_mod.create_app(host=\"0.0.0.0\", allow_remote=True, token=token)` passes no store_path and sets no env -> src/resextract/dashboard/app.py:110 `layer = api.DataLayer(store_path, journal_dir, dockets_dir, graph_path, max_bytes=max_bytes)` receives store_path=None -> src/resextract/dashboard/api.py:409 `self.store_path, self.store_source = resolve_store(store_path)` -> api.py:371 `return Path(DEFAULT_DB_PATH), STORE_SOURCE_DEFAULT`, i.e. the REAL state/state.sqlite. The same is true of every other construction in the file, including the two in-process `main([...])` calls (dashboard/__main__.py:112 `app = create_app(args.store, ...)` with args.store=None -> same default). The subsequent read-only open (api.py `_connect`: `sqlite3.connect(f\"file:{quoted}?mode=ro\", uri=True)`) is what emits the -wal/-shm pair."
+  },
+  "fix": {
+    "mechanism": "RESEXTRACT_STATE_DB",
+    "why_env_not_explicit_store_path": "One module-scoped autouse fixture redirects ALL 11 constructions in this file (including the two in-process main() calls and the spawned module subprocess, which inherits environ) with no call site left to forget; explicit store_path would have required editing 11 call sites plus every test signature for the same coverage. The variable is process-global, so it is set and restored by that single fixture - never left behind.",
+    "fixture": "tests/test_dashboard_auth.py::isolated_store (scope=module, autouse). Copies the real store with shutil.copyfile (a plain byte copy - the original is NEVER opened, so the fixture itself cannot emit sidecars) into tmp_path_factory, points RESEXTRACT_STATE_DB at the copy, and restores the previous value (pop if it was unset) in a finally block.",
+    "env_restored_in_teardown": true,
+    "env_restore_proof": "pytest.main([... 'tests/test_dashboard_auth.py']) run from one python -c; after it returned, `LEAKED_ENV_RESEXTRACT_STATE_DB: None` in that same process. The fixture's finally also restores a pre-existing value if one was set.",
+    "isolation_asserted_on": "app.state.dashboard",
+    "update_note": "api.py:537 `_connect` still uses `mode=ro`, which is the open that creates -wal/-shm. U6.16 fixed resolution, not the open mode. Not changed here (outside my write paths) - it no longer matters for this file because the open now lands on the copy.",
+    "assertions_added": 15,
+    "tests_added": 2,
+    "tests_added_names": [
+      "test_every_app_resolves_to_the_isolated_copy_not_the_real_store",
+      "test_remote_app_and_module_entry_point_resolve_to_the_copy"
+    ],
+    "guard": "test_every_app_resolves_to_the_isolated_copy_not_the_real_store asserts app.state.dashboard['store_path'] == str(isolated_store), store_source == 'env', store_resolution matches, and `!= str(app_mod.api.DEFAULT_DB_PATH)` - so reverting the redirection fails this test even though the auth assertions would still pass against the real store. test_remote_app_and_module_entry_point_resolve_to_the_copy pins the other two construction paths (remote app, and main()'s app via the uvicorn.run sentinel)."
+  },
+  "proof": {
+    "resolved_path_on_run": "asserted equal to str(isolated_store), i.e. <tmp_path_factory>/u6.17-store*/state-copy.sqlite (in-test assertion; the tmp dir is ephemeral and /tmp is wiped between tool calls, so the literal string is not recoverable - the assertion is the evidence)",
+    "new_sidecars": 0,
+    "real_store_sha_after": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+    "real_store_sha_unchanged": true,
+    "real_store_mtime_unchanged": true,
+    "real_store_mtime_after": "2026-10-08 07:47:56.009682763 -0500",
+    "sidecars_after_run": "state/state.sqlite-wal ABSENT; state/state.sqlite-shm ABSENT",
+    "run_alone_result": "15 passed in 8.20s",
+    "dashboard_regression": "tests/test_dashboard.py alone: 71 passed in 16.81s",
+    "bytecode": "PYTHONDONTWRITEBYTECODE=1 for every run. No revert/restore was performed, so the full __pycache__ purge the brief mandates for a revert was not applicable; a global purge was deliberately NOT run because it would rebuild bytecode under concurrent sibling units mid-flight for no benefit."
+  },
+  "existing_assertions_changed": [],
+  "assertion_accounting": "File is untracked in git (`git ls-files --error-unmatch` -> 'did not match any file(s) known to git'), so no git baseline exists for a diff. Accounting instead: 45 `assert ` lines now, of which exactly 15 are mine (2 in the fixture, 7 in test 1, 6 in test 2) -> 30 original, all intact. The 20 protected-pattern lines (401 / \"token\" in / set(body) == {\"error\"} / pytest.raises(ValueError) / rc == 2 / len(calls) == 1 / 200) are all still present. My four edits were pure insertions; every anchor text was reproduced verbatim.",
+  "sidecar_cleanup": {
+    "deleted": false,
+    "reasoning": "The brief's pre-existing pair (attributed to a concurrent sibling) was already GONE when this unit started, so there was nothing to attribute. The pair that existed at the end of my baseline run (08:42:01 / 08:42:06) was mine. It was already ABSENT again when the very next tool call ran - a concurrent unit removed it between calls - so the `rm -f` executed there was a no-op on non-existent files. Holder scan at that moment: /proc/*/fd sweep plus lsof found NO process with state.sqlite open, and the -wal was 0 bytes (no frames). Net effect: nothing was deleted by me, and the final state is 0 sidecars next to the real store.",
+    "store_sha_after": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3"
+  },
+  "other_unisolated_test_files": [
+    "tests/test_cli.py - lines 343 and 419 do `app = dapp.create_app(dockets_dir=captured[\"dockets_dir\"])`: no store_path, and test_cli.py contains NO RESEXTRACT_STATE_DB / store_path / --store / env-setting fixture anywhere (grep returned nothing), so both resolve the REAL state/state.sqlite and will emit the same -wal/-shm pair. Line 741 `dapp.create_app(host=\"0.0.0.0\")` is inside pytest.raises, so it raises in check_bind_host before DataLayer and touches nothing."
+  ],
+  "isolated_test_files_noted": [
+    "tests/test_dashboard.py - already isolated: its make_app defaults store_path to its own STORE fixture (line 99) and every DataLayer/create_app call passes str(STORE); the one bare `api.DataLayer()` at line 1246 is wrapped in monkeypatch.setenv('RESEXTRACT_STATE_DB', ...) at line 1245. Its line 610 `create_app(host='0.0.0.0')` is inside pytest.raises and never reaches DataLayer.",
+    "tests/test_dashboard_auth.py - isolated by this unit."
+  ],
+  "store_untouched": {
+    "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+    "version": 4,
+    "version_evidence": "status_json on a byte copy of the real store (state/logs/U6.17-storecopy.sqlite) reports schema_version 4. Note `pragma user_version` is 0 - the app's schema version is the store's own `schema_version`, not sqlite's user_version.",
+    "rows_identical": true,
+    "rows": {"candidates": 10, "evidence": 0, "verdicts": 0, "claims": 0, "lanes": 5, "lane_candidates": 10, "dockets": 2, "runs": 4},
+    "rows_method": "cp state/state.sqlite state/logs/U6.17-storecopy.sqlite (byte copy) then read the COPY - the real file was never opened by sqlite, so no sidecar was ever created next to it.",
+    "mtime_unchanged": "2026-10-08 07:47:56.009682763 -0500 (identical before and after)"
+  },
+  "duval_untouched": {
+    "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+    "porcelain_count": 2,
+    "note": "Both entries are untracked .ci-trunk.txt / .lane-j-scratch/ from the foreign actor; no modification to any tracked file, no new entry from this unit. HEAD read only; no .worktrees/ read."
+  },
+  "tool_calls": 20,
+  "bound": 20,
+  "commands": [
+    "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models  # -> 000, exit 7",
+    "stat + sha256sum state/state.sqlite and state/state.sqlite-wal/-shm (before)",
+    ".venv/bin/python -m pytest tests/test_dashboard_auth.py --collect-only -q  # 13 collected",
+    ".venv/bin/python -m pytest tests/test_dashboard_auth.py -q  # BEFORE FIX: 13 passed, sidecars created",
+    "/proc/*/fd sweep + lsof state/state.sqlite  # no holder",
+    ".venv/bin/python -c 'import pytest; pytest.main([...tests/test_dashboard_auth.py])'  # AFTER FIX: 15 passed, rc 0, LEAKED_ENV None",
+    ".venv/bin/python -m pytest tests/test_dashboard.py -q  # 71 passed",
+    "grep -rn 'create_app(\\|DataLayer(' tests/  # residual scope",
+    "cp state/state.sqlite state/logs/U6.17-storecopy.sqlite && status_json(copy)  # schema_version 4, rows match"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Residual store leak, same bug class, now scoped: tests/test_cli.py:343 and :419 construct `dapp.create_app(dockets_dir=...)` with no store_path and the file sets no RESEXTRACT_STATE_DB anywhere, so both read the REAL state/state.sqlite and will emit state.sqlite-wal/-shm. Apply the U6.17 pattern verbatim (module-scoped autouse fixture: shutil.copyfile to tmp_path_factory, set RESEXTRACT_STATE_DB, restore in finally) and assert `app.state.dashboard['store_path'] == str(copy)` + `store_source == 'env'`. Secondary, one-line: api.py's `_connect` still opens with `mode=ro`, which is the open that creates the sidecars even for a legitimate read - `immutable=1` (or copy-then-open) would remove the side effect at the boundary rather than at each caller; flagged, not changed, as api.py was outside this unit's write paths."
+}

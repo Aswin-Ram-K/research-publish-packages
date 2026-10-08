@@ -513,9 +513,11 @@ def test_checklist_has_licence_gate_and_pdf_note(tmp_path, monkeypatch):
 
 
 def test_manifest_forbids_unknown_fields():
+    from pydantic import ValidationError
+
     from resextract.docket.manifest import DocketManifest
 
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         DocketManifest.model_validate(
             {
                 "schema": "resextract/docket/1",
@@ -560,3 +562,95 @@ def test_material_report_bridge_reads_excerpts_not_repo(tmp_path):
     spans = {i.dest: i.excerpt for i in bridge.copied}
     assert spans["docs/FINDINGS.md"] == (1, 8)
     assert spans["src/core.ts"] is None
+
+
+# --------------------------------------------------------------------------- #
+# U5.22 -- the boundary: standing is capped where it is *written*
+# --------------------------------------------------------------------------- #
+
+
+def test_assembled_confirms_capped_when_claim_producer_is_replay(tmp_path):
+    """ITEM 1: a caller-supplied CONFIRMS with a non-model producer renders EXTENDS.
+
+    Red→green (guard: revert ``_cap_uncapped_claims``):
+RED: test_assembled_confirms_capped_when_claim_producer_is_replay
+    590: AssertionError: assert 'CONFIRMS' == 'EXTENDS'
+    """
+    docket = tmp_path / "dockets" / "capped"
+    docket, report, claims = facts(tmp_path, docket)
+    def _usable(c):
+        if isinstance(c, dict):
+            return bool(c.get("provenance") and c.get("evidence"))
+        return bool(getattr(c, "provenance", None) and getattr(c, "evidence", None))
+
+    good = next(c for c in claims if _usable(c))
+    bad = dict(good.model_dump() if hasattr(good, "model_dump") else good)
+    bad.update({"id": "C-smuggled", "verdict": "CONFIRMS", "producer": "replay"})
+
+    assemble_docket(docket, report, [bad], producer="replay")
+
+    rendered = {c.id: c for c in read_manifest(docket / "MANIFEST.json").claims}
+    assert rendered["C-smuggled"].verdict == "EXTENDS"
+    assert rendered["C-smuggled"].producer == "replay"
+    assert rendered["C-smuggled"].verdict_reason is not None
+    assert "not 'model'" in rendered["C-smuggled"].verdict_reason
+    text = (docket / "CLAIMS.md").read_text(encoding="utf-8")
+    assert "## C-smuggled — EXTENDS" in text
+    assert "## C-smuggled — CONFIRMS" not in text
+
+
+def test_verify_docket_flags_confirms_without_model_producer(tmp_path):
+    """ITEM 2: the verifier detects a standing that contradicts its producer.
+
+    Red→green (guard: revert ``_claim_standing_problems``):
+RED: test_verify_docket_flags_confirms_without_model_producer
+    618: AssertionError: assert not True
+    """
+    docket = tmp_path / "dockets" / "smuggled"
+    docket, report, claims = facts(tmp_path, docket)
+    assemble_docket(docket, report, claims)
+    assert verify_docket(docket).ok  # baseline: nothing contradicts itself yet
+
+    path = docket / "MANIFEST.json"
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    raw["claims"][0]["verdict"] = "CONFIRMS"
+    raw["claims"][0]["verdict_reason"] = None
+    raw["claims"][0]["producer"] = "replay"
+    path.write_text(json.dumps(raw, indent=2, sort_keys=True), encoding="utf-8")
+
+    caught = verify_docket(docket)
+    assert not caught.ok
+    assert any("CONFIRMS" in p and "not 'model'" in p for p in caught.problems), caught.problems
+
+    # no false positive: the same standing backed by a *model* producer passes
+    for c in raw["claims"]:
+        c["producer"] = "model"
+    path.write_text(json.dumps(raw, indent=2, sort_keys=True), encoding="utf-8")
+    assert verify_docket(docket).problems == []
+
+
+def test_item_rotation_bounded_and_current_item_survives(tmp_path):
+    """ITEM 3: the ``.rN`` rotation keeps the newest N and never eats ITEM.md.
+
+    Red→green (guard: revert the bound in ``_preserve_item``):
+RED: test_item_rotation_bounded_and_current_item_survives
+    634: ImportError: cannot import name 'ITEM_SNAPSHOT_KEEP' from 'resextract.docket.assemble' (/home/zer0null/reserach extarctor/src/resextract/docket/assemble.py)
+    """
+    from resextract.docket.assemble import ITEM_SNAPSHOT_KEEP
+
+    docket = tmp_path / "dockets" / "rotate"
+    docket, report, claims = facts(tmp_path, docket)
+    for k in range(8):
+        (docket / "ITEM.md").write_text(f"# sentinel {k}\n", encoding="utf-8")
+        assemble_docket(docket, report, claims)
+
+    snaps = sorted(docket.glob("ITEM.md.r*"), key=lambda p: int(p.suffix[2:]))
+    assert len(snaps) == ITEM_SNAPSHOT_KEEP == 5
+    # the newest snapshot is the most recent prior ITEM.md -- content not lost
+    assert snaps[-1].read_text(encoding="utf-8") == "# sentinel 7\n"
+    assert [p.name for p in snaps] == [
+        "ITEM.md.r4", "ITEM.md.r5", "ITEM.md.r6", "ITEM.md.r7", "ITEM.md.r8",
+    ]
+    # the live document survives pruning and is the freshly rendered one
+    live = (docket / "ITEM.md").read_text(encoding="utf-8")
+    assert live and "sentinel" not in live

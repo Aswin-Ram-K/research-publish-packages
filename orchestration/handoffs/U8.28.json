@@ -1,0 +1,196 @@
+{
+ "unit": "U8.28",
+ "status": "done",
+ "artifacts": [
+  "docs/PLAN_CORRECTIONS.md",
+  "orchestration/units/U8.28.md",
+  "state/logs/U8.28.prefix.backup.md"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "entries": {
+   "before": 85,
+   "last_before": "cg",
+   "appended": 6,
+   "after": 91,
+   "last_after": "cm",
+   "new_letters": [
+    "ch",
+    "ci",
+    "cj",
+    "ck",
+    "cl",
+    "cm"
+   ]
+  },
+  "reported_only_preserved": 6,
+  "reported_only_letters_located": "(d) :108, (e) :125, (h) :167, (i) :183, (o) :298, (p) :305 - all six headings still present; preservation is proven by the byte-identical prefix rather than by the heading spelling (d/e/h/i do not carry the mark in the heading text)",
+  "existing_entries_modified": 0,
+  "prefix_byte_identical": true,
+  "sha256_before": "7510d72ac42b2e35e073dcee9b4047fb4e09cfe52ae3d7a075cae2876d4cff4d",
+  "sha256_after": "b7559f62415edf65283fdbd7ac67ba6f5abc9b7fbed21372da0d6620538b380b",
+  "bytes_before": 188761,
+  "bytes_after": 212122,
+  "sections": {
+   "A": "ch",
+   "B": "ci",
+   "C": "cj",
+   "D": "ck",
+   "E": "cl",
+   "F": "cm",
+   "G": "scope-note"
+  },
+  "discrepancies_settled": [
+   {
+    "n": 1,
+    "claim": "the other 17 keys byte-identical",
+    "measured": "16 other keys; 17 top-level keys TOTAL; key sets identical; the only key whose value differs is claims (canonical json.dumps re-serialisation: 16 identical / 1 differing)",
+    "recipe": ".venv/bin/python -c \"import json;a=json.load(open('dockets/duval/duval-replay-material/MANIFEST.json'));b=json.load(open('state/backups/U5.27-replay-material/duval-replay-material/MANIFEST.json'));print(len(a),len(b));print(sorted(set(a)^set(b)));print([k for k in a if k in b and a[k]!=b[k]])\"",
+    "was": "wrong-count",
+    "evidence": "live manifest ce45766d4ac845ed mtime 2026-10-08 09:28:51; backup 9b6a577e1402fe41 mtime 08:36:35; equal_others=16; symmetric key difference empty"
+   },
+   {
+    "n": 2,
+    "claim": "banner 15",
+    "measured": "15 files containing the string PROVENANCE: replay-produced, live AND backup, with identical root-relative file lists; 'banner' is NOT a manifest key at all (absent, so get() returns None - not a present null)",
+    "recipe": "grep -rl 'PROVENANCE: replay-produced' dockets/duval/duval-replay-material | wc -l ; the same over the backup root; then diff of root-relative lists",
+    "was": "method-dependent",
+    "evidence": "both sides 15; diff clean (SAME-RELATIVE-SET); 'banner' in manifest == False"
+   },
+   {
+    "n": 3,
+    "claim": "8 contexts versus grep -c on two-hash headings = 7",
+    "measured": "8 evidence items (5 top-level excerpt headings + 3 sub-entries under Other evidence entries) versus 7 top-level headings (the 5 excerpts + Copied material + Other evidence entries); EVIDENCE.md is 151 lines / 8338 bytes; h1=2 because the excerpted FINDINGS.md brings its own top heading at line 88",
+    "recipe": "f=dockets/duval/duval-replay-material/EVIDENCE.md; wc -lc $f; grep -c '^## ' $f; grep -c '^### ' $f; grep -c '^[-*] ' $f; grep -c '^|' $f; grep -n 'context' $f",
+    "was": "method-dependent",
+    "evidence": "context: lines at 26, 55, 65, 75, 85, 135, 142, 149 = 8; manifest material holds 8 items"
+   }
+  ],
+  "two_state_rule": {
+   "verified_in_code": true,
+   "none_site": "api.py:1220 (store-only listing; reason string :1221; U6.23 comment :1210-1218); other None initialisers at :601, :1076, :1307 (overwritten when a verification runs)",
+   "false_sites": [
+    "api.py:616",
+    "api.py:791",
+    "api.py:1085",
+    "api.py:1312",
+    "api.py:1479 is the doctor report's OWN ok, a different field - NOT verify.ok"
+   ],
+   "api_sha": "4f5698cecee8ceb61df6d95cf60522611cb7d71a643ac31cf88c15d7ede12f0f",
+   "api_mtime": "2026-10-08 09:36:17",
+   "no_literal_true_arm": "there is no 'ok': True literal at this sha; success paths compute bool(ok) or take verify_docket().to_dict()",
+   "record_only_claim": true,
+   "verdicts_edited": false
+  },
+  "contract_observations": {
+   "u8_24": "33 vs 16 (handoff tool_calls=33 MEASURED; but orchestration/units/U8.24.md:3 declares Bound 18 tool calls, used 26 - a 7-call gap inside the unit's own records)",
+   "u6_23": "35 vs 18 (handoff tool_calls=35 MEASURED; the relayed bound 18 is not on U6.23.md - grep -niE 'bound|tool call' orchestration/units/U6.23.md returns no match)",
+   "dominant_cause": "handoff self-repair",
+   "mitigations": [
+    "validate the handoff JSON immediately after writing it, before anything else",
+    "cards must state the contracted nesting (verdict keys inside evidence) explicitly",
+    "bounds stated as WORK CALLS with the mandated final report-back excluded (U8.24 would then read 32/16)"
+   ],
+   "measurement_artifact": "an unsorted comm reported a spurious 58 deleted and a tuple-vs-JSON-list comparison mismatched - re-run before believing a surprising number",
+   "mid_append_after_state": "U8.26's recorded after sha a6a0feaf06430d30 equals head -c 186957 sha while the file is 188761 B, so it measured its own after-state 1804 B early: a file cannot contain its own final hash"
+  },
+  "handoff_defect_self_report": {
+   "what": "THIS unit's final handoff was first written with the evidence object never closed (one missing brace); json.load failed at EOF (line 28 col 1)",
+   "detected_by": "the mandated immediate json.load in the very next call - not by a reader or a downstream unit",
+   "cost_calls": 4,
+   "recovery": "tail inspection, a structural brace/string scan, and one full rewrite; evidence was NOT emptied and no key was dropped, which is the damage U8.24 suffered",
+   "ledger_note": "not appended to PLAN_CORRECTIONS.md (budget); it is recorded here and in the final report as a fresh data point that the validate-immediately rule bounds the damage NOT appended to PLAN_CORRECTIONS.md even though it is the wave's 4th instance (and the strongest evidence for (cj)'s contract): the ledger was already written, verified additive and cmp-proven, and appending a further entry would cost 3 more calls (two edits plus re-validation) against a bound already exceeded. An append-only ledger must not be reopened to pad the record; U8.26 set the precedent of recording a scope note instead.",
+   "independently_witnessed_by": "V8.27 (verifier; its handoff sha 318e2c533953b4a1, mtime 09:49:09, overall PASS) independently measured U8.28.json as NOT mid-write and unparseable - see its verbatim record: 8 B, mtime 09:34) and state/state.sqlite-wal (0 B, mtime 09:29) \\u2014 not attributable to me; I only did a plain 100-byte read of the main file\", \"sidecars_note\": \"I did create -shm/-wal for my own COPY under state/verify/V8.27/ (within my write paths)\"}, \"handoffs_all_parse_after_repair\": true}, \"self_reference_evidence\": \"Reproduced U8.24's failure mode in miniature: the mandated write-validate-repair loop on this unit's own handoff cost +4 calls (one invalid JSON from hand-typed nesting needing a brace repair, three count reconciliations). U8.24 lost +12 to the same class; a prior unit +38. Direct evidence for C7 (c)+(a).\", \"sibling_handoff_parse_note\": \"failing=['orchestration/handoffs/",
+   "wave_ranking": "Parent-relayed and partially verified: this is the 4th self-inflicted handoff repair in this wave (U8.24 +12 calls, U6.23 +3, U8.25 +11, U8.28 +4). V8.27 additionally reports reproducing the same mode in miniature at +4 calls.",
+   "bounded_cost": "The mandated validate-immediately rule bounded the damage to 4 calls (immediate json.load, tail inspection, structural brace/string scan, one rewrite); evidence was never emptied and no key was dropped - the damage U8.24 suffered. Repair cost 4, not 11 or 12.",
+   "repaired_and_revalidated": "Repaired and re-validated repeatedly; json.load OK at every check. The final sha256 and byte count of THIS file are reported to the parent and are deliberately NOT quoted here: a file cannot contain its own final hash, which is the rule recorded in ledger entry (cj) and the reason U8.26's recorded after-state was a mid-append artefact. The transient broken version existed only between the write and the immediate validation call; V8.27 read it inside that window (not mid-write)."
+  },
+  "tree_hash_rule_recorded": true,
+  "gitignore_refinement_recorded": true,
+  "supersessions": [
+   {
+    "old": "(ce)",
+    "new": "(ci) and (cm)",
+    "what": "the U6.23 in-flight mark is stale: api.py sha 4f5698ce unchanged since U8.26's read, the comment is landed at :1210-1218, U6.23.json exists (mtime 09:39:42); the fix was comment-only, so the conflation was record-only"
+   },
+   {
+    "old": "(cb)",
+    "new": "(cm)",
+    "what": "the U8.25 in-flight mark: its handoff now EXISTS (sha 77275f123f6a2326, mtime 09:42:44) but is STABLE-UNPARSEABLE (JSONDecodeError line 125 col 5; two reads 2 s apart identical bytes) - so the guard's mid-write skip would not fire and on these bytes it must FAIL; NOT credited; the guard file also moved to 52fbceb74d09e59d mtime 09:37:45 (U8.26 pinned 9a6c7039 at 09:36:14) DRIFT: U8.25.json was then rewritten (sha cf5167e488873858, mtime 09:44:26, 28254 bytes) and now parses with status done - the unparseable state was transient; the sha+mtime cited here are the ones observed."
+   },
+   {
+    "old": "(ce)",
+    "new": "(cm)",
+    "what": "the pytest_cache change is settled: the newest contained file .pytest_cache/v/cache/lastfailed has mtime 09:44:34; the top-level directory mtime 09:04:48 is the wrong instrument"
+   }
+  ],
+  "pre_credited_units": [],
+  "cg_miscited_cards_located": [
+   "U5.28.md:27",
+   "U8.24.md:53"
+  ],
+  "cg_grep_note": "grep -rn 'ast.dump' orchestration/units/ returns 6 cards; the other 4 (U2.12.md:26, U5.23.md:36, U5.31.md:34, U6.23.md:24) are COMMENT-ONLY changes where raw ast.dump equality is the correct method",
+  "claims_verified_on_disk": [
+   "manifest top-level key count and key diff versus the backup",
+   "banner-string file count on both sides and root-relative list equality",
+   "EVIDENCE.md structure (heading levels, list items, table rows, context lines, 151 lines / 8338 bytes)",
+   "api.py sha and every verify.ok None/False arm re-located by content",
+   "the api.py:1210-1218 comment is landed",
+   "U8.24.json tool_calls=33 and U6.23.json tool_calls=35",
+   "U8.25.json exists, sha stable across two reads, and does not parse",
+   "U6.23.json exists (mtime 09:39:42); guard file sha 52fbceb7 mtime 09:37:45",
+   ".pytest_cache newest file mtime 09:44:34",
+   ".gitignore:15 is /dockets/ with the anchor rationale at :9-14",
+   "docket and backup manifest shas and mtimes",
+   "U8.26's after-state was mid-append (head -c 186957 equals a6a0feaf)",
+   "the ast.dump card citations in orchestration/units",
+   "prefix byte-identity by cmp against state/logs/U8.28.prefix.backup.md",
+   "U8.25.json drift: unparseable and byte-stable at 09:42:44 (77275f12), rewritten and parsing at 09:44:26 (cf5167e4)",
+   "U8.28.json parses at report time (sha eab6884c34a90b62, 13489 bytes) - re-validated twice after the repair; V8.27's independent unparseable measurement is quoted verbatim in handoff_defect_self_report"
+  ],
+  "claims_taken_on_report": [
+   "U8.24's handoff-repair narrative (+12, emptied evidence)",
+   "U6.23's narrative (+3 for the missing brace, +2 re-running measurements) and its 75 passed / 58 tests run",
+   "V5.30's 02fa18ec / 1252e07b / a1450929 tree-hash figures and its recipe string",
+   "U5.27's remaining surgical clauses (r5 deletion, HISTORY.md restore, ok=True)",
+   "U6.23's citation that the conflated prose was record-only at PLAN_CORRECTIONS.md:2131 and VERDICTS.md:2135 (VERDICTS.md was not read beyond that single locus and was not edited)",
+   "U6.23.md:21-24 that the api.py fix was comment-only"
+  ],
+  "not_invented": [
+   "no number is given without its recipe",
+   "the relayed bounds 16 and 18 are left attributed, not asserted",
+   "the U8.25 outcome is NOT asserted (its handoff does not parse)",
+   "U5.31, V8.27 and V6.24 outcomes are NOT asserted (not pre-credited)",
+   "the U8.25 guard failure is stated as an inference from the guard's rule plus the stable unparseable read, NOT as a test run",
+   "no VERDICTS.md edit, no test suite, no LLM call, no network"
+  ],
+  "tool_calls_work": 33,
+  "tool_calls_total": 34,
+  "bound": 22,
+  "overage_account": "+11 over the 22 bound, all disclosed: (i) +1 the objective-mandated additive-proof call, since measuring the after-state sits between the append and the handoff write; (ii) +1 persisting the unit card per AGENTS.md section 4; (iii) +4 self-inflicted - the final handoff was first written with a missing closing brace and cost the immediate-validation call, a tail inspection, a structural brace scan and one rewrite; (iv) +1 re-measuring U8.25.json at report time for the drift; (v) +1 the count/drift patch; (vi) +1 the parent-requested re-validation plus the V8.27 cross-read; (vii) +1 the V8.27 repair-record patch; (viii) +1 this final count/self-reference patch, which is the last work call so the figures 33/34 are stable. The mandated final report-back (send_message) is excluded from the work count.",
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w %{http_code} http://192.168.2.168:8012/v1/models",
+   "cp docs/PLAN_CORRECTIONS.md state/logs/U8.28.prefix.backup.md",
+   "wc -c docs/PLAN_CORRECTIONS.md ; sha256sum docs/PLAN_CORRECTIONS.md state/logs/U8.28.prefix.backup.md",
+   "head -c 186957 docs/PLAN_CORRECTIONS.md | sha256sum",
+   ".venv/bin/python -c import json;a=json.load(open('dockets/duval/duval-replay-material/MANIFEST.json'));b=json.load(open('state/backups/U5.27-replay-material/duval-replay-material/MANIFEST.json'));print(len(a),len(b));print(sorted(set(a)^set(b)));print([k for k in a if k in b and a[k]!=b[k]])",
+   "grep -rl 'PROVENANCE: replay-produced' dockets/duval/duval-replay-material | wc -l",
+   "f=dockets/duval/duval-replay-material/EVIDENCE.md; wc -lc $f; grep -c '^## ' $f; grep -c '^### ' $f; grep -c '^[-*] ' $f; grep -c '^|' $f; grep -n context $f",
+   "sha256sum src/resextract/dashboard/api.py ; grep -n 'ok. None' src/resextract/dashboard/api.py ; grep -n 'ok. False' src/resextract/dashboard/api.py ; grep -n verify_docket src/resextract/dashboard/api.py",
+   "sha256sum orchestration/handoffs/U8.25.json ; sleep 2 ; sha256sum orchestration/handoffs/U8.25.json ; .venv/bin/python -c import json;json.load(open('orchestration/handoffs/U8.25.json'))",
+   "find .pytest_cache -type f -printf '%T+ %p' | sort | tail -4",
+   "grep -rn ast.dump orchestration/units/",
+   "head -c 188761 docs/PLAN_CORRECTIONS.md > /tmp/u828.prefix.now ; cmp /tmp/u828.prefix.now state/logs/U8.28.prefix.backup.md",
+   "grep -c '^## (' docs/PLAN_CORRECTIONS.md ; grep -cE '^## [(]d|e|h|i|o|p[)]' docs/PLAN_CORRECTIONS.md"
+  ],
+  "state_drift_at_report_time": "orchestration/handoffs/U8.25.json was UNPARSEABLE and byte-stable at my read (sha 77275f123f6a2326, mtime 09:42:44, JSONDecodeError line 125 col 5) - that measurement was real at its instant. By report time it had been REWRITTEN: sha cf5167e488873858, mtime 09:44:26, 28254 bytes, and it now parses with status done. The unparseable state was therefore TRANSIENT (~1.5 minutes). The (cb)/(cm) record stays honest because it cites the sha AND mtime observed; U8.25's outcome is still NOT credited (the card lists it as in flight, and tests/test_orchestration_handoffs.py is unchanged at 52fbceb74d09e59d, mtime 09:37:45)."
+ },
+ "blocker": "",
+ "next_unit_hint": "The next append starts at letter (cn); the ledger holds 91 entries at sha256 b7559f62415edf65283fdbd7ac67ba6f5abc9b7fbed21372da0d6620538b380b, 212122 bytes. IN-FLIGHT STATUS AS OF THIS REPORT (all uncredited): U8.25.json exists and now PARSES (status done) after being rewritten at 09:44:26 (sha cf5167e488873858); it was stable-unparseable only ~1.5 min earlier, so that state was transient, and tests/test_orchestration_handoffs.py still stands at 52fbceb74d09e59d (mtime 09:37:45) versus U8.26's 9a6c7039 (09:36:14). Also uncredited: U5.31 (its handoff says done, tool_calls 17 against bound 16), V8.27 and V6.24 (stubs, overall PARTIAL). Re-pin before crediting: every one of these files moved during this unit.",
+ "write_paths": [
+  "docs/PLAN_CORRECTIONS.md",
+  "state/logs/U8.28.prefix.backup.md",
+  "orchestration/units/U8.28.md",
+  "orchestration/handoffs/U8.28.json"
+ ]
+}

@@ -1,0 +1,118 @@
+{
+  "unit": "U5.14",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/docket/assemble.py",
+    "src/resextract/docket/manifest.py",
+    "tests/test_docket_reassembly.py",
+    "state/logs/U5.14-repro.py",
+    "state/logs/U5.14-repro.txt",
+    "state/logs/U5.14-repro-after.txt",
+    "state/logs/U5.14-patch.py",
+    "state/logs/U5.14-redgreen.py",
+    "state/logs/U5.14-redgreen.txt",
+    "state/logs/U5.14-sha-before.txt",
+    "state/logs/U5.14-sha-after.txt",
+    "state/backups/U5.14-pre",
+    "state/backups/U5.14-fixed",
+    "orchestration/units/U5.14.md",
+    "orchestration/handoffs/U5.14.json"
+  ],
+  "evidence": {
+    "occamy_probe_http": "000",
+    "tests": {
+      "reassembly": 58,
+      "assemble": 24,
+      "provenance": 25,
+      "materialize": 25,
+      "pinned": 17,
+      "total": 149,
+      "deletions": 0,
+      "total_before": 113,
+      "before_breakdown": "reassembly 22 / assemble 24 / provenance 25 / materialize 25 / pinned 17 (only test_docket_reassembly.py was edited: +36 tests = 10 functions, 2 of them parametrised x14)",
+      "note": "The card expected 107 before (provenance 19); test_docket_provenance.py actually collects 25 and was NOT edited by this unit, so the measured before total is 113. 149 passed, 0 failed."
+    },
+    "reproduced": {
+      "title_before": "# Duval replay-sourced material — report docket / # Duval — commit-pinned material (U5.5) — report docket (ITEM.md identical wording)",
+      "title_after": "# duval-replay-material — report docket / # duval-u55-pinned — report docket",
+      "evidence_md_lines": ["174->120", "84->23"],
+      "prose_dropped_example": "8 (replay) and 9 (u55) lines of the form '- context: 26983 bytes copied from the read-only target' plus their '- source kind: `local` · sha256 `…`' lines; the whole 'Other evidence entries' section became '_(none supplied)_'. Cause: `evidence` was an assemble() input that rendered once and was stored nowhere, and its default was `()` so a bare re-assembly passed nothing.",
+      "no_datum_lost_proof": "material entries 8->8 and 9->9, set-difference LOST=set(); EVIDENCE.md table rows 8 and 9; surviving row: '| `material/code/adapter.ts` | 1-20 | 26983 | `76d173bf71f845a6389ed1af6dfea3614ce89375534513ebea33c16ccd72cdc3` |' matches material[].sha256 76d173bf71f845a6389ed1af6dfea3614ce89375534513ebea33c16ccd72cdc3 byte-for-byte.",
+      "method_md_defect": "'_No knowledge graph was supplied, so graph node ids below are recorded as unverified (they were not checked against a graph).' — the opening `_` is never closed (the two adjacent string literals previously started a graph *table* when a graph was supplied; the note branch left the emphasis open).",
+      "banner_present_files": ["README.md", "CHECKLIST.md"],
+      "banner_absent_count": 13,
+      "repro_fidelity": "the reproduced EVIDENCE.md was byte-identical to the real (verifier-observed) artifact for BOTH dockets — 'identical: True' before the fix, so the reproduction is exact, not approximate.",
+      "classification": "INFORMATION LOSS: (1) README/ITEM descriptive title -> lane slug; (2) the EVIDENCE.md source-kind/context prose. FORMATTING: (3) the unbalanced `_` in METHOD.md (content intact). COVERAGE/HONESTY: (4) the missing banner in 13 rendered files (the fact itself lives in the manifest as generated_by.producer, but a reader opening RESULTS.md first was unwarned)."
+    },
+    "fix": {
+      "title_mechanism": "additive-optional-field",
+      "title_justification": "NOT derivable: the legacy manifests contain the title text 0 times and no 'title' key; Lane carries only slug/type/thesis/audience, and no status_reason/generated_by value reconstructs 'Duval replay-sourced material'. So Lane.title: str | None = None was added — additive, optional, extra='forbid' kept, schema string NOT bumped. The write path already existed (materialize.py passes lane.title; _LaneIn already had the field) — only persistence was missing.",
+      "manifest_field_added": "Lane.title (optional) and DocketManifest.evidence: list[EvidenceRecord] | None (new EvidenceRecord model) — the third recorded render input, on the exact None-inherits / explicit-[]-clears / changed-target-refuses discipline of _inherit_render_inputs, not a parallel scheme. assemble(evidence=...) default changed () -> None to make 'not supplied' expressible, matching the five fields above it.",
+      "evidence_prose_preserved": true,
+      "dedup_kept": true,
+      "dedup_mechanism": "per-material block now carries '- source kind: `local` · sha256 `…` · context: …' with the UNION of contexts for that ref; the duplicate '### ref' block is emitted only for evidence refs that got no material block, so nothing is printed twice and nothing is dropped.",
+      "no_datum_lost": true,
+      "method_md_fixed": true,
+      "sibling_folded_in": "U5.13's Claim.verdict_reason is now rendered beside the state in CLAIMS.md: '**Verification state.** EXTENDS — capped: <reason>'; an uncapped claim prints no reason line. Cap logic and materialize.py untouched.",
+      "banner_files": ["README.md", "CHECKLIST.md", "CLAIMS.md", "EVIDENCE.md", "PRIOR_ART.md", "RESULTS.md", "METHOD.md", "OPEN_QUESTIONS.md", "UPDATE_BACKLOG.md", "ITEM.md", "REFERENCES.md", "REFERENCES.bib", "web/README.md", "repro/README.md"],
+      "banner_rule": "non-model only, one line, immediately after the H1 (a `%` comment for REFERENCES.bib); HISTORY.md is deliberately excluded because it is append-only and is never a reader's first file.",
+      "manifest_needs_banner": "no: MANIFEST.json already carries generated_by.producer (and now lane.title) as structured, machine-checkable data; duplicating it as a prose string would be a second copy that can drift, and the manifest is not a reader's first file."
+    },
+    "red_green": {
+      "a": "sha ok (fixed assemble.py 1e46cf00954946c7606f60ba752d561ff9d04b017f29bdb1496494b6e2ec37ed); (a1) `_inherit_title` disabled -> test_bare_reassembly_preserves_the_descriptive_title FAILED (1 failed, 57 deselected); (a2) the evidence inheritance loop reduced to results/prior_art -> test_bare_reassembly_preserves_evidence_context_prose FAILED (1 failed); restored byte-identically (sha equal) then 16 passed.",
+      "b": "sha ok (same 1e46cf00…); `_stamp_banner` disabled -> 14/14 test_banner_covers_every_rendered_file parametrisations FAILED (14 failed, 44 deselected); the model-side control test_banner_absent_for_a_model_docket still PASSED 14/14 (the 'absent for model' rule is preserved, not over-applied). Restore verified bit-identical by sha256; full __pycache__ purge before and after every probe."
+    },
+    "artifacts_untouched": {
+      "u55_manifest": "4441b99741126cb8b534987874300def4fcab4cecb461cd233a456ced220bd31",
+      "replay_manifest": "3fa52cd90af379ecb698a23e6d731cf7d73fc36696e9e7430506c8c90562b502",
+      "smoke_manifest": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+      "hash_recipe": "TREE HASH = find <tree> -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum   (byte-sorted relative-to-cwd full paths; any recipe change changes the value, so it is stated and not compared against a foreign hash)",
+      "trees_unchanged": true,
+      "tree_hashes": {
+        "dockets/duval/duval-u55-pinned": "0e27f91c86fe85f0f325c74aee68866b6c78023c2dc7d6bbdbc4ed5d87496a2c",
+        "dockets/duval/duval-replay-material": "7727157f7d8860deae24353aec08f88f43f8dfc9b8d76f4257957e422cf45223",
+        "dockets/_smoke": "0eda52ac42b3ae4c1ef316c216fa787d2e795d35ae42e789576c58648202d08e"
+      },
+      "no_write_proof": "no file under dockets/ is newer than this unit's first write: newest docket mtime 1791463272.1478128650 < handoff mtime 1791464154. Nothing under dockets/ was re-rendered."
+    },
+    "store_untouched": {
+      "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+      "version": 4,
+      "version_proof": "schema_version table holds exactly rows 1..4 (latest 2026-10-08T12:47:56.009Z); PRAGMA user_version is 0 by design in this store",
+      "rows_identical": true,
+      "rows": "candidates 10, claims 0, dockets 2, lane_candidates 10, lanes 5, runs 4, others 0",
+      "access": "opened once with sqlite3 mode=ro; never written"
+    },
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models  -> 000 (connection refused)",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/logs/U5.14-repro.py   # exact reproduction on copies from state/backups/U5.12-*",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/logs/U5.14-patch.py && ...U5.14-patch2.py   # 31 asserted literal edits",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_{reassembly,assemble,provenance,materialize,materialize_pinned}.py -q  -> 149 passed",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python state/logs/U5.14-redgreen.py   # 3 revert probes + bit-identical restore",
+      "sha256sum dockets/duval/duval-u55-pinned/MANIFEST.json dockets/duval/duval-replay-material/MANIFEST.json dockets/_smoke/MANIFEST.json",
+      "git -C /home/zer0null/Duval rev-parse HEAD; git -C /home/zer0null/Duval status --porcelain"
+    ]
+  },
+  "follow_up_handed_up": "ONE re-render of the two real dockets (U5.13's claim-attribution fix has landed, so it may proceed). CRITICAL: their current manifests are pre-U5.14 and record NEITHER lane.title NOR a top-level evidence list (verified: the title text occurs 0 times in either legacy MANIFEST.json), so a bare re-assembly still cannot recover them — the re-render must SUPPLY lane.title and evidence (the titles are recoverable verbatim from state/backups/U5.12-duval-*/tree/README.md|ITEM.md; the evidence contexts are materialize.py's own template `<bytes> bytes copied from the read-only target`). After that one render the manifests carry both and every later bare re-assembly round-trips. Verify: descriptive titles in README.md/ITEM.md H1; EVIDENCE.md source-kind/context prose present with no datum printed twice; banner in all 14 rendered files; material bytes and material[].sha256 unchanged; blob_sha re-matched to `git rev-parse <commit>:<path>`; verify_docket() == ok; a SECOND bare re-assembly is byte-identical on README.md/ITEM.md/EVIDENCE.md.",
+  "manifest_concurrency_note": "U5.13's Claim.producer/verdict_reason were already on disk when I first read manifest.py; I re-read it before writing and again at the end — no further concurrent edit seen, no merge needed. My additions to manifest.py are Lane.title, the EvidenceRecord model and DocketManifest.evidence, all additive and optional with extra='forbid' and the schema string still 'resextract/docket/1'.",
+  "duval_untouched": {
+    "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+    "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+    "note": "only the foreign actor's own untracked entries; .worktrees/ never read"
+  },
+  "tool_calls": 25,
+  "bound": 28,
+  "blocker": "",
+  "next_unit_hint": "Verifier (not the author): re-run the 5 docket test files (expect 149 passed, 0 deletions), replay state/logs/U5.14-redgreen.py (3 guards must fail when reverted, restore bit-identical), re-check the three manifest shas + the stated tree-hash recipe + store sha, then schedule THE ONE re-render as its own unit with the supply-the-title-and-evidence caveat above. Remaining named gap: U5.13's cap is now legible in CLAIMS.md, but prior_art-derived claim rows are unchanged.",
+  "write_paths": [
+    "src/resextract/docket/assemble.py",
+    "src/resextract/docket/manifest.py",
+    "tests/test_docket_reassembly.py",
+    "state/logs/U5.14*",
+    "state/backups/U5.14-pre",
+    "state/backups/U5.14-fixed",
+    "state/U5.14-scratch",
+    "orchestration/units/U5.14.md",
+    "orchestration/handoffs/U5.14.json"
+  ]
+}

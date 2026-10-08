@@ -1,0 +1,311 @@
+{
+ "unit": "V5",
+ "batch": "5",
+ "overall": "PASS",
+ "status": "done",
+ "liveness_probe": "DOWN http_code=000 (connection refused) 192.168.2.168:8012; zero LLM calls",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "three permitted test files re-run",
+   "verdict": "PASS",
+   "observed": "50 passed in 7.67s",
+   "evidence": "state/verify/V5/c4.log; command: PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_docket_materialize_pinned.py tests/test_docket_materialize.py tests/test_cli.py -q"
+  },
+  {
+   "id": "C2",
+   "name": "real docket provenance re-derived",
+   "verdict": "PASS",
+   "observed": "6/6 git_object entries: manifest blob_sha == git rev-parse <commit>:<path>; docket file sha256 == recorded sha256; docket bytes == git cat-file blob <commit>:<path>; sizes match",
+   "evidence": "state/verify/V5/c2_provenance.py -> state/verify/V5/c2c3.log"
+  },
+  {
+   "id": "C3",
+   "name": "unpinned entries flagged, drift re-hashed",
+   "verdict": "PASS (no drift; luck, not a guarantee)",
+   "observed": "all 3 unpinned=true with note 'unpinned: untracked_at_commit; mtime <ISO>' + sha256; current working-tree digests identical to the docket copies",
+   "evidence": "state/verify/V5/c2c3.log"
+  },
+  {
+   "id": "C4",
+   "name": "red-green, two guards, sha-proven",
+   "verdict": "PASS",
+   "observed": "(a) byte-source guard reverted -> integrity belt raised MaterializeError '05947c19... != c9d4925a...'; with the belt also disabled the assertion failed showing the docket holding working bytes 05947c19; U5.5's own documented revert reproduced verbatim. (b) needs_rework=False -> assert False is True. Both restored to sha256 53202f09...",
+   "evidence": "state/verify/V5/c4_redgreen.sh; state/verify/V5/c4.log; guard-a0 transcript in-line"
+  },
+  {
+   "id": "C5",
+   "name": "mechanism re-derived offline with own fixture",
+   "verdict": "PASS",
+   "observed": "commit mode: docket bytes == committed sha a6425a5f != working 212542b8, manifest blob_sha == rev-parse HEAD:path (a6a47071). working-tree mode: resolved_from=working_tree, unpinned=true, pinned=False, unpinned_material lists reason source_mode_working_tree + mtime + commit_sha",
+   "evidence": "state/verify/V5/c567_fixture.py -> state/verify/V5/c567.log"
+  },
+  {
+   "id": "C6",
+   "name": "refusal parity incl. the sharp case",
+   "verdict": "PASS (4 symmetric cases identical; pinned-only secret asymmetric BY DESIGN)",
+   "observed": "secret_path (docs/.env -> data/.env: secret_path) identical both modes, no file on disk; secret_content on a worktree-only secret identical both modes (secret_content), no file on disk; containment -> unresolved outside_target_root both modes; .worktrees/ -> unresolved unsafe_path both modes; PINNED-ONLY secret: commit refuses secret_content with nothing on disk, working-tree mode accepts and writes docs/pinned_secret.txt",
+   "evidence": "state/verify/V5/c6_parity.log; state/verify/V5/c6b_c9_c12.log"
+  },
+  {
+   "id": "C7",
+   "name": "deleted-from-working-tree limitation, judged",
+   "verdict": "REPRODUCED -> DEFECT (disclosed by U5.5, so not a false claim)",
+   "observed": "committed docs/DELETED.md, deleted on disk, still a blob at HEAD: material file absent, unresolved=[{reason: not_a_file_in_target, ref: docs/DELETED.md}], docket still produced with the companion file",
+   "evidence": "state/verify/V5/c567.log (C7 section)"
+  },
+  {
+   "id": "C8",
+   "name": "sealed-window honesty",
+   "verdict": "PASS (honest: quiet live window, False path offline-only)",
+   "observed": "window_sealed is computed (_seal_window compares head_end to head_sha; no hardcoded True anywhere; manifest.window_sealed = bool(window_sealed)). Live attempt with --allow-active --window 1: writer verdict quiescent, HEAD 63cbc36d->63cbc36d, window_sealed=True, needs_rework=False. NO burst caught, so the False path was not exercised live",
+   "evidence": "state/verify/V5/c8_c10_live.log"
+  },
+  {
+   "id": "C9",
+   "name": "backward compatibility of the extension",
+   "verdict": "PASS",
+   "observed": "dockets/_smoke/MANIFEST.json (schema resextract/docket/1, no window_sealed, 6 material rows with none of blob_sha/resolved_from/unpinned): read_manifest OK (DocketManifest), validate_manifest -> [] for both dict and path; verify_docket(_smoke) ok=True problems=[]; schema string unchanged on the new manifest",
+   "evidence": "state/verify/V5/c6b_c9_c12.log; state/verify/V5/c9_c10_final.log"
+  },
+  {
+   "id": "C10",
+   "name": "idempotency and rows",
+   "verdict": "PASS",
+   "observed": "re-materialized into state/verify/V5/live_dockets/duval/duval-u55-pinned (never touching dockets/duval/duval-u55-pinned): run 1 copied=9, rerun unchanged=9 copied=0; DB COPY shows exactly 1 dockets row for that dir (id 3) out of 3 total",
+   "evidence": "state/verify/V5/c8_c10_live.log; state/verify/V5/c9_c10_final.log"
+  },
+  {
+   "id": "C11",
+   "name": "honesty audit",
+   "verdict": "PASS with overstatements named",
+   "observed": "50 passed reproduced; blob 94495930 reproduced; pinned@3982f26 blob a225cf82 / sha ba6128bf reproduced; 'unpinned_material' is a runtime+CLI-report field, NOT a MANIFEST.json key (manifest folds reason+mtime into material[].note); 'refusal parity' mislabels the asymmetric pinned-only-secret case; refusals are the UNION of working-tree and pinned-mirror passes; .worktrees/ surfaces as an unresolved ref, not a refusal",
+   "evidence": "this report; state/verify/V5/*.log"
+  },
+  {
+   "id": "C12",
+   "name": "containment",
+   "verdict": "PASS",
+   "observed": "Duval HEAD 63cbc36d... before and after (unchanged), porcelain '?? .ci-trunk.txt\\n?? .lane-j-scratch/\\n' identical before/after (foreign actor's untracked entries left alone); no .worktrees/ reads; real store row counts identical before/after (dockets=2, lanes=5, candidates=10, runs=4); scratch DB copy used for every write",
+   "evidence": "state/verify/V5/c6b_c9_c12.log; state/verify/V5/c9_c10_final.log"
+  }
+ ],
+ "provenance_table": [
+  {
+   "path": "traces/2026-09-28-duval-m0.jsonl",
+   "commit": "5cdc471a...b727e",
+   "recorded_blob8": "94495930",
+   "actual_blob8": "94495930",
+   "docket_sha8": "431605e6",
+   "match": true
+  },
+  {
+   "path": "AGENTS.md",
+   "commit": "5cdc471a...b727e",
+   "recorded_blob8": "551beeb5",
+   "actual_blob8": "551beeb5",
+   "docket_sha8": "cc6db1b3",
+   "match": true
+  },
+  {
+   "path": "CITATION.cff",
+   "commit": "5cdc471a...b727e",
+   "recorded_blob8": "21dca5a3",
+   "actual_blob8": "21dca5a3",
+   "docket_sha8": "9ac105db",
+   "match": true
+  },
+  {
+   "path": "CONSONANCE.md",
+   "commit": "5cdc471a...b727e",
+   "recorded_blob8": "99a7c4d1",
+   "actual_blob8": "99a7c4d1",
+   "docket_sha8": "e7e13755",
+   "match": true
+  },
+  {
+   "path": "docs/FINDINGS.md",
+   "commit": "5cdc471a...b727e",
+   "recorded_blob8": "3f85d0a8",
+   "actual_blob8": "3f85d0a8",
+   "docket_sha8": "47603939",
+   "match": true
+  },
+  {
+   "path": "README.md",
+   "commit": "5cdc471a...b727e",
+   "recorded_blob8": "2c34d208",
+   "actual_blob8": "2c34d208",
+   "docket_sha8": "1f6bbdf6",
+   "match": true
+  }
+ ],
+ "unpinned_drift": [
+  {
+   "path": ".ci-trunk.txt",
+   "docket_sha8": "590e007e",
+   "current_sha8": "590e007e",
+   "drifted": false
+  },
+  {
+   "path": ".lane-j-scratch/monograph.txt",
+   "docket_sha8": "033b1547",
+   "current_sha8": "033b1547",
+   "drifted": false
+  },
+  {
+   "path": ".lane-j-scratch/consonance-external-evidence-2026-10-07.md.txt",
+   "docket_sha8": "d141f139",
+   "current_sha8": "d141f139",
+   "drifted": false
+  }
+ ],
+ "tracked_drift_found": [
+  {
+   "path": "traces/2026-09-28-duval-m0.jsonl",
+   "docket_blob8": "94495930",
+   "head_blob8": "e2d64679",
+   "docket_sha8": "431605e6",
+   "current_sha8": "37bdb77c",
+   "note": "Duval moved 5cdc471a -> 63cbc36d (3 commits); the pinned copy is still the 5cdc471a bytes, which is the mechanism working, not a defect"
+  }
+ ],
+ "red_green": {
+  "a": "sha 53202f09 before/after; revert of the pinned-byte source -> MaterializeError 'pinned integrity failure: ...05947c19... != pinned ...c9d4925a...'; with the integrity belt also disabled -> AssertionError working 05947c19 != committed c9d4925a; U5.5's own documented revert reproduced verbatim; GREEN 1 passed",
+  "b": "sha 53202f09 before/after; needs_rework = False revert -> AssertionError: assert False is True (result.needs_rework); GREEN 1 passed"
+ },
+ "refusal_parity": {
+  "cases": [
+   "secret_path",
+   "secret_content(worktree-only)",
+   "containment",
+   "worktrees",
+   "pinned_only_secret"
+  ],
+  "identical": true,
+  "identical_cases": [
+   "secret_path",
+   "secret_content(worktree-only)",
+   "containment",
+   "worktrees"
+  ],
+  "asymmetric_by_design": [
+   "pinned_only_secret"
+  ],
+  "pinned_only_secret_reason": "commit mode: 'docs/pinned_secret.txt: secret_content' refused, nothing on disk; working-tree mode: NOT refused, file written to docs/pinned_secret.txt. Asymmetric on purpose: the refusal follows the bytes being copied.",
+  "containment_observed": "unresolved [{reason: outside_target_root}] in both modes; worktrees observed: unresolved [{reason: unsafe_path}] in both modes (these surface as unresolved refs, NOT in the refusals list)"
+ },
+ "deleted_file_verdict": {
+  "behaviour": "not_a_file_in_target",
+  "judgement": "defect",
+  "argument": "The docket does not lie (it reports the ref as unresolved, and the docket's own claim is limited to what it holds), so this is a capability gap rather than a provenance falsehood. But it is a defect against the stated purpose: pinning exists to obtain the bytes that existed AT the commit, and deletion from the working tree is the extreme case of the working tree having moved on. The ref->request stage (_resolve_one) requires the path to exist on disk before pinning is attempted, so a citation that was verifiable at commit X silently loses its material whenever the file is later deleted -- and a deletion is exactly the scenario a commit-pinned docket is supposed to survive. The bytes are present in the object store and were never consulted.",
+  "recommended_fix": "Resolve refs tree-first in commit mode: check the recorded commit's tree (git cat-file -t <commit>:<path>) BEFORE the on-disk existence test; materialize from the blob when the path exists at the commit, and keep not_a_file_in_target only for paths absent from BOTH the commit tree and the working tree. The mirror/refusal pipeline already accepts pinned-only sources, so this is a resolution-order change, not a new mechanism. Not fixed by V5."
+ },
+ "sealed_window": {
+  "computed": true,
+  "hardcoded": false,
+  "false_path": "offline-only",
+  "live_attempt": "quiescent (window=1s, --allow-active, HEAD 63cbc36d->63cbc36d, window_sealed=True, needs_rework=False). No burst caught; this is NOT proof the writer is gone.",
+  "evidence": "_seal_window() at materialize.py:1007 returns False with the moved-head reason when head_end != head_sha; no 'window_sealed = True' literal exists; manifest.window_sealed = bool(window_sealed)"
+ },
+ "backward_compat": {
+  "smoke_manifest_validates": true,
+  "smoke_verify_ok": true,
+  "detail": "dockets/_smoke/MANIFEST.json: schema 'resextract/docket/1' unchanged, no window_sealed, 6 material rows with no extension fields; read_manifest -> DocketManifest; validate_manifest -> [] (dict and path); verify_docket -> ok=True, problems=[]"
+ },
+ "idempotency": {
+  "unchanged": 9,
+  "dockets_rows": 1,
+  "detail": "scratch docket state/verify/V5/live_dockets/duval/duval-u55-pinned; run1 copied=9, rerun unchanged=9 copied=0; DB COPY: 3 total dockets rows, exactly 1 (id 3) for the scratch dir"
+ },
+ "not_reproduced": [
+  "The live window_sealed=False / needs_rework=True path was never caught live (no burst); it remains offline-proven only, exactly as U5.5 disclosed.",
+  "U5.5's own tool-call count (35) cannot be verified from artifacts."
+ ],
+ "overstated": [
+  "'listed in unpinned_material' is true of the runtime object and the CLI --json report, but MANIFEST.json has NO unpinned_material key; the manifest records it per entry as material[].note ('unpinned: untracked_at_commit; mtime <ISO>') with no separate reason/mtime keys.",
+  "'refusal parity ... a pinned-only secret' mislabels an intentionally ASYMMETRIC case: commit mode refuses it, working-tree mode accepts it. The behaviour is the safety win, but it is not parity.",
+  "'the refusal is based on the bytes being copied' is imprecise: the refusal set is the UNION of the working-tree plan and the pinned-mirror pass, so a clean-at-the-commit file whose working copy carries a secret is ALSO refused in commit mode.",
+  "'.worktrees/ refused' surfaces as an unresolved ref with reason unsafe_path, not in the refusals list.",
+  "'silent working-tree fallback' guard: U5.5's own revert emits a WARNING ('not_a_git_repo'), so the fallback is not silent in that path; the guard's substance is that pinned bytes must win, which I reproduced at two independent levels (byte source and integrity belt)."
+ ],
+ "unverified": [
+  "Nothing material was left unchecked. The C2 central claim is verified end-to-end. The only UNVERIFIED item is the live False/needs_rework path (offline-proven only)."
+ ],
+ "corrections": [
+  {
+   "plan_assumption": "Pinning obtains the bytes at the recorded commit.",
+   "actually": "Pinning only obtains them for paths still present in the working tree; a path tracked at the commit but deleted on disk is reported not_a_file_in_target and its committed bytes are never read.",
+   "evidence": "state/verify/V5/c567.log C7 section: unresolved=[{reason:'not_a_file_in_target', ref:'docs/DELETED.md'}], material file absent, 'git cat-file -t HEAD:docs/DELETED.md' -> blob",
+   "unit": "U5.5"
+  },
+  {
+   "plan_assumption": "Unpinned entries are 'listed in unpinned_material' (implying the manifest).",
+   "actually": "unpinned_material is a MaterializedDocket field and a CLI-report key; MANIFEST.json carries the same facts as material[].note plus sha256, unpinned=true and resolved_from.",
+   "evidence": "state/verify/V5/c2_provenance.py: 'unpinned_material in manifest: False'; state/verify/V5/c567.log C5b: CLI report unpinned_material populated",
+   "unit": "U5.5"
+  },
+  {
+   "plan_assumption": "Refusal parity covers a pinned-only secret.",
+   "actually": "That case is asymmetric by design (commit refuses, working-tree copies) and is the sharp evidence that the mirror pass inspects the pinned bytes.",
+   "evidence": "state/verify/V5/c6_parity.log",
+   "unit": "U5.5"
+  },
+  {
+   "plan_assumption": "'Live on /home/zer0null/Duval at HEAD 5cdc471a' describes the current state.",
+   "actually": "Duval's self-build loop has since committed; HEAD is now 63cbc36d and the tracked trace file traces/2026-09-28-duval-m0.jsonl moved blob 94495930 -> e2d64679. The original docket still holds the 5cdc471a bytes (sha 431605e6 vs live 37bdb77c), which is pinning working as designed.",
+   "evidence": "state/verify/V5/c9_c10_final.log",
+   "unit": "U5.5"
+  }
+ ],
+ "tool_calls": 39,
+ "bound": 40,
+ "containment": {
+  "duval_head": "63cbc36d94492098e515f9a70a8433bd5f924aae (identical before/after every V5 run)",
+  "porcelain": "?? .ci-trunk.txt\\n?? .lane-j-scratch/ (identical before/after; foreign actor's entries untouched)",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "duval_writes": 0,
+  "store_rows_before": {
+   "candidates": 10,
+   "claims": 0,
+   "dockets": 2,
+   "evidence": 0,
+   "lane_candidates": 10,
+   "lanes": 5,
+   "rework": 0,
+   "runs": 4,
+   "schema_version": 2,
+   "search_health": 0,
+   "targets": 0,
+   "verdicts": 0,
+   "web_sources": 0
+  },
+  "store_rows_after": {
+   "candidates": 10,
+   "claims": 0,
+   "dockets": 2,
+   "evidence": 0,
+   "lane_candidates": 10,
+   "lanes": 5,
+   "rework": 0,
+   "runs": 4,
+   "schema_version": 2,
+   "search_health": 0,
+   "targets": 0,
+   "verdicts": 0,
+   "web_sources": 0
+  },
+  "store_unmutated": true,
+  "note": "every write used a copy (state/verify/V5/live_store.sqlite); RESEXTRACT_STATE_DB pointed at the copy"
+ },
+ "blocker": "",
+ "next_unit_hint": "U5.6: fix the C7 deletion gap by resolving refs tree-first in commit mode (git tree before the on-disk existence test), keeping not_a_file_in_target only when the path is absent from BOTH; then re-run the live lane. Also correct the U5.5 card's wording: unpinned_material is a report field not a manifest key, and the pinned-only secret is an asymmetric refusal, not 'parity'.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V5.md",
+  "orchestration/handoffs/V5.json",
+  "state/logs/V5*",
+  "state/verify/V5/**"
+ ]
+}

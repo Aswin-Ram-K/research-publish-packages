@@ -1,0 +1,377 @@
+{
+ "unit": "V8C",
+ "scope": "U8.6 validity + U8.7 provenance + U8.8 digest pin",
+ "status": "done",
+ "overall": "PARTIAL",
+ "checks": [
+  {
+   "id": "C1",
+   "name": "suite + pin provenance",
+   "verdict": "PASS",
+   "observed": "45 passed / 45 collected in 1.85s; 33 `def test_` -> 45 cases (12 parameterised); run.py+test_run.py untracked (git ls-files empty); pin sha256 52f491ed... == real graph digest 4790bbb1111b76ea... NOT a placeholder",
+   "evidence": "state/logs/V8C_adv.txt; git ls-files config/"
+  },
+  {
+   "id": "C2",
+   "name": "validity adversarial",
+   "verdict": "PASS*",
+   "observed": "18 homemade inputs: 14 rejected+reported+kept (0-byte, garbage, {}, nodes:[], dir, dangling symlink, absent, FIFO, nodes-not-list, nodes-null, links-missing, links-not-list, top-level list); genuine reused 2685 nodes; truncated-valid[1000] and 5-dropped[2680] reused as ok (validity cannot see them); COUNTEREXAMPLE nodes:[100k ints] -> mode=reuse status=ok nodes=0",
+   "evidence": "state/verify/V8C/adv_result.json validity cases"
+  },
+  {
+   "id": "C3",
+   "name": "provenance states",
+   "verdict": "PASS",
+   "observed": "fresh/stale/unverified; malformed (int, list, empty-string commit) => unverified never fresh; 12-hex abbrev matches=>fresh, 8-char diverge=>stale; stale reused with STALE in line + note; require_fresh_graph refuses stale (reported, kept) but not unverified; own spy = exactly 2 calls, same algorithm, same sha256",
+   "evidence": "adv_result.json provenance + spy_shared_decision"
+  },
+  {
+   "id": "C4",
+   "name": "digest pin adversarial",
+   "verdict": "PASS",
+   "observed": "tampered copy (7fca157f055e vs real 4790bbb1111b) + real pin => _reuse_candidate None, message 'digest mismatch: ... corruption or tampering', file byte-identical after; 16 bypass constructions: none yields SILENT reuse; 2 fail-open degradations (pin unreadable/malformed/missing/empty/wrong-key => unpinned => reused, clause only); comparison is 12-hex-prefix only (pin with internal space matched); override reuses but reports DIGEST MISMATCH; consistent graph+pin replacement confirmed",
+   "evidence": "adv_result.json pin section"
+  },
+  {
+   "id": "C5",
+   "name": "live shape",
+   "verdict": "PASS",
+   "observed": "dry exit 0, line 'built at 6deaed07af0d, target head 6c60da5aa924 - STALE; sha256 4790bbb1111b matches the pinned digest 4790bbb1111b; graphify not re-run', state/run+state/kg tree hash identical (6c3ab2f1... -> 6c3ab2f1...); real exit 1, blocked mine/claims/assess, materialize skipped, window_sealed true, 3 of 8 blocked (no stages_not_run field in report)",
+   "evidence": "state/logs/V8C_dry.txt; state/logs/V8C_real.json"
+  },
+  {
+   "id": "C6",
+   "name": "red->green re-derived",
+   "verdict": "PASS",
+   "observed": "(a) pin=None: FAILED at tests/test_run.py:1360 'assert reuse == build' / 'a tampered graph was reused'; (b) _graph_pin absent=>'0'*64: FAILED at tests/test_run.py:1436 'assert build == reuse' / pins 000000000000; both restored with sha256 equality asserted; 45 passed after",
+   "evidence": "state/verify/V8C/run.py.V8C-c6a-DIGESTPIN.bak / c6b-NOPIN.bak"
+  },
+  {
+   "id": "C7",
+   "name": "honesty audit",
+   "verdict": "PASS",
+   "observed": "graph.json top level has NO sha256 key (2 raw substring hits are an incidental node id 'docs_..._corpus_sha256' and label 'sha256'); user_version=0 is disclosed in U8.8/U5.13/U5.14/U6.12/V2R/V2S handoffs (readers not misled); 45 count reproduced; the 29-vs-26 and 26-vs-28 call overages are author-reported and unverifiable from disk",
+   "evidence": "adv_result.json artifact; grep user_version"
+  },
+  {
+   "id": "C8",
+   "name": "containment",
+   "verdict": "PASS",
+   "observed": "store v4 sha 40e8aa0c... identical + rows identical (35); real graph 4790bbb... unchanged; pin file 52f491ed... unchanged; Duval HEAD 6c60da5a... porcelain only '?? .ci-trunk.txt, ?? .lane-j-scratch/' (foreign actor, same before/after); 0 .worktrees reads; 0 new sidecars; 0 stray processes",
+   "evidence": "containment_before.json vs after"
+  }
+ ],
+ "test_counts": {
+  "run": 45,
+  "deletions": "untracked - enumerated, not diff-proven (33 def test_ functions -> 45 collected cases; run.py/test_run.py absent from git index so no diff baseline exists)"
+ },
+ "pin": {
+  "path": "config/graph_pin.toml",
+  "committed": false,
+  "committed_note": "UNTRACKED on this tree (git ls-files config/ -> resextract.toml, targets.toml only); 'committed' in the file's own header and in U8.8's rationale is false here",
+  "contains": "[graphs.\"state/kg/duval/graphify-out/graph.json\"] sha256 = \"4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b\" (version = 1)",
+  "matches_real_graph": true,
+  "sha": "52f491ed584b330a8ce468cf57a6c42cc4f7e2393a4435317709e9efa2ab4d1a"
+ },
+ "validity_table": [
+  {
+   "case": "absent",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": false,
+   "file_kept": true
+  },
+  {
+   "case": "0-byte",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": true,
+   "file_kept": true
+  },
+  {
+   "case": "non-JSON garbage",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": true,
+   "file_kept": true
+  },
+  {
+   "case": "JSON {}",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": true,
+   "file_kept": true
+  },
+  {
+   "case": "nodes: []",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": true,
+   "file_kept": true
+  },
+  {
+   "case": "directory",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": true,
+   "file_kept": true
+  },
+  {
+   "case": "dangling symlink",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": true,
+   "file_kept": true
+  },
+  {
+   "case": "GENUINE (control)",
+   "reused": true,
+   "mode": "reuse",
+   "nodes": 2685,
+   "status": "ok",
+   "reported": false,
+   "file_kept": true
+  },
+  {
+   "case": "nodes not a list",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": true,
+   "file_kept": true
+  },
+  {
+   "case": "links missing",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": true,
+   "file_kept": true
+  },
+  {
+   "case": "links not a list",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": true,
+   "file_kept": true
+  },
+  {
+   "case": "top-level JSON list",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": true,
+   "file_kept": true
+  },
+  {
+   "case": "nodes: null",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": true,
+   "file_kept": true
+  },
+  {
+   "case": "truncated but valid JSON",
+   "reused": true,
+   "mode": "reuse",
+   "nodes": 1000,
+   "status": "ok",
+   "reported": false,
+   "file_kept": true
+  },
+  {
+   "case": "5 nodes dropped (valid JSON)",
+   "reused": true,
+   "mode": "reuse",
+   "nodes": 2680,
+   "status": "ok",
+   "reported": false,
+   "file_kept": true
+  },
+  {
+   "case": "huge node count (100k ints) **ok/0 nodes**",
+   "reused": true,
+   "mode": "reuse",
+   "nodes": 0,
+   "status": "ok",
+   "reported": false,
+   "file_kept": true
+  },
+  {
+   "case": "symlink to valid graph",
+   "reused": true,
+   "mode": "reuse",
+   "nodes": 2685,
+   "status": "ok",
+   "reported": false,
+   "file_kept": true
+  },
+  {
+   "case": "FIFO (not a regular file)",
+   "reused": false,
+   "mode": "build",
+   "nodes": null,
+   "status": "would-build",
+   "reported": true,
+   "file_kept": true
+  }
+ ],
+ "provenance": {
+  "matching": "fresh",
+  "differing": "stale",
+  "absent": "unverified",
+  "malformed": "unverified (int/list/empty-string commit all -> unverified, never fresh)",
+  "stale_still_reused": true,
+  "require_fresh_refuses": true,
+  "plan_run_same_line": true,
+  "spy_calls": 2,
+  "could_make_stale_silent": "no - stale is in the stage line and in ctx.notes for both plan and run; the only blind spot is target_head unreadable, which collapses everything to 'unverified' (stated, not silent)"
+ },
+ "digest_pin": {
+  "tampered_not_reused": true,
+  "file_byte_identical": true,
+  "message": "digest mismatch: bytes hash to 7fca157f055e but <config>/graph_pin.toml pins 4790bbb1111b - corruption or tampering, not staleness (the file is kept on disk and a fresh graph is built; allow_graph_digest_mismatch opts into reusing it)",
+  "bypasses_tried": [
+   "whitespace/padding",
+   "upper-case",
+   "internal space in digest (MATCHED: 12-hex prefix comparison)",
+   "7-hex short prefix (refused)",
+   "12-hex prefix (match, by design)",
+   "malformed TOML",
+   "missing pin file",
+   "unreadable pin chmod 000 (euid 1000, effective)",
+   "empty value",
+   "entry without sha256 key",
+   "bare-string entry form",
+   "pin keyed on another path",
+   "digest unavailable ('unknown')",
+   "symlink to pinned graph",
+   "symlink to tampered graph",
+   "allow_graph_digest_mismatch override"
+  ],
+  "bypass_found": "no SILENT bypass. Two fail-open degradations, both reported in the stage line but with NO note: unreadable/malformed/missing/empty/mis-keyed pin degrades to unpinned => tampered graph reused as 'unverified'. Weakness: comparison uses only the first 12 hex chars of the pinned value, so a pin with a wrong tail still reports match.",
+  "override_behaviour": "reuse, with digest_state=mismatch in counts and a loud note 'graph: DIGEST MISMATCH ... reused only because allow_graph_digest_mismatch opted in'; not reachable from the CLI (run --help has no such flag)",
+  "default_is_fail_closed": true,
+  "control_boundary": "An attacker who can write only state/kg/.../graph.json is caught: the bytes no longer match the pin, so by default they are not reused, the reason is loud and the file is kept. An attacker who can also write (or delete, deface, or re-key) config/graph_pin.toml is not caught -- a consistently replaced graph+pin is reused as digest_state=match, and destroying the pin downgrades the control to unpinned+reused.",
+  "consistent_replacement_confirmed": true
+ },
+ "live": {
+  "dry_run": {
+   "exit_code": 0,
+   "graph_line": "graph skipped  dry run: would reuse existing code-only graph at state/kg/duval/graphify-out/graph.json (built at 6deaed07af0d, target head 6c60da5aa924 - STALE; sha256 4790bbb1111b matches the pinned digest 4790bbb1111b; graphify not re-run: bounded, and a re-extract would write inside the target)",
+   "wrote_nothing": true,
+   "tree_recipe": "find state/run state/kg -type f | sort | xargs sha256sum | sha256sum = 6c3ab2f1be396ca00939be86907422d16f8c0be9f7762c0ec4ff77325c0bfaae before and after"
+  },
+  "real_run": {
+   "exit_code": 1,
+   "blocked": [
+    "mine",
+    "claims",
+    "assess"
+   ],
+   "materialize": "skipped",
+   "window_sealed": true,
+   "stages_not_run": 3,
+   "note": "status=degraded; graph/staging/lanes/refresh ok; 3 of 8 blocked (derived: the report has no stages_not_run field); staged ~100 files under state/run/duval/ (sanctioned live invocation)"
+  }
+ },
+ "red_green": {
+  "a": "reproduced; sha ok (78c989a0... before and after restore); FAILED tests/test_run.py::test_tampered_bytes_are_refused_when_the_pin_disagrees at line 1360 AssertionError \"plan: a tampered graph was reused: {...'mode': 'reuse'...}\" assert 'reuse' == 'build'; 1 passed after restore",
+  "b": "reproduced; sha ok; FAILED tests/test_run.py::test_absent_pin_is_unverified_and_still_reused_never_a_hard_failure at line 1436 AssertionError \"pins 000000000000\" assert 'build' == 'reuse'; 1 passed after restore"
+ },
+ "release_sha_match": {
+  "claimed": "78c989a0a3307375",
+  "actual": "78c989a0a3307375959a5d03593b2e28518530f2bfab9a8db488e1e327f866c0"
+ },
+ "not_reproduced": [
+  "author's tool-call counts (U8.8 29 vs bound 26; U8.7 26/28) - unverifiable from disk, no transcript",
+  "the claim '0 assertions deleted' as a diff - impossible: run.py/test_run.py are untracked; enumerated instead (33 functions/45 cases, all passing)",
+  "one incidental graphify invocation my own harness triggered on the refused-graph path (pin_plan_and_run case): it exited instantly with 'working directory not found' (scratch run dir absent), produced no graph, wrote nothing - not a build"
+ ],
+ "overstated": [
+  "'committed config/graph_pin.toml' - it is untracked; the whole durability argument (survives a state wipe, reviewable in a git diff) is not true on this tree, and a git clean would silently disable the control",
+  "the digest comparison is 12-hex-prefix only, so the pin does not compare the full sha256 it stores",
+  "silence on the fact that a malformed/unreadable/missing pin converts a mismatch refusal into a reuse with no note (only an in-line 'no pin recorded - bytes unverified' clause)"
+ ],
+ "unverified": [
+  "whether cli.py will ever wire allow_graph_digest_mismatch (confirmed absent today: run --help has no flag)",
+  "U8.7's and U8.8's author call counts",
+  "that the author's own red->green used identical revert recipes (mine are equivalent but independent)"
+ ],
+ "corrections": [
+  {
+   "plan_assumption": "config/graph_pin.toml is a committed file (its header, and U8.8's rationale, say so)",
+   "actually": "it is untracked (?? in git status; absent from git ls-files config/); a git clean -fd or fresh clone loses the pin, after which the digest control degrades to unpinned and a tampered graph is reused",
+   "evidence": "git ls-files config/ -> config/resextract.toml, config/targets.toml; git status --porcelain config/ -> ?? config/graph_pin.toml",
+   "unit": "U8.8"
+  },
+  {
+   "plan_assumption": "no input yields status=ok with 0 nodes after U8.6",
+   "actually": "a valid-JSON graph whose non-empty 'nodes' array holds non-objects (e.g. 100k ints) is reused with mode=reuse, status=ok, nodes=0 - the validity rule checks array-ness, never element type",
+   "evidence": "state/verify/V8C/adv_result.json validity case 'huge node count (100k)'",
+   "unit": "U8.6"
+  },
+  {
+   "plan_assumption": "the pin compares the graph's sha256 against the pinned digest",
+   "actually": "only the first 12 hex chars are ever compared (_graph_digest truncates to 12; _same_digest uses min(len(a),len(b),64) with a=12), so a pin with a wrong tail still reports 'matches the pinned digest' - 48-bit effective strength",
+   "evidence": "adv_result.json pin case 'pin_internal_space' -> digest_state=match with pin '4790bbb1111b76ea7cfb 8024...'",
+   "unit": "U8.8"
+  }
+ ],
+ "disclosures": [
+  "my scratch harness called _stage_graph(dry_run=False) once on a REFUSED candidate (the pin_plan_and_run bypass case), which attempted graphify; it failed immediately ('working directory not found') and produced no graph - the only such invocation",
+  "the sanctioned real run wrote ~100 files under state/run/duval/ (staging + lanes + refresh); the store itself is untouched (it is copied per run)",
+  "all scratch confined to state/verify/V8C/; store read with immutable=1 so no SQLite sidecars were created (the 4 listed sidecars pre-date this unit)"
+ ],
+ "tool_calls": 27,
+ "bound": 28,
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+  "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "store": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "version_source": "schema_version table rows 1..4 (PRAGMA user_version reads 0 on this build - not used as evidence)",
+   "rows_identical": true,
+   "rows_total": 35
+  },
+  "real_graph_sha_before": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+  "real_graph_sha_after": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+  "pin_file_sha_before": "52f491ed584b330a8ce468cf57a6c42cc4f7e2393a4435317709e9efa2ab4d1a",
+  "pin_file_sha_after": "52f491ed584b330a8ce468cf57a6c42cc4f7e2393a4435317709e9efa2ab4d1a",
+  "new_sqlite_sidecars": 0,
+  "stray_processes": 0
+ },
+ "blocker": "",
+ "next_unit_hint": "U8.8 needs two follow-ups before it is trusted as a control: (1) actually git-add config/graph_pin.toml (it is untracked, so the pin is not durable) and (2) decide whether a missing/malformed/unreadable pin should stay fail-open, and compare the full 64-hex digest (or state 48-bit strength). U8.6 could additionally reject non-object node entries to close the ok/0-nodes path.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V8C.md",
+  "orchestration/handoffs/V8C.json",
+  "state/logs/V8C*",
+  "state/verify/V8C/**"
+ ]
+}

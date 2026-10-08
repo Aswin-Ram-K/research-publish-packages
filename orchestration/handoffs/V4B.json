@@ -1,0 +1,248 @@
+{
+ "unit": "V4B",
+ "status": "done",
+ "scope": "U4.3 fail-closed gate + U4.4 value axes",
+ "overall": "PARTIAL",
+ "liveness": {
+  "probe": "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models",
+  "result": "exit 7 / http_code 000, one probe",
+  "verdict": "DOWN",
+  "live_llm_calls": 0
+ },
+ "tests": {
+  "verdicts": 41,
+  "evidence": 14,
+  "value": 11,
+  "total": 66,
+  "command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_assess_verdicts.py tests/test_assess_evidence.py tests/test_assess_value.py -q",
+  "result": "66 passed in 0.19s",
+  "note": "a NARROW __pycache__ purge (only */resextract/*) yielded 5 spurious failures in test_assess_verdicts.py before a full purge gave 66 passed"
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "name": "three suites",
+   "verdict": "PASS",
+   "observed": "66 passed (41 verdicts + 14 evidence + 11 value)",
+   "evidence": "state/logs/V4B-live.txt context; full-purge rerun"
+  },
+  {
+   "id": "C2",
+   "name": "fail-closed adversarial",
+   "verdict": "PASS",
+   "observed": "undeclared+evidence => EXTENDS (client_producer=unknown, model_calls=0, replay_calls=1); model-declared with no evidence => gate1 short-circuit, 0 calls, refused; replay/fixture => EXTENDS, model_calls=0; all 8 out-of-vocab/wrong-case declarations raise typed ProducerDeclarationError; declared model + real evidence id => CONFIRMS",
+   "evidence": "state/verify/V4B/c2_adversarial.py (own clients)"
+  },
+  {
+   "id": "C3",
+   "name": "value axes adversarial",
+   "verdict": "PASS",
+   "observed": "unsourced=>unknown with reason; 3 self-devised fabricated refs rejected with distinct details; real ref still substantiated; fabricated evidence id rejected; truncation (payload finish_reason=length AND real UnparseableOutput) => degradation + all six unknown; six axes always present; values.jsonl byte-identical; counts match",
+   "evidence": "state/verify/V4B/c3_value.py + inline C3b probe"
+  },
+  {
+   "id": "C4",
+   "name": "live pass re-derived",
+   "verdict": "PARTIAL",
+   "observed": "no positive verdict anywhere; evidence_rows 0; searches all degraded; fetches 0; model_calls 0. BUT with store_path every claim aborts: OperationalError: table verdicts has no column named producer => claims_assessed 0. Without store_path: UNVERIFIED 2/2 both passes.",
+   "evidence": "state/logs/V4B-live.txt; state/verify/V4B/liveout*/"
+  },
+  {
+   "id": "C5",
+   "name": "field names / alias",
+   "verdict": "PASS",
+   "observed": "run_producer and client_producer distinct in the same artefact (run=none/client=unknown; run=replay/client=fixture); 'none' never a client value; legacy producer is a read-only property == run_producer (assignment => AttributeError)",
+   "evidence": "C5 probe in state/logs/V4B-redgreen.txt"
+  },
+  {
+   "id": "C6",
+   "name": "red->green x3",
+   "verdict": "PASS (b corrected)",
+   "observed": "(a) red CONFIRMS accepted / green, sha 6581860a bit-identical; (b) unit's stated revert pair does NOT go red; payload guard + the 'if not ok:' rejection guard DOES go red / green, sha 6f60b282 bit-identical; (c) red substantiated=True / green",
+   "evidence": "state/logs/V4B-redgreen.txt"
+  },
+  {
+   "id": "C7",
+   "name": "honesty audit",
+   "verdict": "PARTIAL",
+   "observed": "counts 55/11 confirmed; release shas match on disk now; value.py imports PRODUCER_VOCAB from verdicts (identity True) but verdicts.py hard-codes its own literal instead of importing store's (identity False); U4.4 discloses no actual tool-call count",
+   "evidence": "see overstated/not_reproduced"
+  },
+  {
+   "id": "C8",
+   "name": "containment",
+   "verdict": "PASS",
+   "observed": "Duval HEAD 6c60da5a unchanged; porcelain = 2 foreign untracked entries; real store 0/0/0 before and after; 0 .worktrees reads; no stray processes",
+   "evidence": "C8 command block"
+  }
+ ],
+ "fail_closed": {
+  "undeclared_capped": true,
+  "model_without_requests": "refused",
+  "replay_capped": true,
+  "fixture_capped": true,
+  "vocab_rejections": {
+   "gpt": "raised",
+   "Model": "raised",
+   "MODEL": "raised",
+   "": "raised",
+   "none": "raised",
+   "mixed": "raised",
+   "'fixture '": "raised",
+   "'unknown '": "raised"
+  },
+  "positive_path_works": true,
+  "real_client_declaration_landed": true,
+  "real_client_declaration_note": "occamy.py now has a `producer` property (U2.4 landed mid-run; sha 7a44b4e8 -> 97ba490e); its returned VALUE is UNVERIFIED (endpoint down) and no caller passes producer_hint",
+  "residual_holes": [
+   "producer_hint='model' overrides a client declaring replay and yields CONFIRMS (tested)",
+   "any stub that self-declares producer='model' gets CONFIRMS: the gate closes omission, not false declaration"
+  ]
+ },
+ "value_axes": {
+  "unsourced_unknown": true,
+  "fabricated_rejected": true,
+  "truncation_all_unknown": true,
+  "all_six_present": true,
+  "deterministic": true,
+  "counts_match": true,
+  "unknown_reason_quality": "informative",
+  "producer_fixture_judgement": "misleading: recommend replay (in-vocabulary), or add `deterministic` to the vocabulary if the store CHECK is revised; `fixture` should mean canned test data, not a live deterministic derivation from stored claim data"
+ },
+ "live": {
+  "claims_assessed": 2,
+  "by_verdict": {
+   "UNVERIFIED": 2,
+   "CONFIRMS": 0,
+   "EXTENDS": 0,
+   "CONTRADICTS": 0
+  },
+  "evidence_rows": 0,
+  "searches": 8,
+  "degraded": 8,
+  "model_calls": 0,
+  "run_producer": "none",
+  "client_producer": "unknown",
+  "note": "8 real search attempts > the <=6 bound (disclosed). With store_path: claims_assessed 0 in both passes (verdict persistence OperationalError).",
+  "value_axes_by_name": {
+   "affected_parties": {
+    "substantiated": 0,
+    "unknown": 9
+   },
+   "unblocks": {
+    "substantiated": 0,
+    "unknown": 9
+   },
+   "measured_delta": {
+    "substantiated": 0,
+    "unknown": 9
+   },
+   "reproducibility": {
+    "substantiated": 9,
+    "unknown": 0
+   },
+   "cost": {
+    "substantiated": 0,
+    "unknown": 9
+   },
+   "licensing": {
+    "substantiated": 0,
+    "unknown": 9
+   }
+  },
+  "value_totals": {
+   "claims_assessed": 9,
+   "substantiated": 9,
+   "unknown": 45,
+   "producer": "fixture",
+   "partial": false,
+   "degradations": 0,
+   "counts_match": true
+  },
+  "example_substantiated": {
+   "claim": 1,
+   "axis": "reproducibility",
+   "source": "tsconfig.json#L24",
+   "producer": "fixture",
+   "value": "a third party can re-check this claim's own reference tsconfig.json#L24 (lines 24-24 of 29) and re-run the extractor against the same tree"
+  },
+  "example_unknown": {
+   "claim": 1,
+   "axis": "affected_parties",
+   "reason": "which parties a finding matters to requires a judgement the claim's own stored data does not contain; no client was available to make it"
+  }
+ },
+ "red_green": {
+  "a": "sha ok 6581860afe54ac9a4cc24c4b44a593f2a4c64fe2132f9076fc9a8e1f74634762 before/after; DEFAULT_CLIENT_PRODUCER 'unknown'->'model' => AssertionError 'an undeclared client may never publish CONFIRMS', assert 'CONFIRMS' == 'EXTENDS' (1 failed); restored; 1 passed",
+  "b": "sha ok 6f60b282dc2c279c3242f296e9fda66116b39522baca92db65f2e792e5537300 before/after; unit's stated pair ('if not value or not source:' + verifier empty-source) => STILL 1 passed (NOT red); payload guard + 'if not ok:' rejection guard => AssertionError assert 6 == 1 (1 failed); restored; 1 passed",
+  "c": "sha ok 6f60b282... before/after; 'if not ok:' -> 'if False:' => AssertionError assert True is False, Axis(affected_parties, substantiated=True, source='README.md#L99999-L100000'); restored; 1 passed"
+ },
+ "release_shas": {
+  "verdicts": "6581860afe54ac9a4cc24c4b44a593f2a4c64fe2132f9076fc9a8e1f74634762",
+  "value": "6f60b282dc2c279c3242f296e9fda66116b39522baca92db65f2e792e5537300",
+  "match_claimed": true,
+  "both_still_match_after_my_reverts": true
+ },
+ "not_reproduced": [
+  "U4.3 live numbers (claims_assessed 3, UNVERIFIED 3): with store_path the current run assesses 0 claims - OperationalError 'table verdicts has no column named producer' (store.py moved afa77522 -> f23a9916 mid-run; the v3 stores' verdicts table has 5 columns, no producer)",
+  "U4.4's guard-b revert recipe (verifier empty-source line) does not go red",
+  "U4.4's quoted 'assert 1 == 5' - observed 'assert 6 == 1' with the corrected pair"
+ ],
+ "overstated": [
+  "guard-b revert description in U4.3/U4.4 handoffs (wrong second line; a third layer, 'if not verdict.items', still refuses an empty source)",
+  "'the undeclared client ... is not called' - true for value.py (0 calls) but FALSE for verdicts.py, where an undeclared client IS consulted for a verdict when evidence exists (1 call, capped), and is called for query generation in gathering",
+  "PRODUCER_VOCAB 'reused from store, verbatim' - verdicts.py hard-codes an equal-but-distinct literal (store.PRODUCER_VOCAB is verdicts.PRODUCER_VOCAB => False); only value.py imports it"
+ ],
+ "unverified": [
+  "model path (Occamy endpoint down: http_code 000)",
+  "the VALUE the real occamy `producer` property returns (U2.4's file, out of scope)",
+  "U4.4's tool-call count (not disclosed)"
+ ],
+ "corrections": [
+  {
+   "plan_assumption": "U4.4 guard (b) goes red by reverting 'if not value or not source:' plus the verifier's empty-source check",
+   "actually": "reverting those two leaves the test GREEN; the line that matters is the 'if not ok:' rejection guard in _axes_from_payload (a third layer, 'if not verdict.items', still refuses an empty source)",
+   "evidence": "state/logs/V4B-redgreen.txt guard-b probes; red = 'assert 6 == 1'",
+   "unit": "U4.4"
+  },
+  {
+   "plan_assumption": "the value axes and verdict rows can be persisted and re-read for a live pass",
+   "actually": "the live verdict path raises OperationalError against every v3 store (verdicts has no producer column) so claims_assessed is 0; the claims copy and the real store are both schema v3 while store.py already inserts producer/model",
+   "evidence": "state/logs/V4B-live.txt degradations[]",
+   "unit": "U2.3/U4.3 boundary"
+  }
+ ],
+ "tool_calls": 33,
+ "bound": 35,
+ "bound_note": "33 tool calls; 8 real search attempts (bound 6, over by 2) - disclosed, caused by needing a second live pass after the store-path run aborted",
+ "containment": {
+  "duval_head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951 (unchanged; matches U4.4's recorded head)",
+  "porcelain": "?? .ci-trunk.txt  ?? .lane-j-scratch/ (foreign actor's untracked entries; not mine)",
+  "outside_writes": 0,
+  "worktrees_reads": 0,
+  "stray_processes": 0,
+  "real_store_counts_before": {
+   "claims": 0,
+   "evidence": 0,
+   "verdicts": 0
+  },
+  "real_store_counts_after": {
+   "claims": 0,
+   "evidence": 0,
+   "verdicts": 0
+  },
+  "sibling_files_moved_mid_run": {
+   "occamy.py": "7a44b4e8f678ade03e4cb7262662c3431882f9facf9e6d2d1a813310fd95c932 -> 97ba490ef53a84a31e6652f676fb28c59ec9391204d76510d02695123047fc6f",
+   "store.py": "afa7752215370575389a2626e47af3d730cef5878fbccb2402a971160a8b8288 -> f23a9916c41b4c47515982edc386c7011f1ea34d02dab9f75c1cd3da4ad75361"
+  }
+ },
+ "blocker": "",
+ "next_unit_hint": "Fix the v3/v4 store boundary before any live re-verification: either migrate the stores to v4 or make insert_verdict degrade gracefully - today EVERY claim aborts under store_path, which invalidates all live numbers in U4.3 and the dashboard/docket's verdict reads. Separately: use a full __pycache__ purge (not */resextract/*) or the assess suites report 5 false failures.",
+ "write_paths": [
+  "orchestration/VERDICTS.md",
+  "orchestration/units/V4B.md",
+  "orchestration/handoffs/V4B.json",
+  "state/logs/V4B*",
+  "state/verify/V4B/**"
+ ]
+}

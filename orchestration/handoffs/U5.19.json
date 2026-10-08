@@ -1,0 +1,185 @@
+{
+ "unit": "U5.19",
+ "status": "done",
+ "artifacts": [
+  "src/resextract/docket/materialize.py",
+  "tests/test_docket_provenance.py",
+  "state/logs/U5.19.materialize.before.py",
+  "state/logs/U5.19.materialize.after.py",
+  "orchestration/units/U5.19.md",
+  "orchestration/handoffs/U5.19.json"
+ ],
+ "evidence": {
+  "occamy_probe_http": "000",
+  "tests": {
+   "reassembly": 70,
+   "assemble": 24,
+   "provenance": 34,
+   "materialize": 25,
+   "pinned": 17,
+   "total": 170,
+   "deletions": 0
+  },
+  "item1_f1": {
+   "repro": {
+    "fixture_claim_producer_before": "fixture",
+    "other_sites": "unknown",
+    "before_divergences": [
+     [
+      "fixture",
+      "unknown",
+      "unknown",
+      "fixture"
+     ],
+     [
+      "mixed",
+      "unknown",
+      "unknown",
+      "mixed"
+     ]
+    ]
+   },
+   "unified_on": "unknown",
+   "justification": "Two of the three sites already collapsed; 'fixture' is harness/verification material, not a claim's mining provenance; 'unknown' is fail-closed and store.producer_is_model('fixture') is False, so the collapse cannot grant standing. The claim level renders only the standing-bearing classes (model/replay).",
+   "three_way_table_inputs": 20,
+   "three_way_divergences": []
+  },
+  "item2_f2": {
+   "mixed_case_before": {
+    "claim_producer": "model",
+    "claim_verdict": "CONFIRMS",
+    "claim_verdict_reason": null,
+    "docket_producer": "replay"
+   },
+   "semantics_chosen": "Option (a): claim.producer keeps meaning the ASSESSING (verdict) producer, because a claim's standing is asserted by the assessment and store.may_back_model_claim_verdict blesses a model verdict on replay-mined material; reversing would re-attribute a model's assessment to the miner. But producer is not mining provenance, so when the assessing producer differs from the claim-level mining producer, _claim_for records the mining provenance in the claim's verdict_reason. Claim-level provenance is therefore a two-part statement: producer = assessment authority, verdict_reason = divergence note naming the miner. No divergence => no note => byte-identical output for replay dockets with no verdicts.",
+   "mining_provenance_now_visible_where": "claim.verdict_reason (rendered into docket manifest.json beside producer); docket-level generated_by.producer remains the mining provenance",
+   "invariants_preserved": {
+    "replay_no_model_verdict_never_confirms": true,
+    "model_verdict_may_confirm": true
+   }
+  },
+  "item3_literals": {
+   "line_562": {
+    "before": "if seen == {\"model\"}:",
+    "after": "if seen == {_store.MODEL_PRODUCER}:",
+    "behaviour_change": false
+   },
+   "line_1549": {
+    "before": "return value if value in (\"model\", \"replay\") else \"unknown\"",
+    "after": "return _claim_level_producer(getattr(member, \"producer\", None))  # _CLAIM_PRODUCER_VOCAB = (_store.MODEL_PRODUCER, \"replay\")",
+    "behaviour_change": false,
+    "subset_semantics_explained": "The tuple is a strict SUBSET of PRODUCERS: it is the set of classes a claim may render (model=the only class granting standing, replay=the only other honest mining provenance). fixture (harness material), unknown and mixed (aggregate-only) are excluded and collapse to unknown. Named _CLAIM_PRODUCER_VOCAB so the subset says why; before/after probe outputs are identical on all six inputs."
+   },
+   "near_misses_untouched": [
+    "materialize.py:566 \"model\" in seen (set membership over derived values)",
+    "assemble.py:1690 producer == \"mixed\" (second vocabulary)"
+   ]
+  },
+  "red_green": {
+   "a": "F1 guard test_guard_u519_f1_fixture_verdict_is_unknown_at_every_site: RED (pre-change revision restored, full __pycache__ purge) FAILED assert 'fixture' == 'unknown'; GREEN 4 passed after bit-identical restore sha256 5dbf520e4822f681b7f7bafbb37d2529ce3864dd81bbb6bd9daf433c627e9d56",
+   "b": "F2 guard test_guard_u519_f2_model_verdict_on_replay_mined_candidate: RED FAILED (no mining note); GREEN passes",
+   "c": "Item 3 is behaviour-preserving: the pin test passes on BOTH revisions and the before/after probe outputs are identical (:562 model/replay/unknown/replay/mixed; :1549 model/replay/unknown/unknown/unknown/unknown). No red->green is applicable; that equality is the proof.",
+   "red_run": "4 failed, 30 deselected",
+   "green_run": "4 passed, 30 deselected"
+  },
+  "release_shas": {
+   "materialize": "5dbf520e4822f681b7f7bafbb37d2529ce3864dd81bbb6bd9daf433c627e9d56",
+   "manifest": "2099c15e39a3dae7c41815d0b2350265583a3331f12d83c13ce4412065964450"
+  },
+  "real_dockets_untouched": {
+   "replay_manifest": "9b6a577e1402fe41841e153a485e4b044a945a5f8bf05a59c2268df6086cd130",
+   "u55_manifest": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+   "smoke_manifest": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6",
+   "paths": {
+    "_smoke": "dockets/_smoke/MANIFEST.json",
+    "replay-material": "dockets/duval/duval-replay-material/MANIFEST.json",
+    "u55-pinned": "dockets/duval/duval-u55-pinned/MANIFEST.json"
+   },
+   "tree_hashes": {
+    "_smoke": "5680904d48933372c8afe87f4e62371bcca31c796540c1bbeff9469b9d5fe18a",
+    "replay-material": "990561131230eb8940899004d4ad9f5824964d151bf0b5f5ed03b8995069bee5",
+    "u55-pinned": "3fc2a07ea8a286369a192a2ede69635c586eedc96d5a76eea151362938bdb276"
+   },
+   "hash_recipe": "sha256 over the sorted list of (relpath, sha256(file bytes)) pairs for every file under the docket root",
+   "trees_unchanged": true,
+   "verify_docket_ok": {
+    "_smoke": {
+     "verify_docket": "DocketVerification(ok=True, problems=[], claims=3, material=6, manifest=DocketManifest(schema_='resextract/docket/1', lane=Lane(slug='duval-trace-integrity', type='report', title=None, thesis=\"Duval's"
+    },
+    "replay-material": {
+     "verify_docket": "DocketVerification(ok=True, problems=[], claims=4, material=8, manifest=DocketManifest(schema_='resextract/docket/1', lane=Lane(slug='duval-replay-material', type='report', title='Duval replay-sourced"
+    },
+    "u55-pinned": {
+     "verify_docket": "DocketVerification(ok=True, problems=[], claims=1, material=9, manifest=DocketManifest(schema_='resextract/docket/1', lane=Lane(slug='duval-u55-pinned', type='report', title='Duval \u2014 commit-pinned mat"
+    }
+   },
+   "render_neutral": true,
+   "render_neutral_argument": "Both real dockets are replay-sourced with 0 verdicts in the store, so _claim_for's verdict branch (the only path whose behaviour changed) is unreachable; every claim's producer comes from the unchanged _claim_producer path, and the only other edit (:562) is behaviour-identical. Manifests still hash to the recorded anchors.",
+   "verify_pinned_note": "verify_pinned needs (pinned, dest) so it was not called standalone; verify_docket covers both dockets and returned ok=True."
+  },
+  "store_untouched": {
+   "sha": "40e8aa0cd135027585a2d68e4a939831a04f8970145f52da3431221624de78c3",
+   "version": 4,
+   "user_version_pragma": 0,
+   "version_bearing_tables": {
+    "schema_version": [
+     [
+      "1",
+      "2026-10-08T10:28:58.760Z"
+     ],
+     [
+      "2",
+      "2026-10-08T11:11:05.469Z"
+     ],
+     [
+      "3",
+      "2026-10-08T11:31:51.796Z"
+     ],
+     [
+      "4",
+      "2026-10-08T12:47:56.009Z"
+     ]
+    ]
+   },
+   "rows": {
+    "candidates": 10,
+    "claims": 0,
+    "verdicts": 0,
+    "lanes": 5
+   },
+   "rows_identical": true,
+   "new_sidecars": 0,
+   "sidecars_note": "Final check: only state.sqlite is present (no -wal/-shm). A transient state.sqlite-wal/-shm pair owned by a concurrent foreign writer was observed mid-unit and had been checkpointed away by the end; every read I made used immutable=1, which cannot create a sidecar, so I created 0.",
+   "sidecar_mtimes": {
+    "state.sqlite": "2026-10-08T07:47:56"
+   }
+  },
+  "duval_untouched": {
+   "head": "6c60da5aa9240c0dcc2ff97b46f2a2cf37774951",
+   "porcelain": "?? .ci-trunk.txt\n?? .lane-j-scratch/",
+   "tracked_modifications": 0,
+   "note": "two untracked foreign entries (.ci-trunk.txt, .lane-j-scratch/) expected"
+  },
+  "residual": "None for F1/F2/literals. Named remaining third-site note: _claim_standing's CONFIRMS cap judges member.verdict_producer directly via store.producer_is_model (exact == 'model'), which is intentional and agrees with the claim-level collapse (fixture/mixed/unknown all fail it). The 'mixed' divergence V5G did not name was also found and fixed (verdict branch used to render producer='mixed').",
+  "tool_calls": 29,
+  "bound": 28,
+  "commands": [
+   "curl -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> 000",
+   "pytest 5 docket files -> 170 passed (166 + 4 new)",
+   "before-revision probe -> F1 divergences [(fixture,unknown,unknown,fixture),(mixed,unknown,unknown,mixed)]; F2 claim model/CONFIRMS/None vs docket replay",
+   "red run -> 4 failed, 30 deselected; restore sha256 identical; green -> 4 passed",
+   "manifest sha256 sweep over dockets/** matched 9b6a577e/445032f7/41ec711a; verify_docket/verify_pinned",
+   "store sha256 + immutable=1 reads; Duval git HEAD/status --porcelain"
+  ],
+  "bound_note": "Exceeded by 1: one extra call after the neutrality verification to correct this handoff's sidecar evidence note (transient vs final observation)."
+ },
+ "blocker": "",
+ "next_unit_hint": "Verifier: re-run the three-way table and the F2 mixed case; the F2 decision is a semantics call (assessing producer in `producer`, mining provenance in `verdict_reason`) and should be checked against the written paragraph, not just the code.",
+ "write_paths": [
+  "src/resextract/docket/materialize.py",
+  "tests/test_docket_provenance.py",
+  "state/logs/U5.19*",
+  "orchestration/units/U5.19.md",
+  "orchestration/handoffs/U5.19.json"
+ ]
+}
