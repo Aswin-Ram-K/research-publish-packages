@@ -612,9 +612,9 @@ def test_non_loopback_host_is_refused():
         FAILED tests/test_dashboard.py::test_non_loopback_host_is_refused - Failed: D...
         1 failed, 5 passed, 42 deselected
     """
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="refusing to bind non-loopback host '0.0.0.0'"):
         app_mod.create_app(host="0.0.0.0")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="refusing to bind non-loopback host '192.168.2.168'"):
         app_mod.create_app(store_path=str(STORE), host="192.168.2.168")
     remote = app_mod.create_app(store_path=str(STORE), host="0.0.0.0", allow_remote=True)
     assert remote.state.dashboard["host"] == "0.0.0.0"

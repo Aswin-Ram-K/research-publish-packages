@@ -1,0 +1,105 @@
+{
+  "unit": "U8.74",
+  "status": "done",
+  "artifacts": [
+    "tests/test_repo_hygiene.py",
+    "state/verify/U8.74/.gitignore.no-tmp-rule",
+    "state/verify/U8.74/redrepo/",
+    "orchestration/units/U8.74.md"
+  ],
+  "evidence": {
+    "probe": "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models -> 000 (connection refused, zero live LLM calls)",
+    "green_run": ".venv/bin/python -m pytest tests/test_repo_hygiene.py -q -p no:cacheprovider -> 17 passed in 0.03s",
+    "red_run": "U874_GITIGNORE=state/verify/U8.74/.gitignore.no-tmp-rule ... pytest tests/test_repo_hygiene.py -q -> 1 failed, 16 passed in 0.04s",
+    "commands": [
+      "git check-ignore -v --no-index -- note.tmp -> .gitignore:41:**/*.tmp",
+      "git check-ignore -v --no-index -- src/resextract/build.tmp -> .gitignore:41:**/*.tmp",
+      "git check-ignore -v --no-index -- orchestration/units/scan.tmp -> .gitignore:41:**/*.tmp",
+      "git check-ignore -v --no-index -- dockets/_smoke/MANIFEST.json -> .gitignore:15:/dockets/",
+      "git diff --cached --stat -> empty (index untouched)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Add the same global-rule treatment to the other unanchored-by-design rules U8.70 noted (*.sqlite-wal/-shm/-journal, .gitignore:20-22): a test_tmp-style parametrisation in tests/test_repo_hygiene.py would close them for two lines each. Do not touch state/state.sqlite.",
+  "write_paths": [
+    "tests/test_repo_hygiene.py",
+    "state/verify/U8.74/**",
+    "state/logs/U8.74*",
+    "orchestration/units/U8.74.md",
+    "orchestration/handoffs/U8.74.json"
+  ],
+  "file_chosen": {
+    "path": "tests/test_repo_hygiene.py",
+    "why": "A natural home already existed, so I extended it rather than adding tests/test_repo_hygiene.py-adjacent new file. It is THE repo-hygiene guard (8 pre-existing tests, module docstring documenting its own red->green transcript) and it already implements exactly the mechanism U8.70 asked for: subprocess git check-ignore with --quiet for the boolean, -v to name the matching rule, --no-index so the probe is index-independent, plus an autouse skip when git is missing or the cwd is not a work tree. Adding a second hygiene file would have duplicated the _git/is_ignored/ignored_by helpers.",
+    "tracked_status": "tracked (git ls-files --error-unmatch tests/test_repo_hygiene.py succeeds; it is a pre-existing tracked file, and my edit leaves it as a working-tree modification, not a new untracked file)"
+  },
+  "tests": [
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_tmp_paths_are_ignored_at_any_depth[note.tmp]",
+      "what_it_asserts": "A root-level note.tmp is ignored (git check-ignore -q --no-index exit 0) -- the exact probe U8.70 suggested; repo root is where /state/ never reached."
+    },
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_tmp_paths_are_ignored_at_any_depth[src/resextract/build.tmp]",
+      "what_it_asserts": "A source-tree spill path is ignored, proving the rule is global, not root-only."
+    },
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_tmp_paths_are_ignored_at_any_depth[orchestration/units/scan.tmp]",
+      "what_it_asserts": "A path in a hand-written directory that state/** never covers is still ignored."
+    },
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_tmp_rule_is_not_inherited_from_an_ignored_parent",
+      "what_it_asserts": "None of the three parent dirs (src/resextract, orchestration/units) is itself ignored, so the three probes pass BECAUSE of the *.tmp rule and not transitively via an ignored parent directory."
+    },
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_gitignore_declares_a_global_tmp_rule",
+      "what_it_asserts": "Structural half: parsing the real .gitignore finds a rule whose trailing component globs *.tmp AND that rule is global (unanchored or **/-prefixed), not pinned to one directory."
+    },
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_root_dockets_is_still_ignored[dockets/example-docket/MANIFEST.json]",
+      "what_it_asserts": "Pre-existing test, now parametrised (unchanged semantics)."
+    },
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_root_dockets_is_still_ignored[dockets/_smoke/MANIFEST.json]",
+      "what_it_asserts": "NEW parametrisation case: the deliverable path the build's own smoke run assembles stays ignored by the root-anchored /dockets/ rule (matched via .gitignore:15:/dockets/)."
+    }
+  ],
+  "paths_asserted_ignored": [
+    "note.tmp (repo root)",
+    "src/resextract/build.tmp (source tree, outside state/**)",
+    "orchestration/units/scan.tmp (hand-written dir, outside state/**, no rule of its own)",
+    "dockets/_smoke/MANIFEST.json (deliverable, root-anchored /dockets/)",
+    "dockets/example-docket/MANIFEST.json (pre-existing parametrisation case)"
+  ],
+  "nothing_created_on_disk": "git check-ignore is read-only; the guard only shells out to git and reads .gitignore as text. Verified after the runs: for each of note.tmp, src/resextract/build.tmp, orchestration/units/scan.tmp, dockets/example-docket/MANIFEST.json -> 'absent'. dockets/_smoke/MANIFEST.json EXISTS but pre-dates the unit: mtime 2026-10-08 05:49:09 vs my first write 11:06:52 and the mutated copy at 11:07:01 (now 11:07:49) -- produced by an earlier smoke run, not by this unit. A repo-wide find (excluding .git and state/verify) shows *.tmp files only under state/** (the pre-existing transitively-ignored spill files that were the original gap), none at the root or in src/. Also verified: tests/__pycache__ has no entry newer than 30 minutes (PYTHONDONTWRITEBYTECODE=1 on every pytest invocation) and .pytest_cache was suppressed with -p no:cacheprovider.",
+  "mechanism": "BOTH. (a) Behavioural: git check-ignore --quiet --no-index on each asserted path, asserting exit 0 -- git is the authority on its own matching. (b) Structural: the real .gitignore is parsed (comments/blank lines dropped) and a rule whose trailing component globs *.tmp is asserted to exist and to be global (root-anchored or directory-pinned rules are rejected). The parse half is what makes the red cycle cheap -- it reads the file named by U874_GITIGNORE (default: the repo's real .gitignore), so a mutated copy under state/verify/U8.74/ can be red-tested without touching the committed file.",
+  "red": {
+    "copy_path": "state/verify/U8.74/.gitignore.no-tmp-rule",
+    "mutation": "cp of the repo's .gitignore with the rule line '**\\/*.tmp' (.gitignore:41) removed by `grep -v '^\\*\\*/\\.tmp$'`; the surrounding comments and every other rule are byte-identical, so only the rule is gone.",
+    "verbatim_failure": "________________ test_gitignore_declares_a_global_tmp_rule _________________\n\n    def test_gitignore_declares_a_global_tmp_rule() -> None:\n        ...\n        matched = _tmp_rule_patterns(lines)\n>       assert matched, (\n            f\"{gitignore} declares no rule that would ignore a '*.tmp' file; the \"\n            \"global '**/*.tmp' rule (U8.70, .gitignore:41) is what keeps scratch \"\n            \"spill files out of the index, and deleting it made every \"\n            \"test_tmp_paths_are_ignored_at_any_depth case fail\"\n        )\nE       AssertionError: state/verify/U8.74/.gitignore.no-tmp-rule declares no rule that would ignore a '*.tmp' file; the global '**/*.tmp' rule (U8.70, .gitignore:41) is what keeps scratch spill files out of the index, and deleting it made every test_tmp_paths_are_ignored_at_any_depth case fail\nE       assert []\n\ntests/test_repo_hygiene.py:304: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repo_hygiene.py::test_gitignore_declares_a_global_tmp_rule\n1 failed, 16 passed in 0.04s",
+    "pass_with_rule_present": "Same command without U874_GITIGNORE (real .gitignore, rule intact): 17 passed in 0.03s -- the parse assertion matches the global rule '**/*.tmp' and the three check-ignore probes pass. Separately, the BEHAVIOURAL half was red-proved in a throwaway repo at state/verify/U8.74/redrepo (git init inside state/verify/U8.74, which /state/ keeps out of the parent's status): with the mutated copy installed, `git -C state/verify/U8.74/redrepo check-ignore -q --no-index -- note.tmp` -> NOT-ignored exit=1 and src/resextract/build.tmp -> NOT-ignored exit=1; with the real .gitignore installed both -> IGNORED exit=0. So the same assertion the test makes is provably red without the rule and green with it.",
+    "env_seam": "U874_GITIGNORE=/absolute/or/relative/path points only the parse half at that file. Tests shipped with it unset, so the default is the committed .gitignore."
+  },
+  "green": {
+    "command": "cd \"/home/zer0null/reserach extarctor\" && PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_repo_hygiene.py -q -p no:cacheprovider",
+    "result": "17 passed in 0.03s",
+    "collected": 17,
+    "whole_suite_run": false
+  },
+  "dockets_assert_ignored": "Asserted, and it guards an EXISTING property so it needs no red cycle of its own: /dockets/ is root-anchored at .gitignore:15 and has been exercised by tests/test_repo_hygiene.py since the unanchored-dockets/-swallowed-the-fixture-tree bug (its own docstring red transcript). I extended the pre-existing test_root_dockets_is_still_ignored into a parametrisation and added the dockets/_smoke/MANIFEST.json case -- the path the build's own smoke run assembles -- asserting is_ignored() and that the matching rule ends with ':/dockets/'. Mechanically a red cycle is cheap and available if a verifier wants one: point U874_GITIGNORE at a copy with line 15 removed, and the check-ignore half goes red on all four dockets paths (or add an unanchored 'dockets/' and the three fixture-tree tests in the same file fail, as the module docstring already records).",
+  "counts": {
+    "passed": 17,
+    "collected": 17,
+    "def_test_before": 6,
+    "def_test_after": 9,
+    "collected_before": 11,
+    "collected_after": 17,
+    "extended_existing_file": true,
+    "delta_note": "+3 new test functions (test_tmp_paths_are_ignored_at_any_depth parametrised x3, test_tmp_rule_is_not_inherited_from_an_ignored_parent, test_gitignore_declares_a_global_tmp_rule), +1 parametrisation case on the pre-existing test_root_dockets_is_still_ignored. 6 -> 9 def test_; 11 -> 17 collected (11 was the file's documented pre-U8.74 count, matching the module docstring)."
+  },
+  "store_touched": false,
+  "git_state_changed": false,
+  "git_state_proof": "git diff --cached --stat empty (nothing staged, ever); git stash list = 0 entries; HEAD still 9d256ba80e929910339af09bf3d96e0238dc0507 before and after; only read-only git subcommands were run (check-ignore, ls-files, rev-parse, status, diff, show, stash list, and one git init inside state/verify/U8.74/redrepo, a nested throwaway repo that /state/ hides from the parent's status). tests/test_repo_hygiene.py is the only file I modified; the other ' M' entries in git status (docs/PLAN_CORRECTIONS.md, tests/test_cli.py, test_dashboard.py, test_journal.py, test_lanes_build.py, test_writer_detection.py) are concurrent units' working-tree edits, not mine.",
+  "store_note": "state/state.sqlite was never read, opened or hashed -- store-blind.",
+  "tool_calls_work": 15,
+  "bound": 12
+}

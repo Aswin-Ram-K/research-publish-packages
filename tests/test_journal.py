@@ -60,9 +60,9 @@ def test_journal_is_one_file_per_run(root):
 
 def test_reserved_field_names_are_rejected(root):
     j = journal.Journal("run-1", root)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"reserved keys: \['seq'\]"):
         j.append("x", seq=99)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"reserved keys: \['hash'\]"):
         j.append("x", hash="deadbeef")
 
 

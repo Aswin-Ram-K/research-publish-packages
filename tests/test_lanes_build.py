@@ -225,7 +225,7 @@ def test_persist_lanes_honours_type_vocabulary_and_accepts_a_path(tmp_path):
         assert store.get_lane_by_slug(con, "duval", "ember-gate")["type"] is None
     finally:
         con.close()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="lane type must be one of"):
         persist_lanes(lanes, db, "duval", types={"basalt-ridge": "not-a-type"})
 
 
@@ -273,5 +273,5 @@ def test_lane_with_non_independent_members_is_never_split():
 def test_split_raises_rather_than_silently_losing_a_member():
     candidates = fixture_candidates()
     parent = only(build_lanes(candidates), "dune-drift")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="references candidates not supplied"):
         split_lane(parent, [c for c in candidates if c.id != 208])

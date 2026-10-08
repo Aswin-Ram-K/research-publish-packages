@@ -1,0 +1,223 @@
+{
+  "artifacts": [
+    "state/state.sqlite",
+    "state/backups/U8.66-state-pre/state.sqlite",
+    "state/backups/U8.66-state-pre/state.sqlite-shm",
+    "state/backups/U8.66-state-pre/state.sqlite-wal",
+    "state/logs/U8.66_fix.py",
+    "state/logs/U8.66_evidence.json",
+    "orchestration/units/U8.66.md",
+    "orchestration/handoffs/U8.66.json"
+  ],
+  "blocker": "",
+  "bound": 12,
+  "defect_confirmed": true,
+  "disk_manifest": {
+    "path": "dockets/duval/duval-u55-pinned/MANIFEST.json",
+    "sha256": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07"
+  },
+  "evidence": {
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models",
+      "sha256sum dockets/duval/duval-u55-pinned/MANIFEST.json",
+      "PYTHONPATH=src .venv/bin/python -c 'from resextract.docket import verify_docket; ...'",
+      ".venv/bin/python state/logs/U8.66_fix.py",
+      "PRAGMA journal_mode; PRAGMA wal_checkpoint(TRUNCATE); PRAGMA integrity_check; PRAGMA quick_check"
+    ],
+    "defect_description": "dockets row id=2 (dir='dockets/duval/duval-u55-pinned') stored a generated_by lacking the 'producer' key that its on-disk MANIFEST.json carries (producer='replay'). The defect still existed at read time.",
+    "integrity_check": "ok",
+    "json_field_level_note": "manifest_json is now the disk MANIFEST.json verbatim, so beyond the producer key these JSON fields took the disk manifest's own bytes: generated_at 2026-10-08T11:25:12Z -> 2026-10-08T12:00:00Z (the value the disk manifest itself carries, which the card expressly licenses), plus the addition of top-level status_reason / evidence / prior_art / results and claim-level producer / verdict_reason. No other row, table or column was written; verified_at / last_refresh_at / freshness COLUMNS were not touched.",
+    "manifest_json_is_now_byte_identical_to_disk": true,
+    "pre_state_backup": {
+      "matches_store_sha_before": true,
+      "note": "verified equal to the live store at copy time by sha256 comparison asserted inside the fix script.",
+      "path": "state/backups/U8.66-state-pre/state.sqlite",
+      "sha256": "ae9b23b176ae40ee1043c4bcbb7e671db25250de0bdd9a0916d660ec9341c5be"
+    },
+    "probe": "curl -sS -m 5 http://192.168.2.168:8012/v1/models -> HTTP 000 (connection refused). Zero live LLM calls made.",
+    "quick_check": "ok",
+    "row_columns_untouched": [
+      "id",
+      "lane_id",
+      "dir",
+      "source_head",
+      "graph_hash",
+      "freshness",
+      "verified_at",
+      "last_refresh_at"
+    ],
+    "sql_param": "the VERBATIM UTF-8 bytes of dockets/duval/duval-u55-pinned/MANIFEST.json (sha256 445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07). Nothing composed, nothing re-serialised, nothing invented.",
+    "store_sha_changed_as_expected": true,
+    "table_count_sum_after": 35,
+    "table_count_sum_before": 35,
+    "table_counts_identical": true,
+    "verify_docket_baseline": {
+      "_smoke": {
+        "ok": false,
+        "problems": [
+          "byte-identical frozen-witness problem to the one recorded under verify_docket_after"
+        ]
+      },
+      "duval-replay-material": {
+        "ok": true,
+        "problems": []
+      },
+      "duval-u55-pinned": {
+        "ok": true,
+        "problems": []
+      }
+    },
+    "verify_docket_u55_ok_unchanged": true
+  },
+  "exact_sql": "UPDATE dockets SET manifest_json=? WHERE id=2",
+  "generate_by_objects": {
+    "disk": {
+      "app": "resextract",
+      "model": "",
+      "producer": "replay",
+      "version": "0.1.0"
+    },
+    "store_after": {
+      "app": "resextract",
+      "model": "",
+      "producer": "replay",
+      "version": "0.1.0"
+    },
+    "store_before": {
+      "app": "resextract",
+      "model": "",
+      "version": "0.1.0"
+    }
+  },
+  "idempotence_proof": "apply#1 (UPDATE dockets SET manifest_json=? WHERE id=2) rowcount=1 -> store sha 255c3e0c3dbbb17d9bb9559b13ac15d484659c65cbfe9cbf22cff45e08cdf89d; apply#2 with the identical parameter rowcount=1 -> store sha 255c3e0c3dbbb17d9bb9559b13ac15d484659c65cbfe9cbf22cff45e08cdf89d; identical = True. PRAGMA integrity_check = ok; PRAGMA quick_check = ok.",
+  "next_unit_hint": "The mirror defect is closed: dockets id=2 manifest_json is now byte-identical to dockets/duval/duval-u55-pinned/MANIFEST.json and carries generated_by.producer='replay'. Suggested next: a verifier unit re-runs verify_docket on all three dockets (replay ok True [], u55 ok True [], _smoke ok False by design), re-checks the 13 table counts, and confirms id=1's manifest_json sha is still 88336ead4a4bdaaf5c1c510e86bc21576722bb3cfb5b90e16a0fa97a6cf99908. If a strictly surgical fix is preferred over the verbatim-byte mirror, the alternative single-statement form is: UPDATE dockets SET manifest_json = json_patch(manifest_json, '$.generated_by.producer', json('\"replay\"')) WHERE id=2; applied against the pre-state backup in state/backups/U8.66-state-pre/ - that touches only the one key and leaves generated_at at 2026-10-08T11:25:12Z. Store now at 255c3e0c3dbbb17d9bb9559b13ac15d484659c65cbfe9cbf22cff45e08cdf89d.",
+  "other_rows_unchanged": {
+    "dockets_row_total_after": 2,
+    "dockets_row_total_before": 2,
+    "id1_generated_by_after": {
+      "app": "resextract",
+      "model": "",
+      "producer": "replay",
+      "version": "0.1.0"
+    },
+    "id1_is_a_no_op_fixed_point": true,
+    "id1_manifest_json_sha256_after": "88336ead4a4bdaaf5c1c510e86bc21576722bb3cfb5b90e16a0fa97a6cf99908",
+    "id1_manifest_json_sha256_before": "88336ead4a4bdaaf5c1c510e86bc21576722bb3cfb5b90e16a0fa97a6cf99908",
+    "id1_unchanged": true
+  },
+  "overage_reason": "Bound 12, actual 18. (1) The fix script was persisted to state/logs/U8.66_fix.py and needed a write plus two edits: I first indexed manifest_json as r[8] when the dockets schema order puts it at r[3], so the first run raised JSONDecodeError and aborted BEFORE any UPDATE - the store was never left partial and the pre-state remains recoverable from state/backups/U8.66-state-pre/ (sha ae9b23b1...). (2) Evidence was therefore collected in two passes. (3) The handoff itself took three attempts: a syntax error in my validation block, then a first version that nested the required keys inside `evidence` and was correctly rejected before promotion - the card's rule that those keys are TOP-LEVEL was enforced, not assumed. (4) A final correction pass to make sidecars_after fully accurate. Disclosed rather than squeezing evidence out of the report.",
+  "refused": false,
+  "refused_reason": "Nothing refused on policy grounds. All writes stayed inside the declared paths; /home/zer0null/Duval was never written and .worktrees/ was never read; immutable=1 was never used; no sidecar I did not create was deleted. One self-refusal, not a policy refusal: I first bound the SQL parameter to r[8] of the dockets row (wrong column - manifest_json is r[3]) and aborted the fix script on the JSONDecodeError BEFORE issuing the UPDATE rather than write a wrong value, so the store was never left partial.",
+  "row_after": {
+    "dir": "dockets/duval/duval-u55-pinned",
+    "freshness": "current",
+    "generated_at": "2026-10-08T12:00:00Z",
+    "generated_by": {
+      "app": "resextract",
+      "model": "",
+      "producer": "replay",
+      "version": "0.1.0"
+    },
+    "graph_hash": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+    "id": 2,
+    "lane_id": null,
+    "last_refresh_at": "2026-10-08T11:25:12.886Z",
+    "manifest_json_len": 8367,
+    "manifest_json_sha256": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+    "source_head": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+    "verified_at": "2026-10-08T11:25:12.764Z"
+  },
+  "row_before": {
+    "dir": "dockets/duval/duval-u55-pinned",
+    "freshness": "current",
+    "generated_at": "2026-10-08T11:25:12Z",
+    "generated_by": {
+      "app": "resextract",
+      "model": "",
+      "version": "0.1.0"
+    },
+    "graph_hash": "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b",
+    "id": 2,
+    "lane_id": null,
+    "last_refresh_at": "2026-10-08T11:25:12.886Z",
+    "manifest_json_len": 4725,
+    "manifest_json_sha256": "fc5672bcf3d3cd9bec04e7fbcd84c78c9f8e2d427cc7c256e4f6c06ca107fcbf",
+    "source_head": "5cdc471afb2a14934030d581a20f6a9bcffb727e",
+    "verified_at": "2026-10-08T11:25:12.764Z"
+  },
+  "sidecars_after": {
+    "as_first_observed_before_any_connection": [
+      "state.sqlite"
+    ],
+    "durability": "store sha 255c3e0c... is the sha of the main DB file alone with the WAL at zero length, and a fresh read-only connection still returns manifest_json byte-identical to the on-disk MANIFEST.json - the change is checkpointed into the main file, not parked in the WAL.",
+    "files": [
+      "state.sqlite"
+    ],
+    "journal_mode": "wal",
+    "note": "Immediately after my write, a clean close plus PRAGMA wal_checkpoint(TRUNCATE) (returned (0,0,0) - nothing logged) left state.sqlite alone at 176128 B with no -wal and no -shm, i.e. the original single-file sidecar state. state.sqlite is in persistent WAL journal mode, so every subsequent connection - including the read-only ones I used to re-confirm the row - re-materialises a 0-byte state.sqlite-wal and a 32768-byte state.sqlite-shm. Both are therefore present at hand-off time, are 0/transient, and hold no data: the store sha 255c3e0c... is the main file alone and a read-only connection reads manifest_json byte-identical to the on-disk MANIFEST.json. No sidecar I did not create was deleted - the two transient ones belong to my own connections and are produced/removed by SQLite itself."
+  },
+  "sidecars_before": {
+    "as_first_observed": [
+      "state.sqlite"
+    ],
+    "note": "state.sqlite only. During read-only recon my own connections materialised state.sqlite-shm (32768 B) and state.sqlite-wal (0 B); those were NOT pre-existing."
+  },
+  "status": "done",
+  "store_sha_after": "255c3e0c3dbbb17d9bb9559b13ac15d484659c65cbfe9cbf22cff45e08cdf89d",
+  "store_sha_before": "ae9b23b176ae40ee1043c4bcbb7e671db25250de0bdd9a0916d660ec9341c5be",
+  "table_counts_after": {
+    "candidates": 10,
+    "claims": 0,
+    "dockets": 2,
+    "evidence": 0,
+    "lane_candidates": 10,
+    "lanes": 5,
+    "rework": 0,
+    "runs": 4,
+    "schema_version": 4,
+    "search_health": 0,
+    "targets": 0,
+    "verdicts": 0,
+    "web_sources": 0
+  },
+  "table_counts_before": {
+    "candidates": 10,
+    "claims": 0,
+    "dockets": 2,
+    "evidence": 0,
+    "lane_candidates": 10,
+    "lanes": 5,
+    "rework": 0,
+    "runs": 4,
+    "schema_version": 4,
+    "search_health": 0,
+    "targets": 0,
+    "verdicts": 0,
+    "web_sources": 0
+  },
+  "tool_calls_work": 18,
+  "unit": "U8.66",
+  "verify_docket_after": {
+    "_smoke": {
+      "ok": false,
+      "problems": [
+        "claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='unknown') -- a non-model run may not assert CONFIRMS; re-derive the claim through materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)"
+      ]
+    },
+    "duval-replay-material": {
+      "ok": true,
+      "problems": []
+    },
+    "duval-u55-pinned": {
+      "ok": true,
+      "problems": []
+    }
+  },
+  "write_paths": [
+    "state/state.sqlite (only dockets row id=2, only the manifest_json column)",
+    "state/backups/U8.66-state-pre/**",
+    "state/logs/U8.66*",
+    "orchestration/units/U8.66.md",
+    "orchestration/handoffs/U8.66.json"
+  ]
+}

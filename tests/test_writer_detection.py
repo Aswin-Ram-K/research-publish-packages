@@ -296,7 +296,7 @@ def test_missing_directory_is_recorded_not_raised(tmp_path: Path) -> None:
 
 
 def test_signal_rejects_unknown_verdict() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="verdict must be one of"):
         WriterSignal(
             verdict="maybe",
             head_before=None,

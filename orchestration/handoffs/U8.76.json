@@ -1,0 +1,218 @@
+{
+  "unit": "U8.76",
+  "status": "done",
+  "artifacts": [
+    "tests/test_repo_hygiene.py",
+    "orchestration/units/U8.76.md",
+    "state/verify/U8.76/gitignore-no-global-sidecar",
+    "state/verify/U8.76/gitignore-root-anchored-sidecar",
+    "state/verify/U8.76/redA.log",
+    "state/verify/U8.76/redB.log"
+  ],
+  "existing_sidecar_rules": {
+    "reported_by_u874": ".gitignore:20-22  (*.sqlite-wal / *.sqlite-shm / *.sqlite-journal)",
+    "verified": true,
+    "lines": [
+      {
+        "line": 18,
+        "text": "# SQLite sidecars are runtime state, never source.  Global by design: any"
+      },
+      {
+        "line": 19,
+        "text": "# *.sqlite database can grow a -wal/-shm/-journal next to it."
+      },
+      {
+        "line": 20,
+        "text": "*.sqlite-wal"
+      },
+      {
+        "line": 21,
+        "text": "*.sqlite-shm"
+      },
+      {
+        "line": 22,
+        "text": "*.sqlite-journal"
+      }
+    ],
+    "all_three_already_global": true,
+    "git_check_ignore_v_no_index": [
+      ".gitignore:20:*.sqlite-wal\tstate.sqlite-wal",
+      ".gitignore:21:*.sqlite-shm\torchestration/units/state.sqlite-shm",
+      ".gitignore:22:*.sqlite-journal\tsrc/resextract/state.sqlite-journal",
+      ".gitignore:21:*.sqlite-shm\tstate.sqlite-shm",
+      ".gitignore:22:*.sqlite-journal\tstate.sqlite-journal"
+    ]
+  },
+  "broken?": {
+    "broken": false,
+    "finding": "nothing was broken - all three sidecar rules are already unanchored/global and already cover a sidecar at ROOT and at DEPTH",
+    "evidence": [
+      "rules at .gitignore:20-22 have no leading '/' and no directory component -> _pattern_is_global() True",
+      "git check-ignore -v --no-index ignores state.sqlite-wal (root) AND orchestration/units/state.sqlite-shm AND src/resextract/state.sqlite-journal (depth 2 and 3), attributing each match to .gitignore:20/21/22 - not to a parent-directory rule",
+      "the only other rule that could match a sidecar transitively, /state/ at .gitignore:7, is root-anchored; probe parents src, src/resextract, orchestration, orchestration/units all return rc=1 (not ignored)",
+      "no root-anchored-only form (/state.sqlite-wal or state/state.sqlite-wal) exists to replace, so there is nothing for U8.70's 'add the global form' treatment to add"
+    ],
+    "what_was_actually_missing": "coverage - the rules were untested, so nothing stopped them being re-anchored or deleted; the guard is what this unit added"
+  },
+  "gitignore_change": {
+    "changed": false,
+    "before": null,
+    "after": null,
+    "note": "none - rules already global; .gitignore left byte-identical (git diff --exit-code -- .gitignore clean; sha256 27f4f10aa11a8217afd90455fb6faafa17ca204d00d44dfb14a2ab86b2ca60da matches git show HEAD:.gitignore)"
+  },
+  "new_tests": [
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_sidecar_paths_are_ignored_at_any_depth[state.sqlite-wal]",
+      "asserts": "behavioural - git check-ignore --quiet --no-index exit code 0 for a root-level sidecar; plus parent '.' (no parent) is exempt from the transitive-check; plus REPO_ROOT/'state.sqlite-wal' does not exist on disk"
+    },
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_sidecar_paths_are_ignored_at_any_depth[orchestration/units/state.sqlite-shm]",
+      "asserts": "behavioural - a depth-2 sidecar is ignored; parent orchestration/units is asserted NOT ignored (is_ignored False) so the pass cannot be inherited from a parent rule; plus the path does not exist on disk"
+    },
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_sidecar_paths_are_ignored_at_any_depth[src/resextract/state.sqlite-journal]",
+      "asserts": "behavioural - a depth-3 sidecar inside the source tree is ignored; parent src/resextract asserted NOT ignored; plus the path does not exist on disk"
+    },
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_gitignore_declares_a_global_sidecar_rule[-wal]",
+      "asserts": "structural - parse of the real .gitignore (or the U874_GITIGNORE copy): some rule matches a 'state.sqlite-wal' basename AND at least one matching pattern is global (_pattern_is_global); rejects root-anchored '/state.sqlite-wal'"
+    },
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_gitignore_declares_a_global_sidecar_rule[-shm]",
+      "asserts": "structural - same for 'state.sqlite-shm'; rejects '/state.sqlite-shm'"
+    },
+    {
+      "node_id": "tests/test_repo_hygiene.py::test_gitignore_declares_a_global_sidecar_rule[-journal]",
+      "asserts": "structural - same for 'state.sqlite-journal'; rejects '/state.sqlite-journal'"
+    }
+  ],
+  "paths_asserted": {
+    "probes": [
+      "state.sqlite-wal",
+      "orchestration/units/state.sqlite-shm",
+      "src/resextract/state.sqlite-journal"
+    ],
+    "why_outside_any_ignored_parent": "none of these sits under state/**, so /state/ (root-anchored, .gitignore:7) cannot satisfy them transitively; the tests assert this internally by requiring the parent directory NOT to be ignored",
+    "outside_proof_commands": [
+      "git check-ignore --no-index -q -- src            -> rc=1 (not ignored)",
+      "git check-ignore --no-index -q -- src/resextract -> rc=1 (not ignored)",
+      "git check-ignore --no-index -q -- orchestration       -> rc=1 (not ignored)",
+      "git check-ignore --no-index -q -- orchestration/units -> rc=1 (not ignored)"
+    ],
+    "pre_existing_sidecars_not_asserted": "tests/fixtures/dashboard-store/state.sqlite-wal and -shm already exist on disk from earlier units; they are covered by the pre-existing GENERATED_ARTIFACTS parametrisation, not by the new tests"
+  },
+  "nothing_created": {
+    "verified": true,
+    "how": [
+      "in-test: every new behavioural test asserts not (REPO_ROOT / path).exists(), and green ran after the red runs",
+      "post-run shell: test -e for all six probe paths (state.sqlite-wal, orchestration/units/state.sqlite-shm, src/resextract/state.sqlite-journal, note.tmp, src/resextract/build.tmp, orchestration/units/scan.tmp) -> all absent",
+      "repo-wide: find . -path ./.git -prune -o \\( -name '*.sqlite-wal' -o -name '*.sqlite-shm' -o -name '*.sqlite-journal' -o -name '*.tmp' \\) -print found only pre-existing artifacts under tests/fixtures/dashboard-store/, state/logs/ and state/ (all created before this unit); no probe path appeared",
+      "PYTHONDONTWRITEBYTECODE=1 used on every pytest run and a full __pycache__ purge at the end (find ... -name __pycache__ | wc -l -> 0)",
+      "the throwaway stub work tree state/verify/U8.76/redrepo (git init + the copy as .gitignore) was removed after the red runs; only the two mutation copies and the two red logs remain under state/verify/U8.76/**"
+    ]
+  },
+  "red_green": [
+    {
+      "copy_path": "/home/zer0null/reserach extarctor/state/verify/U8.76/gitignore-no-global-sidecar",
+      "mutation": "copy of .gitignore with the three global sidecar rules (*.sqlite-wal, *.sqlite-shm, *.sqlite-journal) deleted outright; nothing on disk edited, U874_GITIGNORE points the structural parse AND (new in U8.76) the check-ignore cwd at it via a throwaway work tree state/verify/U8.76/redrepo",
+      "run": "U874_GITIGNORE=$PWD/state/verify/U8.76/gitignore-no-global-sidecar .venv/bin/python -m pytest tests/test_repo_hygiene.py -q",
+      "result": "8 failed, 15 passed in 0.06s  (rc=1)",
+      "new_tests_red": [
+        "test_sidecar_paths_are_ignored_at_any_depth[state.sqlite-wal]",
+        "test_sidecar_paths_are_ignored_at_any_depth[orchestration/units/state.sqlite-shm]",
+        "test_sidecar_paths_are_ignored_at_any_depth[src/resextract/state.sqlite-journal]",
+        "test_gitignore_declares_a_global_sidecar_rule[-wal]",
+        "test_gitignore_declares_a_global_sidecar_rule[-shm]",
+        "test_gitignore_declares_a_global_sidecar_rule[-journal]"
+      ],
+      "verbatim_failure": [
+        "E       AssertionError: orchestration/units/state.sqlite-shm is not ignored; the global '*.sqlite-wal'/'-shm'/'-journal' rules (.gitignore:20-22) must cover a sidecar wherever its database lives -- at the repository root and inside the source tree, not only the spill files under state/ that /state/ already caught",
+        "E       assert False",
+        "E        +  where False = is_ignored('orchestration/units/state.sqlite-shm')",
+        "E       AssertionError: /home/zer0null/reserach extarctor/state/verify/U8.76/gitignore-no-global-sidecar declares no rule that would ignore a 'state.sqlite-journal' file; the global '*.sqlite-journal' rule (.gitignore:20-22) is what keeps a runtime sidecar out of the index wherever its database lives",
+        "E       assert []"
+      ],
+      "collateral_red": "test_generated_artifacts_are_ignored_on_disk[tests/fixtures/dashboard-store/state.sqlite-wal] and [...state.sqlite-shm] also go red - a true property (deleting the rules really does un-ignore the fixture sidecars), not a false positive",
+      "then_pass": "with the real .gitignore (env unset): 23 passed in 0.04s"
+    },
+    {
+      "copy_path": "/home/zer0null/reserach extarctor/state/verify/U8.76/gitignore-root-anchored-sidecar",
+      "mutation": "copy of .gitignore with the three global forms rewritten root-anchored-only: '*.sqlite-wal' -> '/state.sqlite-wal', '*.sqlite-shm' -> '/state.sqlite-shm', '*.sqlite-journal' -> '/state.sqlite-journal'",
+      "run": "U874_GITIGNORE=$PWD/state/verify/U8.76/gitignore-root-anchored-sidecar .venv/bin/python -m pytest tests/test_repo_hygiene.py -q",
+      "result": "7 failed, 16 passed in 0.06s  (rc=1)",
+      "new_tests_red": [
+        "test_sidecar_paths_are_ignored_at_any_depth[orchestration/units/state.sqlite-shm]",
+        "test_sidecar_paths_are_ignored_at_any_depth[src/resextract/state.sqlite-journal]",
+        "test_gitignore_declares_a_global_sidecar_rule[-wal]",
+        "test_gitignore_declares_a_global_sidecar_rule[-shm]",
+        "test_gitignore_declares_a_global_sidecar_rule[-journal]"
+      ],
+      "new_tests_green": [
+        "test_sidecar_paths_are_ignored_at_any_depth[state.sqlite-wal] - correctly green: a root-anchored '/state.sqlite-wal' DOES match a root-level sidecar; that is exactly the incomplete-coverage case the structural test names, so it is the structural test that must (and does) go red"
+      ],
+      "verbatim_failure": [
+        "E       AssertionError: only directory-anchored rules ['/*.sqlite-wal', '/*.sqlite-shm', '/*.sqlite-journal']; a root-anchored '/state.sqlite-wal' (or one pinned to state/) would not ignore a sidecar sitting next to a database elsewhere in the tree",
+        "E       AssertionError: orchestration/units/state.sqlite-shm is not ignored; the global '*.sqlite-wal'/'-shm'/'-journal' rules (.gitignore:20-22) must cover a sidecar wherever its database lives -- at the repository root and inside the source tree, not only the spill files under state/ that /state/ already caught"
+      ],
+      "then_pass": "with the real .gitignore (env unset): 23 passed in 0.04s"
+    }
+  ],
+  "counts": {
+    "collected_now": 23,
+    "passed_now": 23,
+    "before_u876": 17,
+    "expected_by_card": ">17",
+    "meets_expectation": true,
+    "command": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_repo_hygiene.py -q  ->  23 passed in 0.04s",
+    "test_file_diff_vs_head": "tests/test_repo_hygiene.py | 324 +++++++++++++++++++++++++++++++++++++++-- ; 1 file changed, 315 insertions(+), 9 deletions(-)"
+  },
+  "git_state_changed": false,
+  "store_touched": false,
+  "tool_calls_work": 11,
+  "bound": 12,
+  "evidence": {
+    "probe": "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models -> 000 (exit 7, connection refused); nothing restarted, zero live LLM calls",
+    "existing_rules_quoted": [
+      ".gitignore:18 # SQLite sidecars are runtime state, never source.  Global by design: any",
+      ".gitignore:19 # *.sqlite database can grow a -wal/-shm/-journal next to it.",
+      ".gitignore:20 *.sqlite-wal",
+      ".gitignore:21 *.sqlite-shm",
+      ".gitignore:22 *.sqlite-journal"
+    ],
+    "git_check_ignore_v_no_index": [
+      ".gitignore:20:*.sqlite-wal\tstate.sqlite-wal",
+      ".gitignore:21:*.sqlite-shm\torchestration/units/state.sqlite-shm",
+      ".gitignore:22:*.sqlite-journal\tsrc/resextract/state.sqlite-journal",
+      ".gitignore:21:*.sqlite-shm\tstate.sqlite-shm",
+      ".gitignore:22:*.sqlite-journal\tstate.sqlite-journal"
+    ],
+    "gitignore_untouched": [
+      "git diff --exit-code -- .gitignore -> clean, no output",
+      "git show HEAD:.gitignore | sha256sum -> 27f4f10aa11a8217afd90455fb6faafa17ca204d00d44dfb14a2ab86b2ca60da",
+      "sha256sum .gitignore -> 27f4f10aa11a8217afd90455fb6faafa17ca204d00d44dfb14a2ab86b2ca60da"
+    ],
+    "probe_parents_not_ignored": [
+      "src rc=1",
+      "src/resextract rc=1",
+      "orchestration rc=1",
+      "orchestration/units rc=1"
+    ],
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models",
+      "git check-ignore -v --no-index -- state.sqlite-wal orchestration/units/state.sqlite-shm src/resextract/state.sqlite-journal",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_repo_hygiene.py -q",
+      "U874_GITIGNORE=$PWD/state/verify/U8.76/gitignore-no-global-sidecar .venv/bin/python -m pytest tests/test_repo_hygiene.py -q",
+      "U874_GITIGNORE=$PWD/state/verify/U8.76/gitignore-root-anchored-sidecar .venv/bin/python -m pytest tests/test_repo_hygiene.py -q",
+      "find . -path ./.git -prune -o \\( -name '*.sqlite-wal' -o -name '*.sqlite-shm' -o -name '*.sqlite-journal' -o -name '*.tmp' \\) -print",
+      "git status --porcelain; git rev-parse HEAD; git diff --stat -- .gitignore tests/test_repo_hygiene.py"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Nothing was broken in .gitignore, so the remaining gap is the open user decision U8.74 and this unit both left alone: whether the root-level database (state/state.sqlite) itself should be versioned rather than left as ignored runtime state - the same class of question already recorded for /dockets/ (.gitignore:9-14). Until the user decides, a verifier should re-run only tests/test_repo_hygiene.py (23 passed) and the two red cycles via U874_GITIGNORE against the copies under state/verify/U8.76/; no .gitignore change is expected.",
+  "write_paths": [
+    "tests/test_repo_hygiene.py",
+    "orchestration/units/U8.76.md",
+    "orchestration/handoffs/U8.76.json",
+    "state/verify/U8.76/**"
+  ]
+}

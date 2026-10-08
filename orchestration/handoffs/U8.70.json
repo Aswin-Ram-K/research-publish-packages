@@ -1,0 +1,89 @@
+{
+  "unit": "U8.70",
+  "status": "done",
+  "artifacts": [
+    "/home/zer0null/reserach extarctor/.gitignore",
+    "orchestration/units/U8.70.md",
+    "orchestration/handoffs/U8.70.json",
+    "state/logs/U8.70.log"
+  ],
+  "evidence": {
+    "probe_http_code": "000 (curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models -> 000; zero live LLM calls made)",
+    "existing_tmp_find": "find . -name '*.tmp' -not -path './.git/*' -> 4 files, all under state/",
+    "stage_dry_run_after": "git add -n . | wc -l -> 6 (post-checkpoint-4: only files created after the commit by other units and by me; pre/post-rule dry run was 441 -> 442 paths)",
+    "stage_dry_run_before_my_edit": "441 paths / 4991725 bytes (measured before the .gitignore edit)",
+    "rehearsal_baseline": "434 paths / 4911448 bytes (U8.67 staging rehearsal)",
+    "stage_delta": "+1 path (.gitignore itself, now modified in the working tree) / +1868 bytes; 0 paths removed",
+    "proof_no_removal": "all 4 on-disk *.tmp matched by .gitignore:7:/state/ (find ... -print0 | xargs -0 -n1 git check-ignore -v) and git ls-files -- '*.tmp' -> 0 entries, so the new rule can remove nothing from the stage set",
+    "tracked_tmp_files": "git ls-files -- '*.tmp' -> 0 entries",
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models",
+      "nl -ba .gitignore",
+      "find . -name '*.tmp' -not -path './.git/*' | sort",
+      "git check-ignore -v <4 existing state tmp paths>",
+      "git check-ignore -v --no-index note.tmp",
+      "git check-ignore -v --no-index src/resextract/build.tmp",
+      "git add -n . | wc -l",
+      "git check-ignore -v --stdin <git add -n . paths>",
+      "git ls-files | grep -E '(^|/)\\.env$|...'",
+      "git log -1 --format=%H%n%s ; git show HEAD:.gitignore | grep '**/*.tmp'",
+      "git diff --stat HEAD -- .gitignore"
+    ],
+    "checkpoint_4": "HEAD = 9d256ba8 'Checkpoint 4: verified artifact, hardened enforcement, settled record'; 'git show :.gitignore | grep -n tmp' -> line 41 '**/*.tmp'"
+  },
+  "blocker": "",
+  "next_unit_hint": "A unit should decide whether tests/fixtures/copy-src/.env stays tracked (secret-shaped path already in git index). Optionally a red->green test asserting 'git check-ignore --no-index note.tmp' exits 0 (fails before the rule, passes after).",
+  "write_paths": [
+    ".gitignore",
+    "state/logs/U8.70.log",
+    "orchestration/units/U8.70.md",
+    "orchestration/handoffs/U8.70.json"
+  ],
+  "gitignore_rules_relied_on": [
+    {
+      "line": 7,
+      "rule": "/state/",
+      "role": "already transitively ignored the 4 existing state/**/s.tmp files; verified pre-edit with git check-ignore -v"
+    },
+    {
+      "line": 15,
+      "rule": "/dockets/",
+      "role": "root-only on purpose (protects tests/fixtures/dashboard-store/dockets/**); confirms this file's hygiene rules are deliberately scoped"
+    },
+    {
+      "line": 29,
+      "rule": "__pycache__/",
+      "role": "the generated-output hygiene block my new rule was placed next to"
+    }
+  ],
+  "before": "/.pytest_cache/",
+  "after": "/.pytest_cache/\n\n# --- temporary artifacts (global by design) ---------------------------------\n# A *.tmp file is scratch at any depth: the kg-refresh lane's s.tmp under\n# state/, editor scratch at the repo root, spill files in the source tree.\n# The 4 existing state/**/s.tmp files were already ignored transitively by\n# /state/ above; this rule additionally covers a root-level or src/ *.tmp that\n# /state/ never reached (the gap U8.67's staging rehearsal found).\n**/*.tmp",
+  "check_ignore_tests": [
+    {
+      "path": "state/kg-refresh/duval/repo/tmp/research-lane/s.tmp (and 3 siblings under state/refresh-verify/)",
+      "method": "git check-ignore -v <existing paths> (files exist on disk)",
+      "verbatim_output": ".gitignore:7:/state/\tstate/kg-refresh/duval/repo/tmp/research-lane/s.tmp\n.gitignore:7:/state/\tstate/refresh-verify/duval/scnA/state/kg-refresh/duval/repo/tmp/research-lane/s.tmp\n.gitignore:7:/state/\tstate/refresh-verify/duval/scnB/state/kg-refresh/duval/repo/tmp/research-lane/s.tmp\n.gitignore:7:/state/\tstate/refresh-verify/duval/state/kg-refresh/duval/repo/tmp/research-lane/s.tmp"
+    },
+    {
+      "path": "note.tmp (root level)",
+      "method": "git check-ignore -v --no-index note.tmp -- no file created; --no-index lets check-ignore judge a path that is not in the index",
+      "verbatim_output": ".gitignore:41:**/*.tmp\tnote.tmp\nexit=0"
+    },
+    {
+      "path": "src/resextract/build.tmp",
+      "method": "git check-ignore -v --no-index src/resextract/build.tmp -- no file created",
+      "verbatim_output": ".gitignore:41:**/*.tmp\tsrc/resextract/build.tmp\nexit=0"
+    }
+  ],
+  "existing_tmp_files_ignored_already": {
+    "count": 4,
+    "how_found": "find . -name '*.tmp' -not -path './.git/*' | sort (4 hits, all under state/); pre-edit 'git check-ignore -v' showed every one of them matched by .gitignore:7:/state/ so the new rule changes nothing for them; 'git ls-files -- *.tmp' returns 0 entries (none tracked)"
+  },
+  "stage_set_unchanged": true,
+  "stage_set_change_detail": "NO path was removed by the rule and none was added by it. My own before/after dry run: 441 paths / 4,991,725 bytes before the edit -> 442 paths / 4,993,593 bytes after it, i.e. +1 path and +1,868 bytes, and that +1 is '.gitignore' itself (now modified in the working tree) - not a *.tmp. Airtight proof that nothing was removed: the rule can only ever exclude *.tmp paths; 'find . -name \"*.tmp\" -not -path \"./.git/*\"' finds exactly 4 files and all 4 are matched by .gitignore:7:/state/ (re-verified with 'find ... -print0 | xargs -0 -n1 git check-ignore -v'), and 'git ls-files -- \"*.tmp\"' returns 0 entries, so no *.tmp path was ever in the stage set. Baseline drift vs the rehearsal's 434 paths / 4,911,448 bytes is from concurrent units, not me. Mid-unit the checkpoint-4 unit committed (HEAD moved from a62a8fc5 to 9d256ba8) and staged the tree, which transiently perturbed my 'git add -n .' reading (it briefly named only 4, then 6 paths: U5.3_red1.txt, U5.3_red2.txt, orchestration/handoffs/U8.66.json, orchestration/handoffs/U8.70.json, orchestration/units/U8.66.md, orchestration/units/U8.70.md - all files created after that commit by other units and by me). The 'git check-ignore -v --stdin' proof I first ran therefore only covered 4 paths and was replaced by the find/ls-files proof above.",
+  "tracked_secret_shaped_path": "tests/fixtures/copy-src/.env  [path only - contents deliberately NOT read or printed]",
+  "committed_in_checkpoint_4": "true - checkpoint 4 commit 9d256ba80e929910339af09bf3d96e0238dc0507 'Checkpoint 4: verified artifact, hardened enforcement, settled record' contains the rule: 'git show :.gitignore | grep -n tmp' lists line 41 '**/*.tmp', 'git diff --cached --name-only -- .gitignore' and 'git diff --name-only -- .gitignore' are both empty, and 'git status --porcelain' does not list .gitignore (working tree == index == HEAD)",
+  "git_state_changed_by_me": false,
+  "tool_calls_work": 10,
+  "bound": 8
+}

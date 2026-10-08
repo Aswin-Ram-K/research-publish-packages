@@ -1,0 +1,106 @@
+{
+  "unit": "U8.75",
+  "status": "done",
+  "artifacts": [
+    "orchestration/VERDICTS.md",
+    "docs/PLAN_CORRECTIONS.md",
+    "state/logs/U8.75_verdict_section.md",
+    "state/logs/U8.75_verdicts_prefix.md",
+    "state/logs/U8.75_ledger_prefix_backup.md",
+    "state/logs/U8.75_ledger_facts.txt",
+    "orchestration/units/U8.75.md",
+    "orchestration/handoffs/U8.75.json"
+  ],
+  "evidence": {
+    "probe": "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models -> 000 (connect refused; nothing restarted; zero live LLM calls)",
+    "verdicts_append": "EOF append of 24 lines to orchestration/VERDICTS.md; before sha256 320634 B -> after 325619 B / 3010 lines; cmp of the saved 320634-byte prefix state/logs/U8.75_verdicts_prefix.md against the head of the after-state -> identical (PREFIX_BYTE_IDENTICAL), so 0 pre-existing lines modified; after sha256 13f287d11af84bce6ebedc63ceaaa18a22cd68e98aca1fdb6e9cdb0904b4d7c0; NOT refused on first attempt",
+    "ledger_append": "EOF append of entry (dt) to docs/PLAN_CORRECTIONS.md; entries 123 -> 124 (grep -cE '^## \\(' == 124); before sha256 07bf7f43841f1d67d9573fba33fb6a74fcab9feb86ba1348ce8ae02a310c24f0 / 295449 B -> after sha256 63f9db4166c03bdd5543937134d1f990b5f2d9465b5268b350fbda00fe0d148e / 300567 B; cmp of the saved 295449-byte prefix state/logs/U8.75_ledger_prefix_backup.md against the head of the after-state -> identical, so 0 existing entries modified; NOT refused on first attempt",
+    "ledger_patterns": "grep -nE '^## \\(' | tail -3 -> last entry (ds) at line 2882; grep -cE '^## \\(' -> 123 before, 124 after; grep -cE '^### \\(' -> 0 (the cardinal-safety pattern matches zero lines, as the card warned)",
+    "git_read_only": "git rev-parse HEAD -> 9d256ba80e929910339af09bf3d96e0238dc0507; git rev-parse HEAD^ -> a62a8fc5e88080305bf98c97dfc9d31183bc8900; git show --stat HEAD | tail -3 -> '440 files changed, 70954 insertions(+), 435 deletions(-)'; git ls-files config/graph_pin.toml -> config/graph_pin.toml; git ls-files state/state.sqlite -> empty; git check-ignore -v state/state.sqlite -> .gitignore:7:/state/; git status --porcelain | wc -l -> 22 (unchanged count family, all tracked modifications are siblings'/pre-existing appends plus untracked debris); git log/read-only verbs only, no state-changing subcommand",
+    "u872_decisive_values": "read out of orchestration/handoffs/U8.72.json verbatim: overall pass; pin_tracked_verbatim config/graph_pin.toml; forbidden_in_commit []; state_sqlite_committed false; revertible true; guard_runs 13 passed / 0 failed in 2.46s; not_reproduced []; overstated []; unverified []",
+    "u872_partial_landing": "before this append, EOF of orchestration/VERDICTS.md already carried an uncommitted block '## U8.72 — Checkpoint 4 verification (independent verifier unit; author was U8.69)' = 17 added lines vs HEAD 9d256ba (git diff --stat HEAD -- orchestration/VERDICTS.md), matching the handoff's C1-C6; absent from HEAD, header does not follow the '## V<n>' convention; recorded in the V8.72 section rather than deleted",
+    "mirrors": "dockets id=1 fixed-point sha 88336ead4a4bdaaf5c1c510e86bc21576722bb3cfb5b90e16a0fa97a6cf99908 (repaired by U8.61, which then died); dockets id=2 manifest_json byte-identical to dockets/duval/duval-u55-pinned/MANIFEST.json sha 445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07 (completed by U8.66); table_count_sum 35 before and after across 13 tables; U8.66 idempotence: apply#1 rowcount=1 and apply#2 rowcount=1 both left the store at 255c3e0c3dbbb17d9bb9559b13ac15d484659c65cbfe9cbf22cff45e08cdf89d (identical=True), integrity_check ok, quick_check ok",
+    "commands_count": "8 bash calls total; both appends succeeded first attempt with zero refusals; no re-read of any whole append target beyond the mandated bounded reads"
+  },
+  "commands": [
+    "curl -sS -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.2.168:8012/v1/models",
+    "head -c 3000 orchestration/handoffs/U8.72.json",
+    "grep -nE '^## \\(' docs/PLAN_CORRECTIONS.md | tail -3",
+    "grep -cE '^## \\(' docs/PLAN_CORRECTIONS.md",
+    "grep -cE '^### \\(' docs/PLAN_CORRECTIONS.md",
+    "sha256sum docs/PLAN_CORRECTIONS.md",
+    "wc -c docs/PLAN_CORRECTIONS.md",
+    "tail -c 1500 docs/PLAN_CORRECTIONS.md",
+    "tail -c 1400 orchestration/handoffs/U8.72.json",
+    "tail -c 1200 orchestration/VERDICTS.md; wc -lc orchestration/VERDICTS.md; grep -c '^## ' orchestration/VERDICTS.md",
+    "git rev-parse HEAD / HEAD^ / git show --stat HEAD | tail -3 / git ls-files config/graph_pin.toml / git ls-files state/state.sqlite / git check-ignore -v state/state.sqlite / git status --porcelain | wc -l (read-only)",
+    "git diff --stat HEAD -- orchestration/VERDICTS.md; git log --oneline -3 -- orchestration/VERDICTS.md; git show HEAD:orchestration/VERDICTS.md | grep -n 'U8.72'",
+    "ls -l --time-style=full-iso on VERDICTS.md / PLAN_CORRECTIONS.md / U8.72.json",
+    "grep -n 'mirror|MANIFEST|row count|35' orchestration/handoffs/U8.66.json",
+    "grep -o decisive values + .venv/bin/python json.load on orchestration/handoffs/U8.72.json",
+    "cp -p + cat heredoc >> orchestration/VERDICTS.md + cmp prefix",
+    "cp -p + caret/hash counts + cat heredoc >> docs/PLAN_CORRECTIONS.md + cmp prefix"
+  ],
+  "u872_reconstruction": {
+    "appended": true,
+    "from": "its surviving handoff",
+    "target": "orchestration/VERDICTS.md EOF, section '## V8.72 — PASS — Checkpoint 4 verification by U8.72 (author was U8.69) — RECONSTRUCTED FROM THE UNIT'S SURVIVING HANDOFF'",
+    "bytes_appended": 4985,
+    "lines_appended": 24,
+    "values_quoted": [
+      "\"overall\": \"pass\"",
+      "\"pin_tracked_verbatim\": \"config/graph_pin.toml\"",
+      "\"forbidden_in_commit\": []",
+      "\"state_sqlite_committed\": false",
+      "\"revertible\": true",
+      "\"guard_runs\": \"13 passed / 0 failed in 2.46s\"",
+      "\"not_reproduced\": []",
+      "\"overstated\": []",
+      "\"unverified\": []"
+    ],
+    "marked_as_reconstruction": true,
+    "independently_rederived_by_me": "git rev-parse HEAD/HEAD^, git ls-files config/graph_pin.toml and state/state.sqlite, git check-ignore -v state/state.sqlite, git show --stat HEAD file count, and the 440-file/17-line prefix comparisons — nothing else",
+    "refused": false,
+    "pre_existing_uncommitted_block_noted": true
+  },
+  "ledger_entry": {
+    "letter": "dt",
+    "entries_before": 123,
+    "entries_after": 124,
+    "sha_before": "07bf7f43841f1d67d9573fba33fb6a74fcab9feb86ba1348ce8ae02a310c24f0",
+    "sha_after": "63f9db4166c03bdd5543937134d1f990b5f2d9465b5268b350fbda00fe0d148e",
+    "bytes_before": 295449,
+    "bytes_after": 300567,
+    "prefix_byte_identical": true,
+    "lines_appended": 26,
+    "clauses": [
+      "(dt) Checkpoint 4 committed AND independently verified",
+      "(du) stale store mirrors closed (BOTH dockets rows byte-identical to their MANIFEST.json; 13 tables' row counts unchanged, sum 35; idempotence demonstrated; repairs by U8.61 and U8.66, which then died)",
+      "(dv) orchestration session's own defects, final tally — and the record corrected the orchestrator, repeatedly and without being asked"
+    ],
+    "refused": false
+  },
+  "bounded_read_commands": [
+    "grep -nE '^## \\(' docs/PLAN_CORRECTIONS.md | tail -3",
+    "grep -cE '^## \\(' docs/PLAN_CORRECTIONS.md",
+    "grep -cE '^### \\(' docs/PLAN_CORRECTIONS.md",
+    "tail -c 1500 docs/PLAN_CORRECTIONS.md",
+    "wc -c docs/PLAN_CORRECTIONS.md",
+    "sha256sum docs/PLAN_CORRECTIONS.md",
+    "head -c 3000 orchestration/handoffs/U8.72.json; tail -c 1400 orchestration/handoffs/U8.72.json",
+    "tail -c 1200 orchestration/VERDICTS.md; wc -lc orchestration/VERDICTS.md; grep -n '^## ' orchestration/VERDICTS.md | tail -2"
+  ],
+  "git_state_changed": false,
+  "store_touched": false,
+  "tool_calls_work": 8,
+  "bound": 8,
+  "blocker": "",
+  "next_unit_hint": "Build ends here. The record now carries the verdict (V8.72, reconstructed from U8.72's surviving handoff) and the end state ((dt) in docs/PLAN_CORRECTIONS.md: Checkpoint 4 committed and independently verified, both stale store mirrors closed, orchestration-session defects tallied). Open user decisions, not defects: whether state/state.sqlite should ever be committed, and whether the U5.3_red{1,2}.txt debris should be staged in a future cleanup commit.",
+  "write_paths": [
+    "orchestration/VERDICTS.md",
+    "docs/PLAN_CORRECTIONS.md",
+    "state/logs/U8.75*",
+    "orchestration/units/U8.75.md",
+    "orchestration/handoffs/U8.75.json"
+  ]
+}

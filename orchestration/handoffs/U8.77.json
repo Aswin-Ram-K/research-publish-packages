@@ -1,0 +1,99 @@
+{
+  "unit": "U8.77",
+  "status": "done",
+  "artifacts": [
+    "orchestration/CLOSING.md",
+    "orchestration/units/U8.77.md",
+    "state/verify/U8.77/state.copy.sqlite",
+    "orchestration/handoffs/U8.77.json"
+  ],
+  "evidence": {
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code} %{time_total}' http://192.168.2.168:8012/v1/models",
+      "curl -sS -m 5 -o /dev/null -w '%{http_code} %{time_total}' http://127.0.0.1:8080/",
+      "cp state/state.sqlite state/verify/U8.77/state.copy.sqlite && python sqlite3 counts",
+      "python -c 'from resextract.docket.assemble import verify_docket; ...'",
+      "sha256sum dockets/*/*/MANIFEST.json dockets/_smoke/MANIFEST.json",
+      "git log --oneline -1 ; git diff-tree --no-commit-id --name-only -r 9d256ba"
+    ],
+    "occamy_code": "000",
+    "occamy_time": "0.002022",
+    "searxng_code": "200",
+    "searxng_time": "0.002186",
+    "searxng_search_json": "000 after 5.002811s (timeout)",
+    "searxng_search_html": "200 in 4.859530s",
+    "store_read_method": "copy at state/verify/U8.77/state.copy.sqlite; immutable=1 never used",
+    "verify_docket_replay": "ok=True problems=[]",
+    "verify_docket_u55": "ok=True problems=[]",
+    "verify_docket_smoke": "ok=False problems=['claim C1: standing CONFIRMS contradicts its backing producer unknown ... not model -- a non-model run may not assert CONFIRMS']",
+    "manifest_shas": {
+      "duval-replay-material": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4",
+      "duval-u55-pinned": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+      "_smoke": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6"
+    },
+    "checkpoint4": "9d256ba 'Checkpoint 4: verified artifact, hardened enforcement, settled record', 440 files, +70954/-435",
+    "state_sqlite_tracked": false,
+    "state_sqlite_ignored_by": ".gitignore:7 -> /state/",
+    "forbidden_shaped_paths_in_9d256ba": 1,
+    "forbidden_shaped_paths_list": [
+      "tests/state/backups/v3.sqlite.v3.bak"
+    ],
+    "ledger": "docs/PLAN_CORRECTIONS.md 125 headings / 2907 lines (contents not restated)",
+    "closing_sha": "f892d1fae6fb26484fbee59549e495ee2662e1d4353a6714cea70b46f7419967"
+  },
+  "blocker": "S1.3 not reachable from this workspace: store holds 0 claims / 0 verdicts / 0 evidence, so no CONFIRMS and no publication-ready docket can exist. Occamy 192.168.2.168:8012 returns HTTP 000 (connection refused, 0.002s) - durable fix is the user-owned gx10-host --mem-fraction-static 0.50 -> ~0.60, held not executed. SearXNG 127.0.0.1:8080 root is 200 in 0.002s but its search path is degraded (/search?format=json 000 after the 5.00s timeout; HTML search 200 in 4.86s). No evidence row can exist until both change.",
+  "next_unit_hint": "Flip the two held switches (Occamy --mem-fraction-static ~0.60; SearXNG search path), then re-run `run` against duval, expect the first real evidence rows, re-derive the docket via materialize, and re-run verify_docket (replay/u55 must stay ok=True [], _smoke must stay ok=False). Then land the deferred schema item: typed assessed_by/mined_by under resextract/docket/2 so a mechanically verified file_fact is distinguishable from an unverified one.",
+  "write_paths": [
+    "orchestration/CLOSING.md",
+    "state/logs/U8.77*",
+    "orchestration/units/U8.77.md",
+    "orchestration/handoffs/U8.77.json",
+    "state/verify/U8.77/"
+  ],
+  "store_counts": {
+    "claims": 0,
+    "verdicts": 0,
+    "evidence": 0,
+    "candidates": 10
+  },
+  "occamy": {
+    "code": "000",
+    "time": "0.002022"
+  },
+  "searxng": {
+    "code": "200",
+    "time": "0.002186"
+  },
+  "verdict_13_reachable": {
+    "confirms_exists_today": "No - the store holds 0 claims and 0 verdicts, so nothing can be asserted; every verdict resolves to UNVERIFIED.",
+    "publication_ready_docket_today": "No - with 0 evidence rows the docket is structurally valid (verify_docket ok=True) but carries no verified fact.",
+    "occamy_required": "Occamy must return 200 on /v1/models - durable fix is the gx10-host --mem-fraction-static 0.50 -> ~0.60 on the user-owned host.",
+    "searxng_required": "SearXNG's /search path must return results inside its timeout instead of timing out at 5.00s."
+  },
+  "deliverable_final": {
+    "verify_docket": {
+      "dockets/duval/duval-replay-material": {
+        "ok": true,
+        "problems": []
+      },
+      "dockets/duval/duval-u55-pinned": {
+        "ok": true,
+        "problems": []
+      },
+      "dockets/_smoke": {
+        "ok": false,
+        "problems": [
+          "claim C1: standing CONFIRMS contradicts its backing producer 'unknown', not 'model' (docket generated_by.producer='unknown') -- a non-model run may not assert CONFIRMS; re-derive the claim through materialize so the cap applies, or record mechanically-verified facts as a distinct standing (U5.22 follow-up)"
+        ]
+      }
+    },
+    "manifest_shas": {
+      "duval-replay-material": "ce45766d4ac845ed83432e876b0e424c038f5453bf66570d52ec6df599f99da4",
+      "duval-u55-pinned": "445032f78851b8171c00dca3d95d7ed6660dbf36d903bc156027c11b44a33a07",
+      "_smoke": "41ec711a4324eb9893b6f031c10a647f21e1cb3521ca73a8e8eb168522b283c6"
+    }
+  },
+  "closing_sha": "f892d1fae6fb26484fbee59549e495ee2662e1d4353a6714cea70b46f7419967",
+  "tool_calls_work": 12,
+  "bound": 12
+}

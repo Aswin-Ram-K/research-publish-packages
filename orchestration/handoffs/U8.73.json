@@ -1,0 +1,144 @@
+{
+  "unit": "U8.73",
+  "status": "done",
+  "artifacts": [
+    "docs/PLAN_CORRECTIONS.md",
+    "orchestration/units/U8.73.md",
+    "orchestration/handoffs/U8.73.json",
+    "state/logs/U8.73_prefix_backup.md"
+  ],
+  "git_facts": {
+    "tracked": true,
+    "path": "tests/fixtures/copy-src/.env",
+    "log_lines": [
+      "c6249a6 Checkpoint 2: quiescent post-Batch-0 work (KG/web/store-v2/docket/dashboard/refresh core)"
+    ],
+    "head_stat": "empty - HEAD 9d256ba ('Checkpoint 4') never touched this path; --stat used, never --patch",
+    "size_bytes": 43,
+    "mtime": "2026-10-08 05:37:48.297764364 -0500",
+    "ignored": false,
+    "check_ignore": "exit 1, no rule matches - no .gitignore rule touches it",
+    "worktree_clean": true
+  },
+  "references": [
+    {
+      "path": "tests/test_docket_copy.py",
+      "line": 14,
+      "code": "The fixture tree ``tests/fixtures/copy-src/`` is (re)built idempotently at"
+    },
+    {
+      "path": "tests/test_docket_copy.py",
+      "line": 37,
+      "code": "FIXTURE_ROOT = Path(__file__).resolve().parent / \"fixtures\" / \"copy-src\""
+    },
+    {
+      "path": "tests/test_docket_copy.py",
+      "line": 53,
+      "code": "def ensure_fixture_tree(root: Path = FIXTURE_ROOT) -> Path:"
+    },
+    {
+      "path": "tests/test_docket_copy.py",
+      "line": 63,
+      "note": "PRINTS FILE CONTENTS - _write_if_missing(root / \".env\", ...) synthesises a value named demo-not-a-real-secret (value read from this source code, never from the .env itself)"
+    },
+    {
+      "path": "tests/test_docket_copy.py",
+      "line": 209,
+      "code": "def test_secret_path_refused_and_not_copied(docket):  # the dependent test"
+    },
+    {
+      "path": "tests/test_docket_copy.py",
+      "line": 212,
+      "code": "copier.plan([CopyRequest(str(FIXTURE_ROOT / \".env\"), \".env\", \"oops\")])"
+    },
+    {
+      "path": "tests/test_docket_copy.py",
+      "line": 219,
+      "code": "assert not os.path.exists(copier.material_path(\".env\"))"
+    },
+    {
+      "path": "src/resextract/docket/copy.py",
+      "line": 58,
+      "code": "\".env\","
+    },
+    {
+      "path": "src/resextract/docket/copy.py",
+      "line": 59,
+      "code": "\".env.*\",  # both inside SECRET_PATH_GLOBS, matched on basename via fnmatch"
+    },
+    {
+      "path": "src/resextract/docket/git_source.py",
+      "line": 45,
+      "code": "glob list) so a commit-pinned read cannot hand a docket the bytes of an ``.env``"
+    },
+    {
+      "path": "docs/SECRET_SCAN_POLICY.md",
+      "line": 75,
+      "note": "pre-existing permission: 43 B, '0 of 6', 'U5.1's deliberate secret-shaped-path fixture ... renaming it would weaken the test. Load-bearing.'"
+    },
+    {
+      "path": "orchestration/units/U5.1.md",
+      "line": 13,
+      "code": "`tests/fixtures/copy-src/**` · `state/logs/U5.1*` · `state/verify-docket/**` ·"
+    },
+    {
+      "path": "orchestration/units/U0.11.md",
+      "line": 52,
+      "code": "- **Secret-shaped filenames: 1** — `tests/fixtures/copy-src/.env` (43 B,"
+    },
+    {
+      "path": "orchestration/units/U8.2.md",
+      "line": 40,
+      "code": "4. Fixture measured on disk: `tests/fixtures/copy-src/.env` = **43 B**, content"
+    }
+  ],
+  "what_it_is_for": "A deliberate fixture for the copy engine's PATH-SHAPE refusal branch. tests/test_docket_copy.py:53-63 ensure_fixture_tree() rebuilds the copy-src tree idempotently with _write_if_missing (nothing rewritten if present) and synthesises root/'.env' with a value the writer names demo-not-a-real-secret. The dependent test is test_secret_path_refused_and_not_copied (tests/test_docket_copy.py:209-219): it plans CopyRequest(FIXTURE_ROOT/'.env', '.env', 'oops') and asserts refused_count == 1, refusal_reason == 'secret_path', item.sha256 is None ('secrets must not even be hashed into the docket') and that nothing lands in material_path('.env'). The trigger is the BASENAME, never the content: SECRET_PATH_GLOBS in src/resextract/docket/copy.py:57-59 fnmatch-matches '.env' and '.env.*'. The content-shape branch is covered independently by the sibling test_secret_content_refused_and_not_copied (innocuous filename, secret-shaped content), so this file is the SOLE input for the path-shape branch.",
+  "dependent_tests": [
+    "tests/test_docket_copy.py::test_secret_path_refused_and_not_copied"
+  ],
+  "other_secret_shaped_tracked": [],
+  "tracked_file_count": 595,
+  "recommendation": {
+    "choice": "a",
+    "label": "leave it tracked, permission kept explicit in docs/SECRET_SCAN_POLICY.md",
+    "reasoning": "(a) LEAVE IT TRACKED. It is a deliberate fixture and the record should say so. (c) rename/move out of a secret-shaped filename was rejected: it would delete the ONLY trigger for the path-shape refusal branch and silently shrink coverage - docs/SECRET_SCAN_POLICY.md:75 already states 'the refusal test keys on that exact path shape, so renaming it would weaken the test. Load-bearing.' (b) git rm --cached was rejected: _write_if_missing recreates the file on every test run so untracking buys no risk reduction, it makes the fixture non-reproducible-by-default, it hides a tracked path from audit, and it contradicts that same documented permission. No rotation or purge is warranted: the value is synthetic by construction and named demo-not-a-real-secret by the code that writes it. Furthermore it is the ONLY secret-shaped tracked path in 595 files, so the residual exposure is zero-by-convention rather than by accident."
+  },
+  "user_decision_needed": false,
+  "user_decision_note": "Evidence is not ambiguous. Only a blanket 'zero secret-shaped tracked paths, regardless of coverage' rule would overturn this; that is the user's call and would require (c) plus rewriting SECRET_PATH_GLOBS and the test to a non-secret-shaped canary name.",
+  "ledger_append": {
+    "entry_letter": "ds",
+    "sha_before": "7dfc3d36030f1134138617f7a2e9549089bdc04338f2e28071a84f97a637e84d",
+    "sha_after": "07bf7f43841f1d67d9573fba33fb6a74fcab9feb86ba1348ce8ae02a310c24f0",
+    "bytes_before": 290240,
+    "bytes_after": 295449,
+    "entries_total": 123,
+    "next_letter": "dt",
+    "prefix_identity": "head -c 290240 | sha256sum == sha_before (proves the append changed no existing byte)"
+  },
+  "git_state_changed": false,
+  "secrets_read": false,
+  "tool_calls_work": 8,
+  "bound": 10,
+  "evidence": {
+    "probe": "curl -> 000 (connection refused; Occamy endpoint down, nothing restarted, zero live LLM calls)",
+    "commands": [
+      "git ls-files tests/fixtures/copy-src/.env   -> tests/fixtures/copy-src/.env",
+      "git log --oneline -- tests/fixtures/copy-src/.env | head -5   -> 1 line: c6249a6",
+      "git show HEAD --stat -- tests/fixtures/copy-src/.env   -> (empty)",
+      "stat -c '%s %y %n'   -> 43 2026-10-08 05:37:48.297764364 -0500",
+      "git check-ignore -v tests/fixtures/copy-src/.env   -> exit 1, no output",
+      "git status --porcelain tests/fixtures/copy-src/   -> empty",
+      "git ls-files | grep -E '\\.env|\\.pem$|\\.key$|id_rsa|credentials\\.|keys\\.json|secret'   -> 1 path",
+      "git ls-files | wc -l   -> 595",
+      "grep -cE '^## \\(' docs/PLAN_CORRECTIONS.md   -> 123"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "No follow-up needed unless the user adopts a blanket zero-secret-shaped-tracked-paths rule; that would need a new unit to rewrite SECRET_PATH_GLOBS plus a non-secret-shaped canary fixture and re-run the copy green suite.",
+  "write_paths": [
+    "docs/PLAN_CORRECTIONS.md",
+    "state/logs/U8.73_prefix_backup.md",
+    "orchestration/units/U8.73.md",
+    "orchestration/handoffs/U8.73.json"
+  ]
+}

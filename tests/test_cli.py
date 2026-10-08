@@ -430,7 +430,7 @@ def test_serve_refuses_non_loopback_without_explicit_override(capsys):
     # the same bind legal -- checked without ever starting uvicorn.
     from resextract.dashboard.app import check_bind_host
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="refusing to bind non-loopback host '0.0.0.0'"):
         check_bind_host("0.0.0.0", False)
     assert check_bind_host("0.0.0.0", True) == "0.0.0.0"
     host, port, token = cli._resolve_serve(
@@ -978,7 +978,7 @@ def test_create_app_refuses_non_loopback_by_default():
     import resextract.dashboard.app as dapp
 
     assert inspect.signature(dapp.create_app).parameters["allow_remote"].default is False
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="refusing to bind non-loopback host '0.0.0.0'"):
         dapp.create_app(host="0.0.0.0")
 
 
@@ -1004,7 +1004,7 @@ def test_remote_bind_rejects_the_auto_token(capsys, monkeypatch):
     monkeypatch.setattr(uvicorn, "run", lambda app, **kw: calls.append(kw))
 
     lan = _lan_host()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="operator-chosen secret"):
         cli._resolve_serve(
             argparse.Namespace(host=lan, port=None, token="auto", allow_remote=True)
         )
