@@ -1,9 +1,29 @@
 # Extraction targets. Each target is read-only.
+#
+# ADMISSION POLICY (unit U1.7): admission starts from graphify's REAL ignore
+# predicate (.graphifyignore + .gitignore chains + $GIT_DIR/info/exclude + the
+# git tracked-file exemption) and its noise/cache-dir pruning.
+#   * `include`         documents intent (and is checked for widening attempts);
+#   * `exclude`         globs may only NARROW admission (admit -> reject);
+#   * `assert_present`  repo-relative paths that MUST stay admitted — the
+#                       silent-loss guard. A config that tried to WIDEN past the
+#                       predicate (e.g. re-admitting `.worktrees/`) is refused by
+#                       resextract.kg.policy.TargetPolicy.from_config.
+# Rationale, evidence and consequences: docs/TARGET_POLICY.md.
 
 [targets.duval]
 slug = "duval"
 path = "/home/zer0null/Duval"
+# READ-ONLY, and concurrently written by a FOREIGN actor running its own
+# self-build loop: HEAD moved 6deaed0 -> b44e0e1 -> b2bade3 -> 5cdc471a ->
+# 3982f261 -> 5cdc471a this session (U1.7R re-read it before and after its audit:
+# 5cdc471a both times) and .worktrees/run-1/ holds hundreds of files. Copies must
+# be commit-pinned; never live-walk the target while an extraction is in flight.
 read_only = true
+# Documented intent. `.lane-j-scratch/**` is explicit because the pre-existing
+# `.lane-j-scratch/*.md` would NOT match monograph.txt or
+# consonance-external-evidence-2026-10-07.md.txt — the densest publishable
+# material in the repo would have been silently lost.
 include = [
   "docs/",
   "src/",
@@ -12,4 +32,22 @@ include = [
   "tools/",
   "source-material/",
   ".lane-j-scratch/*.md",
+  ".lane-j-scratch/**",
+]
+# Narrowing globs only; config can never widen. NO exclusion is declared
+# currently because none applies: every build/run artefact found outside .git/
+# and .worktrees/ (22 *.log + 1 *.tmp) lives under `tmp/`, which .gitignore
+# already excludes — a glob here would be a no-op implying the predicate is
+# untrusted. `.worktrees/` is deliberately NOT listed for that same reason:
+# graphify prunes it as a noise dir and that must stay true.
+exclude = []
+# Silent-loss guard. Every path below was confirmed to exist before being
+# asserted (HEAD 5cdc471); observed sizes are in docs/TARGET_POLICY.md.
+# monograph.txt = 83832 B (~83 KB); the evidence review = 159408 B (~159 KB).
+assert_present = [
+  ".lane-j-scratch/monograph.txt",
+  ".lane-j-scratch/consonance-external-evidence-2026-10-07.md.txt",
+  "README.md",
+  "CITATION.cff",
+  "docs/FINDINGS.md",
 ]

@@ -16,9 +16,9 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 DEFAULT_DB_PATH = Path("state/state.sqlite")
 
 TABLES: tuple[str, ...] = (
@@ -33,6 +33,7 @@ TABLES: tuple[str, ...] = (
     "web_sources",
     "search_health",
     "rework",
+    "lane_candidates",  # added in migration 2
 )
 
 # Enumerated vocabularies (enforced by CHECK constraints in migration 1).
@@ -208,7 +209,90 @@ _MIGRATION_1: list[str] = [
     "CREATE INDEX IF NOT EXISTS idx_rework_docket_id ON rework(docket_id)",
 ]
 
-MIGRATIONS: list[tuple[int, list[str]]] = [(1, _MIGRATION_1)]
+def find_duplicate_dockets(con: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Return ``dockets.dir`` values that currently have more than one row.
+
+    Used by migration 2 to *report* duplicates before uniqueness is enforced.
+    Nothing is deleted here; resolution is a separate, deliberate step.
+    """
+    rows = con.execute(
+        "SELECT dir, COUNT(*) AS n, GROUP_CONCAT(id) AS ids FROM dockets "
+        "WHERE dir IS NOT NULL GROUP BY dir HAVING n > 1 ORDER BY dir"
+    ).fetchall()
+    return [
+        {
+            "dir": r["dir"],
+            "count": int(r["n"]),
+            "ids": [int(x) for x in str(r["ids"]).split(",")],
+        }
+        for r in rows
+    ]
+
+
+def resolve_docket_dir_duplicates(con: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Deterministically de-duplicate ``dockets.dir``, then report what merged.
+
+    Keeper = newest ``verified_at`` (NULL newest-last), tie-broken by highest
+    ``id``.  ``rework.docket_id`` rows pointing at a loser are re-pointed at the
+    keeper first, so no rework row is orphaned or lost.  Losers are deleted.
+    Called by migration 2 *before* ``dockets_dir_unique`` is created.
+    """
+    merged: list[dict[str, Any]] = []
+    for dup in find_duplicate_dockets(con):
+        rows = con.execute(
+            "SELECT id, verified_at FROM dockets WHERE dir=? ORDER BY "
+            "(verified_at IS NULL), verified_at DESC, id DESC",
+            (dup["dir"],),
+        ).fetchall()
+        keeper = int(rows[0]["id"])
+        losers = [int(r["id"]) for r in rows[1:]]
+        for loser in losers:
+            con.execute("UPDATE rework SET docket_id=? WHERE docket_id=?", (keeper, loser))
+            con.execute("DELETE FROM dockets WHERE id=?", (loser,))
+        merged.append({"dir": dup["dir"], "keeper": keeper, "merged_ids": losers})
+    return merged
+
+
+def _resolve_docket_dir_duplicates(con: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Migration step: report and resolve pre-existing duplicate docket dirs."""
+    found = resolve_docket_dir_duplicates(con)
+    MIGRATION_NOTES.extend(found)
+    return found
+
+
+# Ordered migrations.  Statement lists may contain plain SQL strings or a
+# callable ``(con) -> Any`` for steps that need Python (e.g. reporting and
+# deterministically merging pre-existing duplicate rows before adding a
+# UNIQUE index, which SQLite cannot do in SQL alone).
+_MIGRATION_2: list[Any] = [
+    # 1. Report + deterministically resolve any pre-existing dockets.dir dupes.
+    _resolve_docket_dir_duplicates,
+    # 2. rework: persist where a suggestion came from, and whether a model
+    #    (rather than a measurement) suggested it.
+    "ALTER TABLE rework ADD COLUMN source_ref TEXT",
+    "ALTER TABLE rework ADD COLUMN model_suggested INTEGER NOT NULL DEFAULT 0 "
+    "CHECK (model_suggested IN (0, 1))",
+    # 3. Lane <-> candidate membership join (defect 2: --lane pulled every lane).
+    """
+    CREATE TABLE IF NOT EXISTS lane_candidates (
+        lane_id      INTEGER NOT NULL REFERENCES lanes(id) ON DELETE CASCADE,
+        candidate_id INTEGER NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+        PRIMARY KEY (lane_id, candidate_id)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_lane_candidates_candidate_id "
+    "ON lane_candidates(candidate_id)",
+    "CREATE INDEX IF NOT EXISTS idx_lane_candidates_lane_id ON lane_candidates(lane_id)",
+    # 4. dockets.dir uniqueness (defect 3).  SQLite cannot add a table-level
+    #    UNIQUE constraint in place, so this is a unique index.
+    "CREATE UNIQUE INDEX IF NOT EXISTS dockets_dir_unique ON dockets(dir)",
+]
+
+MIGRATIONS: list[tuple[int, list[Any]]] = [(1, _MIGRATION_1), (2, _MIGRATION_2)]
+
+# Populated by migration 2 when it detects/resolves duplicate docket dirs, so a
+# caller can report exactly what merged during an in-place upgrade.
+MIGRATION_NOTES: list[dict[str, Any]] = []
 
 
 # --------------------------------------------------------------------------- #
@@ -244,7 +328,16 @@ def init_db(path: str | os.PathLike[str] | None = None) -> Path:
             if version <= current:
                 continue
             for statement in statements:
-                con.execute(statement)
+                if callable(statement):
+                    statement(con)
+                    continue
+                try:
+                    con.execute(statement)
+                except sqlite3.OperationalError as exc:
+                    # A migration that died between ADD COLUMNs leaves the
+                    # column behind; re-running must still reach the end.
+                    if "duplicate column name" not in str(exc).lower():
+                        raise
             con.execute(
                 "INSERT INTO schema_version(version, applied_at) VALUES (?, ?)",
                 (version, utcnow()),
@@ -677,8 +770,134 @@ def set_lane_status(con: sqlite3.Connection, lane_id: int, status: str) -> bool:
 
 
 # --------------------------------------------------------------------------- #
+# lane <-> candidate membership (migration 2)
+# --------------------------------------------------------------------------- #
+
+
+def link_lane_candidates(
+    con: sqlite3.Connection, lane_id: int, candidate_ids: Iterable[int]
+) -> int:
+    """Idempotently link ``candidate_ids`` to ``lane_id``; returns new links.
+
+    Linking the same pair twice is a no-op.  This is the join the materialize
+    stage needs so ``--lane A`` cannot pull lane B's members (defect 2).
+    """
+    ids = sorted({int(c) for c in candidate_ids})
+    before = con.total_changes
+    for candidate_id in ids:
+        con.execute(
+            "INSERT OR IGNORE INTO lane_candidates(lane_id, candidate_id) VALUES (?, ?)",
+            (lane_id, candidate_id),
+        )
+    con.commit()
+    return int(con.total_changes - before)
+
+
+def lane_candidate_ids(con: sqlite3.Connection, lane_id: int) -> list[int]:
+    """Candidate ids linked to a lane, ascending."""
+    rows = con.execute(
+        "SELECT candidate_id FROM lane_candidates WHERE lane_id=? ORDER BY candidate_id",
+        (lane_id,),
+    ).fetchall()
+    return [int(r["candidate_id"]) for r in rows]
+
+
+def candidates_for_lane(con: sqlite3.Connection, lane_id: int) -> list[dict[str, Any]]:
+    """Candidate rows linked to a lane (joined), ordered by candidate id."""
+    rows = con.execute(
+        "SELECT c.* FROM candidates c JOIN lane_candidates lc ON lc.candidate_id = c.id "
+        "WHERE lc.lane_id=? ORDER BY c.id",
+        (lane_id,),
+    ).fetchall()
+    return _rows(rows)
+
+
+def lanes_for_candidate(con: sqlite3.Connection, candidate_id: int) -> list[dict[str, Any]]:
+    """Inverse of :func:`candidates_for_lane`: lane rows for one candidate."""
+    rows = con.execute(
+        "SELECT l.* FROM lanes l JOIN lane_candidates lc ON lc.lane_id = l.id "
+        "WHERE lc.candidate_id=? ORDER BY l.id",
+        (candidate_id,),
+    ).fetchall()
+    return _rows(rows)
+
+
+def unlinked_candidates(con: sqlite3.Connection, state: str | None = None) -> list[dict[str, Any]]:
+    """Candidates with no lane link -- the honest answer when backfill is partial."""
+    sql = (
+        "SELECT c.* FROM candidates c LEFT JOIN lane_candidates lc ON lc.candidate_id = c.id "
+        "WHERE lc.candidate_id IS NULL"
+    )
+    params: list[Any] = []
+    if state is not None:
+        sql += " AND c.state = ?"
+        params.append(state)
+    sql += " ORDER BY c.id"
+    return _rows(con.execute(sql, params).fetchall())
+
+
+# --------------------------------------------------------------------------- #
 # dockets
 # --------------------------------------------------------------------------- #
+
+
+def upsert_docket_by_dir(
+    con: sqlite3.Connection,
+    *,
+    lane_id: int | None = None,
+    dir: str,  # noqa: A002 - matches the schema column name
+    manifest_json: Any = None,
+    source_head: str | None = None,
+    graph_hash: str | None = None,
+    freshness: str | None = None,
+    verified_at: str | None = None,
+    last_refresh_at: str | None = None,
+) -> tuple[int, bool]:
+    """Insert-or-update a docket keyed on ``dir``; never duplicates.
+
+    Returns ``(row_id, inserted)``.  This is the *documented* docket write path
+    (defect 3: ``dockets.dir`` had no uniqueness, so the same directory could be
+    recorded repeatedly).
+
+    On update, provided (non-NULL) fields win and omitted fields keep their
+    stored value, so a partial refresh cannot blank out the manifest.  Use the
+    ``id=`` path of :func:`upsert_docket` when a full-row overwrite is intended.
+    """
+    if dir is None:
+        raise ValueError("upsert_docket_by_dir requires a non-NULL dir")
+    params: dict[str, Any] = {
+        "lane_id": lane_id,
+        "dir": dir,
+        "manifest_json": _dump(manifest_json),
+        "source_head": source_head,
+        "graph_hash": graph_hash,
+        "freshness": freshness,
+        "verified_at": verified_at,
+        "last_refresh_at": last_refresh_at,
+    }
+    existing = _row(con.execute("SELECT * FROM dockets WHERE dir=?", (dir,)).fetchone())
+    if existing is None:
+        cur = con.execute(
+            "INSERT INTO dockets(lane_id, dir, manifest_json, source_head, graph_hash, "
+            "freshness, verified_at, last_refresh_at) "
+            "VALUES (:lane_id, :dir, :manifest_json, :source_head, :graph_hash, "
+            ":freshness, :verified_at, :last_refresh_at)",
+            params,
+        )
+        con.commit()
+        return int(cur.lastrowid), True
+    con.execute(
+        "UPDATE dockets SET lane_id=COALESCE(:lane_id, lane_id), "
+        "manifest_json=COALESCE(:manifest_json, manifest_json), "
+        "source_head=COALESCE(:source_head, source_head), "
+        "graph_hash=COALESCE(:graph_hash, graph_hash), "
+        "freshness=COALESCE(:freshness, freshness), "
+        "verified_at=COALESCE(:verified_at, verified_at), "
+        "last_refresh_at=COALESCE(:last_refresh_at, last_refresh_at) WHERE id=:id",
+        {**params, "id": int(existing["id"])},
+    )
+    con.commit()
+    return int(existing["id"]), False
 
 
 def upsert_docket(
@@ -694,6 +913,13 @@ def upsert_docket(
     verified_at: str | None = None,
     last_refresh_at: str | None = None,
 ) -> int:
+    """Upsert a docket, returning its row id (kept ``int`` for existing callers).
+
+    * ``id=None`` **and** a ``dir`` -> insert-or-update keyed on ``dir``
+      (never duplicates; see :func:`upsert_docket_by_dir`).
+    * ``id`` given -> full-row update by id (unchanged legacy behaviour).
+    * ``id=None`` and no ``dir`` -> plain insert (nothing to key on).
+    """
     params = {
         "id": id,
         "lane_id": lane_id,
@@ -706,6 +932,18 @@ def upsert_docket(
         "last_refresh_at": last_refresh_at,
     }
     if id is None:
+        if dir is not None:
+            return upsert_docket_by_dir(
+                con,
+                lane_id=lane_id,
+                dir=dir,
+                manifest_json=manifest_json,
+                source_head=source_head,
+                graph_hash=graph_hash,
+                freshness=freshness,
+                verified_at=verified_at,
+                last_refresh_at=last_refresh_at,
+            )[0]
         return _insert(
             con,
             "INSERT INTO dockets(lane_id, dir, manifest_json, source_head, graph_hash, freshness, verified_at, last_refresh_at) "
@@ -804,25 +1042,92 @@ def get_search_health(con: sqlite3.Connection, health_id: int) -> dict[str, Any]
     return _get(con, "search_health", "id", health_id)
 
 
+def add_rework(
+    con: sqlite3.Connection,
+    *,
+    docket_id: int | None = None,
+    reason: str | None = None,
+    required_work: str | None = None,
+    source_ref: str | None = None,
+    model_suggested: bool | int = 0,
+    opened_at: str | None = None,
+) -> tuple[int, bool]:
+    """Idempotently open a rework item; returns ``(row_id, inserted)``.
+
+    Deduplicates on ``(docket_id, reason, source_ref)`` (defect 1: refresh output
+    was never persisted, and re-recording duplicated rows).  An identical entry
+    that already exists -- open *or* closed -- is returned as-is and NOT
+    reopened or duplicated; call :func:`close_rework` to close one.
+
+    ``source_ref`` is never fabricated: pass the real provenance ref (e.g.
+    ``git:<sha>:<path>``) or leave it ``None``.
+    """
+    model_value = int(model_suggested)
+    if model_value not in (0, 1):
+        raise ValueError("model_suggested must be 0 or 1")
+    existing = con.execute(
+        "SELECT id FROM rework WHERE docket_id IS ? AND reason IS ? AND source_ref IS ?",
+        (docket_id, reason, source_ref),
+    ).fetchone()
+    if existing is not None:
+        return int(existing["id"]), False
+    cur = con.execute(
+        "INSERT INTO rework(docket_id, reason, required_work, source_ref, model_suggested, "
+        "opened_at, closed_at) VALUES (:docket_id, :reason, :required_work, :source_ref, "
+        ":model_suggested, :opened_at, NULL)",
+        {
+            "docket_id": docket_id,
+            "reason": reason,
+            "required_work": required_work,
+            "source_ref": source_ref,
+            "model_suggested": model_value,
+            "opened_at": opened_at or utcnow(),
+        },
+    )
+    con.commit()
+    return int(cur.lastrowid), True
+
+
+def list_rework(
+    con: sqlite3.Connection,
+    docket_id: int | None = None,
+    open_only: bool = False,
+) -> list[dict[str, Any]]:
+    """List rework rows (optionally for one docket / only still-open items)."""
+    where: list[str] = []
+    params: list[Any] = []
+    if docket_id is not None:
+        where.append("docket_id = ?")
+        params.append(docket_id)
+    if open_only:
+        where.append("closed_at IS NULL")
+    sql = "SELECT * FROM rework"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY id"
+    return _rows(con.execute(sql, params).fetchall())
+
+
 def open_rework(
     con: sqlite3.Connection,
     *,
     docket_id: int | None = None,
     reason: str | None = None,
     required_work: str | None = None,
+    source_ref: str | None = None,
+    model_suggested: bool | int = 0,
     opened_at: str | None = None,
 ) -> int:
-    return _insert(
+    """Legacy int-returning opener; delegates to :func:`add_rework`."""
+    return add_rework(
         con,
-        "INSERT INTO rework(docket_id, reason, required_work, opened_at, closed_at) "
-        "VALUES (:docket_id, :reason, :required_work, :opened_at, NULL)",
-        {
-            "docket_id": docket_id,
-            "reason": reason,
-            "required_work": required_work,
-            "opened_at": opened_at or utcnow(),
-        },
-    )
+        docket_id=docket_id,
+        reason=reason,
+        required_work=required_work,
+        source_ref=source_ref,
+        model_suggested=model_suggested,
+        opened_at=opened_at,
+    )[0]
 
 
 def close_rework(con: sqlite3.Connection, rework_id: int, *, closed_at: str | None = None) -> bool:
@@ -883,6 +1188,17 @@ def status_json(con: sqlite3.Connection) -> dict[str, Any]:
         "candidates": {
             "total": count(con, "candidates"),
             "by_state": _group(con, "candidates", "state"),
+        },
+        "lane_candidates": {
+            "total": count(con, "lane_candidates"),
+            "candidates_linked": int(
+                con.execute(
+                    "SELECT COUNT(DISTINCT candidate_id) FROM lane_candidates"
+                ).fetchone()[0]
+            ),
+            "rework_open": int(
+                con.execute("SELECT COUNT(*) FROM rework WHERE closed_at IS NULL").fetchone()[0]
+            ),
         },
         "runs": {"total": count(con, "runs"), "by_status": _group(con, "runs", "status")},
         "last_run": last_run(con),
