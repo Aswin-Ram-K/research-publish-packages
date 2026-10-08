@@ -166,8 +166,14 @@ def test_fresh_db_is_v2_with_all_tables_columns_and_indices(tmp_path: Path):
     store.init_db(path)
     con = store.connect(path)
     try:
-        assert store.schema_version(con) == 2
-        assert store.SCHEMA_VERSION == 2
+        # Relaxed version pins.  The schema advances; these pin the migration's
+        # contract, not the current number.  A fresh DB must reach AT LEAST v2
+        # (the level this file's data model requires) and must sit exactly at the
+        # module's declared current version.  Do NOT re-tighten to `== 2`: the
+        # mandated v3 bump is exactly what broke that pin.
+        assert store.schema_version(con) >= 2
+        assert store.SCHEMA_VERSION >= 2
+        assert store.schema_version(con) == store.SCHEMA_VERSION
         tables = {
             r["name"] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")
         }
@@ -217,8 +223,17 @@ def test_init_db_twice_is_a_noop(v1_path: Path):
         assert [
             tuple(r) for r in con.execute("SELECT * FROM schema_version ORDER BY version")
         ] == versions_first
-        assert [r["version"] for r in con.execute("SELECT version FROM schema_version ORDER BY version")] == [1, 2]
-        assert store.schema_version(con) == 2
+        # Relaxed version pin: assert membership/ordering, not equality against a
+        # fixed list that a future v4 breaks again.  v1 and v2 must both occur
+        # along the way, in ascending order with no duplicates -- "the schema
+        # advances; this pins the migration's contract, not the current number."
+        # Do NOT re-tighten to `== [1, 2]`.
+        versions = [
+            r["version"] for r in con.execute("SELECT version FROM schema_version ORDER BY version")
+        ]
+        assert versions == sorted(set(versions)), f"version chain not ascending/unique: {versions}"
+        assert {1, 2} <= set(versions), f"v1/v2 migration steps missing from chain: {versions}"
+        assert store.schema_version(con) >= 2
     finally:
         con.close()
 
@@ -239,6 +254,11 @@ def test_v1_to_v2_preserves_every_row(v1_path: Path):
     i.e. the DB stays v1, ``rework.source_ref``/``model_suggested`` and
     ``lane_candidates`` never appear, and every v2 assertion below is red.
     Restored, the same test passes (13 passed).
+
+    NOTE (U0.12): the ``== 2`` pin below was later relaxed to ``>= 2`` because
+    the schema advanced to v3.  The transcript above is the real pre-relaxation
+    output; re-running the same reverted store now fails identically but reports
+    ``assert 1 >= 2``.  It still fails -- the migration contract is intact.
     """
     con = store.connect(v1_path)
     before = _snapshot(con)
@@ -249,7 +269,10 @@ def test_v1_to_v2_preserves_every_row(v1_path: Path):
 
     con = store.connect(v1_path)
     try:
-        assert store.schema_version(con) == 2, "schema_version must be 2 after the upgrade"
+        # Relaxed version pin: this pins the migration's contract (a v1 DB must
+        # reach at least v2 after the upgrade), not the current global number.
+        # Do NOT re-tighten to `== 2`: the schema advances; this is a range.
+        assert store.schema_version(con) >= 2, "v1 db must reach at least v2 after the upgrade"
         after = _snapshot(con)
         after_counts = {t: len(rows) for t, rows in after.items()}
         assert after_counts == before_counts, (before_counts, after_counts)
@@ -534,6 +557,10 @@ def test_status_json_counts_new_table_and_stays_sane(con: sqlite3.Connection):
     assert summary["lane_candidates"]["candidates_linked"] == 2
     assert summary["lane_candidates"]["rework_open"] == 1
     assert summary["dockets"]["total"] == 1
-    assert summary["schema_version"] == 2
+    # Relaxed version pin: status_json must surface the DB's live version, which
+    # must be at least the v2 this test's data model relies on -- a range, not the
+    # current number.  Do NOT re-tighten to `== 2`.
+    assert summary["schema_version"] >= 2
+    assert summary["schema_version"] == store.schema_version(con)
     assert summary["last_run"]["target"] == "duval"
     assert "lane_candidates=2" in store.status_text(con)

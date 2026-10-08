@@ -64,3 +64,18 @@ defined by no file any more and are therefore deliberately **not** on the record
 `tests/test_journal.py` additionally enforces the property:
 `test_test_sources_carry_no_literal_secret_shapes` reads its own bytes and its sibling's and
 fails on any literal match of patterns 1–2 (red→green proof in its docstring).
+
+## Known, intentional secret-shaped *paths* — filename rule ≠ value rule
+
+The rule above is **value-based** and never consults a path. A **filename**-shaped check is a
+*different* rule, and one fixture is deliberate on the path side:
+
+| Path | Bytes | Content | Patterns matched | Why it stays |
+|---|---|---|---|---|
+| `tests/fixtures/copy-src/.env` | 43 | `RESEXTRACT_DEMO_KEY=demo-not-a-real-secret` | **0 of 6** | `U5.1`'s deliberate secret-shaped-**path** fixture for the copy engine's refusal path; the refusal test keys on that exact path shape, so renaming it would **weaken the test**. Load-bearing. |
+
+It passes the value rule by content and is recorded here so no future scanner — or reader — has to
+re-derive why a `.env` sits in the tree. Committed deliberately by `U0.11` (Checkpoint 2,
+`c6249a6`, 115 files) rather than dropped, because the fixture belongs to a verified unit.
+**Do not delete it, and do not add a path exemption for it**: a real credential in that path still
+fails by value under patterns 1–5, which is exactly the property the fixture exists to test.

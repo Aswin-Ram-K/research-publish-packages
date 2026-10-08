@@ -1,7 +1,33 @@
-.venv/
-state/
-dockets/
+# --- environment ----------------------------------------------------------
+# Root-only: a nested ".venv" belongs to another project and is not ours.
+/.venv/
+
+# Root-only: the unanchored "state/" matched a "state" directory at any depth.
+# Keep nested state dirs (fixtures, sub-projects) visible to git.
+/state/
+
+# Root-only ON PURPOSE.  The unanchored rule "dockets/" also matched a
+# directory named "dockets" at any depth - including the test fixture tree
+# tests/fixtures/dashboard-store/dockets/**, whose ok-docket/broken-docket
+# fixtures were therefore untracked and absent on a fresh clone.
+# Whether produced dockets should be versioned at all is an open question for
+# the user; anchoring preserves today's behaviour (root dockets stay ignored).
+/dockets/
+
+# --- generated databases --------------------------------------------------
+# SQLite sidecars are runtime state, never source.  Global by design: any
+# *.sqlite database can grow a -wal/-shm/-journal next to it.
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+# The dashboard fixture DB is generated on demand into a session tmp_path by
+# tests/fixtures/dashboard-store/build.py; a committed copy can silently
+# disagree with the generator.
+/tests/fixtures/dashboard-store/state.sqlite
+
+# --- python build/cache output (genuinely global) -------------------------
 __pycache__/
 *.pyc
-.pytest_cache/
 *.egg-info/
+# Root-only, like the venv above.
+/.pytest_cache/

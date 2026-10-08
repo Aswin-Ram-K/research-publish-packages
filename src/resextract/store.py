@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 DEFAULT_DB_PATH = Path("state/state.sqlite")
 
 TABLES: tuple[str, ...] = (
@@ -41,6 +41,12 @@ VERDICT_VOCAB: tuple[str, ...] = ("CONFIRMS", "EXTENDS", "CONTRADICTS", "UNVERIF
 LANE_TYPES: tuple[str, ...] = ("paper", "report", "blog", "benchmark_card", "memo")
 LANE_STATUSES: tuple[str, ...] = ("draft", "ready", "stale", "needs_rework", "superseded")
 EVIDENCE_SOURCE_KINDS: tuple[str, ...] = ("local", "web")
+
+# Enumerated vocabulary for migration 3 (a CHECK on ``candidates.producer``).
+# ``unknown`` is the honest default: a candidate whose producer cannot be
+# established may not back a model-derived claim.
+PRODUCER_VOCAB: tuple[str, ...] = ("model", "replay", "fixture", "unknown")
+REPLAY_TITLE_PREFIX = "REPLAY "
 
 _JSON_SUFFIX = "_json"
 
@@ -288,11 +294,154 @@ _MIGRATION_2: list[Any] = [
     "CREATE UNIQUE INDEX IF NOT EXISTS dockets_dir_unique ON dockets(dir)",
 ]
 
-MIGRATIONS: list[tuple[int, list[Any]]] = [(1, _MIGRATION_1), (2, _MIGRATION_2)]
+
+# --- migration 3: producer identity (FAIL A) -------------------------------- #
+
+
+def derive_producer(
+    *, title: str = "", run_notes: str = "", existing: str | None = None
+) -> tuple[str, str]:
+    """Return ``(producer, basis)`` for one candidate row.
+
+    Only evidence already present in the row is used: the human-readable run tag
+    at the head of ``runs.notes`` (e.g. ``live-u21-replay``) *and* the
+    ``"REPLAY "`` title prefix the replay client wrote.  A row whose basis is
+    absent -- or half-present -- is ``unknown``.  This function never guesses,
+    and in particular never defaults to ``replay``.
+    """
+    if existing and existing != "unknown":
+        return str(existing), "already recorded on the row"
+    title = title or ""
+    tag = ((run_notes or "").split() or [""])[0]
+    replay_tag = "replay" in tag.lower()
+    replay_title = title.startswith(REPLAY_TITLE_PREFIX)
+    if replay_tag and replay_title:
+        return (
+            "replay",
+            f"run tag {tag!r} at the head of runs.notes + {REPLAY_TITLE_PREFIX!r} title prefix",
+        )
+    if replay_tag or replay_title:
+        seen = f"run tag {tag!r} in runs.notes" if replay_tag else "the 'REPLAY ' title prefix"
+        return "unknown", f"half-evidence only ({seen}); no model/replay attribution claimed"
+    return (
+        "unknown",
+        f"no producer evidence: run tag {tag!r} carries no replay marker and the title "
+        f"does not start with {REPLAY_TITLE_PREFIX!r}",
+    )
+
+
+def _backfill_producer_identity(con: sqlite3.Connection) -> None:
+    """Label every pre-existing candidate honestly, recording the basis used."""
+    runs = {int(r["id"]): dict(r) for r in con.execute("SELECT id, notes FROM runs")}
+    rows = [
+        dict(r)
+        for r in con.execute("SELECT id, run_id, title, producer FROM candidates ORDER BY id")
+    ]
+    for row in rows:
+        run = runs.get(int(row["run_id"])) if row["run_id"] is not None else None
+        producer, basis = derive_producer(
+            title=row.get("title") or "",
+            run_notes=(run or {}).get("notes") or "",
+            existing=row.get("producer"),
+        )
+        con.execute("UPDATE candidates SET producer=? WHERE id=?", (producer, row["id"]))
+        MIGRATION_NOTES_V3.append(
+            {
+                "migration": 3,
+                "table": "candidates",
+                "id": int(row["id"]),
+                "run_id": row["run_id"],
+                "producer": producer,
+                "basis": basis,
+            }
+        )
+
+
+def _backfill_run_identity(con: sqlite3.Connection) -> None:
+    """Record each run's mode where it is derivable, and repair stale runs.
+
+    ``runs.model`` is left NULL: the endpoint was down for every recorded run, so
+    no model attribution is available and inventing one would be a lie.  A run
+    still marked ``running`` at migration time cannot be live -- the version-3
+    migration only ever runs once, from :func:`init_db` -- so it is closed out as
+    ``failed`` with the reason appended, never as a fabricated completion time.
+    """
+    runs = [
+        dict(r)
+        for r in con.execute("SELECT id, notes, status, model, mode FROM runs ORDER BY id")
+    ]
+    for run in runs:
+        notes = run.get("notes") or ""
+        tag = (notes.split() or [""])[0]
+        if run.get("mode") is None:
+            if "replay" in tag.lower():
+                mode, basis = "replay", f"run tag {tag!r} at the head of runs.notes"
+            else:
+                mode, basis = (
+                    "unknown",
+                    f"no mode evidence for run tag {tag!r}; model and mode left unclaimed",
+                )
+            con.execute("UPDATE runs SET mode=? WHERE id=?", (mode, run["id"]))
+            MIGRATION_NOTES_V3.append(
+                {
+                    "migration": 3,
+                    "table": "runs",
+                    "id": int(run["id"]),
+                    "mode": mode,
+                    "model": None,
+                    "basis": basis + "; runs.model left NULL (endpoint down, no attribution)",
+                }
+            )
+        if run.get("status") == "running":
+            repair = (
+                "[U2.2 migration 3] status 'running' repaired to 'failed': the run never "
+                "reached finish_run and persisted no candidates or tokens.  The exact "
+                "completion time is unknowable, so finished_at is left NULL."
+            )
+            con.execute(
+                "UPDATE runs SET status=?, notes=? WHERE id=?",
+                ("failed", f"{notes} | {repair}" if notes else repair, run["id"]),
+            )
+            MIGRATION_NOTES_V3.append(
+                {
+                    "migration": 3,
+                    "table": "runs",
+                    "id": int(run["id"]),
+                    "repair": {
+                        "column": "status",
+                        "from": "running",
+                        "to": "failed",
+                        "basis": "started but never reached finish_run; no candidates and no "
+                        "tokens recorded; finished_at unknowable and left NULL",
+                    },
+                }
+            )
+
+
+_MIGRATION_3: list[Any] = [
+    # Producer identity (FAIL A).  Additive only: two new nullable columns on
+    # `runs`, two on `candidates` (producer carrying an honest 'unknown'
+    # default), then a per-row backfill whose basis is written to
+    # `state/logs/U2.2-migration.json` via `MIGRATION_NOTES`.
+    "ALTER TABLE candidates ADD COLUMN producer TEXT DEFAULT 'unknown' "
+    "CHECK (producer IN ('model', 'replay', 'fixture', 'unknown'))",
+    "ALTER TABLE candidates ADD COLUMN model TEXT",
+    "ALTER TABLE runs ADD COLUMN model TEXT",
+    "ALTER TABLE runs ADD COLUMN mode TEXT",
+    _backfill_producer_identity,
+    _backfill_run_identity,
+]
+
+MIGRATIONS: list[tuple[int, list[Any]]] = [(1, _MIGRATION_1), (2, _MIGRATION_2), (3, _MIGRATION_3)]
 
 # Populated by migration 2 when it detects/resolves duplicate docket dirs, so a
 # caller can report exactly what merged during an in-place upgrade.
 MIGRATION_NOTES: list[dict[str, Any]] = []
+
+# Migration 3's own per-row record of the producer/mode basis it used and the
+# stale-run repair it made.  Kept separate from MIGRATION_NOTES so migration 3
+# cannot displace a migration-2 note (callers index MIGRATION_NOTES[-1]).
+MIGRATION_NOTES_V3: list[dict[str, Any]] = []
 
 
 # --------------------------------------------------------------------------- #
@@ -414,11 +563,15 @@ def insert_run(
     budget: Any = None,
     tokens_used: int = 0,
     notes: str | None = None,
+    model: str | None = None,
+    mode: str | None = None,
 ) -> int:
     return _insert(
         con,
-        "INSERT INTO runs(target, started_at, finished_at, status, budget, tokens_used, notes) "
-        "VALUES (:target, :started_at, :finished_at, :status, :budget, :tokens_used, :notes)",
+        "INSERT INTO runs(target, started_at, finished_at, status, budget, tokens_used, notes, "
+        "model, mode) "
+        "VALUES (:target, :started_at, :finished_at, :status, :budget, :tokens_used, :notes, "
+        ":model, :mode)",
         {
             "target": target,
             "started_at": started_at or utcnow(),
@@ -427,6 +580,8 @@ def insert_run(
             "budget": _dump(budget),
             "tokens_used": tokens_used,
             "notes": notes,
+            "model": model,
+            "mode": mode,
         },
     )
 
@@ -439,8 +594,10 @@ def upsert_run(con: sqlite3.Connection, *, id: int | None = None, **fields: Any)
     if existing is None:
         return _insert(
             con,
-            "INSERT INTO runs(id, target, started_at, finished_at, status, budget, tokens_used, notes) "
-            "VALUES (:id, :target, :started_at, :finished_at, :status, :budget, :tokens_used, :notes)",
+            "INSERT INTO runs(id, target, started_at, finished_at, status, budget, tokens_used, notes, "
+            "model, mode) "
+            "VALUES (:id, :target, :started_at, :finished_at, :status, :budget, :tokens_used, :notes, "
+            ":model, :mode)",
             {
                 "id": id,
                 "target": fields.get("target"),
@@ -450,6 +607,8 @@ def upsert_run(con: sqlite3.Connection, *, id: int | None = None, **fields: Any)
                 "budget": _dump(fields.get("budget")),
                 "tokens_used": fields.get("tokens_used", 0),
                 "notes": fields.get("notes"),
+                "model": fields.get("model"),
+                "mode": fields.get("mode"),
             },
         )
     merged = dict(existing)
@@ -458,8 +617,9 @@ def upsert_run(con: sqlite3.Connection, *, id: int | None = None, **fields: Any)
     merged["budget"] = _dump(merged.get("budget"))
     con.execute(
         "UPDATE runs SET target=:target, started_at=:started_at, finished_at=:finished_at, "
-        "status=:status, budget=:budget, tokens_used=:tokens_used, notes=:notes WHERE id=:id",
-        {k: merged.get(k) for k in ("id", "target", "started_at", "finished_at", "status", "budget", "tokens_used", "notes")},
+        "status=:status, budget=:budget, tokens_used=:tokens_used, notes=:notes, "
+        "model=:model, mode=:mode WHERE id=:id",
+        {k: merged.get(k) for k in ("id", "target", "started_at", "finished_at", "status", "budget", "tokens_used", "notes", "model", "mode")},
     )
     con.commit()
     return id
@@ -469,15 +629,38 @@ def get_run(con: sqlite3.Connection, run_id: int) -> dict[str, Any] | None:
     return _get(con, "runs", "id", run_id)
 
 
-def finish_run(con: sqlite3.Connection, run_id: int, *, status: str = "done", tokens_used: int | None = None, notes: str | None = None) -> bool:
+def finish_run(
+    con: sqlite3.Connection,
+    run_id: int,
+    *,
+    status: str = "done",
+    tokens_used: int | None = None,
+    notes: str | None = None,
+    append_notes: bool = True,
+) -> bool:
+    """Close a run out, **appending** the finishing note to what it recorded at start.
+
+    The graph path written by ``insert_run`` (``"<run-id> graph=<path>"``) is the
+    provenance of the run; overwriting it loses which graph produced the run.
+    Pass ``append_notes=False`` only for a caller that genuinely means to replace
+    the recorded notes.
+    """
+    existing = get_run(con, run_id)
+    if existing is None:
+        return False
     sets = ["finished_at=?", "status=?"]
     params: list[Any] = [utcnow(), status]
     if tokens_used is not None:
         sets.append("tokens_used=?")
         params.append(tokens_used)
     if notes is not None:
+        previous = existing.get("notes") or ""
+        if append_notes and previous:
+            final_notes = f"{previous} | {notes}"
+        else:
+            final_notes = notes
         sets.append("notes=?")
-        params.append(notes)
+        params.append(final_notes)
     params.append(run_id)
     cur = con.execute(f"UPDATE runs SET {', '.join(sets)} WHERE id=?", params)
     con.commit()
@@ -548,11 +731,15 @@ def insert_candidate(
     graph_nodes_json: Any = None,
     score: float | None = None,
     state: str | None = None,
+    producer: str = "unknown",
+    model: str | None = None,
 ) -> int:
     return _insert(
         con,
-        "INSERT INTO candidates(run_id, kind, title, summary, provenance_json, graph_nodes_json, score, state) "
-        "VALUES (:run_id, :kind, :title, :summary, :provenance_json, :graph_nodes_json, :score, :state)",
+        "INSERT INTO candidates(run_id, kind, title, summary, provenance_json, graph_nodes_json, "
+        "score, state, producer, model) "
+        "VALUES (:run_id, :kind, :title, :summary, :provenance_json, :graph_nodes_json, "
+        ":score, :state, :producer, :model)",
         {
             "run_id": run_id,
             "kind": kind,
@@ -562,6 +749,8 @@ def insert_candidate(
             "graph_nodes_json": _dump(graph_nodes_json),
             "score": score,
             "state": state,
+            "producer": producer,
+            "model": model,
         },
     )
 
@@ -570,11 +759,14 @@ def upsert_candidate(con: sqlite3.Connection, *, id: int | None = None, **fields
     if id is None:
         return insert_candidate(con, **fields)
     con.execute(
-        "INSERT INTO candidates(id, run_id, kind, title, summary, provenance_json, graph_nodes_json, score, state) "
-        "VALUES (:id, :run_id, :kind, :title, :summary, :provenance_json, :graph_nodes_json, :score, :state) "
+        "INSERT INTO candidates(id, run_id, kind, title, summary, provenance_json, graph_nodes_json, "
+        "score, state, producer, model) "
+        "VALUES (:id, :run_id, :kind, :title, :summary, :provenance_json, :graph_nodes_json, "
+        ":score, :state, :producer, :model) "
         "ON CONFLICT(id) DO UPDATE SET run_id=excluded.run_id, kind=excluded.kind, title=excluded.title, "
         "summary=excluded.summary, provenance_json=excluded.provenance_json, "
-        "graph_nodes_json=excluded.graph_nodes_json, score=excluded.score, state=excluded.state",
+        "graph_nodes_json=excluded.graph_nodes_json, score=excluded.score, state=excluded.state, "
+        "producer=excluded.producer, model=excluded.model",
         {
             "id": id,
             "run_id": fields.get("run_id"),
@@ -585,6 +777,8 @@ def upsert_candidate(con: sqlite3.Connection, *, id: int | None = None, **fields
             "graph_nodes_json": _dump(fields.get("graph_nodes_json")),
             "score": fields.get("score"),
             "state": fields.get("state"),
+            "producer": fields.get("producer", "unknown"),
+            "model": fields.get("model"),
         },
     )
     con.commit()
@@ -593,6 +787,46 @@ def upsert_candidate(con: sqlite3.Connection, *, id: int | None = None, **fields
 
 def get_candidate(con: sqlite3.Connection, candidate_id: int) -> dict[str, Any] | None:
     return _get(con, "candidates", "id", candidate_id)
+
+
+def candidates_by_producer(
+    con: sqlite3.Connection,
+    producer: str | None = None,
+    run_id: int | None = None,
+) -> list[dict[str, Any]]:
+    """Read candidates, optionally filtered by producer and/or run.
+
+    ``candidates_by_producer(con)`` returns every candidate; ``producer="model"``
+    returns only rows a model really produced; ``"replay"``/``"fixture"``/
+    ``"unknown"`` return those rows.
+    """
+    sql = "SELECT * FROM candidates"
+    clauses: list[str] = []
+    params: list[Any] = []
+    if producer is not None:
+        clauses.append("producer = ?")
+        params.append(producer)
+    if run_id is not None:
+        clauses.append("run_id = ?")
+        params.append(run_id)
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
+    sql += " ORDER BY id"
+    return _rows(con.execute(sql, params).fetchall())
+
+
+def may_back_model_claim(candidate: Mapping[str, Any] | None) -> bool:
+    """True only for a candidate whose producer is really ``model``.
+
+    Replay, fixture and unknown rows are all refused: until real mining runs,
+    no candidate may back a model-derived claim.
+    """
+    return bool(candidate) and candidate.get("producer") == "model"
+
+
+def model_produced_candidates(con: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Every candidate that may back a model-derived claim (usually none)."""
+    return [c for c in candidates_by_producer(con) if may_back_model_claim(c)]
 
 
 def insert_claim(
@@ -1188,6 +1422,7 @@ def status_json(con: sqlite3.Connection) -> dict[str, Any]:
         "candidates": {
             "total": count(con, "candidates"),
             "by_state": _group(con, "candidates", "state"),
+            "by_producer": _group(con, "candidates", "producer"),
         },
         "lane_candidates": {
             "total": count(con, "lane_candidates"),
