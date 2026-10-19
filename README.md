@@ -36,7 +36,7 @@ The release contains:
 | `verify/` | `recompute-claims.py` — re-derives every headline number from the bytes shipped in the release |
 | `second-labeller/` | the independent second-labelling tooling, labels, disagreement record and metrics |
 | `preregistration/` | the pre-registered protocol |
-| `CITATION.cff`, `MANIFEST.json` | deposit citation and integrity manifest (both as published on Zenodo) |
+| `CITATION.cff`, `MANIFEST.json` | deposit citation (as published on Zenodo) and integrity manifest (regenerated for this repository) |
 | `LICENSE`, `COMMERCIAL.md`, `CONTRIBUTING.md` | licence, commercial terms, contribution terms |
 | `README_DEPOSIT.md` | the deposit's own front matter, as published on Zenodo |
 
@@ -95,19 +95,22 @@ description of the problem and the approach you would take, not a patch.
 ## Note on file integrity
 
 Everything in this repository is byte-identical to the corresponding file in the published Zenodo
-archive, **with exactly one exception**: the package's own `README.md` (which describes the archive's
+archive, **with two exceptions**: the package's own `README.md` (which describes the archive's
 directory buckets) is replaced here by this landing page, because this repository needs a README that
-describes the repository. Consequently:
+describes the repository; and `MANIFEST.json` has been regenerated over this repository's own tree.
+Consequently:
 
-- `MANIFEST.json` is the manifest of the Zenodo archive tree, shipped unmodified. Its single entry for
-  `README.md` refers to the archive's `README.md`, not to this page, so re-running the `MANIFEST.json`
-  re-hash described in `README_DEPOSIT.md` will report `README.md` — and only `README.md` — as a
-  mismatch here. That is expected and is a difference of this mirror, not of the archive.
-- The archive's `README.md`, and the manifest entry for it, remain authoritative on Zenodo.
+- `MANIFEST.json` here is the manifest of **this repository**. Its entries — including the entry for
+  `README.md`, which describes this page — name the files shipped here, so re-running the
+  `MANIFEST.json` re-hash described in `README_DEPOSIT.md` reports zero mismatches; the archive's
+  `MANIFEST.json` on Zenodo remains authoritative for the archive tree.
+- The archive's `README.md` remains authoritative on Zenodo.
 
-To check any other file, compare its sha256 against the `MANIFEST.json` entry — every other entry
-describes the file shipped here exactly.
+Every file here, `README.md` included, can be checked by comparing its sha256 against its
+`MANIFEST.json` entry.
 
-**Update:** `MANIFEST.json` here has since been regenerated over this repository's own tree, so the
-`MANIFEST.json` re-hash described in `README_DEPOSIT.md` now reports zero mismatches for the files
-shipped here; the archive's `MANIFEST.json` on Zenodo remains authoritative for the archive tree.
+**Superseded history (before `MANIFEST.json` was regenerated over this repository's tree,
+2026-10-19):** `MANIFEST.json` was then the archive's manifest, shipped unmodified; its entry for
+`README.md` referred to the archive's `README.md`, not to this page, so the re-hash reported
+`README.md` — and only `README.md` — as a mismatch here. That was a difference of this mirror, not of
+the archive.
