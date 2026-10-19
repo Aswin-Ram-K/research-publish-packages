@@ -107,3 +107,7 @@ describes the repository. Consequently:
 
 To check any other file, compare its sha256 against the `MANIFEST.json` entry — every other entry
 describes the file shipped here exactly.
+
+**Update:** `MANIFEST.json` here has since been regenerated over this repository's own tree, so the
+`MANIFEST.json` re-hash described in `README_DEPOSIT.md` now reports zero mismatches for the files
+shipped here; the archive's `MANIFEST.json` on Zenodo remains authoritative for the archive tree.
