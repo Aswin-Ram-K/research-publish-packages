@@ -1,0 +1,197 @@
+{
+  "falsifier": "F4",
+  "fires": false,
+  "verdict": "F4 did not fire — no >=2-shared-8-gram overlap between the 800 training rows and the sealed 190, in either direction",
+  "trainVsFixture": {
+    "rule": "drop when a row shares >= 2 distinct 8-grams with any single row of the other side, applied in both directions",
+    "ngramSize": 8,
+    "threshold": 2,
+    "left": "train800(600rev+200H-A)",
+    "right": "sealed190",
+    "leftRows": 800,
+    "rightRows": 190,
+    "leftGramPopulation": 45115,
+    "rightGramPopulation": 5620,
+    "forward": {
+      "direction": "train800(600rev+200H-A) -> sealed190",
+      "source": "train800(600rev+200H-A)",
+      "target": "sealed190",
+      "sourceRows": 800,
+      "targetRows": 190,
+      "pairsCompared": 152000,
+      "flagged": [],
+      "removedTargetIds": [],
+      "removedCount": 0
+    },
+    "reverse": {
+      "direction": "sealed190 -> train800(600rev+200H-A)",
+      "source": "sealed190",
+      "target": "train800(600rev+200H-A)",
+      "sourceRows": 190,
+      "targetRows": 800,
+      "pairsCompared": 152000,
+      "flagged": [],
+      "removedTargetIds": [],
+      "removedCount": 0
+    },
+    "removed": [],
+    "removedCount": 0,
+    "removedLeftCount": 0,
+    "removedRightCount": 0,
+    "flaggedPairs": 0,
+    "silent": true
+  },
+  "trainVsDev": {
+    "rule": "drop when a row shares >= 2 distinct 8-grams with any single row of the other side, applied in both directions",
+    "ngramSize": 8,
+    "threshold": 2,
+    "left": "train800(600rev+200H-A)",
+    "right": "dev200(H-B)",
+    "leftRows": 800,
+    "rightRows": 200,
+    "leftGramPopulation": 45115,
+    "rightGramPopulation": 10575,
+    "forward": {
+      "direction": "train800(600rev+200H-A) -> dev200(H-B)",
+      "source": "train800(600rev+200H-A)",
+      "target": "dev200(H-B)",
+      "sourceRows": 800,
+      "targetRows": 200,
+      "pairsCompared": 160000,
+      "flagged": [],
+      "removedTargetIds": [],
+      "removedCount": 0
+    },
+    "reverse": {
+      "direction": "dev200(H-B) -> train800(600rev+200H-A)",
+      "source": "dev200(H-B)",
+      "target": "train800(600rev+200H-A)",
+      "sourceRows": 200,
+      "targetRows": 800,
+      "pairsCompared": 160000,
+      "flagged": [],
+      "removedTargetIds": [],
+      "removedCount": 0
+    },
+    "removed": [],
+    "removedCount": 0,
+    "removedLeftCount": 0,
+    "removedRightCount": 0,
+    "flaggedPairs": 0,
+    "silent": true
+  },
+  "fixtureSelfOverlap": {
+    "note": "the fixture against itself — a sanity check that the lint can fire at all on this side. `lintSides` returns one audit record per side, so for two identical sides `removedCount` is twice the number of distinct flagged rows. Both figures are given explicitly here.",
+    "distinctFlaggedRowsPerDirection": 190,
+    "rowsRemovedAcrossBothSides": 380,
+    "flaggedPairs": 568,
+    "silent": false
+  },
+  "demo": {
+    "note": "adapted from EXP#11 demonstrateLint: the copied text is written into the fixture row's `question` field, because a fixture row has no `state` field",
+    "novelSharedGramCount": 0,
+    "probes": [
+      {
+        "name": "seeded.state-only-copy",
+        "copied": "a train row's `state` text written into a fixture row's `question`; options left novel",
+        "expectFire": true,
+        "sharedWithSourceId": "ex11r0000",
+        "aggregateSharedGramCount": 13,
+        "sharedGramCount": 13,
+        "maxPairSharedGramCount": 13,
+        "flaggedSourceIds": [
+          "ex11r0000"
+        ],
+        "fieldsThatCarriedTheSharedGrams": [
+          "question",
+          "state"
+        ],
+        "sampleGrams": [
+          "defect report true ex11r0000 reports refund request true",
+          "delay true ex11r0000 reports security signal true ex11r0000",
+          "delivery delay true ex11r0000 reports security signal true",
+          "ex11r0000 reports defect report true ex11r0000 reports refund"
+        ],
+        "fired": true,
+        "ok": true
+      },
+      {
+        "name": "seeded.boilerplate-only-copy",
+        "copied": "a train row's `instructions` + every `criteria:` value written into a fixture row's `question`",
+        "expectFire": true,
+        "sharedWithSourceId": "ex11r0000",
+        "aggregateSharedGramCount": 220,
+        "sharedGramCount": 220,
+        "maxPairSharedGramCount": 44,
+        "flaggedSourceIds": [
+          "ex11r0000",
+          "ex11r0001",
+          "ex11r0002",
+          "ex11r0003",
+          "ex11r0004"
+        ],
+        "fieldsThatCarriedTheSharedGrams": [
+          "instructions",
+          "question"
+        ],
+        "sampleGrams": [
+          "are checked in order famr0000 order decides the",
+          "billing owns refund requests famr0000 delivery delay goes",
+          "checked in order famr0000 order decides the outcome",
+          "choose exactly one option famr0000 security signal wins"
+        ],
+        "fired": true,
+        "ok": true
+      },
+      {
+        "name": "seeded.whole-row-copy",
+        "copied": "every field of a train row copied verbatim (state, instructions, criteria:*, option:*)",
+        "expectFire": true,
+        "sharedWithSourceId": "ex11r0000",
+        "aggregateSharedGramCount": 233,
+        "sharedGramCount": 233,
+        "maxPairSharedGramCount": 57,
+        "flaggedSourceIds": [
+          "ex11r0000",
+          "ex11r0001",
+          "ex11r0002",
+          "ex11r0003",
+          "ex11r0004"
+        ],
+        "fieldsThatCarriedTheSharedGrams": [
+          "instructions",
+          "state"
+        ],
+        "sampleGrams": [
+          "are checked in order famr0000 order decides the",
+          "billing owns refund requests famr0000 delivery delay goes",
+          "checked in order famr0000 order decides the outcome",
+          "choose exactly one option famr0000 security signal wins"
+        ],
+        "fired": true,
+        "ok": true
+      },
+      {
+        "name": "control.novel-row",
+        "copied": "nothing copied — the unmodified fixture row",
+        "expectFire": false,
+        "sharedWithSourceId": "",
+        "aggregateSharedGramCount": 0,
+        "sharedGramCount": 0,
+        "maxPairSharedGramCount": 0,
+        "flaggedSourceIds": [],
+        "fieldsThatCarriedTheSharedGrams": [],
+        "sampleGrams": [],
+        "fired": false,
+        "ok": true
+      }
+    ],
+    "ok": true
+  },
+  "digests": {
+    "instrument190Expected": "076164ac53c2c1aac130953345c481f88b51f4d6fb93d465c7430308a99b4796",
+    "instrument190Actual": "076164ac53c2c1aac130953345c481f88b51f4d6fb93d465c7430308a99b4796",
+    "corpusExpected": "c78681d6cf35bf23245bd24963c5fbdd6b3ea03e1bf74d1b3ddc5a49ca63fd66",
+    "corpusActual": "c78681d6cf35bf23245bd24963c5fbdd6b3ea03e1bf74d1b3ddc5a49ca63fd66"
+  }
+}

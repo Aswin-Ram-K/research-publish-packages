@@ -1,0 +1,18 @@
+R2-VLLM-REPAIR2 offline verdict  measured 2026-10-24T03:14:15.125021+00:00
+selftest: pass=15 fail=1 n_checks=16 failed=['test_R7_analysis_guard']
+original 14 checks: present=14/14 assertions_edited=0 details_identical_to_2142z=13
+  test_R7_analysis_guard: FAIL = ENVIRONMENTAL (analysis.json absent on disk; the check reads the real file and requires a stale analysis to be refused). Unmodified assertion; passed at 21:42Z when analysis.json existed.
+
+NEW CHECKS (both drive the REAL phase_battery end-to-end, no network):
+  R8 real_battery_send_path: battery_rows=128 arms=['A', 'C', 'R', 'H'] extra_fields_present=True distinct_sha_per_turn=[4] pass1_salts_distinct=16 pass2_equals_pass1=True client_calls=128
+  R9 battery_budget_preflight: needed=182 (54+battery 128) arm_cap=260 headroom=78 worst_measured=219 small_cap_raised=BatteryBudgetExceeded rows_written_before_refusal=0 requests_before_refusal=0
+
+RED->GREEN (mutated COPY of the module source; the named check must FAIL, then pass on live source):
+  flag_dropped_from_OH1: red=True green=True check=R1_flag_in_oh1_oh1l_a1_unchanged red_error=OH1: flag count 0
+  arms_forced_to_one_policy: red=True green=True check=R6_real_arms red_error=arm identity collapsed: {"ok": false, "n_arms": 4, "turns": 16, "min_distinct_prefix_sha256_per_turn": 4, "per
+  extra_dropped_from_Runner_send: red=True green=True check=test_R8_real_battery_send_path red_error=extra fields lost on the send path: {'arm_compaction': 128, 'arm_render': 128, 'prompt_nodes': 128}
+  arm_cap_restored_to_200: red=True green=True check=test_R9_battery_budget_preflight red_error=(219, 200)
+  all_red_then_green=True (4/4, incl. the 2 pre-existing REPAIR guards)
+
+network: 0 model requests, 0 httpx.Client constructions (now fatal), no ssh/docker/lock.
+determinism: 2 runs, identical pass/fail map and identical red->green results.

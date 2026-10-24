@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>The small-encoder crossover is a prompted-baseline artefact: a fine-tuned encoder head loses to a fine-tuned 4B decision model by 0.33 and to a majority-class control</title>
+<meta name="author" content="Aswin Ram Kalugasala Moorthy">
+<style>
+@page { size: A4; margin: 18mm 17mm 20mm 17mm; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body {
+  font-family: "DejaVu Serif", "Liberation Serif", Georgia, serif;
+  font-size: 10.2pt; line-height: 1.42; color: #111; margin: 0;
+  text-align: justify; hyphens: auto;
+}
+h1 {
+  font-size: 16.5pt; line-height: 1.22; margin: 0 0 6pt 0; text-align: left;
+  font-weight: 700; border-bottom: 2px solid #222; padding-bottom: 8pt;
+}
+p.byline {
+  font-size: 11pt; margin: 8pt 0 12pt 0; text-align: left;
+  font-family: "DejaVu Sans", "Liberation Sans", sans-serif;
+}
+p.byline .affil { font-size: 9pt; color: #444; display: block; margin-top: 2pt; }
+h2 { font-size: 12.6pt; margin: 15pt 0 5pt 0; text-align: left; border-bottom: 1px solid #bbb; padding-bottom: 2pt; }
+h3 { font-size: 11pt; margin: 11pt 0 4pt 0; text-align: left; }
+h4 { font-size: 10.4pt; margin: 9pt 0 3pt 0; text-align: left; font-style: italic; }
+p { margin: 0 0 6.5pt 0; }
+ul, ol { margin: 0 0 6.5pt 0; padding-left: 16pt; }
+li { margin: 0 0 3pt 0; }
+hr { border: none; border-top: 1px solid #ccc; margin: 12pt 0; }
+code {
+  font-family: "DejaVu Sans Mono", "Liberation Mono", monospace;
+  font-size: 0.855em; background: #f2f2f2; padding: 0 1.5pt;
+  border-radius: 2px; word-break: break-word;
+}
+strong { font-weight: 700; }
+table {
+  width: 100%; border-collapse: collapse; margin: 6pt 0 10pt 0;
+  font-family: "DejaVu Sans", "Liberation Sans", sans-serif;
+  font-size: 7.9pt; line-height: 1.28; text-align: left; page-break-inside: auto;
+}
+thead { display: table-header-group; }
+tr { page-break-inside: avoid; }
+th, td { border: 0.6pt solid #8a8a8a; padding: 2.6pt 3.4pt; vertical-align: top; }
+th { background: #ececec; font-weight: 700; }
+td code, th code { background: transparent; font-size: 0.92em; }
+blockquote { margin: 6pt 0 6pt 12pt; padding-left: 8pt; border-left: 2px solid #ccc; color: #333; }
+</style>
+</head><body>
+<h1>The small-encoder crossover is a prompted-baseline artefact: a fine-tuned encoder head loses to a fine-tuned 4B decision model by 0.33 and to a majority-class control</h1>
+<p class="byline"><strong>Aswin Ram Kalugasala Moorthy</strong><span class="affil">Byline carried into this render from submission/main.tex.</span></p>
+<h2>Abstract</h2>
+<p>Every public "a small encoder wins" result we were able to locate inside the target corpus compares that
+encoder against a <strong>prompted</strong> (zero- or few-shot) LLM, never against a <strong>fine-tuned generative decider</strong>
+(the claim and its audit trail are internal to the corpus, not an external survey — §2). That a fine-tuned
+generative decider can beat a fine-tuned encoder at comparable effort is <strong>already public</strong> — a 2025
+practitioner blog post reports exactly that on a binary ADE task (§2.1) — so we claim <strong>no priority for the
+direction</strong>; what we claim is this fixture, its controls and its diagnosis. We measure the fine-tuned
+comparison on a sealed typed-single-label decision fixture.</p>
+<p><strong>Headline.</strong> The best fine-tuned encoder head scores <strong>0.3474</strong> and loses to the fine-tuned 4B decider at
+<strong>0.6789</strong> — the <strong>declared primary baseline</strong> (author decision 2026-10-15), the auditable same-run arm —
+with paired McNemar <strong>b = 27, c = 90, ψ = 0.616, Δ = −0.3316, exact
+p = 4.167e−09</strong>. The control that could have contradicted this is the mandatory <strong>majority-class control</strong>,
+and it did contradict the candidate's framing of itself: majority-class returns <strong>0.4526</strong>, beating <em>every</em>
+fine-tuned encoder head by <strong>+0.1053</strong>. The second control that could have contradicted the measurement is
+the <strong>shuffled-label arm</strong>, and it moved the other way from a spurious win: it returns <strong>0.2316</strong>, below the
+fixture's <strong>0.2911</strong> chance floor. A third control guards instrument integrity: our n-gram leak criterion
+(≥ 2 distinct shared 8-grams within one row pair, both directions) flagged <strong>0 of 152,000</strong> training↔fixture
+pairs — and, to show the criterion can fire, it flagged three deliberately seeded copies at <strong>13 / 44 / 57</strong>
+shared 8-grams (pair maxima). Against the <em>published, pre-registered</em> baseline <strong>0.6684</strong> — which
+<code>REPORT.md:189</code> states <strong>cannot be re-scored</strong> from the tree — the same head loses by <strong>0.3210</strong> ("0.32") against the <strong>secondary</strong> baseline <strong>0.6684</strong>.
+<strong>The two figures use two baselines and must not be read as one:</strong> the headline <strong>0.3316</strong> ("0.33") is
+computed against the <strong>declared primary 0.6789</strong>, while <strong>0.3210</strong> ("0.32") is computed against the
+<strong>secondary/published 0.6684</strong>, which is the pre-registered F1 threshold and which <code>REPORT.md:189</code> states
+cannot be re-scored from the tree.</p>
+<p><strong>Correction carried.</strong> Fixing three defects lowered the <strong>SetFit-MPNet</strong> arm monotonically
+(<strong>0.3158 → 0.2947 → 0.2632</strong>), but the same order-probe fix <em>raised</em> the <strong>ModernBERT-base</strong> arm
+(<strong>0.342105 → 0.347368</strong>). The universal claim "every correction moved the affected arm down" is false; the
+SetFit arm returned the opposite direction from the ModernBERT arm, which is the control on that claim.</p>
+<p><strong>Not in this paper.</strong> We make <strong>no latency claim</strong>: the encoder heads were timed locally in one forward
+batch while the 4B figures come from a served stack's stored rows, so the tree cannot support a fair
+latency comparison (see §6.1). We also do <strong>not</strong> report κ = 0.9014 (first blind reader) or κ = 0.8577
+(second, independent blind reader) — nor their mutual κ = 0.9125 — as inter-annotator agreement: both
+labellers were <strong>models</strong>, so this is machine reproducibility of the fixture, not human agreement. The
+second reader <strong>partially</strong> replicates the first: the κ magnitude holds (both ≥ 0.85) but the exact 0.90
+headline does not. An independent human labeller is still owed (§6.2).</p>
+<hr>
+<h2>1. Introduction</h2>
+<p>A common empirical shape in applied model-selection work is a crossover: at small label-set sizes <em>N</em> a
+large language model (LLM) wins or ties, and above some <em>N</em> a small fine-tuned encoder takes over. The
+canonical instance in the corpus we work from is an N-dependent table in which the encoder wins at N = 4
+(AG News 94.11–94.63 vs 91.35; DBPedia at N = 14: 99.27–99.40 vs 98.83) and loses or ties at N = 2. The
+table's decisive property for this paper is not its numbers but its <strong>comparison class</strong>: the LLM side is an
+<strong>API LLM</strong> — i.e. <em>prompted</em>. We read that explicitly in the corpus's own errata
+(<code>docs/DECIDER_STACK_DECISION.md</code> §11.6): <em>"the N-dependent crossover table in §11.2 is
+encoder-versus-</em><em>API LLM</em><em>, i.e. prompted."</em></p>
+<p>If the crossover is a property of <em>prompting</em> rather than of <em>scale</em>, then it should not survive when the
+generative side is given the same resource the encoder gets — supervised fine-tuning on the same task and
+the same labels. That is the hypothesis this paper tests, and the result is negative for the crossover.</p>
+<p><strong>Thesis.</strong> Every "a small encoder wins" result we were able to locate compares the encoder against a
+<strong>prompted</strong> LLM, never against a <strong>fine-tuned</strong> generative decider; under the fine-tuned comparison the
+crossover does not appear on our fixture.</p>
+<p><strong>Novelty, stated narrowly.</strong> We claim <strong>no priority for the direction</strong> of the result. That a fine-tuned
+generative model can beat a small fine-tuned encoder on a classification task is already in the public
+record: a 2025 practitioner experiment on binary adverse-drug-reaction classification reports a fine-tuned
+Llama-3.2-3B LoRA at F1 <strong>93.1</strong> against ModernBERT-large at <strong>89.2</strong> at comparable training cost
+(Simmering, 2025 — a blog post, <strong>not</strong> peer-reviewed; §2.1). What is new here is narrower, and it is what we
+claim: (i) the <strong>sealed typed single-label decision fixture</strong> — 190 cases, N = 2–8 named options per case,
+74 distinct labels — rather than binary sentence classification; (ii) the <strong>option-order permutation
+control</strong>, whose final pass flips <strong>0</strong> cases for every candidate head; and (iii) the <strong>majority-class
+control</strong>, which outranks <strong>every</strong> encoder head (0.4526 vs 0.3474, +0.1053) — a result the public
+counter-case does not contain. The contribution is the <strong>artefact diagnosis on this fixture</strong>, not the
+discovery that a fine-tuned generative decider can win.</p>
+<p><strong>Contributions.</strong></p>
+<ol>
+<li>A like-for-like <strong>fine-tuned vs fine-tuned</strong> measurement on a sealed typed-single-label decision
+   fixture: best fine-tuned encoder head 0.3474 against a fine-tuned 4B decider at 0.6789 (auditable,
+   paired) and 0.6684 (published, not re-scorable). The <em>direction</em> is already public (§2.1); what is new is
+   this fixture and its controls. §4.1–§4.2.</li>
+<li>The finding that the <strong>majority-class control beats every candidate head</strong> (0.4526 vs 0.3474, +0.1053) —
+   so the interesting claim is not merely "the encoder loses to the 4B" but "the encoder loses to a
+   constant answer". This control, the typed fixture and the order-permutation probe are the parts of the
+   result for which we claim priority. §4.3.</li>
+<li>A <strong>calibration</strong> result whose verdict is <strong>convention-dependent</strong>: F3 fires on one stored ECE
+   convention (head 0.0994 ≥ decider 0.0551) and does <em>not</em> fire on the other (0.0994 &lt; 0.1547). We present
+   both and name the ambiguity rather than resolving it. §4.6.</li>
+<li>A <strong>negative method result (M12)</strong>, carried as a correction to the corpus's own summary: the claim that
+   "every correction moved the affected arm down" is true for <strong>SetFit-MPNet only</strong>. §4.5.</li>
+<li>An explicit statement of what the evidence <strong>cannot</strong> support: latency (§6.1) and human agreement on the
+   fixture labels — which <strong>two</strong> blind model passes do not supply, since the second only <strong>partially</strong>
+   replicates the first (§6.2).</li>
+</ol>
+<p>The paper is deliberately narrow. It is a single-fixture, single-host negative result, and §6 says so.</p>
+<hr>
+<h2>2. Related work</h2>
+<h3>2.1 The works that make the "encoder wins" claim</h3>
+<p>The corpus's own audit of this literature lives in <code>docs/DECIDER_STACK_DECISION.md</code> §11.6, committed as
+<code>ad301ae</code> ("errata — the encoder recommendation was stronger than the evidence supports"). It is the
+citation for this paper's core literature claim, and it <strong>does</strong> support the claim — with an important
+qualification about its strength. Verbatim from §11.6:</p>
+<blockquote>
+<p><em>"Every public 'a small encoder wins' result compares the encoder against a </em><em>prompted, zero- or few-shot
+LLM</em><em> — not against a </em><em>fine-tuned generative decider</em><em>. GLiNER's win is </em><em>span extraction (exact-match
+F1), not a typed single-label decision</em><em>; GLiClass has </em><em>no measured LLM head-to-head</em><em> at all (its own
+comparison table is qualitative); and the N-dependent crossover table in §11.2 is encoder-versus-</em><em>API
+LLM</em><em>, i.e. prompted. </em><em>No published measurement was found of a small encoder beating a fine-tuned
+generative model on a typed single-label decision</em><em> — verified-absent, and the second lane checked it
+explicitly."</em></p>
+</blockquote>
+<p>And from the commit message of <code>ad301ae</code>:</p>
+<blockquote>
+<p><em>"A second independent typed-channel lane ran with a stricter evidence base. Every public 'small encoder
+wins' result compares the encoder against a PROMPTED zero/few-shot LLM, not against a fine-tuned
+generative decider … Nobody has published the comparison we need, so our 190-case fixture remains the
+load-bearing evidence."</em></p>
+</blockquote>
+<p><strong>Qualification, stated rather than buried.</strong> This is a claim about a <strong>literature search</strong>, and the search
+protocol — databases, query terms, dates, inclusion rules — is <strong>not recorded in the corpus</strong>
+(this record's internal reference notes §B3; an internal working record not included in the released material). We therefore write "<em>we were able to locate</em>" and "<em>no published measurement was found</em>",
+not "<em>no such result exists</em>". A reviewer cannot audit a "verified-absent" claim whose search is unreported;
+this is the single largest sourcing gap in the paper (§6.4; recorded in this record's internal open-questions log, an internal working record not included in the released material).</p>
+<p>The specific works, with the identifiers the corpus actually carries:</p>
+<ul>
+<li><strong>The N-dependent crossover table.</strong> arXiv <code>2602.06370</code>, cited at <code>DECIDER_STACK_DECISION.md</code> §11.2. The
+  corpus records <strong>no title, authors or venue</strong>; we cite the identifier only and flag the entry as
+  incomplete in <code>REFERENCES.bib</code>. Its encoder-side wins, its latency spreads, and its cost figures are all
+  recorded in the corpus, but its comparison class is a prompted API LLM.</li>
+<li><strong>A corroborating throughput result.</strong> arXiv <code>2512.12677</code>, same section: ModernBERT-base classifies
+  patents at 93.45 samples/s vs Llama-3.2-3B at 1.88 and Qwen3-4B at 1.26; distilling a fine-tuned 3B into
+  ModernBERT-base is recorded as retaining ≥ 97 % of teacher F1 at ~45× throughput. Again: identifier only,
+  no title/authors/venue in the corpus.</li>
+<li><strong>PriDe</strong> (option-ID token bias): arXiv <code>2309.03882</code>, ICLR 2024, cited at <code>DECIDER_STACK_DECISION.md:415</code>
+  and <code>:500</code>. This grounds the position/order-bias concern that our own order-permutation probe measures
+  (§3.4, §4.5).</li>
+<li><strong>Grammar-constrained decoding (GCD)</strong>: arXiv <code>2305.13971</code>, EMNLP 2023, and ACL 2025 Industry
+  (<code>2025.acl-industry.34</code>), cited at <code>DECIDER_STACK_DECISION.md:494–495</code>. A3 does not use GCD; these are
+  listed because the same errata section uses them, and they are <em>not</em> sources for the crossover claim.</li>
+</ul>
+<p><strong>The counter-case, now sourced — and what it does to our claim.</strong> The strongest single threat to a
+one-sided reading of our thesis is no longer unsourced, and we engage it rather than name it. It is a
+<strong>practitioner blog post, not a paper</strong>: Paul Simmering, <em>"ModernBERT vs LLMs for Detecting Adverse Drug
+Reactions"</em>, published 12 January 2025, <code>https://simmering.dev/blog/modernbert-vs-llm/</code> — <strong>no DOI, no
+venue, not peer-reviewed</strong>, cited as <code>simmering2025modernbert</code>. On binary adverse-drug-reaction sentence
+classification (ADE corpus, N = 2) it reports a fine-tuned <strong>Llama-3.2-3B-Instruct LoRA at F1 93.1 and 152
+examples/s</strong> against <strong>ModernBERT-large at 89.2 and 87 examples/s</strong>, with equal fine-tuning effort per arm
+(<em>"All setups can be trained for under one dollar and in less than 15 minutes"</em>). <strong>We claim no priority for
+the direction of that result</strong> — a fine-tuned generative decider can beat a small fine-tuned encoder at
+comparable effort, and it is already public. Three properties separate its setting from ours: (i) its task is
+<strong>binary (N = 2) sentence classification</strong>, not a typed single-label decision over N = 2–8 named options;
+(ii) its decoder is a <strong>3B</strong> model against a 395M encoder — a ≈7.6× scale confound the author names himself
+(<em>"Did it win by sheer size?"</em>); and (iii) its throughput edge is a <strong>serving-stack</strong> property: the author
+records that adding the 30 s vLLM CUDA-graph preparation time drops the LoRA arm to <strong>42 examples/s</strong>, below
+ModernBERT-large, and warns that <em>"this speed comparison was not comprehensive"</em>. Most importantly, the same
+experiment <strong>reproduces half of our diagnosis</strong>: its prompted, DSPy-optimised few-shot Llama-3.2-3B arm
+scored <strong>80.7 F1</strong>, below ModernBERT-large's 89.2 — <em>"Fine-tuning continues to outperform purely prompt-based
+approaches, even when those are optimized using automated prompt engineering."</em> The counter-case is therefore
+not evidence against the prompted-baseline artefact: it is an independent, if non-peer-reviewed,
+reproduction of it on a different task, and it simultaneously sets the novelty boundary we accept above.</p>
+<p><strong>One corpus claim is now sourced, and we cite it for its result.</strong> The corpus's assertion that an
+encoder-only RoBERTa outperforms a fine-tuned LLaMA2-7B on 77-class intent classification is supported by
+Benayas, Sicilia &amp; Mora-Cantallops (2024), <em>A comparative analysis of encoder only and decoder only models
+in intent classification and sentiment analysis</em>, <em>Language Resources and Evaluation</em> <strong>59</strong>(3):2007–2030,
+DOI <code>10.1007/s10579-024-09796-y</code> (<code>benayas2024comparative</code>). On BANKING77 (77 intents) the paper reports the
+encoder-only arm ahead of the fine-tuned decoder-only arm, and a decoder-only serving penalty of one to two
+orders of magnitude on a single T4 (29–108× at fixed output-token budgets). We cite it for that
+peer-reviewed, same-task encoder-over-decoder result; we do not reuse the corpus's "125M" formulation (the
+paper prints "approximately 110-120 million parameters") or its derived F1 gap, which the paper does not
+print. GLiNER and GLiClass, previously unsourced, now have identifiers and are treated in §2.2.</p>
+<h3>2.2 What is adjacent but not the same comparison</h3>
+<p>Four near-misses are worth separating from our claim, because each is a different task or a different
+comparison class; three of them are now sourced rather than merely named:</p>
+<ul>
+<li><strong>Span extraction vs typed single-label decision.</strong> <strong>GLiNER</strong> (arXiv <code>2311.08526</code>; NAACL 2024,
+  pp. 5364–5376, DOI <code>10.18653/v1/2024.naacl-long.300</code>; <code>zaratiana2024gliner</code>) is a <strong>span-extraction (NER)</strong>
+  model whose recorded win is exact-match F1 on spans, against <strong>zero-shot (prompted)</strong> LLMs — a span
+  extractor and a typed decision head are not competing on the same object. <strong>One correction to the corpus's
+  wording applies here:</strong> that characterisation is accurate for GLiNER 2023/2024 itself, but the corpus
+  applies it to the model id <code>fastino/GLiNER2.5-Decide</code>, which is a <strong>text-classification decision model</strong> —
+  GLiNER2 (arXiv <code>2507.18546</code>; <code>zaratiana2025gliner2</code>) explicitly covers <em>text classification</em>, and the model
+  card tags this variant a decision model for intent classification. We therefore cite GLiNER (2023/2024) for
+  the span-extraction point and do <strong>not</strong> rest the claim on the decision-model variant. What GLiNER2's
+  abstract does not state is whether its <em>"LLM-based alternatives"</em> comparison class is prompted or
+  fine-tuned; we do not read it either way.</li>
+<li><strong>No measured LLM head-to-head.</strong> <strong>GLiClass</strong> (arXiv <code>2508.07662</code>, 11 Aug 2025; <code>stepanov2025gliclass</code>)
+  adapts the GLiNER architecture to sequence classification, and the corpus's claim that it has <strong>no measured
+  LLM head-to-head at all</strong> is confirmed: its quantitative baseline tables contain only four cross-encoder/NLI
+  models (<code>deberta-v3-large-zeroshot-v2.0</code>, <code>deberta-v3-base-zeroshot-v2.0</code>,
+  <code>roberta-large-zeroshot-v2.0-c</code>, <code>comprehend_it-base</code>), no generative LLM (and no embedding/SetFit model)
+  has any numeric row, GPT-4o appears only as a training-data annotator, and its LLM comparison is
+  <strong>qualitative prose</strong>. This is an argument <strong>from absence</strong>, and we phrase it as one.</li>
+<li><strong>Prompted/typed deciders vs fine-tuned generative deciders.</strong> The corpus also carries a published
+  <code>laya-typed-decisions</code> figure of <strong>0.374</strong> and an <code>imajev-4b</code> figure of <strong>0.645</strong>. The <code>laya</code> figure is a
+  <em>prompted/typed</em> baseline, not a fine-tuned decider. The <code>imajev</code> <strong>0.645 is the H-A corpus stratum, not a
+  fixture number</strong> — the fixture figure is <strong>0.6368</strong> (<code>REPORT.md</code>, §"Two things … NOT defects") — and we do
+  not place 0.645 in any fixture table. Conflating the two would be a straight numerical error.</li>
+<li><strong>Single-label decision vs router/selection.</strong> A learned router deciding <em>which</em> model to call is a
+  different object from a model deciding <em>which label applies</em>; we do not extend our result to routing.</li>
+</ul>
+<p><strong>Adjacent, citable neighbours — marked <code>ADJACENT</code> in <code>REFERENCES.bib</code>.</strong> Three further works were located
+while searching for external backing for §2.1's absence claim. They are real and traceable, and they are
+<strong>not</strong> sources for our central claim; none of them discharges §6.4's absence claim:</p>
+<ul>
+<li><strong>Kostina, Dikaiakos, Stefanidis &amp; Pallis (2025)</strong>, <em>"Large Language Models For Text Classification: Case
+  Study And Comprehensive Review"</em>, arXiv <code>2501.08457</code> (<code>kostina2025llmtextclassification</code>): an encoder-vs-LLM
+  text-classification study whose LLM arms are <strong>prompted</strong> — it supports the prompted-baseline half, but it is
+  not a survey establishing the absence of a fine-tuned-generative comparison.</li>
+<li><strong>Li, Sleem, Gentile, Nichil &amp; State (2025)</strong>, <em>"Small Language Models in the Real World: Insights from
+  Industrial Text Classification"</em>, ACL 2025 Industry Track, pp. 971–982, DOI
+  <code>10.18653/v1/2025.acl-industry.68</code> (<code>li2025smalllanguagemodels</code>): the closest peer-reviewed
+  equal-effort-adjacent evaluation found — it evaluates <strong>both</strong> prompt engineering <strong>and</strong> supervised
+  fine-tuning for smaller models in industrial settings — but it is an evaluation, not a proof of absence, and
+  its per-task results were not retrieved.</li>
+<li><strong>Weller, Ricci, Marone, Chaffin, Lawrie &amp; Van Durme (2025)</strong>, <em>"Seq vs Seq: An Open Suite of Paired
+  Encoders and Decoders"</em>, arXiv <code>2507.11412</code>, accepted to ICLR'26 (<code>weller2025seqvsseq</code>): under <em>"the same
+  recipe for both encoder-only and decoder-only models"</em> it reports that <em>"encoder-only models excel at
+  classification and retrieval tasks"</em> and that <em>"a 400M encoder outperforms a 1B decoder on MNLI"</em> —
+  matched-recipe, peer-reviewed support for the encoder side, but its headline task is <strong>MNLI (3-way)</strong>, not a
+  typed single-label decision over N = 2–8 named options.</li>
+</ul>
+<p>Our claim is only about the comparison class: encoder-vs-<strong>prompted</strong> LLM does not license the inference
+encoder-vs-<strong>fine-tuned</strong> decider — and the one public fine-tuned-vs-fine-tuned counter-case (§2.1) is
+engaged, not ignored.</p>
+<hr>
+<h2>3. Method</h2>
+<h3>3.1 The fixture</h3>
+<p>The instrument is a sealed set of <strong>190</strong> typed single-label decision cases drawn from a project's own
+decision corpus (<code>evals/fixtures/reflex-decisions.ts</code>), with <strong>721</strong> options total, <strong>74</strong> distinct labels
+(51 of which occur exactly once), and per-case option counts distributed as K = 2 (33 cases), K = 3 (27),
+K = 4 (76), K = 5 (54). Its sha256 is
+<code>076164ac53c2c1aac130953345c481f88b51f4d6fb93d465c7430308a99b4796</code>; the fixture was read once
+(<code>fixtureReads = 1</code>) and its digest was <strong>unchanged before and after</strong> the second-labeller pass, with the
+second labeller's sandbox copy <strong>byte-identical</strong> to the target.</p>
+<p>Three instrument properties matter for reading the numbers, and one is routinely misread:</p>
+<ul>
+<li><strong>Chance floor = 0.2911.</strong> This is the <em>mean of 1/K over the 190 cases</em>, i.e.
+  <code>(33/2 + 27/3 + 76/4 + 54/5)/190 = 55.3/190 = 0.29105263…</code>. It is <strong>not</strong> the majority-class prior. Do not
+  conflate the <strong>0.2911</strong> floor with the <strong>0.4526</strong> majority-class control; they are different constructs
+  computed from different things.</li>
+<li><strong>Option-0 rate = 0.3789</strong>; <strong>leaky majority rate over the fixture's own answers = 0.1474</strong> (the rate at
+  which the most common <em>fixture answer</em>, not option 0, is "always guess" — it is not the majority-class
+  control either).</li>
+<li><strong>Label decidability is imperfect.</strong> The fixture was authored by one worker and carries known flagged
+  weak points; see §6.2 and the five owed corrections listed in this record's internal checklist (an internal working record not included in the released material).</li>
+</ul>
+<h3>3.2 The arms</h3>
+<p>Five arms were evaluated on the sealed fixture by the source experiment (EXP#12). All five accuracy figures
+below are read from the per-arm <code>eval-*.json</code> and agree with <code>REPORT.md</code>'s §1 table to printed precision.</p>
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>role</th>
+<th>params</th>
+<th>accuracy</th>
+<th>95 % CI</th>
+<th>ECE</th>
+<th>Brier</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modernbert-base</code></td>
+<td>candidate</td>
+<td>149,015,041</td>
+<td><strong>0.3474</strong></td>
+<td>[0.2842, 0.4211]</td>
+<td>0.0994</td>
+<td>0.2110</td>
+</tr>
+<tr>
+<td><code>deberta-v3-base</code></td>
+<td>candidate</td>
+<td>183,832,321</td>
+<td><strong>0.3474</strong></td>
+<td>[0.2789, 0.4211]</td>
+<td>0.1629</td>
+<td>0.2458</td>
+</tr>
+<tr>
+<td><code>setfit-mpnet</code></td>
+<td>candidate</td>
+<td>109,489,537</td>
+<td><strong>0.2632</strong></td>
+<td>[0.2053, 0.3263]</td>
+<td>0.1536</td>
+<td>0.2109</td>
+</tr>
+<tr>
+<td><code>majority-class</code></td>
+<td><strong>control</strong></td>
+<td>0</td>
+<td><strong>0.4526</strong></td>
+<td>[0.3842, 0.5263]</td>
+<td>0.2026</td>
+<td>0.2661</td>
+</tr>
+<tr>
+<td><code>shuffled-label</code></td>
+<td><strong>control</strong></td>
+<td>149,015,041</td>
+<td><strong>0.2316</strong></td>
+<td>[0.1737, 0.2895]</td>
+<td>0.0808</td>
+<td>0.1797</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The three candidate heads are 109M–184M parameter encoders.</strong> They are, in the corpus's framing, the
+"small encoder" side of the crossover: ModernBERT-base, DeBERTa-v3-base, and a SetFit-MPNet head. The
+<code>shuffled-label</code> control reuses ModernBERT-base's architecture and parameter count (149,015,041) but is
+trained on shuffled labels.</p>
+<p><strong>⚠ <code>deberta-v3-base</code> did not train at the pre-registered operating point.</strong> Its own recorded evidence:
+train loss 1.1288 → 1.1235 over the two logged points, dev accuracy 0.50 → 0.495 against a dev
+majority-class baseline of <strong>0.475</strong> (<code>analysis.json .observations.debertaV3Training</code>). Its 0.3474 must be
+read as <strong>"did not train"</strong>, not "trained and failed to transfer". We do not present it as a completed arm;
+it is listed to be complete about what was run and is excluded from the headline. The headline arm is
+<code>modernbert-base</code>.</p>
+<p><strong>Training is not bit-reproducible.</strong> Three identical training runs produced ModernBERT epoch-1 dev
+accuracies of 0.5150 and 0.5900 and fixture accuracies of 0.3421 and 0.3474 (<code>REPORT.md</code>, §"A caveat that is
+not a defect"). A ±1–2 point band is honest for <strong>every</strong> head number in this paper, and all of our
+conclusions have margins far larger than that band.</p>
+<h3>3.3 The baselines: two <code>decider-4b</code> figures, and which number uses which</h3>
+<p>There are <strong>two</strong> fine-tuned 4B (<code>decider-4b</code>, 4.66B params) figures in the evidence tree, and they are
+<strong>not</strong> the same measurement. Both are real. The paper must say which figure each number uses, because they
+differ by 0.0105 and the two candidate headline figures — <strong>0.3210</strong> ("0.32") and <strong>0.3316</strong> ("0.33") — come
+from <strong>different</strong> ones. <strong>The primary is declared: 0.6789.</strong></p>
+<table>
+<thead>
+<tr>
+<th>baseline</th>
+<th>value</th>
+<th>source</th>
+<th>re-scorable?</th>
+<th>used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>same-run reproduction</strong> (F0_decider frame)</td>
+<td><strong>0.6789</strong></td>
+<td><code>analysis.json .baselinesRescored["decider-4b-exp11-reproduction"].strata.instrument190.accuracy</code></td>
+<td><strong>Yes</strong> — per-case rows survive in the target repository's per-case decider rows; re-scored 0.6789 vs published 0.6789, <code>reproducesAt3dp = true</code>, <code>absoluteDifference = 4.7e−05</code></td>
+<td><strong>✅ DECLARED PRIMARY BASELINE</strong> (author, 2026-10-15); the paired McNemar partner; Δ = −0.3316 ("0.33")</td>
+</tr>
+<tr>
+<td><strong>historical, published (D-067)</strong></td>
+<td><strong>0.6684</strong></td>
+<td><code>analysis.json .publishedBaselines["decider-4b (published, D-067), instrument190"]</code></td>
+<td><strong>No</strong> — <code>REPORT.md:104</code>: <code>reproduces at 3 d.p. = None</code>; <code>REPORT.md:189</code>: <em>"cannot be re-scored. No per-case rows for that specific measurement are in the tree"</em></td>
+<td>the pre-registered F1 threshold the falsifier was written against; the source of <strong>0.3210</strong> ≈ "0.32"</td>
+</tr>
+</tbody>
+</table>
+<p><strong>✅ PRIMARY BASELINE DECLARED (author decision, 2026-10-15): 0.6789 (same-run).</strong> It is the primary because
+it is the <strong>only auditable</strong> figure and because it is the arm the paired test is actually computed against
+(<code>analysis.json .comparisons["modernbert-base"].b = "decider-4b (EXP#11 reproduction, F0 frame)"</code>, on the
+<em>same 190 cases, same option orders</em> as the heads). <strong>0.6684 is reported as a secondary / robustness figure</strong>,
+retained for its <strong>pre-registration role</strong>: F1 was pre-registered against it
+(<code>EXP#12-typed-channel-comparison.md:95</code>: <em>"encoder accuracy &lt; 0.6684 (the best 4B)"</em>), and it is the figure
+the working title's "0.32" comes from — but it <strong>cannot be re-scored</strong> (<code>REPORT.md:104</code>
+<code>reproduces at 3 d.p. = None</code>; <code>:189</code> no per-case rows survive), which is why it is not primary. <strong>The
+conclusion is unchanged by the choice:</strong> 0.3474 loses to both, and −0.3316 exceeds 2× either MDE (2.079×
+paired / 2.446× unpaired).</p>
+<p><strong>Every number, tied to its baseline:</strong></p>
+<table>
+<thead>
+<tr>
+<th>statement</th>
+<th>baseline</th>
+<th>figure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>headline shortfall (title, abstract)</td>
+<td><strong>0.6789</strong> — declared primary</td>
+<td><strong>Δ = −0.3316</strong> ("0.33")</td>
+</tr>
+<tr>
+<td>paired McNemar: b = 27, c = 90, ψ = 0.616, p = 4.167e−09, paired MDE 0.1595</td>
+<td><strong>0.6789</strong> — declared primary</td>
+<td>computed against the primary</td>
+</tr>
+<tr>
+<td>pre-registered falsifier F1</td>
+<td><strong>0.6684</strong> — secondary</td>
+<td>best head 0.3474 &lt; 0.6684 → <strong>F1 fires</strong></td>
+</tr>
+<tr>
+<td>working title's "0.32"</td>
+<td><strong>0.6684</strong> — secondary</td>
+<td><code>0.6684 − 0.3474 = 0.3210</code></td>
+</tr>
+<tr>
+<td>H-A / H-B corpus strata (0.6650 / 0.67)</td>
+<td><strong>not</strong> fixture numbers</td>
+<td>reported separately in §4.7</td>
+</tr>
+</tbody>
+</table>
+<p><strong>If the declaration were ever revisited (0.6684 promoted to primary), these sentences change</strong> — kept
+explicit so the edit is mechanical:</p>
+<ol>
+<li>Title — "by 0.33" (declared primary, 0.3316) would revert to "by 0.32" (0.3210).</li>
+<li>Abstract, "Headline" sentence — the clause naming 0.6789 as declared primary and 0.6684 as secondary.</li>
+<li>Abstract, "Against the <em>published</em> … 0.3210" sentence — would become the primary figure.</li>
+<li>§4.2 table caption and the primary-baseline row.</li>
+<li>§4.2 sentence fixing Δ = −0.3316 to the same-run arm.</li>
+<li>§5.1 first paragraph (which baseline the shortfall is measured against).</li>
+<li>§6.3 (single-fixture limitation) — the baseline choice is part of the pre-registration story.</li>
+</ol>
+<p><strong>The declaration lives here, where the numbers are used.</strong> This section is the paper's statement of the
+declared primary baseline (<strong>0.6789</strong>, author decision 2026-10-15) and of the deliberate title-figure
+change (the title uses <strong>0.33</strong> against the primary; <strong>0.32</strong> is the secondary-baseline arithmetic); the
+abstract restates both, and no third baseline figure is introduced anywhere in the paper.</p>
+<h3>3.4 Controls — each one is asked what it would have shown</h3>
+<p>A control that cannot report the opposite is decoration. Three controls are load-bearing here, plus
+fixture-reliability and leak-detection probes:</p>
+<ul>
+<li><strong>Majority-class control (0.4526).</strong> Could have contradicted the candidate: if any head exceeded 0.4526,
+  the "encoder head is a viable default" reading would survive on this fixture. <strong>It returned the opposite:</strong>
+  no head does; the margin is +0.1053 over the best head.</li>
+<li><strong>Shuffled-label control (0.2316).</strong> Could have contradicted the measurement: if a head trained on
+  <em>shuffled</em> labels scored at or above the 0.2911 chance floor, the fixture would be leaking label signal
+  through some channel other than the intended task, and every accuracy number above the floor would be
+  suspect. <strong>It returned the opposite:</strong> 0.2316 <strong>&lt; 0.2911</strong>, below chance. Note the associated calibration
+  caveat: its temperature-scaling fit hit the grid ceiling (100.0, <code>onGridCeiling = true</code>), so its reported
+  ECE <strong>0.0808 is an upper bound</strong> on the calibration reachable by that arm, not a fitted value.</li>
+<li><strong>F4 n-gram leak lint.</strong> Could have contradicted instrument integrity: rule = "drop a row when it shares
+  ≥ 2 distinct 8-grams with any single row of the other side", applied <strong>in both directions</strong>, threshold 2.
+  Over the real comparison it compared <strong>152,000</strong> training↔fixture pairs in each direction and flagged
+  <strong>0</strong>, removing 0 rows (and 160,000 training↔dev pairs, also 0). Could it ever fire? The positive controls:
+  three deliberately seeded copies, which fired at <strong>13 / 44 / 57</strong> shared 8-grams. <strong>Read those as
+  per-pair maxima</strong>: 13 is the state-only copy's total <em>and</em> its max-pair count; 44 and 57 are the
+  <strong>max-pair</strong> counts of the boilerplate-only and whole-row copies, whose totals are 220 and 233. A novel
+  row shared 0 grams with anything (negative control). So the lint fires when it should and is silent when it
+  should be — F4 not firing means the run is <strong>not void</strong>.</li>
+<li><strong>Order-permutation probe.</strong> A PriDe-style option-order probe. In the buggy pass-1 it flipped answers on
+  138 (ModernBERT), 142, 101, 135 and 81 cases depending on arm; in the final pass it flips <strong>0</strong> for all
+  candidate heads and <strong>58</strong> for the majority-class control. The control retaining flips is the right
+  behaviour: a constant-answer arm is genuinely order-sensitive by construction, so a probe that reported 0
+  flips for <em>it</em> would be broken.</li>
+<li><strong>Two blind model readers — machine reproducibility only.</strong> Reader B (<code>routeB-blind-model</code>) reached
+  agreement 0.9053, κ 0.9014, 18/190 disagreements; reader B2 (<code>mimo-v2.6-flash</code>) reached 0.8632, κ =
+  0.8577, 26/190 — a <strong>partial</strong> replication whose exact "0.90" headline degrades by ~4 points. The two
+  readers agree with each other at 0.9158, κ = 0.9125. Both are <strong>models</strong>, not independent humans, so
+  neither figure — and not the model-to-model κ either — is <strong>inter-annotator agreement</strong> (§6.2). The
+  deterministic lexical route (<code>routeA</code>) is not a labeller at all: it is a <strong>rule</strong>, and its κ = 0.3249 is
+  the floor a rule-only approach reaches.</li>
+</ul>
+<hr>
+<h2>4. Results</h2>
+<h3>4.1 The five arms on the sealed fixture</h3>
+<p>Best fine-tuned encoder head: <strong>0.3474</strong> (<code>modernbert-base</code>; <code>deberta-v3-base</code> ties it at 0.3474 but did not
+train — §3.2). <code>setfit-mpnet</code>: <strong>0.2632</strong>. Every one of these is barely above the fixture's <strong>0.2911</strong>
+chance floor, and <code>setfit-mpnet</code> is <strong>below</strong> it. The controls bracket the candidates: <code>majority-class</code>
+<strong>0.4526</strong> above, <code>shuffled-label</code> <strong>0.2316</strong> below.</p>
+<p><strong>The pre-registered falsifier F1 fired.</strong> It was written as <em>"encoder accuracy &lt; 0.6684 (the best 4B)"</em>
+(<code>EXP#12-typed-channel-comparison.md:95</code>, <code>REPORT.md:85</code>); the best head is 0.3474, so F1 fires against the
+published figure — and, separately, 0.3474 &lt; 0.6789, so it fires against the auditable one too.</p>
+<h3>4.2 The paired fine-tuned comparison</h3>
+<p>Against the <strong>same-run reproduction, 0.6789</strong> — the paired partner on the same 190 cases and the same option
+orders:</p>
+<table>
+<thead>
+<tr>
+<th>statistic</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>accuracy A (head)</td>
+<td>0.3474 (<code>0.3473684210526316</code>)</td>
+</tr>
+<tr>
+<td>accuracy B (decider, same-run)</td>
+<td>0.6789 (<code>0.6789473684210526</code>)</td>
+</tr>
+<tr>
+<td>accuracy difference Δ</td>
+<td><strong>−0.3316</strong> (<code>−0.33157894736842103</code>)</td>
+</tr>
+<tr>
+<td>McNemar discordant: b (head-only correct)</td>
+<td><strong>27</strong></td>
+</tr>
+<tr>
+<td>McNemar discordant: c (decider-only correct)</td>
+<td><strong>90</strong></td>
+</tr>
+<tr>
+<td>both correct / neither correct</td>
+<td>39 / 34 (rows sum to 190)</td>
+</tr>
+<tr>
+<td>discordant total / discordance ψ</td>
+<td>117 / <strong>0.616</strong></td>
+</tr>
+<tr>
+<td>exact two-sided p</td>
+<td><strong>4.167e−09</strong> (<code>4.166817880507353e-09</code>)</td>
+</tr>
+<tr>
+<td>continuity-corrected χ²</td>
+<td>32.85</td>
+</tr>
+<tr>
+<td><strong>paired</strong> MDE (the quoted figure)</td>
+<td><strong>0.1595</strong></td>
+</tr>
+<tr>
+<td>unpaired MDE (shown only to make the correction visible)</td>
+<td>0.1355</td>
+</tr>
+<tr>
+<td>paired bootstrap 95 % CI of the difference</td>
+<td><strong>[−0.4316, −0.2263]</strong> (excludes 0)</td>
+</tr>
+</tbody>
+</table>
+<p>Δ was checked by two independent paths: <code>0.3473684210526316 − 0.6789473684210526 =
+−0.33157894736842103</code>, and <code>(b − c)/n = (27 − 90)/190 = −63/190 = −0.3315789473684211</code> — same value.
+ψ = 117/190 = 0.6157894736842106.</p>
+<p>Against the <strong>historical, published 0.6684</strong> — the pre-registered F1 threshold, and the figure the working
+title's "0.32" comes from — the difference is <code>0.6684 − 0.3474 = **0.3210**</code>. That is the <strong>secondary /
+robustness</strong> figure and the pre-registered F1 threshold. <strong>The declared primary baseline (0.6789) gives
+Δ = −0.3316 ("0.33"), and every paired statistic in the table above is computed against it.</strong></p>
+<p><strong>A correction we must carry, not a claim we may repeat.</strong> The corpus's own summary
+(the paper-candidates record :269 and experiment-learnings record :281) states <em>"Every correction moved the
+affected arm DOWN."</em> <strong>That is false as a universal.</strong> The released <code>results/REPORT.md</code>
+carries the defect write-up (the standalone <code>results/DEFECT-EVIDENCE.json</code> is <strong>not</strong> part of the
+released set), and it shows:</p>
+<ul>
+<li><code>setfit-mpnet</code> moved <strong>down</strong>: <strong>0.3158 → 0.2947 → 0.2632</strong> (the sequence of <em>distinct</em> values; the
+  intermediate table carries <strong>two</strong> 0.3158 variants, one before and one after the order-probe itself was
+  fixed). Its chain also has two 0.3158 entries, so the quoted three-number chain is the distinct-value
+  sequence, not three table rows.</li>
+<li><code>modernbert-base</code> moved <strong>UP</strong>: <strong>0.342105</strong> (pass 1, buggy order probe) → <strong>0.347368</strong> (final) once the
+  order-probe bug was fixed.</li>
+</ul>
+<p>So the correct statement is: <strong>"every correction moved the <em>SetFit</em> arm down"</strong>, or equivalently <em>"all three
+defects flattered the candidate"</em> — the <em>defects</em> all favoured the candidate, but the <em>fixes</em> did not lower
+every arm. The SetFit arm is the control that returned the expected direction; the ModernBERT arm is the
+control that refuted the universal quantifier. We state the corrected version throughout and repeat it in
+§5.3. The baseline declaration is <strong>not</strong> implicated here; this correction stands regardless of baseline.</p>
+<p>Related numbers in the same chain: SetFit's ECE moved <strong>0.1665 → 0.2738</strong> (worse as accuracy dropped), with
+the <em>final</em> 0.2632 arm at ECE <strong>0.1536</strong>; its order-permutation flips moved <strong>101 → 46 → 36 → 0</strong>, so the
+final arm is order-stable. Pass-1 flips for the other arms were 138 (ModernBERT), 142, 101, 135, 81; the
+final pass reports <strong>0</strong> for all candidate arms.</p>
+<h3>4.3 The control that beats the candidates</h3>
+<p>The majority-class control returns <strong>0.4526</strong> — a constant answer beats <strong>every</strong> fine-tuned encoder head on
+this fixture, by a margin of <strong>+0.1053</strong> over the best one
+(<code>0.45263157894736844 − 0.3473684210526316 = 0.10526315789473684</code>). This is the result we consider hardest
+to explain away, and it is why the paper's claim is stronger than "the 4B wins": on this fixture, the
+encoders are not merely behind the fine-tuned decider, they are behind a <strong>fixed</strong> decision rule.</p>
+<p><code>shuffled-label</code> returns <strong>0.2316</strong>, i.e. <code>0.23157894736842105</code> — <strong>below</strong> the 0.2911 chance floor, which
+is the direction that keeps the instrument credible (§3.4).</p>
+<h3>4.4 Leak detection (F4)</h3>
+<p><code>lint-report.json</code>: <code>fires = false</code>, <code>silent = true</code>, <code>removedCount = 0</code>; forward and reverse each compared
+152,000 pairs and flagged 0. Positive controls fired at 13 / 44 / 57 (pair maxima; totals 13 / 220 / 233);
+the negative control (a novel row) shared 0 grams. <code>analysis.json .falsifiers.F4.fires = false</code> — the run is
+<strong>not void</strong> on the leak criterion.</p>
+<h3>4.5 Power</h3>
+<p>The observed harm is <code>0.33157894736842103 / 0.15949356562876219 = **2.079×**</code> the <strong>paired</strong> MDE, and
+2.446× the unpaired MDE. The conclusion holds against either.</p>
+<p><strong>⚠ We do not reuse the phrase "paired is conservative."</strong> On this run it is false. ψ = 0.616 is high, so
+<code>unpaired/paired = sqrt((p₁(1−p₁)+p₂(1−p₂))/ψ) = 0.85×</code> — the <strong>paired MDE (0.1595) is the LARGER</strong> of the
+two, not the smaller. The <em>requirement</em> to quote the paired figure (method learning M11) still stands; the
+<em>justification</em> that it is the lenient or conservative choice does not. We say what the numbers are.</p>
+<h3>4.6 Calibration — and the convention that decides it</h3>
+<p>The best head's ECE is <strong>0.0994</strong> (<code>0.09936282184403895</code>). The decider-4b's stored ECE is <strong>0.0551</strong> under
+one convention and <strong>0.1547</strong> under the other. The pre-registered F3 falsifier therefore <strong>flips</strong>:</p>
+<ul>
+<li>on <code>probabilities[choice]</code>: head 0.0994 <strong>≥</strong> decider 0.0551 → <strong>F3 fires</strong>;</li>
+<li>on the stored <code>confidence</code> field: 0.0994 <strong>&lt;</strong> 0.1547 → <strong>F3 does not fire</strong>.</li>
+</ul>
+<p>Same rows, opposite verdicts. <code>analysis.json .resolution</code> records <code>fires: ["F1", "F3"]</code> and the state
+<strong>CLOSE</strong>: F1 and F3 fired; F2, F4, F5 and F6 did <strong>not</strong>. <strong>⚠ We flag this ambiguity rather than resolving
+it.</strong> The paper's calibration claim is conditional on the convention, and the convention must be named
+wherever the claim appears. Temperature scaling was fitted on a geometric grid from 1e−3 to 1e2, 200 points;
+per-arm temperatures are 1.0970 (ModernBERT), 0.0036 (DeBERTa — did not train), 39.63 (SetFit), 1.0
+(majority-class), 100.0 (shuffled-label, on grid ceiling).</p>
+<h3>4.7 Two further recorded findings</h3>
+<ul>
+<li><strong>H4 is not supported.</strong> The accuracy ordering is <strong>monotone</strong> in parameter count across the three heads
+  (0.2632 at 109M &lt; 0.3474 = 0.3474 at 149M and 184M), so there is no size-crossover story <em>within</em> these
+  heads. <code>analysis.json .h4.verdict</code> records this explicitly.</li>
+<li><strong>The H-A/H-B strata.</strong> The same <code>decider-4b</code> reproduction scores <strong>0.6650</strong> on the H-A corpus stratum
+  (reproducing its published 0.665) and <strong>0.67</strong> on H-B. These are <strong>corpus strata</strong>, not fixture numbers,
+  and we do not compare them to fixture accuracy. <code>imajev-4b</code>'s <strong>0.645</strong> is likewise an <strong>H-A corpus
+  stratum</strong> figure; its fixture figure is <strong>0.6368</strong>.</li>
+</ul>
+<hr>
+<h2>5. Discussion</h2>
+<h3>5.1 The crossover is a property of the baseline, not of the model class</h3>
+<p>The published crossover compares an encoder against a <strong>prompted</strong> LLM. When the generative side is
+fine-tuned on the same task with the same labels, the crossover does not appear on our fixture: the encoder
+is <strong>0.3316</strong> behind on the <strong>declared primary baseline (0.6789)</strong> and <strong>0.3210</strong> behind on the
+<strong>secondary, published one (0.6684)</strong>. The effect size is not marginal under either pairing: Δ = −0.3316 exceeds
+<strong>2×</strong> either MDE, with exact p = 4.167e−09, and the paired bootstrap CI [−0.4316, −0.2263] excludes zero.</p>
+<p>The honest reading is narrower than "encoders are worse". Prompting and fine-tuning are different
+<em>resources</em>; the published results show what a prompted LLM does with a task description and a few
+examples, and this paper shows what happens when that constraint is removed on this one fixture. The
+crossover may well be a real property of the prompting regime. What we have shown is that it does not
+transfer for free to the fine-tuning regime — which is exactly the inference the corpus's own errata says
+the literature does not license.</p>
+<p><strong>We claim no priority for the direction.</strong> That a fine-tuned generative decider beats a fine-tuned encoder
+at comparable effort is already public (§2.1, Simmering 2025 — a blog post, not peer-reviewed). What this
+fixture contributes is the artefact diagnosis and, sharper than the direction, the majority-class control
+that beats every candidate head (§5.2) — neither of which the counter-case contains.</p>
+<h3>5.2 The majority-class control is the sharpest result</h3>
+<p>We expected the interesting comparison to be encoder vs fine-tuned 4B: <strong>0.3474 vs 0.6789</strong>. The sharper
+finding is <strong>0.3474 vs 0.4526</strong>: a constant answer beats every fine-tuned encoder head by <strong>+0.1053</strong>, and
+<code>setfit-mpnet</code> (0.2632) sits <strong>below</strong> the 0.2911 chance floor. This reframes the paper. It is not
+"the 4B is better than the encoder"; it is "on this fixture the encoder heads fail to beat a fixed rule, and
+the fine-tuned 4B is the only arm that is clearly doing the task". Any recommendation of the form "use an
+encoder head as the default at N ≥ 4" must clear the majority-class bar on the target fixture first — a bar
+that costs one re-score to compute and that the corpus's prior recommendation had not cleared.</p>
+<h3>5.3 Method lessons, including one correction to the record</h3>
+<ul>
+<li><strong>A defect chain can favour the candidate without lowering every arm.</strong> We carry the corrected statement:
+  the corrections lowered the <strong>SetFit</strong> arm (0.3158 → 0.2947 → 0.2632) and <strong>raised</strong> the ModernBERT arm
+  (0.342105 → 0.347368). The universal form of the claim ("every correction moved the affected arm DOWN") is
+  false and is not repeated anywhere in this paper.</li>
+<li><strong>The quoted MDE is the paired one; it is not the lenient one here.</strong> ψ = 0.616, <code>unpaired/paired = 0.85×</code>.
+  Quote the paired figure because M11 requires it, not because it flatters the conclusion.</li>
+<li><strong>A calibration verdict can be decided by a storage convention.</strong> F3 fires on <code>probabilities[choice]</code> and
+  not on <code>confidence</code> — same rows, opposite verdicts. Any calibration claim must name the field it reads.</li>
+<li><strong>A mandatory control is only meaningful if it can win — and here it did.</strong> The majority-class control beat
+  every candidate. The design lesson is to pre-register the control's <em>ability to contradict</em>, not just its
+  presence.</li>
+</ul>
+<hr>
+<h2>6. Limitations</h2>
+<h3>6.1 Latency was out of scope, and the evidence could not support it</h3>
+<p><strong>We make no latency claim, in the abstract, the results or anywhere else.</strong> The evidence tree cannot
+support a fair latency comparison, for four recorded reasons:</p>
+<ol>
+<li><strong>Never co-measured.</strong> <code>REPORT.md:191</code>: <em>"The heads were timed on the GX10's GB10 with local weights; the
+   decider's 0.075 s/decision figure and the re-scored 0.0531 s/decision on these rows come from a served
+   model on a different stack."</em></li>
+<li><strong>Different unit of work.</strong> The head figure is one full per-decision call — all option texts tokenised,
+   <strong>one forward batch</strong>, softmax (12.37 / 14.16 / 11.96 / 12.46 ms for the four heads; 0.003 ms for
+   majority-class; n = 570 after 20 warm-up cases, GPU synchronised). The decider figure is a served
+   autoregressive decode loop. Those are not the same operation.</li>
+<li><strong>The F6 threshold is a constant, not a measurement.</strong> F6 compares heads against the <strong>pre-registered</strong>
+   0.075 s/decision from <code>DECIDER_TIER §2</code>, so F6 not firing (<code>fires = false</code>) only says 12–14 ms &lt; 75 ms.
+   It is not evidence from a head-to-head.</li>
+<li><strong>The decider's own timing spreads 2× across strata of the same model</strong> — 53.06 ms (instrument190),
+   72.85 ms (H-B), 106.92 ms (H-A) — which by itself shows the timing was not controlled. (<code>imajev-4b</code> and
+   <code>laya</code> sit at 453 ms / 639 ms in the same stored source, but comparing them to the local head timings
+   would repeat the same category error.)</li>
+</ol>
+<p>The strongest defensible statement is the uninteresting one: per-decision, the heads sit in the tens of
+milliseconds and the stored decider figures sit in the tens-to-hundreds of milliseconds, measured on
+different stacks and different operations. That is not a result, so latency is dropped and named here
+instead. Closing it would need a 4B decider re-measured on the same host under the same per-decision
+protocol.</p>
+<h3>6.2 Two blind model readers: machine reproducibility of the fixture, <strong>not</strong> inter-annotator agreement</h3>
+<p><strong>Two</strong> blind model passes now exist. Reader B (<code>routeB-blind-model</code>) agrees with the fixture's
+hand-authored labels 0.9053 of the time, κ = 0.9014, with 18/190 disagreements. Reader B2
+(<code>mimo-v2.6-flash</code>), run later on the same blinded inputs, agrees <strong>0.8632</strong> of the time, <strong>κ = 0.8577</strong>,
+with <strong>26/190</strong> disagreements. The two readers agree with <strong>each other</strong> <strong>0.9158</strong> of the time, <strong>κ =
+0.9125</strong> — a genuinely new, model-to-model quantity. The <em>magnitude</em> of the first result therefore
+replicates (both readers land at κ ≥ 0.85), but the exact "0.90" headline does <strong>not</strong>: reader B2 sits 4.2
+points lower on agreement and 4.4 points lower on κ, and the pre-registered ladder would place it in band 2
+(0.75 ≤ agreement &lt; 0.90) while it still clears the band-1 κ threshold. We report this as a <strong>partial
+replication</strong> and give <strong>both</strong> readers, not one of them as "the" figure.</p>
+<p>The two readers agree with each other <em>more</em> than either agrees with the fixture record (0.9158 &gt; 0.9053
+and &gt; 0.8632). That is consistent either with a shared LLM reading bias or with author-idiosyncratic
+conventions in the fixture, and we do not resolve it: a high model-to-model κ is equally consistent with two
+models sharing a <em>wrong</em> convention. What it does rule out is treating the fixture's conventions as
+self-evident, and it is why those conventions should be read as conventions rather than as ground truth.</p>
+<p>Four further findings bound how the labels should be read:</p>
+<ul>
+<li><strong>The weak dimensions are the same for both readers, and the weakest is <code>memory.admission</code></strong> (B2 κ =
+  <strong>0.5625</strong>, B κ = <strong>0.7153</strong>), followed by <code>acquisition</code> (B2 <strong>0.7045</strong>, B <strong>0.8049</strong>). The other
+  five of the seven kinds (<code>escalation</code>, <code>topology</code>, <code>worker.class</code>, <code>context.package</code>,
+  <code>capability.family</code>) are stronger for both readers. Consistent weakness across two independent machine
+  readers points at the <strong>fixture</strong>, not at the readers: label soundness is dimension-dependent, and the
+  dependence looks like a property of the instrument.</li>
+<li><strong>The <code>memory.admission</code> tier boundary is a real, replicated ambiguity — the top repair item.</strong> Four
+  cases (<code>memory.admission-001/-009/-021/-027</code>) record step-scoped scratch that is never re-read as
+  <code>EPHEMERAL</code>; <strong>both</strong> blind readers independently chose <code>DROP</code> on all four (<strong>4/4</strong> replicated). B
+  first reported this convention and B2 shows it is not one model's quirk. The fixture's tier vocabulary
+  for scratch that is never re-read is not pinned down by the questions.</li>
+<li><strong>Accuracy tracks option arity for both readers — but the effect is confounded with kind.</strong> Agreement
+  falls from 0.970 (2-option cases, n = 33) to 0.722 (5-option cases, n = 54) for B2, and from 1.000 to
+  0.815 for B (κ 0.950 → <strong>0.684</strong> and 1.000 → 0.791). The 5-option stratum is dominated by the
+  closed-roster kinds <code>memory.admission</code> and <code>acquisition</code> — the two hardest kinds for independent semantic
+  reasons — so this is <strong>not</strong> clean evidence of option-wording exploitation, and on the stratum where the
+  answer is named in the question (30 <code>escalation</code> cases) the readers scored 30/30 (B) and 28/30 (B2),
+  which is not how a surface-cue matcher behaves. But the gradient is real and it <strong>weakens any blanket
+  "the labels are sound" claim</strong> for high-arity closed-roster kinds: soundness is measurably lower there.</li>
+<li><strong>Disagreement structure, not just its count.</strong> B2 disagrees on 26 cases and B on 18, but the overlap
+  is a <strong>14-case shared contested core</strong> — all four <code>acquisition</code> traps (<code>-007/-014/-019/-023</code>),
+  <code>topology-018</code>, <code>capability.family-004/009</code>, <code>context.package-004</code>, <code>worker.class-023</code>, the four
+  <code>EPHEMERAL</code>/<code>DROP</code> cases above, and <code>memory.admission-018</code> (<code>DROP→EPISODIC</code>). The tails (12 B2-only,
+  4 B-only) are scattered and read as
+  reader-specific noise, not as a second catalogue of defects. The honest reading is "14 shared contested
+  cases plus two small reader-specific tails", not "26 defects".</li>
+</ul>
+<p>Two further honest caveats:</p>
+<ul>
+<li>The <strong>pooled</strong> κ is weak on its own: 51 of 74 labels occur once, so <code>pe</code> is tiny (0.040) and κ is
+  dominated by <code>po</code>. The informative figures are the stratified ones: closed-vocabulary subset (4 kinds,
+  106 cases) κ = <strong>0.8837</strong>; roster-and-bespoke subset (84 cases) κ = <strong>0.9140</strong>; AB mutual agreement
+  <strong>0.3684</strong>; the deterministic lexical rule (routeA — a <strong>rule</strong>, not a labeller) reaches only κ = <strong>0.3249</strong>
+  (agreement 0.3421), and in 4 of the 18 disagreements routeA backs the fixture record. Route A is a
+  <strong>tokeniser-overlap rule</strong> rather than a model, so its κ moves by a few thousandths with how the fixture's
+  text is spelled and cased — the measured range across our neutralisation rounds was 0.319886… to 0.324881…
+  — an order of magnitude smaller than its ≈0.33 separation from the decider, so no conclusion rests on the
+  exact value.</li>
+<li>A threshold was pre-registered (≥ 0.90 agreement / ≥ 0.85 κ). Reader B <em>met</em> it at 0.905 / 0.901; reader
+  B2 <em>met the κ threshold but not the agreement threshold</em>, at 0.863 / 0.858. But a met threshold on a
+  <strong>model</strong> pass — or on two — does not convert it into human agreement.</li>
+</ul>
+<p><strong>An independent human labeller is still owed, and the paper-candidates record §F.3 is not discharged.</strong>
+the second-labeller-190 source experiment tree's evidence record :309 states it for one pass — <em>"</em><em>It is not IAA.</em><em> One pass is
+a model."</em> — and two passes do not change that: <strong>κ = 0.9125 between two models is still not
+inter-annotator agreement and must never be cited as such.</strong> Two models can share a wrong convention as
+easily as a right one, and this result bounds <em>machine</em> reproducibility for exactly two models on exactly
+one fixture. §F.3's point — that several candidate papers share this one 190-case fixture, so <em>"one fixture
+flaw propagates into four papers"</em> — remains true, and its call for a second independent <strong>human</strong> labeller
+is not discharged by either pass. The fixture's own flagged decidability weak points (five owed
+corrections, of which four are repairs to the fixture file itself) are listed in this record's internal checklist (an internal working record not included in the released material) and were
+<strong>deliberately not applied</strong>, because the target repository is strictly read-only.</p>
+<h3>6.3 External validity: one fixture, one host, and a baseline choice awaiting a human</h3>
+<p>This is a single 190-case fixture authored by one worker, evaluated on one host. If a reviewer judges the
+fixture unrepresentative, the claim reduces to "on these 190 cases" — still a publishable negative result,
+but a smaller one. The fixture shares its provenance with several other candidate papers (§F.3). No external
+typed-decision benchmark was used, and none was found in the corpus to use.</p>
+<p><strong>The primary baseline is declared: 0.6789</strong> (author decision, 2026-10-15) — the auditable same-run figure.
+<strong>0.6684</strong> is carried as a secondary / robustness figure and as the pre-registered F1 threshold, and it cannot
+be re-scored. The seven sentences that would change if that declaration were ever revisited are enumerated in
+§3.3; the conclusion does not depend on the choice.</p>
+<h3>6.4 The literature claim is an internal verified-absent audit; its counter-case is a sourced blog post</h3>
+<p>§2's core claim is supported by <code>docs/DECIDER_STACK_DECISION.md</code> §11.6 and commit <code>ad301ae</code>, which state it
+as an errata on the corpus's own earlier recommendation. It <strong>does</strong> support the claim as written — but it is
+a claim about a <strong>literature search whose protocol is not recorded</strong>: databases, query terms, dates and
+inclusion rules are absent from the corpus. We write "we were able to locate" rather than "no such work
+exists", and our external search then <strong>failed to upgrade the hedge</strong>: no survey or recorded search
+protocol establishing the absence was located, so the weaker phrasing stays.</p>
+<p>The corpus's own equal-fine-tuning-effort counter-case, previously without an identifier, is now located and
+cited — as a <strong>blog post</strong>, deliberately not dressed as a paper (§2.1, <code>simmering2025modernbert</code>). It reports
+a fine-tuned Llama-3.2-3B LoRA at F1 93.1 beating ModernBERT-large's 89.2 on binary ADE classification at
+equal per-arm training cost, and we <strong>claim no priority for that direction</strong>. Our thesis is therefore
+supported by <strong>one</strong> fine-tuned-vs-fine-tuned data point against the crossover on our own fixture, plus that
+post's independent reproduction of the prompted-baseline half (its prompted arm scored 80.7) — <strong>not</strong> by a
+survey. The corpus claim that was carried without an identifier — an encoder-only RoBERTa beating a fine-tuned
+LLaMA2-7B on 77-class intent classification — is now sourced to Benayas, Sicilia &amp; Mora-Cantallops (2024),
+<em>Language Resources and Evaluation</em> <strong>59</strong>(3):2007–2030, DOI <code>10.1007/s10579-024-09796-y</code>, and cited for that
+result.</p>
+<h3>6.5 Scope of the candidate arms</h3>
+<p>Only three encoder families were run, all 109M–184M parameters: ModernBERT-base, DeBERTa-v3-base and
+SetFit-MPNet. <strong><code>deberta-v3-base</code> did not train</strong> at the pre-registered operating point (train loss
+1.1288 → 1.1235; dev 0.50 → 0.495 against a dev majority-class baseline of 0.475), so it is not a completed
+arm and we do not rely on it. <strong>Training is not bit-reproducible</strong> — three identical runs gave ModernBERT
+epoch-1 dev accuracies 0.5150 and 0.5900 and fixture accuracies 0.3421 and 0.3474 — so a <strong>±1–2 point band</strong>
+applies to every head number here. All conclusions have margins far larger than that band, but a reader
+should not treat 0.3474 as exact. A reviewer's obvious fourth arm — <strong>a trained linear probe on a frozen LLM
+embedding</strong> — was not run and is <em>not</em> present anywhere in the evidence tree; it is listed as an open
+decision in this record's internal open-questions log (an internal working record not included in the released material). H4 (accuracy monotone in parameter count) is <strong>not supported</strong>; the
+observed ordering is monotone, so there is no within-heads size-crossover story to tell.</p>
+<h3>6.6 The counter-case asks whether our encoder arm is simply under-trained</h3>
+<p>A reviewer who has read the equal-effort counter-case can put the objection in one sentence, and we write it
+here in their voice rather than waiting for it:</p>
+<blockquote>
+<p><em>"Your best encoder head scores 0.3474 and fails to beat a majority-class control at 0.4526, while a real
+ModernBERT-large reached </em><em>0.892 F1</em><em> in the counter-case. Is your encoder arm under-trained — so that your
+shortfall measures your training recipe rather than the crossover you claim to be diagnosing?"</em></p>
+</blockquote>
+<p>We <strong>cannot fully answer that objection from our evidence, and we do not pretend to.</strong> What we can say is
+bounded, item by item:</p>
+<ul>
+<li><strong>The 0.892 is a different instrument and is not comparable.</strong> The counter-case's 89.2 F1 is <strong>binary
+  (N = 2) sentence classification</strong> on the ADE corpus; our fixture is a typed single-label decision over
+  N = 2–8 named options, with <strong>74</strong> distinct labels (51 occurring exactly once) and a <strong>0.2911</strong> mean-1/K
+  chance floor. Absolute accuracy or F1 across those two instruments is not a like-for-like comparison in
+  either direction, and we do not use it as one.</li>
+<li><strong>What the majority-class control licenses — and what it does not.</strong> It licenses exactly one claim: on this
+  fixture, <strong>no encoder head is a viable default</strong> — 0.4526 beats the best head by <strong>+0.1053</strong>, computed on
+  the same 190 cases and the same option orders. It does <strong>not</strong> license the claim that <code>modernbert-base</code> is
+  well tuned, that 0.3474 is an encoder ceiling, or that an encoder could not reach a higher absolute level
+  on this fixture under a better recipe. We report the encoder arm's absolute level as an observed value
+  under one recorded recipe, <strong>not as an architecture verdict</strong>.</li>
+<li><strong>What we do not establish about tuning effort.</strong> This paper reports <strong>no tuning-effort or compute study</strong>
+  for the encoder arms. The counter-case's equal-effort premise (<em>under one dollar, under 15 minutes per arm
+  on one A10G</em>) is <strong>its</strong> premise on <strong>its</strong> task; we did not reproduce it, and we make no equal-effort claim
+  of our own. Training non-reproducibility (§6.5: three identical runs gave fixture accuracies 0.3421 and
+  0.3474, a ±1–2 point band) bounds how much a single head number can carry — but a ±1–2 point band is
+  <strong>not</strong> evidence that the recipe is adequate, and we do not offer it as such.</li>
+<li><strong>The reviewer's alternative reading stays open.</strong> If the encoder arm is under-trained, part of the 0.3316
+  shortfall could reflect the recipe rather than the crossover. Nothing in this paper excludes that reading.
+  It is named as an <strong>open question</strong> in this record's internal unsourced-claims log (an internal working record not included in the released material); closing it would need a tuning-effort sweep
+  on this fixture — including the fourth arm named in §6.5, a trained linear probe on a frozen LLM embedding,
+  which was <strong>not run</strong> — and we did not run one.</li>
+<li><strong>What the claim therefore is.</strong> A <strong>change of direction under fine-tuning</strong> on one sealed fixture, plus
+  the prompted-baseline artefact diagnosis — <strong>not</strong> an estimate of an encoder ceiling, and <strong>not</strong> an
+  equal-effort law. It does not depend on 0.3474 being the best an encoder can do; it depends on the paired
+  fine-tuned comparison, the majority-class control, and the fact that the published encoder-wins results
+  compare the encoder against a <strong>prompted</strong> LLM.</li>
+</ul>
+<hr>
+<h2>7. Reproduction</h2>
+<p>Everything in this paper is checkable against the released reproducibility package — <strong>29 files, no
+evaluation harness</strong>, carrying the sealed 190-case fixture and its schema, the verification tooling
+(<code>verify/recompute-claims.py</code>), the pre-registered protocols, the per-arm result records the claims cite,
+and the second-labeller evidence (Zenodo DOI pending — see Data and code availability). The
+full, copy-pasteable command list with verbatim outputs is this record's internal evidence notes (an internal working record not included in the released material);
+This record's internal claims map (an internal working record not included in the released material) maps each number to its source file and key. <strong>The evaluation harness — the model, training and
+evaluation code — is withheld, so the subset verifies the recorded results but cannot regenerate them.</strong> The
+load-bearing material is:</p>
+<table>
+<thead>
+<tr>
+<th>what</th>
+<th>where (all paths are within the released package unless noted)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>per-arm metrics</td>
+<td><code>results/eval-{modernbert-base,deberta-v3-base,setfit-mpnet,majority-class,shuffled-label}.json</code></td>
+</tr>
+<tr>
+<td>instrument, comparisons, resolution, falsifiers, H4</td>
+<td><code>fixture/reflex-decisions.ts</code>; <code>results/REPORT.md</code>; the per-arm and control records in <code>results/</code></td>
+</tr>
+<tr>
+<td>defect chain</td>
+<td><code>results/REPORT.md</code> (the D1-D3 defect write-up); the standalone <code>results/DEFECT-EVIDENCE.json</code> is <strong>not</strong> part of the released set</td>
+</tr>
+<tr>
+<td>leak lint</td>
+<td>recorded by the withheld harness (<code>harness/data/lint-report.json</code>); not part of the released set</td>
+</tr>
+<tr>
+<td>narrative report</td>
+<td><code>results/REPORT.md</code></td>
+</tr>
+<tr>
+<td>pre-registered protocol</td>
+<td><code>preregistration/EXP12-typed-channel-comparison-prereg.md</code></td>
+</tr>
+<tr>
+<td>second-labeller reliability (reader B)</td>
+<td><code>second-labeller/{RUN.json,EVIDENCE.md,disagreements.jsonl,labelsB.json,PREREGISTRATION.md}</code></td>
+</tr>
+<tr>
+<td>second-labeller robustness (reader B2; <strong>not</strong> in the released subset)</td>
+<td>the source experiment tree's second-labeller robustness records</td>
+</tr>
+<tr>
+<td>harness provenance (<strong>the harness itself is withheld</strong>; recorded for integrity)</td>
+<td>recovered from an unmerged development branch (name and commit withheld), path <code>tools/typed-channel/</code> — 18 files recovered read-only via <code>git cat-file blob</code></td>
+</tr>
+<tr>
+<td>the core literature claim (source repository, not released)</td>
+<td><code>docs/DECIDER_STACK_DECISION.md</code> §11.6; commit <code>ad301ae1a5472fa7bd27807fdc7bb15d35f81988</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Search gotcha, recorded so a replicator does not conclude a number is absent.</strong> The p-value is written with
+a <strong>typographic minus (U+2212)</strong> in the paper-candidates record :265 and the experiment-learnings record :265
+(<code>4.167e−09</code>), so <code>grep 4.167e-09</code> on those two files returns nothing; the machine-readable sources
+(<code>analysis.json</code>, <code>REPORT.md</code>) use an ASCII hyphen. Grep for <code>4.1668</code> or <code>4.167</code> instead, or use
+<code>grep -P '\x{2212}'</code>.</p>
+<p><strong>What reproduces exactly.</strong> The same-run decider baseline: the per-case rows shipped in
+<code>results/baselines.json</code>
+(<code>.models["decider-4b-exp11-reproduction"].perCase</code>, 190 rows) re-score to 0.6789 vs published 0.6789,
+<code>reproducesAt3dp = true</code>, <code>absoluteDifference = 4.7e−05</code>. The historical 0.6684 does <strong>not</strong> — no per-case
+rows survive for it (<code>REPORT.md:104</code>, <code>:189</code>), which is why it is the <strong>secondary</strong> figure and not the
+declared primary — <strong>0.6789</strong> (author decision, 2026-10-15).</p>
+<p><strong>Instrument integrity checks a replicator should re-run.</strong> Fixture sha256 unchanged before/after the second
+labeller pass and byte-identical sandbox copy; F4 silent over 152,000 pairs in both directions while firing
+at 13/44/57 on the seeded copies; row identity <code>39 + 27 + 90 + 34 = 190</code>; chance floor recomputed as
+<code>(33/2 + 27/3 + 76/4 + 54/5)/190</code>.</p>
+<p><strong>Read-only discipline.</strong> The source repository was treated as strictly read-only: no writes, no <code>git</code> state
+changes. HEAD before and after: <code>907fa39da7ba8ecfbe6e976b7a4cddadea7ac36b</code>; working-tree changes present both
+times are <strong>unattributed-to-this-unit</strong> untracked files from a concurrent session and are recorded in
+this record's internal checklist (an internal working record not included in the released material).</p>
+<hr>
+<h2>Data and code availability</h2>
+<p><strong>The paper is public, CC BY 4.0.</strong> By the author's decision of 2026-10-15 the manuscripts in this series are
+released under <strong>Creative Commons Attribution 4.0 International</strong>. The paper's own licence is therefore
+settled, and it is <strong>not</strong> a separate open question awaiting a human decision.</p>
+<p><strong>The released reproducibility package ships with the paper</strong> (29 files; <strong>no evaluation harness</strong>; Zenodo
+DOI pending — see the persistent-identifier paragraph below). It is deliberately
+minimal: it carries the sealed fixture, <code>verify/recompute-claims.py</code> and the second labeller's
+<code>parse_fixture.py</code> and <code>compare.py</code>, the <code>results/</code> records the claims rest on, the pre-registered protocols
+and a <code>README.md</code> — what a reviewer needs to <strong>check</strong> the recorded measurement, and nothing of the system
+the measurement is about. <strong>A reader therefore cannot retrain the arms, cannot re-render the model inputs,
+and cannot re-run the evaluation pipeline: what is released verifies the results, it does not reproduce
+them.</strong></p>
+<ul>
+<li><strong>The instrument and its schema</strong> — <code>fixture/reflex-decisions.ts</code>, the shipped copy of the sealed
+  190-case fixture (shipped sha256
+  <code>89e77a8e24a907f06345a45485c013799e08c806cc9d8f075db7709fbfd8e169</code>; the as-audited source it was derived from is sha256
+  <code>076164ac53c2c1aac130953345c481f88b51f4d6fb93d465c7430308a99b4796</code>), and
+  <code>fixture/DECISION_CASE_SCHEMA.ts</code>.</li>
+<li><strong>The verification tooling and the commands</strong> — <code>verify/recompute-claims.py</code>, which recomputes the cited
+  values from the shipped <code>results/</code> records, plus the copy-pasteable command list in
+  this record's internal evidence notes (an internal working record not included in the released material) and the subset's own <code>README.md</code>. The evaluation harness
+  (18 files) with its frozen <code>data/</code> is <strong>withheld</strong>, not shipped.</li>
+<li><strong>The pre-registered protocols</strong> — <code>preregistration/EXP12-typed-channel-comparison-prereg.md</code> (EXP#12
+  §1–§9), and <code>second-labeller/PREREGISTRATION.md</code>.</li>
+<li><strong>The results</strong> — the five per-arm sealed-190 records (<code>results/eval-*.json</code>) and the re-scored controls
+  with their <strong>per-case</strong> rows (<code>results/baselines.json</code>), so the declared primary baseline <strong>0.6789</strong> is
+  auditable from the released material alone.</li>
+<li><strong>The second-labeller evidence</strong> — <code>second-labeller/{RUN.json,EVIDENCE.md,disagreements.jsonl,labelsB.json}</code>
+  (reader B), the record behind the κ = 0.9014 result, which §6.2 states is machine reproducibility of the
+  fixture and <strong>not</strong> inter-annotator agreement. The <strong>second</strong> model reader (B2, κ = 0.8577; model-to-model
+  κ = 0.9125) is recorded in the source experiment tree at
+  the source experiment tree's second-labeller robustness records
+  and is <strong>not</strong> part of this released subset.</li>
+</ul>
+<p><strong>Honest limitation: the harness does not ship, so the measurement cannot be re-run.</strong>
+The six Python steps (<code>prepare.py</code>, <code>train.py</code>, <code>evaluate.py</code>, <code>analyze.py</code>, <code>defect-probe.py</code>, <code>collect.py</code>),
+the two TypeScript steps (<code>export-fixture.ts</code>, <code>lint.ts</code>) and the harness's frozen <code>data/</code> are <strong>withheld</strong>.
+The subset ships their <strong>outputs</strong> — the sealed fixture and the per-arm and control records in <code>results/</code> —
+and <code>verify/recompute-claims.py</code> recomputes every cited value from those records. What a reader cannot do is
+retrain an arm, re-render the model inputs, or re-run the evaluation pipeline. We do not claim that the
+measurement is re-runnable.</p>
+<p><strong>A provenance fact a reader should not have to guess.</strong> The EXP#12 harness is <strong>not on the source
+repository's default branch</strong>: the experiment closed that branch unmerged (its name and commit are
+withheld), at path <code>tools/typed-channel/</code>, and that path does not exist on trunk. The 18 harness files were
+recovered <strong>read-only from the git object store</strong> (<code>git cat-file blob</code>) and are <strong>not</strong> part of the released
+set; a reader should not assume they are on the default branch.</p>
+<p><strong>Withheld by policy — deliberately, not by oversight.</strong> The <strong>agent-state kernel / runtime implementation</strong>
+(the target repository's withheld implementation directories) is the system the measurement is about, and it is not released. <strong>No model weights</strong>
+are released: the three arms are fetched as <strong>public</strong> checkpoints at run time
+(<code>answerdotai/ModernBERT-base</code>, Apache-2.0; <code>microsoft/deberta-v3-base</code>, MIT;
+<code>sentence-transformers/all-mpnet-base-v2</code>, Apache-2.0), and no weight file is shipped or present in the source
+repository's tree. The source repository's 26-file evidence tree is likewise not released. The full boundary
+is enumerated in the subset's accompanying exclusion inventory — 15 exclusion classes, including traces, run artefacts,
+scratch trees and vendor code. <strong>Checking</strong> this paper's claims requires the <strong>fixture, the verification
+tooling and the result records</strong>; it does <strong>not</strong> require the kernel, the weights, or the training pipeline.
+<strong>Reproducing the measurement is not possible from the released material</strong>, because the harness is withheld.</p>
+<p><strong>Licence of the subset — decided.</strong> The <strong>content</strong> — the fixture and the paper's own material — is covered
+by CC BY 4.0, and <strong>the paper's own text is CC BY 4.0</strong>. The <strong>code</strong> licence for the subset is a
+<strong>different</strong> question, and it is now settled: released artifacts are <strong>source-available under PolyForm
+Noncommercial 1.0.0</strong>, with an <strong>author-offered paid commercial licence</strong> for commercial use. The <strong>main
+repository stays fully proprietary and closed</strong>; the source repository's own <code>LICENSE</code> governs it and its
+terms this paper neither restates nor resolves. The instruments for this decision are in
+<code>strategy/licence-templates/RELEASED-PIECE/</code>.</p>
+<h2>Persistent identifier</h2>
+<p><strong>DOI: AUTHOR TO CONFIRM — Zenodo DOI to be inserted on deposit.</strong> The released reproducibility package
+(29 files; no evaluation harness — see Data and code availability) has <strong>no persistent identifier yet</strong>. No DOI
+has been minted or guessed here. On deposit, the Zenodo DOI belongs in this paragraph and in the Data and code
+availability section, so the released artifacts carry a persistent identifier and not only a licence statement.</p>
+<h2>Compute and resources</h2>
+<p>All encoder-arm measurements reported here were run on a <strong>single host</strong> (<code>GX10 gx10-163b</code>, NVIDIA GB10 GPU);
+the fine-tuned 4B decider figures are re-scored from stored rows produced by a <strong>served stack on different
+hardware</strong> and were <strong>not</strong> co-measured here (§6.1). Per-decision head timing is one batched forward call over
+all option texts, 20 warm-up cases and 3 × 190 = 570 timed cases with the GPU synchronised (§6.1). The three
+encoder arms are public Hugging Face checkpoints fetched at run time; no model weights ship (see Data and code
+availability). This paper reports <strong>no tuning-effort or compute study</strong> for the encoder arms (§6.6).
+<strong>AUTHOR TO CONFIRM: wall-clock training time per arm, GPU memory footprint, and any energy measurement were
+never recorded in this workspace; supply them, or approve their documented omission as stated here.</strong></p>
+<h2>Author contributions</h2>
+<p><strong>AUTHOR TO CONFIRM: author-contributions statement.</strong> The manuscript names no author and carries no
+contribution record, so no CRediT roles can be assigned here. Replace this paragraph with the contribution of
+every author (CRediT roles where the venue asks for them).</p>
+<h2>Funding</h2>
+<p><strong>AUTHOR TO CONFIRM: funding declaration.</strong> No funding source, and no statement that none was received, is
+recorded anywhere in this workspace. Replace this paragraph with the funder name(s) and grant number(s), or
+with an explicit statement that the research received no external funding.</p>
+<h2>Competing interests</h2>
+<p><strong>AUTHOR TO CONFIRM: competing-interests declaration.</strong> No competing-interests fact is recorded anywhere in
+this workspace, so none can be asserted here. Replace this paragraph with either the standard declaration of no
+competing interests or a disclosure of any financial and/or non-financial interests in relation to this work.</p>
+<h2>Use of AI tools</h2>
+<p><strong>AUTHOR TO CONFIRM: AI-use disclosure.</strong> No venue-specific AI-disclosure record exists in this workspace, and
+the required location differs by route (a dedicated in-paper statement, an Acknowledgements note, or a
+checklist item). Replace this paragraph with an accurate account of any generative-AI use in preparing this
+manuscript, or with an explicit statement that no generative AI was used where that is true. Generative-AI
+tools must not be listed as authors.</p>
+<h2>References</h2>
+<p>Only sources whose identifier or location was actually observed are cited. The corpus's four external
+identifier-only entries have since been completed from the arXiv abstract pages, which supplied title and
+authors for each: arXiv <code>2602.06370</code> (Valdes Gonzalez, <em>Cost-Aware Model Selection
+for Text Classification: Multi-Objective Trade-offs Between Fine-Tuned Encoders and LLM Prompting in
+Production</em>); arXiv <code>2512.12677</code> (Yousefiramandi and Cooney, <em>Fine-Tuning Causal LLMs for Text
+Classification: Embedding-Based vs. Instruction-Based Approaches</em>); PriDe, arXiv <code>2309.03882</code> (Zheng et al.,
+<em>Large Language Models Are Not Robust Multiple Choice Selectors</em>; ICLR 2024 Spotlight); and GCD, arXiv
+<code>2305.13971</code> (Geng et al., <em>Grammar-Constrained Decoding for Structured NLP Tasks without Finetuning</em>;
+EMNLP 2023 Main Conference), ACL 2025 Industry <code>2025.acl-industry.34</code>. The internal corpus document that
+carries the core literature claim (<code>DECIDER_STACK_DECISION.md</code> §11.6, commit <code>ad301ae</code>) is the citation for
+that claim. The bibliography now also carries
+the equal-effort counter-case (<strong><code>simmering2025modernbert</code></strong> — a <strong>blog post, not peer-reviewed</strong>, cited as
+such), <strong>GLiNER</strong> (arXiv <code>2311.08526</code>; NAACL 2024, pp. 5364–5376, DOI <code>10.18653/v1/2024.naacl-long.300</code>),
+<strong>GLiNER2</strong> (arXiv <code>2507.18546</code>) and <strong>GLiClass</strong> (arXiv <code>2508.07662</code>). Three further entries are marked
+<strong><code>ADJACENT</code></strong> in <code>REFERENCES.bib</code> and are <strong>not</strong> sources for the central claim: arXiv <code>2501.08457</code>, ACL 2025
+Industry <code>2025.acl-industry.68</code>, and arXiv <code>2507.11412</code> (ICLR'26). The bibliography carries it as a 13th
+entry: <strong><code>benayas2024comparative</code></strong> — Benayas, Sicilia &amp; Mora-Cantallops (2024), <em>A comparative analysis of
+encoder only and decoder only models in intent classification and sentiment analysis</em>, <em>Language Resources
+and Evaluation</em> <strong>59</strong>(3):2007–2030, DOI <code>10.1007/s10579-024-09796-y</code> — the peer-reviewed, same-task
+encoder-over-decoder study that sources the corpus claim; it is cited in §2.1 and §6.4.</p>
+</body></html>

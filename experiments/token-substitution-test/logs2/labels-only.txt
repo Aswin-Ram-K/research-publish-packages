@@ -1,0 +1,164 @@
+==============================================================
+UREDACT1 acceptance test   2026-10-15T23:40:30Z
+as-audited : repro/encoder-crossover-190
+sanitised  : repro/encoder-crossover-190-SANITISED
+scratch    : /tmp/utok2-labels
+==============================================================
+
+### 1. T1 instrument digest (EXPECTED TO CHANGE — declared, not silent)
+076164ac53c2c1aac130953345c481f88b51f4d6fb93d465c7430308a99b4796  /tmp/utok2-labels/orig/fixture/reflex-decisions.ts
+7620f020c86723caad410395f9bad6f8a9a5cca803046bbdf834f9d0ea36a51f  /tmp/utok2-labels/san/fixture/reflex-decisions.ts
+-- target HEAD (read-only) --
+  not supplied - export TARGET_REPO to the path of the read-only target repository to re-run this check
+
+### 2. T5 chance floor (mean 1/k over the 190) recomputed from the fixture, both trees
+orig  cases 190  chanceFloorMean1overK 0.29105263157894734  options_total 721
+san  cases 190  chanceFloorMean1overK 0.29105263157894734  options_total 721
+
+### 3. T4 second-labeller re-run (shipped readers, unmodified) + scoring-projection digest
+  parse_fixture.py [orig] exit=0 stderr=[]
+  compare.py       [orig] exit=0 stderr=[]
+  scoring-projection (id,kind,question,options,correct) sha256 [orig] 57a29b4e78bff60f84309e2e95b56f49663884a13b801345eecd93813ecbf300
+  cases [orig] 190  empty_rationales 0  empty_namespaces 0
+  _line values preserved [orig] [86, 97, 108] ... [2197, 2208]
+  parse_fixture.py [san] exit=0 stderr=[]
+  compare.py       [san] exit=0 stderr=[]
+  scoring-projection (id,kind,question,options,correct) sha256 [san] 2e7bc1842a7ec23a49e84a2ff281eed26c8bb6e8867c47c9a1e714d0ca403ec2
+  cases [san] 190  empty_rationales 190  empty_namespaces 190
+  _line values preserved [san] [86, 97, 108] ... [2197, 2208]
+
+### 4. T3 prepare.py re-run (steps 3-4; no torch, no network)
+  prepare.py [orig] exit=0
+  prepare.py [san] exit=0
+-- diff of the two stdout logs (paths normalised) --
+  PREPARE STDOUT IDENTICAL
+-- rendered split digests --
+24c39afa8606942ac2f4fb3e6f1ce5c2b0c9ee581b67d1aed38260d4aa020c09  /tmp/utok2-labels/orig/harness/data/train.jsonl
+24c39afa8606942ac2f4fb3e6f1ce5c2b0c9ee581b67d1aed38260d4aa020c09  /tmp/utok2-labels/san/harness/data/train.jsonl
+d311a99f0d5b2bd8bcff03e9913b3857ec4c98ffd3714ce9a7afa42514eaa976  /tmp/utok2-labels/orig/harness/data/dev.jsonl
+d311a99f0d5b2bd8bcff03e9913b3857ec4c98ffd3714ce9a7afa42514eaa976  /tmp/utok2-labels/san/harness/data/dev.jsonl
+
+### 5. T2 metrics.json: sanitised regeneration vs as-audited regeneration
+  orig-regenerated == san-regenerated : False
+  san-regenerated  == shipped (hand-added keys stripped) : False
+  HEADLINE NUMBERS from the sanitised regeneration:
+    comparison cases                                     190
+    options_total                                        721
+    routeA kappa (CLAIMS 0.3252)                         0.32520740993294694
+    routeB agreement (0.9052631578947369)                0.9052631578947369
+    routeB kappa (0.9013584840356494)                    0.9013584840356494
+    n_disagreements (18)                                 18
+    AB mutual agreement (CLAIMS 0.3526)                  0.3526315789473684
+    closed-subset kappa (CLAIMS 0.8837)                  0.8837023738280471
+    roster/bespoke kappa (CLAIMS 0.9140)                 0.9139973672663448
+    disagreements_count_routeB                           18
+
+### 6. disagreements.jsonl: only recorded_rationale may differ
+  rows 18 18
+  keys that differ: ['recorded_rationale']
+  every other key identical: True
+  sanitised recorded_rationale values all empty: True
+
+### 7. RESIDUAL STRICT-MECHANISM SCAN (sanitised vs as-audited), per file
+-- orig --
+   80  ./second-labeller/reflex-decisions.sandbox.ts
+   80  ./fixture/reflex-decisions.ts
+   68  ./second-labeller/cases.json
+   68  ./harness/data/fixture-190.json
+   50  ./second-labeller/blinded_cases.json
+    8  ./results/eval-shuffled-label.json
+    7  ./results/eval-majority-class.json
+    7  ./results/eval-deberta-v3-base.json
+    6  ./results/eval-setfit-mpnet.json
+    6  ./results/eval-modernbert-base.json
+    6  ./results/baselines.json
+    5  ./second-labeller/EVIDENCE.md
+    5  ./fixture/DECISION_CASE_SCHEMA.ts
+    4  ./second-labeller/parse_summary.json
+    4  ./second-labeller/parse-orig.stdout
+    3  ./second-labeller/disagreements.jsonl
+    2  ./second-labeller/RUN.json
+    2  ./second-labeller/OWED_CORRECTIONS.md
+    1  ./second-labeller/parse_fixture.py
+    1  ./second-labeller/PREREGISTRATION.md
+    1  ./README.md
+    1  ./MANIFEST.json
+    1  ./INTEGRITY.md
+TOTAL LINES: 416
+-- san --
+   51  ./second-labeller/reflex-decisions.sandbox.ts
+   51  ./fixture/reflex-decisions.ts
+   49  ./second-labeller/cases.json
+   49  ./second-labeller/blinded_cases.json
+   49  ./harness/data/fixture-190.json
+    6  ./SCRUB_REPORT.md
+    5  ./RESIDUALS.md
+    4  ./results/eval-shuffled-label.json
+    3  ./second-labeller/disagreements.jsonl
+    3  ./results/eval-setfit-mpnet.json
+    3  ./results/eval-modernbert-base.json
+    3  ./results/eval-majority-class.json
+    3  ./results/eval-deberta-v3-base.json
+    3  ./fixture/DECISION_CASE_SCHEMA.ts
+    2  ./second-labeller/parse_summary.json
+    2  ./second-labeller/parse-san.stdout
+    2  ./second-labeller/EVIDENCE.md
+    2  ./results/baselines.json
+    1  ./second-labeller/parse_fixture.py
+    1  ./second-labeller/RUN.json
+    1  ./second-labeller/PREREGISTRATION.md
+    1  ./MANIFEST.json
+TOTAL LINES: 294
+
+### 8. RESIDUAL HITS IN THE SANITISED TREE, with the matching text (for classification)
+./SCRUB_REPORT.md:34:The **mechanism vocabulary** patterns (`src/broker`, `StateClass`, `grantPolicy`, `admit(`, `expanded[`)
+./SCRUB_REPORT.md:84:| `StateClass` | 108 | 108 | untouched — instrument vocabulary (UTOK1) |
+./SCRUB_REPORT.md:85:| `grantPolicy` | 79 | 79 | untouched — instrument vocabulary (UTOK1) |
+./SCRUB_REPORT.md:86:| `admit(` | 43 | 43 | untouched — instrument vocabulary (UTOK1) |
+./SCRUB_REPORT.md:143:* The **fixture/dataset instrument vocabulary** — `src/broker` 6, `StateClass` 108, `grantPolicy` 79,
+./SCRUB_REPORT.md:144:  `admit(` 43, `expanded[` 53 in the subset, plus 3/97/88/11/17 in the experiment tree. These **cannot**
+./RESIDUALS.md:18:StateClass|grantPolicy|materialiseGrants|grantKey|admit\(|src/(broker|scope|layer|loop|policy|state)\.ts|content-addressed|DecisionKind|expanded\[\
+./RESIDUALS.md:53:| `README.md` | 4 | **irreducible by design** — the 4 remaining hits are all the `DecisionKind` name, which the variant decision must name (§6).
+./RESIDUALS.md:54:| `fixture/DECISION_CASE_SCHEMA.ts` | 3 | **irreducible by design** — the `DecisionKind` *type name* only, which VARIANT A deliberately keeps for
+./RESIDUALS.md:60:| `MANIFEST.json` | 1 | **partly fixed** — the private-branch commit id (19 citations) and the `git:` history reference are **removed** (UFIX10);
+./RESIDUALS.md:61:| `second-labeller/PREREGISTRATION.md` | 1 | **irreducible** — the frozen pre-registration mentions the `DecisionKind` type declarations; editing
+./results/eval-modernbert-base.json:243:    "none -- admit() mints the state": {
+./results/eval-modernbert-base.json:519:        "none -- admit() mints the state"
+./results/eval-modernbert-base.json:522:      "gold": "none -- admit() mints the state",
+./results/eval-majority-class.json:243:    "none -- admit() mints the state": {
+./results/eval-majority-class.json:519:        "none -- admit() mints the state"
+./results/eval-majority-class.json:522:      "gold": "none -- admit() mints the state",
+./results/eval-deberta-v3-base.json:243:    "none -- admit() mints the state": {
+./results/eval-deberta-v3-base.json:519:        "none -- admit() mints the state"
+./results/eval-deberta-v3-base.json:522:      "gold": "none -- admit() mints the state",
+./results/eval-setfit-mpnet.json:243:    "none -- admit() mints the state": {
+./results/eval-setfit-mpnet.json:519:        "none -- admit() mints the state"
+./results/eval-setfit-mpnet.json:522:      "gold": "none -- admit() mints the state",
+./results/eval-shuffled-label.json:243:    "none -- admit() mints the state": {
+./results/eval-shuffled-label.json:519:        "none -- admit() mints the state"
+./results/eval-shuffled-label.json:522:      "gold": "none -- admit() mints the state",
+./results/eval-shuffled-label.json:524:      "predLabel": "none -- admit() mints the state",
+./results/baselines.json:83:          "gold": "none -- admit() mints the state",
+./results/baselines.json:1457:          "gold": "none -- admit() mints the state",
+./second-labeller/parse_summary.json:37:  "none -- admit() mints the state": 1,
+./second-labeller/parse_summary.json:166:   "none -- admit() mints the state": 1,
+./second-labeller/blinded_cases.json:5:  "question": "Step 3 must emit a written critique of the diff already recorded under the execution namespace. It reads nothin
+./second-labeller/blinded_cases.json:14:  "question": "Step 2 must apply an already-admitted patch to module.ts inside the granted workspace so the on-disk digest ch
+./second-labeller/blinded_cases.json:23:  "question": "Step 4 must report whether the A3_budget gate in src/policy.ts delegates on pass, by reading that file's curre
+./second-labeller/blinded_cases.json:33:  "question": "One step must apply a write patch and a following step must run the unit suite. No single catalogued class dec
+./second-labeller/blinded_cases.json:43:  "question": "Step 5 must append exactly one record to the memory module through a memory.write tool and must not touch any 
+./second-labeller/blinded_cases.json:53:  "question": "A proposal has arrived whose declared spend would exceed the state's budget envelope, so the A3_budget gate re
+./second-labeller/blinded_cases.json:57:   "none -- admit() mints the state"
+./second-labeller/blinded_cases.json:63:  "question": "Two versions of editor are registered: 1.0.0 and 1.1.0. The head state references editor@1.0.0 by content hash
+./second-labeller/blinded_cases.json:73:  "question": "A step must read workspace/src/loop.ts and return a verdict on it, and the postcondition explicitly forbids wr
+cut: Broken pipe (os error 32)
+cut: write error: Broken pipe
+grep: write error: Broken pipe
+grep: write error: Broken pipe
+-- fixture residue, by field class --
+  question     cases_with_hit= 47 occurrences=56
+  options      cases_with_hit=  1 occurrences=1
+  rationale    cases_with_hit=  0 occurrences=0
+  namespaces   cases_with_hit=  0 occurrences=0
+
+VERIFICATION COMPLETE. Log: verify/VERIFICATION.txt

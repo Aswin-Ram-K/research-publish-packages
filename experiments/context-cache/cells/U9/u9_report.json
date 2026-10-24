@@ -1,0 +1,850 @@
+{
+  "fit": {
+    "hit": {
+      "implied_prefill_tokens_per_s": 214624.1,
+      "intercept_ms": 79.186018,
+      "n": 6,
+      "r2": 0.981543,
+      "slope_ms_per_token": 0.004659
+    },
+    "hit_power": {
+      "exponent": 0.2683,
+      "n": 6,
+      "r2": 0.8631
+    },
+    "miss": {
+      "implied_prefill_tokens_per_s": 4153.9,
+      "intercept_ms": -279.451844,
+      "n": 6,
+      "r2": 0.990127,
+      "slope_ms_per_token": 0.240736
+    },
+    "miss_power": {
+      "exponent": 1.052,
+      "n": 6,
+      "r2": 0.9934
+    },
+    "ratio_at_length": {
+      "1024": 0.414,
+      "2028": 0.2498,
+      "3955": 0.156,
+      "7863": 0.0798,
+      "15701": 0.0458,
+      "31415": 0.0307
+    },
+    "ratio_loglog": {
+      "exponent": -0.7837,
+      "n": 6,
+      "r2": 0.9961,
+      "reading": "ratio falls with L (prefill-skipping signature)"
+    }
+  },
+  "method": {
+    "cold_isolation": "fresh 16-hex salt at the front of message 0 -> radix prefix match 0",
+    "hit_predicate": "cached == 64*floor(prompt/64) (U2's law)",
+    "metric": "TTFT = first streamed content chunk; wall = full response",
+    "order_pattern": "A(miss,hit) for reps 0/2/4/6; B(prime,hit,miss) for reps 1/3/5",
+    "pairs": "one cold and one byte-identical warm request per repetition, adjacent in time",
+    "requests": "strictly serial, one in flight",
+    "resolvable": "|median paired delta| > 2 sigma_warm AND bootstrap CI95 excludes 0"
+  },
+  "noise_floor": {
+    "cold_1024": {
+      "all_cold_ok": true,
+      "cv": 0.0795,
+      "max": 245.391,
+      "mean": 213.157,
+      "median": 207.438,
+      "min": 199.848,
+      "n": 10,
+      "p10": 202.334,
+      "p90": 244.484,
+      "ttft_ms": [
+        203.468,
+        204.544,
+        244.383,
+        202.61,
+        207.851,
+        207.606,
+        208.602,
+        207.271,
+        199.848,
+        245.391
+      ]
+    },
+    "warm_1024": {
+      "all_cached_ok": true,
+      "cv": 0.0762,
+      "max": 75.35,
+      "mean": 64.689,
+      "median": 62.609,
+      "min": 60.864,
+      "n": 10,
+      "p10": 61.12,
+      "p90": 72.346,
+      "ttft_ms": [
+        75.35,
+        64.549,
+        62.0,
+        62.207,
+        60.864,
+        63.012,
+        61.148,
+        63.65,
+        62.098,
+        72.012
+      ]
+    },
+    "warm_8192": {
+      "all_cached_ok": true,
+      "cv": 0.0564,
+      "max": 145.555,
+      "mean": 136.33,
+      "median": 139.145,
+      "min": 122.179,
+      "n": 10,
+      "p10": 126.86,
+      "p90": 142.514,
+      "ttft_ms": [
+        135.304,
+        142.176,
+        138.941,
+        141.91,
+        141.645,
+        145.555,
+        139.349,
+        127.38,
+        128.858,
+        122.179
+      ]
+    }
+  },
+  "order_effect": {
+    "A": {
+      "delta_median_ms": 953.895,
+      "lengths": 6
+    },
+    "B": {
+      "delta_median_ms": 913.907,
+      "lengths": 6
+    },
+    "abs_gap_ms": 39.988
+  },
+  "per_length": {
+    "1024": {
+      "abs_diff_ms": 122.298,
+      "delta_ci95_ms": [
+        117.552,
+        122.968
+      ],
+      "delta_median_ms": 122.066,
+      "deltas_ms": [
+        122.285,
+        117.552,
+        116.789,
+        122.968,
+        118.063,
+        122.066,
+        125.659
+      ],
+      "expected_cached_law": "64*((L-1)//64)",
+      "hit": {
+        "cv": 0.0146,
+        "max": 89.132,
+        "mean": 86.866,
+        "median": 86.414,
+        "min": 85.539,
+        "n": 7,
+        "p10": 85.662,
+        "p90": 88.407
+      },
+      "hit_cached_tokens": [
+        960,
+        960,
+        960,
+        960,
+        960,
+        960,
+        960
+      ],
+      "hit_first_warm_median_ms": 87.416,
+      "hit_repeat_warm_median_ms": 85.744,
+      "hit_repeat_warm_reps": [
+        2,
+        3,
+        4
+      ],
+      "hit_wall": {
+        "cv": 0.0146,
+        "max": 89.209,
+        "mean": 86.946,
+        "median": 86.506,
+        "min": 85.617,
+        "n": 7,
+        "p10": 85.738,
+        "p90": 88.488
+      },
+      "invalid_hit_reps": [],
+      "invalid_miss_reps": [],
+      "miss": {
+        "cv": 0.016,
+        "max": 212.06,
+        "mean": 207.635,
+        "median": 208.712,
+        "min": 203.203,
+        "n": 7,
+        "p10": 203.442,
+        "p90": 210.949
+      },
+      "miss_prompt_tokens": [
+        1023,
+        1024,
+        1024,
+        1024,
+        1024,
+        1021,
+        1022
+      ],
+      "miss_wall": {
+        "cv": 0.016,
+        "max": 212.138,
+        "mean": 207.713,
+        "median": 208.786,
+        "min": 203.29,
+        "n": 7,
+        "p10": 203.52,
+        "p90": 211.024
+      },
+      "noise_margin_ms": 9.542,
+      "noise_sigma_ms": 4.771,
+      "order_split": {
+        "A": {
+          "delta_median_ms": 120.174,
+          "hit_median_ms": 86.407,
+          "miss_median_ms": 206.905,
+          "n": 4
+        },
+        "B": {
+          "delta_median_ms": 122.066,
+          "hit_median_ms": 86.908,
+          "miss_median_ms": 208.712,
+          "n": 3
+        }
+      },
+      "pair_length_tokens": 1024,
+      "pairs_valid": 7,
+      "predicate_disagreement_reps": [
+        2,
+        3,
+        4
+      ],
+      "ratio": 0.414,
+      "resolvable": true,
+      "sign_test_p": 0.0078,
+      "speedup": 2.42,
+      "uncached_tokens": [
+        63,
+        61,
+        64,
+        64,
+        64,
+        63,
+        62
+      ],
+      "wall_ratio": 0.4143
+    },
+    "16384": {
+      "abs_diff_ms": 2900.297,
+      "delta_ci95_ms": [
+        2880.649,
+        2956.101
+      ],
+      "delta_median_ms": 2892.075,
+      "deltas_ms": [
+        3000.49,
+        2878.997,
+        2880.649,
+        2956.101,
+        2942.909,
+        2892.075,
+        2889.65
+      ],
+      "expected_cached_law": "64*((L-1)//64)",
+      "hit": {
+        "cv": 0.0881,
+        "max": 160.866,
+        "mean": 143.523,
+        "median": 139.234,
+        "min": 127.262,
+        "n": 7,
+        "p10": 132.929,
+        "p90": 160.667
+      },
+      "hit_cached_tokens": [
+        15680,
+        15680,
+        15680,
+        15680,
+        15680,
+        15680,
+        15680
+      ],
+      "hit_first_warm_median_ms": 139.234,
+      "hit_repeat_warm_median_ms": null,
+      "hit_repeat_warm_reps": [],
+      "hit_wall": {
+        "cv": 0.088,
+        "max": 160.95,
+        "mean": 143.607,
+        "median": 139.311,
+        "min": 127.337,
+        "n": 7,
+        "p10": 133.012,
+        "p90": 160.75
+      },
+      "invalid_hit_reps": [],
+      "invalid_miss_reps": [],
+      "miss": {
+        "cv": 0.0151,
+        "max": 3137.197,
+        "mean": 3063.648,
+        "median": 3039.531,
+        "min": 3023.41,
+        "n": 7,
+        "p10": 3026.694,
+        "p90": 3125.059
+      },
+      "miss_prompt_tokens": [
+        15701,
+        15701,
+        15700,
+        15702,
+        15700,
+        15701,
+        15700
+      ],
+      "miss_wall": {
+        "cv": 0.0151,
+        "max": 3137.278,
+        "mean": 3063.73,
+        "median": 3039.614,
+        "min": 3023.49,
+        "n": 7,
+        "p10": 3026.776,
+        "p90": 3125.144
+      },
+      "noise_margin_ms": 15.696,
+      "noise_sigma_ms": 7.848,
+      "order_split": {
+        "A": {
+          "delta_median_ms": 2916.279,
+          "hit_median_ms": 137.971,
+          "miss_median_ms": 3049.528,
+          "n": 4
+        },
+        "B": {
+          "delta_median_ms": 2892.075,
+          "hit_median_ms": 160.534,
+          "miss_median_ms": 3039.531,
+          "n": 3
+        }
+      },
+      "pair_length_tokens": 15701,
+      "pairs_valid": 7,
+      "predicate_disagreement_reps": [],
+      "ratio": 0.0458,
+      "resolvable": true,
+      "sign_test_p": 0.0078,
+      "speedup": 21.83,
+      "uncached_tokens": [
+        21,
+        21,
+        20,
+        21,
+        20,
+        22,
+        20
+      ],
+      "wall_ratio": 0.0458
+    },
+    "2048": {
+      "abs_diff_ms": 262.006,
+      "delta_ci95_ms": [
+        252.171,
+        363.941
+      ],
+      "delta_median_ms": 259.784,
+      "deltas_ms": [
+        363.941,
+        351.452,
+        250.634,
+        259.784,
+        252.171,
+        376.354,
+        257.599
+      ],
+      "expected_cached_law": "64*((L-1)//64)",
+      "hit": {
+        "cv": 0.0549,
+        "max": 94.844,
+        "mean": 87.685,
+        "median": 87.244,
+        "min": 79.922,
+        "n": 7,
+        "p10": 82.576,
+        "p90": 92.642
+      },
+      "hit_cached_tokens": [
+        1984,
+        1984,
+        1984,
+        1984,
+        1984,
+        1984,
+        1984
+      ],
+      "hit_first_warm_median_ms": 87.244,
+      "hit_repeat_warm_median_ms": null,
+      "hit_repeat_warm_reps": [],
+      "hit_wall": {
+        "cv": 0.0548,
+        "max": 94.918,
+        "mean": 87.763,
+        "median": 87.328,
+        "min": 79.998,
+        "n": 7,
+        "p10": 82.652,
+        "p90": 92.718
+      },
+      "invalid_hit_reps": [],
+      "invalid_miss_reps": [],
+      "miss": {
+        "cv": 0.1423,
+        "max": 463.598,
+        "mean": 389.39,
+        "median": 349.25,
+        "min": 341.808,
+        "n": 7,
+        "p10": 343.362,
+        "p90": 454.411
+      },
+      "miss_prompt_tokens": [
+        2028,
+        2030,
+        2027,
+        2028,
+        2029,
+        2028,
+        2030
+      ],
+      "miss_wall": {
+        "cv": 0.1423,
+        "max": 463.678,
+        "mean": 389.476,
+        "median": 349.333,
+        "min": 341.893,
+        "n": 7,
+        "p10": 343.442,
+        "p90": 454.515
+      },
+      "noise_margin_ms": 9.542,
+      "noise_sigma_ms": 4.771,
+      "order_split": {
+        "A": {
+          "delta_median_ms": 254.885,
+          "hit_median_ms": 88.987,
+          "miss_median_ms": 345.707,
+          "n": 4
+        },
+        "B": {
+          "delta_median_ms": 351.452,
+          "hit_median_ms": 87.244,
+          "miss_median_ms": 431.374,
+          "n": 3
+        }
+      },
+      "pair_length_tokens": 2028,
+      "pairs_valid": 7,
+      "predicate_disagreement_reps": [],
+      "ratio": 0.2498,
+      "resolvable": true,
+      "sign_test_p": 0.0078,
+      "speedup": 4.0,
+      "uncached_tokens": [
+        44,
+        47,
+        43,
+        43,
+        45,
+        47,
+        46
+      ],
+      "wall_ratio": 0.25
+    },
+    "32768": {
+      "abs_diff_ms": 7310.364,
+      "delta_ci95_ms": [
+        7240.822,
+        7341.714
+      ],
+      "delta_median_ms": 7251.01,
+      "deltas_ms": [
+        7240.822,
+        7319.194,
+        7341.714,
+        7209.795,
+        7251.01,
+        7243.094,
+        7388.503
+      ],
+      "expected_cached_law": "64*((L-1)//64)",
+      "hit": {
+        "cv": 0.114,
+        "max": 301.092,
+        "mean": 246.341,
+        "median": 231.55,
+        "min": 224.931,
+        "n": 7,
+        "p10": 226.159,
+        "p90": 279.475
+      },
+      "hit_cached_tokens": [
+        31360,
+        31360,
+        31360,
+        31360,
+        31360,
+        31360,
+        31360
+      ],
+      "hit_first_warm_median_ms": 231.55,
+      "hit_repeat_warm_median_ms": null,
+      "hit_repeat_warm_reps": [],
+      "hit_wall": {
+        "cv": 0.1139,
+        "max": 301.174,
+        "mean": 246.424,
+        "median": 231.63,
+        "min": 225.02,
+        "n": 7,
+        "p10": 226.251,
+        "p90": 279.554
+      },
+      "invalid_hit_reps": [],
+      "invalid_miss_reps": [],
+      "miss": {
+        "cv": 0.0086,
+        "max": 7635.046,
+        "mean": 7531.217,
+        "median": 7541.914,
+        "min": 7434.726,
+        "n": 7,
+        "p10": 7458.677,
+        "p90": 7595.234
+      },
+      "miss_prompt_tokens": [
+        31415,
+        31416,
+        31412,
+        31414,
+        31415,
+        31415,
+        31412
+      ],
+      "miss_wall": {
+        "cv": 0.0086,
+        "max": 7635.135,
+        "mean": 7531.313,
+        "median": 7541.989,
+        "min": 7434.855,
+        "n": 7,
+        "p10": 7458.798,
+        "p90": 7595.321
+      },
+      "noise_margin_ms": 15.696,
+      "noise_sigma_ms": 7.848,
+      "order_split": {
+        "A": {
+          "delta_median_ms": 7296.362,
+          "hit_median_ms": 255.803,
+          "miss_median_ms": 7555.303,
+          "n": 4
+        },
+        "B": {
+          "delta_median_ms": 7243.094,
+          "hit_median_ms": 228.228,
+          "miss_median_ms": 7474.644,
+          "n": 3
+        }
+      },
+      "pair_length_tokens": 31415,
+      "pairs_valid": 7,
+      "predicate_disagreement_reps": [],
+      "ratio": 0.0307,
+      "resolvable": true,
+      "sign_test_p": 0.0078,
+      "speedup": 32.57,
+      "uncached_tokens": [
+        55,
+        52,
+        52,
+        54,
+        55,
+        54,
+        52
+      ],
+      "wall_ratio": 0.0307
+    },
+    "4096": {
+      "abs_diff_ms": 569.341,
+      "delta_ci95_ms": [
+        554.663,
+        627.26
+      ],
+      "delta_median_ms": 559.777,
+      "deltas_ms": [
+        559.777,
+        554.663,
+        680.731,
+        548.972,
+        557.269,
+        627.26,
+        610.327
+      ],
+      "expected_cached_law": "64*((L-1)//64)",
+      "hit": {
+        "cv": 0.0883,
+        "max": 114.776,
+        "mean": 103.217,
+        "median": 105.212,
+        "min": 88.174,
+        "n": 7,
+        "p10": 92.49,
+        "p90": 111.619
+      },
+      "hit_cached_tokens": [
+        3904,
+        3904,
+        3904,
+        3904,
+        3904,
+        3904,
+        3904
+      ],
+      "hit_first_warm_median_ms": 105.212,
+      "hit_repeat_warm_median_ms": null,
+      "hit_repeat_warm_reps": [],
+      "hit_wall": {
+        "cv": 0.0883,
+        "max": 114.853,
+        "mean": 103.298,
+        "median": 105.281,
+        "min": 88.255,
+        "n": 7,
+        "p10": 92.571,
+        "p90": 111.7
+      },
+      "invalid_hit_reps": [],
+      "invalid_miss_reps": [],
+      "miss": {
+        "cv": 0.0598,
+        "max": 768.905,
+        "mean": 694.503,
+        "median": 674.553,
+        "min": 657.502,
+        "n": 7,
+        "p10": 658.926,
+        "p90": 741.138
+      },
+      "miss_prompt_tokens": [
+        3954,
+        3955,
+        3952,
+        3954,
+        3955,
+        3955,
+        3955
+      ],
+      "miss_wall": {
+        "cv": 0.0598,
+        "max": 768.977,
+        "mean": 694.587,
+        "median": 674.654,
+        "min": 657.592,
+        "n": 7,
+        "p10": 659.008,
+        "p90": 741.216
+      },
+      "noise_margin_ms": 9.542,
+      "noise_sigma_ms": 4.771,
+      "order_split": {
+        "A": {
+          "delta_median_ms": 585.052,
+          "hit_median_ms": 105.231,
+          "miss_median_ms": 692.913,
+          "n": 4
+        },
+        "B": {
+          "delta_median_ms": 554.663,
+          "hit_median_ms": 105.212,
+          "miss_median_ms": 659.875,
+          "n": 3
+        }
+      },
+      "pair_length_tokens": 3955,
+      "pairs_valid": 7,
+      "predicate_disagreement_reps": [],
+      "ratio": 0.156,
+      "resolvable": true,
+      "sign_test_p": 0.0078,
+      "speedup": 6.41,
+      "uncached_tokens": [
+        50,
+        51,
+        48,
+        50,
+        51,
+        47,
+        51
+      ],
+      "wall_ratio": 0.1561
+    },
+    "8192": {
+      "abs_diff_ms": 1317.312,
+      "delta_ci95_ms": [
+        1273.15,
+        1325.733
+      ],
+      "delta_median_ms": 1311.68,
+      "deltas_ms": [
+        1325.733,
+        1273.15,
+        1353.959,
+        1311.68,
+        1319.743,
+        1270.04,
+        1301.389
+      ],
+      "expected_cached_law": "64*((L-1)//64)",
+      "hit": {
+        "cv": 0.0783,
+        "max": 133.164,
+        "mean": 118.36,
+        "median": 114.274,
+        "min": 110.317,
+        "n": 7,
+        "p10": 111.233,
+        "p90": 131.387
+      },
+      "hit_cached_tokens": [
+        7808,
+        7808,
+        7808,
+        7808,
+        7808,
+        7808,
+        7808
+      ],
+      "hit_first_warm_median_ms": 114.274,
+      "hit_repeat_warm_median_ms": null,
+      "hit_repeat_warm_reps": [],
+      "hit_wall": {
+        "cv": 0.0783,
+        "max": 133.243,
+        "mean": 118.439,
+        "median": 114.349,
+        "min": 110.393,
+        "n": 7,
+        "p10": 111.307,
+        "p90": 131.469
+      },
+      "invalid_hit_reps": [],
+      "invalid_miss_reps": [],
+      "miss": {
+        "cv": 0.0179,
+        "max": 1464.276,
+        "mean": 1426.317,
+        "median": 1431.586,
+        "min": 1387.424,
+        "n": 7,
+        "p10": 1395.115,
+        "p90": 1449.645
+      },
+      "miss_prompt_tokens": [
+        7863,
+        7861,
+        7865,
+        7864,
+        7861,
+        7863,
+        7861
+      ],
+      "miss_wall": {
+        "cv": 0.0179,
+        "max": 1464.356,
+        "mean": 1426.404,
+        "median": 1431.677,
+        "min": 1387.515,
+        "n": 7,
+        "p10": 1395.206,
+        "p90": 1449.73
+      },
+      "noise_margin_ms": 15.696,
+      "noise_sigma_ms": 7.848,
+      "order_split": {
+        "A": {
+          "delta_median_ms": 1322.738,
+          "hit_median_ms": 113.001,
+          "miss_median_ms": 1437.222,
+          "n": 4
+        },
+        "B": {
+          "delta_median_ms": 1273.15,
+          "hit_median_ms": 114.564,
+          "miss_median_ms": 1400.243,
+          "n": 3
+        }
+      },
+      "pair_length_tokens": 7863,
+      "pairs_valid": 7,
+      "predicate_disagreement_reps": [],
+      "ratio": 0.0798,
+      "resolvable": true,
+      "sign_test_p": 0.0078,
+      "speedup": 12.53,
+      "uncached_tokens": [
+        55,
+        56,
+        57,
+        55,
+        53,
+        56,
+        53
+      ],
+      "wall_ratio": 0.0799
+    }
+  },
+  "question": "Is a prompt-cache hit faster (TTFT) than a cold request at equal prompt length?",
+  "unit": "U9",
+  "verdict": {
+    "all_lengths_hit_faster": true,
+    "lengths_measured": 6,
+    "lengths_resolvable": 6,
+    "min_sign_test_p_possible_n7": 0.0078,
+    "sign_test_p_by_length": {
+      "1024": 0.0078,
+      "2028": 0.0078,
+      "3955": 0.0078,
+      "7863": 0.0078,
+      "15701": 0.0078,
+      "31415": 0.0078
+    },
+    "smallest_effect": {
+      "abs_diff_ms": 122.298,
+      "length_tokens": 1024,
+      "noise_margin_ms": 9.542,
+      "resolvable": true
+    },
+    "speed_claim_supported": true
+  }
+}

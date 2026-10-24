@@ -1,0 +1,371 @@
+{
+  "unit": "U10",
+  "question": "Is the 64-boundary first-repeat miss specific to L % 64 == 0, or a general first-repeat race?  Does a delay remove it?  Does an intervening request remove it?",
+  "verdict": "boundary_specific",
+  "headline": "Only prompts whose length is an exact multiple of 64 miss on the immediately following repeat; every other length hits immediately.",
+  "mechanism": "not insert latency and not a request-triggered flush: 0.25-2.0 s of delay and an intervening unrelated request both leave the miss at 100%, while a second identical repeat hits 10/10 at the tax-law value. The prefix becomes reusable only after it has been prefilled twice -- one wasted full prefill per new multiple-of-64 prefix",
+  "design": {
+    "cold_isolation": "make_salt(seed) -> three fixed-width 4-letter marker words at the front of message 0; every trial's marker is unique and never reused, and every cold role that reports cached != 0 is retried",
+    "exact_lengths": "body sized 12 tokens short of the target plus a one-token tail (' the' repeated); achieved prompt_tokens read back from every response and the cell is refused unless it equals the target",
+    "metric": "usage.prompt_tokens_details.cached_tokens (null -> 0)",
+    "miss_definition": "full_miss = cached == 0 on the repeat; partial = 0 < cached < 64*floor((L-1)//64); hit = cached == 64*floor((L-1)/64)",
+    "serial": "one request in flight; no flock; POST /flush_cache never called",
+    "reps_per_cell": 5,
+    "max_tokens": 2,
+    "thinking": false
+  },
+  "per_length": [
+    {
+      "length": 1008,
+      "length_mod_64": 48,
+      "multiple_of_64": false,
+      "expected_cached_on_hit": 960,
+      "rep1_n": 5,
+      "rep1_full_misses": 0,
+      "rep1_partial_misses": 0,
+      "rep1_miss_rate": 0.0,
+      "rep1_miss_rate_ci95": [
+        0.0,
+        0.5218
+      ],
+      "rep2_n": 0,
+      "rep2_full_misses": 0,
+      "rep2_miss_rate": null,
+      "rep2_miss_rate_ci95": null,
+      "rep1_cached_values": [
+        960,
+        960,
+        960,
+        960,
+        960
+      ],
+      "rep2_cached_values": [],
+      "cold_ttft_median_ms": 418.5,
+      "rep1_hit_ttft_median_ms": 111.7,
+      "rep1_miss_ttft_median_ms": null,
+      "all_trials_cold_verified": true
+    },
+    {
+      "length": 1023,
+      "length_mod_64": 63,
+      "multiple_of_64": false,
+      "expected_cached_on_hit": 960,
+      "rep1_n": 5,
+      "rep1_full_misses": 0,
+      "rep1_partial_misses": 0,
+      "rep1_miss_rate": 0.0,
+      "rep1_miss_rate_ci95": [
+        0.0,
+        0.5218
+      ],
+      "rep2_n": 0,
+      "rep2_full_misses": 0,
+      "rep2_miss_rate": null,
+      "rep2_miss_rate_ci95": null,
+      "rep1_cached_values": [
+        960,
+        960,
+        960,
+        960,
+        960
+      ],
+      "rep2_cached_values": [],
+      "cold_ttft_median_ms": 572.7,
+      "rep1_hit_ttft_median_ms": 80.4,
+      "rep1_miss_ttft_median_ms": null,
+      "all_trials_cold_verified": true
+    },
+    {
+      "length": 1024,
+      "length_mod_64": 0,
+      "multiple_of_64": true,
+      "expected_cached_on_hit": 960,
+      "rep1_n": 5,
+      "rep1_full_misses": 5,
+      "rep1_partial_misses": 0,
+      "rep1_miss_rate": 1.0,
+      "rep1_miss_rate_ci95": [
+        0.4782,
+        1.0
+      ],
+      "rep2_n": 5,
+      "rep2_full_misses": 0,
+      "rep2_miss_rate": 0.0,
+      "rep2_miss_rate_ci95": [
+        0.0,
+        0.5218
+      ],
+      "rep1_cached_values": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "rep2_cached_values": [
+        960,
+        960,
+        960,
+        960,
+        960
+      ],
+      "cold_ttft_median_ms": 531.4,
+      "rep1_hit_ttft_median_ms": null,
+      "rep1_miss_ttft_median_ms": 268.4,
+      "all_trials_cold_verified": true
+    },
+    {
+      "length": 1025,
+      "length_mod_64": 1,
+      "multiple_of_64": false,
+      "expected_cached_on_hit": 1024,
+      "rep1_n": 5,
+      "rep1_full_misses": 0,
+      "rep1_partial_misses": 0,
+      "rep1_miss_rate": 0.0,
+      "rep1_miss_rate_ci95": [
+        0.0,
+        0.5218
+      ],
+      "rep2_n": 0,
+      "rep2_full_misses": 0,
+      "rep2_miss_rate": null,
+      "rep2_miss_rate_ci95": null,
+      "rep1_cached_values": [
+        1024,
+        1024,
+        1024,
+        1024,
+        1024
+      ],
+      "rep2_cached_values": [],
+      "cold_ttft_median_ms": 277.2,
+      "rep1_hit_ttft_median_ms": 400.1,
+      "rep1_miss_ttft_median_ms": null,
+      "all_trials_cold_verified": true
+    },
+    {
+      "length": 1088,
+      "length_mod_64": 0,
+      "multiple_of_64": true,
+      "expected_cached_on_hit": 1024,
+      "rep1_n": 5,
+      "rep1_full_misses": 5,
+      "rep1_partial_misses": 0,
+      "rep1_miss_rate": 1.0,
+      "rep1_miss_rate_ci95": [
+        0.4782,
+        1.0
+      ],
+      "rep2_n": 5,
+      "rep2_full_misses": 0,
+      "rep2_miss_rate": 0.0,
+      "rep2_miss_rate_ci95": [
+        0.0,
+        0.5218
+      ],
+      "rep1_cached_values": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "rep2_cached_values": [
+        1024,
+        1024,
+        1024,
+        1024,
+        1024
+      ],
+      "cold_ttft_median_ms": 275.7,
+      "rep1_hit_ttft_median_ms": null,
+      "rep1_miss_ttft_median_ms": 463.9,
+      "all_trials_cold_verified": true
+    }
+  ],
+  "pooled": {
+    "multiples_of_64": {
+      "lengths": [
+        1024,
+        1088
+      ],
+      "rep1_full_misses": 10,
+      "rep1_trials": 10,
+      "rate": 1.0,
+      "rate_ci95": [
+        0.6915,
+        1.0
+      ]
+    },
+    "non_multiples": {
+      "lengths": [
+        1008,
+        1023,
+        1025
+      ],
+      "rep1_full_misses": 0,
+      "rep1_trials": 15,
+      "rate": 0.0,
+      "rate_ci95": [
+        0.0,
+        0.218
+      ]
+    },
+    "fisher_exact_2x2": [
+      [
+        10,
+        0
+      ],
+      [
+        0,
+        15
+      ]
+    ],
+    "fisher_exact_two_sided_p": 3.0592640634369e-07,
+    "rep2_recovery_full_misses": 0,
+    "rep2_recovery_trials": 10
+  },
+  "delay": [
+    {
+      "delay_s": 0.0,
+      "n": 5,
+      "full_misses": 5,
+      "miss_rate": 1.0,
+      "miss_rate_ci95": [
+        0.4782,
+        1.0
+      ],
+      "cached_values": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "rep1_ttft_median_ms": 463.9,
+      "source": "phase 1 (same protocol, no sleep)"
+    },
+    {
+      "delay_s": 0.25,
+      "n": 5,
+      "full_misses": 5,
+      "miss_rate": 1.0,
+      "miss_rate_ci95": [
+        0.4782,
+        1.0
+      ],
+      "cached_values": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "rep1_ttft_median_ms": 770.1,
+      "source": "phase 2"
+    },
+    {
+      "delay_s": 0.5,
+      "n": 5,
+      "full_misses": 5,
+      "miss_rate": 1.0,
+      "miss_rate_ci95": [
+        0.4782,
+        1.0
+      ],
+      "cached_values": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "rep1_ttft_median_ms": 442.6,
+      "source": "phase 2"
+    },
+    {
+      "delay_s": 1.0,
+      "n": 5,
+      "full_misses": 5,
+      "miss_rate": 1.0,
+      "miss_rate_ci95": [
+        0.4782,
+        1.0
+      ],
+      "cached_values": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "rep1_ttft_median_ms": 553.1,
+      "source": "phase 2"
+    },
+    {
+      "delay_s": 2.0,
+      "n": 5,
+      "full_misses": 5,
+      "miss_rate": 1.0,
+      "miss_rate_ci95": [
+        0.4782,
+        1.0
+      ],
+      "cached_values": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "rep1_ttft_median_ms": 520.8,
+      "source": "phase 2"
+    }
+  ],
+  "insert_unrelated_request": {
+    "trials": 5,
+    "full_misses": 5,
+    "miss_rate": 1.0,
+    "miss_rate_ci95": [
+      0.4782,
+      1.0
+    ],
+    "cached_values": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "unrelated_prompt_tokens": [
+      63,
+      63,
+      63,
+      63,
+      63
+    ]
+  },
+  "budget": {
+    "pilot_probes": 39,
+    "phase1": 65,
+    "phase23": 55,
+    "note": "phase 1 wrote its rows before a send() signature bug stopped the driver after the sweep; phases 2-3 were run by u10_phase23.py so the sweep was not re-spent",
+    "total_live_requests": 159
+  },
+  "request_number_law": {
+    "at_multiples_of_64": "1st request: cold (cached=0); 2nd identical request: cached=0 and full prefill, even after a 2 s delay or an intervening request; 3rd identical request: full tax-law hit",
+    "at_non_multiples": "1st cold, 2nd identical request: full tax-law hit (0/15 misses)"
+  },
+  "explains": {
+    "U9_1024_case": "yes, exactly: L=1024 is a multiple of 64 and reproduced at 5/5, with the second repeat recovering the tax-law hit (960)",
+    "U4b_branch_2_case": "no, not by the boundary rule: U4b's fan-out prompts were ~1925 tokens (1925 % 64 = 5), a residue class where this sweep saw 0/15 misses on identical repeats.  U4b's branch differed from branch 1 in its suffix (prefix-sharing, not an identical repeat); a pilot probe of that shape (same body, different tail, sent immediately) also reported cached=0, so it is plausibly the same insert-visibility class, but that shape is NOT covered by these n=5 cells."
+  },
+  "operational_warning": "A workload whose prompt length is an exact multiple of 64 pays one full prefill per new prefix: 10/10 immediate repeats at 1024 and 1088 tokens reported cached=0 and paid cold-prefill TTFT (median 263-533 ms at 1024 vs ~80 ms for a hit), and neither a 2 s delay nor an unrelated request in between removed it.  The same prompt sent a second time becomes reusable (rep2 10/10 at the tax-law value).",
+  "limits": [
+    "n=5 per cell: each individual cell's CI is wide (0/5 -> [0, 0.52]); the claim rests on the pooled 10/10 vs 0/15 contrast, not on one cell.",
+    "The sweep covers 1008, 1023, 1024, 1025, 1088 tokens.  960, 1020, 1028, 1152, 2048 and 4096 were in the card's list and were not run: the 160-request bound was partly spent on 39 pilot probes that were needed to build an exact-length harness (see u10_pilot.json).",
+    "Only identical repeats are measured in the n=5 cells; the prefix-sharing (different suffix) shape that U4b hit is covered by one pilot probe only.",
+    "No file lock was taken (by instruction), so other units' traffic can interleave; every trial's cold role is verified cold, and the effect is binary rather than marginal, which makes eviction an implausible explanation for a 10/10 vs 0/15 split."
+  ]
+}

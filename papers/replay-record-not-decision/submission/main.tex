@@ -1,0 +1,249 @@
+\documentclass[11pt,a4paper]{article}
+\pdfpagewidth=\paperwidth
+\pdfpageheight=\paperheight
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{url}
+\sloppy
+\title{Replay reproduces the record, not the decision}
+\author{Aswin Ram Kalugasala Moorthy\\ Independent researcher\\ \texttt{aswinram.k.1603@gmail.com}}
+\date{}   % deliberately empty: arXiv advises against \today
+\begin{document}
+\maketitle
+\noindent\textbf{Keywords:} replay determinism, LLM decision replication, binding divergence, record versus decision, option-index encoding, agent trace reproducibility
+
+\textbf{A short note.} One task family (a typed multiple-choice decision), one corpus of 190 cases, four model configurations, four recorded variants. Everything below describes \textbf{already-recorded data}; no model was run, re-trained, or re-evaluated for this note, and the reader is given the files that carry every figure.
+
+\emph{Author block: the author-supplied name.} The byline is \textbf{Aswin Ram Kalugasala Moorthy} --- the author's own name, supplied verbatim, with the affiliation and corresponding-author contact shown on the byline. At drafting, no byline had been decided and this note then described the author block as an unfilled slot for the author to fill in before submission; that was accurate then, and the superseded wording is retained in this package's build record rather than shipped. (Corrected 2026-10-16.) See \S7.
+
+\begin{abstract}
+Replaying a recorded decision trace reproduces the recorded output. It does not necessarily reproduce the \textbf{decision} the trace encodes. On a corpus of 190 decision cases answered by four model configurations under four recorded variants (3,040 rows total), we measure how often two configurations reason over the same record, at the same variant, and pick a \textbf{different option}. At the reference variant V0 that happens on \textbf{476 of 1,140} model-pair-by-case comparisons --- \textbf{41.7544 \%}. The instrument has a real zero: the corpus's own replication arm re-issues the same request and returns an \textbf{identical decision on 244 of 244} non-decomposable comparisons, across both replication pairs, with \textbf{zero} divergent. Against that control the divergence is a property of the binding, not of noise. The four variants give 41.75 \%, 47.11 \%, 40.00 \% and 43.33 \%, so the headline is one arm, not a four-variant average. Relabelling the options alone moves \textbf{245 of 760} decisions (\textbf{32.2368 \%}), but that pool hides the shape: one configuration moves \textbf{119 of 190 (62.63 \%)} while the other three move 15.8--26.8 \%. A second record file, \texttt{l1-head-to-head.jsonl}, is \textbf{not an independent corpus}: it covers the same 190 cases and the same two models, and reproduces the same \texttt{picked\_index} on \textbf{190 of 190} rows per model. Its 51.5789 \% divergence is the same 98 disagreements already counted in the binding table. The stimuli --- the questions and the options --- are \textbf{not carried by these record files}: the records release indices and latencies, not text. The same 190 cases release with the \textbf{companion note} (\texttt{10.5281/zenodo.23463944}), under a different neutralised tagging. A reader can recompute every arithmetic figure here, and --- by recovering the tag correspondence from the per-kind sequence of \texttt{correct} values (\S7) --- can check the questions, options and hand-authored labels for any record; neither release states that mapping as a table.
+
+\end{abstract}
+\section{Introduction}
+
+A deterministic log does not make a model deterministic. If a decision trace is replayed by a different model, or under relabelled options, the \emph{record} of the decision is reproduced exactly while the \emph{decision} it encodes may not be. The distinction matters wherever a system treats a replay as a reconstruction of what happened: a trace that rebinds faithfully can still encode a different choice.
+
+This note quantifies that distinction on one recorded corpus. It is deliberately narrow: one task family, 190 cases, four model configurations, four variants, no new measurement. The claim is not that replay is unreliable in general. The claim is that \textbf{on this corpus, replaying the record reproduces the record and diverges from the decision at a measurable, controlled rate} --- and that the corpus supplies a zero it can report, which is what makes the rate admissible.
+
+The antecedent this note adopts is the pre-registered experiment's own: it records that arXiv 2605.20173 names the phenomenon \emph{replay divergence} --- an LLM consumer of a deterministic event log producing different outputs under model or prompt changes (the pre-registration record, \S1). That citation is quoted from the pre-registration and was \textbf{not} independently fetched for this note (\S6). No literature claim beyond it is made.
+
+\subsection{Related work}
+
+The sentence above was accurate at drafting: no literature claim beyond the antecedent was made then. This subsection, added for review, places the note in the literature it belongs to. It makes no claim about the measured rates, and it cites only work that was verified from a primary record --- the verification is recorded in the reference notes shipped with this note.
+
+The nearest established literature is on nondeterminism in inference itself. Yuan et al. trace disagreement between repeated runs of the same model to numerical sources --- the order in which floating-point reductions are accumulated and the scheduling of kernel launches --- rather than to sampling, so a temperature of zero does not by itself make an execution reproducible \cite{yuanNondeterminism}. That result is the mechanism behind this note's control: the corpus's own replication arm re-issues a recorded request and, on this record, returns an identical decision every time, which is what lets the divergence it does observe be attributed to the binding rather than to numerical jitter.
+
+A parallel literature studies how much of a measured result survives a change of seed, batch or execution order. Henderson et al. show that reported gains in deep reinforcement learning can be explained by seed choice alone \cite{hendersonDeepRL}; Bouthillier et al. formalise benchmark variance and recommend reporting it rather than a single point estimate \cite{bouthillierVariance}. BatchPrompt makes the batch itself a treatment: packing many requests into one call changes the answers and interacts with the position of an item within the batch \cite{linBatchPrompt}. This note's option-relabelling variant is in the same family --- the record is fixed and only the surface form of the request moves --- and its finding that one configuration is far more label-sensitive than the others is a split that the pooled rate hides.
+
+For agents, reproducibility has largely been treated as a property of the environment and the scoring harness rather than of a single decision. AgentBench and the tool-agent-user benchmark of Yao et al. build controlled, replayable settings so that whole trajectories can be compared \cite{liuAgentBench} \cite{yaoTauBench}. This note is deliberately narrower and reports a per-decision rate: it measures single decisions, not trajectories, and says so.
+
+Finally, the note is an exercise in evaluation-record integrity. Dodge et al. argue that a reported result should carry the variation behind it \cite{dodgeShowYourWork}; Gebru et al. argue that the artifacts a result depends on should be documented well enough to be interpreted \cite{gebruDatasheets}. This note follows both precepts in one direction and fails them in another: it releases the record files, the definitions and the analysis, and points to the companion note that releases the stimulus under a different neutralised tagging, so the arithmetic is reproducible and the meaning of a case is checkable by recovering the tag correspondence from the data (\S7).
+
+\section{The records}
+
+Two JSONL files carry the evidence. Both are pinned here by size and digest; a third artifact, the stimulus fixture is \textbf{not} in this release: the same 190 cases ship with the companion note (\S7), under a different neutralised tagging.
+
+
+\begin{center}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.240\textwidth}>{\raggedright\arraybackslash}p{0.240\textwidth}>{\raggedright\arraybackslash}p{0.240\textwidth}>{\raggedright\arraybackslash}p{0.240\textwidth}@{}}
+\hline
+\textbf{record} & \textbf{bytes} & \textbf{lines} & \textbf{sha256 (first 8)} \\ \hline
+\texttt{decision-variants.jsonl} & 1,197,797 & 3,040 & \texttt{c5ec44a7} \\ \hline
+\texttt{l1-head-to-head.jsonl} & 63,238 & 380 & \texttt{6af0e0d8} \\ \hline
+\end{tabular}
+\end{center}
+
+\textbf{\texttt{decision-variants.jsonl} --- the substrate.} 3,040 rows, 21 fields each. The rows are \textbf{4 models $\times$ 190 cases $\times$ 4 variants} (V0--V3): the four configurations are \texttt{decider-0.8b}, \texttt{decider-2b}, \texttt{decider-4b} and \texttt{laya}, and there are 190 distinct case \texttt{id}s spanning 7 \texttt{kind} labels. The field set is stable across all rows. \texttt{variant} is the ``four variants'' of the title; V1 is the option-relabelling arm, and V2/V3 are the re-issue control arm described in \S3.
+
+\textbf{\texttt{l1-head-to-head.jsonl} --- a second execution, not a second corpus.} 380 rows, 8 fields each: 2 models (\texttt{laya}, \texttt{decider-0.8b}) $\times$ the same 190 cases. Its role is discussed --- and limited --- in \S5.
+
+\subsection{The schema trap: \texttt{correct} is an index, not a flag}
+
+In \textbf{both} record files the column named \texttt{correct} holds the \textbf{option index} of the correct answer, not a right/wrong boolean. Its value set is \texttt{\{0, 1, 2, 3, 4\}} in both files, and the first row of each file makes this visible: \texttt{decision-variants.jsonl} line 1 carries \texttt{``correct'': 1} and \texttt{``picked\_index'': 1}; \texttt{l1-head-to-head.jsonl} line 1 carries \texttt{``correct'': 0} with \texttt{``picked\_index'': 1} --- i.e. a \emph{wrong} answer whose \texttt{correct} field is literally \texttt{0}.
+
+The correctness axis must therefore be derived:
+
+\begin{quote}
+\textbf{\texttt{picked\_index == correct}} is the outcome boolean.
+\end{quote}
+
+A replicator who reads \texttt{correct} as a flag will compute a meaningless accuracy --- summing the field as if it were 0/1 yields \texttt{404/380} over the whole second record file, and \texttt{202/190} on each of the two models' own lines (\texttt{sum(r[``correct''] for r in rows)}, whole-file and then inside a per-model loop). This is not a hypothetical: the pre-registered experiment's own record says the first analysis run made exactly this misreading and reported 0 \% outcome divergence for every pair until it was corrected (the pre-registration record, analysis log). We state the trap explicitly here because a reader who trips over it will not be able to reproduce anything.
+
+\subsection{No missing rows}
+
+\texttt{error} is \texttt{null} on all 3,040 rows of \texttt{decision-variants.jsonl}, and \texttt{error\_stage} is \texttt{null} on all 3,040. No row is excluded and there is no missing-data correction anywhere in the figures below.
+
+\section{What is measured}
+
+The definitions are those the pre-registered experiment fixed before its analysis ran (the pre-registration record, \S3), implemented literally:
+
+\begin{enumerate}
+\item \textbf{Control / replication.} \texttt{V0}$\leftrightarrow$\texttt{V2} and \texttt{V1}$\leftrightarrow$\texttt{V3} on non-decomposable cases; divergence means \texttt{picked\_index} differs. A working instrument must report \textbf{zero} here.
+\item \textbf{Binding divergence.} Every unordered pair of the four models, compared at the \textbf{same} variant V0; divergence means \texttt{picked\_index} differs. Six pairs $\times$ 190 cases = \textbf{1,140 comparisons}.
+\item \textbf{Prompt divergence.} Every model, \texttt{V0} vs \texttt{V1} (options relabelled, same model, same case); 4 $\times$ 190 = \textbf{760 comparisons}.
+\item \textbf{Decision stability.} The fraction of the 190 cases on which all four models pick the same option at V0.
+\item \textbf{Outcome divergence.} \texttt{(picked\_index == correct)} differs between the two rows --- a separate axis, because two configurations can pick different options and be equally right.
+\end{enumerate}
+
+\textbf{Denominators are load-bearing.} The 41.7544 \% headline is out of \textbf{1,140} comparisons --- six model pairs at one variant --- not out of the 3,040-row corpus. It is \textbf{not} ``41.8 \% across four variants''; it is one arm. The four variants' binding rates appear separately in \S4.5.
+
+Every figure in \S4 was re-derived from the raw records with a script that reads only the two \texttt{.jsonl} files (the analysis script released with this note); the full mapping from claim to field is in this note's internal claim trace.
+
+\section{Results}
+
+\subsection{Binding divergence at V0}
+
+\footnotesize
+
+\begin{center}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.160\textwidth}>{\raggedright\arraybackslash}p{0.160\textwidth}>{\raggedright\arraybackslash}p{0.160\textwidth}>{\raggedright\arraybackslash}p{0.160\textwidth}>{\raggedright\arraybackslash}p{0.160\textwidth}>{\raggedright\arraybackslash}p{0.160\textwidth}@{}}
+\hline
+\textbf{model pair (at V0)} & \textbf{comparisons} & \textbf{decision divergent} & \textbf{decision \%} & \textbf{outcome divergent} & \textbf{outcome \%} \\ \hline
+decider-0.8b vs decider-2b & 190 & 51 & 26.84 & 30 & 15.79 \\ \hline
+decider-0.8b vs decider-4b & 190 & 69 & 36.32 & 47 & 24.74 \\ \hline
+decider-0.8b vs laya & 190 & 98 & 51.58 & 61 & 32.11 \\ \hline
+decider-2b vs decider-4b & 190 & 50 & 26.32 & 35 & 18.42 \\ \hline
+decider-2b vs laya & 190 & 100 & 52.63 & 67 & 35.26 \\ \hline
+decider-4b vs laya & 190 & 108 & 56.84 & 84 & 44.21 \\ \hline
+\textbf{pooled} & \textbf{1,140} & \textbf{476} & \textbf{41.7544} & \textbf{324} & \textbf{28.4211} \\ \hline
+\end{tabular}
+\end{center}
+
+Two models reasoning over the same record choose a different option on \textbf{41.7544 \%} of model-pair-by-case comparisons. The decision axis diverges more than the outcome axis (\textbf{41.75 \%} vs \textbf{28.42 \%} pooled): two configurations can pick different options and still be equally correct, which is exactly why the two axes are reported separately rather than collapsed. Divergence also grows as the configurations get further apart (26.3--26.8 \% between the decider siblings; 51.6--56.8 \% against \texttt{laya}).
+
+\subsection{Prompt divergence, and the split the pool hides}
+
+
+\begin{center}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.240\textwidth}>{\raggedright\arraybackslash}p{0.240\textwidth}>{\raggedright\arraybackslash}p{0.240\textwidth}>{\raggedright\arraybackslash}p{0.240\textwidth}@{}}
+\hline
+\textbf{model (V0 vs V1)} & \textbf{comparisons} & \textbf{divergent} & \textbf{\%} \\ \hline
+decider-0.8b & 190 & 51 & 26.84 \\ \hline
+decider-2b & 190 & 30 & 15.79 \\ \hline
+decider-4b & 190 & 45 & 23.68 \\ \hline
+laya & 190 & 119 & \textbf{62.63} \\ \hline
+\textbf{pooled} & \textbf{760} & \textbf{245} & \textbf{32.2368} \\ \hline
+\end{tabular}
+\end{center}
+
+Relabelling the options moves \textbf{32.2368 \%} of decisions pooled. That single number overstates the robustness of the three decider configurations: \textbf{one model moves 119 of 190 decisions (62.63 \%)} from a label change alone, while the deciders move 15.8--26.8 \%. The honest statement is the split, not the pool. Any claim that ``option labels barely matter'' is true of three configurations and false of the fourth.
+
+\subsection{The control, and why the rate is admissible}
+
+``\texttt{ V0 <-> V2, non-decomposable: 244 comparisons, 244 identical, 0 divergent V1 <-> V3, non-decomposable: 244 comparisons, 244 identical, 0 divergent }``
+
+The corpus contains a replication arm its authors did not build for this experiment: on non-decomposable cases, V2 re-issues the V0 request and V3 re-issues V1. \textbf{Every one of the 244 re-issued comparisons returned an identical decision, in both pairs.} The instrument can report zero, so the divergence rates are a property of the bindings rather than of jitter, comparison error, or a broken instrument. This control is not decoration: the pre-registered record says its first analysis run inverted the case filter and reported ``51 \% replication divergence'' --- a would-be finding that the zero control caught (the pre-registration record, analysis log).
+
+\subsection{How much replay actually guarantees}
+
+Across the 190 cases at V0, all four configurations agree on the same option in \textbf{60 cases = 31.5789 \%}. That stable set is the size of what replay promises at the decision level on this corpus. For the other 68.4 \% (130/190) of cases, at least one binding picks something different from at least one other.
+
+\subsection{Sensitivity across variants}
+
+The headline is one arm. Binding divergence across V0--V3, each over 1,140 comparisons:
+
+
+\begin{center}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.320\textwidth}>{\raggedright\arraybackslash}p{0.320\textwidth}>{\raggedright\arraybackslash}p{0.320\textwidth}@{}}
+\hline
+\textbf{variant} & \textbf{binding divergence} & \textbf{outcome divergence} \\ \hline
+V0 & 476/1140 = 41.7544 \% & 324/1140 = 28.4211 \% \\ \hline
+V1 & 537/1140 = 47.1053 \% & 371/1140 = 32.5439 \% \\ \hline
+V2 & 456/1140 = 40.0000 \% & 358/1140 = 31.4035 \% \\ \hline
+V3 & 494/1140 = 43.3333 \% & 383/1140 = 33.5965 \% \\ \hline
+\end{tabular}
+\end{center}
+
+The spread is \textbf{40.00--47.11 \%}, a 7.11-point range (V0 sits near the low end). The direction of every claim in this note is invariant across the four arms; the \emph{magnitude} is definitional --- it depends on which variant is called the reference. We report the per-variant column rather than a single number so that a reviewer can see the sensitivity instead of having to discover it.
+
+\section{The timing file is not a second corpus}
+
+\texttt{l1-head-to-head.jsonl} was proposed elsewhere as an independent cross-check (the re-verification record). It is not one, and this note does not claim corroboration from it.
+
+
+\begin{center}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.480\textwidth}>{\raggedright\arraybackslash}p{0.480\textwidth}@{}}
+\hline
+\textbf{property of \texttt{l1-head-to-head.jsonl}} & \textbf{measured} \\ \hline
+cases & the \textbf{same 190} case \texttt{id}s as \texttt{decision-variants.jsonl} \\ \hline
+models & the \textbf{same two} (\texttt{laya}, \texttt{decider-0.8b}) \\ \hline
+\texttt{picked\_index} vs \texttt{decision-variants.jsonl} V0 & \textbf{identical on 190/190 rows for each model} \\ \hline
+disagreement pattern vs the V0 decider-0.8b-vs-laya pair & \textbf{same on 190/190 cases} \\ \hline
+\texttt{ms} (timing) vs \texttt{decision-variants.jsonl} V0 & \textbf{differs on 380/380 rows} \\ \hline
+\texttt{p\_chosen} vs \texttt{decision-variants.jsonl} V0 & \textbf{identical on 380/380 rows} (\texttt{conf} is not a field of \texttt{l1-head-to-head.jsonl}; it exists only in \texttt{decision-variants.jsonl}) \\ \hline
+\end{tabular}
+\end{center}
+
+Its 98/190 = \textbf{51.5789 \%} divergence is arithmetically the same 98 disagreements already counted as the decider-0.8b-vs-laya pair in \S4.1 --- not an independent estimate of the rate. What it \emph{is} is a second \textbf{execution} of the same two models over the same 190 cases: the choices are byte-identical and the timings differ on every row. That is evidence about the \textbf{instruments' repeatability}, not evidence that the 41.75 \% figure holds on a second corpus. We therefore either drop the cross-check or report it as a timing comparison on the same disagreements; we do the latter, and nothing in \S4 relies on it.
+
+\emph{Correction to the re-verification record:} the re-verification record states that \texttt{ms}, \texttt{p\_chosen} and \texttt{conf} all differ on every row. Measured directly, \textbf{\texttt{p\_chosen} is identical on all 380 rows} and \textbf{\texttt{ms} differs on all 380 rows}; \texttt{conf} is not a field of \texttt{l1-head-to-head.jsonl} at all, so no claim about it can be evaluated on the second record's side (it exists only in \texttt{decision-variants.jsonl}). The correction does not change the conclusion --- the file is still not independent --- but the record's sentence is wrong as written.
+
+\section{Limitations}
+
+\textbf{The stimuli are not in the record files, and this remains the largest gap --- now closeable by reference.} Neither record file carries a question or an option label: the columns are model names, case \texttt{id}s, \texttt{kind} labels, small indices, probabilities, latencies and booleans. The questions, the option texts and the hand-authored correctness labels lived only in the stimulus fixture (145,031 bytes; 190 cases), which is not part of either \texttt{.jsonl}; since 2026-10-19 that fixture is \textbf{not withheld}, and the companion note releases those \textbf{same 190 cases}, with the same per-kind counts, as a neutralised fixture (\texttt{fixture-190.json}, 76897 bytes, 190 cases, sha256 \texttt{a15224ba\ldots{}}) under a different tagging (\S7). A reader with the two record files and that companion fixture can \textbf{recompute every arithmetic figure in this note}, verify the control, and --- after recovering the tag correspondence from the per-kind sequence of \texttt{correct} values (\S7) --- check that a case's \texttt{id} or \texttt{kind} means what this note says it means, that the option indices refer to the options the fixture holds, and that the \texttt{correct} index agrees with the fixture's own hand-authored label. A reader still \textbf{cannot} read the tag mapping off any released table, and the fixture's labels remain unaudited for defensibility (\S6). Every divergence number here is still reproducible arithmetic over a \textbf{stimulus-blind} record; what has changed is that the blindness is now liftable by the reader. \emph{(Superseded 2026-10-19: this bullet previously stated the stimuli were withheld outright and that the three checks ``are taken on trust unless the fixture ships''; that superseded wording is retained in \S7's dated history.)}
+
+\textbf{The case set has no recorded sampling frame.} The 190 cases are what the fixture contains; nothing on disk establishes that they are representative of any broader task distribution, so nothing here generalises beyond them.
+
+\textbf{The \texttt{correct} labels were not audited.} We verified the \emph{schema} of \texttt{correct} (it is an index) and used it to derive the outcome axis; we did not verify that any individual label is the defensible one.
+
+\textbf{The analysis script named by the pre-registration was not executed.} The pre-registration's analysis script exists (8,856 bytes) but was neither read nor run for this note; every figure here comes from our own script over the raw records. Whether that script implements the definition it documents is unknown to us.
+
+\textbf{This measures a per-decision rate, not a trajectory rate.} The corpus is single-decision tasks with 2--5 options. A longer agent trajectory compounds these per-decision rates rather than averaging them, so 41.75 \% should not be read as a trajectory-level reliability figure. No trajectory was measured.
+
+\textbf{No live re-run was performed.} The records are a measurement of the recorded record; a live re-run would measure today's endpoint, which may differ from the recorded one. This is by design, but it means the note reports what the record shows, not what the models do now.
+
+\textbf{The antecedent citation was not independently fetched.} arXiv 2605.20173 is quoted from the pre-registration's \S1 and is not verified here. No literature claim rests on it beyond naming the phenomenon.
+
+\section{Data availability}
+
+\textbf{Released.} The two record files (\texttt{decision-variants.jsonl}, 1,197,797 B / 3,040 lines / sha256 \texttt{c5ec44a7\ldots{}}; \texttt{l1-head-to-head.jsonl}, 63,238 B / 380 lines / sha256 \texttt{6af0e0d8\ldots{}}), the definitional section of the pre-registration that fixes the five measurements, and the analysis script that re-derives every number in \S4. Total released size of the two records: \textbf{1,261,035 bytes}.
+
+\textbf{Persistent identifier: concept DOI \texttt{10.5281/zenodo.23482511}.} The released record files and the verification tooling are published on Zenodo under that DOI, so the released artifacts carry a persistent identifier as well as a licence statement. The \textbf{concept} DOI is cited deliberately: it always resolves to the latest version of this deposit, whereas a version DOI dies at the next version.
+
+\textbf{Released with the companion note.} The stimulus fixture --- the questions, the option texts and the hand-authored labels --- releases with the \textbf{companion note} on Zenodo, concept DOI \textbf{\texttt{10.5281/zenodo.23463944}}; it is not copied into this package. The companion fixture is \textbf{not an independent corpus and not a differently-sampled one}: it carries the \textbf{same 190 cases} as the records, with the \textbf{same per-kind counts} (30/30/26/22/26/28/28), under a \textbf{different neutralised tagging} (the companion tags its kinds \texttt{K01 K02 K03 K04 K05 K07 N10}; the records use their own kind names). The case order within a kind is the same on both sides, and the correspondence between the two tag sets is recoverable from the data itself: ordering each kind's cases by numeric suffix, the per-kind sequence of \texttt{correct} values determines the mapping \textbf{uniquely} --- exactly one bijection of the seven kinds matches all seven sequences (\texttt{K01=escalation}, \texttt{K02=worker.class}, \texttt{K03=acquisition}, \texttt{K04=topology}, \texttt{K05=capability.family}, \texttt{K07=memory.admission}, \texttt{N10=context.package}). What a reader can therefore check, with the two record files and the companion fixture: the questions, the options and the hand-authored labels of any record. What a reader still cannot: read the tag mapping off any released table --- neither release states it, so it must be recovered by the rule above --- and audit the fixture's labels for defensibility (\S6).
+
+\textbf{Withheld.} The definitional section ships; and the pre-registration's analysis script, which was not executed for this note, is what remains withheld --- it is not released here (8,856 bytes in the source repository). Whether it implements the definition it documents is unknown to us (\S6).
+
+\textbf{Superseded (dated history).} Until 2026-10-19 this section described the stimulus fixture as \textbf{Withheld}, calling that omission ``the largest gap'', and the section's withheld item was ``the stimulus fixture ...; and the analysis script''. That wording is retained here rather than deleted: it was accurate while no fixture was released, and the change is that the fixture now releases with the companion note by \textbf{reference}, not by copy into this package. The item that remains withheld is the analysis script.
+
+\textbf{Licence.} The paper's own text is \textbf{CC BY 4.0}. The released subset's content is covered by \textbf{CC BY 4.0}; the released artifacts are \textbf{source-available under PolyForm Noncommercial 1.0.0}, with an \textbf{author-offered paid commercial licence} for commercial use. \textbf{The main repository stays fully proprietary and closed}; its own \texttt{LICENSE} governs it and is not restated, copied, or resolved here.
+
+\textbf{Author block: the author-supplied name.} The byline is the author's own name, \textbf{Aswin Ram Kalugasala Moorthy}, supplied verbatim and name only; no affiliation, institution or contact is invented or stated. (Corrected 2026-10-16: at drafting, no byline had been decided and this note then described the author block as an unfilled slot for the author to complete before submission; that was accurate then, and the superseded wording is retained in this package's build record. The author has since supplied the name verbatim, and the record is kept.)
+
+Full claim-by-claim sourcing is in this note's internal claim trace; the unestablished items and what would close them are in this note's internal gap log; the release subset and its boundary are described in this note's internal availability record.
+
+\section*{Compute and resources}
+
+\textbf{Compute and resources.} The figures reported here were re-derived from the two already-recorded data files by the analysis script; no model was trained, served or re-run for this note, and no accelerator, training wall-clock or energy measurement is claimed.
+
+\section*{Author contributions}
+
+\textbf{Author contributions.} This manuscript is by a single author, \textbf{Aswin Ram Kalugasala Moorthy}. The research question and the direction of the work are the author's; the author carried out and directed the work and wrote the paper, and takes responsibility for its content. No further contribution record exists and no CRediT roles are stated.
+
+\section*{Funding}
+
+\textbf{Funding.} This research received no external funding. No funding body, grant number or institutional support is recorded anywhere in this workspace, and none is claimed.
+
+\section*{Use of AI tools}
+
+\textbf{Use of AI tools.} In October, I used large language models through DeepSeek Harness (chiefly \texttt{deepseek-v4.1-flash}, with \texttt{step-5-preview-free} and \texttt{mimo-v2.6-flash} as subagent routes) in two ways: to help design and implement the analysis and the experiment, and to help draft and edit this manuscript. The research idea, the experimental design, and all editorial decisions are my own. I checked and verified all AI-assisted output, and I take full responsibility for the entire content of this paper. The AI systems are not authors and are not credited as contributors.
+
+\section*{Conflicts of Interest}
+
+\textbf{Conflicts of Interest.} The author declares no competing interests.
+
+\begin{thebibliography}{99}
+\bibitem{yuanNondeterminism} Yuan, Jiayi, Li, Hao, Ding, Xinheng, Xie, Wenya, Li, Yu-Jhe, Zhao, Wentian, Wan, Kun, Shi, Jing, Hu, Xia and Liu, Zirui, \emph{Understanding and Mitigating Numerical Sources of Nondeterminism in {LLM} Inference}, 2025, arXiv:2506.09501, \url{https://arxiv.org/abs/2506.09501}.
+\bibitem{hendersonDeepRL} Henderson, Peter, Islam, Riashat, Bachman, Philip, Pineau, Joelle, Precup, Doina and Meger, David, \emph{Deep Reinforcement Learning that Matters}, AAAI Conference on Artificial Intelligence (AAAI), 2018, arXiv:1709.06560, \url{https://arxiv.org/abs/1709.06560}.
+\bibitem{bouthillierVariance} Bouthillier, Xavier, Delaunay, Pierre, Bronzi, Mirko, Trofimov, Assya, Nichyporuk, Brennan, Szeto, Justin, Sepah, Naz, Raff, Edward, Madan, Kanika, Voleti, Vikram, Kahou, Samira Ebrahimi, Michalski, Vincent, Serdyuk, Dmitriy, Arbel, Tal, Pal, Chris, Varoquaux, Ga{\``e}l and Vincent, Pascal, \emph{Accounting for Variance in Machine Learning Benchmarks}, Proceedings of Machine Learning and Systems (MLSys), 2021, arXiv:2103.03098, \url{https://arxiv.org/abs/2103.03098}.
+\bibitem{linBatchPrompt} Lin, Jianzhe, Diesendruck, Maurice, Du, Liang and Abraham, Robin, \emph{{BatchPrompt}: Accomplish more with less}, 2023, arXiv:2309.00384, \url{https://arxiv.org/abs/2309.00384}.
+\bibitem{liuAgentBench} Liu, Xiao, Yu, Hao, Zhang, Hanchen, Xu, Yifan, Lei, Xuanyu, Lai, Hanyu, Gu, Yu, Ding, Hangliang, Men, Kaiwen, Yang, Kejuan, Zhang, Shudan, Deng, Xiang, Zeng, Aohan, Du, Zhengxiao, Zhang, Chenhui, Shen, Sheng, Zhang, Tianjun, Su, Yu, Sun, Huan, Huang, Minlie, Dong, Yuxiao and Tang, Jie, \emph{{AgentBench}: Evaluating {LLM}s as Agents}, International Conference on Learning Representations (ICLR), 2024, arXiv:2308.03688, \url{https://arxiv.org/abs/2308.03688}.
+\bibitem{yaoTauBench} Yao, Shunyu, Shinn, Noah, Razavi, Pedram and Narasimhan, Karthik, \emph{{$\tau$}-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains}, 2024, arXiv:2406.12045, \url{https://arxiv.org/abs/2406.12045}.
+\bibitem{dodgeShowYourWork} Dodge, Jesse, Gururangan, Suchin, Card, Dallas, Schwartz, Roy and Smith, Noah A., \emph{Show Your Work: Improved Reporting of Experimental Results}, 2019, arXiv:1909.03004, \url{https://arxiv.org/abs/1909.03004}.
+\bibitem{gebruDatasheets} Gebru, Timnit, Morgenstern, Jamie, Vecchione, Briana, Vaughan, Jennifer Wortman, Wallach, Hanna, Daum{\'e} III, Hal and Crawford, Kate, \emph{Datasheets for Datasets}, Communications of the ACM (CACM), 2021, arXiv:1803.09010, \url{https://arxiv.org/abs/1803.09010}.
+\end{thebibliography}
+\end{document}

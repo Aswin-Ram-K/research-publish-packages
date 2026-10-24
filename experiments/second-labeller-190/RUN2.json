@@ -1,0 +1,83 @@
+{
+  "_experiment": "second-labeller-190",
+  "_unit": "UEXP2",
+  "_purpose": "Re-run UEXP's pre-registered blind Route B labelling with a DIFFERENT model and compare three ways (vs fixture, vs UEXP's labelsB, per-dimension).",
+  "status": "done",
+  "date": "2026-10-15",
+  "model": "mimo-v2.6-flash (exact id: keyring/mimo-v2.6-flash)",
+  "model_distinctness_note": "labelsB.json does not record its model id (labeller string 'routeB-blind-model'). Distinctness rests on UEXP's own record (RUN.json notes[0], orchestration/units/UEXP.md:68) which designates the stood-down labelsB2 pass as 'a second distinct-model pass (mimo-v2.6-flash)' - i.e. the primary pass is asserted (not proven) to be a different model. Ambiguity recorded, not silently resolved.",
+  "blindness_note": "UEXP2's session read EVIDENCE.md/RUN.json (required by its card) and therefore did NOT label the cases itself; the pass was delegated to a fresh-context child agent instructed to read only blinded_cases.json. First attempt failed (subagent token limit, no file written); retry succeeded with one operational line added (write JSON via shell, do not print).",
+  "target": "the read-only target repository",
+  "target_head_before": "907fa39da7ba8ecfbe6e976b7a4cddadea7ac36b",
+  "target_head_after": "907fa39da7ba8ecfbe6e976b7a4cddadea7ac36b",
+  "fixture_sha256_unchanged": "076164ac53c2c1aac130953345c481f88b51f4d6fb93d465c7430308a99b4796",
+
+  "agreement": 0.8631578947368421,
+  "kappa": 0.8576984012674637,
+  "agreement_detail_vs_fixture": {"n": 190, "po": 0.8631578947368421, "pe": 0.03836565096952908, "kappa": 0.8576984012674637, "exact_index_matches": 164, "disagreements": 26, "_source": "metrics2.json .vs_fixture (exact)" },
+  "kappa_vs_UEXP": 0.9124852462791836,
+  "agreement_vs_UEXP_detail": {"n": 190, "po": 0.9157894736842105, "pe": 0.03775623268698061, "kappa": 0.9124852462791836, "exact_index_matches": 174, "_source": "metrics2.json .vs_UEXP_labelsB (exact)" },
+  "uexp_vs_fixture_recomputed_sanity": {"agreement": 0.9052631578947369, "kappa": 0.9013584840356494, "matches_RUN_json": true},
+
+  "kappa_vs_fixture_uexp_reference": 0.9013584840356494,
+  "replication": "partial",
+  "replication_detail": "kappa 0.858 (this pass) vs 0.901 (UEXP): both >= 0.85, but the exact 0.90 headline does not replicate; pre-registered ladder puts this pass in band 2 on agreement (0.863) and band 1 on kappa.",
+
+  "stratified_kappa": {
+    "_note": "vs fixture's recorded labels; B2 = this pass (mimo-v2.6-flash), UEXP = labelsB.json",
+    "memory.admission": {"n": 28, "B2_agreement": 0.6786, "B2_kappa": 0.5625, "UEXP_agreement": 0.7857, "UEXP_kappa": 0.7153, "weakest_for_both_readers": true},
+    "acquisition": {"n": 26, "B2_agreement": 0.7692, "B2_kappa": 0.7045, "UEXP_agreement": 0.8462, "UEXP_kappa": 0.8049, "second_weakest_for_both_readers": true},
+    "escalation": {"n": 30, "B2_agreement": 0.9333, "B2_kappa": 0.8454, "UEXP_agreement": 1.0, "UEXP_kappa": 1.0},
+    "topology": {"n": 22, "B2_agreement": 0.9545, "B2_kappa": 0.9384, "UEXP_agreement": 0.9545, "UEXP_kappa": 0.9384},
+    "worker.class": {"n": 30, "B2_agreement": 0.9, "B2_kappa": 0.8862, "UEXP_agreement": 0.9333, "UEXP_kappa": 0.9226},
+    "context.package": {"n": 28, "B2_agreement": 0.8929, "B2_kappa": 0.8893, "UEXP_agreement": 0.9286, "UEXP_kappa": 0.9261},
+    "capability.family": {"n": 26, "B2_agreement": 0.9231, "B2_kappa": 0.9142, "UEXP_agreement": 0.8846, "UEXP_kappa": 0.8717}
+  },
+
+  "disagreement_count": 26,
+  "disagreement_structure": {
+    "B2_vs_fixture": 26,
+    "UEXP_vs_fixture": 18,
+    "shared_contested_core": ["worker.class-023", "context.package-004", "capability.family-004", "capability.family-009", "memory.admission-001", "memory.admission-009", "memory.admission-018", "memory.admission-021", "memory.admission-027", "topology-018", "acquisition-007", "acquisition-014", "acquisition-019", "acquisition-023"],
+    "B2_only": ["worker.class-003", "worker.class-029", "context.package-005", "context.package-007", "memory.admission-002", "memory.admission-012", "memory.admission-015", "memory.admission-023", "escalation-007", "escalation-019", "acquisition-005", "acquisition-017"],
+    "UEXP_only": ["worker.class-018", "context.package-002", "capability.family-010", "memory.admission-008"],
+    "jaccard": 0.4667,
+    "reading": "14-case shared contested core replicates (all four acquisition traps, all four EPHEMERAL/DROP cases, topology-018, capability.family-004/009, context.package-004, worker.class-023, memory.admission-018); tails are reader-specific, not new defects."
+  },
+
+  "memory_admission_convention_replicated": true,
+  "memory_admission_convention_detail": {
+    "convention": "step-scoped scratch never re-read: recorded EPHEMERAL vs blind-reader DROP",
+    "cases": {"memory.admission-001": "EPHEMERAL/DROP/DROP", "memory.admission-009": "EPHEMERAL/DROP/DROP", "memory.admission-021": "EPHEMERAL/DROP/DROP", "memory.admission-027": "EPHEMERAL/DROP/DROP"},
+    "replicated_4_of_4": true,
+    "interpretation": "REAL SYSTEMATIC AMBIGUITY at the memory.admission tier boundary, demonstrated with two different blind models - not annotation noise. Top repair item in the fixture."
+  },
+
+  "arity_effect": "present and reported for both readers: agreement vs fixture falls from 0.970 (2-option, n=33) to 0.722 (5-option, n=54) for B2 and 1.000 to 0.815 for UEXP; confounded with kind (5-option strata are dominated by memory.admission/acquisition), and NOT consistent with pure option-wording exploitation (model-model kappa 0.9125 on bespoke kinds; B2 scored 28/30 vs UEXP 30/30 on the answer-named escalation stratum). Weakens a blanket 'labels are sound' reading for high-arity closed-roster kinds.",
+  "arity_detail": {
+    "arity_2": {"n": 33, "B2_agreement": 0.9697, "B2_kappa": 0.9498, "UEXP_agreement": 1.0, "UEXP_kappa": 1.0},
+    "arity_3": {"n": 27, "B2_agreement": 0.8519, "B2_kappa": 0.8405, "UEXP_agreement": 0.9259, "UEXP_kappa": 0.9187},
+    "arity_4": {"n": 76, "B2_agreement": 0.9211, "B2_kappa": 0.9179, "UEXP_agreement": 0.9211, "UEXP_kappa": 0.9179},
+    "arity_5": {"n": 54, "B2_agreement": 0.7222, "B2_kappa": 0.6836, "UEXP_agreement": 0.8148, "UEXP_kappa": 0.7906}
+  },
+
+  "verdict": "PARTIAL replication. The magnitude of UEXP's result replicates with a different model (blind kappa 0.858 vs 0.901, both >= 0.85; model-to-model kappa 0.9125), the same dimensions are weak for both readers (memory.admission, acquisition), the 14-case contested core replicates, and the specific systematic finding replicated 4/4: both blind readers say DROP (not EPHEMERAL) on never-re-read step scratch - a REAL fixture ambiguity at the memory.admission tier boundary, the top repair item. What does not replicate: the exact 0.90 headline (second reader lands at 0.863 agreement, band 2 on the pre-registered ladder), and memory.admission kappa degrades to 0.563. Label quality looks robust across models for 6 of 7 kinds, soft for memory.admission, degraded-but-fair for acquisition - not model-specific, but dimension-dependent.",
+  "limitation": "A MODEL IS NOT AN INDEPENDENT HUMAN ANNOTATOR. Every number here - including the model-to-model kappa of 0.9125 - measures MACHINE reproducibility of the fixture's labels for exactly two models on one fixture, and is NOT inter-annotator agreement. It must never be cited as IAA, does not discharge PAPER_CANDIDATES.md F.3's call for a second independent human labeller, and remains consistent with both models sharing a wrong convention. Replication of a divergence demonstrates ambiguity, not error in either direction.",
+
+  "reproducibility": "python3 compare2.py reproduces metrics2.json and disagreementsB2.jsonl from cases.json + labelsB.json + labelsB2.json. UEXP's compare.py was deliberately NOT re-run (it would overwrite UEXP's metrics.json/disagreements.jsonl).",
+  "concurrent_session_note": "While UEXP2's labeller ran, a concurrent session modified EVIDENCE.md (14:47:33 CDT), metrics.json and RUN.json (14:48:12 CDT) and added OWED_CORRECTIONS.md (14:57:25 CDT) in this sandbox - NOT UEXP2 (its only writes: labelsB2.json 15:09:56, compare2.py, metrics2.json, disagreementsB2.jsonl, ROBUSTNESS.md, RUN2.json). The UEXP numbers cited here were re-verified unchanged post-modification; labelsB.json and disagreements.jsonl untouched. See ROBUSTNESS.md s9.",
+  "read_only_proof": {
+    "git_status_porcelain_before_after_identical": ["?? .ci-trunk.txt", "?? .relay/", "?? docs/evidence/selfbuild/relay-outbound-2026-10-13.txt", "?? docs/migration/"],
+    "repo_pre_dirty_from_concurrent_session": true,
+    "in_window_target_writes": "8 files, ALL under .git/objects/ (7 loose + 1 pack), mtime 2026-10-15 14:38:30 CDT - ~1 min BEFORE UEXP2's first command; 0 under evals/; attributed by exclusion to the unrelated concurrent session (.git/HEAD and .git/index still 12:51:58).",
+    "tracked_working_tree_files_changed": 0
+  },
+  "artifacts": [
+    "experiments/second-labeller-190/ROBUSTNESS.md",
+    "experiments/second-labeller-190/RUN2.json",
+    "experiments/second-labeller-190/labelsB2.json",
+    "experiments/second-labeller-190/compare2.py",
+    "experiments/second-labeller-190/metrics2.json",
+    "experiments/second-labeller-190/disagreementsB2.jsonl"
+  ]
+}

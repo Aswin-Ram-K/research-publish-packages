@@ -1,0 +1,64 @@
+{
+  "unit": "R2-VLLM-PREFLIGHT2",
+  "kind": "read-only host preflight (re-run of R2-VLLM cell)",
+  "probe_mode": "read-only: docker ps/inspect/logs/events, ss -ltn, curl GET /health and /v1/models, nvidia-smi, ps",
+  "window_utc": {"first_probe": "2026-10-24T02:45:46Z", "last_probe": "2026-10-24T02:46:26Z"},
+  "occamy": {
+    "container": "gx10-occamy-nvfp4",
+    "state": "running",
+    "started_at": "2026-10-23T07:58:48.659913191Z",
+    "status": "Up 19 hours",
+    "exit_code": 0, "oom_killed": false, "restart_count": 0, "state_error": "",
+    "host_port": 8012,
+    "health_8012": 200,
+    "health_8012_method": "curl http://192.168.2.168:8012/health from the box (127.0.0.1:8012 returns 000 because the container is bound to 192.168.2.168, not loopback)",
+    "touched": false
+  },
+  "prod": {
+    "container": "gx10-qwen9b",
+    "state": "exited",
+    "started_at": "2026-10-24T02:32:51.277029646Z",
+    "finished_at": "2026-10-24T02:43:20.222698963Z",
+    "exit_code": 0, "oom_killed": false, "restart_count": 0,
+    "startup_reached_health_200": true,
+    "startup_health_200_evidence": "container logs show 'GET /health HTTP/1.1 200 OK' and 'GET /v1/models HTTP/1.1 200 OK' at 02:35:04 and again at 02:43:0x",
+    "shutdown_evidence": "logs 02:43:13 '[shutdown] API server: shutdown triggered' ... 'force killing remaining process EngineCore pid 134'",
+    "reached_ready_now": false,
+    "health_8014_now": 0,
+    "v1_models_8014_now": "empty body (connection reset)",
+    "host_port_binding": {},
+    "port_busy": false,
+    "occupied_by": "",
+    "note": "gx10-qwen9b was cleanly STOPPED (docker stop at 02:43:13, die at 02:43:20) and replaced 1 second later by r2v-a1 on the same host port 8014. It is not crashed and not mid-cold-start."
+  },
+  "containers_other": [
+    {"name": "r2v-a1", "status": "Up 3 minutes", "image": "sha256:2c211a1273b4", "state": "running", "started_at": "2026-10-24T02:43:21.088613327Z", "exit_code": 0, "restart_count": 0,
+     "host_port": 8014, "served_model": "qwen3.5-9b", "binds": "/home/zer0null/models/qwen3.5-9b-bf16->/model, /home/zer0null/.local/share/gx10-qwen9b/vllm-cache->/root/.cache/vllm",
+     "phase_in_window": "loading -> init engine done 02:46:19 (64.47 s) -> api server up, no /health 200 yet at 02:46:26",
+     "events_last_20m": ["start@02:43:21"],
+     "assessment": "This is the A1 cell variant, container name r2v-a1, host port 8014, prod cmd + pmu16 (matches logs/A1-launch.json spec), i.e. the R2-VLLM cell launch phase, not a foreign tenant."},
+    {"name": "gx10-qwen9b", "status": "Exited (0) 3 minutes ago"}
+  ],
+  "port_8014_history": {
+    "pattern": "mutually exclusive over 3 cycles in the last ~13 min: gx10-qwen9b stop -> r2v-a1 destroy -> gx10-qwen9b start -> gx10-qwen9b stop -> r2v-a1 start",
+    "events_utc": [
+      "02:29:28 r2v-a1 stop/die (A1 teardown)",
+      "02:32:51 gx10-qwen9b start (prod restore, health 200 at ~02:35:04)",
+      "02:43:13 gx10-qwen9b kill", "02:43:20 gx10-qwen9b stop/die",
+      "02:43:21 r2v-a1 create+start",
+      "previously: 02:36:11 r2v-a1 kill/destroy, 02:36:16 gx10-qwen9b start"
+    ],
+    "conclusion": "No overlap: prod is stopped before the variant binds 8014, and the variant is destroyed before prod is started back. The 02:32Z {prod:0,occamy:200,var:0} reading was a stop/start boundary, not a port conflict."
+  },
+  "gpu": {
+    "index": 0, "name": "NVIDIA GB10", "memory_used_query": "[N/A]", "memory_total_query": "[N/A]", "utilization_gpu": "0 %",
+    "compute_apps": [
+      {"pid": 3254084, "process": "/usr/bin/python3", "used_memory": "218 MiB", "role": "sglang serve wrapper (occamy-1.0-NVFP4, :8012), elapsed 18:47:09"},
+      {"pid": 3255041, "process": "sglang::scheduler", "used_memory": "44954 MiB", "role": "occamy sglang scheduler, elapsed 18:46:51"},
+      {"pid": 3655291, "process": "VLLM::EngineCore", "used_memory": "14384 MiB (14975 MiB at first probe)", "role": "r2v-a1 EngineCore, elapsed ~02:15"}
+    ],
+    "note": "nvidia-smi cannot report unified-memory totals on GB10 (memory.used/total = [N/A]); per-process used_memory is the observable."
+  },
+  "listeners": ["0.0.0.0:8014 (docker-proxy for r2v-a1)", "192.168.2.168:8010 (node pid 3443)", "192.168.2.168:8012 (docker-proxy for gx10-occamy-nvfp4)", "127.0.0.1:8011 (needle pid 2392)"],
+  "verdict": "host_ready_with_conditions: occamy UP and untouched; prod NOT up (cleanly stopped, replaced by r2v-a1 on 8014); variant r2v-a1 running, api server started ~02:46:19 and /health not yet 200 within the window"
+}
