@@ -313,7 +313,10 @@ def test_migration_reports_and_resolves_duplicate_docket_dirs(tmp_path: Path):
 
 
 def test_add_rework_dedupes_and_lists(con: sqlite3.Connection):
-    docket_id, _ = store.upsert_docket_by_dir(con, dir="dockets/duval/lane-a")
+    docket_id, _ = store.upsert_docket_by_dir(
+        con, dir="dockets/duval/lane-a", freshness="current",
+        manifest_json={"schema": "resextract/docket/1"},
+    )
 
     rid, inserted = store.add_rework(
         con,
@@ -365,22 +368,28 @@ def test_add_rework_dedupes_and_lists(con: sqlite3.Connection):
 
 
 def test_model_suggested_check_rejects_two(con: sqlite3.Connection):
+    # row_schema tier 1: a rework item without a docket cannot be acted on, so the row
+    # the CHECK is being tested on now names its docket (docket_id=1 is seeded by
+    # ``test_open_rework_legacy_path_still_returns_int``'s sibling; here we make one).
+    store.upsert_docket_by_dir(con, dir="dockets/duval/check", freshness="current",
+                               manifest_json={"schema": "resextract/docket/1"})
     with pytest.raises(sqlite3.IntegrityError, match="CHECK constraint failed: model_suggested"):
         con.execute(
             "INSERT INTO rework(docket_id, reason, required_work, model_suggested) "
-            "VALUES (NULL, 'r', 'w', 2)"
+            "VALUES (1, 'r', 'w', 2)"
         )
     with pytest.raises(ValueError, match="model_suggested must be 0 or 1"):
         store.add_rework(con, reason="r", required_work="w", model_suggested=7)
     # 0/1 both round-trip
-    _, i0 = store.add_rework(con, reason="a", required_work="w", model_suggested=0)
-    _, i1 = store.add_rework(con, reason="b", required_work="w", model_suggested=True)
+    _, i0 = store.add_rework(con, docket_id=1, reason="a", required_work="w", model_suggested=0)
+    _, i1 = store.add_rework(con, docket_id=1, reason="b", required_work="w", model_suggested=True)
     assert (i0, i1) == (True, True)
     assert [r["model_suggested"] for r in store.list_rework(con)] == [0, 1]
 
 
 def test_open_rework_legacy_path_still_returns_int(con: sqlite3.Connection):
-    store.upsert_docket_by_dir(con, dir="dockets/duval/lane-a")
+    store.upsert_docket_by_dir(con, dir="dockets/duval/lane-a", freshness="current",
+                               manifest_json={"schema": "resextract/docket/1"})
     rid = store.open_rework(con, docket_id=1, reason="source moved", required_work="re-measure")
     assert isinstance(rid, int)
     assert store.get_rework(con, rid)["model_suggested"] == 0
@@ -410,7 +419,8 @@ def test_upsert_docket_by_dir_never_duplicates(con: sqlite3.Connection):
     Restored, the same test passes (13 passed).
     """
     first_id, inserted = store.upsert_docket_by_dir(
-        con, lane_id=None, dir="dockets/duval/lane-a", freshness="current"
+        con, lane_id=None, dir="dockets/duval/lane-a", freshness="current",
+        manifest_json={"schema": "resextract/docket/1"},
     )
     assert (inserted, first_id) == (True, 1)
 
@@ -436,7 +446,10 @@ def test_upsert_docket_by_dir_never_duplicates(con: sqlite3.Connection):
     assert row["freshness"] == "current"  # omitted field kept its value
 
     # two different dirs -> two rows
-    other, inserted3 = store.upsert_docket_by_dir(con, dir="dockets/duval/lane-b")
+    other, inserted3 = store.upsert_docket_by_dir(
+        con, dir="dockets/duval/lane-b", freshness="current",
+        manifest_json={"schema": "resextract/docket/1"},
+    )
     assert inserted3 is True and other != first_id
     assert store.count(con, "dockets") == 2
 
@@ -457,9 +470,9 @@ def test_dockets_dir_unique_index_rejects_direct_duplicate(con: sqlite3.Connecti
 
 def _seed(con: sqlite3.Connection) -> tuple[int, int, int, int]:
     run = store.insert_run(con, target="duval")
-    c1 = store.insert_candidate(con, run_id=run, kind="claim", title="c1", state="mined")
-    c2 = store.insert_candidate(con, run_id=run, kind="claim", title="c2", state="mined")
-    c3 = store.insert_candidate(con, run_id=run, kind="claim", title="c3", state="mined")
+    c1 = store.insert_candidate(con, run_id=run, kind="claim", title="c1", state="mined", provenance_json=[])
+    c2 = store.insert_candidate(con, run_id=run, kind="claim", title="c2", state="mined", provenance_json=[])
+    c3 = store.insert_candidate(con, run_id=run, kind="claim", title="c3", state="mined", provenance_json=[])
     lane = store.upsert_lane(con, target="duval", slug="lane-a", type="report")
     return run, c1, c2, c3, lane  # type: ignore[return-value]
 
@@ -486,7 +499,7 @@ def test_deleting_a_lane_cascades_its_links(con: sqlite3.Connection):
     assert con.execute("PRAGMA foreign_keys").fetchone()[0] == 1
     _, c1, c2, _, lane = _seed(con)
     store.link_lane_candidates(con, lane, [c1, c2])
-    other = store.insert_candidate(con, kind="claim", title="c4")
+    other = store.insert_candidate(con, kind="claim", title="c4", provenance_json=[])
 
     con.execute("DELETE FROM lanes WHERE id=?", (lane,))
     con.commit()
@@ -510,8 +523,8 @@ def test_deleting_a_lane_cascades_its_links(con: sqlite3.Connection):
 
 def test_all_four_check_vocabularies_reject_bad_values(con: sqlite3.Connection):
     run = store.insert_run(con, target="duval")
-    candidate = store.insert_candidate(con, run_id=run, title="c")
-    claim = store.insert_claim(con, candidate_id=candidate, text="x")
+    candidate = store.insert_candidate(con, run_id=run, title="c", kind="claim", provenance_json=[])
+    claim = store.insert_claim(con, candidate_id=candidate, text="x", kind="claim", provenance_json=[])
 
     with pytest.raises(ValueError, match="verdict must be one of"):
         store.insert_verdict(con, claim_id=claim, verdict="MAYBE")
@@ -547,8 +560,9 @@ def test_all_four_check_vocabularies_reject_bad_values(con: sqlite3.Connection):
 def test_status_json_counts_new_table_and_stays_sane(con: sqlite3.Connection):
     _, c1, c2, _, lane = _seed(con)
     store.link_lane_candidates(con, lane, [c1, c2])
-    store.upsert_docket_by_dir(con, dir="dockets/duval/lane-a", freshness="current")
-    store.add_rework(con, reason="r", required_work="w", source_ref="git:abc:f")
+    store.upsert_docket_by_dir(con, dir="dockets/duval/lane-a", freshness="current",
+                               manifest_json={"schema": "resextract/docket/1"})
+    store.add_rework(con, docket_id=1, reason="r", required_work="w", source_ref="git:abc:f")
 
     summary = store.status_json(con)
     assert set(summary["tables"]) == set(store.TABLES)

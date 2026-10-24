@@ -225,7 +225,10 @@ def test_docket_upsert_round_trip(con):
     assert docket["manifest_json"] == {"schema": "resextract/docket/1"}
     assert docket["freshness"] == "current"
 
-    store.upsert_docket(con, id=docket_id, lane_id=lane_id, dir="dockets/duval/lane-a", freshness="stale")
+    store.upsert_docket(
+        con, id=docket_id, lane_id=lane_id, dir="dockets/duval/lane-a", freshness="stale",
+        manifest_json={"schema": "resextract/docket/1"},
+    )
     assert store.get_docket(con, docket_id)["freshness"] == "stale"
     assert store.get_docket_by_dir(con, "dockets/duval/lane-a")["id"] == docket_id
     assert store.count(con, "dockets") == 1
@@ -233,12 +236,22 @@ def test_docket_upsert_round_trip(con):
 
 def test_evidence_verdict_search_health_and_rework_round_trip(con):
     run_id = store.insert_run(con, target="duval")
-    candidate_id = store.insert_candidate(con, run_id=run_id, kind="claim", title="T", graph_nodes_json=["a", "b"])
-    claim_id = store.insert_claim(con, candidate_id=candidate_id, kind="novelty", text="X beats Y")
-    evidence_id = store.insert_evidence(
-        con, claim_id=claim_id, source_kind="web", source_ref="https://example.org", sha256="ab" * 32
+    candidate_id = store.insert_candidate(
+        con, run_id=run_id, kind="claim", title="T", graph_nodes_json=["a", "b"],
+        provenance_json=[{"ref": "fixture"}],
     )
-    verdict_id = store.insert_verdict(con, claim_id=claim_id, verdict="CONFIRMS", evidence_ids_json=[evidence_id])
+    claim_id = store.insert_claim(
+        con, candidate_id=candidate_id, kind="novelty", text="X beats Y",
+        provenance_json=[{"ref": "fixture"}],
+    )
+    evidence_id = store.insert_evidence(
+        con, claim_id=claim_id, source_kind="web", source_ref="https://example.org",
+        sha256="ab" * 32, retrieved_at="2026-10-08T10:00:00.000Z",
+    )
+    verdict_id = store.insert_verdict(
+        con, claim_id=claim_id, verdict="CONFIRMS", evidence_ids_json=[evidence_id],
+        checked_at="2026-10-08T10:00:01.000Z",
+    )
     health_id = store.insert_search_health(con, engine="duckduckgo", query="q", result_count=3, ok=True)
     con.execute("INSERT INTO dockets(id, lane_id, dir, freshness) VALUES (1, NULL, 'd/1', 'current')")
     rework_id = store.open_rework(con, docket_id=1, reason="source moved", required_work="re-measure")
@@ -263,8 +276,10 @@ def test_status_json_shape(con):
     run_id = store.insert_run(con, target="duval")
     claim_lane = store.upsert_lane(con, target="duval", slug="lane-a", type="paper", status="ready")
     store.upsert_lane(con, target="duval", slug="lane-b", type="memo", status="draft")
-    store.upsert_docket(con, lane_id=claim_lane, dir="dockets/duval/lane-a", freshness="current")
-    store.upsert_docket(con, lane_id=claim_lane, dir="dockets/duval/lane-b", freshness="stale")
+    store.upsert_docket(con, lane_id=claim_lane, dir="dockets/duval/lane-a", freshness="current",
+                        manifest_json={"schema": "resextract/docket/1"})
+    store.upsert_docket(con, lane_id=claim_lane, dir="dockets/duval/lane-b", freshness="stale",
+                        manifest_json={"schema": "resextract/docket/1"})
 
     summary = store.status_json(con)
     assert set(summary) >= {

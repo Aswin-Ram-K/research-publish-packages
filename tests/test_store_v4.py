@@ -300,8 +300,13 @@ def test_producer_defaults_to_unknown_when_writer_omits_column(v3_path: Path):
         assert store.get_evidence(con, 2)["producer"] == "unknown"
         assert store.get_verdict(con, 2)["producer"] == "unknown"
         # and the accessor's own default matches the schema default
-        eid = store.insert_evidence(con, claim_id=1, source_kind="local")
-        vid = store.insert_verdict(con, claim_id=1, verdict="EXTENDS")
+        eid = store.insert_evidence(
+            con, claim_id=1, source_kind="local", retrieved_at="2026-10-08T10:00:00.000Z"
+        )
+        vid = store.insert_verdict(
+            con, claim_id=1, verdict="EXTENDS", evidence_ids_json=[eid],
+            checked_at="2026-10-08T10:00:01.000Z",
+        )
         assert store.get_evidence(con, eid)["producer"] == "unknown"
         assert store.get_verdict(con, vid)["producer"] == "unknown"
         assert store.get_verdict(con, vid)["model"] is None

@@ -18,6 +18,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from resextract import row_schema
+from resextract.row_schema import NullRowError  # re-exported: the one refusal type
+
 SCHEMA_VERSION = 4
 DEFAULT_DB_PATH = Path("state/state.sqlite")
 
@@ -604,9 +607,10 @@ def init_db(path: str | os.PathLike[str] | None = None) -> Path:
                     # column behind; re-running must still reach the end.
                     if "duplicate column name" not in str(exc).lower():
                         raise
-            con.execute(
-                "INSERT INTO schema_version(version, applied_at) VALUES (?, ?)",
-                (version, utcnow()),
+            _insert(
+                con,
+                "INSERT INTO schema_version(version, applied_at) VALUES (:version, :applied_at)",
+                {"version": version, "applied_at": utcnow()},
             )
         con.commit()
     finally:
@@ -842,7 +846,37 @@ def _rows(rows: list[sqlite3.Row]) -> list[dict[str, Any]]:
     return [r for r in (_row(row) for row in rows) if r is not None]
 
 
+def _gate(table: str | None, params: Mapping[str, Any]) -> None:
+    """The row-profile gate, shared by every writer in this module."""
+    if table is not None:
+        # Aliases: ``_text``/``_type`` are the params' spellings of the quoted SQL
+        # identifiers "text"/"type"/"list", which cannot be Python keyword arguments.
+        row_schema.validate_row(
+            table, {row_schema.ALIASES.get(k, k): v for k, v in params.items()}
+        )
+
+
+def _arrow_execute(
+    con: sqlite3.Connection, sql: str, params: Mapping[str, Any]
+) -> sqlite3.Cursor:
+    """Same gate as :func:`_insert`, but returns the cursor and does not commit.
+
+    Exists so a writer that needs ``cursor.lastrowid`` (or commits itself later) still
+    passes through the one gate instead of calling ``con.execute`` directly.
+    """
+    _gate(row_schema.table_of_insert(sql), params)
+    return con.execute(sql, params)
+
+
 def _insert(con: sqlite3.Connection, sql: str, params: Mapping[str, Any]) -> int:
+    """THE one writer: validate the row against its profile, then INSERT.
+
+    Every INSERT in this module goes through here (or :func:`_arrow_execute`), so the
+    row-profile gate in :mod:`resextract.row_schema` cannot be bypassed by a new
+    accessor.  A refused row is never issued to SQLite: the error is raised before
+    ``execute``, so a caller's transaction sees either the whole row or no trace of it.
+    """
+    _gate(row_schema.table_of_insert(sql), params)
     cur = con.execute(sql, params)
     con.commit()
     return int(cur.lastrowid)
@@ -991,7 +1025,8 @@ def upsert_target(
     last_seen_at: str | None = None,
     exclude_json: Any = None,
 ) -> str:
-    con.execute(
+    _insert(
+        con,
         "INSERT INTO targets(slug, path, head_sha, graph_path, graph_hash, last_seen_at, exclude_json) "
         "VALUES (:slug, :path, :head_sha, :graph_path, :graph_hash, :last_seen_at, :exclude_json) "
         "ON CONFLICT(slug) DO UPDATE SET path=excluded.path, head_sha=excluded.head_sha, "
@@ -1062,7 +1097,8 @@ def insert_candidate(
 def upsert_candidate(con: sqlite3.Connection, *, id: int | None = None, **fields: Any) -> int:
     if id is None:
         return insert_candidate(con, **fields)
-    con.execute(
+    _insert(
+        con,
         "INSERT INTO candidates(id, run_id, kind, title, summary, provenance_json, graph_nodes_json, "
         "score, state, producer, model) "
         "VALUES (:id, :run_id, :kind, :title, :summary, :provenance_json, :graph_nodes_json, "
@@ -1226,7 +1262,7 @@ def insert_evidence(
             "sha256": sha256,
             "quote": quote,
             "context": context,
-            "retrieved_at": retrieved_at or utcnow(),
+            "retrieved_at": retrieved_at,
             "copy_path": copy_path,
             "producer": producer or "unknown",
         },
@@ -1296,7 +1332,7 @@ def insert_verdict(
             "verdict": verdict,
             "rationale": rationale,
             "evidence_ids_json": _dump(evidence_ids_json),
-            "checked_at": checked_at or utcnow(),
+            "checked_at": checked_at,
             "producer": producer or "unknown",
             "model": model,
         },
@@ -1372,6 +1408,25 @@ def upsert_lane(
                 "status": status,
             },
         )
+    # The explicit-id upsert is the *only* writer that may store a NULL there -- closing
+    # the hole row_schema recorded as "upsert_lane can bypass _insert on the explicit-id
+    # path".  Without this, an explicit-id lane row would be the one row in the store
+    # that never passed the gate.
+    row_schema.validate_row(
+        "lanes",
+        {
+            "id": id,
+            "target": target,
+            "slug": slug,
+            "title": title,
+            "thesis": thesis,
+            "audience": audience,
+            "type": type,
+            "parent_lane_id": parent_lane_id,
+            "maturity": maturity,
+            "status": status,
+        },
+    )
     con.execute(
         'INSERT INTO lanes(id, target, slug, title, thesis, audience, "type", parent_lane_id, maturity, status) '
         "VALUES (:id, :target, :slug, :title, :thesis, :audience, :type, :parent_lane_id, :maturity, :status) "
@@ -1429,6 +1484,11 @@ def link_lane_candidates(
     ids = sorted({int(c) for c in candidate_ids})
     before = con.total_changes
     for candidate_id in ids:
+        # A link row IS its two ids: either one NULL is a link to nothing, so the gate
+        # is applied here rather than assuming the caller checked.
+        row_schema.validate_row(
+            "lane_candidates", {"lane_id": lane_id, "candidate_id": candidate_id}
+        )
         con.execute(
             "INSERT OR IGNORE INTO lane_candidates(lane_id, candidate_id) VALUES (?, ?)",
             (lane_id, candidate_id),
@@ -1521,7 +1581,8 @@ def upsert_docket_by_dir(
     }
     existing = _row(con.execute("SELECT * FROM dockets WHERE dir=?", (dir,)).fetchone())
     if existing is None:
-        cur = con.execute(
+        cur = _arrow_execute(
+            con,
             "INSERT INTO dockets(lane_id, dir, manifest_json, source_head, graph_hash, "
             "freshness, verified_at, last_refresh_at) "
             "VALUES (:lane_id, :dir, :manifest_json, :source_head, :graph_hash, "
@@ -1594,7 +1655,8 @@ def upsert_docket(
             "VALUES (:lane_id, :dir, :manifest_json, :source_head, :graph_hash, :freshness, :verified_at, :last_refresh_at)",
             params,
         )
-    con.execute(
+    _insert(
+        con,
         "INSERT INTO dockets(id, lane_id, dir, manifest_json, source_head, graph_hash, freshness, verified_at, last_refresh_at) "
         "VALUES (:id, :lane_id, :dir, :manifest_json, :source_head, :graph_hash, :freshness, :verified_at, :last_refresh_at) "
         "ON CONFLICT(id) DO UPDATE SET lane_id=excluded.lane_id, dir=excluded.dir, "
@@ -1631,7 +1693,11 @@ def upsert_web_source(
     extracted_text_path: str | None = None,
     failure_reason: str | None = None,
 ) -> str:
-    con.execute(
+    # Router writer (row_schema.router_methods): a failed fetch legitimately has no
+    # sha256 and no http_status, and "no row" would erase the failure.  The declared
+    # router path is the only one allowed to store those two as NULL.
+    row_schema.router_insert(
+        con,
         "INSERT INTO web_sources(url, sha256, title, page_date, fetched_at, http_status, extracted_text_path, failure_reason) "
         "VALUES (:url, :sha256, :title, :page_date, :fetched_at, :http_status, :extracted_text_path, :failure_reason) "
         "ON CONFLICT(url) DO UPDATE SET sha256=excluded.sha256, title=excluded.title, page_date=excluded.page_date, "
@@ -1647,6 +1713,7 @@ def upsert_web_source(
             "extracted_text_path": extracted_text_path,
             "failure_reason": failure_reason,
         },
+        method="upsert_web_source",
     )
     con.commit()
     return url
@@ -1715,7 +1782,8 @@ def add_rework(
     ).fetchone()
     if existing is not None:
         return int(existing["id"]), False
-    cur = con.execute(
+    cur = _arrow_execute(
+        con,
         "INSERT INTO rework(docket_id, reason, required_work, source_ref, model_suggested, "
         "opened_at, closed_at) VALUES (:docket_id, :reason, :required_work, :source_ref, "
         ":model_suggested, :opened_at, NULL)",

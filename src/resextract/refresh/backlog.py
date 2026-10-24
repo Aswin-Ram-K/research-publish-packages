@@ -341,9 +341,11 @@ def persist_rework(
 ) -> tuple[int, list[str]]:
     """Persist to the ``rework`` table via ``store.open_rework``.
 
-    Store gap (recorded, not worked around silently): the ``rework`` table has no
-    ``source_ref`` / ``model_suggested`` columns and no dedupe or list accessor,
-    so only ``reason`` + ``required_work`` survive the round-trip here.
+    ``source_ref`` / ``model_suggested`` are carried through: the table has both
+    columns (schema v4), so the stored row states what the backlog entry stated.
+    This docstring previously recorded the opposite ("no columns ... only reason +
+    ``required_work`` survive"); that note was stale, and it made every persisted
+    row look as though it had lost its provenance.
     """
     from resextract import store
 
@@ -356,6 +358,8 @@ def persist_rework(
                 docket_id=docket_id,
                 reason=entry.reason,
                 required_work=entry.required_work,
+                source_ref=entry.source_ref,
+                model_suggested=entry.model_suggested,
                 opened_at=entry.opened_at,
             )
             written += 1
@@ -363,7 +367,6 @@ def persist_rework(
             notes.append(f"open_rework failed for {entry.source_ref}: {type(exc).__name__}: {exc}")
     if entries:
         notes.append(
-            "rework table dropped source_ref/model_suggested (no columns); "
-            "only reason+required_work persisted"
+            "rework rows persisted with reason+required_work+source_ref+model_suggested"
         )
     return written, notes

@@ -198,7 +198,9 @@ def seed_claims(path: Path, texts: list[str]) -> list[dict[str, object]]:
     try:
         out = []
         for text in texts:
-            cid = store.insert_claim(con, kind="architectural", text=text)
+            cid = store.insert_claim(
+                con, kind="architectural", text=text, provenance_json=[{"ref": "fixture"}]
+            )
             out.append(claim_dict(cid, text))
         con.commit()
     finally:

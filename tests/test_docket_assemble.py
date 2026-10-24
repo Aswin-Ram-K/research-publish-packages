@@ -73,10 +73,15 @@ def build_store(db_path: Path):
     store.init_db(db_path)
     con = store.connect(db_path)
     seed = json.loads((FIXTURES / "seed.json").read_text(encoding="utf-8"))
+
     target = dict(seed["target"])
     target["path"] = str(SOURCES)
     store.upsert_target(con, **target)
     store.upsert_lane(con, **seed["lane"])
+    # ``assemble``'s lane input model declares only its own fields, so the store-only
+    # ``target`` key is popped before the lane dict reaches it
+
+    seed["lane"].pop("target", None)
     for row in seed["claims"]:
         claim_id = store.insert_claim(
             con,
@@ -86,7 +91,9 @@ def build_store(db_path: Path):
             verification_state=row.get("verification_state"),
         )
         store.insert_verdict(
-            con, claim_id=claim_id, verdict=row["verdict"], rationale=row.get("rationale", "")
+            con, claim_id=claim_id, verdict=row["verdict"], rationale=row.get("rationale", ""),
+            evidence_ids_json=[],  # row_schema tier 1: a verdict always names its evidence
+            checked_at="2026-10-08T10:00:01.000Z",
         )
         for ev in row["evidence"]:
             ref = ev["source_ref"]
@@ -98,6 +105,9 @@ def build_store(db_path: Path):
                 source_ref=ref,
                 sha256=sha256_file(source_file),
                 quote=ev.get("quote"),
+                # row_schema tier 1: evidence records *when* it was retrieved.  The seed
+                # has no clock, so the fixture pins one date (deterministic reports).
+                retrieved_at="2026-10-08T10:00:00.000Z",
             )
     con.commit()
     return con

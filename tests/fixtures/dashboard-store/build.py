@@ -230,7 +230,12 @@ def build_store(path: Path) -> None:
                           thesis="fixture", audience="testers", type="report", status="ready")
         store.upsert_docket(con, id=1, lane_id=1, dir="dockets/ok-docket", source_head="deadbeef",
                             graph_hash="cafefeed", freshness="stale",
-                            verified_at="2026-10-07T00:00:00Z")
+                            verified_at="2026-10-07T00:00:00Z",
+                            # row_schema tier 1: a docket row is its manifest.  A docket
+                            # with no manifest cannot be verified by a reader, so the
+                            # fixture records a minimal valid one instead of NULL.
+                            manifest_json={"schema": "resextract/docket/1",
+                                           "status": "ready", "claims": []})
         store.open_rework(con, docket_id=1, reason="source moved",
                           required_work="re-copy material and re-verify C2",
                           opened_at="2026-10-08T09:30:00.000Z")

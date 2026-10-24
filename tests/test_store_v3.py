@@ -259,10 +259,13 @@ def test_producer_filters_and_model_claim_helper(v2_path: Path):
         assert not store.may_back_model_claim(None)
         assert store.may_back_model_claim({"producer": "model"})
         # a model-produced row does back a claim, and only it
-        cid = store.insert_candidate(con, run_id=1, title="m", producer="model", model="occamy-1.0")
+        cid = store.insert_candidate(
+            con, run_id=1, title="m", producer="model", model="occamy-1.0",
+            kind="claim", provenance_json=[],
+        )
         assert [c["id"] for c in store.model_produced_candidates(con)] == [cid]
         # the honest default for an unlabelled insert is 'unknown', never 'model'
-        plain = store.insert_candidate(con, run_id=1, title="plain")
+        plain = store.insert_candidate(con, run_id=1, title="plain", kind="claim", provenance_json=[])
         assert store.get_candidate(con, plain)["producer"] == "unknown"
     finally:
         con.close()

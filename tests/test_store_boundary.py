@@ -174,7 +174,10 @@ def test_v3_write_raises_typed_error_not_operationalerror(tmp_path: Path) -> Non
     con = store.connect(p)
     try:
         with pytest.raises(store.SchemaTooOldError) as ei:
-            store.insert_verdict(con, claim_id=1, verdict="CONFIRMS", rationale="r")
+            store.insert_verdict(
+                con, claim_id=1, verdict="CONFIRMS", rationale="r",
+                evidence_ids_json=[], checked_at="2026-10-08T10:00:01.000Z",
+            )
     finally:
         con.close()
     err = ei.value
@@ -199,7 +202,10 @@ def test_migrate_copy_is_idempotent_and_never_writes_its_source(tmp_path: Path) 
 
     con = store.connect(tmp_path / "mig.sqlite")
     try:
-        store.insert_verdict(con, claim_id=1, verdict="CONFIRMS", rationale="r", producer="replay")
+        store.insert_verdict(
+            con, claim_id=1, verdict="CONFIRMS", rationale="r", producer="replay",
+            evidence_ids_json=[], checked_at="2026-10-08T10:00:01.000Z",
+        )
         con.commit()
         rows = store.verdicts_by_producer(con)
         assert rows and rows[-1]["producer"] == "replay"
@@ -246,17 +252,21 @@ def test_model_id_recorded_only_for_a_model_producer(tmp_path: Path) -> None:
     p = store.init_db(tmp_path / "s.sqlite")
     con = store.connect(p)
     try:
-        cid = store.insert_claim(con, kind="architectural", text="bridge protocol")
-        store.insert_verdict(
-            con, claim_id=cid, verdict="CONFIRMS", rationale="r", producer="model", model="occamy-1"
+        cid = store.insert_claim(
+            con, kind="architectural", text="bridge protocol", provenance_json=[{"ref": "fixture"}]
         )
         store.insert_verdict(
-            con, claim_id=cid, verdict="UNVERIFIED", rationale="r", producer="replay"
+            con, claim_id=cid, verdict="CONFIRMS", rationale="r", producer="model", model="occamy-1",
+            evidence_ids_json=[], checked_at="2026-10-08T10:00:01.000Z",
+        )
+        store.insert_verdict(
+            con, claim_id=cid, verdict="UNVERIFIED", rationale="r", producer="replay",
+            evidence_ids_json=[], checked_at="2026-10-08T10:00:01.000Z",
         )
         with pytest.raises(ValueError, match="may only accompany producer"):
             store.insert_verdict(
                 con, claim_id=cid, verdict="CONFIRMS", rationale="r", producer="replay",
-                model="occamy-1",
+                model="occamy-1", evidence_ids_json=[], checked_at="2026-10-08T10:00:01.000Z",
             )
         con.commit()
         by_producer = {r["producer"]: r for r in store.verdicts_by_producer(con)}

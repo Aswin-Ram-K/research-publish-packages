@@ -290,11 +290,20 @@ def test_admit_never_raises_and_sources_are_known(tmp_path):
 # 12. the real config keeps its intent (no Duval walk; config read only)
 # --------------------------------------------------------------------------- #
 def test_real_target_config_declares_the_decision():
+    """GUARD: the REAL target's admission is pinned as a decision, not an accident (U4+U1.7R+KG-POLICY)."""
     cfg = Path(__file__).resolve().parents[1] / "config" / "targets.toml"
     policy = P.TargetPolicy.from_config(cfg, "duval")     # must not raise
     assert policy.widen_attempts == []
     assert policy.read_only is True
-    assert ".lane-j-scratch/**" in policy.include
-    assert MONOGRAPH.replace(".md", ".txt") in policy.assert_present
-    assert ".lane-j-scratch/consonance-external-evidence-2026-10-07.md.txt" in policy.assert_present
+    # KG-POLICY (2026-10-23): the TARGET OWNER gitignored .lane-j-scratch/ (Duval
+    # .gitignore:93, commit 90ba6d3, 2026-10-14), so graphify's predicate now
+    # EXCLUDES it and any config include of it is a WIDENING attempt (guard B
+    # refuses: PolicyWideningError, policy.py:327). The pinned decision is the
+    # INVERSE: no config entry references the scratch dir, nothing asserts its
+    # files. RESTORE PATH: if the owner un-ignores it, re-add include
+    # ".lane-j-scratch/**" + the two scratch assert_present entries (files still
+    # on disk: 83832 B + 159408 B) and restore the U1.7R positive pins.
+    assert ".lane-j-scratch/**" not in policy.include
+    assert not any(e.startswith(".lane-j-scratch") for e in policy.include)
+    assert not any(".lane-j-scratch" in e for e in policy.assert_present)
     assert {".worktrees/", ".git/"} & (set(policy.include) | set(policy.exclude)) == set()

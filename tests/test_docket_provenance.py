@@ -700,12 +700,15 @@ def _store_with_assessed_member(
     )
     if verdict is not None:
         claim_id = store.insert_claim(
-            con, candidate_id=cid, kind="claim", text="t", verification_state=state
+            con, candidate_id=cid, kind="claim", text="t", verification_state=state,
+            provenance_json=[{"kind": "file_lines", "ref": "docs/GUIDE.md#L1-L3"}],
         )
         store.insert_verdict(
             con,
             claim_id=claim_id,
             verdict=verdict,
+            evidence_ids_json=[],
+            checked_at="2026-10-08T10:00:01.000Z",
             producer=verdict_producer,
             model="m" if store.producer_is_model(verdict_producer) else None,
         )
@@ -884,7 +887,10 @@ def test_docket_vocabulary_is_the_store_vocabulary_plus_mixed(tmp_path):
     con = store.connect(db)
     try:
         with pytest.raises(sqlite3.IntegrityError):
-            store.insert_candidate(con, kind="claim", producer="mixed")
+            # the row must be complete enough for the *producer* CHECK to be what fires
+            store.insert_candidate(
+                con, kind="claim", title="mixed", producer="mixed", provenance_json=[]
+            )
     finally:
         con.close()
 
