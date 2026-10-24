@@ -1,0 +1,248 @@
+{
+  "generated": "2026-10-24",
+  "window": "2026-10-20/2026-10-24",
+  "branch": "research/next-candidates-2026-10-24",
+  "anchors": {
+    "last_record_sweep": "STATUS-E 2026-10-21",
+    "last_paper_triage": "UPICK1 2026-10-16"
+  },
+  "portfolio": [
+    {
+      "paper": "context-cache",
+      "state": "draft, package-complete, no venue; no submission/, no DOI; MANUSCRIPT 2026-10-23 20:11",
+      "claims": 63,
+      "verifier": "pass"
+    },
+    {
+      "paper": "encoder-crossover-190",
+      "state": "submitted ×2 + Zenodo (Preprints 239326, TMLR L9GcDGb2fr, concept 10.5281/zenodo.23463944 v3 23482311)",
+      "claims": 77,
+      "verifier": "none"
+    },
+    {
+      "paper": "replay-record-not-decision",
+      "state": "TMLR U2WjJMH0EK; Preprints 239328 not accepted as of 2026-10-20; Zenodo 10.5281/zenodo.23482511 v2 23483304",
+      "claims": 62,
+      "verifier": "none"
+    },
+    {
+      "paper": "gated-read-batching",
+      "state": "TMLR q72ZB9ZMqy; Preprints 239329 accepted (author-reported); Zenodo 10.5281/zenodo.23483314 v2 23485733",
+      "claims": 73,
+      "verifier": "none"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "P0",
+      "rank": 0,
+      "tier": "pre-submission",
+      "title": "Reconcile the record before submission",
+      "type": "repair",
+      "claim": "Adjudicating E1 vs C44 and folding E2/E3/E4/E4R/LIVE-MEAS/M1-M into the paper, with the 40-turn/80-turn horizon sentence corrected, is the precondition for submitting the flagship and costs zero live requests.",
+      "evidence": [
+        "papers/context-cache/MANUSCRIPT.md",
+        "papers/context-cache/CLAIMS.md",
+        "papers/context-cache/GAPS.md",
+        "experiments/context-cache/cells/E1/e1_analysis.json",
+        "experiments/context-cache/cells/LIVE-MEAS/"
+      ],
+      "missing": "no new measurement; deliverable is a revised MANUSCRIPT.md + CLAIMS.md + a short \"what the record already measured\" appendix",
+      "requests": 0,
+      "risk": "low",
+      "venue": "n/a"
+    },
+    {
+      "id": "P1",
+      "rank": 1,
+      "tier": "tier-1",
+      "title": "What to do at the wall: append-then-compact at a real 32k/64k limit",
+      "type": "live-batch",
+      "claim": "The cost of a context wall is a window decision, not a boundary event; the hybrid (append until the limit, then compact) pays only after the wall, and the trigger moves the boundary turn but not the steady-state bill.",
+      "evidence": [
+        "experiments/context-cache/cells/G3-LIMIT-V2/",
+        "experiments/context-cache/cells/E1/e1_analysis.json",
+        "experiments/context-cache/cells/MOE-VLLM/",
+        "papers/context-cache/GAPS.md",
+        "papers/context-cache/CLAIMS.md"
+      ],
+      "missing": "five arms in the existing G3-LIMIT-V2 harness on SGLang S0, no restart — H-32k (160), H-64k (190), H-overrun-32k (160), S-overrun-32k (160), S-baseline-window keep_last≈9,896 (160) — ≈830 requests, plus the ~90-request resting-window arm (≈920 total)",
+      "requests": 920,
+      "risk": "H is near-certain to win directionally; the paper rides on magnitude; S and F already fail to separate at 64k",
+      "venue": "MLSys / short systems track or an efficiency workshop"
+    },
+    {
+      "id": "P2",
+      "rank": 2,
+      "tier": "tier-1",
+      "title": "Zero hits: what `cached_tokens` can and cannot tell you",
+      "type": "measurement-methods",
+      "claim": "A cached-token zero has at least four meanings — flag absent (None, never 0 in vLLM 0.27.1 serving.py:95-96), status-name mismatch (status vs http_status), observed miss (A1's 0/128 rows at usage_has_details: true), and coercion of absent to zero (49/97 U2 and 23/438 U4 records) — and a hit rate is unmeasurable without the flag.",
+      "evidence": [
+        "experiments/context-cache/cells/R2-VLLM/",
+        "experiments/context-cache/cells/CX-V2/null_coerce.py",
+        "experiments/context-cache/cells/WIN-VLLM/",
+        "orchestration/STATUS.md"
+      ],
+      "missing": "an offline diff of the A1 vs V2 launch records and grid probes (0 requests), then one A1 re-launch at --gpu-memory-utilization 0.34 (~150 requests) with a short-prompt repeat pair and a /tokenize round-trip; the in-flight R2-VLLM-FIX/OH1 284-row cell (22:43, all 200, hits A 31 / C 38 / H 29 / R 66) is analysed only after POLL-VLLM settles",
+      "requests": 150,
+      "risk": "attribution may be mundane eviction at 0.15 gpu-mem; the methods point survives, the systems claim shrinks",
+      "venue": "SC/MLSys measurement workshop or short paper"
+    },
+    {
+      "id": "P3",
+      "rank": 3,
+      "tier": "tier-2",
+      "title": "The engine effect is not a knob: a pre-registered search of the documented cache space",
+      "type": "pre-registered-live",
+      "claim": "Of the documented cache options, only block/page geometry changes the per-turn bill; the eviction policies, the host tier and KV offload are nulls at 32k; two Round-1 rejections are version errors, not measurements.",
+      "evidence": [
+        "docs/serving-options/R2-DESIGN.md",
+        "papers/context-cache/CLAIMS.md",
+        "orchestration/STATUS.md",
+        "experiments/context-cache/cells/WIN-SGL/",
+        "experiments/context-cache/cells/WIN-VLLM/"
+      ],
+      "missing": "first subset A3 (lfu), A6 (HiCache), A7 (session radix), B3 (KV offload) — ≈280–750 requests, 3–8 restarts; full 12 arms ≈852 requests; A6's startup attempt is 0 model requests",
+      "requests": 750,
+      "risk": "all nulls (still a pre-registered null paper); a positive forces \"engine-level\" → \"configuration-conditional\"; restart cycles need operator approval + the six-key restore proof",
+      "venue": "MLSys / short systems"
+    },
+    {
+      "id": "P4",
+      "rank": 4,
+      "tier": "tier-3",
+      "title": "Progressive disclosure is cache-safe (B6)",
+      "type": "sequel-live",
+      "claim": "Graded disclosure saves 27.8 % prompt tokens (7,638 vs 10,577) with unchanged prefix bytes (0/72, 0/48 sweeps) and no live hit-rate loss.",
+      "evidence": [
+        "papers/context-cache/CLAIMS.md",
+        "orchestration/STATUS.md",
+        "strategy/PAPER_CANDIDATES.md"
+      ],
+      "missing": "one live cell (~300 requests) with the sufficiency arm; EXP#16 is the unmeasured half",
+      "requests": 300,
+      "risk": "the 91.6 % identical-prompt floor",
+      "venue": "workshop (agent efficiency/caching)"
+    },
+    {
+      "id": "P5",
+      "rank": 5,
+      "tier": "tier-3",
+      "title": "Verify like an adversary (N3)",
+      "type": "offline-paper",
+      "claim": "Per-batch independent verification with red→green guard reverts catches a measurable defect taxonomy.",
+      "evidence": [
+        "orchestration/handoffs/",
+        "orchestration/VERDICTS.md",
+        "orchestration/STATUS.md"
+      ],
+      "missing": "none for a scope-reduced paper; counts must be re-mined to today",
+      "requests": "0 (offline)",
+      "risk": "self-referential, no external adopter",
+      "venue": "metascience/agentic-research workshop or arXiv note"
+    },
+    {
+      "id": "P6",
+      "rank": 6,
+      "tier": "tier-2",
+      "title": "The binding constraint is mamba slots, not KV tokens",
+      "type": "capacity-ladder",
+      "claim": "Resident documents scale with max_mamba_cache_size, not with the declared KV pool.",
+      "evidence": [
+        "experiments/context-cache/cells/STATE-CLIFF/plan.md",
+        "orchestration/STATUS.md"
+      ],
+      "missing": "4 rungs × 327 requests + 4 restarts; operator approval required (the plan is marked \"PREPARED, NOT APPROVED TO EXECUTE\")",
+      "requests": 1308,
+      "risk": "production restarts; single box; the curve may be flat",
+      "venue": "MLSys/systems"
+    },
+    {
+      "id": "P7",
+      "rank": 7,
+      "tier": "tier-3",
+      "title": "The band problem (cost model)",
+      "type": "cost-model",
+      "claim": "A 9-term per-turn model calibrated below 20k is 61–73 % low on a 28.5k hold-out because the miss slope prices a turn label (495.6 µs/token = 2.06× a cold prefill).",
+      "evidence": [
+        "strategy/R2_OPT_SIM2.md",
+        "scratch/r2-opt-sim/report2.json",
+        "experiments/context-cache/cells/LIVE-MEAS/"
+      ],
+      "missing": "one ≥20k cell, 4 arms × 40 turns (~160 requests)",
+      "requests": 160,
+      "risk": "ranking withdrawn by its own author; one robust margin only",
+      "venue": "workshop"
+    },
+    {
+      "id": "P8",
+      "rank": 8,
+      "tier": "tier-3",
+      "title": "Latency is not token-proportional (offline)",
+      "type": "offline-paper",
+      "claim": "11.2344× uncached tokens buys only 3.6693× median TTFT — a 3.06× overstatement; cold prefill 229.998 µs/token (r² 0.9903), warm residual 4.4 µs/token; end-to-end latency is not derivable from TTFT-only corpora.",
+      "evidence": [
+        "strategy/LATENCY_DERIVE.md",
+        "state/logs/lat_derive.py",
+        "state/logs/lat_derive.out"
+      ],
+      "missing": "a decode-length sweep for L3, or scope the claim to TTFT",
+      "requests": "0 (offline)",
+      "risk": "the L3 decode-length step is unrun; the end-to-end claim must be scoped to TTFT",
+      "venue": "ICPE/SC measurement workshop, or fold into P0"
+    },
+    {
+      "id": "P9",
+      "rank": 9,
+      "tier": "tier-3",
+      "title": "Does divergence survive a model refresh? (replay sequel)",
+      "type": "sequel-live",
+      "claim": "Binding divergence is a property of the binding, so re-running the now-public 190 cases on current configurations reproduces ≥30 % divergence and scales with the p_chosen margin.",
+      "evidence": [
+        "papers/replay-record-not-decision/CLAIMS.md",
+        "papers/replay-record-not-decision/",
+        "strategy/SUBMISSION_RECORD.md"
+      ],
+      "missing": "1,140 live comparisons (2 pairs × 190 × 3 variants)",
+      "requests": 1140,
+      "risk": "live comparisons only; no offline closure recorded",
+      "venue": "evaluation/reproducibility workshop"
+    },
+    {
+      "id": "P10",
+      "rank": 10,
+      "tier": "tier-3",
+      "title": "Is header-only gating model-bound? (gated sequel)",
+      "type": "sequel-live",
+      "claim": "Recall is preview-bound, so outline + snippets lift F1 above the 0.320 ceiling while batching stays non-degrading.",
+      "evidence": [
+        "papers/gated-read-batching/CLAIMS.md",
+        "papers/gated-read-batching/",
+        "strategy/SUBMISSION_RECORD.md"
+      ],
+      "missing": "T6 second model × 3 batch sizes (1,940 calls) + T3 preview arms",
+      "requests": 1940,
+      "risk": "1,940 calls and one extra model; follow-up paper only if wanted",
+      "venue": "workshop"
+    }
+  ],
+  "traps": [
+    "U4 salvage / re-run (438 rows): both arms were one renderer; E1 already answers the question.",
+    "\"Fork is cheaper at the break\": E1's 11.6× and C44's 1.038 are unreconciled; do not pick one before P0.",
+    "A pure-attention control on this box: no pure-attention checkpoint exists here; both available checkpoints are hybrid-attention.",
+    "lfu/tlru at 32k: P4 predicts a null and nothing evicts; TUNED submits each document once, so a frequency policy has no signal. Run them only under the M4/TUNED pressure protocol.",
+    "\"--prefix-match-unit\" as a \"grid 16\" lever: non-discriminating (2096 % 16 = 0, 1056 % 16 = 0); STATUS §8.2 forbids the claim.",
+    "A4 self-refinement: EXP#11 paired p = 0.0156 fails the workspace's own Bonferroni 0.0125; write it as descriptive or not at all.",
+    "A1 agent-state derivation: the inventory marks it \"withhold\"; the support is a mirror under state/, content-unverified.",
+    "C9 self-build loop / C11 ASR=0 / C12 teardown: stopped run with no positive control; a null across 3,628 rows; n=2. Not paper-shaped.",
+    "Any write to /home/zer0null/Duval or any target: strictly read-only, no hooks, no git state."
+  ],
+  "unverified": [
+    "No GX10 access: restart-cycle costs for P3/P6 are inferred from the record, not observed.",
+    "The POLL-VLLM unit was running and gx10-qwen9b was stopped at 22:39; the in-flight 284-row R2-VLLM-FIX/OH1 cell has no analysis and no config/stack/repeat keys.",
+    "Eleven older docket-era units were read at handoff-metadata level only.",
+    "The claim that the workspace holds a real agent trace (asserted in G12) was not confirmed: the only pinned trace is a commit log, not turns.",
+    "No mechanism claim about server-side chunk insertion is verified; cached_tokens remains the server's own accounting."
+  ]
+}
