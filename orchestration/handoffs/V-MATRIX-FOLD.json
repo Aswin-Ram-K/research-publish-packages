@@ -1,0 +1,42 @@
+{
+  "unit": "V-MATRIX-FOLD",
+  "overall": "pass",
+  "checks": [
+    "independent re-derivation of C63 from the four row files (own loader/filter/factorial, no reuse of c63() helpers): all 43 pinned values reproduced; engine +1225.18 [1132.2,1313.3] pos 70/71, model +275.83 [194.3,357.6] pos 53/71, interaction +272.23 [190.1,354.6] pos 52/71, engine|MoE +952.96 [805.7,1099.8] pos 67, engine|dense +1497.41 [1404.4,1585.0] pos 70, model|vLLM +548.06 [384.7,711.9] pos 52, model|SGLang +3.61 [0.0,10.8] pos 1, grand 1344.1585, engine/model 4.4418, shares 0.9115/0.2052, per-arm engine 1226.1-1229.7 and model 274.0-281.2; cell digests match EVIDENCE.md 66582276.../d6313f72.../a606ca06.../7a0beb4e...; prompt identity prefix_sha256 284/284 and chars 284/284 on all six cell pairs",
+    "package at 63 claims: recompute.py all -> COVERAGE GUARD PASS 63 claims documented, 61 runnable + 2 script-backed; verify_package.py -> PASS, 63 claims, 63 mapped 1:1, UNVERIFIED: none; pytest tests/ -> 1236 passed, 1 skipped (live), 1 failed",
+    "red->green: EXPECTED model_effect_ratio_vllm_over_sglang 151.8172 -> 152.0 made recompute.py C63 exit 1 (FAIL 42/43); restored to 151.8172, sha256 451d0d26...1f581 == RUN.json script_sha256 pin, exit 0 PASS 43/43, test_paper_matrix_fold.py 8 passed",
+    "DENSE-SGL 64k battery screened for replay: all 144 turns = the 148-turn plan + constant 2 tokens (the turns 1-71 equality with the 32k rows is the shared scenario, not a replay); cell fits the 64 law at both depths (hot gcd 64), so the §9b 'model column matters only under vLLM' reading is consistent with its own geometry",
+    "abstract and §9b figures (1,225.18 / 2.6738x / 275.83 / 548.06 / 3.61 / 272.23) each match c63() output; the model effect is stated as engine-conditional, not as a model main effect"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Two author-side repairs, neither a verdict change. (1) Understatement: 151.8172 (CLAIMS.md:220, MANUSCRIPT.md:76 and :593, SERVING-BRIEF.md:121) is 548.06/3.61, a ratio of ROUNDED operands; the ratio of raw means is 151.99999999999997 -> 152.0. The claim text says '4 dp', so 151.8172 is not a truthful 4-dp figure and should become 152.0 (or be derived from the raw means in c63()). Fix in a paper unit that owns those files; EXPECTED['C63'] moves with it. (2) The +3.61 SGLang model effect is ONE row: the two SGLang cells agree byte-for-byte on 283/284 rows and the whole mean comes from arm R turn 9 (G3 6 vs DENSE-SGL 1030), where G3 recomputed that turn after an 81 s restart (run.log 'G3 start: rows_existing=8/888'), consistent with a warm-cache replay. Either drop that row and state the SGLang model effect as 'n=70 turns, 0/70 positive', or state in CLAIMS.md and §9b that +3.61 rests on one of 71 turns. Do NOT re-live the cell to 'fix' it: the arms are truly independent within both SGLang cells (within-turn arm sd 42.8-49.9), so the cost is prose honesty, not a rerun.",
+  "write_paths": [
+    "orchestration/handoffs/V-MATRIX-FOLD.json",
+    "state/logs/V-MATRIX-FOLD-redgreen.txt"
+  ],
+  "not_reproduced": [],
+  "overstated": [
+    "CLAIMS.md:220 / MANUSCRIPT.md:76 / MANUSCRIPT.md:593 / SERVING-BRIEF.md:121 'model effect 151.8172x larger under vLLM' - understated and non-truthful at the stated precision: raw-mean ratio is 152.0; 151.8172 = 548.06/3.61 (rounded operands)",
+    "CLAIMS.md:220 'SGLang 3.61 [0.0, 10.8] (1/71)' - mathematically right but rests on a single turn: the two SGLang cells are byte-identical on 283/284 rows and only arm R turn 9 (G3 6, DENSE-SGL 1030) creates the effect"
+  ],
+  "unverified": [
+    "the cause of the G3 vs DENSE-SGL turn-9 divergence: the restart at run.log line 11 ('G3 start: rows_existing=8/888') is consistent with a warm-cache replay but the replay request is not reconstructable from the on-disk log",
+    "tests/test_gap_closure_ledger.py::test_gap_ids_match_ledger fails on G16 (gaps in GAPS.md missing from the ledger: ['G16']); pre-existing and self-documented at GAPS.md:21-27 by CACHE-AUDIT, untouched by MATRIX-FOLD, not adjudicated here"
+  ],
+  "tool_calls": 39,
+  "bound": 45,
+  "containment": "0 live requests, no lock taken, no target repo touched; no git run against a target. Author files were restored byte-exact after the red test (sha256 451d0d26..., 114,397 bytes, == RUN.json pin). ONLY papers/context-cache/recompute.py was edited and only via an exact two-way substitution (151.8172 <-> 152.0); final state is the original.",
+  "scope": "orchestration/handoffs/V-MATRIX-FOLD.json + state/logs/V-MATRIX-FOLD-redgreen.txt",
+  "red_green": {
+    "guard": "recompute.py C63 EXPECTED['C63']['model_effect_ratio_vllm_over_sglang']",
+    "red": "151.8172 -> 152.0 ; exit 1 ; 'FAIL model_effect_ratio_vllm_over_sglang recomputed=151.8172 paper=152.0' ; 'FAIL 42/43 values match'",
+    "green": "restored to 151.8172 ; exit 0 ; PASS 43/43 ; pytest tests/test_paper_matrix_fold.py 8 passed"
+  },
+  "corrections": [
+    "This verifier's own first reading was that DENSE-SGL duplicated a 32k row at line 293; re-reading the row showed line 293 is the 64k phase, so there is no duplicate and no correction to record against the package on that point (recorded here because a later reader may otherwise repeat the mistake)."
+  ],
+  "assumptions": [
+    "C63's resampling unit is the turn (71) and the arms are salt-separated replicates: verified independently by the within-turn arm sd (vLLM 1.7 both cells; SGLang 49.9 and 42.8) and by recomputing the effects per single arm, which reproduce engine 1216.2-1229.7 and model 274.0-281.2.",
+    "'Terse final verdict' read literally: the handoff carries the verdict, this file carries the evidence, and the reply to the board stays short."
+  ]
+}

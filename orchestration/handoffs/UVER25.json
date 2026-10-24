@@ -1,0 +1,49 @@
+{
+  "unit": "UVER25",
+  "overall": "pass-with-corrections",
+  "scope": "independent re-derivation of UWIRE2/UWIRE1 build source-tree wiring in orchestration/units/UBUILD1.build.sh",
+  "checks": [
+    "identity: sha256 45fe28e435f7d1d7ddd11bbf327d741a1bef2028b6edf11b9e27d8d732867ad3, 1066 lines, bash -n rc=0; pre-edit scratch/uwire2/UBUILD1.build.sh.orig df471955985d03a28b073319679b754e83385c6cc7b708bf865e55416f0d0ab5 1036 lines",
+    "anchors re-derived: :135-140 default OK, :147 warning OK, :180 SHIP_STAGED=( OK, :309-315 FATAL OK, :339 NEVER_SHIP OK, :622 LIC_SRC OK, :631 licence sha guard 3d364676a91dc579954b585e9d3a3c9f0dc03b723715805cc9431f757ce6f900 OK, gate :1051-1066 exit \"$GATE_RC\" OK; CORRECTION staged-copy block is :257-263 not :256-262",
+    "run a default -> scratch/ubij3/tree-three-r2 promoted_default=yes, 29936 OOV, 8 dropped",
+    "run b SAN_SRC_FROZEN_OVERRIDE=1 -> repro/encoder-crossover-190-SANITISED promoted_default=no + WARNING lines, 95606 OOV, 14 dropped",
+    "run c SAN_SRC_OVERRIDE=.../scratch/ubij3/tree-three-b -> that exact tree; run d both overrides -> override wins (highest precedence)",
+    "ordering: wiring line is log line 1; first write/destructive op in script is rm -rf \"$DEST\" at :169, so warning precedes every destructive step",
+    "hunks: current vs scratch/uwire1/UBUILD1.build.sh.orig (1019L) and vs scratch/uwire2/UBUILD1.build.sh.orig (1036L) = 2 hunks each, all comments + the SAN_SRC wiring block; nothing touches SHIP_STAGED, the missing-file FATAL, NEVER_SHIP, licence plumbing, the licence sha guard, or the gate",
+    "emitted set: 64 paths on all three paths, diff a-b and diff a-c identical; kept 52 both; drops 8 vs 14",
+    "tests green: .venv/bin/python -m pytest -q tests/test_build_wiring.py -> 8 passed in 0.04s",
+    "red1 (scratch/uver25/red/mine1.sh, PROMOTED_SAN_SRC reverted to frozen literal): 3 failed, 5 passed",
+    "red2 (scratch/uver25/red/mine2.sh, frozen branch neutralised): 1 failed, 7 passed",
+    "containment: /home/zer0null/research-publish-packages 0 entries, mtime 2026-10-15 18:07:13, untouched; no git verb run against /home/zer0null/Duval and no command of mine wrote it"
+  ],
+  "red_green": "green 8 passed; red1 3 failed (test_default_is_the_chosen_release_artifact, test_frozen_override_still_selects_the_frozen_tree, test_default_is_a_literal_never_guessed_from_disk); red2 1 failed (test_frozen_override_still_selects_the_frozen_tree). Red->green reproduced.",
+  "corrections": [
+    "red failure counts claimed 4 and 2; faithful mutations give 3 and 1. The author's extra failure test_build_wiring_doc_names_both_overrides reads strategy/BUILD_WIRING.md, not the build script, and fails only against a stale pre-UWIRE2 doc copy.",
+    "anchor :256-262 for the staged copy is actually :257-263.",
+    "\"both paths stage 52 files\" is loose: 60/66 candidates staged, 52 kept."
+  ],
+  "contradicted": [],
+  "overstated": [
+    "red-run failure counts 4 and 2 (measured 3 and 1 under the same mutations against the current doc)",
+    "\"~12.4x more residual project identifiers: 44,056 vs 3,317\" printed at :151-153: 44056/3317 = 13.3, (44056-3317)/3317 = 12.3; neither is 12.4",
+    "\"both paths stage 52 files\" (actually 60 promoted / 66 frozen staged, 52 kept)"
+  ],
+  "not_reproduced": [
+    "the claimed literal red counts 4 and 2"
+  ],
+  "unverified": [
+    "the 44,056 and 3,317 residual project-identifier counts themselves (only gate OOV 29,936/95,606 and drop counts 8/14 were reproduced)",
+    "BUILD_WIRING.md prose beyond what tests/test_build_wiring.py checks"
+  ],
+  "containment": "real /home/zer0null/research-publish-packages empty (0 entries, mtime 2026-10-15 18:07:13) and never targeted - all builds ran with explicit DEST under scratch/uver25/**; /home/zer0null/Duval not written by this unit and no git command run against it (a find -newermt sweep shows 40 concurrent-unit .git entries in the window, none from UVER25); only extra side effect was pytest refreshing .pytest_cache/v/cache/{lastfailed,nodeids} in the workspace root",
+  "blocker": "",
+  "next_unit_hint": "Wiring change is sound and safe to gate. If carried forward: fix the printed ratio at UBUILD1.build.sh :151-153 (12.4x -> 13.3x) and pin the BUILD_WIRING.md copy the red harness reads so red counts are exact. Note a concurrent unit may supersede the promoted path scratch/ubij3/tree-three-r2; the verified mechanism is path-independent.",
+  "write_paths": [
+    "strategy/VERIFICATION_REPORT_25.md",
+    "orchestration/units/UVER25.md",
+    "orchestration/handoffs/UVER25.json",
+    "scratch/uver25/**"
+  ],
+  "tool_calls": 13,
+  "bound": 25
+}

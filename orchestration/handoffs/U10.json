@@ -1,0 +1,71 @@
+{
+  "unit": "U10",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/U10/u10_corpus.py",
+    "experiments/context-cache/cells/U10/u10_cell.py",
+    "experiments/context-cache/cells/U10/u10_phase23.py",
+    "experiments/context-cache/cells/U10/u10_smoke.py",
+    "experiments/context-cache/cells/U10/u10_analyze.py",
+    "experiments/context-cache/cells/U10/u10_rows.jsonl",
+    "experiments/context-cache/cells/U10/u10_rows_p23.jsonl",
+    "experiments/context-cache/cells/U10/u10_pilot.json",
+    "experiments/context-cache/cells/U10/u10_runlog.json",
+    "experiments/context-cache/cells/U10/u10_runlog_p23.json",
+    "experiments/context-cache/cells/U10/u10_report.json",
+    "orchestration/units/U10.md"
+  ],
+  "verdict": "boundary_specific",
+  "overall": "pass",
+  "checks": [
+    "pooled contrast: 10/10 full misses at prompt lengths that are exact multiples of 64 vs 0/15 at non-multiples; Fisher exact 2x2 [[10,0],[0,15]] two-sided p=3.06e-07",
+    "per-length boundary: 5/5 misses at L=1024 and L=1088, 0/5 at L=1008/1023/1025",
+    "delay test at L=1088: 20/20 full misses across d=0.25/0.5/1.0/2.0 s, cached=0 on every repeat",
+    "intervening-request test at L=1088: 5/5 full misses after a 63-token unrelated request",
+    "second-repeat test: rep2 hits 10/10 at exactly 64*((L-1)//64) (960 at L=1024, 1024 at L=1088)",
+    "cold isolation: every cold role in every trial reported cached=0 (all_trials_cold_verified=true for all five cells)",
+    "tax law reverified: every one of the 25 hits equals 64*((L-1)//64); no partial hits in the n=5 cells",
+    "explicit caveat: does NOT explain U4b branch 2 -- its ~1925-token prompt (1925%64=5) sits in a residue class with 0/15 misses here and its lost branch was prefix-sharing with a different suffix, plausibly a separate first-request-after-cold effect these cells do NOT cover",
+    "budget: 159 live requests (39 pilot + 65 phase 1 + 55 phases 2-3), 0 wire failures, one request in flight, no flock taken, POST /flush_cache never called"
+  ],
+  "headline": "Only prompt lengths that are an exact multiple of 64 miss on the immediately following identical repeat; lengths one token either side hit immediately. 10/10 misses at 1024 and 1088 vs 0/15 at 1008/1023/1025 (Fisher two-sided p=3.06e-07).",
+  "evidence": {
+    "per_length_table": "L=1008 (L%64=48) 0/5 full misses, rep1 cached [960,960,960,960,960] | L=1023 (63) 0/5, [960 x5] | L=1024 (0) 5/5 misses, [0 x5], rep2 [960 x5] | L=1025 (1) 0/5, [1024 x5] | L=1088 (0) 5/5 misses, [0 x5], rep2 [1024 x5]",
+    "pooled_exact_binomial": "multiples of 64: 10/10 full misses, Clopper-Pearson CI95 [0.6915, 1.0]; non-multiples: 0/15, CI95 [0.0, 0.218]; Fisher exact 2x2 [[10,0],[0,15]] two-sided p=3.06e-07",
+    "per_cell_ci": "n=5 per cell makes each cell's own CI wide: 5/5 -> [0.4782, 1.0], 0/5 -> [0.0, 0.5218]; the finding rests on the pooled contrast",
+    "delay_test_at_L1088": "d=0.25/0.5/1.0/2.0 s: 5/5 full misses each (20/20, cached=0 on every repeat, rep1 TTFT medians 770/443/553/521 ms); d=0.0 reference from phase 1: 5/5. A delay does NOT remove it.",
+    "insert_test_at_L1088": "cold -> 63-token unrelated request -> repeat: 5/5 full misses (cached=0, CI95 [0.4782, 1.0]). An intervening request does NOT remove it.",
+    "recovery": "a second identical repeat (third send of the same bytes) hits: rep2 10/10 at exactly the tax-law value (960 at L=1024, 1024 at L=1088)",
+    "tax_law_reverified": "every one of the 25 hits in the sweep equals 64*((L-1)//64): 1008->960, 1023->960, 1025->1024, 1024->960 (rep2), 1088->1024 (rep2); no partial hits in the n=5 cells",
+    "prefill_cost_of_the_miss": "at L=1024 rep1 miss TTFT median 268.4 ms against a hit median of 80.4-111.7 ms at the neighbouring lengths; at L=1088 miss median 463.9 ms",
+    "cold_isolation_verified": "every cold role in every trial reported cached=0 (all_trials_cold_verified=true for all five cells); a non-cold cold would have been retried and noted, and none was",
+    "harness_note": "U9's hex salt jitters +/-2 tokens, which is fatal on a 64-token boundary; this unit used make_salt(seed) -> three fixed-width 4-letter marker words plus a one-token body tail (' the' repeated), so every cell hit its exact target (5/5, 5/5, 5/5, 5/5, 5/5 at 1024/1023/1025/1088/1008)",
+    "explains_U9_1024": "YES, exactly: same length, same shape and same numbers (cached=0 then 960), now 5/5 rather than 3/3",
+    "explains_U4b_branch_2": "NO, not by this rule: U4b's fan-out prompts were ~1925 tokens (1925%64=5), a residue class with 0/15 misses here, and its lost branch was prefix-sharing with a different suffix rather than an identical repeat. A pilot probe of that shape (same body, different tail, sent immediately) also reported cached=0, so it is plausibly a separate first-request-after-cold effect that these cells do NOT cover",
+    "budget": "159 live requests total (39 pilot probes + 65 phase 1 + 55 phases 2-3), 0 wire failures, 27.9 s phase 1 + phase 2-3; one request in flight; no flock taken; POST /flush_cache never called",
+    "commands": [
+      ".venv/bin/python experiments/context-cache/cells/U10/u10_smoke.py",
+      ".venv/bin/python experiments/context-cache/cells/U10/u10_cell.py",
+      ".venv/bin/python experiments/context-cache/cells/U10/u10_phase23.py",
+      ".venv/bin/python experiments/context-cache/cells/U10/u10_analyze.py"
+    ]
+  },
+  "blocker": "",
+  "mechanism_note": "not insert latency and not a request-triggered flush: 0.25-2.0 s of delay and an intervening unrelated request both leave the miss at 100%, while a second identical repeat hits 10/10. The prefix becomes reusable only after it has been prefilled twice, so a multiple-of-64 workload loses one full prefill per new prefix.",
+  "next_unit_hint": "Paper must carry the operational warning: a workload whose prompt length is a multiple of 64 pays one full prefill per new prefix (delay does not help; only re-sending the same prompt does). A verifier should re-derive from cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl: (1) the 10/10 vs 0/15 split and Fisher p; (2) that every cold role is cached=0 and every hit equals 64*((L-1)//64); (3) that all 20 delay repeats and the 5 insert repeats are cached=0. Unexplained and worth its own unit: the prefix-sharing shape (cold prompt P, then P+suffix sent immediately) at a NON-multiple length, where U4b lost branch 2 and one pilot probe here also saw cached=0 -- n=1, not measured at n=5.",
+  "write_paths": [
+    "experiments/context-cache/cells/U10/u10_corpus.py",
+    "experiments/context-cache/cells/U10/u10_cell.py",
+    "experiments/context-cache/cells/U10/u10_phase23.py",
+    "experiments/context-cache/cells/U10/u10_smoke.py",
+    "experiments/context-cache/cells/U10/u10_analyze.py",
+    "experiments/context-cache/cells/U10/u10_rows.jsonl",
+    "experiments/context-cache/cells/U10/u10_rows_p23.jsonl",
+    "experiments/context-cache/cells/U10/u10_pilot.json",
+    "experiments/context-cache/cells/U10/u10_runlog.json",
+    "experiments/context-cache/cells/U10/u10_runlog_p23.json",
+    "experiments/context-cache/cells/U10/u10_report.json",
+    "orchestration/handoffs/U10.json",
+    "orchestration/units/U10.md"
+  ]
+}

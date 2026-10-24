@@ -1,0 +1,30 @@
+{
+  "unit": "FIX-GUARD",
+  "status": "done",
+  "artifacts": [
+    "tests/test_paper_attribution_guard.py"
+  ],
+  "evidence": {
+    "anchor": "MANUSCRIPT.md SS 3, paragraph whose lead-in is 'The live fan-out figure', sentence carrying 6.744: '**The live fan-out figure (cell G5, race-free; 8 fan-outs x 8 branches, 192 rows, C53).** B/A = **6.744** [4.045, 9.443].' (MANUSCRIPT.md:132 on the 2026-10-23 04:48 tree).",
+    "required_tokens_on_that_sentence": ["cell G5", "8 fan-outs x 8 branches"],
+    "a_green": ".venv/bin/python -m pytest tests/test_paper_attribution_guard.py tests/test_claims_decompose.py -q | tail -2 -> '........................  [100%]' / '24 passed in 0.10s'",
+    "b_red_cell_name": "copy of the tree under scratch/guardfix_root (flat /tmp is not writable in this sandbox and the guard resolves ROOT as parents[1], so the copy must sit at the same depth); 'cell G5' removed from the SS 3 fan-out sentence only -> 'FAILED tests/test_paper_attribution_guard.py::test_g5_fanout_attribution_is_present' / '1 failed, 10 passed'; message: \"the sentence in MANUSCRIPT.md that states the G5 figure 6.744 no longer carries the required token(s) 'cell G5'. Requirement: 'cell G5' AND '8 fan-outs x 8 branches' must all appear in the SAME sentence as 6.744, inside the 'The live fan-out figure' paragraph of ## 3.\"",
+    "c_red_figure": "same copy, 'cell G5' restored, '6.744' -> '6.700' in that sentence -> 'FAILED tests/test_paper_attribution_guard.py::test_g5_fanout_attribution_is_present' / '1 failed, 10 passed'; message names \"missing 'cell G5', '8 fan-outs x 8 branches'\" and quotes MANUSCRIPT.md:136 ('... supersedes the pre-G5 band 3.31 measured / 5.39 projected ... 6.744 is 1.25x above ...') as the sentence that used to satisfy it by accident",
+    "d_green_again": "untouched real tree -> 24 passed in 0.10s; MANUSCRIPT.md sha256 00c727f6561012911c36bad6e078ce9c520741c32d0d5637638f247bc133fa42 and CLAIMS.md sha256 468d791ab0e5f14a305a41750cd273de59d3d208531d0dec6909b3633d100e26 unchanged by this unit",
+    "m4_half_not_weakened": "'Resident capacity (cell M4-EVICT, 283 documents at 1.5017x pressure).' -> 'Resident capacity (283 documents at 1.5017x pressure).' on a copy -> 'FAILED tests/test_paper_attribution_guard.py::test_m4_resident_capacity_attribution_is_present' / '1 failed, 10 passed'",
+    "tests_passing": "24 passed (11 in test_paper_attribution_guard.py, 13 in test_claims_decompose.py)"
+  },
+  "assumptions": [
+    "The resolved anchor is the SS 3 paragraph, not any sentence mentioning 6.744. A first attempt requiring the tokens on *some* 6.744 sentence stayed GREEN on exactly the revert (b) (11 passed), because the abstract at MANUSCRIPT.md:15 also states 6.744 with both tokens. The fix pins section AND paragraph AND sentence.",
+    "Condition string is the manuscript's own ASCII form '8 fan-outs x 8 branches' (lower-case x, no multiplication sign), taken verbatim from MANUSCRIPT.md:132, not guessed; CLAIMS.md:159 and GAPS.md:81 use the same form.",
+    "No '/tmp' copy was possible: /tmp is not writable here (cp/mkdir produced nothing). Copies were staged under scratch/guardfix_root and scratch/guardm4 at the same depth as the real tree so the guard's parents[1] ROOT resolves into the copy; both were deleted after the proof. No writes outside the workspace.",
+    "papers/context-cache/MANUSCRIPT.md was rewritten by another unit at 04:48:09 during this session (its sha256 moved from 0104cfc1... at session start to 00c727f6...: the abstract gained its own 6.744 sentence at :15 and the fan-out paragraph moved from :119 to :132). This unit only read it; every red check above was run against the post-rewrite text.",
+    "Nothing was deleted or weakened: the existing window check (G5, 102,912, 20,328, '0 of 123,256', 'never share a prefix', 'structurally 0', 3.31, 5.39) and both CLAIMS.md C53 assertions remain, and the M4 test is untouched."
+  ],
+  "blocker": "",
+  "next_unit_hint": "V-PAPER3 'unverified[0]' (the G5 half does not bite) is now answered by re-running its two reverts; a verifier should re-run them independently. Remaining from V-PAPER3: check 6 (verify_package.py FAIL -- C53/C54 missing from READER-MAP.md; PACKAGE.md/RUN.json claim counts stale at 50) is still open and is a separate unit.",
+  "write_paths": [
+    "tests/test_paper_attribution_guard.py",
+    "orchestration/handoffs/FIX-GUARD.json"
+  ]
+}

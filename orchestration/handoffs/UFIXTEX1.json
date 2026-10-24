@@ -1,0 +1,49 @@
+{
+  "unit": "UFIXTEX1",
+  "status": "done",
+  "artifacts": [
+    "tools/package/md2tex.py",
+    "tests/test_md2tex.py",
+    "papers/encoder-crossover-190/submission/main.tex",
+    "papers/gated-read-batching/submission/main.tex",
+    "papers/replay-record-not-decision/submission/main.tex",
+    "scratch/ufixtex1/pdf/encoder-crossover-190/main.pdf",
+    "scratch/ufixtex1/pdf/gated-read-batching/main.pdf",
+    "scratch/ufixtex1/pdf/replay-record-not-decision/main.pdf",
+    "orchestration/units/UFIXTEX1.md"
+  ],
+  "evidence": {
+    "root_cause": "Converter maps U+00A7 -> \\S in U_ENC/U_GRB, so manuscript '§B3' became '\\SB3': TeX reads \\SB as one control word and errors 'Undefined control sequence', silently dropping the §.",
+    "job1_sweep": "Only 4 defect sites in the corpus, all papers/encoder-crossover-190/MANUSCRIPT.md:127 §B3, :638 §F.3, :643 §F.3, :653 §F.3. gated-read-batching/MANUSCRIPT.md has 0 §; replay-record-not-decision/MANUSCRIPT.md has 11 §, none followed by a letter. Generated scan \\\\[A-Za-z]+(?=[A-Za-z]) hits exactly encoder main.tex:62, :335 x2, :339. Of 38 distinct escape-produced values only \\S is a bare control word.",
+    "fix": "tools/package/md2tex.py: added CONTROL_WORD_ONLY = re.compile(r'\\\\[A-Za-z]+\\Z') and rewrote Converter.esc to append '{}' when a substituted value is a bare control word and the next character's replacement starts with a letter. A first attempt (post-hoc regex over the finished string) was reverted: it backtracks and matched macro prefixes (\\documen, \\kapp) producing 2080 corruptions.",
+    "job4_change": "Preamble now emits \\documentclass[11pt,a4paper]{article} plus \\pdfpagewidth=\\paperwidth and \\pdfpageheight=\\paperheight, because the class option alone left the media box at 612x792pt (letter); Tectonic is XeTeX and the media box follows those primitives.",
+    "compile_command": "TECTONIC_CACHE_DIR/TMPDIR/HOME inside scratch/ufixtex1, then: scratch/utex1/bin/tectonic -r 1 --keep-logs -o scratch/ufixtex1/pdf/<slug> papers/<slug>/submission/main.tex   (NO -Z continue-on-errors)",
+    "exit_codes": {"encoder-crossover-190": 0, "gated-read-batching": 0, "replay-record-not-decision": 0},
+    "undefined_control_sequence": {"encoder-crossover-190": 0, "gated-read-batching": 0, "replay-record-not-decision": 0},
+    "latex_bang_errors": {"encoder-crossover-190": 0, "gated-read-batching": 0, "replay-record-not-decision": 0},
+    "warnings_overfull_underfull_hbox": {"encoder-crossover-190": "21/51", "gated-read-batching": "6/1", "replay-record-not-decision": "6/2"},
+    "pdf_text_proof": "encoder PDF extracts 'internal reference notes §B3;', '§F.3's point', '(§F.3).'; corrupted forms 'notes 3;' / 'record .3 is not discharged' count = 0 (the previous unit's scratch/utex1/out/main.pdf still extracts both corrupted forms).",
+    "pdfs": {
+      "encoder-crossover-190": {"pages": 25, "page_size": "595.28 x 841.89 pts (A4)", "bytes": 185014, "sha256": "31036dffd659b58805688ae175a6f2a5cfd463ffc07eaf151571fd6f85ec9001"},
+      "gated-read-batching": {"pages": 13, "page_size": "595.28 x 841.89 pts (A4)", "bytes": 105492, "sha256": "f3b156fc2c289cf5f5040ae053dfdeaf0d8b33356cece8d5b8e1bd54f7620aed"},
+      "replay-record-not-decision": {"pages": 9, "page_size": "595.28 x 841.89 pts (A4)", "bytes": 89156, "sha256": "004cc2684f1b60b06d058f09578e89fb4a31bd7cd1fa79642822b2bd8610ee41"}
+    },
+    "regeneration_determinism": "python3 tools/package/md2tex.py --package <slug> --repo-root <workspace> run twice into two dirs; diff -r pass1 pass2 empty for all three. Shipped digests: encoder 742dabbcd64cc5de5ab21e771529be090e97fc1597df36b3b28c8ca5fa453404, gated d9a8fa182e6da0fba1ff5c9bdfb49c33fdd480112233826d39ddfe1d5db58397, replay eb63dd174ff8a7f5a95e2a38fa3af50f9f3e0f1ceeb7afba4ad62f958a993416.",
+    "pytest_red": "MD2TEX_TOOL=$PWD/scratch/ufixtex1/md2tex_prefix.py python3 -m pytest tests/test_md2tex.py::test_no_control_word_absorbs_a_letter --noconftest -q -> '1 failed in 0.05s', AssertionError: encoder-crossover-190/main.tex: a control word is immediately followed by a letter ... [(62, '\\\\SB3; an int'), (335, '\\\\SF.3 is not'), (335, \"\\\\SF.3's poin\"), (339, '\\\\SF.3). No e')]",
+    "pytest_green": "python3 -m pytest tests/test_md2tex.py --noconftest -q -> '7 passed in 0.68s' (the new test alone: '1 passed in 0.13s')",
+    "residual": "Encoder still has 4 words past the right page edge in pdftotext -bbox (maxXMax 599.7 vs A4 width 595.28) - long unbreakable paths such as 'results/eval-{modernbert-base,...}'. Same class pre-existed on the previous unit's letter PDF (4 words past 612.0, maxXMax 613.0). Warnings only; not an error and not fixed because the strings are measured content.",
+    "concurrency": "papers/replay-record-not-decision/MANUSCRIPT.md was modified 2026-10-16 22:38:33 by another unit (not mid-write during my regeneration) and tools/package/md2tex.py carries another unit's author-name config change; regenerating replay therefore also applied that converter-driven author-block wording (not a hand edit). All 7 tests pass on the regenerated state."
+  },
+  "blocker": "",
+  "next_unit_hint": "Verifier: re-run the red command above (must fail on scratch/ufixtex1/md2tex_prefix.py), the green pytest line (must be 7 passed), and the three tectonic compiles WITHOUT -Z continue-on-errors (must be exit 0, zero 'Undefined control sequence', page size 595.28x841.89). Note the 4 pre-existing overhanging path words in the encoder PDF as a recorded warning, not a regression.",
+  "write_paths": [
+    "tools/package/md2tex.py",
+    "tests/test_md2tex.py",
+    "papers/encoder-crossover-190/**",
+    "papers/gated-read-batching/**",
+    "papers/replay-record-not-decision/**",
+    "orchestration/units/UFIXTEX1.md",
+    "orchestration/handoffs/UFIXTEX1.json",
+    "scratch/ufixtex1/**"
+  ]
+}

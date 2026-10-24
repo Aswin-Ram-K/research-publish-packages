@@ -1,0 +1,49 @@
+{
+  "unit": "RECON-ARCHIVED",
+  "status": "done",
+  "artifacts": [
+    "tools/board/session_recon.py",
+    "tests/test_session_recon_archived.py",
+    "state/logs/session-recon.json",
+    "orchestration/VERDICTS.md",
+    "orchestration/units/RECON-ARCHIVED.md"
+  ],
+  "evidence": {
+    "command_or_count": "session-recon: 780 sessions (interactive 1 board-execution 3 card-subagent 35 user-subagent 0 stale 741) attached=75 waived=0 offenders=0 lagging=0 archived=2 historical=35 exit=0",
+    "red_tail": "session-recon: 780 sessions (...) offenders=2 lagging=2 archived=0 historical=35 exit=1",
+    "green_tail": "session-recon: 780 sessions (...) offenders=0 lagging=0 archived=2 historical=35 exit=0",
+    "control_tail": "session-recon: 780 sessions (...) offenders=1 lagging=1 archived=2 historical=35 exit=1",
+    "test_red_tail": "3 failed, 7 passed in 0.03s -> [test_archived_card_is_not_a_lag, test_cli_exit_code_ignores_archived_cards, test_offender_list_prints_each_card_once]",
+    "test_green_tail": "10 passed in 0.02s",
+    "handoff_guard": "tests/test_orchestration_handoffs.py: 13 passed in 2.56s",
+    "commands": [
+      "python3 tools/board/session_recon.py --report .scratch/recon-archived/recon-before.json  (red: exit=1, offenders=2 lagging=2)",
+      ".scratch/recon-archived/board_prefix/session_recon.py (pre-fix copy) --report .scratch/recon-archived/recon-red.json  (red: exit=1, offenders=2, 4 printed offender lines)",
+      "python3 tools/board/session_recon.py  (green: exit=0, offenders=0 lagging=0 archived=2)",
+      "python3 tools/board/session_recon.py --ledger .scratch/recon-archived/ledger-with-live-lag.json  (control: exit=1, offenders=1)",
+      ".venv/bin/python -m pytest tests/test_session_recon_archived.py -q  (green: 10 passed)",
+      ".venv/bin/python -m pytest .scratch/recon-archived/test_red.py -q  (red against pre-fix copy: 3 failed, 7 passed)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Independent verifier card V-RECON-ARCHIVED: re-run the four commands above and confirm 3 red / 10 green; the author self-check is not a gate.",
+  "write_paths": [
+    "tools/board/session_recon.py",
+    "tests/test_session_recon_archived.py",
+    "orchestration/handoffs/RECON-ARCHIVED.json",
+    "orchestration/units/RECON-ARCHIVED.md",
+    "orchestration/VERDICTS.md",
+    "state/logs/session-recon.json"
+  ],
+  "assumptions": [
+    "Archived card = truthy `archivedAt` in ~/.dsh/task-board/ledger-v2.json. 16 of 159 cards carry it; all 16 were checked — the archive action leaves `status` frozen (archived cards read todo/done/failed).",
+    "Archived cards are excluded from settled-lag because they are off the board (no UI surface to settle them); they are REPORTED (archivedWithSettledExecution + summary.archived + an ARCHIVED stdout block) rather than dropped, so the exemption is visible and auditable.",
+    "Scheduled cards keep their existing exemption (unchanged).",
+    "The archive action's semantics were inferred from the 16 measured archived cards; the DSH checkout carries no archivedAt/archive implementation for the task board to cite (grep over /home/zer0null/deepseek-harness returned no hits), so this is a measured inference, not a documented contract.",
+    "Second defect fixed in the same unit because it is the same exit-code-plausibility problem: settled-lag offenders were added under the raw `session-<uuid>` key beside the normalized one, and the print loop repeated every lagging card. Both produced duplicate OFFENDERS lines and are pinned by tests."
+  ],
+  "self_verification": {
+    "independent": false,
+    "note": "Authoring unit verified its own work; AGENTS.md requires a separate verifier card for the gate. Nothing under ~/.dsh was written; no card was created, moved, or settled."
+  }
+}

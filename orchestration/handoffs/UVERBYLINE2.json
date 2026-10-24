@@ -1,0 +1,27 @@
+{
+  "unit": "UVERBYLINE2",
+  "overall": "pass",
+  "checks": [
+    "C1 byline: all three ship exactly one author line, byte-identical placeholder '\\author{AUTHOR SLOT: REAL NAME --- TO BE SUPPLIED}'; grep -c '\\author{' = 1 for each. Digests reproduced: encoder-crossover-190 4efa575442b2878037d625bc604e2ae7aab7e1faf9d9515bd9c9747ebf28885a (84358 B), gated-read-batching a5d32dd7da1a2b9b920ffb9cb272749339edd954f9a1e63b11bb59df6d8886b4 (37291 B), replay-record-not-decision 617672485745d09db0073421e93b4a1e12497e60fbf034c31f9aa1c740aa5a23 (20969 B). Claim's 'paper #2' = replay-record-not-decision, not the 2nd path in its list; tools/package/md2tex.py:7 fixes #3=encoder and #7=gated, so the digest-file mapping is correct as labelled.",
+    "C2 converter sha256 reproduced: d924c949357fb47d5387fdbd827df1f718876c8519d305c9a847e841eb1982d2. Data-only edit supported by in-file changelog tools/package/md2tex.py:169-177 ('author_line -- CHANGED 2026-10-16 (UFIXBYLINE2). Drafting-time value was None') and generic guard code at :574/:591/:633-636. BUT the file is UNTRACKED ('GIT_OPTIONAL_LOCKS=0 git status --porcelain -- tools/package/md2tex.py' -> '?? tools/package/md2tex.py'; git log prints nothing), so no before/after diff exists on disk; the three other md2tex*.py copies (scratch/uprep7, scratch/uprep1, scratch/uvcr33) are much older single-paper converters (984-1139 diff lines) and are NOT a pre-change baseline.",
+    "C3 regeneration: paper trees copied to scratch/uverbyline2/<slug>/paper (submission excluded); converter run twice per package with --paper-root on the copy; 'cmp run1/main.tex run2/main.tex' IDENTICAL and 'cmp run1/main.tex papers/<slug>/submission/main.tex' IDENTICAL for all three (all exits 0). Digests run1 = run2 = shipped in every case. Non-regressive.",
+    "C4 claimed test result reproduced: 'PYTHONDONTWRITEBYTECODE=1 python3 -m pytest tests/test_md2tex.py --noconftest -q -p no:cacheprovider' -> '6 passed in 0.45s', exit 0. Test stronger, not weaker: tests/test_md2tex.py:257-269 assert_author_slot requires exactly one line == AUTHOR_SLOT (:265) and zero other '\\author'-starting lines (:266) - the literal placeholder at :252, not a token existence check; tests/test_md2tex.py:272-277 assert_no_citation_apparatus still asserts the three tokens and is still scoped to the citation-free paper (:291-293).",
+    "C4 red->green on scratch copies via the test's own helpers (shipped files untouched): GREEN helpers OK on all three real files and on replay's citation apparatus (all three tokens False). RED A name substituted '\\author{Jane Q. Researcher}' -> AssertionError 'must carry exactly one byline line ... (found 0); other \\author lines: [\\'\\\\author{Jane Q. Researcher}\\']'. RED B author line deleted -> same AssertionError '(found 0); other \\author lines: []'. RED C stray '\\cite{ghost}' appended -> AssertionError \"unexpected '\\\\cite{' in .../red_cite.tex\". RED C2 end-to-end: '[[CITE:ghost]]' in a copied MANUSCRIPT.md -> exit 1, last line \"CITE/BIBITEM GUARD FAILED: citation apparatus in a zero-bibliography paper: ['\\\\\\\\cite{']\"; marker removed -> exit 0 and regenerated == shipped. Red A is decisive against a weak 'some \\author exists' check; all three perturbations non-vacuous.",
+    "C5 premise correction CONFIRMED: \\cite counts are replay-record-not-decision (#2) = 0, encoder-crossover-190 (#3) = 23, gated-read-batching (#7) = 14; tools/package/md2tex.py:160-168 itself documents the zero-citation paper (cite_anchors must be empty, bib_source='none' (measured)). So only paper #2 is citation-free and the test's citation half is correctly scoped to it."
+  ],
+  "blocker": "",
+  "next_unit_hint": "No re-work needed: claims 1, 3, 4, 5 are fully reproduced and the claimed hashes/counts are exact. For claim 2's provenance, either accept the in-file changelog (tools/package/md2tex.py:169-177) as the record, or pin the pre-UFIXBYLINE2 converter into state/logs so a future diff is obtainable; do not treat the untracked file as diffable.",
+  "write_paths": [
+    "strategy/VERIFICATION_REPORT_BYLINE2.md",
+    "orchestration/units/UVERBYLINE2.md",
+    "orchestration/handoffs/UVERBYLINE2.json",
+    "scratch/uverbyline2/**"
+  ],
+  "contradicted": [],
+  "overstated": [],
+  "not_reproduced": [],
+  "unverified": [
+    "The 'converter logic was not changed' half of claim 2: tools/package/md2tex.py is untracked in git ('?? tools/package/md2tex.py', empty git log), so no pre-change blob exists to diff; the claim rests on the in-file changelog at :169-177 plus the generic cfg-driven guard code at :574/:591/:633-636, which I inspected but cannot turn into a diff.",
+    "The pre-rewrite text of tests/test_md2tex.py was overwritten, so the prompt's statement that the OLD test applied the citation half to all three papers could not be independently checked; only the current scoping (correct per claim 5) is verified."
+  ]
+}

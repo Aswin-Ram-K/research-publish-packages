@@ -1,0 +1,55 @@
+{
+  "unit": "G3-FOLD",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/CLAIMS.md",
+    "papers/context-cache/EVIDENCE.md",
+    "papers/context-cache/GAPS.md",
+    "papers/context-cache/PACKAGE.md",
+    "papers/context-cache/READER-MAP.md",
+    "papers/context-cache/RUN.json",
+    "papers/context-cache/recompute.py",
+    "tests/test_paper_boundary_attribution.py",
+    "orchestration/units/G3-FOLD.md",
+    "orchestration/handoffs/G3-FOLD.json"
+  ],
+  "evidence": {
+    "benchmark": "The answer desk grades the shortcut table, which is why this repo's diff stays small: the paper moves, the experiments do not.",
+    "claim_added": "C62 \u2014 compaction at a real 32k/64k boundary costs +134.6 to +747.2 uncached tokens per turn after it, and nothing before it",
+    "control_segment": "pre-boundary matched-turn delta -11.8 to +51.0 uncached/turn across 12 arm-instances, 0/12 boot95 CIs exclude zero",
+    "post_boundary": "post-boundary matched-turn delta +134.6 to +747.2 uncached/turn, 11/12 boot95 CIs exclude zero (exception 32k F-ptr: +134.6 [-12.8, 285.9])",
+    "boundary_rows": "18 compactions, compensated_this_turn true on 18 rows, first at turn 71 (32k) and turn 143 (64k); boundary turn 1,826-2,972 uncached vs the baseline's own drop turn 1,236-1,246",
+    "resting_window": "last-turn prompt B 9,896 / S 13,325 / S-ptr 13,321 / F 13,542 / F-ptr 13,546 / S-k800 11,009 / F-k800 11,717 at 32k; 22,063 / 23,632 / 23,634 / 23,762 / 23,765 / 22,643 / 14,197 at 64k",
+    "rows_sha256": "589662cef35cbdf6c54b3f75ff11dff9a86e618fc8c77fa3dbcc0d5a2d573382",
+    "commands": [
+      ".venv/bin/python papers/context-cache/recompute.py C62  -> PASS 17/17 values match",
+      ".venv/bin/python papers/context-cache/recompute.py all  -> 59 claims checked, all match (GRID GUARD PASS 7/7)",
+      ".venv/bin/python papers/context-cache/verify_package.py -> PASS, 62 claims, 62 mapped",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_boundary_attribution.py tests/test_paper_attribution_guard.py -q -> 19 passed"
+    ],
+    "red_green": "RED-1: G3 status reverted to 'NOT SETTLED by the cross-stack window' -> 1 failed, 7 passed. RED-2: \u00a76a result sentence's cheap end set to +0.0 and the control sentence's band replaced by 0.0 -> 2 failed, 6 passed. RED-3: the 32k F-ptr row removed from C62's expected table -> recompute.py C62 FAIL 16/17 and test_c62_expected_rows_are_pinned_not_range_only fails. GREEN: all files restored -> recompute.py C62 PASS 17/17, 19 passed."
+  },
+  "assumptions": [
+    "Read 'put the measured compaction cost into the paper' as one claim (C62) + one manuscript section (\u00a76a) + the abstract/\u00a71/\u00a710/\u00a711 touch points, the package's existing convention, rather than a new paper section restating \u00a76.",
+    "Read 'close G3' as NARROWED, not closed: the limit case is now measured and in the paper, but the trigger (headroom, not an overrun), the post-boundary length (27-89 turns, one seed), the separation (no arm compacts to the baseline's window) and a second engine remain open and are named in GAPS.md G3.",
+    "Left the G3-LIMIT-V2 cell's own analysis.json untouched; C62 re-derives everything from rows.jsonl with the same bootstrap recipe (10,000 resamples, seed 20251023), so where the two overlap they agree.",
+    "Corrected an early draft's mechanism sentence ('the arms rest shorter, so later notes land on a longer prompt drive') after the last-turn prompts refuted it: the arms carry MORE prompt at the end; the cost is a destroyed prefix (cached_tokens 0 at the boundary) and a worse hit rate on a shorter prompt.",
+    "The new guard's assertions are anchored on the sentences that state the band and the control, not on the section: a section-wide token check stayed green at 8 passed on a revert that rewrote the result sentence while the per-arm table kept the figures."
+  ],
+  "blocker": "",
+  "next_unit_hint": "A verifier unit (not this author) should re-run the four commands above and the three red reverts, and check \u00a76a's two stated limits against the rows. After that, the remaining G3 work is live: a trigger that overruns a budget by a known amount, a compacting arm that targets the baseline's window, a longer 64k post-boundary segment, and the same on vLLM.",
+  "write_paths": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/CLAIMS.md",
+    "papers/context-cache/EVIDENCE.md",
+    "papers/context-cache/GAPS.md",
+    "papers/context-cache/PACKAGE.md",
+    "papers/context-cache/READER-MAP.md",
+    "papers/context-cache/RUN.json",
+    "papers/context-cache/recompute.py",
+    "tests/test_paper_boundary_attribution.py",
+    "orchestration/units/G3-FOLD.md",
+    "orchestration/handoffs/G3-FOLD.json"
+  ]
+}

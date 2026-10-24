@@ -1,0 +1,33 @@
+{
+  "unit": "STRAY-REF",
+  "status": "done",
+  "artifacts": [
+    "tests/test_no_stray_package_refs.py",
+    "orchestration/units/STRAY-REF.md"
+  ],
+  "evidence": {
+    "guard_red_green": "PYTHONPATH=src python3 -m pytest tests/test_no_stray_package_refs.py -q -> green '3 passed'; with NEW file tests/stray_ref_plant_STRAYREF.md planted carrying '| package record | scratch/uneutral10/package/second-labeller/RUN.json | the package chain |' -> '1 failed' naming 'tests/stray_ref_plant_STRAYREF.md:1: treats the stale scratch tree's RUN RECORD as the package record (scratch/uneutral10 + record artefact) — that tree's RUN.json is experiment G46/unit G33 of 2026-10-16, not this package's record'; plant removed -> '3 passed'. No shared file edited.",
+    "defective_record_identity": "scratch/uneutral10/package/second-labeller/RUN.json starts: {\"_experiment\": \"G46\", \"_unit\": \"G33\", \"status\": \"done\", \"_target_head\": \"907fa39da7ba8ecfbe6e976b7a4cddadea7ac36b\", \"_fixture_path_in_target\": \"P05\", ...} — a 2026-10-16 record of a different experiment/target, not this package's record",
+    "sweep_counts": "grep -rn uneutral10 papers/ tests/ tools/ docs/ *.md = 19 lines / 5 text files (HISTORICAL or fixture pins); repo-wide excluding scratch/ .worktrees/ = 446 lines, nearly all orchestration/units/*.md historical cards; scratch/ cited in papers/ tests/ minus fixrunr2|probe|tmp = 51 lines; lines co-occurring scratch/uneutral10 with RUN.json|run.json|EVIDENCE.md|rows.jsonl in papers/ tests/ tools/ = 0",
+    "digests_non_regression": "PYTHONPATH=src python3 -m pytest tests/test_run_record_digests.py -q -> '5 passed in 0.03s' (before and after)",
+    "commands": [
+      "PYTHONPATH=src python3 -m pytest tests/test_no_stray_package_refs.py -q",
+      "PYTHONPATH=src python3 -m pytest tests/test_run_record_digests.py -q",
+      "grep -rn uneutral10 papers/ tests/ tools/ docs/ *.md",
+      "grep -n _experiment scratch/uneutral10/package/second-labeller/RUN.json"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Guard is live and self-verifying. Three AUTHORITATIVE scratch citations in released papers prose need a follow-up card (not editable by STRAY-REF per its hard rules): papers/encoder-crossover-190/{MANUSCRIPT.md:141,CLAIMS.md:21-22,AVAILABILITY.md:36} name scratch/urever2/verify_divergence.py as the reproduction path; papers/gated-read-batching/released/SUPERSEDED-UNPACKED.md:41 makes scratch/upkginstall7/build_archive.sh the build command; papers/tmlr/README.md:35 names scratch/utex1/bin/tectonic. A verifier should: re-run both pytest commands, re-run the plant cycle, and diff orchestration/ to confirm only the three declared paths changed.",
+  "write_paths": [
+    "tests/test_no_stray_package_refs.py",
+    "orchestration/handoffs/STRAY-REF.json",
+    "orchestration/units/STRAY-REF.md"
+  ],
+  "assumptions": [
+    "Plant was a NEW file (tests/stray_ref_plant_STRAYREF.md) created and removed, not a temporary edit to a shared file — chosen because concurrent units (GUARD-G5B, KG-POLICY, FIX-RUN-R2) run pytest on shared files; removal restores the tree byte-identically by construction.",
+    "pytest invoked with PYTHONPATH=src — bare python3 -m pytest fails at tests/conftest.py:19 with ModuleNotFoundError: No module named 'resextract'; this is the repo's established convention.",
+    "The guard's own record-source quotes are assembled from token halves so its source does not trip its line-scoped scanner; an alternative (SELF in RECORD_SOURCE_EXEMPTIONS) was rejected to keep that table literally empty.",
+    "Scope of the record-source rule limited to scratch/uneutral10 per the card's step 3; broader scratch/** classification is reported, not guarded."
+  ]
+}

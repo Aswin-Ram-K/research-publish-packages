@@ -1,0 +1,41 @@
+{
+  "unit": "UFIX31",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/UNEUTRAL8.md",
+    "orchestration/handoffs/UNEUTRAL8.json",
+    "strategy/STIMULUS_NEUTRALISATION.md",
+    "orchestration/units/UFIX31.md",
+    "orchestration/handoffs/UFIX31.json",
+    "scratch/ufix31/pkg"
+  ],
+  "evidence": {
+    "corrections_applied": "6 defects + 1 also-record block = 7 notes in UNEUTRAL8.md (5 anchors); 4 notes in STIMULUS_NEUTRALISATION.md",
+    "recompute_on_copy": "python3 verify/recompute-claims.py on scratch/ufix31/pkg -> 2 x MISMATCH (routeA.kappa shipped=0.31988636363636364; AB_mutual shipped=0.3473684210526316), ALL CLAIM NUMBERS PRESERVED: False, EXIT=1 RAN (not read-only)",
+    "script_lines_quoted": ":38 0.3252: \"second-labeller route-A kappa\", | :41 0.3526: \"second-labeller A/B mutual agreement\"} | :115 sb = {0.3252: met[\"routeA\"][\"kappa\"], | :118 0.3526: met[\"passes\"][\"labelsB.json\"][\"AB_mutual_agreement\"]}",
+    "routeB_literal": "UNEUTRAL8.md read 0.9013584845356494; correct 0.9013584840356494 (off at 10th decimal)",
+    "census_reproduced": "DISTINCT-CLASS-IDS-PRESENT 28 TOTAL-OCCURRENCES 1362 (emitted); pre-state 35/1608",
+    "bytes_total": "field=859428 (sum of 28 listed); MANIFEST.json=11764 B; sum(all 29)=871192",
+    "strict_walk": "actual_files=29 listed=28 unlisted_strict=['MANIFEST.json'] missing=[]",
+    "prestate": "diff -rq scratch/uneutral8/before_pkg scratch/uneutral6/package -> clean (byte-identical); urecut1/package differs",
+    "uneutral8_json_reparse": "json.load OK: unit=UNEUTRAL8 keys=8 corrections_2026_10_16=7 original keys intact",
+    "commands": [
+      "awk 'NR==38||NR==41||NR==115||NR==118' scratch/uneutral8/package/verify/recompute-claims.py",
+      "cp -a scratch/uneutral8/package scratch/ufix31/pkg && (cd scratch/ufix31/pkg && python3 verify/recompute-claims.py)",
+      "python3 scratch/uneutral8/census.py scratch/uneutral8/package",
+      "diff -rq scratch/uneutral8/before_pkg scratch/uneutral6/package",
+      "python3 <manifest strict-walk: MANIFEST.json files[] vs os.walk, sum bytes>",
+      "python3 -c 'import json; json.load(open(\"orchestration/handoffs/UNEUTRAL8.json\"))'"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Shipping the eight neutralised tokens requires updating the frozen expectations the package's own check compares against: verify/recompute-claims.py CLAIMS constants 0.3252 (routeA.kappa) and 0.3526 (AB_mutual) are now stale versus metrics.json's recorded 0.31988636363636364 / 0.3473684210526316; the check exits 1 until metrics.json's recorded routeA values (or the expectations) are re-frozen, together with CLAIMS.md:108 and MANUSCRIPT.md:381. Do not re-use UNEUTRAL8's 'recompute-claims does not cover route A' statement.",
+  "write_paths": [
+    "strategy/STIMULUS_NEUTRALISATION.md",
+    "orchestration/units/UNEUTRAL8.md",
+    "orchestration/handoffs/UNEUTRAL8.json",
+    "orchestration/units/UFIX31.md",
+    "orchestration/handoffs/UFIX31.json",
+    "scratch/ufix31/**"
+  ]
+}

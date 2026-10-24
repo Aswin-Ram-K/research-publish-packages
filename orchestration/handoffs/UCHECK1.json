@@ -1,0 +1,31 @@
+{
+ "unit": "UCHECK1",
+ "status": "done",
+ "artifacts": [
+  "strategy/CITATION_FETCH_VERIFICATION.md",
+  "orchestration/units/UCHECK1.md",
+  "orchestration/handoffs/UCHECK1.json"
+ ],
+ "evidence": {
+  "modernbert_full_text_terms": "2512.12677v3 body: ModernBERT x12, 93.45 x2 (Table 3/13 ModernBERT-base 24.55 93.45 21.51 84.48), 1.88 x3 (Llama-3.2-3B 3.04 1.88 2.05 1.37), 1.26 x2 (Qwen3-4B-Instruct-2507 0.77 1.26 0.64 0.83), Llama-3.2-3B x28, Qwen3-4B x2, distill x16, 'retains >= 97% of teacher F1', 'a ~45x gap (Table 13)'",
+  "n_dependent_full_text_terms": "2602.06370v1: N-dependent=0, crossover=0, 94.11/94.63 FOUND (AG News encoders vs Claude 4.5 ZS 91.35), 99.27/99.40 FOUND, 98.83 FOUND (best LLM DBPedia); 'varying label cardinalities'; Table 1 #Classes 2/2/4/14",
+  "controls_simmering": "200, 64330 B: 89.2/87, 93.1/152, 80.7, 42 ex/s, 395M, A10G all found; 3/3 required controls CONFIRMED",
+  "http_statuses": "abs/2512.12677=200 42575B; abs/2602.06370=200 43530B; html/2512.12677v3=200 357024B; html/2602.06370v1=200 423961B; ar5iv x2=200 206627B/377661B; simmering=200 64330B",
+  "tool_calls_used": "10 of 20",
+  "commands": [
+   "mkdir -p scratch/ucheck1 orchestration/units orchestration/handoffs",
+   "for u in abs/2512.12677 abs/2602.06370 html/2512.12677v3 html/2602.06370v1 ar5iv/2512.12677 ar5iv/2602.06370; do curl -sSL --max-time 40 -o raw_$f.html -w '%{http_code} %{size_download}' https://.../$u; done",
+   "python3 tag-strip + re.finditer on raw_5917ebd0.html (2512.12677v3) for ModernBERT|93.45|1.88|1.26|Llama-3.2-3B|Qwen3-4B|distill|97|45|samples/s",
+   "python3 tag-strip + re.finditer on raw_8ce7f5a2.html (2602.06370v1) for N-dependent|crossover|#Classes|94.11|91.35|99.27|99.40|98.83|label cardinalit",
+   "curl -sSL --max-time 40 -o simmering.html https://simmering.dev/blog/modernbert-vs-llm/ ; python3 re.finditer for 89.2|93.1|87|152|80.7|42|395|A10G"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Withdraw UCITE1 MIS-CITED-1 (L150-152) -> SUPPORTED-FULL-TEXT; downgrade MIS-CITED-2 to a labelling/nuance defect, not a mis-citation: the source figures ARE printed but 'N-dependent crossover table' is the corpus's coinage (0 hits for N-dependent/crossover) and the encoder still wins at N=14 (99.40 vs 98.83). Add 'CLV 5-class patent corpus' to the 93.45 sentence and use Qwen3-4B-Instruct-2507. Fix REFERENCES.bib:62-68 UNVERIFIED note (now verified from body) and extend the :49-50 caveat to 'not verbatim in the body either'. If a verifier is dispatched, the red-green check is: the same re.finditer over an abstract-only fetch returns not-found for every one of these nine terms.",
+ "write_paths": [
+  "strategy/CITATION_FETCH_VERIFICATION.md",
+  "orchestration/units/UCHECK1.md",
+  "orchestration/handoffs/UCHECK1.json",
+  "scratch/ucheck1/**"
+ ]
+}

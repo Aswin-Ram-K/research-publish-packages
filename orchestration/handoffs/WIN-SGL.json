@@ -1,0 +1,55 @@
+{
+  "unit": "WIN-SGL",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/WIN-SGL/rows.jsonl",
+    "experiments/context-cache/cells/WIN-SGL/analysis.json",
+    "experiments/context-cache/cells/WIN-SGL/launch_variant.py",
+    "experiments/context-cache/cells/WIN-SGL/win_sgl_cell.py",
+    "experiments/context-cache/cells/WIN-SGL/win_sgl_analyze.py",
+    "experiments/context-cache/cells/WIN-SGL/run_unit.py",
+    "experiments/context-cache/cells/WIN-SGL/logs/",
+    "experiments/context-cache/cells/WIN-SGL/logs/S3-startup-failure.log",
+    "state/config/occamy-inspect-pre.json",
+    "state/config/S0-server-info.json",
+    "state/config/S1-server-info.json",
+    "state/config/S2-server-info.json",
+    "state/config/occamy-restore-baseline.json",
+    "orchestration/units/WIN-SGL.md"
+  ],
+  "evidence": {
+    "rows": "1800 rows, all status 200, sha256 ea5728760540352a752bca501fe77aaae054ec0a88deba4db9bdf8a9f3c5e6c7",
+    "requests": "S1 900/900, S2 900/900, S3 0/0 -- total 1800 of the 1800 bound (S3 needs none: it cannot start)",
+    "grid_S0": "page_size 1: gcd 64, 351/880 cached are odd multiples of 64, 60.1% multiples of 128",
+    "grid_S1": "page_size 64: gcd 64, 351/880 odd multiples of 64, 60.1% multiples of 128 -> SAME granularity as S0; 887/888 rows byte-identical to S0 (1 row -1024)",
+    "grid_S2": "page_size 128: gcd 128, 0/880 odd multiples of 64, 100% multiples of 128 -> granularity MOVED to 128; 349/888 rows -64 vs S0, 525 identical, 13 higher",
+    "probe_S1": "L 957/1013/1067/1121 -> cached 896/960/1024/1088 = 64*14..17; 2 discriminating targets match 64, 0 match 128",
+    "probe_S2": "L 957/1013/1067/1121 -> cached 896/896/1024/1024; 2 discriminating targets match 128, 0 match 64",
+    "battery": "S1: page_size=64 rows=888 hit=0.974202 unc/turn=740.403 32k=729.22 64k=746.02 gcd=64 odd64=351 cap=1624512 | S2: page_size=128 rows=888 hit=0.973778 unc/turn=752.583 32k=745.2 64k=756.28 gcd=128 odd64=0 cap=1663872",
+    "s0_baseline": "S0: page_size=1 rows=888 hit=0.974242 unc/turn=739.25 32k=725.75 64k=746.02 gcd=64 odd64=351 cap=1306681",
+    "restores": "3/3 config_ok=true, health 200 after each: page_size->1, mamba_radix_cache_strategy->extra_buffer, mem_fraction_static->0.45, disable_chunked_prefix_cache->false",
+    "s3": "verbatim: 'sglang serve: error: unrecognized arguments: --enable-chunked-prefix-cache' (container exited after 21.8 s; log logs/S3-startup-failure.log)",
+    "production_after": "health 200, systemd --user unit active, page_size 1, extra_buffer, 0.45, disable_chunked false, max_total_num_tokens 1,620,892",
+    "commands": [
+      ".venv/bin/python experiments/context-cache/cells/WIN-SGL/run_unit.py --only S1",
+      ".venv/bin/python experiments/context-cache/cells/WIN-SGL/run_unit.py --only S2",
+      ".venv/bin/python experiments/context-cache/cells/WIN-SGL/run_unit.py --only S3",
+      ".venv/bin/python experiments/context-cache/cells/WIN-SGL/win_sgl_analyze.py"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "page_size 256 (does granularity track the pager or clamp at 64?), --disable-chunked-prefix-cache (the flag that exists) as its own unit, and the ~864-token lag mechanism (median deficit, identical at page_size 1 and 64; 349 rows lose exactly one 64-block at 128).",
+  "write_paths": [
+    "experiments/context-cache/cells/WIN-SGL/",
+    "state/config/",
+    "orchestration/units/WIN-SGL.md",
+    "orchestration/handoffs/WIN-SGL.json"
+  ],
+  "assumptions": {
+    "stop_surface": "MEASURED DEVIATION: production is the ExecStart of the systemd USER unit gx10-occamy-nvfp4.service (Restart=on-failure, --rm); the system-scope unit of that name is inactive, which is what the card checked. docker stop deletes the container (AutoRemove=true, measured) and the unit recreates it within ~1 s, so the variant is given the port by `systemctl --user stop|start gx10-occamy-nvfp4.service`, not by docker stop/start.",
+    "token_capacity": "max_total_num_tokens is re-profiled from free memory at every start: 1,306,681 on the 4-day-old process -> 1,644,272/1,624,512/1,663,872/1,620,892 after successive restarts with no flag changed. The restore gate therefore requires the four config keys to match exactly and reports capacity with its delta, rather than calling a proven restore failed.",
+    "budget": "S1 and S2 each spent 900 (888 battery + 12 probe) = the whole 1800; S3 was launched once for the arg-parser verdict and needed no requests.",
+    "prompt_identity": "rows are paired with S0 by (depth, arm, turn) because salts and chain construction are identical: prompt_tokens matched 888/888 for both S1 and S2.",
+    "fan_out": "not measured: the battery has no fan-out arm (S0's B/A fan-out comes from a different cell)."
+  }
+}

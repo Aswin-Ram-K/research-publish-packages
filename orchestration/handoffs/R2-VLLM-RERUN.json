@@ -1,0 +1,110 @@
+{
+  "unit": "R2-VLLM-RERUN",
+  "status": "partial",
+  "artifacts": [
+    "experiments/context-cache/cells/R2-VLLM/rows.jsonl",
+    "experiments/context-cache/cells/R2-VLLM/logs/rerun-console.log",
+    "experiments/context-cache/cells/R2-VLLM/logs/pre.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/OH1-launch.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/OH1-teardown.json",
+    "experiments/context-cache/cells/R2-VLLM/discarded-r1/rows.jsonl",
+    "experiments/context-cache/cells/R2-VLLM/discarded-r1/analysis.json",
+    "orchestration/units/R2-VLLM-RERUN.md",
+    "orchestration/handoffs/R2-VLLM-RERUN.json"
+  ],
+  "evidence": {
+    "row_counts": {
+      "rows_jsonl_lines": 54,
+      "configs": {"OH1": 54},
+      "phases": {"tokens": 32, "grid": 14, "gate": 2, "baseline": 6, "battery": 0},
+      "battery_rows": 0,
+      "note": "OH1 ran to the end of its baseline phase, then died at the first battery request. A1 never started."
+    },
+    "rows_sha256": "afbb765934579b06e49f68d0b581bf8f96806735970b4bb93a2e2b3c3d5ea3b6",
+    "discarded_r1": {
+      "rows_jsonl_sha256": "2737125f917fe212ad54bf67521a5ccb66a740eb35a064665d7516282de5045c",
+      "rows_jsonl_lines": 420,
+      "analysis_json_sha256": "8e9e45cf310ccb802c84a5ec34afe4d4bfe9ff33354487f6e5fe6fabd1bb9515",
+      "moved_to": "experiments/context-cache/cells/R2-VLLM/discarded-r1/",
+      "dry_run_sha_preserved": true
+    },
+    "usage_has_details": {"true": 54, "false": 0, "absent": 0},
+    "usage_coverage_OH1": {"n_rows": 54, "n_observed": 54, "n_unobserved": 0, "n_cached_gt0": 35, "blind": false},
+    "cached_tokens_gt0_by_config": {"OH1": 35, "OH1L": 0, "A1": 0},
+    "cached_tokens_gt0_by_config_phase": {"OH1/grid": 14, "OH1/tokens": 14, "OH1/baseline": 6, "OH1/gate": 1},
+    "distinct_prefix_sha256_per_turn_per_arm": {
+      "measured": false,
+      "reason": "no battery rows; arm identity is only observable in the battery phase",
+      "expected_contract": "4/4 at every turn",
+      "battery_phase_arm_identity_assertions": "phase_battery() calls arm_identity_report() BEFORE the first request (pmu16_cell.py:972-975) and raises if not ok; it never got that far because Runner.send raised first"
+    },
+    "blocks_available_histogram": {"0": 20, "1": 12, "2": 4, "3": 1, "4": 9, "5": 2, "7": 1, "8": 4, "10": 1},
+    "non_200_rows": 0,
+    "analysis_rows_sha256_match": false,
+    "analysis_status": "NOT RUN — no --phase analyse executed, analysis.json absent (moved to discarded-r1/). Analysing 54 gate/grid/baseline rows with zero battery rows would publish a partial analysis that looks complete.",
+    "lock_wait_s": 0.0,
+    "lock_held_s": 0.0,
+    "lock_attempt_1": "TimeoutError: lock ... busy (errno 11) — the brief's 'no live process holds it' was FALSIFIED; a live holder released at 2026-10-24T02:48:57.144739+00:00 with note 'R2-VLLM done'",
+    "lock_attempt_2": "ACQUIRED, waited 0.0s",
+    "lock_after_run": "released by my process; later re-verified FREE",
+    "occamy_health_by_step": [
+      {"step": "start", "code": 200},
+      {"step": "pre", "code": 200},
+      {"step": "after-lock", "code": 200},
+      {"step": "OH1-launch", "code": 200},
+      {"step": "OH1-teardown", "code": 200},
+      {"step": "end", "code": 200}
+    ],
+    "occamy_untouched": "verified running since 2026-10-23T07:58:48.659913191Z at end (unchanged StartedAt); only inspect/health/models/metrics reads performed",
+    "pre_capture": {"provenance": "live capture_pre() at 02:49:06Z — prod was UP, so no on-disk fallback needed", "prod_health": 200, "prod_id": "qwen3.5-9b", "prod_block_size": "1056", "occamy_health": 200, "occamy_id": "occamy-1.0"},
+    "prod_restore": {
+      "proven": true,
+      "provenance": "from the SIBLING locked run's own logs/run.json + logs/prod-restore.json (finished 2026-10-24T02:48:57Z), not from my attempt — my attempt never reached A1/restore",
+      "health": 200,
+      "health_wait_s": 134.2,
+      "models_id": "qwen3.5-9b",
+      "max_model_len": 32768,
+      "block_size_pre": "1056",
+      "block_size_now": "1056",
+      "cmd_same": true,
+      "binds_same": true,
+      "image_same": true,
+      "status_running": true,
+      "occamy_at_restore": 200,
+      "verified_live_by_me_at_end": {"prod8014": 200, "prod_status": "running"}
+    },
+    "oh1_launch_proof": {"prefix_match_unit": 16, "block_size": 2096, "health_status": 200, "health_wait_s": 223.4, "occamy": 200},
+    "requests_issued": {"mine": 54, "cap_total": 1000, "cap_arm": 200, "OH1_used": 54, "OH1L_used": 0, "A1_used": 0},
+    "truncation": "none by cap in my attempt; the attempt terminated on a TypeError before any cap could bind",
+    "test_commands_not_run": [],
+    "commands": [
+      ".venv/bin/python -c 'import pmu16_cell as m; m.acquire_lock(m.LOCK_PATH, 5.0, ...)' -> TimeoutError busy (attempt 1), ACQUIRED waited 0.0s (attempt 2)",
+      "mv experiments/context-cache/cells/R2-VLLM/{rows.jsonl,analysis.json} -> discarded-r1/",
+      ".venv/bin/python experiments/context-cache/cells/R2-VLLM/pmu16_cell.py --all > logs/rerun-console.log 2>&1",
+      "ssh zer0null@192.168.2.168 'docker ps -a; docker inspect -f {{.State.Status}}/StartedAt; curl /health' (after every step)",
+      ".venv/bin/python -c 'import pmu16_analyze as ana; ana.usage_coverage(ana.load_rows(rows))'"
+    ]
+  },
+  "blocker": "TWO instrument defects in the repaired pmu16_cell.py, both inside phase_battery, both needing the REPAIR unit (not this rerun unit): (1) Runner.send() (lines 525-534) has no 'extra' keyword, but phase_battery passes extra={arm_compaction,arm_render,prompt_nodes} at line 987 -> TypeError 'unexpected keyword argument extra', which killed OH1 at the first battery request after 54 rows. build_row (line ~560) already accepts and merges 'extra', so the fix is one forwarding keyword on send(), and the offline selftest never exercised the live send path. (2) ARM_REQUEST_CAP=200 is too small for the repaired battery: the battery alone is 2 passes x 16 turns x 4 arms = 128 requests, and OH1 spends ~54 before it (gate 2 + grid 16 + baseline 6 + ~30 tokenize probes), so OH1 needs ~183-190 and any relaunch replays those 54 rows first — the arm guard trips sequentially and PERMANENTLY. Observed twice independently as 'arm cap reached for OH1: 219/200' and 'arm cap reached for A1: 201/200' in logs/run.json (the 02:35 run). Relaunching without raising ARM_REQUEST_CAP cannot produce battery rows, and 4 arms x 219 = 876 < TOTAL_REQUEST_CAP 1000, so the total cap has plenty of headroom.",
+  "next_unit_hint": "Return to a REPAIR-2 unit, not a rerun: (a) add 'extra: dict | None = None' to Runner.send and forward it to build_row; (b) raise ARM_REQUEST_CAP from 200 to >=240 (headroom for 4 arms x ~190 = 760 < TOTAL_REQUEST_CAP 1000); (c) add an offline selftest that calls phase_battery's send path with a fake Client so the 'extra' keyword and the cap arithmetic are both exercised WITHOUT live requests — this is the exact gap that let both defects reach production, and all 14 existing selftest checks stayed green while the live battery was still broken; (d) after that, discard this 54-row OH1 prefix to discarded-r1/rows-partial-oh1.jsonl (sha afbb7659...) and rerun from scratch so request_index starts at 1 and no phase is a mix of two instrument versions. IMPORTANT for whoever launches next: the .occamy.lock is NOT stale — it was held by a live sibling R2-VLLM run that released at 02:48:57Z, and a second live process acquired it at 02:49:08Z and was still running r2v-oh1l at 03:02Z. Acquire it via the cell's acquire_lock and let it block; do not assume a stale lock and do not hand-edit it.",
+  "write_paths": [
+    "experiments/context-cache/cells/R2-VLLM/rows.jsonl",
+    "experiments/context-cache/cells/R2-VLLM/analysis.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/**",
+    "experiments/context-cache/cells/R2-VLLM/discarded-r1/**",
+    "experiments/context-cache/.occamy.lock",
+    "orchestration/units/R2-VLLM-RERUN.md",
+    "orchestration/handoffs/R2-VLLM-RERUN.json"
+  ],
+  "tool_calls": 25,
+  "bound": 35,
+  "assumptions": [
+    "The 54 OH1 rows are KEPT as evidence of the instrument's repair (usage_has_details=true on all 54, cached hits on 35) rather than discarded, because they prove REPAIR A works live on the grid/baseline path; they are labelled as a partial prefix and the next unit is told to archive them before the next full run.",
+    "--phase analyse was deliberately NOT run: with 0 battery rows the analysis would publish gate/grid/baseline summaries with an empty battery section, and the guard's rows_sha256/n_rows contract would then vouch for a record that cannot answer the arm-identity question. An absent analysis.json is an honest gap; a partial one reads as complete.",
+    "The brief said the lock was stale with no live process; that was falsified at 02:48Z. I treated a TimeoutError as authoritative over the brief and re-probed with plain flock, then acquired through the cell's own acquire_lock rather than editing or deleting the lock file.",
+    "The brief said prod was stopped and r2v-a1 was running; by 02:48:25Z both had changed (prod Up since 02:46:40Z, r2v-a1 gone) because the prior lock holder completed its own restore. I took a live capture_pre() instead of the on-disk fallback the brief allowed for the stopped case.",
+    "The prod restore proof in this handoff is attributed to the sibling run that legitimately held the lock (logs/run.json + logs/prod-restore.json, finished 02:48:57Z); I re-verified prod /health 200 and Status=running live at the end but did NOT re-run restore_prod myself, since prod was already up and running my own restore would have restarted a healthy prod.",
+    "occamy health was read on 192.168.2.168:8012 (the only binding that answers); 127.0.0.1:8012 returns 000 by binding, per R2-VLLM-PREFLIGHT2.",
+    "r2v-oh1l seen running at 03:02Z is attributed to the sibling R2-VLLM process holding the lock (pid 6, acquired 02:49:08Z), not to my process — my console log shows my run ended at OH1 teardown with r2v-oh1 removed and no OH1L launch. I did not tear it down, because it belongs to that live run."
+  ]
+}

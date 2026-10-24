@@ -1,0 +1,50 @@
+{
+ "unit": "VE13",
+ "overall": "partial",
+ "checks": [
+  "1 PASS E1 counts: e1_runlog.requests=195 (planned 195, failures 0, lock_wait 0.0), 228 rows, 3 sessions x 38 turns, 6 event turns [12,17,22,27,32,37] = 36 event rows / 18 pairs, rows sha256 263db62e631737495f99284fbe60fd5121b3d6a7a2cbd7aa2984572dd71984bd matches",
+  "2 PASS E1 statistics reproduced from the frozen rows via e1_analyze.analyse(): fork median 5132.75, summarise 442.25, paired delta median +4774.25 (min -2035, max +5611.5), CI [193.5,4868.25] (seed 20261020), 15/18 positive p=0.007538; n=15 exclusion median +4839.5, CI [4677.5,4901.5], 15/15, p=6.1e-05; the 3 negatives are exactly event_index 2 where both arms recorded cached_tokens=0 (6/6 rows)",
+  "3 PASS red->green on the distinctness guard: GREEN rebuild -> 18 informative pairs, first-diff byte offset 222 at all 18 events, pre-fork turns byte-identical; RED pre-U13 legacy plan -> 114/114 fork turns byte-identical, check_distinctness raises 'arms render byte-identical prompts at/after the event -- the U4 defect' (162 problems), 0 informative pairs",
+  "4 ADJUDICATED legitimate fork semantics, NOT NAIVE_MUTABLE: render.py:117-122 interpolates root={chain[0].node_id} gated on chain[0].kind=='fork' and node_id is a content address (nodes.py:44-46,71-82); the label is byte-constant between folds (plan turns 12-16, 17-21, 22-26, 27-31, 32-36 identical) and changes only when the fold replaces the root, whereas NAIVE_MUTABLE interpolates volatile into message 0 unconditionally (render.py:167-179). Rows: fork cached 6464-8448 on warm non-event turns vs 64 at events >=3. The break is not label-manufactured: the fork node's own body opens '[fork] replaces head through <digest>' (differing_message_indices [0,1] at every event), so a full re-prefill would occur with the label removed; the label only moves the first-diff offset to 222. The break-cost number is not an artefact.",
+  "5 PASS partial is honest: 3x44x2=264 (258 neighbour-trimmed) > the 200 cap; rows stop at turn 38 and there are 0 rows at turn 42, so event 7 is genuinely absent and not top-up-able (cold pre-event state). 11 shared + 2x27 = 65/session = 195 <= 200",
+  "6 PASS E3 counts: 104 rows e3_rows.jsonl sha 7d123dd4deaf55d87f6ec92e2cb564c4d70b13d78eee8caab8ef5df6757ff1ad and 12 rows e3_replicate_rows.jsonl sha b9969992b88999f00833a48262738c46bc0d94d680cc1cd3dfaf617d404c6b12 both match; 104+12=116 requests; runlog get_count=44 = 2 info + 42 metrics; 35 append-kind and 35 repeat-kind rows (repeat twins present); chain phase = 32 appends + 32 repeats, p60 perturb = 3 + 3",
+  "7 PASS (definitional) deficit == 64*floor(L_prev/64) - cached on all 70 deficit-bearing rows, as stored and after the analyzer's salt-scoped recompute (e3_analyze.py:127-133); RED with L_prev in place of floor(L_prev/64) fails 70/70. The second identity in the card is tail_term, not residual: tail_term == L - 64*floor(L_prev/64) - L%64, residual == (L-cached) - L%64, residual == tail_term + deficit (70/70); residual == tail_term only where deficit == 0 (61/70; 31/35 appends as claimed)",
+  "8 PARTIAL / overstated word: the pool-scale gauges and the 0,0 perturbation support 'mamba pool eviction is not the driver', but with no per-chain checkpoint counter, a 3-append pressure manipulation and 4/35 repeats still losing state, the licensed word for the mechanism is 'not established'; 'REFUTED' is licensed only for the universal form (every append's deviation is eviction-caused). e3_server_state.json and e3_metrics.jsonl really carry the quoted fields: mamba_used_tokens=4, mamba_usage=0.0625, mamba_evictable_tokens 59-60, mamba_available_tokens 0-1 on the 42 non-boot snapshots (boot 3.0/used 0, replicate:before 4.0/used 0)",
+  "9 PARTIAL: the two-term law carries its own remainder (E3.md:126-127 appended tail plus a boundary lag bounded by one appended body; next test = same chain on a pure-attention endpoint to separate mamba granularity from radix-insert lag) and the hint is endpoint-scoped; the single word 'universally' should be scoped to the 35 measured appends on one hybrid endpoint (occamy-1.0 @192.168.2.168:8012) with one U4-shape replication",
+  "10 PASS both: E1.json and E3.json parse and carry all 7 contracted unit keys; shared modules under experiments/context-cache/ (client.py, runner.py, analyze.py, README.md, __init__.py) carry 2026-10-20 mtimes, unchanged by either 2026-10-21 run; both authors' artefacts lie inside their declared cells + handoff + unit card (E1 disclosed .occamy.lock)"
+ ],
+ "blocker": "",
+ "next_unit_hint": "Gate: advance with corrections. E1's G1 answer stands unchanged (break is real, mechanism adjudicated legitimate, partial honest). E3 needs two sentences changed before citing: (a) 'mamba checkpoint eviction' is NOT REFUTED for the mechanism - say 'the universal eviction attribution is refuted; the residual's mechanism is not established'; (b) the deficit histogram is the salt-scoped recomputed series, not the rows' stored field. The decisive open test is unchanged and named: the same append chain on a pure-attention endpoint to separate mamba checkpoint granularity from radix-insert lag; event 7 needs a raised-cap 44-turn E1 rerun.",
+ "write_paths": [
+  "orchestration/units/VE13.md",
+  "orchestration/handoffs/VE13.json",
+  "orchestration/VERDICTS.md"
+ ],
+ "not_reproduced": [],
+ "overstated": [
+  "E3 headline 'G7 hypothesis REFUTED (mamba checkpoint eviction)' - the evidence licenses 'not established' for the mechanism (pool-scale gauges only, 3 perturbed appends at 0,0, 4/35 repeats still lose state); 'refuted' holds only for the universal attribution",
+  "E3 'deficit histogram {0:31,192:2,768:1,832:1}' and '31/35 appends' are the analyzer's salt-scoped recomputed series, not the rows' stored deficit field (stored: {0:30,192:2,768:1,832:1,-1728:1}); the report's recomputed_rows note discloses the recompute, the headline does not",
+  "E3 '43 metrics snapshots' - e3_metrics.jsonl holds 44; the probe made 42 metric GETs (44 GETs = 2 info + 42 metrics)",
+  "E1 mechanism 'cached is 64 against 6464-6528 on its neighbours' - warm neighbours at events >=3 span 6464-8448 (the 12 event rows themselves are cached=64, exact)"
+ ],
+ "unverified": [
+  "E3 per-chain mamba checkpoint eviction is not directly observable: no per-chain counter exists in the archived metrics, and the 24-prefix perturbation is an upper-bound substitute (the author records that assumption)",
+  "E1 break-cost generality: one endpoint and one summariser (deterministic prefix-truncating, nested summaries); the summarise arm's ~4.3k reuse is summariser-dependent, as the handoff already caveats"
+ ],
+ "corrections": [
+  "E1: 7 non-event fork rows (u4-s1/2/3 turns 18 and 19, u4-s3 turn 23) record cached=64 - post-fold retention failures the mechanism paragraph does not mention; the one at u4-s3 turn 23 is the next-neighbour of event 22 and therefore deflates that pair's break cost (conservative direction, it cannot inflate the headline)",
+  "E3: state the decomposition as residual = tail_term + deficit; the 'residual == L - 64*floor(L_prev/64) - L%64' form is valid only where deficit == 0",
+  "E3: p60 round-2 stored deficit is -1728 because the driver stored prev_prompt_tokens=269 from an interleaved probe; the chain-scoped recompute (prev 2019) gives 0 - the histogram should be labelled as the recomputed series",
+  "E1: fork-arm server prompt_tokens delta at events median 411 (189-621) and 'event 2 both arms cached=0' both reproduced exactly"
+ ],
+ "red_green": [
+  "E1 distinctness GREEN: 18/18 informative pairs, first-diff offset 222 at all 18 events, pre-fork turns byte-identical; RED (pre-U13 legacy plan): 114/114 turns byte-identical, guard raises the U4-defect message, 0 informative pairs",
+  "E3 grid identity GREEN: deficit == 64*floor(L_prev/64) - cached on 70/70 deficit-bearing rows; RED: replacing floor(L_prev/64) with L_prev fails 70/70"
+ ],
+ "tool_calls": 37,
+ "bound": 35,
+ "assumptions": {
+  "bound_overrun": "VE13 used 37 tool calls against the card's <=35 hard bound (2 over): the overrun is two dead-end exploratory reads (plan entries carry no 'messages' key) plus the E3 kind x phase cross-tab needed to locate the histogram's row set. 0 live requests, no lock acquisition, no write outside the three declared paths.",
+  "recompute_authority": "For E3 the analyzer's salt-scoped prev_prompt_tokens (e3_analyze.py:127-133, report.recomputed_rows) is treated as authoritative for chain appends; the rows' stored driver field is reported alongside."
+ }
+}

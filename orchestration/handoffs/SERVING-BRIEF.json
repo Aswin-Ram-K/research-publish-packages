@@ -1,0 +1,54 @@
+{
+  "unit": "SERVING-BRIEF",
+  "status": "done",
+  "mode": "workspace-write",
+  "artifacts": [
+    "papers/context-cache/SERVING-BRIEF.md",
+    "papers/context-cache/serving_brief.py",
+    "state/serving-brief.json",
+    "tests/test_serving_brief.py",
+    "orchestration/units/SERVING-BRIEF.md"
+  ],
+  "evidence": {
+    "commands": [
+      ".venv/bin/python papers/context-cache/serving_brief.py --check",
+      ".venv/bin/python -m pytest tests/test_serving_brief.py -q",
+      ".venv/bin/python papers/context-cache/verify_package.py",
+      ".venv/bin/python - <<'EOF' (in-process red checks: drift EXPECTED, doctor table digit, doctor prose digit) EOF"
+    ],
+    "check": "SERVING-BRIEF CHECK PASS  19 items, 13 cells, all figures re-derived; tables, markers and prose numbers match the ledger",
+    "pytest": "3 passed in 5.67s",
+    "verify_package": "PASS — 63 claims in CLAIMS.md, 63 mapped 1:1, 2 script-backed + 61 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none",
+    "items": 19,
+    "cells_pinned": 13,
+    "live_requests": 0,
+    "locks_taken": 0,
+    "target_writes": 0,
+    "files_created": 4,
+    "red_green": [
+      "RED1 caught: C47.mean_uncached_per_turn: recomputed 739.2 != paper 740.2 (tol 0.0001) — drifting EXPECTED is refused",
+      "RED2 table drift caught: True — replacing one digit inside the generated numbers table makes the block comparison fail",
+      "RED3 prose drift caught: [\"line 56: number '68' appears in prose but in no ledger row\"]"
+    ],
+    "prose_rule": "every numeral in a non-table, non-code line of the brief must appear in the generated tables; every S-item must be cited somewhere in the brief"
+  },
+  "assumptions": [
+    "S19 (production flag set) is pinned to the config capture state/config/live-server-config.json rather than a live /get_server_info call: the unit took 0 live requests by design, and the capture's sha256 ef5b894f… is the config_sha256 M4's run.json already pins.",
+    "The engine comparison is described as one 32k band (284 rows per cell) because that is all C63 measures; no extrapolation to other bands is made.",
+    "Paper values are quoted from recompute.EXPECTED, not recomputed values, where the two differ in the last printed digit (C34 hit ms/token 0.004659 paper vs 0.004661 recomputed, inside tolerance); the brief therefore quotes per-token rates that both agree on and omits the ratio that would expose the rounding gap."
+  ],
+  "bound": "1 run, ~25 tool minutes, 0 live requests",
+  "blocker": "",
+  "next_unit_hint": "Verifier V-SERVING-BRIEF: re-run --check and the three red checks (drift EXPECTED, table digit, prose digit), then audit the brief's qualitative claims against CLAIMS.md/GAPS.md line by line — the numbers are machine-guarded, the prose ('cheapest measured configuration', 'only newest band reusable', 'persistent per-turn cost', gap IDs G4/G7/G12/G13) is not. Also confirm no file outside the four declared write paths changed.",
+  "write_paths": [
+    "papers/context-cache/SERVING-BRIEF.md",
+    "papers/context-cache/serving_brief.py",
+    "state/serving-brief.json",
+    "tests/test_serving_brief.py",
+    "orchestration/units/SERVING-BRIEF.md",
+    "orchestration/handoffs/SERVING-BRIEF.json"
+  ],
+  "tool_calls": 58,
+  "started": "2026-10-23T19:19:08-05:00",
+  "ended": "2026-10-23T19:32:00-05:00"
+}

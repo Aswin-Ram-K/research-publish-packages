@@ -1,0 +1,40 @@
+{
+  "unit": "UFIXPKG8",
+  "status": "partial",
+  "artifacts": [
+    "orchestration/units/UBUILD1.build.sh",
+    "strategy/OUTSIDE_TOKEN_REDACTION.md",
+    "tests/test_ufixpkg8_tag_re.py",
+    "orchestration/units/UFIXPKG8.md",
+    "orchestration/handoffs/UFIXPKG8.json"
+  ],
+  "evidence": {
+    "live_regex_before": "orchestration/units/UBUILD1.build.sh:907 -> TAG_RE = re.compile(\"^(?:K|F|S|C|R|D|N)[\" + DIGITS + \"][\" + DIGITS + \"]$\" (extracted and exec'd, effective pattern ^(?:K|F|S|C|R|D|N)[0123456789][0123456789]$|^TAG_[0123456789][0123456789]$)",
+    "live_regex_after": "orchestration/units/UBUILD1.build.sh:907 -> TAG_RE = re.compile(\"^(?:K|F|S|C|R|D|N|P)[\" + DIGITS + \"][\" + DIGITS + \"]$\"",
+    "red_green_control": "RED: python3 -m pytest tests/test_ufixpkg8_tag_re.py -q --noconftest vs UNPATCHED live file -> '5 failed, 23 passed in 0.02s' (the 5 = test_live_gate_accepts_the_minted_p_family[P01..P05]). GREEN: .venv/bin/python -m pytest tests/test_ufixpkg8_tag_re.py -q vs PATCHED live file -> '28 passed in 0.01s'.",
+    "non_vacuous": "yes - both runs read TAG_RE out of the live orchestration/units/UBUILD1.build.sh and exec it; only the file changed between red and green, and the failing assertion prints the live pattern ^(?:K|F|S|C|R|D|N)[0123456789]... 'P05' rejects it.",
+    "before_string_counts": "build script before-string occurrences = 1; doc anchor-line occurrence counts = 1, 1 (both asserted equal to 1 before any write).",
+    "doc_edit": "strategy/OUTSIDE_TOKEN_REDACTION.md lines 67-70: stale quote '(?:K|F|S|C|R|D)[0-9][0-9]$ at UBUILD1.build.sh:879' replaced with the live class '(?:K|F|S|C|R|D|N|P)' at ':907', and the false claim 'P01..P05 ... is **not** accepted by the build gate's TAG_RE' rewritten as a historical statement plus a 'Corrected by UFIXPKG8' note.",
+    "rejection_demo": "15 negative tokens rejected by the patched live regex, all in test_live_gate_still_rejects_words_and_near_misses: 'hello', 'word', 'P', 'P1', 'P001', 'p01', 'P01x', 'P0a', 'X01', 'Q01', 'D-067', 'TAG_1', 'TAG_100', '', 'the withheld rationale note'. 8 already-accepted families stay accepted: K01, F56, S02, C01, R10, D43, N01, TAG_01.",
+    "tests_added": "tests/test_ufixpkg8_tag_re.py - 28 tests (5 P-family, 8 other-family, 15 negative), each parameterised; fails on the old grammar, passes on the fixed one.",
+    "full_suite": "'.venv/bin/python -m pytest tests/ -q' -> '3 failed, 1025 passed, 1 skipped in 68.80s'. Failures: tests/test_kg_policy.py::test_real_target_config_declares_the_decision; tests/test_package_tools.py::PackageTools::test_census_reproduces_documented_totals_on_shipped_package; tests/test_package_tools.py::PackageTools::test_checker_is_sensitive.",
+    "suite_failure_triage": " 'parse_fixture.py': 1, 'reflex-decisions.ts': 1})\\nnKind\\tinside=0\\toutside=1\\tkeys=0\\tjson:Counter({'MATERIALISE': 18, 'fixture-190.json': 3, 'reflex-decisions': 3, 'reflex-decisions.ts': 3, 'parse_fixture.py': 2, 'DECISION_CASE_SCHEMA.ts': 1, 'DecisionCase': 1, 'DecisionKind': 1, 'nKind': 1, 'EXP12-typed-channel-comparison-prereg.md': 1, 'typed-channel': 1})\\n\" | E   AssertionError: 1 != 0 : missing=0 hash_mismatch=1 size_mismatch=1 unlisted=0 listed_but_absent=0 |       HASH: fixture/reflex-decisions.ts |       SIZE: fixture/reflex-decisions.ts |     manifest_self_recomputes=True (blank generated_utc; drop manifest_self; sort_keys indent=2) |     VERDICT FAIL | /usr/lib/python3.14/unittest/case.py:918: AssertionError: 1 != 0 : missing=0 hash_mismatch=1 size_mismatch=1 unlisted=0 listed_but_absent=0 | =========================== short test summary info ============================ | FAILED tests/test_kg_policy.py::test_real_target_config_declares_the_decision | FAILED tests/test_package_tools.py::PackageTools::test_census_reproduces_documented_totals_on_shipped_package | FAILED tests/test_package_tools.py::PackageTools::test_checker_is_sensitive | 3 failed, 3 deselected in 0.25s",
+    "suite_failures_touch_the_tag_regex": false,
+    "untriaged_live_copies_outside_write_paths": [
+      "tools/package/gate.sh:110 TAG_RE = re.compile(\"^(?:K|F|S|C|R|D|N)[\" + DIGITS + \"]...$\") - emitted/checked-in copy of the same gate, still rejects P",
+      "strategy/CODE_AGNOSTIC_RELEASE_POLICY.md:577 quotes the older form ^(K|F|S|C|R|D)[0-9]{2}$ | ^TAG_[0-9]{2}$",
+      "strategy/PARENT_REFERENCE_CLASSIFICATION.md:105,111 quote the older form and the 'not P' caveat",
+      "strategy/RELEASE_BUILD_3.md:388 already describes the intended OLD->NEW widening (P included); no edit needed"
+    ]
+  },
+  "blocker": "Partial by write-path scope, not by failure: the gate grammar lives in one more live copy UFIXPKG8 does not own - tools/package/gate.sh:110 (the emitted/checked-in gate.sh, same class K|F|S|C|R|D|N, still rejecting P01-P05). Two prose records also quote the old class (strategy/CODE_AGNOSTIC_RELEASE_POLICY.md:577, strategy/PARENT_REFERENCE_CLASSIFICATION.md:105,111). Also unverified by this unit: whether the 3 pre-existing-looking full-suite failures above are affected by this change (their triage text is in evidence).",
+  "next_unit_hint": "One mechanical unit owning tools/package/gate.sh should apply the same single-token widening at line 110: (?:K|F|S|C|R|D|N) -> (?:K|F|S|C|R|D|N|P), then re-run 'tests/test_ufixpkg8_tag_re.py' extended to load_tag_re(EMITTED_GATE) and the full suite. Confirm the 3 unrelated failures (test_kg_policy manifest/config, test_package_tools census + checker sensitivity) are pre-existing by re-running them on a stashed copy of this diff.",
+  "write_paths": [
+    "orchestration/units/UBUILD1.build.sh",
+    "strategy/OUTSIDE_TOKEN_REDACTION.md",
+    "tests/**",
+    "orchestration/units/UFIXPKG8.md",
+    "orchestration/handoffs/UFIXPKG8.json",
+    "scratch/ufixpkg8/**"
+  ]
+}

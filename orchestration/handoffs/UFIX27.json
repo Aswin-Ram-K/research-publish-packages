@@ -1,0 +1,61 @@
+{
+  "unit": "UFIX27",
+  "status": "done",
+  "artifacts": [
+    "strategy/DTAG_NEUTRALISATION.md",
+    "orchestration/handoffs/UDTAG1.json",
+    "orchestration/units/UFIX27.md",
+    "orchestration/handoffs/UFIX27.json"
+  ],
+  "evidence": {
+    "wrong_total_sites": "grep -rn '3,009,198|3009198' over the whole workspace (excluding .git): 9 hits at 4 distinct sites - strategy/DTAG_NEUTRALISATION.md:8 (writable, live); orchestration/handoffs/UDTAG1.json:25 (writable, frozen); orchestration/units/UVER24.md:37 (forbidden, verifier record, correct in context); orchestration/handoffs/UVER24.json:22,:30,:37 and strategy/VERIFICATION_REPORT_23.md:151,:161,:214 (forbidden, verifier records, correct in context). Zero hits under scratch/udtag1/tree-five* or any MANIFEST.json.",
+    "byte_math_from_disk": "scratch/udtag1/tree-five: 45 files, 3008830 total, MANIFEST.json 22325, payload 2986505; tree-five-b identical; base scratch/ubij3/tree-three-r2: 45 files, 3008378 total, MANIFEST.json 21873, payload 2986505 (payload byte-identical base vs emitted).",
+    "extra_site_found": "strategy/DTAG_NEUTRALISATION.md:6 said the 44 payload files total 3,008,378 bytes; disk says 2,986,505 (3,008,378 is the base tree total incl. its 21,873-byte manifest). Same class as defect 1, not in UVER24's named list; corrected in place with the old value preserved.",
+    "defect2_scratch_udtag1_listing": "dtag_one.py, regen_manifest.py, check_emitted.py, logs_build.txt, logs/ (census-before.txt, census-after.txt, census-before-seed0.txt, census-after-seed0.txt, census.diff, census-seed0.diff, compare.diff, compileall.out, recompute-before.txt, recompute-after.txt), base-copy/, run-base/, run-five/, run-b/, tree-five/, tree-five-b/. No *facts* file anywhere in the workspace (only .venv internals and state/logs/U8.75_ledger_facts.txt); UDTAG1.md never mentions 'facts'. Entry replaced with scratch/udtag1/logs/.",
+    "handoff_reparse": "python3 -c 'import json;json.load(open(\"orchestration/handoffs/UDTAG1.json\"))' -> VALID (exit 0); artifacts[5]=scratch/udtag1/logs/, corrections=2; frozen string 3009198 still present verbatim in evidence.manifest.",
+    "frozen_trees_untouched": "sha256 scratch/udtag1/tree-five/MANIFEST.json and tree-five-b/MANIFEST.json identical before and after this unit's edits.",
+    "guard": "every in-place replacement asserted old_string.count()==1 immediately before writing; anchor '  },\\n  \"blocker\": \"\",' asserted once before inserting the corrections array.",
+    "commands": [
+      "grep -rn --binary-files=without-match -E '3,009,198|3009198' .",
+      "ls -la scratch/udtag1/ scratch/udtag1/logs/",
+      "python3 -c 'import json;json.load(open(\"orchestration/handoffs/UDTAG1.json\"))'"
+    ]
+  },
+  "edits": [
+    {
+      "path": "strategy/DTAG_NEUTRALISATION.md:8",
+      "treatment": "live statement - corrected in place, old value kept in the parenthetical",
+      "before": "`counts.files` 45, `counts.bytes_total` 3,009,198.",
+      "after": "`counts.files` 45, `counts.bytes_total` 3,008,830 (corrected 2026-10-16 from `3,009,198`: the manifest and the disk agree on 3,008,830 = 44 payload files 2,986,505 + `MANIFEST.json` 22,325; wrong by 368 bytes, found by UVER24 and re-derived from disk by UFIX27)."
+    },
+    {
+      "path": "strategy/DTAG_NEUTRALISATION.md:6",
+      "treatment": "live statement - corrected in place, old value kept in the parenthetical (extra finding, same class)",
+      "before": "the 44 payload files total **3,008,378 bytes, unchanged**",
+      "after": "the 44 payload files total **2,986,505 bytes, unchanged** (corrected 2026-10-16 from `3,008,378`: that is the base *tree* total of 45 files including its own 21,873-byte `MANIFEST.json`; the emitted payload is byte-for-byte the base payload, 2,986,505 - found and re-derived from disk by UFIX27, beyond UVER24's two named defects)"
+    },
+    {
+      "path": "orchestration/handoffs/UDTAG1.json (artifacts[5])",
+      "treatment": "phantom entry replaced by the real fact-bearing artifact (brief prefers naming the real one over deleting)",
+      "before": "    \"scratch/udtag1/udtag1_facts.json\",",
+      "after": "    \"scratch/udtag1/logs/\","
+    },
+    {
+      "path": "orchestration/handoffs/UDTAG1.json (top-level, after evidence)",
+      "treatment": "frozen record - value untouched, dated correction note appended beside it",
+      "before": "  },\n  \"blocker\": \"\",",
+      "after": "  },\n  \"corrections\": [\n    \"Corrected 2026-10-16: evidence.manifest recorded counts.bytes_total 3009198; the manifest (scratch/udtag1/tree-five/MANIFEST.json:42) and the disk say 3008830 = 44 payload files 2986505 + MANIFEST.json 22325. Wrong by 368 bytes. The frozen value in evidence.manifest is left exactly as UDTAG1 wrote it; this note is the correction. Established by UVER24 (orchestration/units/UVER24.md:37, strategy/VERIFICATION_REPORT_23.md:151 and :161), re-derived from disk by UFIX27.\",\n    \"Corrected 2026-10-16: artifacts[] previously listed scratch/udtag1/udtag1_facts.json, which does not exist on disk; no file named *facts* exists anywhere in the workspace and orchestration/units/UDTAG1.md never names one, so the entry was a phantom with no real counterpart of that name. It was replaced with the real fact-bearing output scratch/udtag1/logs/ (census-before/after and -seed0.txt, census.diff, census-seed0.diff, compare.diff, compileall.out, recompute-before/after.txt). Found by UVER24 (orchestration/handoffs/UVER24.json:22), verified against disk by UFIX27.\"\n  ],\n  \"blocker\": \"\","
+    }
+  ],
+  "blocker": "",
+  "next_unit_hint": "Independent verifier: re-run the grep, the disk byte sum, and the json.load; red->green by reverting line 8 to 3,009,198 (guard must fail on the stale figure). Open author decisions remain unchanged from UVER24: ship second-labeller/reflex-decisions.sandbox.ts so parse_fixture.py/compare.py can run, and the manifest source/source_sha256 exposure policy. Not re-opened here.",
+  "write_paths": [
+    "strategy/DTAG_NEUTRALISATION.md",
+    "orchestration/handoffs/UDTAG1.json",
+    "orchestration/units/UFIX27.md",
+    "orchestration/handoffs/UFIX27.json",
+    "scratch/ufix27/**"
+  ],
+  "tool_calls": 9,
+  "bound": 10
+}

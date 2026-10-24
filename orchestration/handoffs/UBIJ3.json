@@ -1,0 +1,487 @@
+{
+ "unit": "UBIJ3",
+ "status": "done",
+ "artifacts": [
+  "scratch/ubij3/tree-three-r2",
+  "scratch/ubij3/bij_three.py",
+  "scratch/ubij3/kcensus3.py",
+  "scratch/ubij3/check_escapes.py",
+  "scratch/ubij3/measure.sh",
+  "scratch/ubij3/build-r2.log",
+  "scratch/ubij3/measure.log",
+  "scratch/ubij3/census-MINE-three-r2.txt",
+  "scratch/ubij3/census-BASE-one-r2.txt",
+  "strategy/COHERENT_BIJECTION_EXTENSION_2.md",
+  "orchestration/units/UBIJ3.md"
+ ],
+ "evidence": {
+  "verdict": "Ship scratch/ubij3/tree-three-r2. Invariant-safe (guard delta +0, stimulus digest identical) AND better than UBIJ1 (frozen 3,348 vs 5,364, -37.6%, same in-stimulus floor, verifier shipped). UBIJ2's 3,118 must NOT ship: its headline was bought by rewriting 554 in-stimulus occurrences.",
+  "commands": [
+   "python3 scratch/ubij3/bij_three.py scratch/ubij3/tree-three-r2 2>&1 | tee scratch/ubij3/build-r2.log",
+   "python3 scratch/ubij3/bij_three.py scratch/ubij3/tree-three-b  (second build, idempotence)",
+   "diff -r scratch/ubij3/tree-three-r2 scratch/ubij3/tree-three-b",
+   "cp -a scratch/ubij3/tree-three-r2 scratch/ubij3/tree-three-run  (instrumented twin)",
+   "python3 -m compileall -q scratch/ubij3/tree-three-run",
+   "cd scratch/ubij3/tree-three-run/second-labeller && cp ../fixture/reflex-decisions.ts ./reflex-decisions.sandbox.ts && python3 parse_fixture.py && python3 compare.py",
+   "cd scratch/ubij3/tree-three-run && python3 verify/recompute-claims.py",
+   "cd scratch/ubij3/tree-three-run && python3 harness/prepare.py",
+   "python3 scratch/ubij1/census_one.py scratch/ubij1/tree-one-r2  > scratch/ubij3/census-BASE-one-r2.txt",
+   "python3 scratch/ubij1/census_one.py scratch/ubij3/tree-three-r2 > scratch/ubij3/census-MINE-three-r2.txt",
+   "python3 scratch/ubij3/kcensus3.py <tree>   (K01..K10 layer, 4 trees)",
+   "python3 scratch/ubij3/check_escapes.py scratch/ubij1/tree-one-r2 scratch/ubij3/tree-three-r2",
+   "diff <(cd scratch/ubij1/tree-one-r2 && find . -type f|sort) <(cd scratch/ubij3/tree-three-r2 && find . -type f|sort)"
+  ],
+  "guard": {
+   "command": "python3 scratch/ubij3/bij_three.py scratch/ubij3/tree-three-r2  (guard runs before any tree is written)",
+   "literal_output": [
+    "GUARD  baseline inside=2171 distinct=30 total=5364",
+    "GUARD  emitted  inside=2171 distinct=30 total=3348",
+    "GUARD  inside-stimulus delta = +0",
+    "GUARD PASSED: model-readable stimulus preserved exactly (delta 0)."
+   ],
+   "mechanism": "identical scanner scratch/ubij1/census_one.py run as a subprocess on baseline and on the temp build; inside count AND distinct count must be exactly equal or shutil.rmtree(tmp) + exit 3, no tree written. FAIL-CLOSED.",
+   "guard_passed": true,
+   "independent_corroboration": {
+    "stimulus_only_sha256_baseline": "26c5ddcb4b68d5c3181db388b7bb0bf829e73c72304d5f0d3d302bb40c9d4653",
+    "stimulus_only_sha256_mine": "26c5ddcb4b68d5c3181db388b7bb0bf829e73c72304d5f0d3d302bb40c9d4653",
+    "identical": true,
+    "method": "sha256 over the 190 fixture question+options values and the 1000 rendered situation strings of train+dev",
+    "census_per_class_datajsonl_mine": "inside=1221 outside=0 keys=0",
+    "census_per_class_datajsonl_baseline": "inside=1221 outside=164 keys=1000"
+   }
+  },
+  "census_frozen_184_ids": {
+   "scanner": "scratch/ubij1/census_one.py (identical on both sides)",
+   "rows": [
+    {
+     "tree": "scratch/uneutral3/tree-stripped",
+     "files": 44,
+     "total": 9247,
+     "inside": 2171,
+     "outside": 5701,
+     "keys": 1375,
+     "distinct": null
+    },
+    {
+     "tree": "scratch/ubij1/tree-one-r2",
+     "files": 44,
+     "total": 5364,
+     "inside": 2171,
+     "outside": 2024,
+     "keys": 1169,
+     "distinct": 90
+    },
+    {
+     "tree": "scratch/ubij2/tree-two-r2",
+     "files": 44,
+     "total": 3118,
+     "inside": 1617,
+     "outside": 1381,
+     "keys": 120,
+     "distinct": 73,
+     "note": "inside 554 lower than baseline == INVARIANT BROKEN"
+    },
+    {
+     "tree": "scratch/ubij3/tree-three-r2",
+     "files": 45,
+     "total": 3348,
+     "inside": 2171,
+     "outside": 1099,
+     "keys": 78,
+     "distinct": 74
+    }
+   ],
+   "mine_vs_ubij1": {
+    "total_delta": -2016,
+    "total_pct": -37.6,
+    "inside_delta": 0,
+    "outside_delta": -925,
+    "keys_delta": -1091
+   }
+  },
+  "census_complete_decode_K_layer": {
+   "scanner": "scratch/ubij3/kcensus3.py",
+   "K_layer": {
+    "total": 3676,
+    "outside_values": 3586,
+    "keys": 90,
+    "inside_stimulus": 0,
+    "identical_in_all_four_trees": true
+   },
+   "rows": [
+    {
+     "tree": "tree-stripped",
+     "frozen": 9247,
+     "K": 3676,
+     "complete_decode": 12923
+    },
+    {
+     "tree": "ubij1/tree-one-r2",
+     "frozen": 5364,
+     "K": 3676,
+     "complete_decode": 9040
+    },
+    {
+     "tree": "ubij2/tree-two-r2",
+     "frozen": 3118,
+     "K": 3676,
+     "complete_decode": 6794
+    },
+    {
+     "tree": "ubij3/tree-three-r2",
+     "frozen": 3348,
+     "K": 3676,
+     "complete_decode": 7024
+    }
+   ],
+   "note": "complete-decode is a SEPARATE number from the frozen census; a headline that mixes them is wrong. The fixture's kind values were already the neutral K01..K10 layer in the source, which is why the K figure is constant across trees."
+  },
+  "sizes_and_idempotence": {
+   "tree_stripped": {
+    "files": 44,
+    "bytes": 3096483
+   },
+   "ubij1_tree-one-r2": {
+    "files": 44,
+    "bytes": 3057815
+   },
+   "ubij2_tree-two-r2": {
+    "files": 44,
+    "bytes": 3038324
+   },
+   "ubij3_tree-three-r2": {
+    "files": 45,
+    "bytes": 3006637
+   },
+   "idempotence": "PASS - two consecutive builds byte-identical (diff -r exit 0)",
+   "manifest_digest": "995299b123335bf4c9414f3cb84ab834eec33b7721b1b3b82607783ceb9d466f",
+   "pristine_twin": "headline figure taken from scratch/ubij3/tree-three-r2; no __pycache__/*.out/*.err; find -type f = 45. All instrumented runs done in scratch/ubij3/tree-three-run because the tools mutate the tree they run in."
+  },
+  "tool_exit_codes": {
+   "compileall": {
+    "exit": 0,
+    "output": "",
+    "note": "no SyntaxWarning; UBIJ2 emitted '\\F is an invalid escape sequence' at harness/tccommon.py:118"
+   },
+   "jsonl_train": {
+    "exit": null,
+    "records": 800,
+    "bad": 0,
+    "sha256": "95e0ea1314a01efc641b0e493e66a10c11a59fa7aa4cdf5bcd5e4201093b474c"
+   },
+   "jsonl_dev": {
+    "exit": null,
+    "records": 200,
+    "bad": 0,
+    "sha256": "a9cd7e4a0698b628cc0d1b40f5d2041b717545d4e184ffbba8c3e9387050961a"
+   },
+   "jsonl_disagreements": {
+    "exit": null,
+    "records": 18,
+    "bad": 0,
+    "sha256": "cb719d3a3b02a946ff0a3df898afff2886b608f95bc9059e32502b623c7acc07"
+   },
+   "parse_fixture_py": {
+    "exit": 0,
+    "literal_output": "records_found 190, cases_parsed 190, parse_failures [], options_total 721, distinct_labels 74"
+   },
+   "compare_py": {
+    "exit": 0,
+    "literal_output": "cases 190, options_total 721, routeA agreement 0.34210526315789475 kappa 0.32520740993294694 exact_index_matches 65 ties 120 zero_score_cases 41"
+   },
+   "verify_recompute_claims_py": {
+    "exit": 0,
+    "shipped": true,
+    "sha256": "3e67a39eadc9a4f65d32462ec7093c167d01089089a7a88b131415ef65275dc5",
+    "shipped_matches_authoritative": true
+   },
+   "harness_prepare_py": {
+    "exit": 2,
+    "literal_stderr": "REFUSED: corpus digest mismatch -- expected c78681d6cf35bf23245bd24963c5fbdd6b3ea03e1bf74d1b3ddc5a49ca63fd66, got f1359a72d0826dd6c44cf2672ddaa665cdeb35aad56f0f15f4ba52867bb5ddf3",
+    "note": "pre-existing: single REFUSED line, no traceback, no other error. Confirmed the reason is only that corpus-digest pin. UBIJ1 got 47fb4a50..., UBIJ2 got 1aa0ad32...; the 'got' self-digest necessarily changes under any renaming."
+   }
+  },
+  "metrics_remeasured_here": {
+   "source": "verify/recompute-claims.py (exit 0) + second-labeller/compare.py (exit 0) + second-labeller/metrics.json, all in the emitted tree; nothing inherited from UBIJ2",
+   "arms": {
+    "modernbert-base": [
+     0.347368,
+     0.347368
+    ],
+    "deberta-v3-base": [
+     0.347368,
+     0.347368
+    ],
+    "setfit-mpnet": [
+     0.263158,
+     0.263158
+    ],
+    "majority-class": [
+     0.452632,
+     null
+    ],
+    "shuffled-label": [
+     0.231579,
+     null
+    ],
+    "decider-4b-repro": [
+     0.678947,
+     null
+    ]
+   },
+   "arms_format": "key -> [reported, recomputed]",
+   "confusion_2x2": {
+    "both": 39,
+    "headOnly": 27,
+    "deciderOnly": 90,
+    "neither": 34,
+    "sum": 190
+   },
+   "all_claim_numbers_preserved": "ALL CLAIM NUMBERS PRESERVED: True",
+   "routeA": {
+    "ties": 120,
+    "agreement": 0.34210526315789475,
+    "kappa": 0.32520740993294694,
+    "exact_index_matches": 65,
+    "zero_score_cases": 41
+   },
+   "routeB_primary": {
+    "agreement": 0.9052631578947369,
+    "kappa": 0.9013584840356494,
+    "exact_index_matches": 172,
+    "n_disagreements": 18
+   },
+   "AB_mutual_agreement": 0.3526315789473684,
+   "stratification_closed_subset_kappa": 0.8837023738280471,
+   "stratification_closed_subset_n": 106,
+   "stratification_roster_and_bespoke_subset_kappa": 0.9139973672663448,
+   "stratification_roster_and_bespoke_subset_n": 84,
+   "cases": 190,
+   "options_total": 721,
+   "disagreements_count_routeB": 18,
+   "note": "UBIJ2 left closed/roster kappa, arms 0.347368 x2, arm 0.263158 and the 2x2 un-extracted; all measured here and all match UBIJ1."
+  },
+  "kept_digests_baseline_vs_mine": {
+   "harness/data/fixture-190.json": {
+    "baseline": "022be4a3c4ba3757",
+    "mine": "022be4a3c4ba3757",
+    "moved": false
+   },
+   "harness/data/train.jsonl": {
+    "baseline": "e81baca922b0b44e",
+    "mine": "95e0ea1314a01efc",
+    "moved": true,
+    "why": "non-prose record material renamed (goldIndex and other field keys, renamed values); situation values proven identical by guard + stimulus digest"
+   },
+   "harness/data/dev.jsonl": {
+    "baseline": "4162971988fb8c35",
+    "mine": "a9cd7e4a0698b628",
+    "moved": true,
+    "why": "same as train"
+   },
+   "fixture_correctness_digest": {
+    "baseline": "c7696edc0e71d83faafc2e489925788e0f36c6af94913674f8953718352c9a55",
+    "mine": "c7696edc0e71d83faafc2e489925788e0f36c6af94913674f8953718352c9a55",
+    "moved": false
+   },
+   "scoring_projection_sha256": {
+    "baseline": "620e4a07f8add8c5c8073017d4148d1fa542bea1c711a02f9f98fd9193e8e50b",
+    "mine": "620e4a07f8add8c5c8073017d4148d1fa542bea1c711a02f9f98fd9193e8e50b",
+    "moved": false,
+    "note": "computed from the GENERATED second-labeller/cases.json (absent from pristine trees) in tree-one / tree-three-run"
+   },
+   "second-labeller/metrics.json": {
+    "baseline": "6bf39077261f00be",
+    "mine": "6bf39077261f00be",
+    "moved": false
+   },
+   "MANIFEST.json": {
+    "baseline": "0553ea51672cb7f8",
+    "mine": "0553ea51672cb7f8",
+    "moved": false
+   },
+   "results/baselines.json": {
+    "baseline": "8d4c584cfa42441e",
+    "mine": "90689d5789ad7868",
+    "moved": true,
+    "why": "renamed kind/field values inside"
+   }
+  },
+  "fix2_escape_proof": {
+   "lookbehind": "lb = r\"(?<![A-Za-z0-9_.\\\\])\"",
+   "harness/tccommon.py:118 baseline": "    return f\"{render_context(kind, situation)}\\nCandidate option: {' '.join(str(option).split())}\"",
+   "harness/tccommon.py:118 mine": "    return f\"{render_context(kind, situation)}\\nCandidate option: {' '.join(str(option).split())}\"",
+   "byte_identical": true,
+   "harness/prepare.py:148 baseline": "\"template\": tc.TASK_PREFIX + \"\\\\nKind: {kind}\\\\nSituation: {situation}\\\\nCandidate option: {option}\",",
+   "harness/prepare.py:148 mine": "identical to baseline",
+   "nCandidate_occurrences": {
+    "baseline": 2,
+    "mine": 2,
+    "preserved": true,
+    "inside_stimulus": 0
+   },
+   "F19_option_occurrences": {
+    "baseline": 0,
+    "mine": 0
+   },
+   "invalid_upper_escape_lines": {
+    "baseline": 1,
+    "mine": 1,
+    "only_line": "harness/data/manifest.json:22",
+    "classification": "PRE-EXISTING dataset field-placeholder syntax, not an escape corruption: the identical line with identical decoded value (\\\\F32 / \\\\F39 / \\\\F45) is already in the untransformed tree-stripped (sha256 7c54a314...) and byte-identical in all four trees (one-r2 / two-r2 / three-r2: 58ae7f69...). Nothing in this unit touched it."
+   },
+   "runtime_effect": "compileall exit 0 with NO SyntaxWarning (UBIJ2 emitted '\\F is an invalid escape sequence')"
+  },
+  "fix3_verifier": {
+   "root_cause": "scratch/uneutral3/gen-pinned.log step 'R0 copy' records \"files_copied\": 41 and \"own_artefacts_skipped\": [\"INTEGRITY.md\",\"README.md\",\"REDACTION_REPORT.md\",\"redact.py\",\"variants\",\"verify\"] - so verify/ was never in tree-pinned, hence never in tree-stripped, hence absent from BOTH scratch/ubij1/tree-one-r2 and scratch/ubij2/tree-two-r2 (each verify/ holds only redaction-log.json). UBIJ1 concealed it at diagnostic time: scratch/uneutral3/run_diags.sh does cp \"$LIVE/verify/recompute-claims.py\" \"$TREE/verify/recompute-claims.py\" with the comment 'the shipped verifier (not in the emitted tree; copied in from the live tree)'.",
+   "fix": "builder stages verify/recompute-claims.py from repro/encoder-crossover-190-SANITISED/verify/ into the emitted set",
+   "proof_file_set": "diff of baseline vs emitted file lists is exactly '43a44 > ./verify/recompute-claims.py' - all 44 baseline files present, one added, 45 total, none lost",
+   "not_added_deliberately": [
+    "RECOMPUTE-CLAIMS.txt",
+    "RESIDUAL-SCAN.txt",
+    "VERIFICATION.txt",
+    "integrity-table.md",
+    "run-verification.sh",
+    "scrub-uscrub1.py"
+   ]
+  },
+  "packaging_surface": {
+   "claim_369_reproduces": false,
+   "origin_of_369": "unverified prose in strategy/COHERENT_BIJECTION_EXTENSION.md:236 and :276; that document's own rows sum to ~607",
+   "measured_raw_per_item": 309,
+   "measured_deoverlapped_spans": 240,
+   "in_non_json_text_only": 187,
+   "breakdown": {
+    "filename": 179,
+    "path": 100,
+    "pointer": 30
+   },
+   "keys": 0,
+   "stimulus_prose": 0,
+   "ids_present": "33 of 63; 30 occur in neither tree; max reachable over any tree = 316",
+   "never_counted_before": {
+    "file_names": 44,
+    "directory_names": 11
+   },
+   "unrenameable_core": [
+    {
+     "name": "preregistration/EXP12-typed-channel-comparison-prereg.md",
+     "exposes": "EXP12 + typed-channel",
+     "refs": 1,
+     "where": "MANIFEST.json:265",
+     "note": "best value per unit of work"
+    },
+    {
+     "name": "harness/tccommon.py",
+     "exposes": "tc = typed channel",
+     "refs": 13,
+     "files": 9,
+     "note": "imports dominate"
+    },
+    {
+     "name": "harness/tcmodel.py",
+     "exposes": "tc",
+     "refs": 9,
+     "files": 8,
+     "note": "imports dominate"
+    },
+    {
+     "name": "variants/no-union/ (+2 fixture copies)",
+     "exposes": "no-union ablation label",
+     "refs": 9,
+     "files": 2
+    },
+    {
+     "name": "harness/LEAD-WIRING.md",
+     "exposes": "LEAD",
+     "refs": 4,
+     "files": 3
+    }
+   ],
+   "dirs_with_vocabulary": [
+    "variants/",
+    "variants/no-union/",
+    "variants/no-union/files/",
+    "variants/no-union/files/fixture/"
+   ],
+   "non_census_labels": {
+    "imajev": {
+     "occ": 42,
+     "files": 10,
+     "note": "largest single non-census leak; unsure if project-specific or an external public dataset name"
+    },
+    "second-labeller-190": 36,
+    "no-union": 9,
+    "encoder-crossover-190": 4
+   },
+   "extra_findings": [
+    "MANIFEST.json carries \"source\": \"...docs/research/EXP#12-evidence/...\" plus source_sha256 digests of unreleased private-repo files",
+    "MANIFEST.json declares counts.files: 42 but lists 2 files absent from disk (INTEGRITY.md, README.md) and omits 4 that do (42-2+4=44)"
+   ],
+   "decision": "LEFT TO THE AUTHOR. No shipped file was renamed in this unit.",
+   "recommendation": "preregistration file first (1 ref); then one mechanical pass for tccommon.py/tcmodel.py; then variants/no-union/ (2 files) and LEAD-WIRING.md (3 refs). Missing-file pointers need no rename. Generic names out of scope."
+  },
+  "map_handling": {
+   "map_shipped": false,
+   "on_disk": false,
+   "logged": false,
+   "size": "91 identifiers over 5 families (kind, kind-dotted, field, role, tool-cap) in memory only",
+   "protected_from_renaming": {
+    "constructionRule": "read by harness/prepare.py",
+    "criteria": "load-bearing JSON key whose value subtree is prose",
+    "typed-channel": "census filename - renaming text cannot rename the shipped path"
+   },
+   "statement": "The full map is withheld by design and is not present in this handoff, the unit card or the strategy document."
+  },
+  "irreducible_inside_stimulus": {
+   "count": 2171,
+   "distinct": 30,
+   "ids": [
+    "editor",
+    "reasoner",
+    "model.call",
+    "attached",
+    "verifier",
+    "fs.read",
+    "fs.write",
+    "test.run",
+    "net.fetch",
+    "detached",
+    "topology",
+    "output-only",
+    "code-inspector",
+    "memory.write",
+    "memory-curator",
+    "policyHash",
+    "MATERIALISE",
+    "expanded[",
+    "broker",
+    "admit(",
+    "researcher",
+    "critic",
+    "web.fetch",
+    "code-review",
+    "escalation",
+    "expiresAtEpoch",
+    "ToolCallIR",
+    "reasonerCalls",
+    "canRequestEscalation",
+    "MutationProposal"
+   ],
+   "why": "agent roles, tool name-caps and option-label fragments occurring INSIDE the rendered question/options/situation prose the model reads (e.g. 'reasoner (propose only)', 'editor (attached, writes)'). Renaming them would change the stimulus and invalidate every published number. UBIJ1 reached the same conclusion."
+  },
+  "bound": {
+   "limit": 45,
+   "used": "~40",
+   "remainder": "none"
+  }
+ },
+ "blocker": "",
+ "next_unit_hint": "Verifier unit (not this author): re-run bash scratch/ubij3/measure.sh, re-derive the guard delta independently, and add a RED->GREEN check - re-run bij_three.py with the rendered-prose needles disabled and confirm the guard aborts with exit 3 and writes no tree. Then decide the packaging-surface renames (preregistration/EXP12-...md first, 1 ref; then tccommon.py/tcmodel.py, variants/no-union/, LEAD-WIRING.md) and whether to regenerate MANIFEST.json (still declares counts.files 42 and omits verify/recompute-claims.py).",
+ "write_paths": [
+  "scratch/ubij3/**",
+  "strategy/COHERENT_BIJECTION_EXTENSION_2.md",
+  "orchestration/units/UBIJ3.md",
+  "orchestration/handoffs/UBIJ3.json"
+ ]
+}

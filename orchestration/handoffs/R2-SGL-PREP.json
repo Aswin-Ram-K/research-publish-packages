@@ -1,0 +1,61 @@
+{
+  "unit": "R2-SGL-PREP",
+  "status": "done",
+  "artifacts": [
+    "state/config/variant_launcher.py",
+    "state/config/window_gate.py",
+    "scratch/r2sglprep/selftest_offline.py",
+    "scratch/r2sglprep/dryrun_evidence.py",
+    "scratch/r2sglprep/selftest-verdict.json",
+    "scratch/r2sglprep/selftest-out.txt",
+    "scratch/r2sglprep/dryrun-evidence.json",
+    "orchestration/units/R2-SGL-PREP.md"
+  ],
+  "evidence": {
+    "selftest_offline": "R2-SGL-PREP offline: 23 passed, 0 failed, 6/6 mutations caught",
+    "command": ".venv/bin/python scratch/r2sglprep/selftest_offline.py --red --json scratch/r2sglprep/selftest-verdict.json",
+    "dry_run": "3 configs x 0 host actions + --apply refused (rc=2): total_host_actions_attempted=0",
+    "checks_covered": [
+      "spec_is_production_sglang", "plan_single_delta", "plan_rewrites_in_place",
+      "plan_adds_absent_flag", "launcher_drift_refused", "launcher_declared_noop_refused",
+      "flag_parsing_spellings", "create_argv_from_spec_only", "dry_run_default_touches_nothing",
+      "apply_refused", "stop_safety_gate", "window_sequence_offline",
+      "restore_proof_catches_wrong_cmd", "restore_proof_catches_flag_drift", "capacity_never_gated",
+      "gate_green", "gate_catches_cold_cache", "gate_catches_contamination", "gate_catches_off_grid",
+      "gate_catches_broken_window", "gate_catches_non_200", "gate_respects_budget", "gate_on_grid_unit"
+    ],
+    "red_green": {
+      "launcher_drift": "caught",
+      "stop_safety": "caught",
+      "restore_cmd": "caught",
+      "gate_grid": "caught",
+      "gate_cold": "caught",
+      "gate_window": "caught"
+    },
+    "host_mutation": "0 docker commands, 0 ssh commands, 0 model requests, 0 lock acquisitions, no GX10 contact",
+    "target_readonly": "no write to /home/zer0null/Duval; no git command run against it",
+    "containment": "only state/config/{variant_launcher,window_gate}.py, scratch/r2sglprep/**, orchestration/units/R2-SGL-PREP.md written; scratch/r2-opt-sim/** belongs to a concurrent unit and was not touched"
+  },
+  "findings_for_the_live_window": [
+    "state/config/occamy-inspect-pre.json records HostConfig.AutoRemove=true -- production is an --rm container, so `docker stop` DESTROYS it and `docker start` has nothing to start (the defect WIN-SGL hit live). LaunchSession.assert_stop_safe() refuses before any create; the live card must run the stop-safety rewrite first.",
+    "The same spec carries no --page-size, no --radix-eviction-policy, no --disable-chunked-prefix-cache: a window on any of the three adds a flag rather than changing one. The delta guard reports it as `added` (correct), and PRODUCTION_DEFAULTS records lru as production's implicit eviction policy so a slru window is still a provable single delta.",
+    "Production control surface is `systemctl --user gx10-occamy-nvfp4.service`, not the container: systemd recreates the container within a second, so a container-level stop cannot hold :8012 free.",
+    "max_total_num_tokens is re-profiled from free memory at every start (MEASURED: 1,306,681 -> 1,644,272, no flag changed) -- restore_keys gates config only and reports capacity with its delta."
+  ],
+  "assumptions": [
+    "R2-SGL-PREP's contract is the card prompt plus the batch frame (variant launcher + G0 window gate); the two levers exercised in the dry-run evidence (--radix-eviction-policy, --page-size, --disable-chunked-prefix-cache) are the levers named in WIN-SGL's and R-SGL's own next_unit_hint, chosen as representative rather than as a decision about which window runs.",
+    "PRODUCTION_DEFAULTS['--radix-eviction-policy'] = 'lru' is taken from the SGLang radix_eviction_policy documentation already pinned in this repo (scratch/cache-audit/docs/pin_sgl_radix_eviction_policy.mdx, 'lru' listed first and documented as the default). No live request was made to confirm it; the live window's G0 captures /get_server_info, which carries the resolved policy.",
+    "The gate's MIN_REQUESTS=2 floor is a judgement: a gate that cannot pay for its cold+warm probes is not a gate. A window may raise the budget, never lower it below 2."
+  ],
+  "blocker": "",
+  "next_unit_hint": "The live R2-SGL window card should import both modules rather than re-implement them: `LaunchSession(executor, spec, config)` for the container dance (assert_stop_safe BEFORE create, prove_restore AFTER start) and `run_gate(cfg, send=runner.send, tokenizer=runner.tokenize)` before the first measured row, refusing via `assert_gate`. Two gaps this unit could not close offline and the window card must handle: (1) the SGLang /tokenize route is available (WIN-VLLM measured vLLM 404s) so the gate's tokenizer path is live-untested -- if it 404s the gate still passes, it just loses the offset; (2) the gate's C5b window check calls the tokenizer once per gate run, which counts as a request on a vLLM-shaped endpoint and must be metered against the cap.",
+  "write_paths": [
+    "state/config/variant_launcher.py",
+    "state/config/window_gate.py",
+    "scratch/r2sglprep/",
+    "orchestration/units/R2-SGL-PREP.md",
+    "orchestration/handoffs/R2-SGL-PREP.json"
+  ],
+  "tool_calls": 34,
+  "bound": 40
+}

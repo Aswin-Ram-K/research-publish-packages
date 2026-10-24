@@ -1,0 +1,43 @@
+{
+  "unit": "UREADME2",
+  "status": "done",
+  "artifacts": [
+    "scratch/ureadme2/clone/ (clone; README.md corrected, MANIFEST.json regenerated, committed and pushed)",
+    "scratch/ureadme2/verify/ (second fresh clone of the pushed repository)",
+    "orchestration/units/UREADME2.md",
+    "orchestration/handoffs/UREADME2.json",
+    "remote: https://github.com/Aswin-Ram-K/research-publish-packages @ 5554d82bb355ea709032f46cc7444da342329246 (main) — changed files: README.md, MANIFEST.json"
+  ],
+  "evidence": {
+    "baseline_check_at_36a82bcb": "python3 tools/package/check_manifest.py --package scratch/ureadme2/clone =>\nmissing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0\nmanifest_self_recomputes=True (blank generated_utc; drop manifest_self; sort_keys indent=2)\nVERDICT PASS\nexit 0",
+    "baseline_readme_digest": "clone README.md sha256=5194f59ba62a5efaf62c190b33ddd7097b5599f8601e673d555a5eace74b84a9 bytes=6369 — matched the MANIFEST.json entry, confirming the card's premise that the check already passed",
+    "card_premise_verified": "git -C clone log -1 => 36a82bcb001cad5eef02cf20d0e58467cee9d298 'Regenerate MANIFEST.json over this repository's tree; note arrangement in README'; MANIFEST.json policy='fail-closed: this manifest lists exactly the files on disk in this package'; README.md entry {sha256 5194f59b..., bytes 6369, kind authored, identical_to_source false}",
+    "check_after_readme_edit_before_regen": "missing=0 hash_mismatch=1 size_mismatch=1 unlisted=0 listed_but_absent=0\n  HASH: README.md\n  SIZE: README.md\nVERDICT FAIL\nexit 1",
+    "regen": "python3 tools/package/regen_manifest.py --package scratch/ureadme2/clone --no-note =>\nfiles_on_disk: 31   bytes_total: 849704   manifest_self: 9fba3bf481035468\nfiles[] entries: 30 (excludes MANIFEST.json)\nadded: []   changed: 1",
+    "check_after_regen_worktree": "missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0\nmanifest_self_recomputes=True\nVERDICT PASS\nexit 0",
+    "readme_sentences_classified_by_line": "(a)=false, corrected: :39 table row 'MANIFEST.json ... both as published on Zenodo'; :98 'with exactly one exception'; :102-105 bullet 'shipped unmodified ... will report README.md - and only README.md - as a mismatch here. That is expected'; :108-109 'To check any other file ... every other entry'. (b)=true, kept: :106 archive README.md authoritative on Zenodo (shortened to that half); :111-113 the 'Update:' sentence, folded into the primary statement (redundant as a trailing addendum). :53 'checks documented in README_DEPOSIT.md' unchanged.",
+    "convention": "new statement primary; false wording retained as dated 'Superseded history (before MANIFEST.json was regenerated over this repository's tree, 2026-10-19)' — date sourced from the manifest's own generated_utc 2026-10-19T04:30:53Z; nothing silently reworded into always-true history",
+    "doi_untouched": "git -C clone diff --unified=0 -- README.md | grep -E '^[-+].*(zenodo\\.org|DOI|10\\.5281)' => NONE; remote HEAD~1 vs HEAD lines 13,14,61,64 => all UNCHANGED; no DOI sentence found demonstrably wrong from repo-internal evidence",
+    "remote_verification_project_checker": "fresh clone scratch/ureadme2/verify @ 5554d82bb355ea709032f46cc7444da342329246 => missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0\nmanifest_self_recomputes=True\nVERDICT PASS\nexit 0; git status --short empty",
+    "diff_stat": "README.md 35 +++++---- / MANIFEST.json 10 +++----; 2 files changed, 24 insertions(+), 21 deletions(-) (README.md: table row + integrity section only)",
+    "pushed_sha": "5554d82bb355ea709032f46cc7444da342329246 (main; 36a82bc..5554d82)",
+    "git_identity": "repository-local only: Aswin-Ram-K / 185140014+Aswin-Ram-K@users.noreply.github.com; gh api user --jq .login => Aswin-Ram-K; no token printed, no repo setting changed",
+    "disagreement_tool_location": "tools/package/{check,regen}_manifest.py are NOT in the repository — they live at the workspace root; resolve_package() (tools/package/_pkg.py:22-31) treats a non-absolute --package as workspace-relative, so `--package .` from inside the clone fails: 'FATAL: no MANIFEST.json in /home/zer0null/reserach extarctor', exit 2. Run from the workspace root with a workspace-relative path.",
+    "consequence_recorded": "MANIFEST.json is now no longer byte-identical to the archive's copy, so the repository differs from the archive in two files (README.md substituted, MANIFEST.json regenerated) instead of one; the README now states this ('with two exceptions').",
+    "commands": [
+      "git clone https://github.com/Aswin-Ram-K/research-publish-packages.git scratch/ureadme2/clone",
+      "python3 tools/package/check_manifest.py --package scratch/ureadme2/clone",
+      "python3 tools/package/regen_manifest.py --package scratch/ureadme2/clone --no-note",
+      "git -C scratch/ureadme2/clone config user.name Aswin-Ram-K && git -C scratch/ureadme2/clone config user.email 185140014+Aswin-Ram-K@users.noreply.github.com",
+      "git -C scratch/ureadme2/clone commit -m 'Correct README integrity note: this repository\\'s manifest describes this repository and its check passes' && git -C scratch/ureadme2/clone push origin main",
+      "git clone https://github.com/Aswin-Ram-K/research-publish-packages.git scratch/ureadme2/verify && python3 tools/package/check_manifest.py --package scratch/ureadme2/verify"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Independent verifier: re-clone 5554d82bb355ea709032f46cc7444da342329246 into a THIRD scratch dir and re-run tools/package/check_manifest.py from the workspace root (expect all-zero + VERDICT PASS, exit 0); confirm the remote README delta is confined to the file table row and the 'Note on file integrity' section, that lines 13,14,61,64 are byte-identical to 36a82bcb, and that the MANIFEST.json delta is only the README.md entry sha256/bytes, counts.bytes_total, generated_utc and manifest_self. Recorded card/measurement disagreements: (1) two extra class-(a) sentences beyond the mismatch bullets existed — README.md:39 ('both as published on Zenodo') and README.md:98 ('with exactly one exception') — both corrected; (2) tools/package is workspace-root, not repository, and `--package .` resolves to the workspace root (exit 2), so the check must run from the workspace root with a workspace-relative path. Residual, accepted: the repository now differs from the Zenodo archive in two files, not one.",
+  "write_paths": [
+    "orchestration/units/UREADME2.md",
+    "orchestration/handoffs/UREADME2.json",
+    "scratch/ureadme2/**"
+  ]
+}

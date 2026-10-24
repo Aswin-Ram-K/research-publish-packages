@@ -1,0 +1,66 @@
+{
+  "unit": "U8.78",
+  "status": "done",
+  "artifacts": [
+    "state/logs/U8.78_staged.txt",
+    "state/logs/U8.78_commit.txt",
+    "orchestration/units/U8.78.md",
+    "orchestration/handoffs/U8.78.json"
+  ],
+  "evidence": {
+    "probe": "000 (curl to http://192.168.2.168:8012/v1/models: connection refused; zero live LLM calls)",
+    "prechecks": "porcelain=29; dryrun_count=29; dryrun_bytes=993; HEAD=9d256ba80e929910339af09bf3d96e0238dc0507 (expected sha matched)",
+    "guard_run": "23 passed in 0.04s - PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_repo_hygiene.py -q -p no:cacheprovider, after full __pycache__ purge",
+    "staged": "27 files, 791-byte list at state/logs/U8.78_staged.txt; git diff --cached --shortstat: 27 files changed, 2095 insertions(+), 19 deletions(-)",
+    "forbidden_check": "grep -Ec '^(state/|dockets/)|__pycache__|\\.pytest_cache|\\.tmp$|^U5\\.3_red|state\\.sqlite|^\\.ci-trunk\\.txt$|^\\.lane-j-scratch' state/logs/U8.78_staged.txt -> 0 hits",
+    "pin_still_tracked": "config/graph_pin.toml",
+    "commit": "41ad35b68bcee486a67c434afbc84b0724d9f5b4 Final tail: hygiene guards, reconstructed verdict, closing record (parent 9d256ba80e929910339af09bf3d96e0238dc0507; 27 files, +2095/-19)",
+    "post_checks": "HEAD=41ad35b68bcee486a67c434afbc84b0724d9f5b4; git status --porcelain | wc -l = 2 (U5.3_red1.txt, U5.3_red2.txt only); git log --oneline -2: 41ad35b Final tail: hygiene guards, reconstructed verdict, closing record | 9d256ba Checkpoint 4: verified artifact, hardened enforcement, settled record",
+    "store_touched": "false - no command read, opened, hashed or stat'ed state/state.sqlite; git ls-files state/state.sqlite -> empty; only the git index/objects changed",
+    "commands": [
+      "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models",
+      "git status --porcelain | wc -l ; git add -n . | wc -l ; git add -n . | wc -c ; git rev-parse HEAD",
+      "find . -type d -name __pycache__ -not -path './.git/*' -not -path './.venv/*' -exec rm -rf {} +",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_repo_hygiene.py -q -p no:cacheprovider",
+      "git add tests/test_repo_hygiene.py ; git add -u ; git add orchestration/handoffs orchestration/units orchestration/CLOSING.md orchestration/STATUS.md orchestration/VERDICTS.md docs/PLAN_CORRECTIONS.md",
+      "git diff --cached --name-only > state/logs/U8.78_staged.txt",
+      "git ls-files config/graph_pin.toml",
+      "git commit -F - ('Final tail: hygiene guards, reconstructed verdict, closing record')",
+      "git rev-parse HEAD ; git status --porcelain | wc -l ; git log --oneline -2"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Build closed: the post-checkpoint-4 tail is committed as 41ad35b. Residual untracked debris U5.3_red1.txt/U5.3_red2.txt remains (excluded by instruction); a future cleanup unit may stage it while still excluding state/**, dockets/** and *.tmp.",
+  "write_paths": [
+    "state/logs/U8.78_staged.txt",
+    "state/logs/U8.78_commit.txt",
+    "orchestration/units/U8.78.md",
+    "orchestration/handoffs/U8.78.json"
+  ],
+  "prechecks": {
+    "porcelain": 29,
+    "dryrun_count": 29,
+    "dryrun_bytes": 993,
+    "head": "9d256ba80e929910339af09bf3d96e0238dc0507"
+  },
+  "guard_green_before_commit": {
+    "passed": 23,
+    "collected": 23
+  },
+  "staged_count": 27,
+  "staged_bytes": 791,
+  "staged_list_path": "state/logs/U8.78_staged.txt",
+  "forbidden_hits": 0,
+  "forbidden_check": "grep -Ec '^(state/|dockets/)|__pycache__|\\.pytest_cache|\\.tmp$|^U5\\.3_red|state\\.sqlite|^\\.ci-trunk\\.txt$|^\\.lane-j-scratch' state/logs/U8.78_staged.txt -> 0",
+  "pin_still_tracked": "config/graph_pin.toml",
+  "commit_sha": "41ad35b68bcee486a67c434afbc84b0724d9f5b4",
+  "commit_message": "Final tail: hygiene guards, reconstructed verdict, closing record",
+  "post_porcelain": 2,
+  "log_oneline_2": [
+    "41ad35b Final tail: hygiene guards, reconstructed verdict, closing record",
+    "9d256ba Checkpoint 4: verified artifact, hardened enforcement, settled record"
+  ],
+  "store_touched": false,
+  "tool_calls_work": 6,
+  "bound": 10
+}

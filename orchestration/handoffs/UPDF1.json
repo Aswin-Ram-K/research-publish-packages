@@ -1,0 +1,37 @@
+{
+ "unit": "UPDF1",
+ "status": "done",
+ "artifacts": [
+  "papers/encoder-crossover-190/rendered/encoder-crossover-190.pdf",
+  "papers/encoder-crossover-190/rendered/encoder-crossover-190.docx",
+  "papers/encoder-crossover-190/rendered/encoder-crossover-190-libreoffice.pdf",
+  "papers/encoder-crossover-190/rendered/encoder-crossover-190.html",
+  "papers/encoder-crossover-190/rendered/convert.py",
+  "strategy/PDF_ROUTE.md",
+  "orchestration/units/UPDF1.md"
+ ],
+ "evidence": {
+  "chrome_pdf": "google-chrome --headless=new --print-to-pdf (quoted paths) -> exit 0, '728748 bytes written to file', Pages: 20, Page size 594.96 x 841.92 pts (A4), Tagged: yes, 0.8s",
+  "chrome_snap_fails": "snap chromium: 'cannot create transient scope: DBus error ... Process 27 is a kernel thread, refusing.'",
+  "chrome_unquoted_path_fails": "ERROR:chrome/app/chrome_main.cc:201] Multiple targets are not supported in headless mode. (exit 13) - workspace path contains a space",
+  "libreoffice_pdf": "soffice -env:UserInstallation=file://...%20... --headless --convert-to pdf -> 'using filter : writer_web_pdf_Export', exit 0, 495677 bytes, 24 pages",
+  "libreoffice_first_attempt": "literal spaces in -env:UserInstallation URL -> 'terminate called after throwing an instance of 'com::sun::star::uno::RuntimeException'', no output",
+  "docx_direct_fails": "'Error: no export filter for .../encoder-crossover-190.docx found, aborting.' exit 1 (Writer/Web doc has no docx filter)",
+  "docx_via_odt_works": "html->odt (writerweb8_writer, 40954 b) -> odt->docx ('filter : Office Open XML Text', exit 0, 42326 b); zip 12 entries, document.xml 243427 chars, 5 <w:tbl>",
+  "determinism": "two chrome runs both 728748 b; 171 differing bytes; cmp differs at byte 381 = /CreationDate + /ModDate, remaining ~167 bytes in tagged-PDF /ID (nodeNNN) + /Names array ordering; pdftotext of both runs byte-identical (70727 chars)",
+  "extraction": "pdftotext -layout: 70727 chars, 20 pages, all 7 sections + References present, no mojibake (Î/Â/â€/Ã/U+FFFD absent)",
+  "unicode_fidelity": "kappa 31, approx 3, ge 10, times 13, pm 4, arrow 23, Delta 8, psi 7, section 63, arrowleftright 3, minus 32 - all equal to source counts",
+  "no_overflow": "pdftotext -bbox: 10542 word boxes, max xMax 547.50pt vs page 594.96pt and content edge 546.77pt; 0 words past margin, 0 clipped; min xMin 48.0pt",
+  "fonts": "pdffonts: DejaVu Serif/Sans/Mono CID TrueType Identity-H, all emb=yes sub=yes uni=yes; plus NotoColorEmoji Type 3 for the two check-mark emoji",
+  "abstract_and_byline": "'AUTHOR SLOT: REAL NAME - TO BE SUPPLIED' on page 1; abstract first sentence + headline sentence verified whitespace-normalised",
+  "recommendation": "Preprints.org YES (pdf+docx gates met); TMLR NO (compile the LaTeX elsewhere)"
+ },
+ "blocker": "",
+ "next_unit_hint": "Preprints.org submission is unblocked: use rendered/encoder-crossover-190.pdf (Chrome route) with the .docx as fallback. Before upload: fill AUTHOR SLOT, restore page numbers, replace the two check-mark emoji. For TMLR, delegate a LaTeX compile on a host with TeX Live (or Overleaf) from submission/main.tex - do not submit this render.",
+ "write_paths": [
+  "papers/encoder-crossover-190/rendered/**",
+  "strategy/PDF_ROUTE.md",
+  "orchestration/units/UPDF1.md",
+  "orchestration/handoffs/UPDF1.json"
+ ]
+}

@@ -78,3 +78,15 @@ remains open; `V2R` recovery is `partial` with no verdict on disk as of this led
 live unit id (`U2.1`) — a live id names an agent that will finish and be superseded — and added the
 regression test asserting no placeholder owner matches `U\d+\.\d+[a-z]?` (14 passed).
 `cli.PLACEHOLDERS` is now conformant; the Batch-0 tree had collided strings.
+
+## 10. An automated session with no no-questions rule stalls silently
+
+A board card whose `prompt` was one thin line, handed to a session that was never told it had no answerer,
+cost **8h31m** and produced **zero artefacts**. `session-7e3c8cc9-6347-4419-b4b4-5b03729810cd` (unit `U3`)
+called `ask_user_question` at step 3 asking for the unit objective, because the contract lived only in the
+card's `description` — a field the board does not send — while `prompt` carried "Live measurement unit. Hold
+the `.occamy.lock` for the whole cell batch." The `U6` session asked **9** times and also produced nothing;
+three task-board execution sessions stalled the same way on 2026-10-21. The fix has two halves, both now
+stated in [`AGENTS.md`](../AGENTS.md) §"Automated sessions never ask the user": every card's `prompt` must be
+the **whole** unit contract, and every executable card carries an `automated` tag whose `promptPrefix`
+forbids questions. A prompt that needs the `description` to be understood is not a prompt.

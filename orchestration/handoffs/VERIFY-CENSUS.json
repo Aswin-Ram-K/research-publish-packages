@@ -1,0 +1,64 @@
+{
+  "unit": "VERIFY-CENSUS",
+  "overall": "partial",
+  "checks": [
+    "PASS  post-edit `recompute.py all` (FIX-CENSUS NOT_RUN a): 59 claims checked, all match; GRID GUARD PASS 7/7; 6 COVERAGE GUARD ok lines + PASS 62 claims documented, 60 runnable here + 2 script-backed; EXIT=0.",
+    "PASS  post-edit `verify_package.py` (NOT_RUN b): `PASS - 62 claims in CLAIMS.md, 62 mapped 1:1, 2 script-backed + 60 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none`; EXIT=0.",
+    "PASS  `pytest tests/test_paper_claim_census.py -q` (NOT_RUN c): 8 passed 0 failed, AFTER this unit corrected two defective assertions (see corrections). As authored it was 5 passed / 3 FAILED.",
+    "PASS  RED-1 / GREEN-1 on fix_1 script_backed() (NOT_RUN d1): with `.group(1)` restored in scratch/verify-census/recompute_red1.py, coverage_guard() raises AttributeError: 'NoneType' object has no attribute 'group' for all four command-cell shapes tested (none, z, `see note`, see CLAIMS.md); the authored file prints COVERAGE GUARD FAIL 1 claim row(s) whose command names no .py script -- listed as `C63 (CLAIMS.md:241, command 'none')` -- and returns 1.",
+    "PARTIAL  RED-2 / GREEN-2 on fix_2 contiguity (NOT_RUN d2): GREEN verified -- with C40 deleted the authored coverage_guard prints `COVERAGE GUARD FAIL  claim-id gap(s) below the maximum C62: C40` and returns 1, while the intact ledger returns 0. RED is NOT as the author described (see overstated #2): with the contiguity block removed the guard still returns 1, not 0.",
+    "PARTIAL  full `pytest tests/ -q`, settled: 1196 passed, 1 skipped (live test, not run), 1 failed. The only failure is tests/test_kg_policy.py::test_real_target_config_declares_the_decision (PolicyWideningError on `.lane-j-scratch/*.md` in config/targets.toml), which is outside this unit's write paths and predates it. tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps passed once this handoff replaced the placeholder stub -- 13 passed in that file, and 21 passed on tests/test_paper_claim_census.py + tests/test_orchestration_handoffs.py together.",
+    "FAIL  FIX-RUN's claimed success is not real: scratch/fixrun/apply_edits.py does not exist on disk, and `python3 scratch/fixrun/check_digest_pins.py` prints `VERDICT FAIL (12 finding(s))`, EXIT=1 -- not the `VERDICT PASS` its next_unit_hint requires.",
+    "PASS-NOTE  FIX-RUN's actual defect fix IS present in the shipped record even though its driver is gone: scratch/uneutral10/package/second-labeller/RUN.json:12 `_sha256_labels` names the record's real source, and :13 `_sha256_labels_note` records the shipped digest 89e77a8e… / 81439 B against the as-audited pin 076164ac… / 145031 B; MANIFEST.json files[] carries source_sha256 076164ac… and sha256 89e77a8e…, `identical_to_source: false`. The 12 guard findings are 1 digest-relation finding plus 11 fold-vocabulary findings ('second labeller', 'home') that are not digest lies."
+  ],
+  "corrections": [
+    "tests/test_paper_claim_census.py::test_the_live_ledger_is_contiguous_and_fully_runnable asserted `coverage_ids() == [C01..C62]` in DOCUMENT order. CLAIMS.md is grouped by section, so C13 legitimately sits at row 4: measured ids [C01, C02, C03, C13, C04, ...]. The test was red on a correct ledger. Corrected to compare the SORTED numeric id set; re-measured RED (original assertion False) -> GREEN (set contiguity True), and still catches a lost row (C40 removed -> False). CLAIMS.md was NOT reordered -- that would have been changing the evidenced artifact to satisfy a test.",
+    "tests/test_paper_claim_census.py::test_no_document_re_states_a_hard_coded_claim_total scanned fenced code blocks and iconically quoted tokens, so it flagged the programme's own output vocabulary ('59 claims checked, all match', 'COVERAGE GUARD PASS 62 claims documented') and a quoted token ('`59 claims checked` is the count...'). Corrected to strip ``` blocks and `inline` spans before counting, because a pasted transcript is not a count the prose asserts; a typed total in prose still fails. Red->green measured: 3 real prose totals remained after the strip and were removed.",
+    "FIX-CENSUS's next_unit_hint predicted the new test module's failure mode would be 'test 2's regex assumption'; the three actual failures were the doc-total scan (2 cases) and the document-order assertion (1), not the regex test (which passed)."
+  ],
+  "overstated": [
+    "FIX-CENSUS evidence.new_test calls the module '10 test cases'. It defines 8 test functions / 10 parametrised cases, and as authored 3 of them FAILED. The claim is a count of the file, not of a passing suite.",
+    "FIX-CENSUS's red->green documentation (test module docstring, RED-2) states that with the contiguity check removed 'a CLAIMS.md copy with C40 deleted passes every existing count (61 ids, 61 runners) and coverage_guard() returns 0'. Measured FALSE: with the contiguity block removed, a C40-deleted ledger returns 1, because `orphan = runners - set(documented)` reports 'runner for undocumented claim(s): C40' and the separate `set(documented) == runners | set(scripts)` check reports 'census 61 ids != runners 62'. Contiguity is a THIRD net under an existing one, not the only net. Measured for C40 AND C05 deleted (C05 chosen to rule out C40 being special): both return 1 with two defects. The contiguity check still earns its place -- it is the only check that names the gap explicitly -- but the 'nothing else notices' premise is refuted.",
+    "FIX-RUN status `partial` understates the residue: its handoff describes apply_edits.py as existing-but-unapplied ('apply and verify in one pass: (1) run scratch/fixrun/apply_edits.py'). The file is absent. A unit following that hint would have to re-author the driver, not run it."
+  ],
+  "not_reproduced": [
+    "The RED-2 condition stated in FIX-CENSUS (contiguity removed -> coverage_guard() returns 0). Reproduced as 1 with two other defect lines. The GREEN-2 condition was fully reproduced."
+  ],
+  "unverified": [
+    "Whether the 11 fold-vocabulary findings from check_digest_pins.py are intended to gate the package, or are a guard-side over-application of the 'home '/'second-labeller' vocabulary keys. Not decided here: deciding it would mean editing the guard or the payload, both outside this unit's scope.",
+    "tests/test_kg_policy.py::test_real_target_config_declares_the_decision -- pre-existing, unrelated to the census (config/targets.toml declares `.lane-j-scratch/*.md` which graphify's predicate excludes). Not repaired.",
+    "The 1 live test (not run: needs --live / RESEXTRACT_LIVE=1). This unit took 0 requests and no lock.",
+    "PACKAGE.md §7's refreshed tail was verified equal to a live `recompute.py all` whose tail was captured with grep over the 4 signature lines (GRID PASS, GRID TUNED, 59 claims checked, COVERAGE GUARD). Equality is with blank lines ignored."
+  ],
+  "blocker": "",
+  "next_unit_hint": "FIX-CENSUS can be re-carded as done: every NOT_RUN item is measured green and its two overstated claims are corrected above. Two follow-ups: (1) FIX-RUN needs a FRESH unit with a writable scope for scratch/fixrun/** -- apply_edits.py must be re-authored, and that unit must decide whether the 11 fold-vocabulary findings are in scope or a guard false positive before it can claim PASS; (2) test_kg_policy's `.lane-j-scratch` widening refusal is untouched and needs its own card if it is not known-green.",
+  "write_paths": [
+    "orchestration/units/VERIFY-CENSUS.md",
+    "orchestration/handoffs/VERIFY-CENSUS.json",
+    "tests/test_paper_claim_census.py",
+    "papers/context-cache/PACKAGE.md",
+    "papers/context-cache/READER-MAP.md",
+    "scratch/verify-census/**"
+  ],
+  "assumptions": [
+    "The card's one line ('run the post-edit verification FIX-CENSUS could not, and check FIX-RUN's false success') is the whole contract.",
+    "The authored fix in papers/context-cache/recompute.py was NOT modified. All RED runs use reverted COPIES under scratch/verify-census/, so the real module's behaviour was never broken even transiently for a concurrent reader.",
+    "The two failing assertions in the new test module were treated as defects in the TEST, not the ledger, ONLY where the test contradicted the artifact's documented structure (sectioned tables) or flagged the programme's own output. Where the test was right -- three typed prose totals -- the documents were edited instead.",
+    "PACKAGE.md §7's documented verified tail was refreshed from 2 COVERAGE GUARD lines to the 7 currently printed. The 2 GRID lines above it are still printed by the run and were left in place.",
+    "CLAIMS.md sha256 abcae72076134e83439fd41c7166a41f746b94511ea7d2b740793da5b82d6986 before and after this unit (verified by sha256sum)."
+  ],
+  "evidence": {
+    "final_digests": "papers/context-cache/PACKAGE.md 49b62200a48b99b8a31eec1cc3c184ed4daf7346c76d2f050d1e3167cb0456af; papers/context-cache/READER-MAP.md f3c80d5881aa41455267d8de722f984e33df1b876efd1e1db366172cc47c0275; tests/test_paper_claim_census.py 7af7976047708b7c334fa20b43528b7cbd38b067f5838dfa7c7babd3deacf66e; papers/context-cache/CLAIMS.md abcae72076134e83439fd41c7166a41f746b94511ea7d2b740793da5b82d6986 (unchanged); papers/context-cache/recompute.py 85917e480d1aea24d0d5b85ab75ab0464cd2b950ff6d7622ed093be09716abcc (unchanged, as authored by FIX-CENSUS).",
+    "commands": [
+      ".venv/bin/python papers/context-cache/recompute.py all -> 59 claims checked, all match; GRID GUARD PASS 7/7; COVERAGE GUARD PASS 62 claims documented, 60 runnable here + 2 script-backed -- exit 0",
+      ".venv/bin/python papers/context-cache/verify_package.py -> verify_package: PASS -- 62 claims in CLAIMS.md, 62 mapped 1:1 -- exit 0",
+      ".venv/bin/python -m pytest tests/test_paper_claim_census.py -q -> as authored: 3 failed, 5 passed; after this unit's corrections: 8 passed",
+      ".venv/bin/python -m pytest tests/ -q -> 2 failed, 1195 passed, 1 skipped",
+      "python3 scratch/fixrun/check_digest_pins.py -> VERDICT FAIL (12 finding(s)) -- exit 1",
+      "ls scratch/fixrun/apply_edits.py -> No such file or directory",
+      "reverted copies: scratch/verify-census/recompute_red1.py (script_backed .group(1)); recompute_red2.py / _red2b.py / _red2c.py / _red2d.py / _red2e.py (contiguity block removed, in successive variants)"
+    ],
+    "read_judgement": "tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps failed while the placeholder stub written at the top of this unit was on disk (it lacked the verifier-shape keys `overall` and `checks`). With this settled handoff in place that file is green: 13 passed. The stub-first rule and the shape guard conflict until the unit finishes; a stub written as a VALID verifier shape avoids the transient red.",
+    "tool_calls": 44
+  }
+}

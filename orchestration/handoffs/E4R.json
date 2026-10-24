@@ -1,0 +1,190 @@
+{
+ "unit": "E4R",
+ "status": "done",
+ "artifacts": [
+  "orchestration/units/E4R.md",
+  "orchestration/handoffs/E4R.json",
+  "experiments/context-cache/cells/E4R/e4r_cell.py",
+  "experiments/context-cache/cells/E4R/e4r_rows.jsonl",
+  "experiments/context-cache/cells/E4R/e4r_run.json",
+  "experiments/context-cache/cells/E4R/e4r_report.json",
+  "experiments/context-cache/cells/E4R/e4r_rows_dryrun.jsonl",
+  "experiments/context-cache/cells/E4R/e4r_report_dryrun.json"
+ ],
+ "evidence": {
+  "live_run": "python3 e4r_cell.py -> requests=180 probes=8 rows=180 failures=0 aborted='' lock_wait_s=0.0 elapsed_s=42.2 rows_sha256=05a59f28d169947fd959842ef482e07ec95fb2a96ac8405151e4aaf1920e09a7",
+  "requests": 180,
+  "probes": 8,
+  "max_requests": 180,
+  "trials_per_cell": {
+   "1024": 20,
+   "1088": 20,
+   "1008": 5,
+   "1152": 1
+  },
+  "sends_per_trial": {
+   "1024": 4,
+   "1088": 4,
+   "1008": 2,
+   "1152": 2
+  },
+  "per_rep_cached_counts": {
+   "1024": {
+    "cold": "0x20",
+    "rep1": "0x20",
+    "rep2": "960x20 (== L-64)",
+    "rep3": "960x20 (== L-64)"
+   },
+   "1088": {
+    "cold": "0x20",
+    "rep1": "0x20",
+    "rep2": "1024x20 (== L-64)",
+    "rep3": "1024x20 (== L-64)"
+   },
+   "1008": {
+    "cold": "0x5",
+    "rep1": "960x5 (== 64*floor(1007/64), block_tax 48)"
+   },
+   "1152": {
+    "cold": "0x1",
+    "rep1": "0x1 (spot check only, n=1)"
+   }
+  },
+  "rep3_counts": {
+   "L_minus_64": "40/40",
+   "eq_L": "0/40",
+   "eq_ceiling_u10_64floor": "40/40 CP95 [0.9119,1.0] (exact Clopper-Pearson 0.025**(1/40) = 0.9119; Wilson would be 0.9124 -- the 'CP' label is correct, VE4R correction 4)",
+   "block_tax_64": "40/40",
+   "rep3_equals_rep2_per_trial": "40/40"
+  },
+  "rep2_counts_same_trials": {
+   "L_minus_64": "40/40",
+   "eq_L": "0/40",
+   "block_tax_64": "40/40"
+  },
+  "predictions": {
+   "one_repeat_lag_persists": "CONFIRMED at rep-3 (40/40 at L-64) -- the PERSISTENCE reading: the 64-token shortfall does not clear after the first repeat. The one-repeat (transient) lag reading, i.e. recovery at rep-3, is REFUTED. One label, two readings: persistence confirmed, recovery refuted (VE4R correction 1).",
+   "transient_recovery": "REFUTED (0/40 at L)",
+   "worse": "REFUTED (no degraded value)",
+   "one_repeat_lag_readings": {
+    "persistence": "CONFIRMED (rep-3 == L-64, 40/40)",
+    "recovery_at_rep3": "REFUTED (0/40 at L)"
+   }
+  },
+  "rep3_licensed_sentence": "A multiple-of-64 prompt's 64-token shortfall is a persistent steady-state ceiling, not a one-repeat lag: on repeat 3 it equals 64*floor((L-1)/64) = L-64 in 40/40 boundary trials (CP95 lower 0.9119, exact Clopper-Pearson 0.025**(1/40); a Wilson interval would give 0.9124) and never L (0/40), with a block tax of exactly 64 in 40/40 -- one full extra prefill at the first repeat (rep-1: cached 0, tax L, 20/20), then a persistent one-block tax on every later repeat measured. Bounded scope: persistent through repeat 3 (repeats 2-3 of 3 measured; rep-4 not reachable, 200 > 180) -- the 64-tax applies to repeats 2-3, and '(repeats 1-3)' is the measured window, not the tax's range. Scope: one endpoint / one model / one SGLang build.",
+  "cold_isolation": "46/46 cold rows cached == 0",
+  "lengths_exact": "46/46 trials at the exact target prompt_tokens (1008/1024/1088/1152); 0 drift rows",
+  "ttft_ms_medians": {
+   "1024_cold": 232.524,
+   "1024_rep1": 231.442,
+   "1024_rep2": 116.947,
+   "1024_rep3": 116.669,
+   "1088_cold": 279.3,
+   "1088_rep1": 278.87,
+   "1088_rep2": 117.6,
+   "1088_rep3": 117.347,
+   "1008_rep1": 109.693
+  },
+  "rows_by_role": {
+   "cal": 8,
+   "cold": 46,
+   "rep1": 46,
+   "rep2": 40,
+   "rep3": 40
+  },
+  "rows_sha256": "05a59f28d169947fd959842ef482e07ec95fb2a96ac8405151e4aaf1920e09a7",
+  "rows_first_last_ts": [
+   1792617124.424,
+   1792617166.291
+  ],
+  "lock_wait_s": 0.0,
+  "elapsed_s": 42.2,
+  "failures": 0,
+  "dry_run": "python3 e4r_cell.py --dry-run -> requests=180 rows=180 aborted='' (offline control-flow check, no network)",
+  "commands": [
+   "cd \"/home/zer0null/reserach extarctor/experiments/context-cache/cells/E4R\" && python3 e4r_cell.py --dry-run",
+   "cd \"/home/zer0null/reserach extarctor/experiments/context-cache/cells/E4R\" && python3 e4r_cell.py",
+   "sha256sum experiments/context-cache/cells/E4R/e4r_rows.jsonl"
+  ],
+  "ttft_ms_key_labels": "VE4R correction 3: keys were '1024_miss'/'1088_miss' (231.442/278.87); those are the REPEAT-1 medians (cached == 0 regime, same as cold), not the cold row. Cold medians 232.524/279.3 are now separate keys '1024_cold'/'1088_cold'. rep-2 116.947/117.6 and rep-3 116.669/117.347 recorded. 'miss' must not be read as 'cold'."
+ },
+ "blocker": "",
+ "next_unit_hint": "Rep-3 is settled: the 64-token shortfall persists at rep-3 (40/40 at L-64, 0/40 at L, 40/40 rep3==rep2). The one-repeat (transient) lag -- recovery at rep-3 -- is REFUTED; the persistence reading is CONFIRMED (VE4R), so VE4's steady-state ceiling holds at rep-3 and E4C's 'permanent' is restored scoped: persistent through repeat 3 (repeats 2-3 of 3 measured), rep-1's tax being L. Still unmeasured: rep-4+ (needs 5 sends/trial > 180), full n at 1008/1152 (neighbours got n=5/n=1 behind rep-3 depth), 2048/4096, and any server-side cause (G13). A verifier can rerun the analysis offline on rows sha256 05a59f28...; red->green: relabel one 1024 trial's rep3 as 0 and the 40/40-at-L-64 claim must fail.",
+ "write_paths": [
+  "experiments/context-cache/cells/E4R/**",
+  "orchestration/units/E4R.md",
+  "orchestration/handoffs/E4R.json"
+ ],
+ "assumptions": [
+  "A1: 4 sends/trial at 1024+1088 = 160 requests + 8 calibration probes; 1008 took 10, 1152 reached 1 trial before the 180 cap. The card gave rep-3 depth priority; neighbours therefore landed at n=5/n=1, not n=10. 1152's single trial is a spot check, never pooled.",
+  "A2: rep-4 not run - 5 sends/trial at both lengths alone is 200 > 180; the card made rep-4 conditional on budget, so the three measured repeats carry the claim and 'permanent' is licensed only for repeats 2-3 of 3 measured.",
+  "A3: each cell calibrated immediately before its trials (E4 calibrated all up front); same calibrate() code, one probe per cell hit the exact length (1024 chars=4291/tail=26, 1088 4567/29, 1008 4221/26, 1152 4843/28), so no drift rows were spent.",
+  "A4: role names follow E4 verbatim (cold, rep1, rep2, rep3) so rows are comparable; send_index/repeat_index added because the card counts 'rep-N' as sends while E4 counts repeats - the card's rep-3 is repeat_index 3 / send_index 4.",
+  "A5: cached_tokens accepted as the server reports it (G13); no server-side trace of chunk insertion, so persistence is measured, mechanism is not."
+ ],
+ "superseded_text": {
+  "rep3_licensed_sentence": "A multiple-of-64 prompt's 64-token shortfall is a persistent steady-state ceiling, not a one-repeat lag: on repeat 3 it equals 64*floor((L-1)/64) = L-64 in 40/40 boundary trials (CP95 lower 0.9119) and never L (0/40), with a block tax of exactly 64 in 40/40 -- one full extra prefill at the first repeat, then a permanent one-block tax on every later repeat measured (repeats 1-3, one endpoint/model/SGLang build).",
+  "ttft_ms_medians": {
+   "1024_miss": 231.442,
+   "1024_rep2": 116.947,
+   "1024_rep3": 116.669,
+   "1088_miss": 278.87,
+   "1088_rep2": 117.6,
+   "1088_rep3": 117.347,
+   "1008_rep1": 109.693
+  },
+  "predictions_one_repeat_lag_persists": "CONFIRMED at rep-3 (40/40 at L-64)",
+  "next_unit_hint": "Rep-3 is settled: the 64-token shortfall persists at rep-3 (40/40 at L-64, 0/40 at L, 40/40 rep3==rep2), so 'one-repeat lag' is refuted and VE4's steady-state ceiling holds at rep-3; E4C's 'permanent' can be restored scoped to repeats 2-3. Still unmeasured: rep-4+ (needs 5 sends/trial > 180), full n at 1008/1152 (neighbours got n=5/n=1 behind rep-3 depth), 2048/4096, and any server-side cause (G13). A verifier can rerun the analysis offline on rows sha256 05a59f28...; red->green: relabel one 1024 trial's rep3 as 0 and the 40/40-at-L-64 claim must fail.",
+  "eq_ceiling_u10_64floor": "40/40 CP95 [0.9119,1.0]",
+  "E4R.mdx_corrections_section": "absent (no '## Corrections' heading before E4RC)",
+  "E4R.md:53": "**One-repeat lag is refuted; transient recovery is refuted.**",
+  "E4R.md:56": "then a permanent 64-token (one block) tax on every later repeat measured.",
+  "E4R.md:61-62": "1024 miss 231.4 / rep2 116.9 / rep3 116.7; 1088 miss 278.9 / rep2 117.6 / rep3 117.3"
+ },
+ "verifier_corrections": [
+  {
+   "id": 1,
+   "verifier": "VE4R",
+   "applied": true,
+   "where": "orchestration/units/E4R.md:53 (+ :37 row label), orchestration/handoffs/E4R.json evidence.predictions.one_repeat_lag_persists",
+   "claim": "the 64-token shortfall does not clear after the first repeat (persistence), not that it recovers at repeat 3",
+   "as_written": "E4R.md:53 'One-repeat lag is refuted; transient recovery is refuted.' while E4R.md:37 and E4R.json one_repeat_lag_persists say CONFIRMED -- same label, opposite verdicts",
+   "corrected_to": "'the one-repeat (transient) lag is refuted; the persistence reading is confirmed'; the :37 row relabelled 'persistence (was labelled \"one-repeat lag\")'; the JSON names the confirmed reading as persistence and the refuted one as recovery"
+  },
+  {
+   "id": 2,
+   "verifier": "VE4R",
+   "applied": true,
+   "where": "orchestration/handoffs/E4R.json evidence.rep3_licensed_sentence; E4R.md:56 and :70-71",
+   "claim": "the 64-token block tax persists through repeat 3 (repeats 2-3 of 3 measured); rep-1's tax is L",
+   "as_written": "'then a permanent one-block tax on every later repeat measured (repeats 1-3, one endpoint/model/SGLang build)' -- reads as a tax on repeats 1-3 because rep-1's tax is a full prefill (L), not 64",
+   "corrected_to": "'persistent through repeat 3 (repeats 2-3 of 3 measured; rep-4 not reachable, 200 > 180)'; the 64-tax applies to repeats 2-3 and '(repeats 1-3)' is the measured window, not the tax's range -- matching E4R.md:57-58"
+  },
+  {
+   "id": 3,
+   "verifier": "VE4R",
+   "applied": true,
+   "where": "orchestration/handoffs/E4R.json evidence.ttft_ms_medians; E4R.md:61-62",
+   "claim": "the ~2x TTFT contrast is real but the 'miss' medians are repeat-1, not cold",
+   "as_written": "keys '1024_miss' = 231.442 and '1088_miss' = 278.87, readable as cold; no cold medians in the JSON",
+   "corrected_to": "keys renamed '1024_rep1'/'1088_rep1'; added '1024_cold' 232.524 / '1088_cold' 279.3 and a ttft_ms_key_labels note; rep-2 116.947/117.6 and rep-3 116.669/117.347 recorded (unchanged values)"
+  },
+  {
+   "id": 4,
+   "verifier": "VE4R",
+   "applied": true,
+   "where": "orchestration/handoffs/E4R.json evidence.rep3_counts.eq_ceiling_u10_64floor; E4R.md:52",
+   "claim": "CP95 [0.9119, 1.0] is the exact Clopper-Pearson bound 0.025**(1/40), not Wilson (0.9124)",
+   "as_written": "'40/40 CP95 [0.9119,1.0]' -- label 'CP' correct but interval unnamed",
+   "corrected_to": "'40/40 CP95 [0.9119,1.0] (exact Clopper-Pearson 0.025**(1/40) = 0.9119; Wilson would be 0.9124)' -- no number changed, no rename needed"
+  }
+ ],
+ "verified_by": {
+  "verifier": "VE4R",
+  "verdict": "pass",
+  "verdict_handoff": "orchestration/handoffs/VE4R.json",
+  "corrections_applied_by": "E4RC",
+  "applied_at": "2026-10-21T16:17:13-0500",
+  "numbers_re_derived_by_verifier": true
+ }
+}

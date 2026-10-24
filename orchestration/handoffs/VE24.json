@@ -1,0 +1,53 @@
+{
+ "unit": "VE24",
+ "overall": "partial",
+ "checks": [
+  "E2 c1 PASS-REPRODUCED from rows (not report): rows_sha256 47980b49400f49fd932b69ab0926c5a1988e3d68a8a4ec446c8c4cb66d1cf7ca, n_rows 89; .venv/bin/python experiments/context-cache/cells/E2/e2_probe.py --analyse-only (offline, 0 requests, no lock). Independent recompute: R t19-34 mean uncached 1658.9 = 456.7 new_tail + 30.2 prev-prompt residue (pp%64) + 1172.0 re_prefill, residual 0.000 on 16/16; t2-17 779.5 = 454.9+36.6+288.0; t36-40 1586.8 = 458.8+40.0+1088.0; all 37 steady 1268.9 = 456.2+34.3+778.4.",
+  "E2 c1 CAVEAT: residual==0 is an ALGEBRAIC IDENTITY. (p-c)-[(p-pp)+(pp%64)+((pp-pp%64)-c)] == 0 for every row once prefix_ok holds, so it cannot go red and is not evidence. Falsifiable content = prefix_ok (37/37) + the cached/floor64 identity (33/37). E2's own assumptions concede this in substance.",
+  "E2 c2 PASS: 37/37 steady turns prefix_identical with 0 changed message indices; 33/37 have cached == 64*floor(p_j/64) for an earlier turn j, exceptions exactly t19,t20,t36,t37 (the recovery turns after each fold); lag histogram 1:7 2:8 3:10 4:8 (post-fold all 3-4; pre-fold 1:7 2:8 3:1 - one lag-3 at t10, so 'lag 1-2 pre-fold' is not exact); re_prefill a multiple of 64 on 37/37; |re_prefill - est token sum of skipped trailing messages| max 121 (0 mismatches >128); head_sha b135590c... one value over 40 turns; summary sha changes only at t18 (11b8e9bc) and t35 (a1273293).",
+  "E2 c3 RED->GREEN: replacing floor64(p_j) with plain p_j in the hit test gives 0/37 hits (not 33/37) - the claim can go red and does.",
+  "E2 c4 ADJUDICATION -> OVERSTATED. U15 ran R and F as two WARM 40-turn epochs in one 60 s run (160 rows, both arms live from t1, F t1 cached=0), so epoch warmth is constant in the comparison E2 deflates: U15 F t36-38 2048/2048/2944 vs R 896/896/1792 (verified in experiments/context-cache/cells/U15/rows.jsonl). E2's own warm runs reproduce BOTH U15 arms exactly (R t36-40 896/896/1792/1792/2688; F2 t36-38 2048/2048/2944, uncached 455/919/450 vs U15 458/922/453). E2's cold F (live only from t30, salt 2502) lost its own t35->t36 lag-1 hit (768 vs 2048) - a real cache-history effect and a run-order caveat on U15's numbers, but NOT a reattribution of U15's F-R gap, which the warm run order reproduces. Confounds: n=1 per condition, salts 2502/2503 vs U15 1501/1502, cold F interleaved with R while F2 ran solo.",
+  "E2 c4b NOT REPRODUCED: 'E2F ... reproduced R's depth' (orchestration/units/E2.md:100). Rows: F cold t36-38 = 768/768/2048 vs R 896/896/1792 - no turn matches. Only the shallow single-step pattern is R-like.",
+  "E2 c5 PASS: R reproduces U15 exactly from rows (t19-23 768/768/1920/1920/2816; t36-40 896/896/1792/1792/2688). Shares 456.7/1658.9=27.53%, 30.2/1658.9=1.82%, 1172.0/1658.9=70.65% -> 98.2% tail (27.5+70.7) / 1.8% grid, arithmetic from the components. '0% summary node' is by construction (no summary term); supported only indirectly (summary_test: 2/37 turns stop at the invariant head; summary sha constant within epochs).",
+  "E4 c6 PASS: e4_analyze.py rerun on pinned sha 5f10b3160a8c7b394512b841a991e5f1cc5956d2c6c252aaa1645d0fae8a2560 (220 rows): 960 5/5 (0x5), 1023 0/20 (960x20), 1024 20/20 (0x20), 1025 0/20 (1024x20), 1088 20/20 (0x20); pooled multiples 45/45 CP95 lower 0.9213 (=0.025^(1/45)); non-multiples 0/40 CP95 upper 0.0881; Fisher two-sided 3.465e-25 (one-sided == two-sided for this table; matches 3.46e-25); boundary rep-1 cached=0 in 40/40; 85 cold rows all cached==0; all 210 trial sends at the exact target prompt_tokens; 220 = 10 cal + 85 rep1 + 40 rep2 + 85 cold.",
+  "E4 c7 PASS: rep-2 hits only at L-64 - 1024->960 and 1088->1024 in 40/40, never at L.",
+  "E4 c8 RED->GREEN: relabelling the 1025 cell as 1024 makes the multiplicity claim 45/65 misses (fails; it was 45/45). Fisher survives that flip (p=2.9e-14) but goes red on permuted labels ([[22,23],[23,17]], p=0.515), so the test is real and not a constant.",
+  "E4 c9 ADJUDICATIONS: (a) 'falsified' is licensed ONLY at the multiple boundary on the first repeat (0/20 at each of two multiples, zero variance across 40 trials - a deterministic law falls to one reproducible counterexample); it is NOT licensed for the general tax law, which E2's warm rows show holding on 33/37 turns, with only 1024/1088 (+960 n=5) tested. General form: 'not observed at n=20'. (b) ceiling 64*floor((L-1)/64) is ATTAINED 80/80 rows (1023->960, 1025->1024, rep-2 960/1024), and the miss-rule form is refuted by 1025 0/20 where (L-1)%64==0. Both directions hold. (c) 'deterministic' is licensed for rep-1 at the five tested lengths on this one endpoint (0 variance); rep-2 already shows a different second outcome, no rep-3 was run - so 'deterministic' as a mechanism word is not licensed; 'deterministic for the first repeat at n=20' is.",
+  "E4 c10 A1: consistent with rows - only 960/1023/1024/1025/1088 present, 1008/4096/2048/1152 absent, 960 at n=5; 220/220 = row count = max_requests in e4_run.json. Drop reason (budget) is arithmetic (9x20x3=540>220) but not evidenced on disk: e4_run.json plans only the 5 cells it ran.",
+  "BOTH containment PASS: shared modules under experiments/context-cache/ (client.py, runner.py, analyze.py, README.md, __init__.py) mtime 2026-10-20, untouched by the 10-21 runs; all cell writes under cells/E2 and cells/E4; both handoffs parse as JSON and carry the 7 contracted keys (+assumptions); VE24 made 0 live requests, acquired no lock."
+ ],
+ "blocker": "",
+ "next_unit_hint": "E2: keep the verified decomposition (456.7/30.2/1172.0; prefix_ok 37/37; 33/37 floor64 boundary identity; post-fold lag 3-4) as component structure, and STRIKE the U15 deflation. U15's R and F were both warm 40-turn epochs and E2's warm F2 reproduces U15's F exactly, so the F-R gap is reproducible under the run order that produced it; report the cold-F run as run-order sensitivity and fix 'reproduced R's depth', which the numbers do not support. Do not cite residual 0.0 as evidence. E4: no re-measurement; scope 'falsified' to the multiple boundary on the first repeat and 'deterministic' to rep-1 at the five tested lengths. Remaining gap: cause (server-side trace or a rep-3 at 1024).",
+ "write_paths": [
+  "orchestration/units/VE24.md",
+  "orchestration/handoffs/VE24.json",
+  "orchestration/VERDICTS.md"
+ ],
+ "not_reproduced": [
+  "E2 'E2F cold-epoch F reproduced R's depth' (orchestration/units/E2.md:100): rows give 768/768/2048 vs R 896/896/1792 - no post-fold turn matches."
+ ],
+ "overstated": [
+  "E2 check 4: 'depth tracks cache-epoch warmth, not the fork marker' - warmth is not a variable in U15's R-vs-F comparison (both arms warm, 40 turns each) and E2's warm F2 reproduces U15 F, so the deflation of U15's headline is not licensed; only the cold-F run-order sensitivity is.",
+  "E2.md:100 'reproduced R's depth' (see not_reproduced).",
+  "E2 handoff 'lag 1-2 pre-fold': pre-fold histogram is 1:7 2:8 3:1 (t10 sits at lag 3, j=7)."
+ ],
+ "unverified": [
+  "E4 A1's reason for dropping 1008/4096/2048/1152 (budget): absence is verified, the reason is arithmetic (540>220), no on-disk 9-cell plan exists.",
+  "E2 '0% summary node' as a measured attribution share - it is structural (no summary term in the decomposition), supported only by summary_test (2/37 turns stop at the head).",
+  "Whether U15's four arms were interleaved request-by-request (row timestamps only) - not needed for the ruling but it blocks a cleaner eviction-vs-warmth separation."
+ ],
+ "corrections": [
+  "E2: residual 0.0 on 16/16 is an algebraic identity, not a measurement - it cannot go red; cite prefix_ok 37/37 as the empirical content.",
+  "E2: lag wording - pre-fold is 1-2 plus one lag-3 (t10); post-fold is 3-4 as claimed.",
+  "E2: attribution shares (98.2/1.8/0) are arithmetic from the component means and add no evidence beyond them.",
+  "E4 wording: 'falsified'/'deterministic' must carry 'first repeat, five lengths, one endpoint'; the general form is 'not observed at n=20'.",
+  "E4: the identity check that carries the boundary is 64*floor((L-1)/64) attained 80/80, not the (L-1) miss rule, which 1025 refutes."
+ ],
+ "red_green": [
+  "E2 floor64->plain p_j: 33/37 -> 0/37 hits (fails as required).",
+  "E4 1025 relabelled 1024: multiplicity claim 45/45 -> 45/65 (fails as required); Fisher survives that flip (2.9e-14).",
+  "E4 Fisher on permuted labels: [[22,23],[23,17]] p=0.515 - test is not a constant."
+ ],
+ "tool_calls": 29,
+ "bound": 35
+}

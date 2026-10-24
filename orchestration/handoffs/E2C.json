@@ -1,0 +1,106 @@
+{
+ "unit": "E2C",
+ "status": "done",
+ "artifacts": [
+  "orchestration/units/E2C.md",
+  "orchestration/handoffs/E2C.json",
+  "orchestration/units/E2.md",
+  "orchestration/handoffs/E2.json"
+ ],
+ "evidence": {
+  "tool_calls": 8,
+  "bound": 12,
+  "live_requests": 0,
+  "lock_acquired": false,
+  "purpose": "record repair only - no re-measurement, no new run",
+  "before_after_per_correction": [
+   {
+    "n": 1,
+    "claim": "deflation: 'depth tracks cache-epoch warmth, not the fork marker'",
+    "location": "orchestration/units/E2.md:99-103 (orig) + handoff evidence.F_vs_R_component",
+    "before": "depth tracks cache-epoch warmth, not the fork marker",
+    "after": "a warm epoch is necessary for the comparison; the arm still contributes (an interaction), which this design does not isolate",
+    "ruling": "OVERSTATED",
+    "verifier": "VE24 c4, VE2 5"
+   },
+   {
+    "n": 2,
+    "claim": "E2F cold F 'reproduced R's depth'",
+    "location": "orchestration/units/E2.md:100 (original line number, before the corrections block was inserted)",
+    "before": "cached 0 at t30) reproduced **R's** depth instead: t36-38 cached 768/768/2048",
+    "after": "FALSE: E2F 768/768/2048 vs R 896/896/1792 at t36-38 - no turn matches; reproduces R's MAGNITUDE only (unc 1735/2199/1346 vs 1385/1849/1380)",
+    "ruling": "NOT REPRODUCED / false",
+    "verifier": "VE24 c4b, VE2 5"
+   },
+   {
+    "n": 3,
+    "claim": "pre-fold lag 1-2 turns; F2 lag 1 turn",
+    "location": "orchestration/units/E2.md:11 and :95-96",
+    "before": "lag 1-2 turns before the first fold, 3-4 turns after it / re-prefill 149 (lag 1 turn)",
+    "after": "t10 is turn-lag 3 (cached 3840 = floor64(prompt_7)); pre-fold 1:7 2:8 3:1; F2 cached 2048 also = floor64(prompt_3)/floor64(prompt_18), so lag 1 is non-unique",
+    "ruling": "CORRECTED",
+    "verifier": "VE24 overstated, VE2 not_reproduced"
+   },
+   {
+    "n": 4,
+    "claim": "'14/16 post-fold' and '0% summary node'",
+    "location": "orchestration/units/E2.md:68 and :81; handoff evidence.attribution/summary_test",
+    "before": "cached >= head+summary on 14/16 post-fold steady turns",
+    "after": "17/21 across all post-fold steady turns (t19-34 only was 14/16); summary node cached behind every cut (min 768) - 0% summary is structural, not a measured share",
+    "ruling": "SCOPED",
+    "verifier": "VE2 corrections"
+   },
+   {
+    "n": 5,
+    "claim": "re_prefill value list",
+    "location": "orchestration/units/E2.md:78-80",
+    "before": "(0, 448, 512, 832, 896, 960, 1344, 1408, 1600)",
+    "after": "(0, 384, 448, 512, 832, 896, 960, 1024, 1152, 1344, 1408, 1600) - 8448 only on fold turns t18/t35",
+    "ruling": "INCOMPLETE",
+    "verifier": "VE2 corrections"
+   },
+   {
+    "n": 6,
+    "claim": "residual == 0.0 cited as evidence",
+    "location": "orchestration/units/E2.md:52; handoff evidence.decomposition_*",
+    "before": "residual 0.0 on 16/16 turns (cited as evidence)",
+    "after": "algebraic identity, cannot go red; evidence = 37/37 prefix-identical + 33/37 cached==64*floor(prompt_j/64); red->green plain prompt_j -> 0/37",
+    "ruling": "OVERSTATED AS EVIDENCE",
+    "verifier": "VE24 c1, VE2 1/4"
+   }
+  ],
+  "false_claim_location": "orchestration/units/E2.md:100 (original line numbering) - 'reproduced **R's** depth'; rows give E2F cold t36-38 cached 768/768/2048 vs R 896/896/1792",
+  "e2_json_integrity": "temp -> json.load -> key-order assert (original 8 keys first, evidence original 15 keys first) -> os.replace; re-parsed OK; 7 contracted keys present (unit,status,artifacts,evidence,blocker,next_unit_hint,write_paths); added keys: verifier_corrections(6), corrections_applied_by, superseded_text(6), next_unit_hint_corrected, evidence_keys_added, evidence.{F_vs_R_component_corrected,residual_is_identity,attribution_scope,boundary_test_lag_scope,summary_test_scope,re_prefill_values_full}",
+  "e2_md_integrity": "top section '## Corrections (VE24 + VE2, applied by E2C)' inserted after the H1; all 135 original lines retained verbatim below it; no author value deleted or rewritten",
+  "recomputed_offline_from_rows": {
+   "E2F_t36_38_cached": "768/768/2048 (unc 1735/2199/1346)",
+   "R_t36_38_cached": "896/896/1792 (unc 1385/1849/1380); R t36-40 896/896/1792/1792/2688",
+   "F2_t36_38_cached": "2048/2048/2944 (unc 455/919/450); F2 t36 hits j=3,18,35 -> all 2048",
+   "prefix_identical": "37/37 steady, 0 changed msg indices (only t18,t35 are fold turns)",
+   "floor64_hits": "33/37; plain prompt_j 0/37 (red->green)",
+   "lag_histogram": "pre 1:7 2:8 3:1 (t10 lag 3, cached 3840=floor64(prompt_7)); post 3:9 4:8",
+   "re_prefill_set_steady": "0,384,448,512,832,896,960,1024,1152,1344,1408,1600 (all %64==0); 8448 only t18/t35",
+   "head_sha": "single value b135590c360ff45f6c471218e7146b52166007712c04964939f4d0841541a592 over 40 R turns",
+   "summary_shas": "11b8e9bc at t19, a1273293 at t36 - changes only at t18/t35",
+   "summary_node_check": "21 post-fold steady turns (t19-40 minus fold t35); short (< head 848 + sum 188): t19,t20,t36,t37 -> 17/21"
+  },
+  "commands": [
+   "python3 offline recompute over experiments/context-cache/cells/E2/rows.jsonl + rows_f2.jsonl (read-only)",
+   "python3 json.load/assert/os.replace on orchestration/handoffs/E2.json"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Cite E2 only through the corrected forms: warm epoch necessary, arm contribution not isolated; 37/37 prefix + 33/37 floor64 as evidence (never residual 0.0); 17/21 with 'structural' for the summary share; 384/1024 in the value list. If G6 truly needs the fork marker isolated, run a cold-R control from t30 plus a second seed - do not re-run F cold as a refutation (that is the E2F/F2 contrast, already explained as run-order sensitivity).",
+ "write_paths": [
+  "orchestration/units/E2C.md",
+  "orchestration/handoffs/E2C.json",
+  "orchestration/units/E2.md",
+  "orchestration/handoffs/E2.json"
+ ],
+ "assumptions": [
+  "Automated session - no questions asked; no missing value blocked the repair.",
+  "Line numbers quoted for E2.md originals are the ORIGINAL numbering (pre-insertion); the corrections block shifts them, so E2.json keys superseded text as 'E2.md:<original line>'.",
+  "VE24/VE2 rulings treated as final (two independent verifiers, same ruling) - E2C re-checked their numeric cites offline from rows rather than re-running any live request.",
+  "Additive discipline: no author value deleted or rewritten; corrected forms added as companions plus a top-of-file corrections section."
+ ]
+}

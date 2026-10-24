@@ -1,0 +1,49 @@
+{
+  "unit": "R2-OPT-SIM",
+  "status": "done",
+  "artifacts": [
+    "scratch/r2-opt-sim/calibrate.py",
+    "scratch/r2-opt-sim/cost_model.py",
+    "scratch/r2-opt-sim/constants.json",
+    "scratch/r2-opt-sim/report.json",
+    "scratch/r2-opt-sim/report2.json",
+    "scratch/r2-opt-sim/selfcheck.py",
+    "scratch/r2-opt-sim/selfcheck.json",
+    "scratch/r2-opt-sim/regression.py",
+    "scratch/r2-opt-sim/probe_prompt.py",
+    "scratch/r2-opt-sim/probe_transfer.py",
+    "tests/test_r2_opt_sim.py",
+    "orchestration/units/R2-OPT-SIM.md",
+    "orchestration/cursors/r2-opt-sim.json",
+    "strategy/R2_OPT_SIM.md"
+  ],
+  "evidence": {
+    "command_or_count": "23 passed; selfcheck red 8/9, restored green True, not_coupled ['miss slope x2']; 0 live requests, no .occamy.lock, no network",
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_r2_opt_sim.py -q  ->  23 passed in 0.08s",
+      ".venv/bin/python scratch/r2-opt-sim/selfcheck.py  ->  green (real constants) GREEN 23 passed; 8 of 9 mutations RED; restored GREEN 23 passed; not_coupled ['miss slope x2']",
+      ".venv/bin/python scratch/r2-opt-sim/calibrate.py  ->  exit 0, constants.json regenerated (bce60b68... unchanged: R2-VLLM deliberately out, see assumptions)",
+      ".venv/bin/python scratch/r2-opt-sim/cost_model.py --roots '{\"own\": \"/home/zer0null/reserach extarctor\"}'  ->  constants: 22 rows, problems 0; pointer report degraded ['cross-feed-cursor','external:gpu-prefill-throughput']; ranking 9 candidates; hold-out 4 arms",
+      "sha256sum scratch/r2-opt-sim/{calibrate.py,constants.json,cost_model.py,selfcheck.py,report.json} tests/test_r2_opt_sim.py  ->  b1e5e872 / bce60b68 / 330322f3 / 37d2aee8 / 7efafdd4 / ef8a75c7"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "R2-OPT-SIM2: (1) fix the compacting-arm prompt model -- R/F's measured max prompt (9,943 / 10,071 tok) exceeds the model's (6,619 / 6,560), a free fit needs 13,803 us/ktok at r2 0.678; one constant 'cost per prompt token of a rebuilt chain' closes it. (2) The pre-20k/at-20k regime step (model ratio 1.273 vs measured 2.075) needs a knob that is visible inside the fit window, not a band correction -- the band correction is wrong (it pushes arm C from +49.5 % to +210 %). (3) Decide R2-VLLM in/out as its own unit: re-deriving constants.json with it moves only behaviour.rewrite and small_prompts, and re-issuing the ranking is a new report. (4) Do not spend a live slot on R vs F until one of the above moves the band: the gap is -10.2 ms against a +/-5 ms edge.",
+  "assumptions": [
+    "R2-VLLM (420 rows) is kept OUT of constants.json. It was written after the report's numbers were computed; the file is the record of what the report was computed from, and every constant must cite its cell. live_miss -- the constant every report number depends on -- is identical with and without it (495.633 us/tok, n 54). Re-deriving it would change the layout facts under a published ranking.",
+    "The 'selfcheck.py red 8/9' score with not_coupled ['miss slope x2'] is reported as-is rather than tuned to 9/9. A mutation that scales a coefficient is preserved by any comparison using that coefficient on both sides; six formulations were tried and each passed on the mutated file. Turning the case green by widening a threshold would make the guard a decoration.",
+    "The compacting arms' fold/trim behaviour is modelled as measured (arm C does not trim at the five folds), not as the runner's nominal policy. constants.json records schedule_is_from_the_plan: true for the plan's [18,35,53,71]; a token-budget walk would give [15,30,45,61,77] and is NOT used.",
+    "The external workspace (GPU-side prefill/kernel timing) is declared and ABSENT on this host. Rule 2 of the pointer protocol (external constants enter only as a ratio against a same-unit in-workspace constant) is therefore unexercised by real data; the pointer check covers it as a MISSING status, not a calibration.",
+    "The report at strategy/R2_OPT_SIM.md was written by SIM-PROMOTE, not by this unit. This unit appended section 8 (what closed, what did not) and left sections 1-7 byte-for-byte untouched, including the two claims now superseded (\u00a75.3 is closed; the miss-slope case is renamed).",
+    "Report-level numbers are unchanged by this pass: report.json (7efafdd4...) was regenerated before SIM-PROMOTE's digests were taken and its hold-out rows, ranking and robustness runs are the ones section 4 and section 3 of the report quote.",
+    "tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps is red on disk for SIX handoffs this unit did not write: R2-A2/R2-A3/R2-B2/R2-C (20:11-20:17, planning-doc shaped) and V-R2VLLM-TRIAGE/VLLM-CELL (21:24-22:11, verdict reports carrying no overall/checks). Those are sibling workstreams outside this unit write path and are NOT repaired here; R2-OPT-SIM.json itself carries the seven-key unit shape and passes the parse test."
+  ],
+  "write_paths": [
+    "scratch/r2-opt-sim/**",
+    "tests/test_r2_opt_sim.py",
+    "orchestration/units/R2-OPT-SIM.md",
+    "orchestration/cursors/r2-opt-sim.json",
+    "orchestration/handoffs/R2-OPT-SIM.json",
+    "strategy/R2_OPT_SIM.md"
+  ]
+}

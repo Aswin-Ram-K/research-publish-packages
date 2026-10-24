@@ -1,0 +1,44 @@
+{
+  "unit": "UAUCLEAN1",
+  "status": "done",
+  "artifacts": [
+    "scratch/uneutral10/package/second-labeller/RUN.json",
+    "scratch/uneutral10/package/results/REPORT.md",
+    "scratch/uneutral10/package/MANIFEST.json",
+    "scratch/uauclean1/zenodo/research-publish-packages-encoder-crossover-190-v1.zip",
+    "scratch/uauclean1/zenodo/research-publish-packages-encoder-crossover-190-v1.zip.sha256",
+    "scratch/uauclean1/zenodo/ZENODO_UPLOAD.txt",
+    "scratch/uauclean1/zenodo/members.txt",
+    "strategy/ZENODO_DEPOSIT.md",
+    "orchestration/units/UAUCLEAN1.md"
+  ],
+  "evidence": {
+    "job1_leak_fixed": "second-labeller/RUN.json:13 and results/REPORT.md:5 genericised to '(a later clean-up pass)' / '[corrected 2026-10-16: ...]'; meaning kept: 369159b0...(81284 B) -> 89e77a8e24a907f06345a45485c013799e08c806cc9d8f075db7709fbfd8e169 (81439 B); source 076164ac...(145031 B) unaffected; RUN.json still parses (json.load OK)",
+    "job1_resweep": "grep -rEo '\\bU[A-Z][A-Z0-9]{2,}[0-9]*\\b' over payload: only 3 x UNVERIFIED (ordinary English word); all 18 unit-name prefixes: 0 hits",
+    "job2_scripts": "verify/recompute-claims.py exit 0 + 'VERDICT: PASS'; second-labeller/parse_fixture.py exit 0; second-labeller/compare.py exit 0",
+    "job2_fixture_digest": "c7696edc0e71d83faafc2e489925788e0f36c6af94913674f8953718352c9a55 (printed by recompute-claims.py, matches required)",
+    "job2_checker": "check_manifest.py --package scratch/uneutral10/package: missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0; VERDICT PASS; counts.files=29 (before/after1/after2 all 29)",
+    "job2_idempotence": "second rebuild: files[] identical, manifest_self identical e44caf89f347397dccce8bedd332acd70f36fc7334df5c16a29942e6a85f260d, top-level metadata identical; only generated_utc changed 2026-10-17T03:25:45Z -> 2026-10-17T03:26:03Z",
+    "job2_no_number_moved": "26/28 manifest entries unchanged; only results/REPORT.md e1aa5b89...28642B -> 31af578c...28629B and second-labeller/RUN.json b0321e94...13052B -> 0737ac88...13064B changed; all published diagnostics re-read after edit and identical (arms 0.347368; majority 0.452632; chance floor 0.291053; decider 0.6684 quoted / 0.678947 repro; McNemar 39/27/90/34=190 p=4.166818e-09; kappa 0.8837/0.914; A/B 0.368421; route-A 0.3252)",
+    "job3_archive": "unzip -Z1 | wc -l = 29; sha256 2338ed02c1c6770b182a79355dbda36cb6d593e08e65a3d38ae9da369c4b048f; extract to x + 'diff -r x ../../uneutral10/package' produced no output -> 'DIFF: IDENTICAL'",
+    "commands": [
+      "grep -rEo '\\bU[A-Z][A-Z0-9]{2,}[0-9]*\\b' scratch/uneutral10/package",
+      "python3 scratch/ufixpkg3/rebuild_manifest.py",
+      "python3 verify/recompute-claims.py; python3 second-labeller/parse_fixture.py; python3 second-labeller/compare.py",
+      "python3 tools/package/check_manifest.py --package scratch/uneutral10/package",
+      "zip -r -X -D .../research-publish-packages-encoder-crossover-190-v1.zip . -x '*.pyc' -x '*__pycache__*' -x '*.DS_Store'",
+      "unzip -Z1 research-publish-packages-encoder-crossover-190-v1.zip | sort | tee members.txt | wc -l",
+      "sha256sum research-publish-packages-encoder-crossover-190-v1.zip | tee research-publish-packages-encoder-crossover-190-v1.zip.sha256",
+      "unzip -q research-publish-packages-encoder-crossover-190-v1.zip -d x && diff -r x ../../uneutral10/package"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Author must (1) replace AUTHOR SLOT: REAL NAME --- TO BE SUPPLIED with the real name in ZENODO_UPLOAD.txt before pasting, (2) confirm the commercial licence terms (COMMERCIAL.md is a DRAFT template), (3) paste the minted Zenodo DOI back into the manuscript DOI slot. Unfixed observation, not in scope: payload second-labeller/RUN.json:2-3 still carries internal experiment ids 'G46'/'G33' (G-prefixed, not matched by the U-id sweep or the 18 U-prefixes); flag to the author if those must also be genericised.",
+  "write_paths": [
+    "scratch/uneutral10/package/**",
+    "strategy/ZENODO_DEPOSIT.md",
+    "orchestration/units/UAUCLEAN1.md",
+    "orchestration/handoffs/UAUCLEAN1.json",
+    "scratch/uauclean1/**"
+  ]
+}

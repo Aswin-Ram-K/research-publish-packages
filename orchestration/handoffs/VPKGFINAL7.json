@@ -1,0 +1,38 @@
+{
+  "unit": "VPKGFINAL7",
+  "overall": "fail",
+  "checks": [
+    "PASS size/digests: 126,639 B, sha256 0e70ba54188d87fd8d92ab237bede3186358b3ae67bc421f54020a61b99b6a85, md5 e2af1616b64f7ca54b9bf61e60427785, 16 tar members (12 files + 4 dirs), exactly one top-level dir gated-read-batching-released",
+    "PASS check_manifest.py --package <ABS> on payload AND on extraction: missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0, VERDICT PASS, exit 0",
+    "PASS recompute-claims.py in extraction: checks 49 passed 49 failed 0, VERDICT PASS, exit 0",
+    "PASS rows file 2,267,742 bytes / 9,260 lines; 2026-09-28-trace-m0 exactly 4 occurrences on lines 9195/9196/9198/9200 (selfselect/gate_min/stage/stage_route, mode e2e task T10); lowercase duval forms all 0",
+    "PASS no published number moved: GATED_READ_2026.md md5 fe1b900525c63ad0c1ee546d23370c6e and gated-read-summary.json md5 9bba213e4772692a7eccc7cf13715202 identical pre/post; 15.279 ratio and 0-of-20 exposure re-derived OK",
+    "PASS recipe reproducibility: scratch/upkginstall7/build_archive.sh run with output redirected to scratch/vpkgfinal7/rebuild produced 126,639 B sha256 0e70ba54... byte-identical to shipped (cmp clean), two independent stages cmp-identical, never reads a prior archive; shipped artifact sha unchanged after the run",
+    "PASS red->green on check_manifest: one-byte flip -> HASH: data/gated-read-rows.jsonl, hash_mismatch=1, VERDICT FAIL; restore -> VERDICT PASS and recompute 49/49",
+    "PASS licence body: lines 5-135 = 4,563 bytes sha256 ffcca38841adb694b6f380647e15f17c446a4d1656fed51a1e2041d064c94cc8, unmodified PolyForm Noncommercial body",
+    "PASS MANIFEST.json describes the archive: 11 file entries all verify, counts files=12 bytes_total=2374092"
+  ],
+  "blocker": "TARGET NAME STILL PRESENT: data/gated-read-rows.jsonl lines 9235 and 9239 carry \"answer\": \"DUVAL_HOSTED_LAYER_OK\" (uppercase Duval, 2 occurrences; grep -i duval = 2 lines). The four-row 2026-09-28-duval-m0 -> 2026-09-28-trace-m0 rename did not cover the T17 e2e answers. Do not deposit until these two values are neutralised at equal length and MANIFEST/README/recompute digests are regenerated.",
+  "next_unit_hint": "Neutralise the two DUVAL_HOSTED_LAYER_OK answers (rows 9235/9239, mode e2e task T17) at equal length, regenerate MANIFEST.json with tools/package/regen_manifest.py, update README shipped-digest table and the recompute-claims.py ROWS_SHA256 pin, then re-verify size/lines/digests. Also fix the stale GATED_READ_PROVENANCE.md row in README (31,679 B / ba9f78dd / 0aca7cdb vs shipped 31,562 B / cfc81ef6) and add CITATION.cff + README_DEPOSIT.md to the 'What ships' tables (10 of 12 files listed).",
+  "write_paths": [
+    "scratch/vpkgfinal7/**",
+    "orchestration/units/VPKGFINAL7.md",
+    "orchestration/handoffs/VPKGFINAL7.json",
+    "strategy/VERIFICATION_REPORT_PKGFINAL7.md"
+  ],
+  "not_reproduced": [
+    "claim 8 red-side for the recompute: a one-byte corruption of data/gated-read-rows.jsonl does not yield 48/49, it raises json.decoder.JSONDecodeError: Expecting ':' delimiter: line 1 column 105 (char 104) and prints no VERDICT line ('48/49' is conditional on corrupting a field the parser still accepts)"
+  ],
+  "overstated": [
+    "\"the target's name appears zero times\" / leak-sweep zero: false, DUVAL_HOSTED_LAYER_OK x2 in data/gated-read-rows.jsonl:9235,9239",
+    "\"the cleaning added +792 bytes of dated supersession notes\": 792 is the compressed archive delta (126,639 - 125,847); the added prose is +1,188 B README.md, +239 B recompute-claims.py, +1 B MANIFEST.json = +1,428 B raw",
+    "README 'the digests of the bytes shipped here are listed below': the GATED_READ_PROVENANCE.md row (31,679 B / ba9f78dd / 0aca7cdb) does not match the shipped 31,562 B / cfc81ef6 file",
+    "archive contains exactly what the docs enumerate: both 'What ships' tables list 10 of the 12 shipped files (CITATION.cff and README_DEPOSIT.md omitted)"
+  ],
+  "unverified": [
+    "the paper's \\bibitem/\\cite counts and claim values 'untouched': measured 13 \\bibitem, 14 \\cite commands, 13 distinct keys in papers/gated-read-batching/submission/main.tex, but no pinned pre-clean copy of main.tex was compared, so 'unchanged' is not established",
+    "the paper's §7 as the source of 'what the archive contains': §7 is Conclusion (MANUSCRIPT.md:213, main.tex:247) and lists no files; no data-availability section exists, so the premise could not be checked against the paper and was checked against the package READMEs instead"
+  ],
+  "tool_calls": 24,
+  "bound": 25
+}

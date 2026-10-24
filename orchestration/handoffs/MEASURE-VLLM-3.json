@@ -1,0 +1,45 @@
+{
+  "unit": "MEASURE-VLLM-3",
+  "status": "done",
+  "artifacts": [
+    "orchestration/handoffs/MEASURE-VLLM-3.json",
+    "orchestration/units/MEASURE-VLLM-3.md",
+    "GX10:/home/zer0null/r2/launch-oh2.sh",
+    "GX10:/home/zer0null/r2/OH1/launch3-inspect.json",
+    "GX10:/home/zer0null/r2/OH1/status",
+    "GX10:/home/zer0null/r2/OH1/rows.jsonl",
+    "GX10:/home/zer0null/r2/driver.pid"
+  ],
+  "evidence": {
+    "container": "Up 4 minutes|0.0.0.0:8020->30000/tcp, [::]:8020->30000/tcp",
+    "container_id": "f72952ea6a23",
+    "vllm_host_pid": 3794205,
+    "driver_pid": 3794430,
+    "driver_ps": " 03:58 bash",
+    "health_v1_models": "200",
+    "status_line": "STARTED 2026-10-24T03:35:22Z",
+    "served_models": "{\"object\":\"list\",\"data\":[{\"id\":\"occamy-1.0\",\"object\":\"model\",\"created\":1792813160,\"owned_by\":\"vllm\",\"root\":\"/hf-cache/hub/models--Accio-Lab--occamy-1.0-NVFP4/snapshots/fa865dc5e80a13b9a2d8ae8d65ed2ee332f33652\",\"parent\":null,\"max_model_len\":32768,\"permission\":[",
+    "kv_cache_log": "(EngineCore pid=131) INFO 10-24 03:38:33 [gpu_worker.py:563] Available KV cache memory: 13.93 GiB;(EngineCore pid=131) INFO 10-24 03:38:33 [kv_cache_utils.py:2235] GPU KV cache size: 1,029,213 tokens;",
+    "rows_so_far": 0,
+    "gpu_memory_utilization": "0.34",
+    "qwen9b": "Exited (0) 4 minutes ago",
+    "occamy_sglang_8012": "Up 20 hours",
+    "available_mb": "26693",
+    "commands": [
+      "ssh gx10 'docker stop -t 30 gx10-qwen9b; docker rm -f r2oh1; bash /home/zer0null/r2/launch-oh2.sh' -> CID=f72952ea6a23",
+      "ssh gx10 'setsid nohup bash /home/zer0null/r2/run3.sh' -> driver pid 3794430",
+      "ssh gx10 'curl -s -o /dev/null -w %{http_code} http://127.0.0.1:8020/v1/models' -> 200"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "POLL-VLLM: collect GX10:/home/zer0null/r2/OH1/{rows.jsonl,startup.txt,status} and /tmp/r2oh1.log; driver pid 3794430, container r2oh1 :8020. Restart gx10-qwen9b only AFTER the cell finishes.",
+  "write_paths": [
+    "orchestration/handoffs/MEASURE-VLLM-3.json",
+    "orchestration/units/MEASURE-VLLM-3.md"
+  ],
+  "assumptions": [
+    "Reused container name r2oh1 and host port 8020 so run.sh's health/poll logic works unchanged; only the gpu-memory-utilization changed 0.22 -> 0.34.",
+    "Reconstructed docker run from the dead attempt-2 container's inspect (image sha 2c211a12, --entrypoint vllm, --ipc host, --shm-size 32 GiB, binds to /hf-cache and qwen9b vllm-cache).",
+    "gx10-qwen9b stopped per the card ('stop gx10-qwen9b only'); gx10-occamy-nvfp4 (:8012 SGLang) deliberately left running and untouched."
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "unit": "R2-VLLM-FIX-CLOSE",
+  "status": "done",
+  "artifacts": [
+    "orchestration/VERDICTS.md",
+    "orchestration/STATUS.md",
+    "orchestration/units/R2-VLLM-FIX-CLOSE.md",
+    "orchestration/handoffs/R2-VLLM-FIX-CLOSE.json"
+  ],
+  "evidence": {
+    "verdicts_append": "V-R2-VLLM-RERUN entry appended at the tail of orchestration/VERDICTS.md: 3839 -> 3908 lines (+69), existing 3839 lines byte-unchanged, no earlier entry rewritten",
+    "status_append": "orchestration/STATUS.md: 250 -> 316 lines (+66); new '## 8. R2-VLLM instrument repair batch (2026-10-23/24)' with 8.1 unit table (8 units, same shape as 7.1), 8.2 manuscript-safe / do-not-print, 8.3 open items; the four prior §§1-7 untouched; the old '## 8. Next structural steps' heading renumbered to '## 9.' (heading line only, body unchanged); the one-line state paragraph extended by 2 additive lines noting the batch closed",
+    "numbering": "New section is §8, NOT §7.4/§7.5: §7's numbering is spent on the context-cache batch, so a top-level §8 keeps the file monotone without renumbering §§1-7; the displaced 'Next structural steps' is now §9",
+    "transposed_values": "OH1 236 rows / A1 182 = 418 rows sha 6f7f05fa...de0ad1; usage_has_details 418/418; cached_tokens None 0; arm identity 4/4 in 64/64 (config,rep,turn) groups; battery rep0 0/64 both configs, rep1 OH1 62/64 (A15 C16 R16 H15) vs A1 0/64; A1 27 hits all arm:null probe rows; block sizes OH1 2096 / A1 1056; ARM_REQUEST_CAP 260 with 0 'arm cap reached' lines; lock released 2026-10-24T03:27:40Z; prod restore proven=true 1056->1056; discarded-r1 sha 2737125f...de5045c",
+    "guard_weakness": "mutation of pmu16_cell.py:134 aborts selftest_offline.py before any check summary with 'AssertionError: revert pattern drifted from the source: flag_dropped_from_OH1' instead of a named FAIL; live suite pass=16 fail=0 red_green=True; pmu16_cell.py sha 2ae22c6c...d0c9d unchanged",
+    "three_overstatements": "(i) ANALYSE 'one arm with a miss' -> misses are A(turn 1) and H(turn 2), 15/16 each; (ii) REPAIR2 'worst 219' -> 236 rows for OH1; (iii) ANALYSE 15/16 -> 16/16 now",
+    "corrections_made_by_this_unit": [
+      "RERUN's 54-row kill is attributed to the 'extra' TypeError; the '219/200' cap trip belongs to the EARLIER 02:35 run (per RERUN.evidence.bound/render2 as recorded in V-R2-VLLM-RERUN C9(d)) and is not the kill cause of the 54-row attempt",
+      "REPAIR2's discipline clause 'httpx.Client now RAISES on construction (attempts counter = 0)' was NOT transcribed: it contradicts R8 driving the real phase_battery through a FakeChatClient (128 client calls) and is not what makes the unit offline; the containment claim rests on 0 model requests / 0 ssh / 0 docker / no lock instead",
+      "repair_plan is cited as 7 orders (state/logs/R2-VLLM-triage.json repair_plan, orders 1-7); no order was renumbered or merged",
+      "R2-VLLM-PREFLIGHT2 is presented as what it measured (read-only host state, 0 mutating commands), not as containment of the batch"
+    ],
+    "commands": [
+      "tail -110 orchestration/VERDICTS.md ; head -12 orchestration/VERDICTS.md (style read)",
+      "cat orchestration/STATUS.md (full read before edit)",
+      "python3 - (staged STATUS.md to .tmp with the new section, then mv onto orchestration/STATUS.md)",
+      "python3 -c 'json.load(open(...R2-VLLM-FIX-CLOSE.json.tmp)) + contracted-key check' then mv"
+    ],
+    "offline_containment": "0 model requests, 0 ssh, 0 docker, no lock acquisition, no writes outside the workspace; no file edited before it was read"
+  },
+  "blocker": "",
+  "next_unit_hint": "Two follow-ups are licensed by the record, neither blocking. (i) An A1-ATTRIBUTION unit: A1 returned 0 cached tokens on 128/128 observed battery rows while its own 27 probe hits (all arm:null, same launch r2v-a1) prove the prefix-cache path works; the cause is unassigned between prefix-cache eviction under the launch's --gpu-memory-utilization 0.15 / --max-num-seqs and tokenizer prefix divergence for qwen3.5-9b, and must be separated by an experiment (e.g. a repeat-pair at short prompt lengths inside the battery phase, a slow-repeat control at --max-num-seqs 1, and a /tokenize round-trip on the identical bytes). (ii) A --prefix-match-unit DISCRIMINATION test on a launch whose resolved block size is NOT divisible by the flag value: the OH1L leniency premise '2096 % 8 != 0' was false (2096 = 2^4 x 131, so 2096 % 8 == 0) and DOCCHECK refuted it; 2096 % 3 == 2, so a pmu 3 launch should be REFUSED by ValueError ('all KV cache group block sizes must be divisible by prefix_match_unit') and a pmu 7 launch likewise — note the flag is IGNORED entirely for single-KV-group models (kv_cache_utils.py:648-650), so the probe needs a multi-group model with --prefix-caching on. Separately and non-blocking: repair selftest_offline.py's revert-guard (stable anchor, relocation-safe corpora path) so a real future regression reads as a named FAIL rather than a Traceback.",
+  "write_paths": [
+    "orchestration/VERDICTS.md",
+    "orchestration/STATUS.md",
+    "orchestration/units/R2-VLLM-FIX-CLOSE.md",
+    "orchestration/handoffs/R2-VLLM-FIX-CLOSE.json"
+  ],
+  "tool_calls": 12,
+  "bound": 12,
+  "assumptions": [
+    "Transposition only: no number was re-measured. Every figure in the two markdown edits comes from the seven handoffs, the triage report, the rerun report or verify-dossier.json as read in this session.",
+    "STATUS numbering: a new top-level §8 was chosen over §7.4/§7.5 because §7.4 is already 'Open items, with their numbers' in the context-cache batch and §8-§9 already exist above 'Standing constraints'; the displaced 'Next structural steps' heading moved to §9 so the sequence stays monotone (1,2,3,4,5,6,7,8,9).",
+    "The §7.3-style manuscript block was written as §8.2 with two lists (may print / do not print) rather than licensed-sentence bullets, because this batch licenses capability facts, not effect sizes.",
+    "The verdict entry is appended only; VERDICTS.md lines 1-3839 were not touched (checked by line count and by the placement of the new heading immediately after V-FINAL3's last bullet).",
+    "The one-line state paragraph was extended additively (2 lines) because the R2-VLLM batch closed after it was written; no other sentence in §§0-7 was edited."
+  ]
+}

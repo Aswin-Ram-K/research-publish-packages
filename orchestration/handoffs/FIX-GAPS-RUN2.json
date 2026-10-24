@@ -1,0 +1,36 @@
+{
+  "unit": "FIX-GAPS-RUN2",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/GAPS.md",
+    "papers/context-cache/RUN.json",
+    "orchestration/units/FIX-GAPS-RUN2.md",
+    "orchestration/handoffs/FIX-GAPS-RUN2.json"
+  ],
+  "evidence": {
+    "command_or_count": "GAPS.md 2 sites corrected (EVIDENCE.md no longer stale; closure condition now names 2 real measurements); RUN.json pins resolved (recompute.py 85917e48… re-measured; u4 claimed pin carries an explicit names-no-file note); cell_digests now 17 rows + 1 unpinned_live + 13 no_rows = 31/31 cell dirs, DENSE-SGL pinned 7a0beb4e… 894 rows; MOE-VLLM withheld from pinning because its rows.jsonl grew 22→79→172 rows during the measurement",
+    "commands": [
+      "sha256sum papers/context-cache/recompute.py => 85917e480d1aea24d0d5b85ab75ab0464cd2b950ff6d7622ed093be09716abcc",
+      "python3 inventory over experiments/context-cache/cells/ => rows 17 · unpinned_live 1 · no_rows 13 · sum 31 · cells 31 · missing [] · dupes [] · bad digests []",
+      "PYTHONDONTWRITEBYTECODE=1 python3 papers/context-cache/verify_package.py => PASS — 62 claims in CLAIMS.md, 62 mapped 1:1, 2 script-backed + 60 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none; rc=0",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_run_record_digests.py tests/test_paper_claim_census.py -q => 13 passed",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_attribution_guard.py tests/test_claims_decompose.py tests/test_g5_fanout_attribution.py tests/test_no_stray_package_refs.py -q => 38 passed",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/recompute.py all => COVERAGE GUARD PASS 62 claims documented, 60 runnable here + 2 script-backed; GRID GUARD PASS; rc=0",
+      "python3 -c json.load(RUN.json) => RUN.json parses"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "MOE-VLLM rows.jsonl is live (172+ rows at 18:59:33 CDT) and deliberately unpinned: after that cell settles, move it from cell_digests.unpinned_live to cell_digests.rows with sha256+w and drop the entry. Also: V-FINAL5 names tests/test_gap_closure_ledger.py, which does not exist on disk. V-FINAL5 can now re-verify the package.",
+  "write_paths": [
+    "papers/context-cache/GAPS.md",
+    "papers/context-cache/RUN.json",
+    "orchestration/handoffs/FIX-GAPS-RUN2.json",
+    "orchestration/units/FIX-GAPS-RUN2.md"
+  ],
+  "assumptions": [
+    "The card's premise that both files were untouched since before the prior run was stale: both carried mtime 18:06 with the CX-V3 corrections and a 16-cell cell_digests block already present. This unit verified those edits against orchestration/VERDICTS.md:12 and repaired what the 18:06 pass left behind instead of re-applying correct text.",
+    "GAPS.md:330-332 asserted EVIDENCE.md was still stale; EVIDENCE.md was fixed by FIX-EVID-DOC at 18:00, so that assertion was rewritten (EVIDENCE.md itself was not edited).",
+    "MOE-VLLM is not given a digest pin this pass because the file was still growing during measurement; a pin that is stale on arrival is the defect the block exists to prevent. The debt is named in cell_digests.unpinned_live.",
+    "Zero live requests, no GX10, no pipeline run; the only processes touched were local sha256sum/wc/json/pytest."
+  ]
+}

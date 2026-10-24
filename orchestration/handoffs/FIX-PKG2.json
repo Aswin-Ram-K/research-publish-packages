@@ -1,0 +1,60 @@
+{
+ "unit": "FIX-PKG2",
+ "status": "done",
+ "artifacts": [
+  "papers/context-cache/PACKAGE.md",
+  "papers/context-cache/CLAIMS.md",
+  "papers/context-cache/verify_package.py",
+  "papers/context-cache/recompute.py",
+  "orchestration/units/FIX-PKG2.md",
+  "orchestration/handoffs/FIX-PKG2.json"
+ ],
+ "evidence": {
+  "defect_1_gate_overclaim": "PACKAGE.md:11 'Integrity gate: verify_package.py (exit 0 required)' with no scope; verify_package.py resolves ids/cells/functions and recomputes NO value. Fixed: :11 now names it a structural census and §9 states the structural-vs-value split (value check is §7 step 1, recompute.py all).",
+  "defect_2_invisible_rows": "V-FINAL2 RED E reproduced before the fix: planted '| Not a claim at all, planted | x | y | z | ... |' in CLAIMS.md -> verify_package exit 0 AND recompute.py all exit 0. Both guards derived counts by regex and skipped the row.",
+  "defect_3_c06_floor": "CLAIMS.md:76 prose column said 'The measured ratio is a floor; with all seven warm branches it would be 5.3922', contradicting MANUSCRIPT.md:139-150 ('Both halves of that argument are wrong'); C05 (CLAIMS.md:74) named no supersession for 3.3133.",
+  "defect_4_dangling_citations": "CLAIMS.md corrections table cited `handoffs/U4.json`, U4b, CX-V2, U15; no papers/context-cache/handoffs/ exists. Repointed to orchestration/handoffs/.",
+  "green_verify": "verify_package: PASS - 62 claims in CLAIMS.md, 62 mapped 1:1, 2 script-backed + 60 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none | exit=0",
+  "green_recompute": "59 claims checked, all match / GRID GUARD PASS  7/7 configs / COVERAGE GUARD ok    every CLAIMS.md table row is a claim row or a declared source key (nothing invisible to the census) / COVERAGE GUARD PASS  62 claims documented, 60 runnable here + 2 script-backed | exit=0",
+  "green_c06": "recompute.py C06 -> PASS  6/6 values match (counterfactual_A_uncached 2856, counterfactual_B_over_A 5.392156862745098)",
+  "red_e_invisible_row": "plant '| Not a claim at all, planted | x | y | z | .venv/bin/python papers/context-cache/recompute.py C63 |' after C62 -> 'verify_package: FAIL / - CLAIMS.md:202: unrecognised row, invisible to the claim census (first cell 'Not a claim at all, planted', under 'The compaction boundary, measured live (G3-FOLD)')' exit=1; 'COVERAGE GUARD FAIL  1 CLAIMS.md row(s) invisible to the census, so unchecked by this run: / - CLAIMS.md:202 first cell ...' + 'COVERAGE GUARD FAIL  1 coverage defect(s)' exit=1",
+  "red_f_unbacked_claim": "plant '| C63 | planted unbacked claim | x | y | recompute.py C63 |' -> verify_package exit 1 ('missing claim ids in READER-MAP: C63'); COVERAGE GUARD 'no runner for 1 claim(s): C63' + 'census 63 ids != runners 62' exit=1",
+  "red_g2_source_row_extra_cell": "source-key row given a 6th cell -> 'CLAIMS.md:35: unrecognised row, invisible to the claim census (first cell 'U2-rows', under 'Source rows and digests')' exit=1",
+  "red_h_undeclared_section": "replace '### Source rows and digests' heading with the original bold lead-in -> 'CLAIMS.md:33: unrecognised row ... under 'CLAIMS.md - the context-cache findings package'' exit=1; restored, cmp byte-identical, both guards exit 0. This red test is why CLAIMS.md carries a real heading for that table instead of relying on prose.",
+  "restored_byte_identical": "after every red test: cmp scratch/fixpkg2/CLAIMS.final.md papers/context-cache/CLAIMS.md -> silent",
+  "tests": ".venv/bin/python -m pytest tests/test_paper_attribution_guard.py tests/test_claims_decompose.py tests/test_paper_boundary_attribution.py tests/test_paper_g3_bands.py tests/test_orchestration_handoffs.py tests/test_repo_hygiene.py -q -> 81 passed in 2.63s",
+  "digests_after": {
+   "CLAIMS.md": "abcae72076134e83439fd41c7166a41f746b94511ea7d2b740793da5b82d6986",
+   "recompute.py": "4845bd8d0026696c29498b2b9b95056ea2d8487c5f5f03447bd9b017da2197c6",
+   "verify_package.py": "e9854b81df254ffac2955cfe2f3f74d752154f80f66903a2fe4d2c86c7ebb8f9",
+   "PACKAGE.md": "dd5688a1f5e657a701f6fb27bbc83760813be05bf331904deec608f72d1e9065",
+   "READER-MAP.md": "60ff8aa0cd9aa0136f45d78482b5cc1d935162d93fdda0efe6915f915f0edf1f (unchanged)"
+  },
+  "commands": [
+   ".venv/bin/python papers/context-cache/verify_package.py; echo \"exit=$?\"",
+   ".venv/bin/python papers/context-cache/recompute.py all; echo \"exit=$?\"",
+   ".venv/bin/python papers/context-cache/recompute.py C06",
+   ".venv/bin/python -m pytest tests/test_paper_attribution_guard.py tests/test_claims_decompose.py tests/test_paper_boundary_attribution.py tests/test_paper_g3_bands.py tests/test_orchestration_handoffs.py tests/test_repo_hygiene.py -q",
+   "cp papers/context-cache/CLAIMS.md scratch/fixpkg2/CLAIMS.final.md  (red-test backup inside the workspace, restored)",
+   "sha256sum papers/context-cache/{CLAIMS.md,recompute.py,verify_package.py,PACKAGE.md}"
+  ],
+  "tool_calls": 38
+ },
+ "assumptions": [
+  "The card's tag line is the whole contract ('stop PACKAGE.md claiming a gate it lacks; fix C06's retracted floor reading'); the scope was read as PACKAGE.md's gate claim + CLAIMS.md C06, and the invisible-row cascade found while fixing the gate claim was treated as in-scope because it is what makes the gate claim true. No live requests, no locks, no server.",
+  "C05's value cell was also marked superseded (B/A 3.3133 by C53's 6.744) because V-FINAL2's next_unit_hint names CLAIMS.md:73-74 together; this is the same retraction, one row up.",
+  "Turning the 'Source rows and digests' lead-in into a '###' heading is a CLAIMS.md formatting change, not a claim change: no id, value, source or command moved, and recompute.py all / verify_package both stay green.",
+  "RUN.json left untouched (not a claim about a gate); noted as open."
+ ],
+ "blocker": "",
+ "next_unit_hint": "The structural cascade is closed, but the value-level equivalent is not: neither guard would notice a CLAIMS.md row whose Value column drifts from what recompute.py prints (only running `recompute.py all` catches that, and PACKAGE.md still lets a reader believe exit 0 implies values are right). Consider a unit that (a) makes verify_package.py run the stored-value checks for every claim whose command is `recompute.py Cxx` and fail on the printed PASS/FAIL, or (b) rewrites PACKAGE.md:191's UNVERIFIED sentence that still reads as a value guarantee. Still open from earlier cards: RUN.json verification.synthesis_recompute carries no hash for the current recompute.py (now 4845bd8d...); the C62 weak spot at 64k S turn 151 (+5,473 uncached); FIX-MAN2 is a stub handoff with blocker 'in progress' and no artifacts.",
+ "write_paths": [
+  "papers/context-cache/PACKAGE.md",
+  "papers/context-cache/CLAIMS.md",
+  "papers/context-cache/verify_package.py",
+  "papers/context-cache/recompute.py",
+  "scratch/fixpkg2",
+  "orchestration/units/FIX-PKG2.md",
+  "orchestration/handoffs/FIX-PKG2.json"
+ ]
+}

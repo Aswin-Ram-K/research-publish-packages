@@ -1,0 +1,49 @@
+{
+  "unit": "SIM-PROMOTE",
+  "status": "partial",
+  "artifacts": [
+    "strategy/R2_OPT_SIM.md",
+    "orchestration/units/SIM-PROMOTE.md",
+    "tests/test_r2_opt_sim.py",
+    "scratch/r2-opt-sim/selfcheck.json",
+    "scratch/r2-opt-sim/constants.json",
+    "scratch/r2-opt-sim/cost_model.py",
+    "scratch/r2-opt-sim/calibrate.py",
+    "scratch/r2-opt-sim/report2.json"
+  ],
+  "evidence": {
+    "promoted_unchanged": "scratch/r2-opt-sim/cost_model.py sha256 01535f47ecceff9b612731dc8edc83af2f29af93f2299373a1ddb505f833be76, calibrate.py b1e5e87213e4b8f715533695d65c4a6111560ade32da48530761c9bcf6e8c819, constants.json bce60b68305e8d7da9a1c623bdd37b594384cd4c75818e838d5d013dcafa2d1b, report2.json a4da828eaedddeac588225db134d7fea3c50071ef77cce609ad8c036f8114e1e, cost_model2.py 12375e923dedf145b6cb2d9c8db358cfbb45f4050497a186cd88367f245e618b -- no third model written, no existing assertion changed",
+    "suite_green": ".venv/bin/python -m pytest tests/test_r2_opt_sim.py -q -p no:cacheprovider -> '22 passed in 0.07s' (21 inherited + 1 added); tests/test_r2_opt_sim.py sha256 369dee8bd6bf107a99a1ce9992b3f648ccf4bfdd5b6db6eee098585244d80b5a",
+    "guard_red_in_tree": "copied tree, constants.json with live_miss.slope_us_per_tok x2 -> 1 failed (the added guard); the same guard opened to a message references the measured 832.7 ms vs a 100.0 ms floor",
+    "guard_green_in_tree": "same tree, real constants -> 22 passed",
+    "calibration_rerun": ".venv/bin/python scratch/r2-opt-sim/calibrate.py --out .scratch/simpromote/constants_v2.json -> exit 0, 743 flat fields, sha256 781fca19efeefecc59114a5a3ad240f738ad4a724fac68fd6d3f90b398569d3c != constants.json bce60b68... -> 64 fields differ (R2-VLLM/rows.jsonl is on disk with 420 rows and is not in sources.files; small_prompts.pooled n 210->222, intercept 81.28->54.86; behaviour rows 6763->6913). live_miss unchanged: slope 495.633 us/tok, n 54, intercept -20.763 ms",
+    "model_rerun": ".venv/bin/python scratch/r2-opt-sim/cost_model.py -> exit 0, 'constants: 22 rows, problems 0', ranking live-R < live-F < pointer+fold < live-C < pointer+pads < mutable+movable < live-A < append+notes < mutable (identical under no_full_cost and pooled_lookup)",
+    "regression_baseline": ".venv/bin/python scratch/r2-opt-sim/regression.py .scratch/simpromote/regression.json -> arm C turns 41-80: measured 572.0 ms; train_mean 287.5 (err -49.7 %, MAE 286.0); structure-fixed predictor err -46.4 %, MAE 265.9; model+bias err -18.6 %, MAE 182.4; oracle window_mean MAE 241.7",
+    "two_orders": "cost_model.py order (live-R top, mutable last) vs report2.json ranking.order (live-C top, mutable last) -- report2.json has zero robust adjacent gaps (robust gaps: []), so neither order is licensed as a ranking; its quotable margins are adopted only as numbers in the report",
+    "selfcheck": "scratch/r2-opt-sim/selfcheck.json selfcheck.py's own output, read not re-run: cases 9, red 8, not_coupled ['miss slope halved'], restored_green true",
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_r2_opt_sim.py -q -p no:cacheprovider",
+      ".venv/bin/python scratch/r2-opt-sim/calibrate.py --out .scratch/simpromote/constants_v2.json --json",
+      ".venv/bin/python scratch/r2-opt-sim/cost_model.py --out .scratch/simpromote/report_v2.json",
+      ".venv/bin/python scratch/r2-opt-sim/regression.py .scratch/simpromote/regression.json",
+      "python3 -c 'import json; c=json.load(open(\"scratch/r2-opt-sim/constants.json\")); print(c[\"sources\"][\"files\"].keys())'"
+    ]
+  },
+  "blocker": "Two things a verifier must resolve before anything downstream cites this model. (1) A COPY of the model grades a green suite on mutated constants: with live_miss.slope_us_per_tok doubled on disk, 22/22 pass in a temp-dir copy AND in an in-workspace copy under .scratch/simpromote/, where the same process reports T.ROOT inside the copy and T.CONSTANTS corresponding to the mutated file; in-tree the same mutation is caught. The mechanism is NOT diagnosed -- a mutated .pyc was excluded (a 'cold' mutation in a copy IS caught), and a **-spread key loss was excluded. Consequence: selfcheck.py's red 8/9 is not reproducible outside the workspace tree; the 9th case is reproducible in-tree. (2) constants.json is stale against its own rerun command: 64 fields differ once R2-VLLM (420 rows, on disk since 21:17Z) is scanned -- the layout facts the ranking rests on are not reproducible; live_miss (the hold-out constant) is unchanged.",
+  "next_unit_hint": "V-SIM-PROMOTE (verifier, not the author, offline, 0 requests): (a) run the four commands above and reproduce the table in strategy/R2_OPT_SIM.md section 3; (b) decide R2-VLLM in or out of the behaviour scan and, if 'in', re-run cost_model.py and re-issue the order; (c) reproduce the copy-grades-green anomaly with a minimal fixture and name its mechanism, then run selfcheck.py --red in-tree and record whether 9/9 red is reachable with the added guard; (d) confirm no write outside the declared paths. Do not re-derive the model.",
+  "write_paths": [
+    "orchestration/units/SIM-PROMOTE.md",
+    "strategy/R2_OPT_SIM.md",
+    "tests/test_r2_opt_sim.py",
+    "scratch/r2-opt-sim/selfcheck.json",
+    "orchestration/handoffs/SIM-PROMOTE.json",
+    ".scratch/simpromote/**"
+  ],
+  "assumptions": [
+    "WRITE PATHS: the card lists 'orchestration/units/R2-OPT-SIM.md' (a member of the family) and '.scratch/** run artifacts'; neither is touched, so a scratch root of .scratch/simpromote/ is used for run artifacts. The card's scratch/r2-opt-sim/selfcheck.json is declared writable but is NOT rewritten by this unit -- selfcheck.py regenerates it, and rewriting a guard's output without running the guard would be a claim, not evidence.",
+    "STATUS: 'partial', not 'done'. The deliverable exists and the promoted model is green, but the copy anomaly stays open, constants.json is not reproducible, and no verifier has ruled. The plan's own rule applies: partial is a result.",
+    "TRIAL WITHIN THE PARENT CARD: no third cost model was written. The only code change is one additive test (guard) plus nothing else; every promoted artefact keeps the digest it had before this unit.",
+    "SECTION 3's numbers are from regression.py's honest out-of-sample protocol (fit on turns 1-40 of all arms, grade on arm C 41-80), NOT from report.json's column, whose error_pct is computed against the all-80-turn mean while its error_ms is against the 41-80 mean -- the report states that inconsistency rather than repairing the artefact.",
+    "R2-OPT-SIM2's report2.json was re-read at the end of the unit and is byte-identical (sha256 a4da82...e1e); it has no robust adjacent gaps, so the report adopts its margins (folder 334.4 vs live-C 285.0, gap +49.3 ms) and not its ordering."
+  ]
+}

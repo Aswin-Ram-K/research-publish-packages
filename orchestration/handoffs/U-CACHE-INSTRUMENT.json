@@ -1,0 +1,71 @@
+{
+  "unit": "U-CACHE-INSTRUMENT",
+  "status": "done",
+  "verdict": "server-reported",
+  "overall": "partial",
+  "claim_verdict": "94.56% SURVIVES as a server-reported instrument, WITH THREE STATED LIMITS (see findings). It must not be thrown out, but the paper must describe it as a provider-usage field, not as a measured cache-hit rate, and must use a MEDIAN-OVER-SESSIONS headline, not the sum ratio.",
+  "checks": [
+    "cachedTokens is a pure pass-through of the provider usage object; no local estimate or derivation (findings[0])",
+    "inputTokens denominator comes from the same usage payload in the same settle call (dist/index.js:594; findings[1])",
+    "independent corroboration: 52,707 cacheLedger lines sum to input 3,804,227,263 / cached 3,597,266,905 = 94.5597%, matching stats_json (findings[2])",
+    "single self-hosted endpoint 127.0.0.1:8790, openai protocol, model deepseek-v4.1-flash; not a cloud-vendor or public-API result (findings[3])",
+    "LIMIT 1: cached semantics are protocol-dependent and stats_json stores no protocol flag (findings[4])",
+    "LIMIT 2: anthropic cache-write tokens are dropped from the denominator when input>=cached>0, which lowers the ratio (findings[5])",
+    "LIMIT 3: hitPct is integer-rounded but stored input/cached are raw, and the ratio was recomputed from raw integers (findings[6])",
+    "contamination not material: the 8 research sessions are 0.282% of input at 93.92%, so excluding them moves the rate +0.0018pp to 94.5615% (findings[10], findings[11], contamination.conclusion)",
+    "dispersion is the real fragility: 1130 of 1273 sessions carry cached>0, so the sum-ratio is not the typical session and median-over-sessions is the defensible headline (findings[12])"
+  ],
+  "findings": [
+    "`cachedTokens` is a PURE PASS-THROUGH of the provider `usage` object. There is no local estimate, heuristic, or derivation: the number is read straight out of the API usage payload and accumulated. It cannot be an estimate.",
+    "`inputTokens` (the denominator) is ALSO provider-reported, from the same `usage` object, and is accumulated in the same settle call as `cachedTokens` (dist/index.js:594 `stats.inputTokens+=s3.total`, immediately followed by `session.stats.cachedTokens+=s3.reportedCached`). Numerator and denominator therefore come from the SAME payload and are internally consistent.",
+    "A second, INDEPENDENT record of the same data corroborates it exactly: `sessions.metadata_json.cacheLedger.lines` holds one entry PER REQUEST (52707 lines across 1181 sessions), each carrying its own `input`/`cached`/`hitPct`/`model`/`proto`/`upstream`. Summing those per-request lines gives input=3,804,227,263 cached=3,597,266,905 rate=94.5597% — identical to the accumulated counters, to the token. The stats_json counter is not drifting from the underlying samples.",
+    "The provider here is a single self-hosted endpoint, http://127.0.0.1:8790 (all 1273 sessions: origin=8790, namespace='dsh'). The cached count is whatever THAT server reports in its usage object. The rate measures that server's KV-cache reuse, NOT a cloud vendor's prompt caching and not DeepSeek's public API. A paper must name the endpoint and the model id (deepseek-v4.1-flash appears in ledger lines).",
+    "LIMIT 1 — semantics are protocol-dependent and the DB stores no flag. `cachedTokens` means 'cache READ' and is EXCLUDED from input (additive), for anthropic. For openai/responses/google it means 'subset OF prompt_tokens' and is INCLUDED in input. The read code maps both: openai reads `prompt_tokens_details.cached_tokens ?? prompt_cache_hit_tokens`; anthropic reads `cache_read_input_tokens`; google reads `cachedContentTokenCount`. The denominator is repaired by `promptInputTotal` (dist/index.js:516) which adds cached back for split-semantics protocols. The flag is only present in cacheLedger lines (`proto`), not in stats_json.",
+    "LIMIT 2 — anthropic cache-WRITE tokens are DROPPED from the denominator. `promptInputTotal` only adds back `cached` and `creation` when `input < cached` (the split-semantics heuristic). On a partial page-cache miss where input>=cached>0, the additive branch is skipped and `cache_creation_input_tokens` is omitted. This is conservative (it lowers the ratio), so it does not inflate the claim.",
+    "LIMIT 3 — an arithmetic rounding, NOT a clamp. `hitPct` in log/ledger lines is `Math.round(cached/total*100)` (integer percent). The STORED stats_json and ledger `input`/`cached` fields are raw integers; I recomputed the ratio from raw integers, so this does not affect 94.56%. Note the display value hitPct is 0..100 and is not clamped at 100 in the accumulate path.",
+    "NON-DENOMINATOR compat bug found and excluded: an older buggy parse `num3(usage['input_tokens_details']['cached_tokens'])` (dist/index.js:885) reads the wrong (OpenAI-shaped) path for anthropic. It can only misrecord a cached count as undefined->null. Since it feeds the numerator only, on a hit it can only UNDERCOUNT cachedTokens. It cannot manufacture a high ratio, and for this DB all sessions are openai protocol.",
+    "`lastInputTokensSource` / `contextTokensSource` = 'usage' vs 'estimate' grade the CONTEXT/LAST-REQUEST size only (1059 usage vs 200 estimate; 1011 usage vs 262 estimate respectively). They do NOT grade `cachedTokens`. `lastInputTokensOrigin` and `calibratedEstimateOrigin` = 'http://127.0.0.1:8790' (an endpoint stamp, NOT a usage/estimate flag). `calibratedEstimate` is a dimensionless ratio (~0.9-1.4) used to calibrate the LOCAL estimate; it never touches cachedTokens. `localInputEstimate` is a separate local estimate and is NOT the denominator.",
+    "cacheSamples is a SAMPLE COUNTER, not a saturated guard: 55594 requests vs 55594 cacheSamples (1:1). Every request that reported usage produced a sample; there is no 'cachedTokens clamped to cacheSamples' behaviour.",
+    "CONTAMINATION — the research workspace is NOT absorbed by the DB. 8 sessions (1 root + 7 subagents) do belong to this research program: session-b61634cb-... (the parent research conversation, titles matching the caching experiment) and its forked subagent sessions. These 8 carry 10,729,113 input tokens, 10,076,928 cached tokens, 431 requests.",
+    "The exclusion does NOT move the headline: WITH research sessions 94.5597%; WITHOUT them 94.5615% (1265 sessions, 3,793,498,150 input, 3,587,189,977 cached). The research sessions alone sit at 93.92%, below the fleet average, so including them slightly LOWERS the number. The claim is not self-serving.",
+    "THE REAL FRAGILITY IS NOT CONTAMINATION, IT IS DISPERSION: because the sum-of-ratio is dominated by big sessions, the fleet number is not the typical session. Sessions with cachedTokens>0 = 1130 of 1273. A per-session median is the defensible headline; report both sum-ratio and median, and say which is which."
+  ],
+  "evidence": {
+    "decisive_quote": "if(s3.reportedCached!==null&&s3.total>0){session.stats.cachedTokens+=s3.reportedCached;session.stats.cacheSamples+=1}",
+    "decisive_location": "/home/zer0null/.dsh/profiles/web/node_modules/billion-context/dist/index.js:594 (also dist/agent/pi-native.js:869)",
+    "denominator_quote": "function settleUsageReport(session,s3,localTextEstimate){if(s3.total>0){session.stats.inputTokens+=s3.total;session.stats.lastInputTokens=Math.max(0,s3.total-(session.stats.compressCreditTokens??0));session.stats.lastUsageGradeTokens=session.stats.lastInputTokens;session.stats.lastInputTokensSource=\"usage\";",
+    "denominator_location": "/home/zer0null/.dsh/profiles/web/node_modules/billion-context/dist/index.js:594",
+    "provenance_quote": "function recordUsage(ctx,usage,round){const prompt=usage.inputTokens;const cached=usage.cachedTokens;const out=usage.outputTokens;const reportedCached=typeof cached===\"number\"?cached:null;const total=promptInputTotal(ctx.protocol,prompt,cached,usage.creationTokens);",
+    "provenance_location": "/home/zer0null/.dsh/profiles/web/node_modules/billion-context/dist/index.js:719",
+    "parse_quote": "if(protocol===\"openai\"){const prompt=num6(usage[\"prompt_tokens\"]);const cached=num6(usage[\"prompt_tokens_details\"]?.[\"cached_tokens\"])??num6(usage[\"prompt_cache_hit_tokens\"]);return{total:prompt!==void 0?promptInputTotal(\"openai\",prompt,cached):void 0,cached}}",
+    "parse_location": "/home/zer0null/.dsh/profiles/web/node_modules/billion-context/dist/index.js:516",
+    "denominator_repair_quote": "function promptInputTotal(protocol,input,cached,creation){if(input===void 0)return 0;const includesCached=protocol===\"openai\"||protocol===\"responses\"||protocol===\"google\";const splitSemantics=!includesCached||typeof cached===\"number\"&&input<cached;const additive=(splitSemantics&&typeof cached===\"number\"?cached:0)+(splitSemantics&&typeof creation===\"number\"?creation:0);return input+additive}",
+    "denominator_repair_location": "/home/zer0null/.dsh/profiles/web/node_modules/billion-context/dist/index.js:516",
+    "package": "billion-context 0.1.202 at /home/zer0null/.dsh/profiles/web/node_modules/billion-context (declared in /home/zer0null/.dsh/profiles/web/package.json). No separate source tree exists under ~/.local/share/billion-context (only ca/ and sessions/index.db).",
+    "independent_corroboration": "metadata_json.cacheLedger.lines summed = 52,707 per-request lines, input 3,804,227,263, cached 3,597,266,905 -> 94.5597%, matching stats_json counters exactly.",
+    "db_access": "opened strictly read-only via sqlite3.connect('file:...index.db?mode=ro', uri=True); zero writes to the DB. Note the DB is LIVE and grew during the read (1269->1273 sessions, 55,401->55,585 requests), because this very research session writes to it."
+  },
+  "contamination": {
+    "eligible_population": "1273 sessions / 55585 requests (snapshot at read time; claim said 1269 / 55401 - the DB grew during verification from the live service).",
+    "research_sessions_count": 8,
+    "research_sessions_identified_by": "session id prefix 'session-b61634cb-606d-4220-9b7e-eeb2b9a9e2a7' (root research conversation + 7 forked subagents) and by title text referencing the caching experiment.",
+    "research_sessions_tokens": {"inputTokens": 10729113, "cachedTokens": 10076928, "requests": 431, "own_rate_pct": 93.9214},
+    "share_of_total_input_pct": 0.282,
+    "with_research_sessions": {"sessions": 1273, "input": 3804227263, "cached": 3597266905, "requests": 55585, "rate_pct": 94.5597},
+    "without_research_sessions": {"sessions": 1265, "input": 3793498150, "cached": 3587189977, "requests": 55154, "rate_pct": 94.5615},
+    "delta_pp": 0.0018,
+    "conclusion": "Not material. Excluding the research workspace's own sessions moves the figure by +0.0018pp (they are BELOW the fleet average). 94.56% is not a self-flattering artefact."
+  },
+  "recomputed_rates": {
+    "claimed": {"sessions": 1269, "requests": 55401, "rate_pct": 94.56},
+    "sum_over_sessions_all": {"sessions": 1273, "requests": 55585, "input": 3804227263, "cached": 3597266905, "rate_pct": 94.5597},
+    "sum_over_sessions_excluding_research": {"sessions": 1265, "requests": 55154, "input": 3793498150, "cached": 3587189977, "rate_pct": 94.5615},
+    "ledger_per_request_sum": {"lines": 52707, "sessions": 1181, "input": 3804227263, "cached": 3597266905, "rate_pct": 94.5597},
+    "sessions_with_cached_gt_0": 1130,
+    "sessions_total": 1273,
+    "note": "Earlier partial reads during live growth gave 94.5579% (1271 rows) and 94.5582% (1273 rows); all are within 0.003pp. Compressible ranges of the DB (metadata_json stats row) are stable to 4 decimals."
+  },
+  "blocker": "",
+  "next_unit_hint": "DOWNSTREAM PAPER WORK (three fixes, none of them 'throw the number out'): (1) LABEL the metric as a provider-usage field 'cached_tokens from the usage object of endpoint 127.0.0.1:8790', NOT 'measured cache hit rate'. (2) ADD a per-session MEDIAN (and IQR) alongside the 94.56% sum-ratio, because the sum-ratio is dominated by large sessions; this is the strongest remaining criticism. (3) STATE the protocol semantics (openai/responses/google = cached is subset of prompt_tokens; anthropic = additive split) and that the population is a SINGLE self-hosted endpoint running deepseek-v4.1-flash, so this does NOT generalise to DeepSeek's public API or to cloud vendors. Also state the read-only query and the fact the DB is live (row counts drift). OPTIONAL: re-run the query closing the ledger `proto`/`model` breakdown per rate so the paper can prove the sample is one protocol.",
+  "write_paths": ["/home/zer0null/reserach extarctor/orchestration/handoffs/U-CACHE-INSTRUMENT.json"]
+}

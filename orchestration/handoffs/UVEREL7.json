@@ -1,0 +1,37 @@
+{
+  "unit": "UVEREL7",
+  "overall": "partial",
+  "checks": [
+    "Ladder re-run CONFIRMED: cut1/cut2/cut3 exit 0 with 'RESULT pass exit=0 claims=143 failed=0 []' (143 PASS, 5 NOTE, 0 FAIL each); cut4 exit 3 with literal 'MISSING section per_task required by claims [...]' + 'RESULT fail exit=3 missing=[per_task]'.",
+    "cut3 inventory CONFIRMED exact: 5 files, 28,233 B total, and all five section-4 md5s recompute (record.json 34e27ccbc09e586f57362196b726f0da, verify_claims.py f0855d9e41b09df895e974feb7597856, METHOD.md a78e827a0546cbef248befb89b8fa428, sealed.json ce18156c126b530970b3f2f62dd3d2c4, provenance.json 97b3dd3224f4b628288fa984b2793970).",
+    "Two-sided minimality direction CONFIRMED: cut2->cut3 loses 0 claims (both 143 PASS exit 0); json.load key diff shows cut4 = cut3 minus only the per_task key (only-cut3=['per_task'], only-cut4=[], other 8 top-level keys byte-identical); cut4 verifies 0 of 143 and exits 3.",
+    "Sealed figures CONFIRMED not reproducible: selection[MODE-7] gives ok_cheapest 18/120=0.150 and ok_cheapest_alt 27/120=0.225 vs published 0.575 (=69/120, no matching count in rows); rows carry n=120 routed decisions, picked_dist {[EXTRACT-2]:120}, ok_chosen 84/120=0.700 vs sealed router total 207 (87 decisions in no record).",
+    "Withheld-surface grep: exact handoff pattern over all four cut dirs = 0 matching files (CONFIRMED). Independently derived pattern from GATED_READ_DISCLOSURE.md (X-01/02/03/04/08/09/10/11, N-06, P-13, F-01, F-02) matches 10 files but every hit is a token collision: n_files substring of neutral field payload_in_files, ptok a loop-local variable at cut3/verify_claims.py:244, unparsed prose at cut3/METHOD.md:38; no private path, model id, payload token, module/method name, branch label, broker/credential shape, src/** name or legend found.",
+    "Neutralisation CONFIRMED: cut3 record.json carries [MODE-1..8], [ARM-1..6], [EXTRACT-1..4] and unit keys U0001/U0046/U0058/U0060/U0082; [TASK-01..20] and [MODEL-1]/[MODEL-2] appear only in cut1/cut2 record.jsonl; schema block = 'reduced-neutralised'; no tag->identifier legend ships (verify_claims.py docstring, METHOD.md tag ranges only, derived grep finds no map).",
+    "Red->green CONFIRMED on copy scratch/uverel7/verify_claims_redgreen.py: as-is exit 0; tamper chk(\"R4-CHOSEN-OK\", 0.700->0.999) yields exit 1 'FAIL R4-CHOSEN-OK expected=0.999 got=0.7' + 'RESULT fail exit=1 claims=143 failed=1 [R4-CHOSEN-OK]'; restore exit 0; copy md5 f0855d9e41b09df895e974feb7597856 equals the untouched artifact md5.",
+    "CONTRADICTED byte totals: cut1 measured 1,572,249 B (report 1,572,498), cut2 1,148,742 B (report 1,148,991), cut4 27,200 B (report 27,447); find -printf and du -sb agree, all 20 files share build mtime 2026-10-16 16:43:47. Deltas measure cut2->cut3 1,120,509 B (report 1,120,758) and cut3->cut4 1,033 B (report 1,035; report's own table sizes give 786, internally inconsistent). Section 8's 'every section 1-6 number from the md5 run' fails for those three totals.",
+    "UNVERIFIED: provenance pin (input_bytes 2267742 / input_lines 9260 / input_md5 3aad1ae29e472ef9f5f54e179510faf5 / input_sha256 5732766d...) cannot be checked against the withheld raw record - PROV-* only proves internal agreement with hard-coded literals; hard-coded 'published' expectations not cross-read against GATED_READ_2026.md; section 8's '34 tool calls vs bound 30' not re-measurable; gold_derivation not re-runnable (answers withheld) though its stored_only_by_unit sums are internally consistent (pinned 12, live 14)."
+  ],
+  "blocker": "",
+  "next_unit_hint": "The release decision stands: ship scratch/urelease7/cut3/ verbatim (5 files, 28,233 B, md5s in section 4 all reproduce; exits 0 with 143 PASS / 5 NOTE; removing per_task and only per_task flips it to exit 3). If the deliverable is revised, correct section 2's byte bookkeeping (cut1 1,572,249 / cut2 1,148,742 / cut4 27,200 B; deltas 1,120,509 and 1,033 B) and soften section 5/6's absolute 'no private schema identifier survives' / 'only strings are published values and tags' wording. Do not add a tag legend, a manifest, or the gold-derivation script; keep the two sealed figures presented as sealed, not verified. Full detail in strategy/VERIFICATION_REPORT_REL7.md; dated Verification note appended to strategy/GATED_READ_RELEASE_CUT.md.",
+  "write_paths": [
+    "strategy/VERIFICATION_REPORT_REL7.md",
+    "strategy/GATED_READ_RELEASE_CUT.md",
+    "orchestration/units/UVEREL7.md",
+    "orchestration/handoffs/UVEREL7.json",
+    "scratch/uverel7/**"
+  ],
+  "not_reproduced": [],
+  "overstated": [
+    "Section 5: 'no private schema identifier survives the reduction' - the F-01/F-02-listed tokens ptok (verify_claims.py:244 loop variable), n_files (substring of the neutral field payload_in_files) and unparsed (METHOD.md:38 prose) survive as strings; no substantive leak.",
+    "Section 6: 'the only strings the release carries are the published values and the uniform tags listed in section 5' - field names, prose and claim ids are also carried."
+  ],
+  "unverified": [
+    "Provenance pin vs the withheld raw record (input_bytes 2267742, input_lines 9260, input_md5 3aad1ae29e472ef9f5f54e179510faf5, input_sha256 5732766d67d533a2b2e2ddce50d04bcb34a2480f70e1087fdee5754cacc35223) - raw record withheld.",
+    "Whether the 143 hard-coded expected values equal the manuscript's published values (arithmetic from the shipped record was verified; the source note was not re-read).",
+    "Section 8 process disclosure '34 tool calls against a stated bound of 30'.",
+    "gold_derivation outcome cannot be re-run (derivation script withheld), though its counts are internally consistent."
+  ],
+  "tool_calls": 17,
+  "bound": 20
+}

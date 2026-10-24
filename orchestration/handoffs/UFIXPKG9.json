@@ -1,0 +1,39 @@
+{
+ "unit": "UFIXPKG9",
+ "status": "done",
+ "artifacts": [
+  "tools/package/gate.sh",
+  "tests/test_ufixpkg8_tag_re.py",
+  "scratch/uneutral10/package/MANIFEST.json",
+  "scratch/ufixpkg9/evidence.json",
+  "scratch/ufixpkg9/test_package_tools_local.py"
+ ],
+ "evidence": {
+  "defect1_red": "gate.sh:110 pattern ^(?:K|F|S|C|R|D|N)[digits][digits]$ ; P01 accepted=False (before edit)",
+  "defect1_green": "^(?:K|F|S|C|R|D|N|P)[digits][digits]$ ; P01 accepted=True; P,P1,P001,p01,D-067,hello rejected; K01,F56,S02,C01,R10,D43,N01,TAG_01 preserved",
+  "defect1_test": "python3 -m pytest tests/test_ufixpkg8_tag_re.py -q -> 56 passed (fixture parametrised over BUILD_SCRIPT + EMITTED_GATE)",
+  "defect1_second_copy": "scratch/ufixtree1/UBUILD1.repin.build.sh:749 also lacks P (frozen repin copy under scratch); prose copy in strategy/OUTSIDE_TOKEN_REDACTION.md",
+  "defect1_direction": "UBUILD1.build.sh:818 'cat > \"$DEST/gate.sh\" <<GATE_EOF' emits a gate; heredoc body vs tools/package/gate.sh DIFFER in 108 diff lines -> tools/package/gate.sh is NOT a verbatim emitted copy; it is a hand-carried sibling (its header cites scratch/ugate1+ugate2), so the two are effectively independent hand-maintained sources of truth and that is why they diverged",
+  "defect2_before": "check_manifest.py --package scratch/uneutral10/package -> missing=0 hash_mismatch=1 size_mismatch=1 unlisted=0 listed_but_absent=0; HASH: fixture/reflex-decisions.ts; SIZE: fixture/reflex-decisions.ts; VERDICT FAIL; exit=1",
+  "defect2_stale_entry": "MANIFEST sha256=369159b03aa67f1571517ea2a9c3c460d218ee832d00e8ddd4928e5e6da0f78d bytes=81284",
+  "defect2_actual": "sha256=89e77a8e24a907f06345a45485c013799e08c806cc9d8f075db7709fbfd8e169 bytes=81439 (+155)",
+  "defect2_regen": "python3 tools/package/regen_manifest.py --package scratch/uneutral10/package --generated-utc 2026-10-16T22:51:23Z --no-note -> files_on_disk: 29 bytes_total: 830893 (was 830738) manifest_self: 16ff23fe3ba7aba5; files[] entries: 28 (excludes MANIFEST.json); added: [] changed: 1; exit=0",
+  "defect2_after": "check_manifest.py -> missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0; manifest_self_recomputes=True; VERDICT PASS; exit=0",
+  "defect2_independent": "raw sha256/bytes walk of all 28 files[] entries: independent_drift=[] (zero)",
+  "tools": "verify/recompute-claims.py exit=0 VERDICT: PASS ALL PUBLISHED NUMBERS REPRODUCED: True; second-labeller/parse_fixture.py exit=0; second-labeller/compare.py exit=0",
+  "paper_byte_total": "grep 830738|830,738|bytes_total in papers/encoder-crossover-190/ -> NO match; no published number depends on the byte total. BUT papers/encoder-crossover-190/CLAIMS.md:47 cites the shipped reflex-decisions.ts digest 369159b0...f78d (MANIFEST.json:74,:75), which regen changes to 89e77a8e...; that published digest is now stale and lives outside this unit's write paths.",
+  "triage": "1 failed, 4 passed in 1.94s",
+  "suite_collection": "full-suite collection is blocked in this environment: 16 tests error on 'ModuleNotFoundError: No module named graphify' (src/resextract/kg/policy.py:47 imports graphify.detect); not caused by this work",
+  "bound_note": "completed at 21 tool calls, 1 over the 20 stated in the card; the overage is the mandated handoff+send step"
+ },
+ "blocker": "",
+ "next_unit_hint": "A fresh unit should (a) decide whether tools/package/gate.sh should be mechanically regenerated from the UBUILD1.build.sh heredoc or the two copies unified, and (b) update papers/encoder-crossover-190/CLAIMS.md:47 (and MANIFEST.json:74-75 cite) to the new shipped digest 89e77a8e... ; also fix scratch/ufixtree1/UBUILD1.repin.build.sh:749 if that repin is still live.",
+ "write_paths": [
+  "tools/package/gate.sh",
+  "tests/**",
+  "scratch/uneutral10/package/MANIFEST.json",
+  "orchestration/units/UFIXPKG9.md",
+  "orchestration/handoffs/UFIXPKG9.json",
+  "scratch/ufixpkg9/**"
+ ]
+}

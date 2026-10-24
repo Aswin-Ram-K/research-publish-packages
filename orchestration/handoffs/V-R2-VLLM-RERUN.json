@@ -1,0 +1,109 @@
+{
+  "unit": "V-R2-VLLM-RERUN",
+  "overall": "partial",
+  "checks": [
+    {
+      "id": "C1",
+      "name": "instrument no longer blind (usage-accounting flag + observed-vs-blind)",
+      "result": "pass",
+      "command": "python3 rows/launch scan: python3 -c 'json.load(OH1-launch.json|OH1L-launch.json|A1-launch.json) walk for enable-prompt-tokens-details / prefix-match-unit' + rows.jsonl usage census",
+      "actual_output": "OH1-launch /spec/extra[0]='--enable-prompt-tokens-details', /spec/cmd[27]=same, /spec/cmd[30]='--prefix-match-unit'; OH1L-launch identical (extra[0], cmd[27], cmd[30]); A1-launch /spec/extra[0]='--enable-prompt-tokens-details', /spec/cmd[31]='--prefix-match-unit', /spec/cmd[33]=same. rows.jsonl: 418 rows, status==200 on 418/418, usage_has_details is true on 418/418, cached_tokens is None on 0 rows, rows with usage_has_details!=True AND cached_tokens==0 = 0 (no fabricated zero found). 194 battery rows carry an observed cached_tokens==0 (observed miss, not unobserved).",
+      "note": "flag count per launch spec is 1 in cmd in all three launches; A1 is prod's own Cmd with pmu 16 + this one flag (test_R1 asserts exact equality)."
+    },
+    {
+      "id": "C2",
+      "name": "arm identity is real, from bytes",
+      "result": "pass",
+      "command": "python3 -c 'for each (config_id, rep, turn) count distinct prefix_sha256 over arms A,C,R,H; check arm_compaction/arm_render/prompt_nodes on every battery row; check render<->compaction mapping'",
+      "actual_output": "64 (config,rep,turn) groups; groups with !=4 distinct prefix_sha256: 0; pairwise arm coincidences across all 64 groups: 0. All 256 battery rows carry arm_compaction + arm_render + prompt_nodes (True). Declared concatenation violations: 0 — A=(append_note,pointer) 64 rows, C=(summarise_in_place,naive_append) 64, R=(fork,pointer_fork) 64, H=(append_note,pointer) 64. prompt_nodes.compaction/render disagreeing with the row labels: 0; prompt_nodes.turn == turn on 256/256.",
+      "note": "No turn where two arms coincide. FORK→pointer_fork, SUMMARISE_IN_PLACE→naive_append, APPEND_NOTE→pointer confirmed on the recorded bytes."
+    },
+    {
+      "id": "C3",
+      "name": "cold pass (rep=0 battery cached_tokens == 0 on all cells)",
+      "result": "pass",
+      "command": "python3 -c 'battery rows with rep==0 and cached_tokens!=0'",
+      "actual_output": "battery rows rep0 = 128, rep1 = 128; rep0 battery rows with cached_tokens != 0: 0 (over 2 configs x 4 arms x 16 turns = 128 cells). No exception, no contamination.",
+      "note": "rep0 probe-phase rows DO carry cached_tokens>0 (OH1 48, A1 18 per the analyse handoff, all arm:null probe/grid/tokens/baseline rows) — legitimate probe reuse inside a probe phase, not a battery cold-pass violation."
+    },
+    {
+      "id": "C4",
+      "name": "repeat pass (rep1 == rep0 bytes; pass-2 hit picture)",
+      "result": "pass",
+      "command": "python3 -c 'map (config,arm,turn)->prefix_sha256 for rep0 vs rep1; count rep1 battery rows with cached_tokens>0 per config and per arm'",
+      "actual_output": "rep0 and rep1 key sets identical (128 cells each), prefix_sha256 mismatches: 0 (byte-identical repeat). rep1 battery hits: OH1 62/64 {A:15, C:16, H:15, R:16}; rep1 battery misses: 2 -> (A,turn 1) and (H,turn 2). A1 rep1 battery hits: 0/64.",
+      "note": "handoff says '62/64 incl. one arm with a miss'. The total 62/64 is exactly reproduced, but the miss split is overstated in precision terms: the 2 misses sit in TWO arms (A once, H once), each with 15/16 — there is no arm with two misses. Refinement, not a defect in the total."
+    },
+    {
+      "id": "C5",
+      "name": "independent re-derivation of the per-(config,arm) table",
+      "result": "pass",
+      "command": "python3 -c 'own script over rows.jsonl: per (config_id, arm) rows, cached_eq_0, cached_gt_0, cached_none, total_cached, uncached mean/median'",
+      "actual_output": "OH1|A 32 rows 0-eq 17 >0 15 none 0 total 80240 mean 2967.75 med 1799.5 | OH1|C 32/16/16/0/45168/1420.5/599.0 | OH1|R 32/16/16/0/47872/1505.188/599.0 | OH1|H 32/17/15/0/84288/2840.75/1576.0 | OH1|probe 108/38/70/0/382336/1667.241/175.0 | A1|A 32/32/0/0/0/5475.25/5359.5 | A1|C 32/32/0/0/0/2832.0/2893.5 | A1|R 32/32/0/0/0/3001.188/3047.5 | A1|H 32/32/0/0/0/5474.75/5359.0 | A1|probe 54/27/27/0/170048/2057.981/995.0 ; config rows OH1 236, A1 182 (sum 418).",
+      "note": "Byte-for-byte identical to orchestration/handoffs/R2-VLLM-ANALYSE.json evidence.per_config_arm on every field, every cell (20 cells x 7 fields). No discrepancy. rows.jsonl sha256 6f7f05fab99a4c4b03ed1a7c662163db3a0f453b761a2339e5a38cb054de0ad1 and n_rows 418 also reproduce, and match analysis.json _source.rows_sha256 / analysis-guard.json."
+    },
+    {
+      "id": "C6",
+      "name": "A1 zero pattern characterised (observed miss vs unobserved)",
+      "result": "pass",
+      "command": "python3 -c 'A1 rows: cached>0 / cached==0 / None counts, hit phases, hit prompt sizes vs resolved_block_size; battery rows and their blocks_available'",
+      "actual_output": "A1 182 rows: cached>0 27, cached==0 155, None 0. Hit phases: grid 10, tokens 10, baseline 6, gate 1 — all arm:null. A1 battery rep1 rows 64, cached_tokens==0 on 64/64, prompt_tokens 1183..10368, blocks_available>=1 on 64/64; 0 battery hits on 114+ rows. A1 resolved_block_size 1056 / prefix_match_unit 16; OH1 2096 / 16. A1 battery byte-prefixes that had hit earlier in the same launch: 0 (OH1 likewise 0) — battery prompts are new bytes, so the probe hits do not transfer.",
+      "supported": "YES — 'A1 battery misses while A1 probes hit' is supported by the rows: the 27 hits are entirely probe-phase (arm:null) rows of the same launch (A1-launch.json /spec/container r2v-a1, one launch, rows interleaved by request_index), while 64/64 A1 battery rep1 rows are observed misses (cached_tokens==0 WITH usage_has_details true — observed, never None).",
+      "not_established": "NO causal explanation accepted: eviction under max-num-seqs / gpu_mem, tokenizer prefix divergence for qwen3.5-9b, or scheduler behaviour are not discriminated by these 182 rows. The analyse handoff's own cannot_claim list agrees; I confirm it is correctly withheld."
+    },
+    {
+      "id": "C7",
+      "name": "containment / safety (occamy never stopped, prod restored, lock released, discarded-r1 intact)",
+      "result": "pass",
+      "command": "grep -nE 'occamy=|restore prod|proven' logs/run-console.log; cat logs/{OH1,OH1L,A1}-teardown.json logs/prod-restore.json; grep released_utc experiments/context-cache/.occamy.lock; sha256sum discarded-r1/rows.jsonl",
+      "actual_output": "run-console.log: 'lock acquired after 0.0s'; 'launch OH1: health=200 waited=233.3s block=2096 launched=True occamy=200'; 'teardown OH1: rm rc=0 occamy=200'; 'launch OH1L: … occamy=200'; 'teardown OH1L: rm rc=0 occamy=200'; 'launch A1: … block=1056 … occamy=200'; 'teardown A1: rm rc=0 occamy=200'; 'restore prod: health=200 id=qwen3.5-9b block 1056->1056 proven=True occamy=200'. Launch records: OH1-launch.occamy={port 8012, status 200, checked 03:12:36Z}, OH1L-launch.occamy={200, 03:18:11Z}, A1-launch.occamy={200, 03:21:41Z}; teardown files each carry occamy.status 200 at teardown time (03:14:09Z / 03:18:14Z / 03:25:02Z) and port_after 0 for the variant only. prod-restore.json: proven true, status_running true, cmd_same/binds_same/image_same true, block_size_pre/now '1056', models.id 'qwen3.5-9b', http_status 200, occamy.status 200. rm targets are r2v-oh1 / r2v-oh1l / r2v-a1 only — gx10-occamy-nvfp4 never appears as an rm/stop target. rows: status!=200 count 0, error keys 0. experiments/context-cache/.occamy.lock content {\"unit\":\"R2-VLLM\",\"released_utc\":\"2026-10-24T03:27:40.275113+00:00\",\"note\":\"R2-VLLM done\"}. discarded-r1/rows.jsonl sha256 2737125f917fe212ad54bf67521a5ccb66a740eb35a064665d7516282de5045c (420 lines) — matches the declared digest.",
+      "note": "Lock file is left on disk holding the RELEASED record (released_utc present) rather than being deleted; the release claim is therefore evidenced by the file's own released_utc, not by absence."
+    },
+    {
+      "id": "C8",
+      "name": "red->green on a guard (re-run + own mutation)",
+      "result": "pass_with_finding",
+      "command": "cd experiments/context-cache/cells/R2-VLLM && .venv/bin/python selftest_offline.py ; then: isolated copy under .verifier-tmp/x/y/z/w with pmu16_cell.py line 134 ('    \"--enable-prompt-tokens-details\",') deleted, run, restore, run, delete copy",
+      "actual_output": "Live re-run: 16 'ok' lines, SUMMARY pass=16 fail=0 red_green=True (test_R7_analysis_guard now ok because analysis.json exists). Own red: the suite ABORTS before any check summary with 'AssertionError: revert pattern drifted from the source: flag_dropped_from_OH1: '\\\"--reasoning-parser\\\", \\\"qwen3\\\", \\\"--trust-remote-code\\\",\\\\n    # '' — the mutation changes test_R1's OUTPUT (flag count 1->0) but does not change its INPUT (build_spec still yields the flag from the spec path), so the revert-guard does not notice and the suite dies instead of reporting red. Own green: unmutated copy at the same path gives 'ok test_R1_flag_in_oh1_oh1l_a1_unchanged' and 'red->green flag_dropped_from_OH1: red=True green=True OH1: flag count 0'. Live source sha256 unchanged 2ae22c6c32230790962c93a7157a2a0e00679dfef5b3f52e7f95d58d635d0c9d before and after; temp copy removed.",
+      "finding": "The two RED defects (missing usage flag, collapsed arm identity) are genuinely guarded — the whole suite aborts rather than passing when the flag is dropped, and test_R1's recorded red->green (flag count 0) reproduces. But the revert-guard is implemented as a source-text substitution whose pattern is '--reasoning-parser', 'qwen3', '--trust-remote-code' followed by a '# ...' comment (THREE-dot placement of the flag), and it has drifted from the current file (the flag now sits BESIDE --trust-remote-code). Any mutation in that vicinity aborts the suite with a Traceback instead of a named FAIL, so a future genuine regression cannot be read as a clean red. Also: the suite is not relocation-safe (temp copies outside the repo fail 7 checks on FileNotFoundError looking for corpora/* and the real rows.jsonl), so it can only be exercised in place. Neither weakness touches the committed green state (pass=16 fail=0)."
+    },
+    {
+      "id": "C9",
+      "name": "four required facts for operator/gate",
+      "result": "pass",
+      "command": "derived from rows.jsonl (C3/C4/C5) + logs/run.json requests_this_run",
+      "actual_output": "(a) OH1 battery hits per arm: rep0 0/16 for each of A,C,R,H (0/64 total); rep1 A 15/16, C 16/16, R 16/16, H 15/16 = 62/64. (b) A1 battery hits per arm: rep0 0/16 each (0/64); rep1 0/16 each (0/64). (c) --prefix-match-unit validity: NOT discriminated by this run — 2096 % 16 == 0 and 1056 % 16 == 0, so both resolved block sizes are whole multiples of the flag value and an honoured flag is indistinguishable from an ignored one; additionally OH1L launched with pmu 8 on the same occamy-1.0 recipe and produced 0 rows, and prod metrics report prefix_match_unit=\"None\" with use_replayssm/prefix_caching_hash_algo=sha256, so nothing isolates the flag's effect. (d) requests: run.json requests_this_run = 182 for the A1 (final) launch; rows.jsonl holds 418 rows / request_index 1..418 with 418 unique (config_id, request_index) -> OH1 236 rows (236 requests), A1 182 rows (182 requests), 418 total. Cap: ARM_REQUEST_CAP raised 500->260 by R2-VLLM-REPAIR2; worst measured config 236 (rows) / 219 (REPAIR2's live measurement) < 260; 0 'arm cap reached' lines in run-console.log; the only cap encounter is historical — logs/rerun-console.log ends 'PHASE FAILED OH1: Runner.send() got an unexpected keyword argument 'extra'' after 54 rows, which is the failure the repair removed.",
+      "note": "R2-VLLM-REPAIR2's handoff and logs/repair2-offline.txt present ARM_REQUEST_CAP as 260 and the small-cap BatteryBudgetExceeded refusal as evidence; I re-ran the suite and saw 'red->green arm_cap_restored_to_200: red=True green=True (219, 200)', consistent with a cap >219 in the live source."
+    }
+  ],
+  "blocker": "",
+  "next_unit_hint": "Gate can advance on the instrument question: both defects are fixed and observable in the data (418/418 rows carry usage details, 0 fabricated zeros, 64/64 (config,rep,turn) groups have 4 distinct arm prefixes, cold pass clean, repeat pass byte-identical, per-(config,arm) table re-derived byte-for-byte). Two follow-ups, neither blocking: (1) R2-VLLM-ANALYSE handoff should read 'OH1 62/64 with one miss in A and one in H (15/16 each)' instead of 'one arm with a miss'; (2) a small card should make selftest_offline.py's revert-guard match on a stable anchor (e.g. the test's own constant / regex on source) and make the suite relocation-safe, so a real future regression is reported as a named FAIL rather than a Traceback. The A1 battery 0/128 miss stays a FINDING needing an attributing experiment, not an instrument defect; --prefix-match-unit validity is still untested because both block sizes are multiples of 16.",
+  "write_paths": [
+    "orchestration/handoffs/V-R2-VLLM-RERUN.json",
+    "orchestration/units/V-R2-VLLM-RERUN.md"
+  ],
+  "not_reproduced": [],
+  "overstated": [
+    "R2-VLLM-ANALYSE: 'OH1 62/64 battery cells hit incl. one arm with a miss' — the total 62/64 reproduces exactly, but the misses are one each in arms A (turn 1) and H (turn 2), 15/16 apiece; no single arm carries the miss. Precision overstatement, not a numeric error.",
+    "R2-VLLM-REPAIR: evidence claims 14/14 with 'flag_dropped_from_OH1 red=True green=True'. The green half reproduces on the current source, but the red half is now produced by an aborted run (AssertionError 'revert pattern drifted from the source'), not by a clean FAIL of test_R1; the check's recorded red requirement is therefore satisfied by halting rather than by failing.",
+    "R2-VLLM-REPAIR2: 'worst-case config 219' vs the rows on disk showing 236 rows for OH1 — 219 was measured against an earlier 54-row prefix; the current 236 remains under the 260 cap so the conclusion holds, but the number is stale.",
+    "R2-VLLM-ANALYSE: 'pass=15 fail=1 note' is fine, but the later green count of 16 on the same file comes from test_R7 now finding analysis.json; the handoff's 15/16 is a timestamp-dependent figure and should not be quoted as a standing result."
+  ],
+  "unverified": [
+    "Whether the 2 OH1 rep1 battery misses (A turn 1, H turn 2) are eviction or prefix-length effects — not discriminaable from these rows and not claimed by any unit.",
+    "Whether --prefix-match-unit 16 is honoured by either engine: 2096 % 16 and 1056 % 16 are both 0, so the run cannot distinguish an honoured flag from an ignored one; OH1L's pmu 8 launch produced no rows. The analyse handoff correctly says 'NOT established'.",
+    "The A1 battery 0/128 miss cause (eviction under max-num-seqs 6 / gpu_mem 0.32 vs qwen3.5-9b tokenizer divergence) — no experiment in this batch isolates it.",
+    "The '14/14' and '15/16' pass counts at the exact timestamps claimed (21:42Z, 22:14Z): I re-ran the suite only in the present state (16/16) and cannot reconstruct the historical intermediate states.",
+    "logs/repair-offline.json was ANNOTATED by R2-VLLM-REPAIR2 (not re-measured) — I verified the annotation text exists, but the annotated file is not an independent measurement."
+  ],
+  "tool_calls": 18,
+  "bound": 20,
+  "assumptions": [
+    "Rep 0 of the battery is taken as pass 1 (cold) and rep 1 as pass 2 (repeat), per the card; the 'pass' column is absent/null on every row.",
+    "A1 'battery miss while probes hit' is read at row granularity: hits are the 27 arm:null probe-phase rows, misses are the 64 A1 battery rep1 rows; both from the single A1 launch (r2v-a1), so the contrast is within-one-launch by construction.",
+    "cache hits are measured via prompt_tokens_details.cached_tokens; a present 0 is an observed miss, an absent field is unobserved (None) — no row in rows.jsonl is unobserved, so no claim rests on the distinction here.",
+    "Containment is verified from the recorded health/teardown/restore artefacts (occamy status 200 at every teardown, prod-restore proven=true, block 1056, id qwen3.5-9b); no live container was contacted, per the offline-only constraint.",
+    "The abandoned negative-control attempts (temp copies that failed 7 checks on FileNotFoundError for corpora/end... and the real rows.jsonl) are recorded as a relocation-safety finding, not as a defect of the committed code; the live suite passes 16/16 in place.",
+    "One workspace scratch tree (.verifier-tmp/, and famously .verifier-scratch/) was created and removed within single commands; nothing remains on disk and no committed file under experiments/ was modified (live pmu16_cell.py sha256 verified unchanged)."
+  ]
+}

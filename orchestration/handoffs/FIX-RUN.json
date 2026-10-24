@@ -1,0 +1,41 @@
+{
+ "unit": "FIX-RUN",
+ "status": "partial",
+ "artifacts": [
+  "scratch/fixrun/check_digest_pins.py",
+  "scratch/fixrun/apply_edits.py",
+  "orchestration/units/FIX-RUN.md",
+  "orchestration/handoffs/FIX-RUN.json"
+ ],
+ "evidence": {
+  "defect": "second-labeller/RUN.json:12 _sha256_labels names papers/encoder-crossover-190/CLAIMS.md:39 and MANIFEST.json files[].source_sha256 as its own source, but no MANIFEST entry carries source_sha256 = 076164ac...b4796 (it is only the entry sha256 of fixture/reflex-decisions.ts, whose source_sha256 is a6536c04...). The record's real source is repro/encoder-crossover-190/second-labeller/RUN.json, sha256 32da4d518c7257f9cf27997a7734981e3317de9c03005bdc0311495406e1edb3.",
+  "no_guard": "Measured: check_manifest.py re-hashes MANIFEST entries only; gate.sh counts vocabulary; verify/recompute-claims.py recomputes numbers; UBUILD1.build.sh runs gate.sh only; EVIDENCE_NOTES.md:278-279 prints the pinned keys without hashing. No guard re-hashes a pinned digest against the file its name names.",
+  "payload_measured": "scratch/uneutral10/package: 29 files; second-labeller/RUN.json 160 lines sha256 0737ac8891c754de9b648dc2ff3de75773fd4e4549748b9c9f27a36991e62355 13064 B; fixture/reflex-decisions.ts sha256 89e77a8e24a907f06345a45485c013799e08c806cc9d8f075db7709fbfd8e169 81439 B; fixture/fixture-190.json sha256 a15224bada6950ad27f693acd2287dec564134419061baa475f6716d2db3852e 76897 B.",
+  "guard_first_run": "python3 scratch/fixrun/check_digest_pins.py against the unedited payload: 8 findings - 6 seeded by the guard's over-broad 'home ' spelling variant (fixed) and the runtime status line 'recompute: exactly one file re-hashes to it -> []', i.e. by inspection no payload file re-hashes to 076164ac...b4796 while the pinned name fixture/reflex-decisions.ts is 89e77a8e... .",
+  "ambiguous_source_digest": "MANIFEST.json lists second-labeller/RUN.json source 'G46/RUN.json' source_sha256 e68b4f9e88e5232d077008584ab6d7eaaf1e4cad5693e98441ac609635225a4b; no payload file re-hashes to that; the workspace copy is 32da4d51....",
+  "not_done": "apply_edits.py was NOT applied (Bash channel failed with 'UNKNOWN: unknown error, write' after the second selftest planting). No green claim: the guard was not re-run after the spelling fix, no red->green transcript exists, and no test/build hook was added.",
+  "commands": [
+   "cat repro/encoder-crossover-190/second-labeller/RUN.json; ls repro/encoder-crossover-190/second-labeller/",
+   "python3 - <<\"EOF\" (read scratch/uneutral10/package/MANIFEST.json entries for fixture/*.ts, fixture-190.json, second-labeller/RUN.json) EOF",
+   "sha256sum scratch/uneutral10/package/fixture/reflex-decisions.ts scratch/uneutral10/package/fixture/fixture-190.json scratch/uneutral10/package/second-labeller/RUN.json",
+   "wc -c scratch/uneutral10/package/fixture/reflex-decisions.ts scratch/uneutral10/package/fixture/fixture-190.json scratch/uneutral10/package/second-labeller/RUN.json",
+   "timeout 300 bash tools/package/gate.sh --package scratch/uneutral10/package",
+   "sed -n '1,120p' tools/package/check_manifest.py; sed -n '1,140p' tools/package/gate.sh",
+   ".venv/bin/python -m pytest tests/test_orchestration_handoffs.py tests/test_repo_hygiene.py -q",
+   "python3 scratch/fixrun/check_digest_pins.py"
+  ],
+  "tool_calls": 34
+ },
+ "assumptions": [
+  "The card's one line is the whole contract; the artefact chain was read as the shipped record scratch/uneutral10/package/second-labeller/RUN.json (the copy the paper package ships) plus its pinners (MANIFEST.json, EVIDENCE_NOTES.md, the build). repro/encoder-crossover-190/second-labeller/RUN.json is the same record before neutralisation and was read only to establish provenance.",
+  "The pinned digest 076164ac...b4796 is deliberately NOT rewritten: it is the as-audited instrument source, is correct in value, and the wrongness is the unlabelled relation to the shipped bytes plus the fabricated source sentence. Fixing labels records why a pin whose bytes changed is not a lying hash; rewriting the pin would destroy the evidence.",
+  "Write paths were scoped to scratch/fixrun/** because the card named no files; the workspace copy repro/ and papers/ were left untouched."
+ ],
+ "blocker": "Bash channel failed mid-unit ('UNKNOWN: unknown error, write') after the guard's second selftest planting: apply+verify+red->green could not be completed. Everything edited after the failure was written through the file tools and is unverified.",
+ "next_unit_hint": "Apply and verify in one pass: (1) run scratch/fixrun/apply_edits.py, which renames nothing (the instrument_sha256_* keys are already correct after UFIXPKG4) but (a) replaces _sha256_labels with a sentence that names the RECORD's real source and points the shipped-copy digest at MANIFEST.json, keeping the pinned as-audited digest and naming the placeholder rewrite as the reason the bytes differ, (b) replaces _sha256_labels_note, (c) replaces the literal target path in _fixture_path_in_target with '<target-repo>/evals/fixtures/reflex-decisions.ts'; (2) python3 scratch/fixrun/check_digest_pins.py must print VERDICT PASS; (3) capture red->green by re-planting the old _sha256_labels and showing the guard's 'no live label' finding come back; (4) add the guard to tests/ (a suite-level node, so the 'new guard' survives CI) and to UBUILD1.build.sh's gate step; (5) settle the open e68b4f9e...5a4b source digest and the gate.sh exit-code observation with ${PIPESTATUS[0]}.",
+ "write_paths": [
+  "scratch/fixrun/**",
+  "orchestration/units/FIX-RUN.md",
+  "orchestration/handoffs/FIX-RUN.json"
+ ]
+}

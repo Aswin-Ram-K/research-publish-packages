@@ -1,0 +1,45 @@
+{
+  "unit": "V-RECON-ARCHIVED",
+  "overall": "pass",
+  "checks": [
+    "red (independent re-run): pre-fix copy .scratch/recon-archived/session_recon_prefix.py against the real ledger -> exit=1, offenders=2 lagging=2 archived=0 historical=35, 4 printed class=settled-lag lines (2 cards x 2, the double-count)",
+    "green: tools/board/session_recon.py against the same real ledger -> exit=0, offenders=0 lagging=0 archived=2 historical=35, 0 OFFENDERS block",
+    "control (check is not dead): same ledger + one synthetic live unsettled card -> exit=1, offenders=1 lagging=1 archived=2, exactly 1 printed settled-lag line, still 2 ARCHIVED lines",
+    "tests green: .venv/bin/python -m pytest tests/test_session_recon_archived.py -q -> 10 passed in 0.02s",
+    "tests red against the pre-fix copy: RECON_UNDER_TEST=.scratch/v-recon-archived/redcopy/session_recon_prefix.py -> 3 failed, 7 passed (test_archived_card_is_not_a_lag, test_cli_exit_code_ignores_archived_cards, test_offender_list_prints_each_card_once)",
+    "handoff guard: .venv/bin/python -m pytest tests/test_orchestration_handoffs.py -q -> 13 passed in 2.58s",
+    "independent enumeration of archived cards: 16 archivedAt cards in ledger revision 1052; 10 archived+unsettled; the 8 scheduled ones are dropped by the pre-existing schedule exemption and the 2 non-scheduled ones (7a7424d4, 75e1f3b7) are exactly the two reported under archivedWithSettledExecution — the exemption covers every archived card, no escape",
+    "adversarial edges probed: status=backlog+archived -> archived (not lag); status=running+archived -> archived; archivedAt=0 or null -> NOT archived (treated as live, conservative); archived+scheduled -> exempt via schedule, not reported",
+    "containment: ~/.dsh mtime sweep before/after (excluding sessions/) shows only the DSH runtime's own writes (storages/session_projcache, memos-plugin, dsh-bottom-info-bar); task-board/ledger-v2.json unchanged md5 f931c2dccbe01de23180e7efbafdf7a0, mtime 2026-10-23 11:49:22, revision 1052; no card created, moved or settled",
+    "no bare `git status` against any target; the acceptance target /home/zer0null/Duval was not touched by any command in this unit"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Author's claim stands: the reconciler fix is reproduced independently and the control proves the settled-lag check is live. Not covered by the fix, left as recorded gaps: (a) an archived card that also carries a `schedule` is exempt through the schedule branch, so it is invisible in archivedWithSettledExecution (8/10 archived+unsettled cards today) — reporting, not correctness; (b) archivedAt=0/null would be graded live — archive writes epoch-ms so this is untriggered. Any future archive-semantics question should re-measure against ledger revision 1052 rather than cite this verdict.",
+  "write_paths": [
+    "orchestration/handoffs/V-RECON-ARCHIVED.json",
+    "orchestration/units/V-RECON-ARCHIVED.md",
+    "orchestration/VERDICTS.md",
+    "state/logs/session-recon.json",
+    "state/logs/V-RECON-ARCHIVED-redgreen.txt",
+    ".scratch/v-recon-archived/"
+  ],
+  "not_reproduced": [],
+  "overstated": [],
+  "unverified": [
+    "the author's `archived=2` vs the pre-fix `archived=0` field did NOT exist before the fix, so the red-run 'archived=0' above comes from the pre-fix copy's summary key default (the key is initialised in the report skeleton), not from a real pre-fix measurement of an archived count",
+    "the author cited 780 sessions / attached=75; the re-run shows 782 sessions / attached=77 because two board executions started after the author's run (this verifier session included). Session counts are time-dependent; the exit-code and archived/lagging figures are what the claim rests on."
+  ],
+  "tool_calls": 21,
+  "bound": "≤45 tool calls; read-only over ~/.dsh; no card created/moved/settled",
+  "scope": "tools/board/session_recon.py exit-code plausibility for archived cards + the settled-lag double-count",
+  "red_green": "red (exit=1, offenders=2, 4 lines / 3 tests failed) -> green (exit=0, offenders=0, 10 tests passed) -> control (exit=1, offenders=1, 1 line)",
+  "corrections": [
+    "author's '780 sessions attached=75' is a dated count, re-measured today at 782/77",
+    "author's red-tail field 'archived=0' is a skeleton default, not a measured pre-fix count"
+  ],
+  "containment": "~/.dsh ledger md5 unchanged; only DSH-runtime-owned files moved; nothing written outside the workspace",
+  "assumptions": [
+    "The pre-fix body is reconstructed from .scratch/recon-archived/session_recon_prefix.py, the copy the authoring unit saved; its diff against HEAD is exactly the archived branch plus the print-loop/dedupe change, so it is the right revert target.",
+    "The control ledger is the ledger snapshot (md5 f931c2dc…) plus one synthetic card V-RECON-SYNTHETIC-LAG, written only under .scratch/; the real ledger was never modified."
+  ]
+}

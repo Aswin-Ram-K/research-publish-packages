@@ -1,0 +1,46 @@
+{
+  "unit": "R-SGL",
+  "status": "done",
+  "artifacts": [
+    "docs/serving-options/R-SGL.md",
+    "orchestration/units/R-SGL.md"
+  ],
+  "evidence": {
+    "sources_checked": 18,
+    "claims_with_numbers": 20,
+    "commands": [
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/hicache_design",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/hicache_best_practices",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/hicache_storage_runtime_attach_detach",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/session_radix_cache",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/speculative_decoding",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/pd_disaggregation",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/dp_dpa_smg_guide",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/attention_backend",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/hyperparameter_tuning",
+      "local_web_crawl https://docs.sglang.io/cookbook/autoregressive/Qwen/Qwen3.5",
+      "local_web_crawl https://docs.sglang.io/cookbook/autoregressive/Qwen/Qwen3.8",
+      "local_web_crawl https://www.lmsys.org/blog/2025-09-10-sglang-hicache/",
+      "local_web_crawl https://www.lmsys.org/blog/2026-08-11-unified-radix-cache/",
+      "local_web_crawl https://www.lmsys.org/blog/2026-08-12-qwen3-8-day0-support/",
+      "local_web_crawl https://docs.lmcache.ai/recipes/qwen3_5.html",
+      "local_web_search sglang radix cache eviction policy / hicache / speculative decoding / router cache-aware",
+      "live requests to Occamy: 0 (no GET /get_server_info taken; config supplied verbatim in the unit card)",
+      "python3 -m json.tool orchestration/handoffs/R-SGL.json (validates this file)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Measure first, in this order, on the frozen server where possible: (1) runtime-attach the HiCache L3 file backend via the HTTP admin endpoints (the only no-restart cache lever) and record hit rate/TTFT with --enable-cache-report; (2) once a restart window exists, sweep --page-size 1 vs 64 with extra_buffer held fixed, since that is the direct lever on the measured 64-token grid and our page_size=1+extra_buffer pairing is undocumented; (3) --radix-eviction-policy sweep; (4) HiCache L2 only after a memory check, given the mem-fraction-static 0.50 crash-loop history; (5) NEXTN/MTP gated on confirming this checkpoint ships MTP weights and on setting --max-running-requests explicitly (NEXTN silently caps concurrency at 48). Cache-aware routing and PD disaggregation are needs-multi-node and out of scope for the single GX10.",
+  "write_paths": [
+    "orchestration/units/R-SGL.md",
+    "docs/serving-options/R-SGL.md",
+    "orchestration/handoffs/R-SGL.json"
+  ],
+  "assumptions": [
+    "No read-only GET to the Occamy server was made (the card allowed at most 3). The deployment config was supplied verbatim in the unit card, so the live SGLang version string is unverified; all flags and claims are as documented on the SGLang docs/blogs reachable on 2026-10-21.",
+    "Runnability is classified for a single GX10 node whose server cannot be restarted during the current run: anything marked needs-restart or needs-multi-node is therefore out of scope for the current run, and that is stated in the note rather than treated as a failure.",
+    "Where a primary page body could not be retrieved (LMCache Qwen3.5 recipe page returned navigation only), the note records 'no measured claim found' instead of inferring or estimating a number.",
+    "Qwen3-family MTP/NEXTN support is documented for Qwen3.8 in the SGLang cookbook; whether this specific Qwen3.5-MoE checkpoint ships MTP weights is recorded as unverified rather than assumed.",
+    "The 64-token grid is explained as a mamba/GDN checkpoint granularity (FLA_CHUNK_SIZE=64, --mamba-track-interval) consistent with the measured law; the exact commit/fold timing is not documented, so it is labelled a hypothesis to test, not an established mechanism."
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "unit": "FIX-CENSUS",
+  "status": "partial",
+  "artifacts": [
+    "papers/context-cache/recompute.py",
+    "tests/test_paper_claim_census.py",
+    "orchestration/units/FIX-CENSUS.md",
+    "orchestration/handoffs/FIX-CENSUS.json"
+  ],
+  "evidence": {
+    "card_premise_measured": "FOUR probes on the real tree, each row planted then restored; papers/context-cache/CLAIMS.md sha256 abcae72076134e83439fd41c7166a41f746b94511ea7d2b740793da5b82d6986 before and after every probe (verified by sha256sum both times).",
+    "probe_A": "a C63 row inserted BEFORE the C62 row, no runner -> `verify_package: FAIL - missing claim ids in READER-MAP: C63`, EXIT=1. The census DOES see C63.",
+    "probe_B": "a C63 tail row whose command cell is `none`, appended -> `recompute.py all` EXIT=1, but ONLY via `AttributeError: 'NoneType' object has no attribute 'group'` raised at recompute.py:2043 inside script_backed() -- a traceback, not a verdict.",
+    "probe_C": "same row counted directly: coverage_ids() -> 63 ids, surface_defects() -> [], and the run still printed `59 claims checked, all match` before dying.",
+    "probe_D": "same tail row with command cell `z` -> same AttributeError at :2043.",
+    "baseline_green_before_edits": "recompute.py all -> `59 claims checked, all match` + `GRID GUARD PASS 7/7 configs` + `COVERAGE GUARD PASS 62 claims documented, 60 runnable here + 2 script-backed`; verify_package.py -> `PASS - 62 claims in CLAIMS.md, 62 mapped 1:1 ... UNVERIFIED: none`, EXIT=0. Both measured by this unit before any edit.",
+    "fix_1": "recompute.py:script_backed() no longer crashes: a 5-cell claim row whose column 5 names no .py is appended to the new module-level UNRUNNABLE list (with CLAIMS.md line number) and coverage_guard() prints `COVERAGE GUARD FAIL  N claim row(s) whose command names no .py script` and returns non-zero.",
+    "fix_2": "recompute.py:coverage_guard() gains a contiguity check: documented ids must be exactly C01..C(max); otherwise `COVERAGE GUARD FAIL  claim-id gap(s) below the maximum C(nn): ...`. Rationale, measured rather than assumed: a deleted C40 leaves 61 ids that still agree 1:1 with 61 runners, surface_defects()==[] and no duplicate -- every pre-existing count stays green.",
+    "new_test": "tests/test_paper_claim_census.py (10 test cases): the pattern reaches C63-C99; every census source declares exactly C\\\\d{2}; a planted non-script row is a FAIL not a crash; a deleted-C40 ledger FAILS on contiguity; the live ledger is contiguous and clean; no document in PACKAGE.md/READER-MAP.md re-types a claim total.",
+    "commands": [
+      ".venv/bin/python papers/context-cache/recompute.py all (BEFORE edits) -> 59 claims checked, all match; GRID GUARD PASS 7/7; COVERAGE GUARD PASS 62 -- exit 0",
+      ".venv/bin/python papers/context-cache/verify_package.py (BEFORE edits) -> verify_package: PASS - 62 claims in CLAIMS.md, 62 mapped 1:1, 2 script-backed + 60 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none -- exit 0",
+      "planted C63 before C62 -> verify_package: FAIL - missing claim ids in READER-MAP: C63 -- exit 1",
+      "planted C63 tail row, col 5 = none -> recompute.py all -> AttributeError at recompute.py:2043; last good line `59 claims checked, all match`; exit 1",
+      "coverage_ids() -> 63 ; surface_defects() -> [] (planted tail row)",
+      "restored after every probe: sha256sum CLAIMS.md -> abcae72076...6986 (unchanged)"
+    ],
+    "NOT_RUN": "Every command after the recompute.py edits. At that point the harness lost its process executor: `bash` has returned `Error: UNKNOWN: unknown error, write` on every invocation since (echo/pwd/true, with and without workdir, foreground and background -- the background job reported `subprocess failed before reporting an outcome: Error: UNKNOWN: unknown error, write`). It is NOT session-local: a fresh verifier subagent I launched hit the identical failure on all 9 of its probes, and glob/structural_search/grep fail with `ripgrep launch failed` for the same reason. read/edit/write/working_directory still work. Therefore NOT verified by execution: (a) `recompute.py all` after the edits, (b) `verify_package.py` after the edits, (c) that the new test file passes, (d) RED->GREEN on fix_1 and fix_2."
+  },
+  "assumptions": [
+    "STATUS is `partial`, not `done`, because the two fixes are written but the post-edit green run and the red->green were never executed. Nothing in this handoff claims they pass.",
+    "The card's premise (\"the census is blind past C62\") is FALSE as stated for the id pattern -- C\\\\d{2} already matches C63-C99 and probe A was caught by verify_package.py. The real blind spot is script_backed() crashing on the first non-script claim row (probes B and D) plus the absence of any contiguity check. I recorded that as a correction instead of manufacturing the defect the card predicted.",
+    "NO shadow copy of CLAIMS.md/PACKAGE.md/READER-MAP.md was edited. I had staged one under scratch/fix-census/rg/ for a red->green, but its relative ROOT_DIR resolved to scratch/fix-census/rg, so its row files were missing and every probe against it was invalid; those probes prove nothing and are not cited.",
+    "RED->GREEN executions against the real tree are cited (probe A-D, all restored, sha verified). The pytest-level red->green on the NEW tests is NOT cited because it never ran.",
+    "C40 is used as the planted gap in the contiguity test because it is a stored-value FUNCS claim: deleting an external-script claim would be caught by the separate `missing script` check instead of by contiguity."
+  ],
+  "blocker": "Harness process executor down for the remainder of this session (`Error: UNKNOWN: unknown error, write` on every subprocess; background jobs affected too). Post-edit verification of papers/context-cache/recompute.py and tests/test_paper_claim_census.py could not be executed.",
+  "next_unit_hint": "As soon as a shell works, run in order: (1) `.venv/bin/python papers/context-cache/recompute.py all` -> expect `59 claims checked, all match`, `GRID GUARD PASS 7/7`, `COVERAGE GUARD ok    claim ids are contiguous C01..C62`, `COVERAGE GUARD PASS  62 claims documented, 60 runnable here + 2 script-backed`, exit 0; (2) `.venv/bin/python papers/context-cache/verify_package.py` -> exit 0; (3) `.venv/bin/python -m pytest tests/test_paper_claim_census.py -q` -> 10 passed; (4) red->green: revert script_backed() to `.group(1)` -> an appended `| C63 | ... | none |` row must raise AttributeError (1 failed); remove the contiguity block -> a C40-deleted ledger must return 0 from coverage_guard() (1 failed); (5) full `pytest tests/ -q` to confirm nothing else regressed. If the pytest module is red on first run the most likely cause is test 2's regex assumption about how each source spells the pattern -- fix the test, not the sources. Also still open from FIX-G3BANDS: FIX-COVERAGE (card b3cbab9a) edits CLAIMS.md:190.",
+  "write_paths": [
+    "papers/context-cache/recompute.py",
+    "tests/test_paper_claim_census.py",
+    "orchestration/units/FIX-CENSUS.md",
+    "orchestration/handoffs/FIX-CENSUS.json"
+  ]
+}

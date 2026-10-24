@@ -1,0 +1,106 @@
+{
+  "unit": "LATENCY-DERIVE",
+  "status": "done",
+  "artifacts": [
+    "strategy/LATENCY_DERIVE.md",
+    "state/logs/lat_derive.py",
+    "state/logs/lat_derive.out"
+  ],
+  "evidence": {
+    "command_or_count": ".venv/bin/python state/logs/lat_derive.py  -> exit 0, 71 lines; 0 live requests, 0 locks, 0 writes outside workspace",
+    "commands": [
+      ".venv/bin/python state/logs/lat_derive.py > state/logs/lat_derive.out"
+    ],
+    "divider": "computed / assumed / not computable",
+    "computed_measured": {
+      "L1_cold_prefill_us_per_token_linear_OLS": 229.998,
+      "L1_fit_intercept_ms": -263.9,
+      "L1_fit_r2": 0.9903,
+      "L1_cold_ttft_ms_by_L": {
+        "1024": 207.4,
+        "2048": 348.1,
+        "4096": 692.9,
+        "8192": 1421.9,
+        "16384": 3054.9,
+        "32768": 7529.0
+      },
+      "L1_marginal_ms_per_1024_tokens": [
+        140.7,
+        172.4,
+        182.2,
+        204.1,
+        279.6
+      ],
+      "L2_warm_ttft_ms_by_L": {
+        "1024": 85.5,
+        "2048": 87.2,
+        "4096": 105.2,
+        "8192": 130.2,
+        "16384": 139.2,
+        "32768": 231.6
+      },
+      "L2_warm_residual_us_per_token": 4.4,
+      "L2_independent_warm_vs_cold": {
+        "U2": {
+          "warm_med_ms": 83,
+          "cold_med_ms": 199,
+          "n_each": 44
+        },
+        "E4": {
+          "warm_med_ms": 75,
+          "cold_med_ms": 209,
+          "n_warm": 40,
+          "n_cold": 85
+        },
+        "E4R": {
+          "warm_med_ms": 109,
+          "cold_med_ms": 245,
+          "n_warm": 5,
+          "n_cold": 46
+        }
+      },
+      "source_of_pure_prefill": "U9 only: all 139 rows have completion_tokens==1, so ttft carries no decode term"
+    },
+    "assumed_not_fitted": {
+      "L3_end_to_end": "T(L,G) ~= TTFT(L) + G*r with r=26.81 ms/token (U6, warm MoE, ct 35-64, r2 0.9919)",
+      "why_assumed": "no cell varies completion_tokens against a fixed prompt; pools are ct=1 (139 rows), ct=2 (1,986), ct=4 (9,323), ct=8 (192), ct=64 (233) plus singletons",
+      "status": "order-of-magnitude only; NOT citable as a measurement"
+    },
+    "not_computable": {
+      "prefill_vs_queue_attribution": "ttft slopes on the same box span 6.713/9.196/9.484/12.307 us/token across G3-LIMIT-V2/DENSE-SGL/WIN-SGL/LIVE-MEAS (r2 0.831-0.971); no field separates a slower kernel from a busier queue",
+      "latency_under_concurrency": "grep for concurren|semaphore|ThreadPool|PoolExecutor|parallel in experiments/context-cache/client.py and runner.py -> 0 hits; 100% serial, every TTFT is unloaded",
+      "real_service_latency": "synthetic serial corpus, no arrival process, no generation length",
+      "p95_p99_any_tail": "per-condition n=5-10 (U9 7-22, U10 5); tail of a 5-sample set is the maximum",
+      "cold_start_ttft": "no cell separates first request after restart; would need a restart (forbidden)",
+      "server_side_ttft": "both fields are client-side wall clock; network and tokenisation are not subtracted",
+      "vllm_cross_engine_timing": "CROSS-HTTP has 3 timing rows; MOE-VLLM/WIN-VLLM carry ttft but no latency_ms"
+    },
+    "coverage_asymmetry": {
+      "cells_with_ttft_and_wall": 18,
+      "cells_with_latency_ms_only": [
+        "M4 (327 rows)",
+        "TUNED (289 rows)"
+      ],
+      "finding": "the two eviction-pressure/capacity cells record only undifferentiated latency_ms, so they cannot attribute time; the attribution-capable cells have no eviction pressure. No cell is both."
+    },
+    "corrections_to_published_text": {
+      "C40_268.4_ms": "reproduces exactly as U10 p1 rep1 at L=1024 (268 ms), but it is the BOUNDARY REPEAT, not a cold prefill: the cold send at the same length is 531 ms. Never print 268.4 as cold-prefill cost.",
+      "C34_vs_here": "C34 0.240736 ms/token is log-log (L^1.0520); this note's 0.229998 is linear OLS on the same rows. Consistent, differently parameterised, not a conflict.",
+      "S12_C60": "11.2344x is a TOKEN ratio. Measured in time on the same SGLang: G3 median ttft 439.5 ms vs TUNED 1612.6 ms = 3.6693x. The token framing overstates the latency penalty by 3.06x."
+    },
+    "verification_of_own_claims": "every figure above re-derived in this pass from experiments/context-cache/cells/*/*.jsonl; grep of state/logs/lat_derive.out matched all except formatting-only 8,305.00 vs 8305.00"
+  },
+  "assumptions": [
+    "Scope taken as the on-disk measurement rows in experiments/context-cache/cells/ plus the published claims in papers/context-cache/ (CLAIMS.md, SERVING-BRIEF.md, MANUSCRIPT.md). Offline literature numbers in docs/serving-options/ were excluded from the derivation because no row backs them.",
+    "Median-of-medians used for the TUNED-vs-G3 comparison because the two cells share no paired turns; recorded in the note rather than silently presented as paired.",
+    "U9's six lengths treated as a fixed design, so the OLS slope is reported with its domain (1k-32k) and not extrapolated, per the automated tag rule against unsupportable metrics."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Two follow-ups, either of which needs a new card. (1) Timing cells M4/TUNED store only latency_ms; a small patch that also records ttft_ms+wall_ms would make every future eviction finding attributable to prefill vs queueing at no extra request cost. (2) The C40 wording and the S12 token-vs-time framing should go to an independent verifier before the manuscript cites either as a latency claim.",
+  "write_paths": [
+    "strategy/LATENCY_DERIVE.md",
+    "state/logs/lat_derive.py",
+    "state/logs/lat_derive.out",
+    "orchestration/handoffs/LATENCY-DERIVE.json"
+  ]
+}

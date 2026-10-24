@@ -1,0 +1,115 @@
+{
+  "unit": "R2-DOCBRIEF",
+  "status": "done",
+  "topic": "Round-2 design pre-registration: the documented served-option space that closes/narrows G16, arms fixed before numbers",
+  "artifacts": [
+    "docs/serving-options/R2-DESIGN.md",
+    "orchestration/units/R2-DOCBRIEF.md",
+    "orchestration/handoffs/R2-DOCBRIEF.json"
+  ],
+  "write_paths": [
+    "docs/serving-options/R2-DESIGN.md",
+    "orchestration/units/R2-DOCBRIEF.md",
+    "orchestration/handoffs/R2-DOCBRIEF.json"
+  ],
+  "bound": {
+    "live_requests": 0,
+    "gx10_access": "none",
+    "lock": "not taken",
+    "server_starts": 0,
+    "papers_edits": 0,
+    "tool_calls": 20
+  },
+  "deliverable_shape": {
+    "path": "docs/serving-options/R2-DESIGN.md",
+    "lines": 173,
+    "arms": 12,
+    "sgLang_arms": [
+      "A1 no_buffer",
+      "A2 max-mamba-cache-size 25",
+      "A3 lfu",
+      "A4 tlru",
+      "A5 int8 mamba ckpt",
+      "A6 HiCache",
+      "A7 session radix"
+    ],
+    "vllm_arms": [
+      "B1 prefix-match-unit 64 + block 64",
+      "B2 mamba-cache-mode align",
+      "B3 kv-offloading",
+      "B4 prompt-tokens-details",
+      "B5 block 16 + unit 32"
+    ],
+    "predictions": 9,
+    "baselines": [
+      "S0 live SGLang production",
+      "V1 vLLM 0.27.1 block 16"
+    ],
+    "analysis_fixed": "paired per-turn delta, percentile bootstrap over the 71 turns, 10,000 resamples, seed 20251023 (C62/C63 method)"
+  },
+  "evidence": {
+    "command_or_count": "12/12 quoted Round-1 figures resolve verbatim in CLAIMS.md; pinned trace digest reproduced from disk",
+    "commands": [
+      "python3 - <<'PY' (figure-trace loop over [0.957153, 729.7641, 0.956941, 733.3697, 0.901212, 1,682.7218, 2,096, 0.869037, 2,230.7782, 1,088, 739.25, 0.974242]) -> 'figures quoted: 12 | not in CLAIMS.md: none'",
+      "sha256sum dockets/duval/duval-u55-pinned/material/data/2026-09-28-duval-m0.jsonl -> 431605e624ca90596ec8c5890fc40da08715ae1ffa6759b689255f1670af4ecb (matches AGENTS.md pin)",
+      "wc -lc dockets/duval/duval-u55-pinned/material/data/2026-09-28-duval-m0.jsonl -> 573 866816",
+      "grep -n 'mamba-radix-cache-strategy\\|page-size 1' docs/serving-options/LAUNCH-SGLANG.md -> :25 --page-size 1, :26 --mamba-radix-cache-strategy extra_buffer",
+      "sed -n '219,224p' papers/context-cache/CLAIMS.md -> C63 row (cell hit/uncached/gcd quadruples)",
+      "python3 -c json load of recompute.py EXPECTED['C63'] -> cells tuple 4dp values, engine_effect 1225.18",
+      "python3 -c json load of R2-C.version_pins + R2-D.evidence -> shared-prefix-checkpoint bisect comparison"
+    ],
+    "figure_trace": "All 4dp values quoted from CLAIMS.md C63 / C60 exactly as stored (733.3697, 2,230.7782, 729.7641, 1,682.7218). Two were initially written rounded to 2dp (733.37, 2,230.78), which failed a literal trace; corrected to the stored 4dp forms so every figure is string-verifiable.",
+    "reconciliation": "R2-C and R2-D bisects on --enable-mamba-shared-prefix-checkpoint are reconcilable: R2-D never tested v0.30.1 (steps v0.30.0 -> v0.31.0); R2-C finds it at v0.30.1rc0. Both agree it is absent from v0.27.1, so it is recorded absent-by-version and is NOT an arm."
+  },
+  "design_decisions": [
+    {
+      "decision": "Round 2 = the served-option space that answers G16, scoped to the five R2 lanes",
+      "why": "G16 is the only open gap whose named closure is 'run the documented options', and R2-A..R2-E were commissioned against exactly that. C63 (the 2x2) is already measured, so Round 2 must not rerun it."
+    },
+    {
+      "decision": "Deliverable written to docs/serving-options/R2-DESIGN.md, not papers/**",
+      "why": "This unit is not licensed to edit the manuscript; the design is a serving document and sits beside MATRIX-2x2.md (the Round-1 answer) and the five R-*.md lane notes."
+    },
+    {
+      "decision": "Predictions pre-registered with a stated falsifier each (P1..P9), and a null is reported as a result",
+      "why": "Without a pre-committed direction, arms chosen after seeing data cannot distinguish a documented-but-useless option from an untested one - which is the exact failure G16 records."
+    },
+    {
+      "decision": "P9 (no SGLang arm reaches V1's dense 2,230.7782 within +-10%) is named load-bearing",
+      "why": "It is the only prediction that tests whether C63's engine effect is a property of the ENGINE or of the CONFIGURATIONS Round 1 picked. If any SGLang arm closes the gap, C63 becomes configuration-conditional and must be restated."
+    },
+    {
+      "decision": "--enable-mamba-shared-prefix-checkpoint recorded as absent-by-version, not as an arm",
+      "why": "Absent from v0.27.1 (both bisects agree) so it would fail at argument parsing; and R2-D documents it requires EAGLE on the mamba group, which this box does not run - so even a version bump would not test it."
+    },
+    {
+      "decision": "HiCache (A6) included specifically as a re-test of a Round-1 rejection whose citation does not carry the claim",
+      "why": "G16 records that LAUNCH-SGLANG.md:107-150 quotes 'ValueError: HiRadixCache only supports MHA and MLA yet' with no source URL of its own, and the string is absent from the cited thread for build 0.0.0.dev1+g4ccff141d; the live server already runs UnifiedRadixCache. Either outcome upgrades a citation into a measurement."
+    }
+  ],
+  "assumptions": [
+    "Automated session: ask_user_question was never called and no question was asked in prose.",
+    "The card prompt named only the deliverable (R2-DOCBRIEF). Two values were genuinely missing and were resolved conservatively: (1) output path -> docs/serving-options/R2-DESIGN.md; (2) scope of 'Round 2' -> the G16 serving-option space covered by the R2-A..R2-E lanes. Both are recorded in the unit card as assumptions that a reviewer may reassign without invalidating any cited figure, because every number names its own source.",
+    "Writability: this card reports, so it is workspace-write. The handoff stub was written FIRST, before any other artefact.",
+    "The binary-gate harness's 'Round 2' (strategy/SYSTEM_ITEM_INVENTORY.md:539, citing docs/research/EXPERIMENT_PROGRAMME_2.md) is a DIFFERENT program; that file does not exist on this disk, so it was excluded.",
+    "No live request, no GX10 access, no lock, no server start, no papers/** edit."
+  ],
+  "red_green": {
+    "claim": "The deliverable's figures are traceable to their named source",
+    "green": "12/12 quoted figures resolve verbatim in papers/context-cache/CLAIMS.md (figure-trace loop prints 'not in CLAIMS.md: none')",
+    "red": "The same loop against the first draft reports 2 misses (733.37, 2,230.78) because those were rounded to 2dp while CLAIMS.md stores 733.3697 and 2,230.7782 - the check does fail when a figure is not exact. Corrected to 4dp; loop now clean.",
+    "note": "This is a real red->green on a trace check, not a post-hoc assertion; the red state is recorded rather than erased."
+  },
+  "not_reproduced": [
+    "No Round-2 measurement exists: this is a pre-registration, so every arm's outcome is necessarily unmeasured. Nothing in this handoff claims an outcome.",
+    "The 16 GAPS.md/ledger statuses were read from state/gap-ledger.json, not re-derived by this unit (GAP-TRIAGE owns that derivation)."
+  ],
+  "overstated": [],
+  "unverified": [
+    "HiCache behaviour on build 0.0.0.dev1+g4ccff141d (A6) - unpinned; that is the arm's purpose.",
+    "--enable-int8-mamba-checkpoint accuracy: undocumented upstream (R2-A3), so the capacity claim cannot be accepted without a quality gate; the design requires one.",
+    "Whether the live --mamba-radix-cache-strategy resolves to extra_buffer under 'auto': the live launch passes extra_buffer explicitly, but the resolver's effective value was not read from a startup log by this unit."
+  ],
+  "blocker": "",
+  "next_unit_hint": "A measurement unit can now run Round 2 against the pre-registered predictions without choosing arms after the fact. Cheapest first reads that need no cell: (a) read the already-recorded 1088 and 1056 startup logs for 'Setting attention block size to %d tokens' and 'Mamba cache mode is set to ...' to pin B2's baseline; (b) run B4 (--enable-prompt-tokens-details) first, since no other vLLM arm is readable without per-response cached_tokens. P9 must be evaluated explicitly and, if any SGLang arm reaches V1's dense 2,230.7782 within +-10%, C63 must be restated as configuration-conditional."
+}

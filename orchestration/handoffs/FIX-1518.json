@@ -1,0 +1,71 @@
+{
+  "unit": "FIX-1518",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/recompute.py",
+    "papers/context-cache/CLAIMS.md",
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/SERVING-BRIEF.md",
+    "docs/serving-options/MATRIX-2x2.md",
+    "papers/context-cache/RUN.json",
+    "state/serving-brief.json",
+    "state/gap-ledger.json",
+    "tests/test_c63_ratio_raw_operands.py",
+    "state/logs/FIX-1518-redgreen.txt",
+    "state/logs/FIX-1518-ratio.txt",
+    "state/logs/FIX-1518-probe.py"
+  ],
+  "evidence": {
+    "raw_ratio": "model|vLLM raw=548.056338028169 model|SGLang raw=3.6056338028169015 raw ratio=151.99999999999997 4dp=152.0 rounded-op ratio=548.06/3.61=151.8172",
+    "recompute_C63": "PASS 43/43 values match ; OK model_effect_ratio_vllm_over_sglang recomputed=152.0 paper=152.0",
+    "recompute_all": "COVERAGE GUARD PASS 63 claims documented, 61 runnable here + 2 script-backed ; EXIT=0",
+    "verify_package": "PASS — 63 claims in CLAIMS.md, 63 mapped 1:1, 2 script-backed + 61 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none",
+    "serving_brief_check": "SERVING-BRIEF CHECK PASS 19 items, 13 cells, all figures re-derived; tables, markers and prose numbers match the ledger",
+    "new_test": "tests/test_c63_ratio_raw_operands.py -> 6 passed",
+    "ledger_tests": "tests/test_gap_closure_ledger.py -> 8 passed",
+    "full_suite": "1242 passed, 1 skipped (live), 1 failed — tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps, failing on R2-A2/R2-B2/R2-C, three OTHER units' handoffs written 20:11-20:14 during this run; not my files",
+    "commands": [
+      ".venv/bin/python state/logs/FIX-1518-probe.py",
+      ".venv/bin/python -m pytest tests/test_c63_ratio_raw_operands.py -q",
+      ".venv/bin/python papers/context-cache/recompute.py C63",
+      ".venv/bin/python papers/context-cache/recompute.py all",
+      ".venv/bin/python papers/context-cache/verify_package.py",
+      ".venv/bin/python papers/context-cache/serving_brief.py --check",
+      ".venv/bin/python -m pytest tests/ -q"
+    ],
+    "script_sha256_before": "451d0d26ca43c3ea2cb1cae7c5264425f947e04bc5687babefb9258611e1f581",
+    "script_sha256_after": "dbb871a94a59d3600a769a8240b0bf896710087e01667f0f1814d629382eacee"
+  },
+  "red_green": {
+    "guard": "tests/test_c63_ratio_raw_operands.py::test_pin_is_ratio_of_raw_means",
+    "red": "recompute.py restored to shipped pin 151.8172 -> AssertionError: EXPECTED['C63']['model_effect_ratio_vllm_over_sglang'] is 151.8172, but the ratio of the raw means is 152.0. 151.8172 is reproducible only as 548.06/3.61 -- a ratio of rounded operands; 5 failed, 1 passed; recompute.py C63 pinned at 152.0 against a 151.8172 derivation printed FAIL model_effect_ratio_vllm_over_sglang recomputed=151.8172 paper=152.0 -> FAIL 42/43, EXIT=1",
+    "green": "pin 152.0 + derivation from raw means -> 6 passed; recompute.py C63 PASS 43/43, EXIT=0"
+  },
+  "root_cause": "c63() divided the ROUNDED per-level means (m_vllm_s['mean'] / m_sgl_s['mean'], each rounded to 2 dp by effect()), so it reproduced 548.06/3.61 = 151.8172. The claim quotes the figure at 4 dp, where the ratio of the raw means is 152.0. Fixed at the derivation, not just the pin: the ratio now divides statistics.fmean(m_vllm) / statistics.fmean(m_sgl) unrounded, and the pinned EXPECTED moves to 152.0 with it.",
+  "write_paths": [
+    "papers/context-cache/recompute.py",
+    "papers/context-cache/CLAIMS.md",
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/SERVING-BRIEF.md",
+    "docs/serving-options/MATRIX-2x2.md",
+    "papers/context-cache/RUN.json",
+    "state/serving-brief.json",
+    "state/gap-ledger.json",
+    "tests/test_c63_ratio_raw_operands.py",
+    "state/logs/FIX-1518-*"
+  ],
+  "blocker": "tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps fails on orchestration/handoffs/R2-A2.json (missing artifacts, evidence, blocker, next_unit_hint), R2-B2.json (same plus write_paths) and R2-C.json (missing artifacts, evidence, blocker, next_unit_hint). Those are three concurrent units' own handoffs, mtime 20:11:35 / 20:14:05 / 20:13:14, outside this unit's write path and not its to rewrite. This single failure is the only red in the full suite; it was already red before FIX-1518 touched anything (my handoff did not exist when it first ran).",
+  "next_unit_hint": "For whoever owns the R2 research batch: their three handoffs are unit-shaped but omit the contracted keys the guard now enforces — artifacts / evidence / blocker / next_unit_hint (R2-B2 also write_paths). Adding those keys in a repair unit clears the last red; do not edit another live unit's handoff from here. Separately, state/gap-ledger.json pinned G5/G7 at MANUSCRIPT.md:645 while the manuscript is 726 lines and :645 reads '## 11. Limitations'; both cited figures sit on :643, which FIX-1518 did not move (726 lines before and after) — repointed to :643, closing the pre-existing test_stale_citation_audit_is_accurate failure that FIX-G16-LEDGER had left half-fixed.",
+  "overstated": [
+    "V-MATRIX-FOLD's next_unit_hint proposed changing the pin to 152.0 while leaving the derivation reading the rounded means. That alone would have made recompute.py C63 FAIL out of the box (recomputed=151.8172 vs paper=152.0). The derivation had to change too; both are changed here."
+  ],
+  "unverified": [
+    "Whether any downstream reader hard-codes 151.8172 from an older copy of the manuscript: grep over the workspace finds the figure only in historical handoff/log baselines (orchestration/handoffs/V-MATRIX-FOLD.json, state/logs/V-MATRIX-FOLD-redgreen.txt), which are frozen records and were not edited."
+  ],
+  "assumptions": [
+    "The claim's '4 dp' wording binds the printed figure, so 152.0 is the truthful value and the rounded-operand 151.8172 is an arithmetic artefact. If the authors intended 'quote the ratio of the two printed figures', the same guard would need inverting — this unit chose the raw-mean reading and recorded why in a comment in c63()."
+  ],
+  "corrections": [
+    "This unit's own first reading attributed the stale MANUSCRIPT.md:645 ledger pin to its own +2-line edit. It did not: the manuscript is 726 lines both before and after, the first differing line is 76 (the ratio token only), and the audit test fails identically with the edit reverted. Recorded so a later reader does not re-bisect it."
+  ]
+}

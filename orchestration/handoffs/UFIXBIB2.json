@@ -1,0 +1,101 @@
+{
+  "unit": "UFIXBIB2",
+  "status": "done",
+  "artifacts": [
+    "scratch/uprep1/md2tex.py",
+    "papers/encoder-crossover-190/REFERENCES.bib",
+    "papers/encoder-crossover-190/submission/main.tex",
+    "orchestration/units/UFIXBIB2.md",
+    "orchestration/handoffs/UFIXBIB2.json",
+    "scratch/ufixbib2/main.shipped.tex",
+    "scratch/ufixbib2/main.generated.tex",
+    "scratch/ufixbib2/main.final.tex",
+    "scratch/ufixbib2/main.final2.tex"
+  ],
+  "evidence": {
+    "command_or_count": "non-ascii bytes=0; \\bibitem entries=12; placeholder occurrences=0; idempotence run2==run3 sha256=5ecb498c40ab286496ee8191981a030b7a9903bac91ef04256babdb4ede06af3 (cmp BYTE-IDENTICAL); diff OLD shipped -> regenerated = 5 lines only (428,431,432,433,434); line 435 now identical to shipped; main.tex stays 444 lines; converter exit 0 on all 3 runs",
+    "commands": [
+      "cp papers/encoder-crossover-190/submission/main.tex scratch/ufixbib2/main.shipped.tex  # backup, sha256 16dbd714abdb3d7b5dfd1aa644acb6b57d91caf4f8bd70a6e9faca4c80fb333d",
+      "python3 scratch/uprep1/md2tex.py  # run1 pre-fix repro -> main.generated.tex",
+      "diff -u scratch/ufixbib2/main.shipped.tex scratch/ufixbib2/main.generated.tex",
+      "python3 scratch/uprep1/md2tex.py  # run2 post-fix -> main.final.tex",
+      "python3 scratch/uprep1/md2tex.py  # run3 post-fix -> main.final2.tex",
+      "cmp scratch/ufixbib2/main.final.tex scratch/ufixbib2/main.final2.tex",
+      "python3 -c \"d=open('papers/encoder-crossover-190/submission/main.tex','rb').read();print(sum(1 for b in d if b>127))\"",
+      "grep -cF '\\bibitem{' papers/encoder-crossover-190/submission/main.tex",
+      "grep -cF 'Author and/or title not recorded' papers/encoder-crossover-190/submission/main.tex",
+      "sed -n '428p;431,435p' papers/encoder-crossover-190/submission/main.tex"
+    ],
+    "counts": {
+      "non_ascii_bytes": 0,
+      "bibitem_entries": 12,
+      "placeholder_occurrences": 0,
+      "diff_lines_changed_vs_old_shipped": 5,
+      "converter_runs": 3,
+      "main_tex_lines": 444
+    },
+    "failure_1_before_fix": {
+      "shipped_428": "see diff: shipped :428 carried SHORT titles ('Cost-Aware Model Selection for Text Classification') and the converter emitted the MANUSCRIPT.md text with FULL titles",
+      "converter_emitted_428_pre_fix_prefix": "Only sources whose identifier or location was actually observed are cited. The corpus's four external identifier-only entries have since been completed from the arXiv abstract pages (unit \\textbf{UBIB1}, 2026-10-15), which supplied title an",
+      "note": "md2tex.py has no hard-coded References prose: the :428 paragraph is parsed from MANUSCRIPT.md (the '__BIBPROSE__' path), so the corrected source text is already what regeneration emits. Verified by reading all 307 lines of md2tex.py: no literal sentence."
+    },
+    "failure_2_before_fix_converter_emitted": {
+      "line_431": "\\bibitem{arxiv2602_06370} Valdes Gonzalez, Alberto Andres, \\emph{Cost-Aware Model Selection for Text Classification: Multi-Objective Trade-offs Between Fine-Tuned Encoders and {LLM} Prompting in Production}, 2026, arXiv:2602.06370, Cited in \\texttt{docs/DECIDER\\_STACK\\_DECISION.md} \\S11.2 (the N-dependent encoder-vs-LLM crossover table), \\url{https://arxiv.org/abs/2602.06370}.",
+      "line_432": "\\bibitem{arxiv2512_12677} Yousefiramandi, Amirhossein and Cooney, Ciaran, \\emph{Fine-Tuning Causal {LLM}s for Text Classification: Embedding-Based vs. Instruction-Based Approaches}, 2025, arXiv:2512.12677, Cited in \\texttt{docs/DECIDER\\_STACK\\_DECISION.md} \\S11.2 (throughput corroboration), \\url{https://arxiv.org/abs/2512.12677}.",
+      "line_433": "\\bibitem{pride2309_03882} Zheng, Chujie, Zhou, Hao, Meng, Fandong, Zhou, Jie and Huang, Minlie, \\emph{Large Language Models Are Not Robust Multiple Choice Selectors}, 2023, arXiv:2309.03882, ICLR 2024 (Spotlight). Cited in \\texttt{docs/DECIDER\\_STACK\\_DECISION.md}:415 and :500 as ``PriDe'', \\url{https://arxiv.org/abs/2309.03882}.",
+      "line_434": "\\bibitem{gcd2305_13971} Geng, Saibo, Josifoski, Martin, Peyrard, Maxime and West, Robert, \\emph{Grammar-Constrained Decoding for Structured {NLP} Tasks without Finetuning}, 2023, arXiv:2305.13971, EMNLP 2023 (Main Conference). Cited in \\texttt{docs/DECIDER\\_STACK\\_DECISION.md}:494--495, alongside \\url{https://aclanthology.org/2025.acl-industry.34}, \\url{https://arxiv.org/abs/2305.13971}.",
+      "line_435": "\\bibitem{source_decider_stack_2026} \\emph{{DECIDER\\_STACK\\_DECISION.md} \\S11.6}, \\texttt{the read-only target repository/docs/DECIDER\\_STACK\\_DECISION.md}, \\S11.6 (ERRATA on \\S11.5); committed as \\texttt{ad301ae1a5472fa7bd27807fdc7bb15d35f81988}. \\emph{[Author and/or title not recorded in the corpus --- to be completed before submission.]}"
+    },
+    "edits": [
+      {
+        "file": "papers/encoder-crossover-190/REFERENCES.bib",
+        "before": "  title        = {{DECIDER\\_STACK\\_DECISION.md} \\S11.6},\n  note         = {SOURCED (internal corpus document; this is the citation for the paper's CORE LITERATURE",
+        "after": "  title        = {{DECIDER\\_STACK\\_DECISION.md} \\S11.6},\n  authornote   = {unpublished internal corpus document (no attributable author)},\n  note         = {SOURCED (internal corpus document; this is the citation for the paper's CORE LITERATURE",
+        "why": "honest explicit field for the authorless unpublished internal document; the placeholder was wrong"
+      },
+      {
+        "file": "scratch/uprep1/md2tex.py",
+        "before": "    bits = []\n    if g(\"author\"):    bits.append(auth(g(\"author\")))\n    if g(\"title\"):     bits.append(r\"\\emph{\" + g(\"title\") + \"}\")",
+        "after": "    bits = []\n    if g(\"author\"):    bits.append(auth(g(\"author\")))\n    if g(\"title\"):     bits.append(r\"\\emph{\" + g(\"title\") + \"}\")\n    # Honest authorless representation: an entry that declares (via `authornote`) that it has\n    # no attributable author is emitted with that statement, never the missing-field placeholder.\n    if g(\"authornote\"): bits.append(g(\"authornote\"))",
+        "why": "emit the .bib's honest wording as its own clause, positioned where the shipped file had it (after the title)"
+      },
+      {
+        "file": "scratch/uprep1/md2tex.py",
+        "before": "    missing = [x for x in (\"author\", \"title\") if not g(x)]\n    tail = (r\" \\emph{[Author and/or title not recorded in the corpus --- to be completed\"\n            r\" before submission.]}\") if missing else \"\"",
+        "after": "    missing = [x for x in (\"author\", \"title\") if not g(x)]\n    tail = (r\" \\emph{[Author and/or title not recorded in the corpus --- to be completed\"\n            r\" before submission.]}\") if (missing and not g(\"authornote\")) else \"\"",
+        "why": "suppress the '[Author and/or title not recorded ...]' placeholder for an entry that explicitly declares it has no attributable author"
+      }
+    ],
+    "intended_lines_changed_vs_old_shipped": [
+      "428",
+      "431",
+      "432",
+      "433",
+      "434"
+    ],
+    "line_428_delta": {
+      "old_shipped_fragment": "arXiv \\texttt{2602.06370} (Valdes Gonzalez, \\emph{Cost-Aware Model Selection for Text Classification}); arXiv \\texttt{2512.12677} (Yousefiramandi and Cooney, \\emph{Fine-Tuning Causal LLMs for Text Classification})",
+      "regenerated_fragment": "d authors for each: arXiv \\texttt{2602.06370} (Valdes Gonzalez, \\emph{Cost-Aware Model Selection for Text Classification: Multi-Objective Trade-offs Between Fine-Tuned Encoders and LLM Prompting in Production}); arXiv \\texttt{2512.12677} (Yousefiramandi and Cooney, \\emph{Fine-Tun",
+      "why": "MANUSCRIPT.md:852-855 is the corrected source and carries the full titles; the converter emits that text, so the stale shortened hand-patch at :428 is replaced by the source of truth"
+    },
+    "lines_431_434_delta": "the four repaired external entries now also carry the REFERENCES.bib howpublished clause ('Cited in \\texttt{docs/DECIDER\\_STACK\\_DECISION.md} ...'), which the shipped hand-patch had stripped; task step 2 requires keeping the howpublished/URL fields. Author, title, venue (ICLR 2024 Spotlight / EMNLP 2023 Main Conference) and URL are unchanged.",
+    "final_bibitems": {
+      "line_431": "\\bibitem{arxiv2602_06370} Valdes Gonzalez, Alberto Andres, \\emph{Cost-Aware Model Selection for Text Classification: Multi-Objective Trade-offs Between Fine-Tuned Encoders and {LLM} Prompting in Production}, 2026, arXiv:2602.06370, Cited in \\texttt{docs/DECIDER\\_STACK\\_DECISION.md} \\S11.2 (the N-dependent encoder-vs-LLM crossover table), \\url{https://arxiv.org/abs/2602.06370}.",
+      "line_432": "\\bibitem{arxiv2512_12677} Yousefiramandi, Amirhossein and Cooney, Ciaran, \\emph{Fine-Tuning Causal {LLM}s for Text Classification: Embedding-Based vs. Instruction-Based Approaches}, 2025, arXiv:2512.12677, Cited in \\texttt{docs/DECIDER\\_STACK\\_DECISION.md} \\S11.2 (throughput corroboration), \\url{https://arxiv.org/abs/2512.12677}.",
+      "line_433": "\\bibitem{pride2309_03882} Zheng, Chujie, Zhou, Hao, Meng, Fandong, Zhou, Jie and Huang, Minlie, \\emph{Large Language Models Are Not Robust Multiple Choice Selectors}, 2023, arXiv:2309.03882, ICLR 2024 (Spotlight). Cited in \\texttt{docs/DECIDER\\_STACK\\_DECISION.md}:415 and :500 as ``PriDe'', \\url{https://arxiv.org/abs/2309.03882}.",
+      "line_434": "\\bibitem{gcd2305_13971} Geng, Saibo, Josifoski, Martin, Peyrard, Maxime and West, Robert, \\emph{Grammar-Constrained Decoding for Structured {NLP} Tasks without Finetuning}, 2023, arXiv:2305.13971, EMNLP 2023 (Main Conference). Cited in \\texttt{docs/DECIDER\\_STACK\\_DECISION.md}:494--495, alongside \\url{https://aclanthology.org/2025.acl-industry.34}, \\url{https://arxiv.org/abs/2305.13971}.",
+      "line_435": "\\bibitem{source_decider_stack_2026} \\emph{{DECIDER\\_STACK\\_DECISION.md} \\S11.6}, unpublished internal corpus document (no attributable author), \\texttt{the read-only target repository/docs/DECIDER\\_STACK\\_DECISION.md}, \\S11.6 (ERRATA on \\S11.5); committed as \\texttt{ad301ae1a5472fa7bd27807fdc7bb15d35f81988}."
+    },
+    "still_excluded": "benayas2024comparative absent from main.tex (grep 0); 94.27/70.87 appear only in the manuscript's pre-existing prose that says the claim is DROPPED and not cited (unchanged lines 81, 351) - no new citation of them. No prose/number other than :428/:431-434 changed."
+  },
+  "blocker": "",
+  "next_unit_hint": "The canonical regeneration path is now `python3 scratch/uprep1/md2tex.py` and it is idempotent (byte-identical on repeat, 0 non-ASCII, 12 \\bibitem). New contract: an authorless internal entry declares `authornote` in REFERENCES.bib and the converter emits it instead of the missing-field placeholder. Re-verify before any future .bib edit that the placeholder count stays 0. If a reviewer wants the old hand-stripped howpublished form restored, that would require pruning howpublished prose in md2tex.py and would violate the 'keep howpublished/URL' instruction - decide at the gate.",
+  "write_paths": [
+    "scratch/uprep1/md2tex.py",
+    "papers/encoder-crossover-190/REFERENCES.bib",
+    "papers/encoder-crossover-190/submission/main.tex",
+    "orchestration/units/UFIXBIB2.md",
+    "orchestration/handoffs/UFIXBIB2.json",
+    "scratch/ufixbib2/**"
+  ]
+}

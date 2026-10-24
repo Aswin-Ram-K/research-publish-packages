@@ -1,0 +1,58 @@
+{
+ "unit": "INTEGRITY-R1",
+ "status": "done",
+ "artifacts": [
+  "tools/integrity/verify_round1_record.py",
+  "tests/test_round1_record_pins.py",
+  "state/logs/INTEGRITY-R1-redgreen.txt",
+  "orchestration/units/INTEGRITY-R1.md"
+ ],
+ "evidence": {
+  "command_or_count": ".venv/bin/python tools/integrity/verify_round1_record.py -> '0 failure(s) across 85 checks', exit 0",
+  "commands": [
+   ".venv/bin/python tools/integrity/verify_round1_record.py  (exit 0, 85 checks; A 41 pins re-hashed, B 22 CLAIMS.md source rows, C recompute.py all + verify_package.py, D u5_recon/u4_recon, E attribution guard)",
+   ".venv/bin/python papers/context-cache/recompute.py all  (exit 0: '60 claims checked, all match', 'GRID GUARD PASS 7/7 configs', 'COVERAGE GUARD PASS 63 claims documented, 61 runnable here + 2 script-backed')",
+   ".venv/bin/python papers/context-cache/verify_package.py  (exit 0: PASS, 63 claims mapped 1:1, 'UNVERIFIED: none')",
+   ".venv/bin/python experiments/context-cache/cells/CX-V2/u5_recon.py  (exit 0: 190 cases, 760 rebuilt cells, POINTER==NAIVE_APPEND 760/760, prompt_sha256 570/760, retention 2280/2280)",
+   ".venv/bin/python experiments/context-cache/cells/CX-V2/u4_recon.py  (exit 0: head digest==live 44/44 both arms x3 sessions, body digest equal 11, RENDER=naive_append, POINTER_FORK never imported True)",
+   ".venv/bin/python -m pytest tests/test_round1_record_pins.py -q  (5 passed)",
+   ".venv/bin/python -m pytest tests/test_paper_attribution_guard.py -q  (18 passed)"
+  ],
+  "pins_rederived": {
+   "RUN.json units rows/events/analysis": "21/21 match (12 single rows_file + 1 list + events/analysis digests)",
+   "RUN.json cell_digests.rows": "18/18 match, 18/18 row counts match, unpinned_live empty",
+   "RUN.json corpora": "3/3 match (volatility 388652 B, compaction 351975 B, endtoend 240410 B)",
+   "RUN.json pins block": "6 *_file pins re-hashed and match; 2 superseded values confirmed genuinely superseded (u4_sessions_payload 78b725cb -> 0ca987d9; u5_render_py 4184c932 unconfirmable pre-U14 state)",
+   "verifier handoff": "orchestration/handoffs/CX-V2.json sha256 0887c656baaa3748... matches its pin",
+   "recompute.py": "sha256 dbb871a94a59d3600a769a8240b0bf896710087e01667f0f1814d629382eacee matches pins.recompute and verification.synthesis_recompute.script_sha256",
+   "CLAIMS.md source table": "22/22 rows match bytes + row count + sha256"
+  },
+  "not_reproduced": [],
+  "overstated": [],
+  "unverified": [
+   "The FILTERS inside recompute.py: C63 admits MOE-VLLM rows with phase in (None,'battery') and selects 284 of the file's 306 (20 probe + 2 gate excluded). The selected rows are exactly 4 arms x 71 turns and the pins hold, but no recorded assertion ties that admission rule to a written decision; flagged, not adjudicated.",
+   "Whether cells' prose agrees with verifier rulings (STATUS.md sec.8 item 3) - out of scope here, still needs its own unit.",
+   "Any statement requiring a live request: none was made; 0 requests, no .occamy.lock taken."
+  ],
+  "red_green": {
+   "target": "the record's digest pins had no guard \u2014 nothing in the repo re-derived a pinned row file",
+   "green": "tools/integrity/verify_round1_record.py exit 0 (0 failures / 85 checks); pytest tests/test_round1_record_pins.py 5 passed",
+   "red": "dropped the last row of experiments/context-cache/cells/MOE-VLLM/rows.jsonl in-process -> verifier exit 1 'FAIL A2 cell MOE-VLLM ... sha256 30d5781830841bc2 != pinned 6658227689a35eee'; pytest exit 1 'sha256 drifted from its pin'. CONTROL: papers/context-cache/verify_package.py on the SAME mutated tree still printed PASS, exit 0 \u2014 the demonstrated hole.",
+   "green_after_restore": "rows file restored byte-identical (6658227689a35eee...); verifier exit 0, pytest exit 0",
+   "second_red": "appended one row to experiments/context-cache/cells/G3/rows.jsonl -> exit 1 'rows(splitlines) 889 != pinned 888'; restored byte-identical (d6313f72c2eca0bc...)",
+   "capture": "state/logs/INTEGRITY-R1-redgreen.txt",
+   "self_correction": "Pass 1 of the new verifier reported 1 failure (A5 u4_cell_py_claimed). It was the CHECKER's bug, not the record's: that key's own note says 'value unchanged; only the file name was missing', so its value is expected to match. The A5 supersession rule was narrowed to the two keys whose repair text names a different value; no record file was edited to make a check pass."
+  }
+ },
+ "blocker": "",
+ "next_unit_hint": "Round 2 may now be placed on the Round-1 record at these digests. Two things are still open and are NOT covered by this gate: (a) recompute.py's row-admission rule for MOE-VLLM (phase battery only, 284 of 306) is unpinned by any recorded decision; (b) the cell-prose-vs-verifier-ruling diff (STATUS.md sec.8 item 3). A Round-2 unit that quotes a Round-1 number should cite the digest from RUN.json cell_digests, and re-run tools/integrity/verify_round1_record.py first.",
+ "write_paths": [
+  "orchestration/units/INTEGRITY-R1.md",
+  "orchestration/handoffs/INTEGRITY-R1.json",
+  "tools/integrity/verify_round1_record.py",
+  "tests/test_round1_record_pins.py",
+  "state/logs/INTEGRITY-R1-redgreen.txt"
+ ],
+ "read_only_targets_confirmed": "No write reached papers/**, experiments/** or any file outside the five write_paths. The two row files mutated for red->green were restored from in-memory bytes in a finally block and verified byte-identical in the same process; /home/zer0null/Duval untouched (no git command run against it at all).",
+ "assumptions": "Automated lane: no ask_user_question used. 'Round-1 record' read as the papers/context-cache claims package (CLAIMS.md C01..C63 + RUN.json pins) because it is the only record family carrying the R2-* units' subject matter (SGLang/vLLM cache measurement); the board prompt did not name the file, so the most conservative reading \u2014 verify the record that Round-2 numbers would land on \u2014 was taken. 0 live requests, no lock."
+}

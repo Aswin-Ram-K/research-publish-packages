@@ -1,0 +1,28 @@
+{
+  "unit": "UXPOSE7",
+  "status": "done",
+  "artifacts": [
+    "strategy/EXPOSURE_COLUMN_RESOLUTION.md",
+    "scratch/uxpose7/recompute_exposure.py",
+    "scratch/uxpose7/exposure_counts.txt",
+    "orchestration/units/UXPOSE7.md"
+  ],
+  "evidence": {
+    "command_or_count": "ctx_has_a OR ctx_has_b per arm (published order) = [20, 20, 19, 0, 19, 20] == published corrected column; expo_a OR expo_b = [20, 20, 19, 19, 19, 20] -> stage_route 19 not 0 (URELEASE7 CONFIRMED); draft max(SUM ctx_has_a, SUM ctx_has_b) = [19, 19, 18, 0, 14, 20]; MODE-4 F1 = 2*28/(2*28+118+92) = 56/266 = 0.210526 (published 0.210 is a truncation, correct is 0.211)",
+    "commands": [
+      "python3 scratch/uxpose7/recompute_exposure.py state/kg-refresh/duval/repo/docs/research/gated-read-rows.jsonl",
+      "sed -n '100,102p;194p;203,206p;217p;250,251p' state/kg-refresh/duval/repo/docs/research/GATED_READ_2026.md",
+      "sed -n '508,531p;588,609p' state/kg-refresh/duval/repo/tools/gated-read/bench.py",
+      "sed -n '75p;78p' strategy/GATED_READ_DISCLOSURE.md",
+      "grep -n '0\\.210\\|0\\.211' papers/gated-read-batching/CLAIMS.md papers/gated-read-batching/DISCLOSURE_CHANGES.md"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Apply the single-line fix to strategy/GATED_READ_REVERIFY.md:103 (ctx_has_a∨ctx_has_b, not expo_a∨expo_b) via a unit owning that write path; no paper edit needed (MANUSCRIPT.md:195 already declines the exposure claim). Optionally add the definitional qualifier quoted in EXPOSURE_COLUMN_RESOLUTION.md §4 to GATED_READ_2026.md:250-251.",
+  "write_paths": [
+    "strategy/EXPOSURE_COLUMN_RESOLUTION.md",
+    "orchestration/units/UXPOSE7.md",
+    "orchestration/handoffs/UXPOSE7.json",
+    "scratch/uxpose7/**"
+  ]
+}

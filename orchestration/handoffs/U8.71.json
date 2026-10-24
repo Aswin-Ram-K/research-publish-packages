@@ -1,0 +1,587 @@
+{
+ "unit": "U8.71",
+ "status": "done",
+ "artifacts": [
+  "orchestration/units/U8.71.md",
+  "orchestration/handoffs/U8.71.json",
+  "state/verify/U8.71/before/*.py (5 pre-edit snapshots)",
+  "state/verify/U8.71/measure.py",
+  "state/logs/U8.71_messages.json",
+  "state/verify/U8.71/fix3.py",
+  "state/verify/U8.71/batch.py",
+  "state/verify/U8.71/reds/redgreen_report.json",
+  "state/verify/U8.71/reds/logs/ (30 leg logs + 10 IMPORTED_FROM logs)",
+  "state/verify/U8.71/tracked_status.json",
+  "state/verify/U8.71/diff_test_{cli,dashboard,journal,lanes_build,writer_detection}.diff",
+  "state/verify/U8.71/comm_*_{before,after}.lst",
+  "state/verify/U8.71/counts_*_{before,after}.txt"
+ ],
+ "evidence": {
+  "command_or_count": "10 sites tightened across 5 files; 10/10 with three-legged reds (pre-fix PASS rc0 / fixed FAIL rc1 / pristine control PASS rc0) and import_ok; 0 def test_ deleted (LC_ALL=C comm -3 empty for all 5 files)",
+  "probe": "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> 000; no live LLM call was made",
+  "mutations": {
+   "journal.py": {
+    "file": "resextract/journal.py",
+    "literal": "journal fields may not shadow reserved keys:",
+    "occurrences": 1,
+    "to": "shadowed reserved journal keys:"
+   },
+   "split.py": {
+    "file": "resextract/lanes/split.py",
+    "literal": "references candidates not supplied:",
+    "occurrences": 1,
+    "to": "references candidates missing from the splitter:"
+   },
+   "store.py": {
+    "file": "resextract/store.py",
+    "literal": "lane type must be one of {LANE_TYPES}, got {type!r}",
+    "occurrences": 1,
+    "to": "bad lane type {type!r}; allowed {LANE_TYPES}"
+   },
+   "writer.py": {
+    "file": "resextract/refresh/writer.py",
+    "literal": "verdict must be one of",
+    "occurrences": 1,
+    "to": "verdict must be a recognised value from"
+   },
+   "app.py": {
+    "file": "resextract/dashboard/app.py",
+    "literal": "refusing to bind non-loopback host",
+    "occurrences": 1,
+    "to": "non-loopback bind refused"
+   },
+   "cli.py": {
+    "file": "resextract/cli.py",
+    "literal": "operator-chosen secret",
+    "occurrences": 1,
+    "to": "operator-chosen value"
+   }
+  },
+  "pre_fix_passed": 10,
+  "fixed_failed": 10,
+  "pristine_passed": 10,
+  "import_ok": 10,
+  "commands": [
+   "curl -sS -m 5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models",
+   ".venv/bin/python state/verify/U8.71/measure.py  (wrapped pytest.raises; records message + src raise-site)",
+   ".venv/bin/python state/verify/U8.71/fix3.py  (package copies, 30 red legs, before/after counts)",
+   "LC_ALL=C comm -3 comm_<f>_before.lst comm_<f>_after.lst  -> no differences"
+  ]
+ },
+ "sites": [
+  {
+   "file": "tests/test_journal.py",
+   "real_line": 63,
+   "exc_type": "ValueError",
+   "test": "test_reserved_field_names_are_rejected",
+   "before": "with pytest.raises(ValueError):",
+   "after": "with pytest.raises(ValueError, match=r\"reserved keys: \\['seq'\\]\"):",
+   "rule_step": "step2: builtin ValueError has no narrower project class (src/** out of scope); both sites share one raise in journal.py:138, so the reserved-key name inside the message is the shortest discriminator",
+   "message_measured": "builtins.ValueError: journal fields may not shadow reserved keys: ['seq']"
+  },
+  {
+   "file": "tests/test_journal.py",
+   "real_line": 65,
+   "exc_type": "ValueError",
+   "test": "test_reserved_field_names_are_rejected",
+   "before": "with pytest.raises(ValueError):",
+   "after": "with pytest.raises(ValueError, match=r\"reserved keys: \\['hash'\\]\"):",
+   "rule_step": "step2: same as :63 - the key name is the only thing separating the two raises",
+   "message_measured": "builtins.ValueError: journal fields may not shadow reserved keys: ['hash']"
+  },
+  {
+   "file": "tests/test_lanes_build.py",
+   "real_line": 276,
+   "exc_type": "ValueError",
+   "test": "test_split_raises_rather_than_silently_losing_a_member",
+   "before": "with pytest.raises(ValueError):",
+   "after": "with pytest.raises(ValueError, match=\"references candidates not supplied\"):",
+   "rule_step": "step2: builtin ValueError, no narrower class; the refusal phrase in split.py:124 is the only discriminator",
+   "message_measured": "builtins.ValueError: lane 'dune-drift' references candidates not supplied: [208]"
+  },
+  {
+   "file": "tests/test_lanes_build.py",
+   "real_line": 228,
+   "exc_type": "ValueError",
+   "test": "test_persist_lanes_honours_type_vocabulary_and_accepts_a_path",
+   "before": "with pytest.raises(ValueError):",
+   "after": "with pytest.raises(ValueError, match=\"lane type must be one of\"):",
+   "rule_step": "step2: builtin ValueError from the store lane-type vocabulary; mirrors the already-tight tests/test_store.py:209 form",
+   "message_measured": "builtins.ValueError: lane type must be one of ('paper', 'report', 'blog', 'benchmark_card', 'memo'), got 'not-a-type'"
+  },
+  {
+   "file": "tests/test_writer_detection.py",
+   "real_line": 299,
+   "exc_type": "ValueError",
+   "test": "test_signal_rejects_unknown_verdict",
+   "before": "with pytest.raises(ValueError):",
+   "after": "with pytest.raises(ValueError, match=\"verdict must be one of\"):",
+   "rule_step": "step2: builtin ValueError from the dataclass guard in writer.py:137; the vocabulary phrase is the only discriminator",
+   "message_measured": "builtins.ValueError: verdict must be one of ('quiescent', 'active_writer', 'head_moved'), got 'maybe'"
+  },
+  {
+   "file": "tests/test_cli.py",
+   "real_line": 433,
+   "exc_type": "ValueError",
+   "test": "test_serve_refuses_non_loopback_without_explicit_override",
+   "before": "with pytest.raises(ValueError):",
+   "after": "with pytest.raises(ValueError, match=\"refusing to bind non-loopback host '0.0.0.0'\"):",
+   "rule_step": "step2: builtin ValueError; 3 ValueErrors fire in this file (2 from check_bind_host, 1 from the token guard), so the host literal in the message is the shortest discriminator",
+   "message_measured": "builtins.ValueError: refusing to bind non-loopback host '0.0.0.0'; pass --allow-remote (allow_remote=True) to opt in explicitly"
+  },
+  {
+   "file": "tests/test_cli.py",
+   "real_line": 981,
+   "exc_type": "ValueError",
+   "test": "test_create_app_refuses_non_loopback_by_default",
+   "before": "with pytest.raises(ValueError):",
+   "after": "with pytest.raises(ValueError, match=\"refusing to bind non-loopback host '0.0.0.0'\"):",
+   "rule_step": "step2: as :433 - same guard (app.py:81), host literal discriminates from the token refusal",
+   "message_measured": "builtins.ValueError: refusing to bind non-loopback host '0.0.0.0'; pass --allow-remote (allow_remote=True) to opt in explicitly"
+  },
+  {
+   "file": "tests/test_cli.py",
+   "real_line": 1007,
+   "exc_type": "ValueError",
+   "test": "test_remote_bind_rejects_the_auto_token",
+   "before": "with pytest.raises(ValueError):",
+   "after": "with pytest.raises(ValueError, match=\"operator-chosen secret\"):",
+   "rule_step": "step2: builtin ValueError from cli.py:429; the test itself asserts 'explicit --token' in the CLI text after the with-block, so that substring cannot also carry the guard - 'operator-chosen secret' sits in the same message and is asserted nowhere else",
+   "message_measured": "builtins.ValueError: a non-loopback bind ('203.0.113.7') requires an explicit --token; '--token auto' is not an operator-chosen secret -- pass --token <secret>"
+  },
+  {
+   "file": "tests/test_dashboard.py",
+   "real_line": 615,
+   "exc_type": "ValueError",
+   "test": "test_non_loopback_host_is_refused",
+   "before": "with pytest.raises(ValueError):",
+   "after": "with pytest.raises(ValueError, match=\"refusing to bind non-loopback host '0.0.0.0'\"):",
+   "rule_step": "step2: builtin ValueError; both sites in this test hit one guard (app.py:81), so the host literal separates 615 from 617",
+   "message_measured": "builtins.ValueError: refusing to bind non-loopback host '0.0.0.0'; pass --allow-remote (allow_remote=True) to opt in explicitly"
+  },
+  {
+   "file": "tests/test_dashboard.py",
+   "real_line": 617,
+   "exc_type": "ValueError",
+   "test": "test_non_loopback_host_is_refused",
+   "before": "with pytest.raises(ValueError):",
+   "after": "with pytest.raises(ValueError, match=\"refusing to bind non-loopback host '192.168.2.168'\"):",
+   "rule_step": "step2: as :615; the literal '192.168.2.168' is written in the test source itself, so it is stable",
+   "message_measured": "builtins.ValueError: refusing to bind non-loopback host '192.168.2.168'; pass --allow-remote (allow_remote=True) to opt in explicitly"
+  }
+ ],
+ "left_broad": [],
+ "unverified_fixes": [],
+ "reds": [
+  {
+   "file": "tests/test_journal.py",
+   "line": 63,
+   "mutation": "journal.py: 'journal fields may not shadow reserved keys:' -> 'shadowed reserved journal keys:'",
+   "pre_fix_passed": true,
+   "pre_fix_rc": 0,
+   "fixed_failed_verbatim": [
+    "E       AssertionError: Regex pattern did not match.",
+    "E         Expected regex: \"reserved keys: \\\\['seq'\\\\]\"",
+    "E         Actual message: \"shadowed reserved journal keys: ['seq']\"",
+    "state/verify/U8.71/reds/scratch_fixed/tests/test_journal.py:63: AssertionError"
+   ],
+   "fixed_rc": 1,
+   "pristine_passed": true,
+   "pristine_rc": 0,
+   "imported_from": [
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/mutant/resextract/__init__.py",
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/pristine/resextract/__init__.py"
+   ],
+   "import_ok": true
+  },
+  {
+   "file": "tests/test_journal.py",
+   "line": 65,
+   "mutation": "journal.py: 'journal fields may not shadow reserved keys:' -> 'shadowed reserved journal keys:'",
+   "pre_fix_passed": true,
+   "pre_fix_rc": 0,
+   "fixed_failed_verbatim": [
+    "E       AssertionError: Regex pattern did not match.",
+    "E         Expected regex: \"reserved keys: \\\\['seq'\\\\]\"",
+    "E         Actual message: \"shadowed reserved journal keys: ['seq']\"",
+    "state/verify/U8.71/reds/scratch_fixed/tests/test_journal.py:63: AssertionError"
+   ],
+   "fixed_rc": 1,
+   "pristine_passed": true,
+   "pristine_rc": 0,
+   "imported_from": [
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/mutant/resextract/__init__.py",
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/pristine/resextract/__init__.py"
+   ],
+   "import_ok": true
+  },
+  {
+   "file": "tests/test_lanes_build.py",
+   "line": 276,
+   "mutation": "split.py: 'references candidates not supplied:' -> 'references candidates missing from the splitter:'",
+   "pre_fix_passed": true,
+   "pre_fix_rc": 0,
+   "fixed_failed_verbatim": [
+    "E       AssertionError: Regex pattern did not match.",
+    "E         Expected regex: 'references candidates not supplied'",
+    "E         Actual message: \"lane 'dune-drift' references candidates missing from the splitter: [208]\"",
+    "state/verify/U8.71/reds/scratch_fixed/tests/test_lanes_build.py:276: AssertionError"
+   ],
+   "fixed_rc": 1,
+   "pristine_passed": true,
+   "pristine_rc": 0,
+   "imported_from": [
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/mutant/resextract/__init__.py",
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/pristine/resextract/__init__.py"
+   ],
+   "import_ok": true
+  },
+  {
+   "file": "tests/test_lanes_build.py",
+   "line": 228,
+   "mutation": "store.py: 'lane type must be one of {LANE_TYPES}, got {type!r}' -> 'bad lane type {type!r}; allowed {LANE_TYPES}'",
+   "pre_fix_passed": true,
+   "pre_fix_rc": 0,
+   "fixed_failed_verbatim": [
+    "E       AssertionError: Regex pattern did not match.",
+    "E         Expected regex: 'lane type must be one of'",
+    "E         Actual message: \"bad lane type 'not-a-type'; allowed ('paper', 'report', 'blog', 'benchmark_card', 'memo')\"",
+    "state/verify/U8.71/reds/scratch_fixed/tests/test_lanes_build.py:228: AssertionError"
+   ],
+   "fixed_rc": 1,
+   "pristine_passed": true,
+   "pristine_rc": 0,
+   "imported_from": [
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/mutant/resextract/__init__.py",
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/pristine/resextract/__init__.py"
+   ],
+   "import_ok": true
+  },
+  {
+   "file": "tests/test_writer_detection.py",
+   "line": 299,
+   "mutation": "writer.py: 'verdict must be one of' -> 'verdict must be a recognised value from'",
+   "pre_fix_passed": true,
+   "pre_fix_rc": 0,
+   "fixed_failed_verbatim": [
+    "E       AssertionError: Regex pattern did not match.",
+    "E         Expected regex: 'verdict must be one of'",
+    "E         Actual message: \"verdict must be a recognised value from ('quiescent', 'active_writer', 'head_moved'), got 'maybe'\"",
+    "state/verify/U8.71/reds/scratch_fixed/tests/test_writer_detection.py:299: AssertionError"
+   ],
+   "fixed_rc": 1,
+   "pristine_passed": true,
+   "pristine_rc": 0,
+   "imported_from": [
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/mutant/resextract/__init__.py",
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/pristine/resextract/__init__.py"
+   ],
+   "import_ok": true
+  },
+  {
+   "file": "tests/test_cli.py",
+   "line": 433,
+   "mutation": "app.py: 'refusing to bind non-loopback host' -> 'non-loopback bind refused'",
+   "pre_fix_passed": true,
+   "pre_fix_rc": 0,
+   "fixed_failed_verbatim": [
+    "E       AssertionError: Regex pattern did not match.",
+    "E         Expected regex: \"refusing to bind non-loopback host '0.0.0.0'\"",
+    "E         Actual message: \"non-loopback bind refused '0.0.0.0'; pass --allow-remote (allow_remote=True) to opt in explicitly\"",
+    "state/verify/U8.71/reds/scratch_fixed/tests/test_cli.py:433: AssertionError"
+   ],
+   "fixed_rc": 1,
+   "pristine_passed": true,
+   "pristine_rc": 0,
+   "imported_from": [
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/mutant/resextract/__init__.py",
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/pristine/resextract/__init__.py"
+   ],
+   "import_ok": true
+  },
+  {
+   "file": "tests/test_cli.py",
+   "line": 981,
+   "mutation": "app.py: 'refusing to bind non-loopback host' -> 'non-loopback bind refused'",
+   "pre_fix_passed": true,
+   "pre_fix_rc": 0,
+   "fixed_failed_verbatim": [
+    "E       AssertionError: Regex pattern did not match.",
+    "E         Expected regex: \"refusing to bind non-loopback host '0.0.0.0'\"",
+    "E         Actual message: \"non-loopback bind refused '0.0.0.0'; pass --allow-remote (allow_remote=True) to opt in explicitly\"",
+    "state/verify/U8.71/reds/scratch_fixed/tests/test_cli.py:981: AssertionError"
+   ],
+   "fixed_rc": 1,
+   "pristine_passed": true,
+   "pristine_rc": 0,
+   "imported_from": [
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/mutant/resextract/__init__.py",
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/pristine/resextract/__init__.py"
+   ],
+   "import_ok": true
+  },
+  {
+   "file": "tests/test_cli.py",
+   "line": 1007,
+   "mutation": "cli.py: 'operator-chosen secret' -> 'operator-chosen value'",
+   "pre_fix_passed": true,
+   "pre_fix_rc": 0,
+   "fixed_failed_verbatim": [
+    "E       AssertionError: Regex pattern did not match.",
+    "E         Expected regex: 'operator-chosen secret'",
+    "E         Actual message: \"a non-loopback bind ('203.0.113.7') requires an explicit --token; '--token auto' is not an operator-chosen value -- pass --token <secret>\"",
+    "state/verify/U8.71/reds/scratch_fixed/tests/test_cli.py:1007: AssertionError"
+   ],
+   "fixed_rc": 1,
+   "pristine_passed": true,
+   "pristine_rc": 0,
+   "imported_from": [
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/mutant/resextract/__init__.py",
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/pristine/resextract/__init__.py"
+   ],
+   "import_ok": true
+  },
+  {
+   "file": "tests/test_dashboard.py",
+   "line": 615,
+   "mutation": "app.py: 'refusing to bind non-loopback host' -> 'non-loopback bind refused'",
+   "pre_fix_passed": true,
+   "pre_fix_rc": 0,
+   "fixed_failed_verbatim": [
+    "            E       Failed: DID NOT RAISE ValueError",
+    "E       AssertionError: Regex pattern did not match.",
+    "E         Expected regex: \"refusing to bind non-loopback host '0.0.0.0'\"",
+    "E         Actual message: \"non-loopback bind refused '0.0.0.0'; pass --allow-remote (allow_remote=True) to opt in explicitly\"",
+    "state/verify/U8.71/reds/scratch_fixed/tests/test_dashboard.py:615: AssertionError"
+   ],
+   "fixed_rc": 1,
+   "pristine_passed": true,
+   "pristine_rc": 0,
+   "imported_from": [
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/mutant/resextract/__init__.py",
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/pristine/resextract/__init__.py"
+   ],
+   "import_ok": true
+  },
+  {
+   "file": "tests/test_dashboard.py",
+   "line": 617,
+   "mutation": "app.py: 'refusing to bind non-loopback host' -> 'non-loopback bind refused'",
+   "pre_fix_passed": true,
+   "pre_fix_rc": 0,
+   "fixed_failed_verbatim": [
+    "            E       Failed: DID NOT RAISE ValueError",
+    "E       AssertionError: Regex pattern did not match.",
+    "E         Expected regex: \"refusing to bind non-loopback host '0.0.0.0'\"",
+    "E         Actual message: \"non-loopback bind refused '0.0.0.0'; pass --allow-remote (allow_remote=True) to opt in explicitly\"",
+    "state/verify/U8.71/reds/scratch_fixed/tests/test_dashboard.py:615: AssertionError"
+   ],
+   "fixed_rc": 1,
+   "pristine_passed": true,
+   "pristine_rc": 0,
+   "imported_from": [
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/mutant/resextract/__init__.py",
+    "/home/zer0null/reserach extarctor/state/verify/U8.71/copies/pristine/resextract/__init__.py"
+   ],
+   "import_ok": true
+  }
+ ],
+ "counts": {
+  "tests/test_cli.py": {
+   "passed": {
+    "before": 44,
+    "after": 46
+   },
+   "collected": {
+    "before": 46,
+    "after": 46
+   },
+   "def_test_": {
+    "before": 30,
+    "after": 30
+   },
+   "deleted": [],
+   "added": [],
+   "note": "2 failed / 44 passed in BOTH the before and the after run of the relocated snapshot tree - pure relocation artifacts (state/state.sqlite and dockets/ resolve via Path(__file__).resolve().parents[1]); in the real tree test_cli.py is 46 passed / 46 collected"
+  },
+  "tests/test_dashboard.py": {
+   "passed": {
+    "before": 75,
+    "after": 75
+   },
+   "collected": {
+    "before": 75,
+    "after": 75
+   },
+   "def_test_": {
+    "before": 58,
+    "after": 58
+   },
+   "deleted": [],
+   "added": [],
+   "note": "identical before/after"
+  },
+  "tests/test_journal.py": {
+   "passed": {
+    "before": 10,
+    "after": 10
+   },
+   "collected": {
+    "before": 10,
+    "after": 10
+   },
+   "def_test_": {
+    "before": 10,
+    "after": 10
+   },
+   "deleted": [],
+   "added": [],
+   "note": "identical before/after"
+  },
+  "tests/test_lanes_build.py": {
+   "passed": {
+    "before": 13,
+    "after": 13
+   },
+   "collected": {
+    "before": 13,
+    "after": 13
+   },
+   "def_test_": {
+    "before": 13,
+    "after": 13
+   },
+   "deleted": [],
+   "added": [],
+   "note": "identical before/after"
+  },
+  "tests/test_writer_detection.py": {
+   "passed": {
+    "before": 19,
+    "after": 19
+   },
+   "collected": {
+    "before": 19,
+    "after": 19
+   },
+   "def_test_": {
+    "before": 19,
+    "after": 19
+   },
+   "deleted": [],
+   "added": [],
+   "note": "identical before/after"
+  }
+ },
+ "recipes": {
+  "measure": "wrap pytest.raises, capture the ExceptionInfo message plus the last traceback frame (file:line + source line); run the real tests, no LLM",
+  "reds": "throwaway package copies at state/verify/U8.71/copies/{pristine,mutant}; import redirection via PYTHONPATH (which beats the editable .pth) proven by a conftest that imports resextract and logs IMPORTED_FROM; cwd = workspace root so the suite's own relative state//dockets/ fixtures resolve; exactly one -q (a second -q is verbosity -2 and suppresses the summary line)",
+  "counts": "pytest <file> -q -p no:cacheprovider -rN against the state/verify/U8.71/before/ snapshot and the live tree, plus --collect-only for the collected count",
+  "mutant": "message-only edit to the src raise inside the throwaway copy: same exception type, same refusal, different text"
+ },
+ "tracked_status": {
+  "tests/test_cli.py": {
+   "tracked": true,
+   "porcelain": "",
+   "diff_method": "diff -u state/verify/U8.71/before/<stem>.py -> worktree, saved to state/verify/U8.71/diff_<stem>.diff",
+   "delta_added_lines": 3
+  },
+  "tests/test_dashboard.py": {
+   "tracked": true,
+   "porcelain": "",
+   "diff_method": "diff -u state/verify/U8.71/before/<stem>.py -> worktree, saved to state/verify/U8.71/diff_<stem>.diff",
+   "delta_added_lines": 2
+  },
+  "tests/test_journal.py": {
+   "tracked": true,
+   "porcelain": "",
+   "diff_method": "diff -u state/verify/U8.71/before/<stem>.py -> worktree, saved to state/verify/U8.71/diff_<stem>.diff",
+   "delta_added_lines": 2
+  },
+  "tests/test_lanes_build.py": {
+   "tracked": true,
+   "porcelain": "",
+   "diff_method": "diff -u state/verify/U8.71/before/<stem>.py -> worktree, saved to state/verify/U8.71/diff_<stem>.diff",
+   "delta_added_lines": 2
+  },
+  "tests/test_writer_detection.py": {
+   "tracked": true,
+   "porcelain": "",
+   "diff_method": "diff -u state/verify/U8.71/before/<stem>.py -> worktree, saved to state/verify/U8.71/diff_<stem>.diff",
+   "delta_added_lines": 1
+  }
+ },
+ "diff_method": "diff -u against the state/verify/U8.71/before/ snapshot (NOT git diff): a checkpoint commit (41ad35b) landed mid-work and swept this unit's edits into HEAD, so `git diff` and `git status --porcelain` both emit 0 bytes; all 5 files are tracked (git ls-files -v = H, no skip-worktree)",
+ "real_store_touched": false,
+ "real_store_note": "No command of this unit opened, read or hashed state/state.sqlite; its mtime is unchanged (2026-10-08 10:56:29.025176858, predating this unit) and every DB used lived under a state/verify/U8.71 tmp path. The project's own suite asserts the file's existence when run from the workspace root, exactly as on any normal run; that is the suite's behaviour, not a command of this unit.",
+ "remaining_after": [
+  {
+   "file": "tests/test_dashboard_auth.py",
+   "lines": [
+    346,
+    348
+   ],
+   "risk": 65,
+   "exc": "OSError",
+   "note": "message is errno-dependent ('[Errno 111] Connection refused', or a urllib URLError wrapper) - either pick an errno-agnostic substring or leave broad with that reason"
+  },
+  {
+   "file": "tests/test_occamy_client.py",
+   "lines": [
+    738,
+    740
+   ],
+   "risk": 65,
+   "exc": "json.JSONDecodeError"
+  },
+  {
+   "file": "tests/test_run.py",
+   "lines": [
+    624
+   ],
+   "risk": 65,
+   "exc": "ValueError"
+  },
+  {
+   "file": "tests/test_cli.py",
+   "lines": [
+    328
+   ],
+   "risk": 61,
+   "exc": "sqlite3.OperationalError"
+  },
+  {
+   "file": "tests/test_dashboard_auth.py",
+   "lines": [
+    231
+   ],
+   "risk": 61,
+   "exc": "ValueError"
+  },
+  {
+   "file": "tests/test_lanes_classify.py",
+   "lines": [
+    182
+   ],
+   "risk": 61,
+   "exc": "KeyError"
+  }
+ ],
+ "remaining_note": "8 still-blind builtin-broad sites remain (18 at unit start -> 10 tightened -> 8 left). Separately, state/verify/U8.36/triage_final.json is stale: 27 of its 45 builtin-broad 'blind' entries are already tight and it should be re-derived before any further batch.",
+ "checkpoint_commit": "41ad35b 'Final tail: hygiene guards, reconstructed verdict, closing record' landed mid-work and committed this unit's 10 edits into HEAD; all 5 files are tracked with clean porcelain, so git diff is 0 bytes and the delta is recorded as diff -u against the before/ snapshot instead. No git state-changing command was run by this unit.",
+ "blocker": "none",
+ "next_unit_hint": "Take the 8 remaining builtin-broad sites (tests/test_dashboard_auth.py:346/348, tests/test_occamy_client.py:738/740, tests/test_run.py:624, tests/test_cli.py:328, tests/test_dashboard_auth.py:231, tests/test_lanes_classify.py:182); re-derive triage_final.json first - 27 of its 45 builtin-broad 'blind' entries are already tight.",
+ "write_paths": [
+  "tests/test_journal.py",
+  "tests/test_lanes_build.py",
+  "tests/test_writer_detection.py",
+  "tests/test_cli.py",
+  "tests/test_dashboard.py",
+  "state/verify/U8.71/**",
+  "state/logs/U8.71*",
+  "orchestration/units/U8.71.md",
+  "orchestration/handoffs/U8.71.json"
+ ],
+ "tool_calls_work": 45,
+ "bound": 18
+}

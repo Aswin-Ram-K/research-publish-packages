@@ -1,0 +1,110 @@
+{
+  "unit": "U15",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/U15/rows.jsonl",
+    "experiments/context-cache/cells/U15/events.jsonl",
+    "experiments/context-cache/cells/U15/analysis.json",
+    "experiments/context-cache/cells/U15/u15_cell.py",
+    "experiments/context-cache/cells/U15/u15_analyze.py",
+    "orchestration/units/U15.md"
+  ],
+  "evidence": {
+    "command": ".venv/bin/python experiments/context-cache/cells/U15/u15_cell.py",
+    "requests_live": "160 cell requests (this run: 0; hard cap 220)",
+    "elapsed_s": 0.0,
+    "rows": "160/160 rows {'R': 40, 'F': 40, 'A': 40, 'C': 40} in experiments/context-cache/cells/U15/rows.jsonl",
+    "rows_sha256": "7d93f7950ed0eb98a1b429e10eeb00b4646b1ace7355b12b773f0ba13517d8f8",
+    "first_row_ts": "2026-10-21T03:54:39.883170+00:00",
+    "last_row_ts": "2026-10-21T03:55:40.387856+00:00",
+    "compaction_schedule": [
+      18,
+      35
+    ],
+    "per_arm": "R: prompt=194788 cached=143616 uncached=51172 hit=0.7373 breaks=2 net_break_cost=1620; F: prompt=198376 cached=151296 uncached=47080 hit=0.7627 breaks=2 net_break_cost=1975; A: prompt=412177 cached=382080 uncached=30097 hit=0.9270 breaks=0 net_break_cost=0; C: prompt=403259 cached=372736 uncached=30523 hit=0.9243 breaks=0 net_break_cost=0",
+    "prefix_breaks": "R: 2 at [18, 35]; F: 2 at [18, 35]; A: 0 at []; C: 0 at []",
+    "window_cost_A": "{\"arm\": \"A\", \"first_prompt_tokens\": 1186, \"last_prompt_tokens\": 19583, \"prompt_growth_tokens\": 18397, \"prompt_growth_factor\": 16.511804384485664, \"total_prompt_tokens\": 412177, \"control_total_prompt_tokens\": 403259, \"extra_prompt_tokens_vs_control\": 8918, \"final_prompt_extra_vs_control\": 608, \"note\": \"Arm A never shrinks: every compaction appends a [note] node to the whole existing chain.  `extra_prompt_tokens_vs_control` is the token mass those notes add over the 40-turn window; `prompt_growth_tokens` is the window growth from first to last turn.\"}",
+    "decomposition": "{\"note\": \"R's total-uncached excess over the control splits into (a) the two scheduled break turns, measured net of C, and (b) the post-compaction steady state.  If (b) dominates, the arm-level ratio is a window/short-chain cost, not a break-event cost.\", \"uncached_by_segment\": {\"1-17 (pre first compaction)\": {\"R\": 13674, \"F\": 13563, \"A\": 13674, \"C\": 13704}, \"18-34 (post first compaction)\": {\"R\": 28487, \"F\": 28922, \"A\": 12382, \"C\": 12586}, \"35-40 (post second compaction)\": {\"R\": 9011, \"F\": 4595, \"A\": 4041, \"C\": 4233}}, \"R_minus_C_by_segment\": {\"1-17 (pre first compaction)\": -30, \"18-34 (post first compaction)\": 15901, \"35-40 (post second compaction)\": 4778}, \"R_total_uncached\": 51172, \"C_total_uncached\": 30523, \"R_minus_C_total\": 20649, \"break_net_total_R\": 1620, \"steady_state_excess_R\": 19029, \"steady_state_share_of_gap\": 0.9215458375708266, \"counterfactual_R_ambient_plus_break\": 32143, \"A_vs_counterfactual_R\": 1.0679801973618632, \"turns_19_34_means\": {\"R\": {\"uncached\": 1659.9375, \"prompt\": 5811.9375}, \"F\": {\"uncached\": 1678.9375, \"prompt\": 5942.9375}, \"A\": {\"uncached\": 722.9375, \"prompt\": 13146.9375}, \"C\": {\"uncached\": 754.9375, \"prompt\": 12838.9375}}}",
+    "claim": "{\"question\": \"Does Arm A beat Arm R by >=1.5x on total uncached tokens?\", \"answer\": \"yes\", \"ratio_R_over_A\": 1.7002359039106887, \"statement\": \"YES: Arm A beats Arm R by 1.700x on total uncached tokens (51172 vs 30097). R and F are within 8.0% of each other, so the edit-vs-fork contrast is not the driver. Decomposition: only 1620 tokens of R's 20649-token excess over the control (7.8% of the gap) is net break cost at the two compaction turns; the other 19029 tokens (92.2%) is the post-compaction steady state, where R's short window re-prefills ~1660 tokens/turn against the control's ~755. The >=1.5x test passes, but the cost is window truncation-plus-break, not the break event alone: with the control's ambient residual and only the break effect, R would total 32143 and A/R would be 1.07x.\", \"if_yes\": \"cost is head mutability, not edit-vs-fork\", \"if_no\": \"the refutation stands unqualified\"}"
+  },
+  "blocker": "",
+  "next_unit_hint": "Verifier: re-run `.venv/bin/python experiments/context-cache/cells/U15/u15_analyze.py` offline (no live calls) and compare analysis.json's rows_sha256; check Arm A has zero prefix-break events while R and F break exactly at the scheduled compaction turns, and that C's ambient residual is subtracted in the net break cost. Then rule on whether the edit-vs-fork refutation stands.",
+  "write_paths": [
+    "experiments/context-cache/cells/U15/**",
+    "orchestration/handoffs/U15.json",
+    "orchestration/units/U15.md"
+  ],
+  "answer": {
+    "question": "Does Arm A beat Arm R by >=1.5x on total uncached tokens?",
+    "answer": "yes",
+    "ratio_R_over_A": 1.7002359039106887,
+    "statement": "YES: Arm A beats Arm R by 1.700x on total uncached tokens (51172 vs 30097). R and F are within 8.0% of each other, so the edit-vs-fork contrast is not the driver. Decomposition: only 1620 tokens of R's 20649-token excess over the control (7.8% of the gap) is net break cost at the two compaction turns; the other 19029 tokens (92.2%) is the post-compaction steady state, where R's short window re-prefills ~1660 tokens/turn against the control's ~755. The >=1.5x test passes, but the cost is window truncation-plus-break, not the break event alone: with the control's ambient residual and only the break effect, R would total 32143 and A/R would be 1.07x.",
+    "window_cost_of_never_compacting": {
+      "arm": "A",
+      "first_prompt_tokens": 1186,
+      "last_prompt_tokens": 19583,
+      "prompt_growth_tokens": 18397,
+      "prompt_growth_factor": 16.511804384485664,
+      "total_prompt_tokens": 412177,
+      "control_total_prompt_tokens": 403259,
+      "extra_prompt_tokens_vs_control": 8918,
+      "final_prompt_extra_vs_control": 608,
+      "note": "Arm A never shrinks: every compaction appends a [note] node to the whole existing chain.  `extra_prompt_tokens_vs_control` is the token mass those notes add over the 40-turn window; `prompt_growth_tokens` is the window growth from first to last turn."
+    },
+    "decomposition": {
+      "note": "R's total-uncached excess over the control splits into (a) the two scheduled break turns, measured net of C, and (b) the post-compaction steady state.  If (b) dominates, the arm-level ratio is a window/short-chain cost, not a break-event cost.",
+      "uncached_by_segment": {
+        "1-17 (pre first compaction)": {
+          "R": 13674,
+          "F": 13563,
+          "A": 13674,
+          "C": 13704
+        },
+        "18-34 (post first compaction)": {
+          "R": 28487,
+          "F": 28922,
+          "A": 12382,
+          "C": 12586
+        },
+        "35-40 (post second compaction)": {
+          "R": 9011,
+          "F": 4595,
+          "A": 4041,
+          "C": 4233
+        }
+      },
+      "R_minus_C_by_segment": {
+        "1-17 (pre first compaction)": -30,
+        "18-34 (post first compaction)": 15901,
+        "35-40 (post second compaction)": 4778
+      },
+      "R_total_uncached": 51172,
+      "C_total_uncached": 30523,
+      "R_minus_C_total": 20649,
+      "break_net_total_R": 1620,
+      "steady_state_excess_R": 19029,
+      "steady_state_share_of_gap": 0.9215458375708266,
+      "counterfactual_R_ambient_plus_break": 32143,
+      "A_vs_counterfactual_R": 1.0679801973618632,
+      "turns_19_34_means": {
+        "R": {
+          "uncached": 1659.9375,
+          "prompt": 5811.9375
+        },
+        "F": {
+          "uncached": 1678.9375,
+          "prompt": 5942.9375
+        },
+        "A": {
+          "uncached": 722.9375,
+          "prompt": 13146.9375
+        },
+        "C": {
+          "uncached": 754.9375,
+          "prompt": 12838.9375
+        }
+      }
+    }
+  },
+  "lock": "acquired after 0.0s; pid 5; held for the whole run"
+}

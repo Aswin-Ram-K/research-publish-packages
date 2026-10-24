@@ -1,0 +1,66 @@
+{
+  "unit": "GAP-TRIAGE",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/GAPS.md",
+    "papers/context-cache/PACKAGE.md",
+    "state/gap-triage.json",
+    "state/gap-ledger.json",
+    "tests/test_gap_triage.py",
+    "orchestration/units/GAP-TRIAGE.md"
+  ],
+  "evidence": {
+    "gate": "(.venv/bin/python papers/context-cache/verify_package.py) PASS — 62 claims in CLAIMS.md, 62 mapped 1:1, 2 script-backed + 60 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none; exit 0",
+    "values": "(.venv/bin/python papers/context-cache/recompute.py all) 59 claims checked, all match; COVERAGE GUARD PASS 62 claims documented, 60 runnable here + 2 script-backed; exit 0",
+    "derived_counts": "tests/test_gap_closure_ledger.py derive() re-run over state/gap-ledger.json: {'closed': 2, 'open': 10, 'narrowed': 3, 'unverifiable': 1}; stated-vs-derived disagreements: []",
+    "triage": "10 decisions: 8 stated-limitation (G2, G6, G7, G8, G9, G10, G13, G15), 2 stale-prose (G12, G14); recorded in state/gap-triage.json with per-gap evidence and why",
+    "g12_fix": "GAPS.md G12 rewritten: 'no eviction pressure was applied (the KV pool holds 1.3 M tokens)' removed; scoped to the append/summarise corpus; capacity corrected to 1,620,892 declared tokens with C54 (1.5017x, 283 docs) and C59 (TUNED 1.505083x); dated GAP-TRIAGE note added; gap remains OPEN",
+    "g14_fix": "GAPS.md G14 rewritten: 'neither has been tested at the limit' removed; records G3-LIMIT-V2/C62 (2,780 rows, 18 compactions at 32k/64k) as measuring the steady-state half; records all 18 triggers as projected_prompt_exceeds_budget_headroom (12 + 6 repeats) and no hybrid arm among B,B-ptr,S,S-ptr,F,F-ptr,S-k800,F-k800; gap remains OPEN",
+    "scope_statement": "GAPS.md intro + new 'Triage ledger' section, and PACKAGE.md §8, now state that verify_package's UNVERIFIED: none is a claim-value census, not a gap census (2 closed / 3 narrowed / 10 open / 1 unverifiable)",
+    "ledger": "state/gap-ledger.json stated_status updated for the ten open ids to their new STATUS: OPEN words plus a top-level triage block; derived_status and evidence_refs untouched",
+    "red_green": {
+      "red": "re-planted G12 'no eviction pressure was applied (the KV pool holds 1.3 M tokens)' and G14 'Neither has been tested at the limit.' -> pytest tests/test_gap_triage.py -> 2 failed, 7 passed (test_g12_stale_capacity_and_pressure_are_corrected, test_g14_limit_regime_is_no_longer_denied)",
+      "restore": "cp scratch/gap-triage/GAPS.green.bak papers/context-cache/GAPS.md; cmp -> byte-identical",
+      "green": "pytest tests/test_gap_triage.py -> 9 passed; combined 10-guard battery -> 95 passed in 0.29s"
+    },
+    "hashes": {
+      "papers/context-cache/GAPS.md": "ab419a6559b834d1f08bf73907695141062128b673a3d569ba78e92e936b98e4",
+      "papers/context-cache/PACKAGE.md": "e75765741a9e7f0368c81bc911df1af0dc6fde5e5f59a3be669220c81141547c",
+      "state/gap-triage.json": "61b189ac77f49d550755da5a857f6b73bd2be30779c7220e2bb5d02fd38850e6",
+      "state/gap-ledger.json": "a3e004fb2fd52eff78ef8e12d2d0109aa2ce339d569e3ec3fd918787d1b1220b",
+      "tests/test_gap_triage.py": "c59ac32a1ca5298b77625eb7a75d28890a62c258b8f1a7760e242725b63f427c"
+    },
+    "commands": [
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/verify_package.py",
+      ".venv/bin/python papers/context-cache/recompute.py all",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_gap_triage.py tests/test_gap_closure_ledger.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_g3_bands.py tests/test_context_cache_qualifier.py tests/test_paper_attribution_guard.py tests/test_g5_fanout_attribution.py tests/test_no_stray_package_refs.py tests/test_paper_claim_census.py tests/test_claims_decompose.py tests/test_run_record_digests.py -q",
+      "cp scratch/gap-triage/GAPS.green.bak papers/context-cache/GAPS.md && cmp scratch/gap-triage/GAPS.green.bak papers/context-cache/GAPS.md"
+    ],
+    "findings": [
+      "tests/test_orchestration_handoffs.py currently fails test_no_new_contract_key_gaps on a sibling handoff, orchestration/handoffs/MATRIX-FOLD.json (mtime 2026-10-23 19:13:36), which lacks write_paths. GAP-TRIAGE's own handoff audits clean (shape unit, gaps None). Not edited: another unit's write path.",
+      "EVIDENCE.md §5 still records that G3-LIMIT-V2/C62 has no independent verifier; a fresh verifier card should re-derive C62 before G3's remainder is narrowed further."
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "G3-LIMIT-V2/C62 still has no independent verifier (EVIDENCE.md §5 says so). Before any of G3's remainder is narrowed further, a fresh verifier card should re-derive C62 from cells/G3-LIMIT-V2/rows.jsonl; separately, G13's per-row build pin and U2 44-repeat canary are the two named unrun closers.",
+  "write_paths": [
+    "papers/context-cache/GAPS.md",
+    "papers/context-cache/PACKAGE.md",
+    "state/gap-triage.json",
+    "state/gap-ledger.json",
+    "tests/test_gap_triage.py",
+    "orchestration/units/GAP-TRIAGE.md",
+    "orchestration/handoffs/GAP-TRIAGE.json",
+    "scratch/gap-triage/"
+  ],
+  "assumptions": [
+    "The ten ids are the ledger's own derived_status == open set (same ten GAP-LEDGER2 reported); the card's thin prompt supplied no alternate list.",
+    "stated-limitation is a classification of the gap, not a closure: the two stale-prose fixes correct the sentence while leaving both gaps open, and no claim depends on the corrected text.",
+    "Editing state/gap-ledger.json was confined to stated_status strings (to keep 'the entry's own words' true) plus a top-level triage block; derived_status and evidence_refs were not changed, and the ledger guard still passes.",
+    "PACKAGE.md is a shared package document, not another unit's write path; the added sentence only scopes the existing UNVERIFIED claim to claim values.",
+    "EVIDENCE.md §5 was read and cited, not edited (its G3-LIMIT-V2 verifier gap is recorded in next_unit_hint instead)."
+  ],
+  "tool_calls": 72,
+  "bound": 75
+}

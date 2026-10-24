@@ -1,0 +1,61 @@
+{
+  "unit": "UNEUTRAL2",
+  "status": "done",
+  "artifacts": [
+    "scratch/uneutral2/tree-full/",
+    "scratch/uneutral2/tree-full-run2/",
+    "scratch/uneutral2/tree-stripped/",
+    "scratch/uneutral2/census2.py",
+    "scratch/uneutral2/census-pinned.txt",
+    "scratch/uneutral2/census-unpinned.txt",
+    "scratch/uneutral2/census-unpinned-plus-verify.txt",
+    "scratch/uneutral2/census-stripped.txt",
+    "scratch/uneutral2/gen-run1.log",
+    "scratch/uneutral2/gen-run2.log",
+    "strategy/UNPINNED_MEASUREMENT.md",
+    "orchestration/units/UNEUTRAL2.md"
+  ],
+  "evidence": {
+    "unpinned_command": "cd repro/encoder-crossover-190-SANITISED && REDACT_PINS=0 python3 redact.py --out \"/home/zer0null/reserach extarctor/scratch/uneutral2/tree-full\"",
+    "live_tree_untouched": "sha256 sweep of repro/encoder-crossover-190-SANITISED before vs after -> diff clean -> LIVE TREE UNCHANGED",
+    "redact_py_modified": "NO. before==after. pinned default intact at repro/encoder-crossover-190-SANITISED/redact.py:925 NEUTRAL_PINS = os.environ.get(\"REDACT_PINS\", \"1\") != \"0\"",
+    "scanner": "scratch/uneutral2/census2.py -- same id source/method as scratch/uneutral1/scan.py (column 2 of scratch/uagnostic1/census.tsv, case-insensitive), plus per-file/class/line attribution",
+    "census_pinned_tree": "45 files, 99/184 ids, 26351 occurrences",
+    "census_unpinned_tree": "44 files, 16/184 ids, 29 occurrences -- ALL in verify/redaction-log.json: GrantPolicy 3, INTEGRITY.md 3, REDACTION_REPORT.md 3, grantPolicy 3, DECISION_CASE_SCHEMA.ts 2, RESIDUALS.md 2, SCRUB_REPORT.md 2, reflex-decisions 2, reflex-decisions.ts 2, LEAD-WIRING.md 1, LICENCE_TODO.md 1, WIRING.md 1, broker 1, editor 1, export-fixture.ts 1, fixture-190.json 1; cause = stage_e runs before write_log(), and verify/redaction-log.json is in `generated` and rewritten afterwards",
+    "census_unpinned_plus_verifier": "45 files, 19/184, 36 occurrences (the +7 is verify/recompute-claims.py, copied in after generation, therefore untagged)",
+    "census_stripped": "45 files, 99/184, 9254 occurrences (train 2910 + dev 580)",
+    "claims_run": "cd scratch/uneutral2/tree-full && python3 verify/recompute-claims.py -> exit 0; verbatim tail: '  ALL CLAIM NUMBERS PRESERVED: True' and '  fixture correctness digest: 9997da6263840017dba05fff5ea64b8264c6b8107a152e782ba292a4198d61d0'; all 9 numeric checks OK. CAVEAT: this script reads neither train.jsonl nor dev.jsonl (grep: none), and its SECOND-LABELLER section compares hard-coded constants against shipped results/metrics.json -- it does not recompute route A",
+    "routeA_live": "ties 120, agreement 0.34210526315789475, kappa 0.32520740993294694, exact_index_matches 65, zero_score_cases 41, AB_mutual_agreement 0.3526315789473684",
+    "routeA_pinned_tree": "ties 120, agreement 0.34210526315789475, kappa 0.32520740993294694, exact_index_matches 65, zero_score_cases 41, AB_mutual_agreement 0.3526315789473684 (identical to live)",
+    "routeA_unpinned_tree": "ties 121, agreement 0.3368421052631579, kappa 0.31988636363636364, exact_index_matches 64, zero_score_cases 41, AB_mutual_agreement 0.3473684210526316 -- MEASURED by copying the pristine parse_fixture.py/compare.py onto the unpinned tree and running them on its own retagged fixture + its own retagged labelsB.json; with pristine labelsB.json compare.py raises at compare.py:42 in kappa (join fails)",
+    "claims_moved": "YES -- 5 of 6 route-A numbers move (ties, agreement, kappa, exact_index_matches, AB_mutual_agreement). The published/cited route-A kappa 0.3252 becomes 0.319886. Cause: route A is a tokeniser-overlap function of the fixture's verbatim question/options/id strings, and REDACT_PINS=0 lifts PIN_LITERAL_KEYS",
+    "jsonl_corruption": "ALL records invalid: train 800/800, dev 200/200; json.decoder.JSONDecodeError: Invalid \\escape: line 1 column 755 (char 754). Cause: census field names nCandidate (scratch/uagnostic1/census.tsv:64), nKind (:65), nSituation (:66) are substrings of the JSON escape \\n + Kind/Situation/Candidate inside string values, so the escape becomes backslash + tag (\\F32, 6 per record 1). Evidence bytes: '... option the situation selects.\\F32: routin...'",
+    "tooling_breakage": "unpinned lifts PIN_SKIP_EXT {.py,.sh,.bash}; scratch/uneutral2/tree-full/second-labeller/parse_fixture.py:16 becomes SRC = os.path.join(HERE, \"D07.sandbox.ts\") (pristine: \"reflex-decisions.sandbox.ts\") -> FileNotFoundError -> parse_fixture.py/compare.py cannot run inside the tree as generated",
+    "digest_fixture_sha256": "live 751dc007ba115dccc5815fdf97c9ce7b34b0dc990a6e57802d762e9b35ad9cae | pinned f0a2abceed6a2be2e892ec9cb234eafe665e77a001573971042aef7ce151bc37 | unpinned e5112bc7aa1cdae170acc9d9d60883d3cb6e0011d029e88a1471eb64bf40d44a",
+    "digest_train_sha256": "live 24c39afa8606942ac2f4fb3e6f1ce5c2b0c9ee581b67d1aed38260d4aa020c09 | pinned same | unpinned 0f53cc39066ad561bc789e3deb1f61b5bc5c8b937d96adb0658c21bee0dc6cd4",
+    "digest_dev_sha256": "live d311a99f0d5b2bd8bcff03e9913b3857ec4c98ffd3714ce9a7afa42514eaa976 | pinned same | unpinned 36319e01c4a5044ee2922c382971cf5690ffc41cb48dcd1941742b8c6d45e1e6",
+    "digest_fixture_correctness": "live 8dd05ce6fe31f6bef484e97bed9ec8c96fb5f2c0b17ebb20ff57afb8716c106a | pinned same | unpinned 9997da6263840017dba05fff5ea64b8264c6b8107a152e782ba292a4198d61d0; recipe = verify/recompute-claims.py:126-128 hashlib.sha256(json.dumps([[c[\"id\"], c[\"correct\"], len(c[\"options\"])] for c in fixture], separators=(\",\", \":\")).encode()).hexdigest()",
+    "digest_scoring_projection": "live 57a29b4e78bff60f84309e2e95b56f49663884a13b801345eecd93813ecbf300 | pinned f549a2bdcf0a7dea9ec1da8ad2e68dbca376045cb38f507b7e18a611df0e34e5 | unpinned 78838399b361ab7dc345eaef5cb43d7b83366a0ae75d8797b5277354ba5c2be6; recipe = sha256(json.dumps([{k:c[k] for k in ('id','kind','question','options','correct')} for c in cases], sort_keys=True, separators=(',',':'), ensure_ascii=False)); recipe validated against live 57a29b4e and pinned f549a2bd",
+    "consumed_fields": "options (train.py:94 k_max = max(len(e[\"options\"]) for e in examples); train.py:312,:322,:373; tccommon.py:167), kind (tccommon.py:167; train.py:311 s = tc.render_context(e[\"kind\"], e[\"situation\"]); train.py:322), situation (tccommon.py:167; train.py:311; train.py:322), goldIndex (train.py:105 gold[i] = e[\"goldIndex\"]; train.py:169,:175,:315,:323,:376), gold (train.py:367 counts[e[\"gold\"]] = counts.get(e[\"gold\"], 0) + 1). Loaded at train.py:429-430",
+    "dead_fields": "texts (0 read-sites; re-derived by tccommon.py:165-167 texts_for_example -> render(example[\"kind\"], example[\"situation\"], o) for o in example[\"options\"]), id, familyId, clanId, stratum (read only by prepare.py:79-91, the split builder, never by training)",
+    "strip_saving": "train 2205127 -> 509453 B (-1695674 B, -76.90%); dev 484922 -> 118444 B (-366478 B, -75.57%); total -2062152 B (-76.7%); texts alone = 1977152 B. stripped sha256 train 0866fe7c8681a35b2d6da8c274cfc6fd3ace17e3db5d73e0d03bacc80a3c3d53, dev 7e09344c40ef51832f40249c62efccf09b0fb773ddb5645e9c87f3440750ca69",
+    "strip_moves_no_claim": "recompute-claims.py contains no read of train.jsonl/dev.jsonl (grep: none); it does move train/dev sha256 and defect-probe.py:110 devSplitSha256",
+    "idempotence": "diff -r scratch/uneutral2/tree-full scratch/uneutral2/tree-full-run2 -> only 'Only in .../tree-full/verify: recompute-claims.py' (this unit's post-generation copy, not generator output). gen-run1.log sha256 == gen-run2.log sha256 == 0496d7328bbba7f806ce4f378b6a42282d9ca898bb365a5c8c470cc0e82cd692. Whole-tree: run1 6085313101dbfb3cfa76fd508dfd02c24940f78836af6d961c91cc013fd87a77, run2 b8c0718cddd7f7deadceb66e08952368ab6ed351f7bfa07b58d25d5f1faded05 (differ only by that file)",
+    "map_never_shipped": "M built in-memory only; no tag-original pair written or logged; verify/redaction-log.json carries \"map_shipped\": false",
+    "commands": [
+      "cd repro/encoder-crossover-190-SANITISED && REDACT_PINS=0 python3 redact.py --out /home/zer0null/reserach\\ extarctor/scratch/uneutral2/tree-full",
+      "python3 scratch/uneutral2/census2.py <tree>  (scratch/uneutral1/tree, scratch/uneutral2/tree-full, scratch/uneutral2/tree-stripped)",
+      "cd scratch/uneutral2/tree-full && python3 verify/recompute-claims.py",
+      "cd scratch/uneutral2/rt/{live,pinned} && python3 parse_fixture.py && python3 compare.py",
+      "cd scratch/uneutral2/rt/ufix2/second-labeller && python3 parse_fixture.py && python3 compare.py"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Parent decision. Recommendation: (A) ship the pinned tree now -- it is the only artifact where no claim number moves; (B) REDACT_PINS=0 as implemented MUST NOT SHIP: it makes all 800 train + 200 dev records invalid JSON (census names nCandidate/nKind/nSituation collide with the \\n escape), breaks shipped second-labeller/parse_fixture.py (filename identifier retagged to D07), and moves 5 of 6 route-A claim numbers (kappa 0.325207 -> 0.319886, ties 120 -> 121, exact 65 -> 64, AB 0.352632 -> 0.347368), while still leaving 29 occurrences. (C) as literally defined (unpin + strip) inherits that movement; the workable form is C' = (A) + strip texts/id/familyId/clanId/stratum from train.jsonl+dev.jsonl (measured -2062152 B, -76.7%, immune to recompute-claims.py) + selectively retag non-fixture material, keeping PIN_LITERAL_KEYS (id/question/options) and the .py/.sh tooling pins. Residual floor under C' is ~5764 after the JSONL share retags. A SEPARATE verifier must re-run: census2 on both trees, recompute-claims.py in the unpinned tree, parse_fixture+compare on live/pinned/unpinned, and the two-run idempotence diff.",
+  "write_paths": [
+    "scratch/uneutral2/**",
+    "strategy/UNPINNED_MEASUREMENT.md",
+    "orchestration/units/UNEUTRAL2.md",
+    "orchestration/handoffs/UNEUTRAL2.json"
+  ]
+}

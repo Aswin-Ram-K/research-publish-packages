@@ -1,0 +1,44 @@
+{
+  "unit": "UPIPE",
+  "status": "done",
+  "artifacts": [
+    "state/logs/UPIPE-run.log",
+    "state/logs/UPIPE-replay.log",
+    "state/logs/UPIPE-search-health.txt",
+    "state/logs/UPIPE-baseline.txt",
+    "state/verify/UPIPE/pre.sqlite",
+    "state/verify/UPIPE/post.sqlite",
+    "orchestration/units/UPIPE.md"
+  ],
+  "evidence": {
+    "search_health": "8 results for 3 queries (agent state kernel=6, self-refinement LLM degradation=0, evidence verification pipeline=2), all http 200; unresponsive_engines verbatim on every query: [[\"brave\",\"Suspended: too many requests\"],[\"duckduckgo\",\"CAPTCHA\"],[\"google cse\",\"Suspended: too many requests\"],[\"mojeek\",\"Suspended: access denied\"],[\"qwant\",\"CAPTCHA\"]]; engines suspended=5 (brave, duckduckgo, google cse, mojeek, qwant)",
+    "doctor": "core 4/4 green; optional 2/3 green (docling bridge down) -> doctor: OK (exit 0). Occamy core ok model=occamy-1.0 completion HTTP 200 (252 ms); SearXNG core ok HTTP 200, results=10 (its probe query is generic and does NOT detect the degradation targeted queries expose); crawl bridge ok; graphify ok 0.9.80; docling bridge DOWN ConnectError connection refused (optional); renderers optional ok missing pdflatex/pandoc/tectonic; dashboard port optional ok 127.0.0.1:8901 free",
+    "candidates": "10",
+    "claims": "0",
+    "evidence_rows": "0",
+    "verdicts": "0",
+    "dockets_ready": "0",
+    "duval_writes_by_pipeline": "0",
+    "duval_writes_by_other_session": "0",
+    "commands": [
+      "curl -s --max-time 30 -G 'http://127.0.0.1:8080/search' --data-urlencode 'q=agent state kernel' --data-urlencode 'format=json'  -> http=200, results=6",
+      "curl ... 'q=self-refinement LLM degradation' -> http=200, results=0",
+      "curl ... 'q=evidence verification pipeline' -> http=200, results=2",
+      "./.venv/bin/resextract doctor -> core 4/4 green, optional 2/3 green, exit 0",
+      "git -C /home/zer0null/Duval status --porcelain (pre and post) -> byte-identical; HEAD 24f339c0c3994f7af5c6f505bd8b65744612f853 unchanged",
+      "find /home/zer0null/Duval -newermt '2026-10-14T19:36:10-05:00' -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -> EMPTY before and after",
+      "timeout 900 ./.venv/bin/resextract run --target duval -> 9 s, exit 1, 'completed WITH DEGRADATIONS'; mine/claims/assess blocked at the producer gate; materialize skipped; refresh ok",
+      "timeout 600 ./.venv/bin/resextract run --target duval --allow-replay -> materialize degraded REPLAY-DERIVED: dockets=5, failures=0; all 5 run-scoped dockets status=draft, none ready",
+      "cp state/state.sqlite state/verify/UPIPE/post.sqlite; sqlite3 ro -> candidates=10, claims=0, evidence=0, verdicts=0; candidates by producer=[('replay',10)]",
+      "./.venv/bin/resextract status -> candidates=10 claims=0 evidence=0 verdicts=0 lanes=5 by_status={'draft':5} dockets=2 by_freshness={'current':2}",
+      "./.venv/bin/resextract --help -> 'mine  not implemented yet - planned for batch 2 (mining)'"
+    ]
+  },
+  "blocker": "Not the model endpoint. Occamy is UP (HTTP 200, completion in 252 ms) yet every run reports the literal string 'model endpoint DOWN (http 200)'. The operative blocker is the STORE PRODUCER GATE plus an unimplemented mine stage: src/resextract/run.py:2008-2012 computes model_candidates from the store before any stage runs, and run.py:2067 blocks mine/claims/assess when that list is empty; all 10 candidates have producer='replay' and the CLI lists 'mine' as 'not implemented yet - planned for batch 2'. The gate message at run.py:353-363 hard-codes the 'model endpoint DOWN (http {status})' prefix, which misdiagnoses the cause. Consequence: claims/evidence/verdicts can never move off 0 even with Occamy up, and repairing SearXNG alone cannot create an evidence row because the run never reaches a search-driven stage (searches that return results still hit the same gate). SearXNG remains degraded independently: 8 results across 3 queries, 5 engines suspended/CAPTCHA.",
+  "next_unit_hint": "Do NOT spend the next unit repairing SearXNG expecting evidence - it is not the binding constraint on this path. Open a diagnosis unit on the producer gate: decide whether mine is supposed to seed model-produced candidates (in which case it must run BEFORE the gate is evaluated) or whether a seed/import path is intended, and fix the misdiagnosing gate_reason string at run.py:353-363 to stop reporting a reachable endpoint as DOWN. Separately: doctor's SearXNG probe is a generic query that reports 'results=10' while targeted queries return 0-6 (8/3) - doctor should probe a discriminating query or report unresponsive_engines, otherwise it certifies a degraded search leg as green.",
+  "write_paths": [
+    "state/logs/",
+    "orchestration/units/UPIPE.md",
+    "orchestration/handoffs/UPIPE.json"
+  ]
+}

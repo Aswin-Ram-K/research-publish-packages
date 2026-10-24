@@ -1,0 +1,47 @@
+{
+  "unit": "VE2",
+  "overall": "partial",
+  "checks": [
+    "1 PASS: author --analyse-only re-run (CELL_DIR redirected) reproduced analysis.json exactly (ALL-SAME true, all keys, n_rows=51, rows sha 47980b49...); rows recompute t19-34 mean uncached 1658.9375 = 456.6875 tail + 30.25 boundary + 1172.0 re-prefill, residual 0.0 on 16/16 (and on all 37 steady turns). Printed precision 1,658.9/456.7/30.2/1,172.0 matches.",
+    "2 PASS with notes: 37/37 steady R turns prefix_identical + 0 changed messages; 33/37 cached == 64*floor(prompt_j) for earlier j, lags 1:7 2:8 3:10 4:8, failures exactly t19,t20,t36,t37; skipped-message sum vs re_prefill max |mismatch| 59 tokens, 0/33 over 128; 81/81 re_prefill multiples of 64; head_sha one value over 40 R turns; summary_shas change only at t18 and t35; summary node est 188 before every cut (min cached 768).",
+    "3 PASS: (456.6875+1172.0)/1658.9375 = 0.98183, 30.25/1658.9375 = 0.01823, summary 0 -> 98.2% tail / 1.8% grid / 0% summary.",
+    "4 PASS red->green: replacing floor64(prompt_j) with prompt_j gives 0/37 matches, so the 33/37 identity fails on the same rows; the identity is quantization-dependent.",
+    "5 FAIL/OVERSTATED: F2 t36-38 cached 2048/2048/2944, unc 455/919/450 (mean 608 = 444.33 tail + 14.33 boundary + 149.33 re; U15 F 458/922/453; R t36-40 re mean 1088; E2F cold cached 768/768/2048, re 1280/1728/896) all verified. But 'epoch warmth, not fork marker' is not licensed: warm R 1088 vs warm F2 149 differ 7.3x, E2F confounds warmth with missing t1-29 history and has no cold-R control, one seed, and E2F does not numerically match R (896/896/1792).",
+    "6 PASS: U15 R cached t19-23 768/768/1920/1920/2816 and t36-40 896/896/1792/1792/2688 exact (unc -1/turn from salt); U15 F t35-38 768/2048/2048/2944 exact (unc -3/turn); shared modules client.py/runner.py/analyze.py mtimes 2026-10-20 predate E2 window 2026-10-21 15:45-15:48; no shared-module/src/tests/other-cell write; no POST, no lock."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Keep E2's measurements (they reproduce exactly) but correct the deflation: F2 licenses 'a warm epoch is necessary for F's shallow t36-38 re-prefill', not 'depth is not the fork marker' (warm R is deep; cold F lacks t1-29 history; one seed; E2F cached 768/768/2048 is not R's 896/896/1792). If G6 needs the marker isolated, run a cold-R control from t30 plus a second seed; do not re-run F cold as a refutation.",
+  "write_paths": [
+    "orchestration/units/VE2.md",
+    "orchestration/handoffs/VE2.json",
+    "orchestration/VERDICTS.md"
+  ],
+  "not_reproduced": [
+    "F2 'lag 1 turn' as a unique attribution: cached 2048 also equals floor64(prompt_3) and floor64(prompt_18); turn lags vs j=35 are 1,2,1. The 149-token re_prefill amount does reproduce."
+  ],
+  "overstated": [
+    "E2's 'F's t36-40 advantage tracks cache-epoch warmth, not the fork marker': the rows license only that warm epoch is necessary (F2 reproduces U15 F) and that the effect is not purely the marker; they do not license excluding the arm, since warm R and warm F2 still differ 7.3x."
+  ],
+  "unverified": [
+    "F2 stops at t38, so U15 F t39-40 (cached 2944/3840, unc 948/518) is not reproduced.",
+    "Single seed per arm/epoch; run-to-run cache variance unquantified."
+  ],
+  "corrections": [
+    "E2F cold cached 768/768/2048 is not R's depth: R t36-38 cached 896/896/1792 (unc 1385/1849/1380); E2F matches only R's deep-re-prefill magnitude (re 1280/1728/896).",
+    "Pre-fold turn lags are {1:7, 2:8, 3:1}: t10 is turn-lag 3, so 'lag 1-2 pre-fold' holds in message-skip units (t10 skips 2 messages) but not in turn units.",
+    "'14 of 16 post-fold steady turns' covers t19-34 only; across all 21 post-fold steady turns the head+summary test is 17/21 (t36,t37 also short), though the summary node (est 188) is cached behind every cut (min cached 768).",
+    "E2.md's re_prefill value list omits 384 and 1024 (both multiples of 64)."
+  ],
+  "red_green": [
+    "cached == 64*floor(prompt_j): 33/37; cached == prompt_j: 0/37 on the same rows -> the 33/37 claim depends on the 64-quantization."
+  ],
+  "assumptions": [
+    "Automated session, no questions asked; offline only (0 live requests, no .occamy.lock).",
+    "Author --analyse-only was executed with CELL_DIR/ANALYSIS_PATH redirected to /tmp so E2's analysis.json was not rewritten; the one stray cells/E2/...tmp created by the first cross-device redirect was removed."
+  ],
+  "containment": [
+    "0 POSTs; .occamy.lock not acquired; only declared VE2 write paths touched persistently; a transient /tmp analysis copy and a deleted .tmp in cells/E2 (no E2 artifact content changed)."
+  ],
+  "tool_calls": 20,
+  "bound": 20
+}

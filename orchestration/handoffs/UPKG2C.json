@@ -1,0 +1,33 @@
+{
+  "unit": "UPKG2C",
+  "status": "done",
+  "artifacts": [
+    "papers/replay-record-not-decision/MANUSCRIPT.md (availability claims repointed; superseded wording kept as dated history)",
+    "papers/replay-record-not-decision/TMLR_ANONYMITY_NOTE.md",
+    "papers/replay-record-not-decision/AVAILABILITY.md, papers/replay-record-not-decision/GAPS.md (dated 2026-10-19 update blocks)",
+    "papers/replay-record-not-decision/submission/main.tex (+ABSTRACT.txt, ABSTRACT_METADATA.txt regenerated)",
+    "scratch/upkg2c/package/ (8 files; fixture/ removed; MANIFEST regenerated)",
+    "scratch/upkg2c/reproduce-join.py, join-results.json, cut_ladder.py, cut-ladder.txt, clean-extraction.txt, rg-red.txt, rg-green.txt, md2tex-delta.json, tectonic.log, out/main.pdf",
+    "orchestration/units/UPKG2C.md",
+    "orchestration/handoffs/UPKG2C.json"
+  ],
+  "evidence": {
+    "job1_join": "python3 scratch/upkg2c/reproduce-join.py -> fixture 190 cases sha256 a15224bad...; records 3040 rows / 190 distinct cases sha256 c5ec44a79...; per-kind distinct-case counts fixture {K01:30,K02:30,K03:26,K04:22,K05:26,K07:28,N10:28} vs records {acquisition:26,capability.family:26,context.package:28,escalation:30,memory.admission:28,topology:22,worker.class:30}; 'counts match as multisets: True'; cases with >1 distinct correct: 0 on both sides; 'kind bijections ... = 1' = K01->escalation,K02->worker.class,K03->acquisition,K04->topology,K05->capability.family,K07->memory.admission,N10->context.package",
+    "card_disagreement": "card's per-kind counts are per DISTINCT CASE; the record file has 16 rows per case (3040/190), so per-row counts are 16x larger (30x16=480 etc). Not a contradiction once the unit is fixed; no bijection exists in per-row units.",
+    "job3_manifest": "python3 tools/package/check_manifest.py --package $PWD/scratch/upkg2c/package -> missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0; manifest_self_recomputes=True; VERDICT PASS; exit 0 (8 files on disk, files[]=7, counts.files=8, counts.bytes_total=1298026)",
+    "job3_clean": "mktemp -d; cp -a scratch/upkg2c/package/. $EX; (cd $EX; python3 verify/recompute-claims.py) -> exit 0; 'CHECKS: 30/30 passed'; 'ALL PUBLISHED NUMBERS REPRODUCED: True'; 'VERDICT: PASS'",
+    "job3_red_green": "l1-head-to-head.jsonl offset 98 0x31->0x30: sha256 6af0e0d8294cf4d7a20e2d8cb9bfe0c11ff70cc4c4b2792fcdedaf9246b2a1e7 -> 9e3280b9024897455f6e2ca10ca23f6d1cad09f05a386ca1741f5acdb9b339c0; exit 1 with FAILED: digest:data/l1-head-to-head.jsonl, line-1 trap, l1 == 98/190, l1 picks are V0 picks; restored -> sha256 6af0e0d8...; exit 0 VERDICT PASS",
+    "job3_cut_ladder": "python3 scratch/upkg2c/cut_ladder.py -> c00_full=0, c00b_plus_exp7=0, c01_no_fixture=0, c01b_add_then_drop_fixture=0, c01c_with_companion_fixture=0, c02=0, c03_drop_one_row=1, c04=1, c05=1, c06=1, c07_drop_l1=1, c08_drop_dv=1; first break c03",
+    "job4_md2tex": "python3 tools/package/md2tex.py --package replay-record-not-decision -> exit 0 twice; sha256 b18f9506d754fa9fa82b202f6862b9a4dba52985f4169f1cf5c9555bbfbb96f7 both runs (cmp silent); 32359 B / 247 lines (before 28852 B / 243 lines); 4 changed hunks (abstract sentence, related-work sentence, S2 sentence, S6 bullet, S7 withdrawn->released); numeric literals before 389/124 distinct -> after 442/138; ADDED {01:2,02:2,03:2,04:2,05:2,07:2,10:5,10.5281:2,15224:1,19:3,190:6,2026:3,22:1,23463944:2,256:1,26:2,28:2,30:2,6:3,7:5,76897:1,8:1,856:1}; REMOVED none; DOI is a new literal (10, 10.5281, 23463944); bibitem 8 / distinct 8 / cite 8 / distinct cited 8 / uncited 0 / unresolved 0",
+    "job4_tectonic": "HOME/TMPDIR/TECTONIC_CACHE_DIR exported under scratch/upkg2c/; scratch/utex1/bin/tectonic -r 1 -o scratch/upkg2c/out papers/.../submission/main.tex -> exit 0; 'Undefined control sequence' count 0; '!' line count 0; pdfinfo Pages: 10; PDF 101052 B; no -Z continue-on-errors used",
+    "writes_confined": "only papers/replay-record-not-decision/**, scratch/upkg2c/**, orchestration/units/UPKG2C.md, orchestration/handoffs/UPKG2C.json; no git command run; target repos untouched (no writes, no state change)"
+  },
+  "blocker": "",
+  "next_unit_hint": "A separate unit (or the main session) must (1) install scratch/upkg2c/package/** into papers/replay-record-not-decision/ as the released tree and re-run check_manifest + clean-extraction recompute there, and (2) decide whether tools/package/md2tex.py's dename_rules should be updated: its rule set still maps the source-fixture phrase to the literal 'the withheld stimulus fixture', so the regenerated main.tex now reads 'lived only in the withheld stimulus fixture ... since 2026-10-19 that fixture is not withheld' (historically true, but the tool's fixed phrase is now stale and the tool is outside UPKG2C's write paths). The manuscript was conformed to the tool, not the reverse. Also: MANUSCRIPT.md's availability pointer text now directs readers to AVAILABILITY.md, which got a dated 2026-10-19 update block rather than a rewrite.",
+  "write_paths": [
+    "papers/replay-record-not-decision/**",
+    "scratch/upkg2c/**",
+    "orchestration/units/UPKG2C.md",
+    "orchestration/handoffs/UPKG2C.json"
+  ]
+}

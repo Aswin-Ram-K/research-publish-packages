@@ -1,0 +1,37 @@
+{
+  "unit": "UPLACE1",
+  "status": "done",
+  "artifacts": [
+    "strategy/INTERNAL_REFERENCE_PLACEMENT.md",
+    "orchestration/units/UPLACE1.md",
+    "orchestration/handoffs/UPLACE1.json"
+  ],
+  "evidence": {
+    "in_abstract_count": "3 occurrences, 2 lines, 2 of 3 papers",
+    "abstract_extents": "grep -n 'begin{abstract}|end{abstract}' papers/*/submission/main.tex -> encoder 16/25, gated 18/23, replay 20/23",
+    "matching_line_counts": "grep -cE 'REPORT\\.md|analysis\\.json|eval-[a-z-]+\\.json|DECIDER_STACK|GATED_READ|LEARNINGS\\.md|EXP#|[a-z0-9_-]+\\.jsonl|metrics\\.json|RUN\\.json' papers/*/submission/main.tex -> encoder 21, gated 0, replay 15",
+    "paper3_abstract_hits": "encoder submission/main.tex:19 has \\texttt{REPORT.md:189} twice inside abstract 16-25; MANUSCRIPT.md abstract lines 26 and 29 mirror them",
+    "paper1_abstract_hit": "replay submission/main.tex:21 has \\texttt{l1-head-to-head.jsonl} once inside abstract 20-23; MANUSCRIPT.md:29 mirrors it",
+    "REPORT_md_ships": "find scratch/uneutral10/package -type f -> results/REPORT.md 28629 B; wc -l -> 303; sed -n 188,190p shows line 189 = '* **`decider-4b 0.6684` (D-067) cannot be re-scored.**' (citation accurate and followable)",
+    "analysis_json_does_not_ship": "scratch/uneutral10/package tree contains no analysis.json; cited at main.tex:134,148,149,153,251,268,273,395",
+    "docs_decider_stack_does_not_ship": "no docs/DECIDER_STACK_DECISION.md in package (private-repo path)",
+    "replay_records_shipping_UNKNOWN": "tar tzf papers/replay-record-not-decision/submission/replay-record-not-decision.tar.gz -> main.tex only; only on-disk copies are state/.../duval/repo/docs/research/{l1-head-to-head,decision-variants}.jsonl in the read-only target repo",
+    "commands": [
+      "grep -n 'begin{abstract}\\|end{abstract}' papers/*/submission/main.tex",
+      "grep -cE 'REPORT\\.md|analysis\\.json|eval-[a-z-]+\\.json|DECIDER_STACK|GATED_READ|LEARNINGS\\.md|EXP#|[a-z0-9_-]+\\.jsonl|metrics\\.json|RUN\\.json' papers/*/submission/main.tex",
+      "find scratch/uneutral10/package -type f -printf '%s\\t%p\\n'",
+      "wc -l scratch/uneutral10/package/results/REPORT.md",
+      "sed -n '188,190p' scratch/uneutral10/package/results/REPORT.md",
+      "tar tzf papers/*/submission/*.tar.gz",
+      "find . -name 'l1-head-to-head.jsonl' -print"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Apply Edits A1-A4 from strategy/INTERNAL_REFERENCE_PLACEMENT.md to the encoder abstract (main.tex:19 and MANUSCRIPT.md:26,29) with a NO-OP check that UAUTHOR1 has stopped; leave replay/l1-head-to-head.jsonl in place. The body dangling cluster (analysis.json, docs/DECIDER_STACK_DECISION.md, lint-report.json) is a release-boundary decision: prefer adding analysis.json to scratch/uneutral10/package/results/ over rewriting eight citations. Read-only respected: no writes under papers/** or tools/**.",
+  "write_paths": [
+    "scratch/uplace1/**",
+    "strategy/INTERNAL_REFERENCE_PLACEMENT.md",
+    "orchestration/units/UPLACE1.md",
+    "orchestration/handoffs/UPLACE1.json"
+  ]
+}

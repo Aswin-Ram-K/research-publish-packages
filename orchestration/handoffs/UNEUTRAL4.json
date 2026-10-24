@@ -1,0 +1,310 @@
+{
+ "unit": "UNEUTRAL4",
+ "status": "done",
+ "artifacts": [
+  "strategy/CPRIME_MEASUREMENT.md",
+  "scratch/uneutral4/floor.py",
+  "scratch/uneutral4/residual-floor.txt",
+  "scratch/uneutral4/census-rerun-pinned.txt",
+  "scratch/uneutral4/census-rerun-stripped.txt",
+  "scratch/uneutral4/census-rerun-bij.txt",
+  "scratch/uneutral4/bij_det.py",
+  "scratch/uneutral4/bij-run1/",
+  "scratch/uneutral4/bij-run2/",
+  "scratch/uneutral4/t/pinned/",
+  "scratch/uneutral4/t/stripped/",
+  "scratch/uneutral4/t/bij/",
+  "scratch/uneutral4/prepare-stripped.out",
+  "scratch/uneutral4/audit.py",
+  "orchestration/units/UNEUTRAL4.md"
+ ],
+ "evidence": {
+  "commands": [
+   "bash scratch/uneutral3/run_diags.sh <tag> scratch/uneutral4/t/<tag>   # tag in pinned|stripped|bij; all exit 0",
+   "python3 scratch/uneutral2/census2.py <tree>   # only census scanner on disk; ids from scratch/uagnostic1/census.tsv col 2 (184 ids)",
+   "python3 scratch/uneutral4/floor.py   # decoded-value+key walk, case-insensitive",
+   "python3 scratch/uneutral4/bij_det.py  (x2, DST=scratch/uneutral4/bij-run)  # byte-identical; diff -r vs tree-bij empty",
+   "wc -c harness/data/{train,dev}.jsonl; find <tree> -type f -printf '%s\\n' | awk '{s+=$1} END{print s}'",
+   "python3 -m compileall harness second-labeller ; python3 second-labeller/parse_fixture.py ; python3 second-labeller/compare.py ; python3 verify/recompute-claims.py"
+  ],
+  "number_movement_table_live_pinned_stripped_bij": {
+   "routeA": {
+    "ties": 120,
+    "agreement": 0.34210526315789475,
+    "kappa": 0.32520740993294694,
+    "exact_index_matches": 65,
+    "zero_score_cases": 41
+   },
+   "routeB_primary": {
+    "agreement": 0.9052631578947369,
+    "kappa": 0.9013584840356494,
+    "exact_index_matches": 172,
+    "n_disagreements": 18,
+    "AB_mutual_agreement": 0.3526315789473684
+   },
+   "stratification": {
+    "closed_subset": 0.8837023738280471,
+    "roster_and_bespoke_subset": 0.9139973672663448
+   },
+   "arms_equal_in_all_trees": {
+    "modernbert-base": 0.347368,
+    "deberta-v3-base": 0.347368,
+    "setfit-mpnet": 0.263158,
+    "majority-class": 0.452632,
+    "shuffled-label": 0.231579,
+    "decider-4b-repro": 0.678947,
+    "2x2_both_headOnly_deciderOnly_neither": "39/27/90/34"
+   },
+   "verdict": "IDENTICAL in live|pinned|stripped|bij for every metric; only the fixture-correctness digest moves (bij only)"
+  },
+  "fixture_correctness_digest": {
+   "live": "8dd05ce6fe31f6bef484e97bed9ec8c96fb5f2c0b17ebb20ff57afb8716c106a",
+   "pinned": "8dd05ce6fe31f6bef484e97bed9ec8c96fb5f2c0b17ebb20ff57afb8716c106a",
+   "stripped": "8dd05ce6fe31f6bef484e97bed9ec8c96fb5f2c0b17ebb20ff57afb8716c106a",
+   "bij_measured": "c7696edc0e71d83faafc2e489925788e0f36c6af94913674f8953718352c9a55",
+   "bij_claimed_by_UNEUTRAL3": "30b75581...",
+   "note": "30b75581 matches scratch/uneutral3/rt/bij (superseded 20:06 build); tree-bij fixture mtime 20:08:25, bij.py edited 20:07:57, ~20 data files differ tree-bij vs rt/bij"
+  },
+  "bytes": {
+   "train.jsonl": {
+    "live": 2205127,
+    "pinned": 2205127,
+    "stripped": 509453,
+    "bij": 501133
+   },
+   "dev.jsonl": {
+    "live": 484922,
+    "pinned": 484922,
+    "stripped": 118444,
+    "bij": 116669
+   },
+   "strip_saving_two_files": 2062152,
+   "tree_totals": {
+    "live": 5611497,
+    "pinned": 5158635,
+    "stripped": 3096483,
+    "bij": 3057949
+   },
+   "bij_minus_stripped": -38534,
+   "per_field_train_dev_removed": {
+    "texts": [
+     1625474,
+     349678
+    ],
+    "id": [
+     13600,
+     3400
+    ],
+    "familyId": [
+     17600,
+     4400
+    ],
+    "clanId": [
+     15200,
+     3800
+    ],
+    "stratum": [
+     15800,
+     3200
+    ]
+   }
+  },
+  "census": {
+   "scanner": "scratch/uneutral2/census2.py",
+   "ids": "scratch/uagnostic1/census.tsv col2, 184 ids",
+   "pinned": {
+    "claimed": "26344 / 99 of 184",
+    "measured": "26344 / 99 of 184",
+    "verdict": "reproduced"
+   },
+   "stripped": {
+    "claimed": "9247 / 99 of 184",
+    "measured": "9247 / 99 of 184",
+    "verdict": "reproduced"
+   },
+   "bij": {
+    "claimed": "8213 / 99 of 184",
+    "measured": "5384 / 95 of 184",
+    "verdict": "CONTRADICTED"
+   },
+   "rt_bij_superseded": {
+    "measured": "9768 / 99 of 184 (54 files incl. diagnostic outputs)"
+   },
+   "decoded_value_walk_totals": {
+    "pinned": 16813,
+    "stripped": 9247,
+    "bij": 5384
+   },
+   "pinned_surplus_explanation": "9531 = \\nKind/\\nCandidate/\\nSituation escape artifacts counted as nKind(3180)+nCandidate(3179)+nSituation(3178)=9537 in raw lines; absent after texts is stripped"
+  },
+  "field_audit": {
+   "consumed_read_sites": {
+    "options": [
+     "harness/train.py:94",
+     "harness/train.py:312",
+     "harness/train.py:322",
+     "harness/train.py:373",
+     "harness/tccommon.py:145-146",
+     "harness/tccommon.py:156",
+     "harness/tccommon.py:158",
+     "harness/tccommon.py:163"
+    ],
+    "kind": [
+     "harness/train.py:311",
+     "harness/train.py:322",
+     "harness/tccommon.py:163"
+    ],
+    "situation": [
+     "harness/train.py:311",
+     "harness/train.py:316",
+     "harness/train.py:322",
+     "harness/tccommon.py:163"
+    ],
+    "goldIndex": [
+     "harness/train.py:105",
+     "harness/train.py:169",
+     "harness/train.py:175",
+     "harness/train.py:315",
+     "harness/train.py:323",
+     "harness/train.py:376"
+    ],
+    "gold": [
+     "harness/train.py:367"
+    ]
+   },
+   "dead": "texts (write-only at harness/prepare.py:115; locals re-derived via tc.texts_for_example); id (written harness/tccommon.py:139; fixture-side readers only harness/analyze.py:152, harness/evaluate.py:322 from evaluate.py:282 fixture_case_to_example, tccommon.py:153); familyId/clanId/stratum (corpus-only readers harness/prepare.py:74-91, analyze.py:325; writes tccommon.py:140-143)",
+   "verdict": "strip field list correct; nothing reads a stripped field from the JSONL"
+  },
+  "jsonl_and_tooling": {
+   "train.jsonl": "800 records, 0 bad (all trees)",
+   "dev.jsonl": "200, 0 bad",
+   "disagreements.jsonl": "18, 0 bad",
+   "parse_fixture.py": "exit 0 all trees",
+   "compare.py": "exit 0 all trees",
+   "recompute-claims.py": "exit 0 all trees (prints ALL CLAIM NUMBERS PRESERVED: True even on tree-bij)",
+   "compileall harness+second-labeller": "OK all trees"
+  },
+  "prepare_py_refusal": {
+   "all_three_trees": "exit 2: REFUSED: corpus digest mismatch - expected c78681d6cf35bf23245bd24963c5fbdd6b3ea03e1bf74d1b3ddc5a49ca63fd66, got 58b09a3c...",
+   "live_corpus_sha256": "c78681d6... (matches constant harness/tccommon.py:64)",
+   "pinned_corpus": "58b09a3c...",
+   "bij_corpus": "47fb4a50...",
+   "verdict": "pre-existing, pin-induced, NOT caused by the strip; released tree cannot regenerate its own JSONL"
+  },
+  "kind_alias": {
+   "KIND_ALIAS_keys": [
+    "acquisition.path",
+    "escalation.decision",
+    "routing.team",
+    "topology.shape"
+   ],
+   "corpus_kinds_pinned": "K01,K02,K04,K05,K07,K08,K09,K10,context.package",
+   "resolves": "0/9 in pinned, stripped AND bij -> bijection adds no new alias break"
+  },
+  "residual_floor": {
+   "inside_stimulus_question_options_situation": {
+    "pinned": 2171,
+    "stripped": 2171,
+    "bij": 2171,
+    "distinct": 30
+   },
+   "outside_values": {
+    "pinned": 11267,
+    "stripped": 5701,
+    "bij": 2044
+   },
+   "json_keys": {
+    "pinned": 3375,
+    "stripped": 1375,
+    "bij": 1169
+   },
+   "bij_inside_identifiers": {
+    "editor": 398,
+    "reasoner": 310,
+    "verifier": 229,
+    "attached": 181,
+    "fs.read": 179,
+    "model.call": 176,
+    "fs.write": 164,
+    "test.run": 157,
+    "net.fetch": 131,
+    "detached": 75,
+    "topology": 23,
+    "output-only": 22,
+    "code-inspector": 22,
+    "memory.write": 15,
+    "memory-curator": 14,
+    "MATERIALISE": 8,
+    "web.fetch": 7,
+    "researcher": 7,
+    "policyHash": 7,
+    "critic": 7,
+    "code-review": 7,
+    "expanded[": 6,
+    "admit(": 6,
+    "broker": 5,
+    "expiresAtEpoch": 3,
+    "escalation": 3,
+    "ToolCallIR": 3,
+    "reasonerCalls": 2,
+    "canRequestEscalation": 2,
+    "MutationProposal": 2
+   },
+   "fixture_questions_with_real_kind_token": {
+    "word_boundary": "23/190 (reproduced)",
+    "lowercase_substring": "25/190",
+    "any_census_identifier_substring": "75/190",
+    "any_census_identifier_word_boundary": "85/190"
+   },
+   "decisive_answer": "zero project vocabulary NOT reachable while keeping published numbers; floor 2171 occurrences / 30 identifiers inside the model's input prose"
+  },
+  "ship_verdict": "ship tree-stripped (provable dead-field removal, all numbers preserved incl. digest, JSONL parses, tooling runs); tree-bij is measured-but-not-shipped (two-vocabulary artifact: renamed data vs pinned .py/.sh/verify pins; saves only 38534 B = 1.24%); tree-pinned not shippable (1.97 MB dead texts, prepare.py refuses)",
+  "false_positive_check": "verify/recompute-claims.py prints ALL CLAIM NUMBERS PRESERVED: True on tree-bij whose fixture digest is c7696edc, not the claimed 30b75581 - never cite that True as evidence that no number moved",
+  "contradictions_to_UNEUTRAL3": [
+   "bij census 8213/99 -> measured 5384/95",
+   "bij digest 30b75581... -> measured c7696edc... (on-disk tree + 2 deterministic rebuilds); both claim values match rt/bij, a superseded build",
+   "no census scanner exists under scratch/uneutral3/, so the claimed bij numbers are not regenerable on disk"
+  ],
+  "reproduced_from_UNEUTRAL3": [
+   "strip moves no number (2,062,152 B saved; metrics identical)",
+   "strip field list is correct (independent read-site audit)",
+   "pinned census 26344/99",
+   "stripped census 9247/99",
+   "bijection moves the fixture digest but no metric",
+   "23/190 fixture questions contain a real kind token",
+   "residual is irreducible while keeping published numbers (floor quantified: 2171/30 in-stimulus)"
+  ],
+  "untracked_before_after": {
+   "note": "strategy/ and papers/ are untracked in this git repo (git status --short shows '?? strategy/' and '?? papers/'), so the change is not visible to git; text carried verbatim here.",
+   "strategy/CPRIME_MEASUREMENT.md": {
+    "before": "",
+    "before_note": "absent (UNEUTRAL3 never wrote it)",
+    "after_sha256": "13d0712ebecf77a086747115fcda7e21d989642aa8a001e5c17d7e015f338dcb",
+    "after_bytes": 21748,
+    "after_lines": 324,
+    "after_text": "# C′ MEASUREMENT — verification report on UNEUTRAL3's release option C′\n\n**Unit:** UNEUTRAL4 (independent verifier + reporter). **Author of the artifacts under test:** UNEUTRAL3,\nwhich died before writing this file; its card/handoff are left untouched as the record of the failed unit.\n**Workspace:** `/home/zer0null/reserach extarctor`. **Date of run:** the UNEUTRAL4 session that wrote this file.\n\nReader's warning, stated up front because it is the single most dangerous artifact in this workspace:\n\n> `verify/recompute-claims.py` prints `ALL CLAIM NUMBERS PRESERVED: True` **even on a tree where route A has\n> moved**. It reads neither JSONL and never recomputes route A. That `True` was reproduced by me on all three\n> trees — including `tree-bij`, whose fixture-correctness digest is *not* the one UNEUTRAL3 claimed. **Do not\n> cite that `True` as evidence that no number moved.**\n\nEvery number below is labelled **[U4]** (measured by me, command given) or **[U3]** (UNEUTRAL3's claim).\n[U3] numbers I reproduced are labelled **[U3≡U4]**; contradicted ones **[U3✗U4]**.\n\n---\n\n## 1. Trees, provenance, and exact build commands\n\nAll three trees contain **44 files, identical file sets** (`find . -type f | sort` diff empty between each\npair). They are built in a chain, each stage reading the previous tree:\n\n| Tree | Path | Built by |\n|---|---|---|\n| pinned | `scratch/uneutral3/tree-pinned` | UNEUTRAL1 (tree A) |\n| stripped | `scratch/uneutral3/tree-stripped` | `python3 scratch/uneutral3/strip.py` (SRC=`tree-pinned` → DST=`tree-stripped`) |\n| bij | `scratch/uneutral3/tree-bij` | `python3 scratch/uneutral3/bij.py` (SRC=`tree-stripped` → DST=`tree-bij`; LIVE=`repro/encoder-crossover-190-SANITISED` is read only for kind discovery) |\n\nDiagnostics for all trees were produced by:\n\n```\nbash scratch/uneutral3/run_diags.sh <tag> <tree>      # tag ∈ {pinned,stripped,bij}\npython3 verify/recompute-claims.py                    # inside each tree\n```\n\n- `strip.py` constant facts [U4, read of `scratch/uneutral3/strip.py:25-28`]: `SRC=…/tree-pinned`,\n  `DST=…/tree-stripped`, `DEAD=(\"texts\",\"id\",\"familyId\",\"clanId\",\"stratum\")`.\n- `bij.py` constant facts [U4, read of `scratch/uneutral3/bij.py:32-39`]: `LIVE=repro/encoder-crossover-190-SANITISED`,\n  `SRC=…/tree-stripped`, `DST=…/tree-bij`, `SKIP_EXT={\".py\",\".sh\",\".bash\"}`, `PROSE_KEYS={question,options,situation,state,instructions,criteria,…}`;\n  the map is never written to disk (`map_shipped:false`).\n- The pinned tree's own build log `scratch/uneutral3/gen-pinned.log` records steps (R0 copy of 41 files;\n  R1–R3 fixture rewrite `076164ac…` → `751dc007…`; redaction log under `verify/`) but **not a command line**\n  — the pinned generator's invocation is **UNVERIFIED** (see §9).\n- `bij.py` was **re-executed by me** through a DST-parametrized copy (`scratch/uneutral4/bij_det.py`\n  → `scratch/uneutral4/bij-run`). Two runs are byte-identical, and the rebuild is byte-identical to the\n  on-disk `tree-bij` (`diff -r` empty) — so the bij build is deterministic and its stated command is exact.\n\nDiagnostic copies with the recorded outputs live at `scratch/uneutral3/rt/{pinned,stripped,bij}/`, and my\nverbatim working copies at `scratch/uneutral4/t/{pinned,stripped,bij}/`. Note: `rt/bij` is a **superseded\nbuild** (see §6).\n\n---\n\n## 2. Byte table [U4]\n\n| File | live | pinned | stripped | bij |\n|---|---|---|---|---|\n| `harness/data/train.jsonl` | 2,205,127 | 2,205,127 | 509,453 | 501,133 |\n| `harness/data/dev.jsonl` | 484,922 | 484,922 | 118,444 | 116,669 |\n| **two data files** | 2,690,049 | 2,690,049 | 627,897 | 617,802 |\n| **whole tree (data byte total)** | 5,611,497 (59 files) | 5,158,635 | 3,096,483 | 3,057,949 |\n\n- strip saving vs pinned: `1,695,674 + 366,478 = 2,062,152 B` on the two data files; tree total −2,062,152 B\n  (−39.97%). **[U3≡U4]** (UNEUTRAL3 claimed −2,062,152 B total: exact).\n- bij additional saving vs stripped: **−38,534 B (−1.24%)** tree-wide. **[U3]** claimed no byte figure for bij\n  beyond \"moves no metric\"; this is my measurement.\n- Per-field train/dev bytes removed by the strip [U4]: `texts` 1,625,474 / 349,678 · `id` 13,600 / 3,400 ·\n  `familyId` 17,600 / 4,400 · `clanId` 15,200 / 3,800 · `stratum` 15,800 / 3,200.\n\nCommands: `wc -c` on each file; tree totals by `find <tree> -type f -printf '%s\\n' | awk '{s+=$1} END{print s}'`.\n\n---\n\n## 3. Full number-movement table [U4, all columns re-run by me]\n\nProduced by `bash scratch/uneutral3/run_diags.sh <tag> scratch/uneutral4/t/<tag>`; every invocation exited 0.\nThe `live` column is the reference as published in the sanitised tree.\n\n| Quantity | live | pinned | stripped | bij |\n|---|---|---|---|---|\n| routeA `ties` | 120 | 120 | 120 | 120 |\n| routeA `agreement` | 0.34210526315789475 | = | = | = |\n| routeA `kappa` | 0.32520740993294694 | = | = | = |\n| routeA `exact_index_matches` | 65 | 65 | 65 | 65 |\n| routeA `zero_score_cases` | 41 | 41 | 41 | 41 |\n| routeB_primary `agreement` | 0.9052631578947369 | = | = | = |\n| routeB_primary `kappa` | 0.9013584840356494 | = | = | = |\n| routeB_primary `exact_index_matches` | 172 | 172 | 172 | 172 |\n| routeB_primary `n_disagreements` | 18 | 18 | 18 | 18 |\n| `AB_mutual_agreement` | 0.3526315789473684 | = | = | = |\n| kappa, `closed_subset` (labelsB) | 0.8837023738280471 | = | = | = |\n| kappa, `roster_and_bespoke_subset` | 0.9139973672663448 | = | = | = |\n| arm `modernbert-base` | 0.347368 | = | = | = |\n| arm `deberta-v3-base` | 0.347368 | = | = | = |\n| arm `setfit-mpnet` | 0.263158 | = | = | = |\n| arm `majority-class` | 0.452632 | = | = | = |\n| arm `shuffled-label` | 0.231579 | = | = | = |\n| arm `decider-4b-repro` | 0.678947 | = | = | = |\n| 2×2 `both/headOnly/deciderOnly/neither` | 39/27/90/34 | = | = | = |\n| **fixture-correctness digest** | `8dd05ce6fe31f6bef484e97bed9ec8c96fb5f2c0b17ebb20ff57afb8716c106a` | `8dd05ce6…` | `8dd05ce6…` | **`c7696edc0e71d83faafc2e489925788e0f36c6af94913674f8953718352c9a55`** |\n\nSo: **the strip moves no number, including the digest [U3≡U4]**; **the bijection moves no metric but does move\nthe fixture-correctness digest [U3≡U4]**. The digest is `sha256` over `[[id, correct, len(options)]]` for the\nfixture ([U4] read of `verify/recompute-claims.py:126-128`).\n\n**The bij digest claim is a trap.** UNEUTRAL3 says the digest moves `8dd05ce6…` → `30b75581…`. That value is\nwhat `scratch/uneutral3/rt/bij` yields — but `rt/bij` is a **superseded 20:06 build**: the on-disk\n`tree-bij/harness/data/fixture-190.json` is 20:08:25, `rt/bij/…` is 20:06:56, and `bij.py` was last edited\n20:07:57; `diff -rq tree-bij rt/bij` shows ~20 differing data files. The on-disk `tree-bij`, my two fresh\nrebuilds, and the current `bij.py` all give **`c7696edc…`**. So the *phenomenon* (digest moves) is reproduced,\nbut the *value* `30b75581…` is **[U3✗U4]** — a number from a build that no longer exists on disk.\n\n---\n\n## 4. Census [U4 re-runs]\n\nScanner: **`scratch/uneutral2/census2.py`** ([U4] — no census scanner exists anywhere under\n`scratch/uneutral3/`; only `strip.py`, `bij.py`, `run_diags.sh`). Identifier source:\n**`scratch/uagnostic1/census.tsv`**, column 2, 184 identifiers (header `cat id count files locations`).\nCounting method: per line, case-insensitive `re.findall` over raw file bytes.\n\n| Tree | UNEUTRAL3 claim | my re-run (`scratch/uneutral4/census-rerun-*.txt`) | verdict |\n|---|---|---|---|\n| pinned | TOTAL 26,344 · 99 of 184 | **TOTAL 26,344 · 99 of 184** | **[U3≡U4]** exact |\n| stripped | TOTAL 9,247 · 99 of 184 | **TOTAL 9,247 · 99 of 184** | **[U3≡U4]** exact |\n| bij | TOTAL 8,213 · 99 of 184 | **TOTAL 5,384 · 95 of 184** | **[U3✗U4]** contradicted |\n| `rt/bij` (superseded build) | — | TOTAL 9,768 · 99 of 184 (54 files, includes diagnostic outputs) | — |\n\nPer-class occurrences [U4]: pinned — data-jsonl 20,587 · json 4,316 · ts 1,038 · tooling 308 · prose-md 50 ·\ndata-jsonl-other 45. stripped — json 4,316 · data-jsonl 3,490 · ts 1,038 · tooling 308 · prose-md 50 ·\ndata-jsonl-other 45. bij — data-jsonl 2,385 · json 2,053 · ts 600 · tooling 308 · data-jsonl-other 25 ·\nprose-md 13.\n\n**Why the pinned raw-line count (26,344) differs from a decoded-value count (16,813).** My value-level walk\n(`scratch/uneutral4/floor.py`, case-insensitive over JSON values) totals pinned **16,813**, stripped **9,247**,\nbij **5,384** — the stripped and bij totals agree with `census2.py` *exactly*, which validates the walk (the\nfirst version of my walk undercounted because it used `low.count(i)` without `i.lower()`; fixed). The pinned\ngap of 9,531 is a **scanner artifact**: the raw-line scanner matches across JSON escape sequences, counting\n`\"\\nKind\"`, `\"\\nCandidate\"`, `\"\\nSituation\"` as the identifiers `nKind` / `nCandidate` / `nSituation`\n(3,180 + 3,179 + 3,178 = 9,537, ~the whole gap). Those characters do not exist in the decoded data, and they\nvanish with `texts`. Consequence: **~36% of the pinned census number is not project vocabulary at all.**\n\n---\n\n## 5. Field audit — consumed vs dead, with read-sites [U4]\n\nRead of `harness/train.py` and `harness/tccommon.py`. The strip removed `texts`, `id`, `familyId`, `clanId`,\n`stratum` from `train.jsonl` + `dev.jsonl` only (not from `corpus.json`, correctly: `prepare.py:79-91` reads\n`familyId`/`clanId`/`stratum` from the **corpus**, which the strip never touches).\n\n**Consumed from a loaded JSONL example** — read-site lines:\n\n| Field | Read-sites |\n|---|---|\n| `options` | `harness/train.py:94`, `:312`, `:322`, `:373`; `harness/tccommon.py:145-146`, `:156`, `:158`, `:163` |\n| `kind` | `harness/train.py:311`, `:322`; `harness/tccommon.py:163` |\n| `situation` | `harness/train.py:311`, `:316`, `:322`; `harness/tccommon.py:163` |\n| `goldIndex` | `harness/train.py:105`, `:169`, `:175`, `:315`, `:323`, `:376` |\n| `gold` | `harness/train.py:367` |\n\n**Dead** — grep for a reader of a *loaded JSONL example* is empty in each case:\n\n| Field | Evidence it is dead |\n|---|---|\n| `texts` | only **written** at `harness/prepare.py:115` (`out[\"texts\"]=tc.texts_for_example(ex)`); the local variables named `texts` in `train.py:103`, `evaluate.py:79`, `tcmodel.py:117` are **re-derived** via `tc.texts_for_example(...)`. `grep -n 'e\\[\"texts\"\\]\\|ex\\[\"texts\"\\]\\|example\\[\"texts\"\\]\\|rec\\[\"texts\"\\]'` → **empty**. |\n| `id` | written at `harness/tccommon.py:139` (`\"id\": case[\"caseId\"]`). Readers are fixture-side only: `analyze.py:152` (fixture), `evaluate.py:322` (`\"id\": ex[\"id\"]`, where `examples` come from `evaluate.py:282` `tc.fixture_case_to_example(c)`, not from JSONL), `tccommon.py:153` (writes a fixture example). |\n| `familyId`, `clanId`, `stratum` | reads are of **corpus** cases (`prepare.py:74-91` from `tc.load_corpus()`; `analyze.py:325` reads `baselines[\"checks\"]`); writes at `tccommon.py:140-143`. `grep -n 'e\\[\"familyId\"\\]\\|ex\\[…\\]\\|example\\[…\\]\\|rec\\[…\\]'` returns **only the tccommon.py write lines**. |\n\n**Verdict: the strip's field list is correct.** Nothing loads a stripped field from the JSONL. (This matches\nUNEUTRAL3's own audit; I re-derived it independently.)\n\n---\n\n## 6. Parseability and tooling checks [U4]\n\n| Check | live | pinned | stripped | bij |\n|---|---|---|---|---|\n| `json.loads` every line of `train.jsonl` | n/a (not re-run) | 800 records, 0 bad | 800, 0 bad | 800, 0 bad |\n| `json.loads` every line of `dev.jsonl` | n/a | 200, 0 bad | 200, 0 bad | 200, 0 bad |\n| `disagreements.jsonl` | n/a | 18, 0 bad | 18, 0 bad | 18, 0 bad |\n| `second-labeller/parse_fixture.py` | exit 0 | exit 0 | exit 0 | exit 0 |\n| `second-labeller/compare.py` | exit 0 | exit 0 | exit 0 | exit 0 |\n| `verify/recompute-claims.py` | printed True | printed True | printed True | printed True ← see the warning at the top |\n| `python3 -m compileall harness/ second-labeller/` | — | OK | OK | OK |\n\n**`prepare.py` refuses in every tree, and it is not the strip's fault.** [U4] In `tree-pinned`,\n`tree-stripped` and `tree-bij`, `harness/prepare.py` exits **2** with:\n\n```\nREFUSED: corpus digest mismatch — expected c78681d6cf35bf23245bd24963c5fbdd6b3ea03e1bf74d1b3ddc5a49ca63fd66, got 58b09a3c…\n```\n\n(`prepare.py:43-45`, constant `tccommon.py:64 CORPUS_SHA256`.) The **live** `corpus.json` sha256 *is*\n`c78681d6…` (matches the frozen constant); `tree-pinned` = `tree-stripped` = `58b09a3c…`; `tree-bij` =\n`47fb4a50…`. The refusal is **pin-induced and pre-existing** — the same in `tree-pinned`, before the strip\never ran. Consequence: **the released tree cannot regenerate its own JSONL; the strip is one-way.** (`tree-bij`\ndiffers because the bijection renamed data in `corpus.json` too.)\n\n**KIND_ALIAS is already broken before the bijection** [U4]. `tccommon.py`'s `KIND_ALIAS` has 4 keys\n(`acquisition.path`, `escalation.decision`, `routing.team`, `topology.shape`); the corpus kinds in\n`tree-pinned` are `K01,K02,K04,K05,K07,K08,K09,K10,context.package` → **0 of 9 resolve**. Same 0 in\n`tree-stripped`, and the same 0 in `tree-bij` (which renamed only the residual `context.package`→`N10`). So\nthe bijection introduces **no new** alias break. (This killed my initial hypothesis that the bijection breaks\nprompt rendering via the alias table; it does not, because the alias table is already inert in the pinned tree.)\n\n---\n\n## 7. Residual classes and the irreducible floor [U4]\n\nMeasured by `scratch/uneutral4/floor.py` (case-insensitive, per identifier, over decoded JSON values *and*\nJSON keys; full table in `scratch/uneutral4/residual-floor.txt`). \"Inside stimulus\" = occurrences inside the\n**values** of `question` / `options` / `situation` — i.e. the text the model actually reads; \"outside\" =\noccurrences in other values; \"keys\" = occurrences as JSON object keys.\n\n| Tree | inside stimulus | outside values | JSON keys | total (walk) |\n|---|---|---|---|---|\n| pinned | 2,171 | 11,267 | 3,375 | 16,813 |\n| stripped | 2,171 | 5,701 | 1,375 | 9,247 |\n| bij | 2,171 | 2,044 | 1,169 | 5,384 |\n\n**The inside-stimulus figure is identical in all three trees — 2,171 occurrences of 30 distinct identifiers.**\nThat is the **irreducible floor**: the prose is the model's input, and the bijection masks it (restores it\nverbatim on purpose). In `tree-bij`, those 2,171 are **40.3%** of all remaining occurrences.\n\nThe residual identifiers *inside the stimulus* in `tree-bij` (count): `editor` 398, `reasoner` 310,\n`verifier` 229, `attached` 181, `fs.read` 179, `model.call` 176, `fs.write` 164, `test.run` 157,\n`net.fetch` 131, `detached` 75, `topology` 23, `output-only` 22, `code-inspector` 22, `memory.write` 15,\n`memory-curator` 14, `MATERIALISE` 8, `web.fetch` 7, `researcher` 7, `policyHash` 7, `critic` 7,\n`code-review` 7, `expanded[` 6, `admit(` 6, `broker` 5, `expiresAtEpoch` 3, `escalation` 3, `ToolCallIR` 3,\n`reasonerCalls` 2, `canRequestEscalation` 2, `MutationProposal` 2 (30 identifiers; totals per tree in\n`residual-floor.txt`).\n\n**Fixture questions containing a real kind token: 23 of 190 [U3≡U4]** by the word-boundary regex\n`(?<![A-Za-z0-9_.])k(?![A-Za-z0-9_])`; 25 of 190 by lowercase substring; 75 of 190 questions contain *some*\ncensus identifier by substring (85 by word boundary). UNEUTRAL3's \"23\" is reproduced. The live kind\nvocabulary is 7: `acquisition`, `capability.family`, `context.package`, `escalation`, `memory.admission`,\n`topology`, `worker.class`.\n\n### The decisive question — is zero project vocabulary reachable while keeping the published numbers?\n\n**No, not from here.** Any substitution that removed the remaining in-stimulus tokens would rewrite the\n`question` / `options` / `situation` prose — the exact bytes the model reads — and the published route-A and\nroute-B numbers are functions of that stimulus plus stored labels. So the floor stands at **2,171 occurrences\nof 30 identifiers inside the stimulus** (23 fixture questions naming their own kind among them). Reaching zero\nwould require a further, *behaviour-preserving* rewrite of the prose whose preservation could only be shown by\nre-rendering and re-running the models — which nothing in this workspace has done (§9). What is achievable\nwithout touching the stimulus is bounded by the outside/key classes, which the bijection already reduced to\n2,044 + 1,169.\n\n---\n\n## 8. Plain verdict\n\n**What a reader of the released artifact still sees.** Taking the recommended shape (`tree-stripped`), a\nreader of the released tree still sees **9,247 occurrences of 99 of the original 184 identifiers**, of which\n**2,171 occurrences / 30 identifiers sit inside the model's own input** (`question`/`options`/`situation`),\nincluding **23 fixture questions that name their own decision kind in prose**. The kind axis itself is already\nopaque (`K01…K10` tags; the shipped `KIND_ALIAS` resolves 0 of them, before and after any our work), but the\nresidual vocabulary — role names (`editor`, `reasoner`, `verifier`, `critic`, `researcher`), tool/interface\nnames (`fs.read`, `fs.write`, `model.call`, `test.run`, `net.fetch`, `ToolApi`-style types) — is fully\nreadable, and **308 occurrences remain in the shipped tooling** (`.py`/`.sh`) in *every* shape, because C′\ndeliberately pins the tooling. The dead metadata (`texts`, `id`, `familyId`, `clanId`, `stratum`) is gone from\nthe JSONL; the byte cost of the release drops by 39.97%.\n\n**Which shape I would ship: `tree-stripped`.**\n\n1. It is the only shape whose reduction is *provable*: every removed field has zero read-sites on a loaded\n   JSONL example (§5), and the removal moves no number *including* the fixture-correctness digest (§3).\n2. Every check I ran passes on it: JSONL parses, `parse_fixture.py`/`compare.py`/`recompute-claims.py` exit 0,\n   all Python byte-compiles (§6).\n3. `tree-bij` buys **−38,534 B (−1.24%)** and −3,863 occurrences over the strip, but it is a\n   **two-vocabulary artifact**: the data files are renamed while the shipped `.py`/`.sh`/`verify/**` pins\n   (which C′ keeps by design) still name the original vocabulary, so a reader gets renamed ids in the data and\n   original names in the tooling with no bridge. Its own residual is 40% in-stimulus and unfixable, so it does\n   not reach the neutralisation goal either.\n4. Ship `tree-bij` only if the release goal is explicitly \"minimise residual identifier *occurrences*\", and\n   accept the two-vocabulary artifact knowingly; the 1.24% byte gain alone does not justify it. If the goal is\n   reaching the floor, the honest next step is a *consistent* re-tag (data **and** pinned tooling, plus\n   `KIND_ALIAS`) followed by a full re-render/re-run — not this bijection.\n5. Do **not** ship `tree-pinned`: it carries 1.97 MB of dead `texts` and cannot regenerate its own JSONL\n   (`prepare.py` refuses, §6).\n\n---\n\n## 9. UNVERIFIED list\n\n1. **No model was run.** `torch`/`transformers` were not exercised; \"numbers preserved\" is verified only for\n   *metric recomputation from stored labels and result JSONs*, not for re-training or re-rendering a prompt.\n   A reader who retrains on any of these trees is untested.\n2. **The claimed bij census `8,213` / `99 of 184` has no on-disk source.** Reproduced: `tree-bij` → 5,384/95;\n   my deterministic rebuild → 5,384/95; `rt/bij` (superseded) → 9,768/99. No scanner exists under\n   `scratch/uneutral3/`, so the number cannot be regenerated by any command I could find.\n3. **The claimed digest `30b75581…` belongs to a build that no longer exists on disk** (`rt/bij`, 20:06);\n   the on-disk `tree-bij` and fresh rebuilds give `c7696edc…`. The earlier `bij.py` revision could not be\n   recovered. `tree-bij` + current `bij.py` is deterministic (two runs byte-identical, `diff -r` empty vs disk).\n4. **Pinned generator invocation** is not recorded (only step counts in `gen-pinned.log`); I did not re-run\n   UNEUTRAL1's build.\n5. **`prepare.py` regeneration was not run to completion in any tree** — it refuses at exit 2 in\n   pinned/stripped/bij (pre-existing, §6). I did not run it against the live tree (forbidden).\n6. **`harness/train.py` / `evaluate.py` were read and byte-compiled, not executed** (no torch/GPU run), so\n   \"the shipped tooling still runs\" is verified for `parse_fixture.py`, `compare.py`, `recompute-claims.py`\n   (exit 0 each) and for compilation of the rest.\n7. **The pinned 9,531 raw-line surplus** is attributed to `\\n`-escape artifacts (nKind/nCandidate/nSituation\n   = 3,180/3,179/3,178) by arithmetic and spot-checks, but I did not enumerate the artifact hits line by line.\n8. **The map M** was never written to disk or logged by me; `bij.py` prints `map_shipped:false`, and all three\n   trees have identical file sets (44 files), so no map artifact is shipped — but I did not run an exhaustive\n   content search for a mapping table.\n\n---\n\n## 10. Reproduce-everything index\n\n| Artifact | What it shows |\n|---|---|\n| `scratch/uneutral4/census-rerun-{pinned,stripped,bij}.txt` | my census re-runs (scanner `scratch/uneutral2/census2.py`) |\n| `scratch/uneutral4/residual-floor.txt` | per-identifier inside/outside/key counts, all three trees |\n| `scratch/uneutral4/floor.py`, `audit.py` | the walkers that produced the floor table |\n| `scratch/uneutral4/bij_det.py`, `bij-run1/`, `bij-run2/` | bijection determinism + byte-identical rebuild of `tree-bij` |\n| `scratch/uneutral4/t/{pinned,stripped,bij}/` | verbatim copies on which every diagnostic column was re-run |\n| `scratch/uneutral4/prepare-stripped.out` | the `prepare.py` refusal in the stripped tree |\n| `scratch/uneutral3/rt/<t>/{recompute-<t>.out,second-labeller/{parse-<t>.out,compare-<t>.out,metrics.json}}` | UNEUTRAL3's own diagnostic outputs (read-only record) |\n| `scratch/uneutral3/{strip.py,bij.py,run_diags.sh,gen-pinned.log,strip-report.json}` | the builders under test |\n"
+   },
+   "papers/": {
+    "before": "(untouched by UNEUTRAL4: not read, not written)",
+    "after": "(untouched by UNEUTRAL4: not read, not written)"
+   }
+  },
+  "unverified": [
+   "no model run (torch/transformers untested): numbers preserved verified only for metric recomputation from stored labels/results, not retraining or prompt re-rendering",
+   "claimed bij census 8213/99 and digest 30b75581 have no on-disk source (the earlier bij.py revision was not recovered)",
+   "pinned generator command line not recorded (gen-pinned.log has step counts only); UNEUTRAL1 build not re-run",
+   "prepare.py regeneration never completed in any tree (refuses); live tree not run (forbidden)",
+   "harness/train.py and evaluate.py read + byte-compiled, not executed",
+   "pinned raw-line surplus 9531 attributed by arithmetic + spot-check to \\n-escape artifacts, not enumerated line by line",
+   "no exhaustive on-disk content search for a leaked map M (all three trees have identical 44-file sets; bij.py prints map_shipped:false)"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Ship tree-stripped as C'. If a later unit wants to approach the 2171-occurrence in-stimulus floor it must re-tag data AND the pinned tooling (incl. harness/tccommon.py KIND_ALIAS) consistently and then re-render/re-run the models - the current tree-bij bijection does not and cannot reach zero while keeping the published numbers. Re-run `bash scratch/uneutral3/run_diags.sh <tag> <tree>` after any further change; do not trust recompute-claims.py's PRESERVED:True.",
+ "write_paths": [
+  "scratch/uneutral4/**",
+  "strategy/CPRIME_MEASUREMENT.md",
+  "orchestration/units/UNEUTRAL4.md",
+  "orchestration/handoffs/UNEUTRAL4.json"
+ ]
+}

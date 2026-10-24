@@ -1,0 +1,502 @@
+{
+  "artifacts": [
+    "experiments/context-cache/cells/E1/e1_cell.py",
+    "experiments/context-cache/cells/E1/e1_distinctness.py",
+    "experiments/context-cache/cells/E1/e1_analyze.py",
+    "experiments/context-cache/cells/E1/e1_plan.json",
+    "experiments/context-cache/cells/E1/e1_rows.jsonl",
+    "experiments/context-cache/cells/E1/e1_events.jsonl",
+    "experiments/context-cache/cells/E1/e1_runlog.json",
+    "experiments/context-cache/cells/E1/e1_distinctness_green.json",
+    "experiments/context-cache/cells/E1/e1_distinctness_red.json",
+    "experiments/context-cache/cells/E1/e1_analysis.json",
+    "orchestration/units/E1.md",
+    "orchestration/handoffs/E1.json"
+  ],
+  "assumptions": {
+    "request_index": "renumbered from row order after the run (driver recorded the post-arm-loop counter); no usage value altered.",
+    "salt_scope": "per session, not per (arm, policy, session) as in U4: a per-arm salt would make the pre-fork prompts differ and force 264 requests. Cold isolation across sessions is preserved; the two arms share only the pre-fork bytes, which are identical by construction.",
+    "turn_depth": "38 instead of the card's 44: the only depth/arm/session product inside the hard 200-request cap; chosen as a conservative default, not asked of the user (automated session)."
+  },
+  "blocker": "",
+  "evidence": {
+    "answer_G1": "fork and summarise-in-place do NOT have the same break cost at the compaction event under the post-U13 library. Median break cost: fork 5132.75 uncached tokens, summarise-in-place 442.25; median paired delta +4774.25 (range -2035..+5611.5; 95% bootstrap CI [193.5, 4868.25]; 15/18 pairs positive, sign test p=0.0075). The three negative pairs are all at event index 2, where both arms recorded cached_tokens=0 (an across-the-board full miss, not a policy effect): excluding that stratum, n=15, median +4839.5, CI [4677.5, 4901.5], 15/15 positive, p=6.1e-05.",
+    "caveats": [
+      "The summarise arm's ~4.3k-token reuse depends on the deterministic prefix-truncating summariser: successive summaries are nested prefixes. A real abstractive summariser would not guarantee that, so the magnitude is summariser-dependent; the fork marker's effect (break starts in the header and at the first body byte) is not.",
+      "Server-side cache retention is noisy and not instrumented: at every event-2 turn both arms recorded cached_tokens=0, and steady-state cached values alternate between 6144, 6464 and 4352. The paired design absorbs most of it via the neighbouring-turn baseline, but the noise is why the full-18 CI is wide ([193.5, 4868.25]).",
+      "The fork arm's prompt is larger by the marker+label: server prompt_tokens delta at events has median 411 and range 189-621 (growing with each fold because summaries nest earlier markers). That is a property of the post-U13 encoding, not a measurement error.",
+      "This run answers the *event* question only; it says nothing about total uncached cost over the whole conversation (that is U15's question) and no steady-state winner is claimed."
+    ],
+    "commands": [
+      "python3 experiments/context-cache/cells/E1/e1_distinctness.py   # offline, 0 requests, red+green proof",
+      "python3 experiments/context-cache/cells/E1/e1_cell.py --plan    # offline, 0 requests, 195 planned",
+      "python3 experiments/context-cache/cells/E1/e1_cell.py --run     # 195 live requests, serial, lock held",
+      "python3 experiments/context-cache/cells/E1/e1_analyze.py        # reads frozen rows, 0 requests"
+    ],
+    "deviation_and_remainder": "Design target was 3 sessions x 44 turns / 7 events / 21 pairs, which needs 264 live requests (3x44x2; 258 trimming to the last neighbour) -- over the hard 200 cap. Ran the largest symmetric design that fits: 38 turns, 6 events, 18 pairs, 195 requests (11 shared pre-fork requests + 2x27). Remainder: event 7 (turn 42) and its 3 pairs. It cannot be topped up by appending turns 39-43, because the pre-event cache state would be cold; getting it needs a 44-turn rerun at a raised cap.",
+    "distinctness": {
+      "green": {
+        "bytes_at_turn12_u4_s1": {
+          "fork": 20508,
+          "summarise_in_place": 20238
+        },
+        "claim": "post-U13 arms differ at/after the fork point, identical before it",
+        "differing_message_indices_at_events": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "event_turns": [
+          12,
+          17,
+          22,
+          27,
+          32,
+          37,
+          12,
+          17,
+          22,
+          27,
+          32,
+          37,
+          12,
+          17,
+          22,
+          27,
+          32,
+          37
+        ],
+        "first_diff_byte_offset_at_events": [
+          222,
+          222,
+          222,
+          222,
+          222,
+          222,
+          222,
+          222,
+          222,
+          222,
+          222,
+          222,
+          222,
+          222,
+          222,
+          222,
+          222,
+          222
+        ],
+        "fork_marker_offset_in_concatenated_content_bytes": 302,
+        "guard_informative_pairs": 18,
+        "offline_est_token_delta_at_events": [
+          43,
+          65,
+          75,
+          81,
+          84,
+          86,
+          43,
+          65,
+          75,
+          81,
+          84,
+          86,
+          43,
+          65,
+          75,
+          81,
+          84,
+          86
+        ],
+        "post_fork_turns_distinct": true,
+        "pre_fork_turns_identical": true,
+        "preamble_label_offset_in_header_bytes": 210,
+        "server_prompt_token_delta_at_events": {
+          "median": 411.0,
+          "values": [
+            194,
+            301,
+            376,
+            455,
+            536,
+            611,
+            189,
+            298,
+            380,
+            467,
+            546,
+            621,
+            195,
+            285,
+            368,
+            442,
+            512,
+            593
+          ]
+        }
+      },
+      "red": {
+        "claim": "with the fork marker removed (pre-U13 library, unlabelled POINTER) the two arms are byte-identical at every turn and the analysis refuses",
+        "fork_marker_present_anywhere": false,
+        "guard_error": "162 distinctness failure(s); first: u4-s1 turn 12: arms render byte-identical prompts at/after the event -- the U4 defect",
+        "guard_raised": true,
+        "identical_at_every_turn": true,
+        "informative_pairs": 0,
+        "turns_checked": 114
+      }
+    },
+    "elapsed_s": 175.709,
+    "failures": 0,
+    "lock_wait_s": 0.0,
+    "mechanism": "Within-arm contrast at events 3-6: the fork arm's event-turn cached_tokens is 64 against 6464-6528 on its neighbouring turns (it re-prefills essentially the whole prompt), while the summarise arm's event-turn cached_tokens is 4352/4416, the same as its own neighbours. Two causes, both intrinsic to the post-U13 encoding: (a) the content-addressed fork root is labelled in the invariant header and that label changes at every fold, so the break starts inside message 0 (observed first-diff byte offset 222 is in the header; cached falls to the pre-label 64-token block); (b) the fork root body begins with the unique [fork] marker (offset 302), so nothing after the header can prefix-match.",
+    "median_break_cost_per_arm": {
+      "fork": 5132.75,
+      "summarise_in_place": 442.25
+    },
+    "paired_delta": {
+      "bootstrap_95ci": [
+        193.5,
+        4868.25
+      ],
+      "mean": 2811.5833333333335,
+      "median": 4774.25,
+      "n": 18,
+      "range": [
+        -2035.0,
+        5611.5
+      ],
+      "sign_test": {
+        "negative": 3,
+        "p_two_sided": 0.007538,
+        "positive": 15,
+        "zero": 0
+      }
+    },
+    "pairs": 18,
+    "per_event_paired_deltas": [
+      [
+        "u4-s1",
+        1,
+        12,
+        193.0
+      ],
+      [
+        "u4-s1",
+        2,
+        17,
+        -1994.5
+      ],
+      [
+        "u4-s1",
+        3,
+        22,
+        4677.5
+      ],
+      [
+        "u4-s1",
+        4,
+        27,
+        4743.5
+      ],
+      [
+        "u4-s1",
+        5,
+        32,
+        4840.5
+      ],
+      [
+        "u4-s1",
+        6,
+        37,
+        4869.5
+      ],
+      [
+        "u4-s2",
+        1,
+        12,
+        190.5
+      ],
+      [
+        "u4-s2",
+        2,
+        17,
+        -2025.5
+      ],
+      [
+        "u4-s2",
+        3,
+        22,
+        5545.0
+      ],
+      [
+        "u4-s2",
+        4,
+        27,
+        5611.5
+      ],
+      [
+        "u4-s2",
+        5,
+        32,
+        4839.5
+      ],
+      [
+        "u4-s2",
+        6,
+        37,
+        4901.5
+      ],
+      [
+        "u4-s3",
+        1,
+        12,
+        193.5
+      ],
+      [
+        "u4-s3",
+        2,
+        17,
+        -2035.0
+      ],
+      [
+        "u4-s3",
+        3,
+        22,
+        1449.5
+      ],
+      [
+        "u4-s3",
+        4,
+        27,
+        4805.0
+      ],
+      [
+        "u4-s3",
+        5,
+        32,
+        4867.0
+      ],
+      [
+        "u4-s3",
+        6,
+        37,
+        4936.5
+      ]
+    ],
+    "per_event_strata": {
+      "by_event_index": {
+        "1": {
+          "deltas": [
+            193.0,
+            190.5,
+            193.5
+          ],
+          "median_break_cost_fork": 5026.5,
+          "median_break_cost_summarise": 4833.5,
+          "median_cached_at_event_fork": 0,
+          "median_cached_at_event_summarise": 0,
+          "median_delta": 193.0,
+          "n": 3,
+          "negative": 0,
+          "positive": 3
+        },
+        "2": {
+          "deltas": [
+            -1994.5,
+            -2025.5,
+            -2035.0
+          ],
+          "median_break_cost_fork": 1916.5,
+          "median_break_cost_summarise": 3914.0,
+          "median_cached_at_event_fork": 0,
+          "median_cached_at_event_summarise": 0,
+          "median_delta": -2025.5,
+          "n": 3,
+          "negative": 3,
+          "positive": 0
+        },
+        "3": {
+          "deltas": [
+            4677.5,
+            5545.0,
+            1449.5
+          ],
+          "median_break_cost_fork": 4268.0,
+          "median_break_cost_summarise": -417.5,
+          "median_cached_at_event_fork": 64,
+          "median_cached_at_event_summarise": 4352,
+          "median_delta": 4677.5,
+          "n": 3,
+          "negative": 0,
+          "positive": 3
+        },
+        "4": {
+          "deltas": [
+            4743.5,
+            5611.5,
+            4805.0
+          ],
+          "median_break_cost_fork": 5183.5,
+          "median_break_cost_summarise": 425.5,
+          "median_cached_at_event_fork": 64,
+          "median_cached_at_event_summarise": 4352,
+          "median_delta": 4805.0,
+          "n": 3,
+          "negative": 0,
+          "positive": 3
+        },
+        "5": {
+          "deltas": [
+            4840.5,
+            4839.5,
+            4867.0
+          ],
+          "median_break_cost_fork": 5277.0,
+          "median_break_cost_summarise": 418.5,
+          "median_cached_at_event_fork": 64,
+          "median_cached_at_event_summarise": 4352,
+          "median_delta": 4840.5,
+          "n": 3,
+          "negative": 0,
+          "positive": 3
+        },
+        "6": {
+          "deltas": [
+            4869.5,
+            4901.5,
+            4936.5
+          ],
+          "median_break_cost_fork": 5331.0,
+          "median_break_cost_summarise": 461.5,
+          "median_cached_at_event_fork": 64,
+          "median_cached_at_event_summarise": 4352,
+          "median_delta": 4901.5,
+          "n": 3,
+          "negative": 0,
+          "positive": 3
+        }
+      },
+      "excluding_event_index_2": {
+        "bootstrap_95ci": [
+          4677.5,
+          4901.5
+        ],
+        "deltas": [
+          193.0,
+          4677.5,
+          4743.5,
+          4840.5,
+          4869.5,
+          190.5,
+          5545.0,
+          5611.5,
+          4839.5,
+          4901.5,
+          193.5,
+          1449.5,
+          4805.0,
+          4867.0,
+          4936.5
+        ],
+        "max": 5611.5,
+        "median": 4839.5,
+        "min": 190.5,
+        "n": 15,
+        "negative": 0,
+        "positive": 15,
+        "sign_test": {
+          "negative": 0,
+          "p_two_sided": 6.1e-05,
+          "positive": 15,
+          "zero": 0
+        },
+        "why": "at event 2 both arms recorded cached_tokens=0 (an across-the-board full miss, not a policy effect); reported, not dropped silently"
+      }
+    },
+    "pre_fork_sharing": "Turns 1-11 are byte-identical across arms (no fork exists yet), so one request serves both and is written as one row per arm with shared_request=true (66 rows from 33 requests). The identical-prompt fact is asserted in the live loop before every shared send and re-checked by the analysis guard.",
+    "requests": 195,
+    "rows": 228,
+    "rows_sha256": "263db62e631737495f99284fbe60fd5121b3d6a7a2cbd7aa2984572dd71984bd",
+    "rows_sha256_note": "sha of e1_rows.jsonl after the request_index renumber recorded in e1_runlog.json:row_repair; no measured value changed",
+    "sessions": 3,
+    "stop_reason": ""
+  },
+  "next_unit_hint": "Verifier: re-run the two offline commands (e1_distinctness.py, e1_analyze.py; 0 requests) against the frozen e1_rows.jsonl and confirm green 18/18 distinct at events, red identical + guard raised, and the 18 deltas reproduce. GAPS G1 can now be upgraded from 'the break-cost comparison has not been made' to the measured sentence in evidence.answer_G1, with the summariser caveat; do NOT extend it to a steady-state claim, and do not re-run for the 7th event unless the cap is raised (a top-up is impossible).",
+  "status": "partial",
+  "unit": "E1",
+  "write_paths": [
+    "experiments/context-cache/cells/E1/**",
+    "orchestration/units/E1.md",
+    "orchestration/handoffs/E1.json",
+    ".occamy.lock was written only as the lock record (acquire/release), as prior units do"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "unit": "R-STACK",
+  "status": "done",
+  "artifacts": [
+    "docs/serving-options/LAUNCH-SGLANG.md",
+    "docs/serving-options/LAUNCH-VLLM.md",
+    "orchestration/units/R-STACK.md",
+    "orchestration/handoffs/R-STACK.json"
+  ],
+  "evidence": {
+    "command_or_count": "SGLang docs [fetched] server_arguments + issue #12826 + PR #21259; vLLM v0.27.1 cache.py/arg_utils.py/registry.py/quantization dir/serving.py [fetched via GitHub raw]; live-server-config.json [read]; 0 live model requests",
+    "commands": [
+      "curl -s https://docs.sglang.ai/advanced_features/server_arguments.html",
+      "curl -s https://raw.githubusercontent.com/sgl-project/sglang/main/docs/advanced_features/server_arguments.md",
+      "curl -s https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/config/cache.py",
+      "curl -s https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/engine/arg_utils.py",
+      "curl -s https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/model_executor/models/registry.py",
+      "curl -s https://api.github.com/repos/vllm-project/vllm/contents/vllm/model_executor/layers/quantization?ref=v0.27.1"
+    ],
+    "live_config_read": "state/config/live-server-config.json (U-GRID, sampled 2026-10-21)"
+  },
+  "blocker": "",
+  "next_unit_hint": "Maintenance window: S2 (HiCache) removed for occamy (hybrid mamba no-go); S3 unknown for hybrid (DeepSeek-only per docs); V1 --enable-mamba-shared-prefix-checkpoint unavailable in 0.27.1 (use block-grid checkpointing only); V2 treat first launch as probe.",
+  "write_paths": [
+    "docs/serving-options/LAUNCH-SGLANG.md",
+    "docs/serving-options/LAUNCH-VLLM.md",
+    "orchestration/units/R-STACK.md",
+    "orchestration/handoffs/R-STACK.json"
+  ],
+  "assumptions": [
+    "SGLang build 0.0.0.dev1+g4ccff141d; vLLM 0.27.1; no live verification performed (hard constraint: 0 live model requests).",
+    "S4 qwen3.5-9b is dense (Qwen3.5 family: 4B/9B/27B dense, 35B-A3B/122B-A10B/397B-A17B MoE); confidence high from standard naming.",
+    "vLLM v0.27.1 engine_args docs URL may serve a different version; arg_utils.py and cache.py from GitHub tag v0.27.1 are authoritative.",
+    "Memory costs are estimates from live config (weights 23.763 GB, KV 12.461 GB) and checkpoint-format assumptions; not measured.",
+    "HiCache hybrid mamba no-go based on issue #12826 comment; exact error text may differ in build 0.0.0.dev1+g4ccff141d."
+  ]
+}

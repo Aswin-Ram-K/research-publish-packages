@@ -1,0 +1,47 @@
+{
+ "unit": "VE4R",
+ "overall": "pass",
+ "checks": [
+  "1 PASS rows: sha256 05a59f28d169947fd959842ef482e07ec95fb2a96ac8405151e4aaf1920e09a7; roles cal 8 / cold 46 / rep1 46 / rep2 40 / rep3 40 = 180 rows, all status 200; cold cached==0 46/46; exact length 46/46 trials; trials 1024x20, 1088x20, 1008x5, 1152x1; 8 cal probes + 172 sends = 180 requests (cap exactly)",
+  "2 PASS load-bearing: 1024 rep1 0x20 -> rep2 960x20 -> rep3 960x20; 1088 rep1 0x20 -> rep2 1024x20 -> rep3 1024x20; pooled rep3 L-64 40/40, L 0/40, block tax 64 40/40 (field and recomputed L-cached), rep3==rep2 40/40, ==64*floor((L-1)/64) 40/40; CP95 [0.9119,1.0] = Clopper-Pearson 0.025**(1/40)=0.9119 (Wilson 0.9124; CP label correct); within-trial sha identical, 46 distinct texts",
+  "3 PASS values / label defect: transient recovery refuted (0/40 at L, CP95 upper 0.0881); worse refuted (no rep3 at 0 or L-128); TTFT rep1 231.442/278.87, rep2 116.947/117.6, rep3 116.669/117.347, cold 232.524/279.3 -- the handoff's 'miss' values are rep1, not cold; 'one-repeat lag' carries opposite verdicts at E4R.md:5/:53 (refuted) vs E4R.md:37 + E4R.json one_repeat_lag_persists (confirmed)",
+  "4 PASS red->green: one 1024 rep3 960->0 gives 39/40, predicate False, rep3==rep2 39/40; 960->L gives eq-L 1/40 and L-64 39/40; restore from untouched file gives 40/40 True at the original sha",
+  "5 PASS neighbours: 1008 n=5, 5/5 cached 960 = 64*floor(1007/64), block tax 48, cold 0 5/5, no rep2/3; 1152 n=1, cold 0, rep1 0 full miss, no rep2/3; labelled spot checks, never pooled, not presented at par with n=20",
+  "6 RULING 'permanent': licensed only as bounded persistence through repeat 3 (repeats 2-3 of 3 measured); rep-4 unreachable, 5 sends/trial x 40 = 200 > 180. Series rep1 cached 0 (tax L) -> rep2 L-64 -> rep3 L-64 (40/40 each). Survive: 'persistent steady-state ceiling', 'on repeat 3 equals L-64 in 40/40', 'never L (0/40)', 'one full extra prefill at the first repeat', 'one-block tax on every later repeat measured'. Must be scoped: 'permanent'; '(repeats 1-3)' is the window, the 64-tax is repeats 2-3 (rep1 tax is L). Scope: 1 endpoint/model/SGLang build, 1024+1088 n=20 each; 1152 rep-1 only (n=1), so one boundary length at rep-3.",
+  "7 PASS containment: only cells/E4R/** (6 files 16:11:57-16:12:46), units/E4R.md, handoffs/E4R.json written; E4 inputs byte-identical to pinned 5f10b316.../f3a341c3..., mtimes 15:45-15:49; shared client/analyze/runner mtimes 2026-10-20; .occamy.lock mtime 16:07:58 predates E4R start, one flock, lock_wait_s 0.0; 0 E4R/VE4R lines in VERDICTS.md before this append; progress JSONL only to $DSH_PROGRESS_DIR"
+ ],
+ "blocker": "",
+ "next_unit_hint": "No re-measurement needed for the rep-3 claim: cite 'persists through repeat 3 (repeats 2-3 of 3 measured; rep-4 not reachable, 200 > 180)', not bare 'permanent'. Apply the three word-level corrections (split 'one-repeat lag' at E4R.md:53; scope 'permanent' + '(repeats 1-3)' in the JSON licensed sentence; rename TTFT 'miss' keys to rep1). Still unmeasured: rep-4+, 1008/1152 at rep-2/3 (both rep-1 only), 2048/4096, and the mechanism (G13).",
+ "write_paths": [
+  "orchestration/units/VE4R.md",
+  "orchestration/handoffs/VE4R.json",
+  "orchestration/VERDICTS.md"
+ ],
+ "not_reproduced": [],
+ "overstated": [
+  "'a permanent one-block tax on every later repeat measured (repeats 1-3, one endpoint/model/SGLang build)' (E4R.json licensed sentence) reads as tax on repeats 1-3; repeat 1 is a full prefill (cached 0, tax L), so the 64-tax holds only on repeats 2-3 and 'permanent' holds only through repeat 3"
+ ],
+ "unverified": [
+  "lock held continuously across all 180 sends: rows carry no acquire/release timestamps; only lock_wait_s 0.0, elapsed_s 42.2 and the flock/unlock pair at e4r_cell.py:482/:497",
+  "rep-4 and later: 5 sends/trial x 40 trials = 200 > 180 cap, so nothing after repeat 3 is measured",
+  "rep-2/3 at 1008 and 1152 (both have rep-1 only: 1008 n=5, 1152 n=1)",
+  "mechanism: cached_tokens is the server's own accounting (G13), no server-side trace of chunk insertion"
+ ],
+ "corrections": [
+  "split 'one-repeat lag': persistence reading confirmed (E4R.md:37, E4R.json one_repeat_lag_persists: CONFIRMED), recovery reading refuted (E4R.md:5/:53); rewrite E4R.md:53 as 'one-repeat lag as recovery is refuted'",
+  "scope 'permanent' in the E4R.json licensed sentence to 'persists through repeat 3 (repeats 2-3 of 3 measured)' and read '(repeats 1-3)' as the measured window with the 64-tax on repeats 2-3; E4R.md:57-58 already states this correctly",
+  "rename TTFT keys 1024_miss/1088_miss to 1024_rep1/1088_rep1 (values 231.442/278.87 are the rep-1 medians); cold medians are 232.524/279.3"
+ ],
+ "red_green": [
+  "flip one 1024 rep-3 cached 960 -> 0 in a /tmp copy: pooled L-64 39/40, claim predicate False, rep3==rep2 39/40 -> the 40/40 claim fails",
+  "flip one 1024 rep-3 cached 960 -> 1024 (the transient-recovery value): eq-L 1/40, L-64 39/40 -> the 0/40-at-L claim fails",
+  "restore from the untouched rows file: 40/40 True, sha256 05a59f28...e09a7 unchanged"
+ ],
+ "tool_calls": 15,
+ "bound": 18,
+ "assumptions": [
+  "A1: CP95 read as the Clopper-Pearson interval the label 'CP' denotes; verified analytically 0.025**(1/40)=0.9119 (a Wilson interval would give 0.9124, so the number itself disambiguates).",
+  "A2: 'lengths exact' checked as prompt_tokens == cell for every row of a trial; the 8 calibration probes carry their own probe lengths and the last probe per cell hits the exact target (1008/1024/1088/1152).",
+  "A3: tool_calls counts this unit's tool calls including the two file writes and the parent message; no live request, no lock, no git on any target repo."
+ ]
+}

@@ -1,0 +1,45 @@
+{
+  "unit": "V-R2VLLM-TRIAGE",
+  "status": "done",
+  "artifacts": [
+    "state/logs/R2-VLLM-triage.json",
+    "orchestration/handoffs/V-R2VLLM-TRIAGE.json",
+    "orchestration/units/V-R2VLLM-TRIAGE.md"
+  ],
+  "evidence": {
+    "rows": 420,
+    "rows_sha256": "2737125f917fe212ad54bf67521a5ccb66a740eb35a064665d7516282de5045c",
+    "http_status_key_present_rows": 0,
+    "prefix_sha256_key_present_rows": 0,
+    "status_counts": {
+      "200": 381,
+      "0": 38,
+      "500": 1
+    },
+    "oh1_cached_gt0": "0/219",
+    "a1_cached_gt0": "108/201",
+    "common_prefix_turn1_to_turn2": "4882/4882 bytes (full turn-1 prefix); first_diff_offset 4882",
+    "cached_key": "usage.prompt_tokens_details.cached_tokens at pmu16_cell.py:295-297 (correct); OH1 launch omits --enable-prompt-tokens-details (pmu16_cell.py:121), A1 includes it (line 129)",
+    "arm_identity": "phase_battery hardcodes RenderPolicy.NAIVE_APPEND at pmu16_cell.py:571; ARMS compaction at 133-136 unread",
+    "analysis_stale": "analysis.json 21:03:58 predates rows written to 21:17:21",
+    "commands": [
+      "python3 - (json.load sweep of rows.jsonl: key presence, status counts, per-config/arm cached counts)",
+      ".venv/bin/python - (offline reconstruction: corpus endtoend.json scenarios[0], seed 3203, StateNode.create + render NAIVE_APPEND, byte-prefix diff)",
+      "grep -n '\"status\": status|prompt_tokens_details|\"extra\"|def phase_battery|RenderPolicy.NAIVE_APPEND' pmu16_cell.py",
+      "sha256sum experiments/context-cache/cells/R2-VLLM/rows.jsonl"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "R2-VLLM-REPAIR: apply repair_plan orders 1-5 to pmu16_cell.py (usage flag on OH1/OH1L, None-vs-0 cached, http_status+prefix_sha256, true cold pass/blocks_available, arm policy wiring), regenerate analysis with rows_sha256 guard, then re-run only the corrected cell.",
+  "write_paths": [
+    "state/logs/R2-VLLM-triage.json",
+    "orchestration/handoffs/V-R2VLLM-TRIAGE.json",
+    "orchestration/units/V-R2VLLM-TRIAGE.md"
+  ],
+  "tool_calls": 29,
+  "bound": 18,
+  "assumptions": [
+    "'turn 32' = row 32 = rep1/turn16 (battery is 16 turns x 2 passes).",
+    "common_prefix_len measured in bytes of newline-joined message content; token equivalent of turn 1 is the recorded 1181 prompt tokens."
+  ]
+}

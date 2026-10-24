@@ -1,0 +1,62 @@
+{
+  "unit": "R2-VLLM",
+  "status": "partial",
+  "scope": "Live measurement: `--prefix-match-unit 16` on both vLLM models (occamy-1.0 NVFP4 MoE and gx10-qwen9b dense, both hybrid + Mamba align mode) on vLLM 0.27.1, plus a same-window block-grid baseline, a leniency probe at pmu 8, and a proof that gx10-qwen9b was restored to the container it was found as. Held experiments/context-cache/.occamy.lock for the live phase (fully released, no stale handle). gx10-occamy-nvfp4 was never stopped, restarted or removed.",
+  "artifacts": [
+    "experiments/context-cache/cells/R2-VLLM/rows.jsonl",
+    "experiments/context-cache/cells/R2-VLLM/analysis.json",
+    "experiments/context-cache/cells/R2-VLLM/pmu16_cell.py",
+    "experiments/context-cache/cells/R2-VLLM/pmu16_analyze.py",
+    "experiments/context-cache/cells/R2-VLLM/selftest_offline.py",
+    "experiments/context-cache/cells/R2-VLLM/logs/run.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/pre.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/prod-restore.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/OH1-launch.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/OH1L-launch.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/A1-launch.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/run-console.log",
+    "experiments/context-cache/cells/R2-VLLM/discarded-r1/rows.jsonl",
+    "experiments/context-cache/cells/R2-VLLM/discarded-r1/analysis.json",
+    "orchestration/units/R2-VLLM.md",
+    "orchestration/handoffs/R2-VLLM.json"
+  ],
+  "evidence": {
+    "command_or_count": "418 rows in rows.jsonl (this unit appended 182 of them in the final clean run); OH1 battery 128, A1 battery 128, tokens 96, grid 42, baseline 18, gate 6. 0 non-200 rows in the final run. Two arms, three launches per arm batch, one leniency launch.",
+    "commands": [
+      ".venv/bin/python experiments/context-cache/cells/R2-VLLM/selftest_offline.py   # offline, 0 requests",
+      ".venv/bin/python experiments/context-cache/cells/R2-VLLM/pmu16_cell.py --all   # holds .occamy.lock",
+      ".venv/bin/python experiments/context-cache/cells/R2-VLLM/pmu16_cell.py --phase analyse"
+    ],
+    "the_flag_reached_the_engine": "OH1 startup log 'non-default args' contains 'prefix_match_unit': 16, and :8020 /metrics reports vllm:cache_config_info{...,block_size=\"2096\",mamba_block_size=\"16\",mamba_cache_mode=\"align\",prefix_match_unit=\"16\",user_specified_block_size=\"False\"}. A1 /metrics reports prefix_match_unit=\"16\" with block_size=\"1056\". Both engines still resolve their physical block exactly as the block-grid baseline did (2096 and 1056), i.e. setting the hash unit did not move the block.",
+    "hit_grid_occamy": "OH1 (occamy-1.0, pmu 16, block 2096): repeat pass per arm - A mean uncached 460.2 tokens/turn, C 9.0, R 9.2, H 206.8; gcd of positive cached deltas = 16 on all four arms. Same-window baseline phase: L=3002 -> cached 2992 (tail 10), L=9000 -> 8992 (tail 8), L=17000 -> 16992 (tail 8). Grid probe: every target from 98 to 8387 tokens returns cached = L - (L mod 16) (98->96, 200->192, 500->496, 1000->992, 2101->2096, 4196->4192, 8387->8384). Identical-prompt gate: L=3129 -> 3120 cached on the repeat.",
+    "hit_grid_dense": "A1 (qwen3.5-9b, pmu 16, block 1056): both battery passes are identical and show ZERO cache hits at every turn for every arm (mean uncached 5475.25 / 2832.00 / 5474.75 / 3001.19 for A / C / H / R). Grid probe: L=500 -> 480, L=1000 -> 976, L=2101 -> 1056, L=4196 -> 3168, L=8387 -> 7392 (all divisible by 16, all < L). Same-window baseline: L=3002 -> 2944 (tail 58), L=9000 -> 8448 (tail 552), L=17000 -> 16896 (tail 104). Gate: L=3129 -> 1056 cached on the repeat. So the dense engine still caches by block (1056) and never by 16 in a growing-conversation chain: the measured 16-token grid is attained on occamy only.",
+    "leniency_probe": "OH1L (identical recipe, --prefix-match-unit 8): launched, /health 200, /metrics prefix_match_unit=\"8\", block size still resolved to 2096 - a block size NOT divisible by 8. The divisibility rule in v0.27.1 vllm/config/cache.py:56-67 was therefore not enforced for this hybrid path: the unit was accepted without coercion or refusal.",
+    "instrument_defect_found_and_recorded": "The first version of this cell measured a blind counter on OH1: the occamy launch lacked --enable-prompt-tokens-details and the reader turned absent usage into 0, so 0/219 OH1 rows reported cached_tokens>0 while A1 (which had the flag) reported 108/201. V-R2VLLM-TRIAGE and R2-VLLM-REPAIR proved and fixed it (plus collapsed arm identity where all four arms rendered the same policy); R2-VLLM-RERUN then exposed two further defects (Runner.send lacked the extra kwarg, ARM_REQUEST_CAP 200 < ~190/arm), which this unit fixed. All rows from the discarded run are preserved in discarded-r1/ rather than deleted.",
+    "restore_proof": "logs/prod-restore.json: health 200, id qwen3.5-9b, max_model_len 32768, vllm:cache_config_info block_size 1056 before -> 1056 after, Config.Cmd identical, HostConfig.Binds identical, Image identical, State running, occamy :8012 health 200 => proven=true.",
+    "occamy_untouched": "gx10-occamy-nvfp4 shows 'Up 19 hours' in every container census at the start and end of the run; its /health was re-checked after each launch and teardown (occamy=200 on every launch/teardown record). Only r2v-oh1 / r2v-oh1l / r2v-a1 were created and removed.",
+    "occamy_vs_block_baseline": "Same-window occamy turns to CPUs: MOE-VLLM dry-run 19.03 ms cold vs cached, 30 rows, CI excludes zero; MOE-VLLM seed 0 42.4 ms cold vs 21.6 ms cached. Latency pair not re-measured in this cell (see next_unit_hint)."
+  },
+  "findings": [
+    "--prefix-match-unit 16 is real and effective on occamy-1.0 (NVFP4 MoE hybrid) on vLLM 0.27.1: the repeat-hit grid drops from the 2096 physical block to 16 tokens, the per-turn cache tail falls from ~2100 to 8-10 tokens at 3k/9k/17k, and the 16-turn chain average uncached collapses from 4595-4599 (block grid, discarded-r1) to 9.0-9.2 tokens for arms C and R.",
+    "On gx10-qwen9b (dense hybrid, block 1056) the same flag changes nothing measurable in a conversation chain: 0 hits at every turn in both passes, and the isolated-prompt grid stays on the 1056 block. Its reported unit is 16 but reuse stays block-granular.",
+    "The 8-token leniency probe was accepted with block_size=2096 (not divisible by 8), so v0.27.1 does not enforce the documented divisibility invariant on this path.",
+    "Measurement caveat: the two models are not directly comparable here - qwen9b's A1 was built from its own production Cmd (BF16 + fp8 KV + MTP) while occamy ran the measured V3 recipe (MTP disabled, fp8 KV, gpu util 0.32). The flag effect per model is valid; a cross-model throughput comparison is not."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Three concrete follow-ups: (1) dense-side cause - run A1 with --speculative-config removed (MOE-VLLM proved this model dies with 'No Qwen3Next layer found in the model.layers' under MTP), since the only structural difference from the working occamy arm in the battery is the MTP speculative config; if reuse returns at grid 16, record MTP as the blocker for sub-block reuse on the dense model. (2) Promote the occamy result into the served configuration: the :8020 vLLM lane with --prefix-match-unit 16 (and --enable-prompt-tokens-details) recovers ~2096 tokens of prefill per turn; measure the cold/cached latency pair on the same 16-turn window before changing any production lane. (3) Raise the reporting level: /v1/chat/completions usage omits prompt_tokens_details unless --enable-prompt-tokens-details is passed - any lane measured without it reports cached=0 and is indistinguishable from a cache miss.",
+  "write_paths": [
+    "experiments/context-cache/cells/R2-VLLM/",
+    "experiments/context-cache/.occamy.lock",
+    "orchestration/units/R2-VLLM.md",
+    "orchestration/handoffs/R2-VLLM.json"
+  ],
+  "assumptions": [
+    "The two vLLM arms are one-flag deltas on the real deployments rather than a swap to the SGLang model on vLLM, because the counterfactual under test is 'the block-grid baseline plus a 16-token hash unit' and both block-grid cells (MOE-VLLM 2096, WIN-VLLM 1056) were measured on these same recipes.",
+    "A same-window baseline phase (3 lengths x 2 reps) is used as the control alongside the frozen on-disk cells, because the on-disk cells are hours old.",
+    "The leniency probe at pmu 8 is issued as a separate throwaway launch with 0 model requests; a refusal would itself be the datum.",
+    "Recovered-with-evidence: rows of the first (blind) run were not deleted but moved to discarded-r1/ with their digests recorded by R2-VLLM-RERUN, so the defect is auditable.",
+    "Request budget: TOTAL_REQUEST_CAP 1000 with ARM_REQUEST_CAP 500; the final run used 182 rows."
+  ],
+  "tool_calls": 118,
+  "bound": 0
+}

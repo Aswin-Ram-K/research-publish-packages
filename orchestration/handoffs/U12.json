@@ -1,0 +1,35 @@
+{
+  "unit": "U12",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/U12.md",
+    "orchestration/handoffs/U12.json",
+    "orchestration/handoffs/U10.json"
+  ],
+  "evidence": {
+    "guard_before": "AssertionError: NEW unit-shape handoff contract gaps: {} {} ; NEW verifier-shape gaps: {'U10.json': ['overall', 'checks']} {}",
+    "guard_after": "tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps - 1 passed in 0.03s",
+    "classifier": "tests/test_orchestration_handoffs.py:191 classify(): if name.startswith('V') or 'verdict' in doc or 'overall' in doc -> 'verifier', else 'unit'. U10.json was judged verifier because it carries \"verdict\": \"boundary_specific\"; the U10 filename does not start with V.",
+    "contracts": "unit shape -> inline CONTRACT (test line 114, 7 keys: unit,status,artifacts,evidence,blocker,next_unit_hint,write_paths); verifier shape -> state/logs/U8.18/verifier_shape_baseline.json contract_verifier (6 keys: unit,overall,checks,blocker,next_unit_hint,write_paths). Missing keys measured were exactly overall,checks.",
+    "baselines": "state/logs/U8.15/baseline_gaps.json (sha256-pinned) for unit shape, state/logs/U8.18/verifier_shape_baseline.json (sha256-pinned) for verifier shape. _regressions() flags NEW (absent filename) and WORSENED (key beyond exemption); test_no_baseline_entry_over_declares checks the tightening direction. Baselines frozen and never re-derived; U10.json was not added to either.",
+    "edit": "Pure insertion after line 18 of orchestration/handoffs/U10.json: \"overall\": \"pass\" plus a 9-string \"checks\" array. No reordering, no reformatting, no existing value changed. File re-parses (json.load: overall=pass, checks n=9; key order preserved with the two new keys at positions 5-6).",
+    "checks_source_map": "pooled contrast <- evidence.pooled_exact_binomial (10/10 vs 0/15, Fisher 2x2 [[10,0],[0,15]] p=3.06e-07); per-length boundary <- evidence.per_length_table; delay test <- evidence.delay_test_at_L1088 (20/20 over d=0.25-2.0 s); intervening-request test <- evidence.insert_test_at_L1088 (5/5 after a 63-token request); second-repeat recovery <- evidence.recovery (rep2 10/10 at 64*((L-1)//64)); tax law <- evidence.tax_law_reverified (25/25 hits); cold isolation <- evidence.cold_isolation_verified (all_trials_cold_verified=true, 5 cells); U4b caveat <- evidence.explains_U4b_branch_2 (~1925 tokens, 1925%64=5, prefix-sharing with different suffix, plausibly a separate first-request-after-cold effect); budget <- evidence.budget (159 live requests, 0 wire failures, no flock, no POST /flush_cache).",
+    "siblings": "audit() shapes for this batch: U4.json=unit, U5.json=unit, U8.json=unit, U9.json=unit, U11.json=unit (all gap-free); U10.json=verifier (repaired). No other new gap exists.",
+    "remaining_gaps_all_frozen": "U0.22.json, U3.2.json, U6.16.json, U6.17.json (unit) and V2T.json, V4R.json, V5F.json, V6E.json, V6F.json (verifier) — every one is a pre-existing frozen-baseline entry, none new or widened.",
+    "full_suite_before": "PYTHONPATH=src .venv/bin/python -m pytest tests -q -> 2 failed, 1107 passed, 1 skipped in 60.35s (test_kg_policy::test_real_target_config_declares_the_decision + this guard)",
+    "full_suite_after": "PYTHONPATH=src .venv/bin/python -m pytest tests -q -> 1 failed, 1108 passed, 1 skipped in 62.23s; only tests/test_kg_policy.py::test_real_target_config_declares_the_decision (known pre-existing, left alone)",
+    "full_suite_system_python_note": "the literal command PYTHONPATH=src python3 -m pytest tests -q collects 16 errors before any test runs: ModuleNotFoundError for third-party graphify and fastapi in the system interpreter (0.42s, unrelated to this edit; the same command fails identically on the unedited tree). .venv/bin/python has both deps, so the meaningful suite run is the .venv one recorded above.",
+    "commands": [
+      "PYTHONPATH=src python3 -m pytest tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps -q",
+      "python3 -c \"import json; d=json.load(open('orchestration/handoffs/U10.json')); print(d['overall'], len(d['checks']))\"",
+      "PYTHONPATH=src .venv/bin/python -m pytest tests -q"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "The handoff corpus is contract-green with only frozen gaps left. Do not re-add U10.json to any baseline; if a verifier wants U10's claims re-derived, read experiments/context-cache/cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl (not the handoff prose). Unrelated open question U10 left for its own unit: the prefix-sharing shape (cold P then P+suffix sent immediately) at a NON-multiple-of-64 length, where U4b lost branch 2 with n=1.",
+  "write_paths": [
+    "orchestration/handoffs/U10.json",
+    "orchestration/handoffs/U12.json",
+    "orchestration/units/U12.md"
+  ]
+}

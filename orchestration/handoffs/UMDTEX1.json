@@ -1,0 +1,45 @@
+{
+  "unit": "UMDTEX1",
+  "status": "done",
+  "artifacts": [
+    "tools/package/md2tex.py (new, 31714 B, sha256 c62feb657a14aa957f0ca2296435ce3820750af98d457acb0a4ac187d97867ec)",
+    "tools/package/README.md (appended one '### `md2tex.py`' section immediately before '## Tests'; no existing line changed; file 215 -> 267 lines)",
+    "tests/test_md2tex.py (new; 4 tests: byte_identity, idempotent, citation_guard red->green, shipped_artifacts_are_clean)",
+    "orchestration/units/UMDTEX1.md (own card, outcome note appended)",
+    "scratch/umdtex1/literals.py (AST-extracted originals' volatile literals)",
+    "scratch/umdtex1/body.py (assembled body; literals injected verbatim)",
+    "scratch/umdtex1/orig_enc.py, scratch/umdtex1/orig_grb.py (originals with only the outdir constant patched)",
+    "scratch/umdtex1/papers.before.sha256, scratch/umdtex1/papers.after.sha256 (39 files each)",
+    "scratch/umdtex1/new-enc/, scratch/umdtex1/new-grb/ (regenerated outputs)",
+    "scratch/umdtex1/mut/md2tex_mut.py (guard-disabled mutant for the non-vacuity check)"
+  ],
+  "evidence": {
+    "diff_of_the_two_converters": "scratch/uprep1/md2tex.py 368 lines sha256 e4594f1727cf40e1de7388a2b892b16acc0e3fa4b134c9656e82f79afa107f50 vs scratch/uprep7/md2tex.py 429 lines sha256 ccad301dfd1b6dc1ac320dfdb34267ec03e5ab77c70b70a9653051ac404ceb2e; my `diff -u` is 544 lines (parent measured 487 by another method). Shared: unicode-escape machinery, CODE_RE/regex-based `inline` (bold, italic), quoteify, block loop (hr, title, headings, abstract/references specials, quote, bullets, numbered, pipe tables, paragraphs), preamble, thebibliography{99}, bidirectional cite/bibitem guard. Paper-specific divergences (the finding), all carried as config in PACKAGES: (1) bibliography source - encoder parses REFERENCES.bib (parse_bib + bibitem renderer with authornote and a missing-author/title tail), gated sets refmode and emits \\bibitem{refN} from the manuscript's own numbered `## References` list, with a \\renewcommand{\\refname} preamble line; (2) gated-only sanitisation - unit_ids strip (\\bU[A-Z]{2,}[0-9]+[a-z]?\\b + punctuation/space collapse), flatten_links, footnote_star sentinel STAR='\\x00STAR\\x00'; (3) gated-only status-banner drop `^(\\textbf\\{Status:\\}|Status:)`; (4) gated emits 3 files (main.tex, ABSTRACT.txt, ABSTRACT_METADATA.txt), encoder 1; (5) unicode maps differ by exactly two entries (gated adds i-grave and element-of); (6) anchors 13 (.bib keys, encoder) vs 14 (refN incl. one comma-joined 'ref3,ref6', gated); (7) cite-mark and cite-extract regexes differ (encoder [A-Za-z0-9_\\\\] / [A-Za-z0-9_]; gated [A-Za-z0-9_,] / [^}]* split on commas); (8) the two \\date{} comment strings differ; (9) guard sets differ (encoder never fails on non-ascii and has 3 stale-string checks; gated fails on unmapped source and residual output non-ascii, asserts exactly 13 bibitems, checks balanced braces, rejects 5 forbidden patterns, rejects residual '**', requires exactly one AUTHOR SLOT).",
+    "byte_identity_cmp_and_sha256": "encoder: cmp scratch/umdtex1/new-enc/main.tex papers/encoder-crossover-190/submission/main.tex -> exit 0 IDENTICAL; both sha256 90db2cd4e7fa6a63d4b91e2c0636c3879de54fc2a4e7f55fcbf2cce4197c9b86 (83832 B). gated: cmp scratch/umdtex1/new-grb/main.tex papers/gated-read-batching/submission/main.tex -> exit 0 IDENTICAL; both sha256 a5d32dd7da1a2b9b920ffb9cb272749339edd954f9a1e63b11bb59df6d8886b4 (37291 B). gated ABSTRACT.txt: cmp IDENTICAL, both sha256 59ef6d55d64d6a3c3b500ffb653e8f85c11fca9e841b1ff37fc8b43c0ef1a6e9. gated ABSTRACT_METADATA.txt: cmp IDENTICAL, both sha256 05ce7038056235b3bd52dd1f3dac3c048698701eac35cd779b3198192c88e962. Baseline that makes this a real oracle: the originals with only their outdir constant patched (scratch/umdtex1/orig_enc.py, orig_grb.py) reproduced all four shipped files cmp-identical, so the shipped bytes are the originals' own outputs.",
+    "tests_literal_output": "python3 tests/test_md2tex.py -> 'ALL 4 TESTS PASSED' exit=0. python3 -m pytest tests/test_md2tex.py --noconftest -q -> '.... [100%] 4 passed in 0.29s' exit=0. python3 -m pytest tests/test_md2tex.py -q (no --noconftest) -> 'ImportError while loading conftest .../tests/conftest.py; tests/conftest.py:19: in <module> from resextract.llm import OccamyClient; E ModuleNotFoundError: No module named resextract' exit=4. So the wider suite cannot collect in this environment and --noconftest (or the direct run) is required; I used BOTH and both pass.",
+    "red_green_non_vacuous": "RED: a copy of paper #3's manuscripts dir with one well-formed uncited entry appended to REFERENCES.bib -> tool exit 1, message \"R18 FAILED: uncited=['uncited_probe_2099'] unknown=[] bibitems=14 bibkeys=14\", which names the probe key. GREEN: same copy with the entry removed -> exit 0 and main.tex sha256 90db2cd4...c9b86 == shipped. Non-vacuity proven by mutation, not assertion: scratch/umdtex1/mut/md2tex_mut.py disables guard_citations ('if False and (missing or unknown or bibitems != len(bib_keys))') and the same red scenario then exits 0 and writes a main.tex carrying 1 \\bibitem{uncited_probe_2099} and 0 \\cite{uncited_probe_2099}. So the red assertion genuinely detects an absent guard rather than an incidental error.",
+    "papers_unchanged": "find papers -type f | sort | xargs sha256sum before vs after -> diff -q reports no difference across all 39 files; snapshot files scratch/umdtex1/papers.before.sha256 and scratch/umdtex1/papers.after.sha256 are byte-identical. No write ever targeted papers/** (the baseline runs wrote only under scratch/umdtex1/).",
+    "config_deviation": "The card asked for per-paper values in a TOML under orchestration/packages/. I did NOT do that: that path is outside this unit's declared write paths AND orchestration/packages/<slug>.toml are UBUILD1's own schema=1 build manifests consumed by tools/package/check_manifest.py, so adding md2tex keys there would be an undeclared write plus a foreign-schema edit. Instead per-paper values are the pure-data PACKAGES registry inside tools/package/md2tex.py (keyed by slug). Migration, documented in the tool docstring and README: lift PACKAGES verbatim to orchestration/packages/<slug>/md2tex.toml and load with tomllib; no logic change, every value is already data.",
+    "commands": [
+      "python3 tools/package/md2tex.py --package encoder-crossover-190 --outdir scratch/umdtex1/new-enc",
+      "python3 tools/package/md2tex.py --package gated-read-batching --outdir scratch/umdtex1/new-grb",
+      "cmp scratch/umdtex1/new-enc/main.tex papers/encoder-crossover-190/submission/main.tex",
+      "cmp scratch/umdtex1/new-grb/main.tex papers/gated-read-batching/submission/main.tex",
+      "sha256sum tools/package/md2tex.py papers/encoder-crossover-190/submission/main.tex papers/gated-read-batching/submission/main.tex",
+      "python3 tests/test_md2tex.py",
+      "python3 -m pytest tests/test_md2tex.py --noconftest -q",
+      "python3 -m pytest tests/test_md2tex.py -q",
+      "find papers -type f | sort | xargs sha256sum"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Add a 'replay-record-not-decision' entry to PACKAGES. Measured about that paper: files are AVAILABILITY.md 4443 B, CLAIMS.md 12000 B, GAPS.md 6620 B, MANUSCRIPT.md 17462 B; NO REFERENCES.bib, ZERO '## References' sections, ZERO '[[CITE:' anchors, 0 unit ids, 0 Status banners, 0 markdown links, 0 footnote-stars, and 5 '^N. ' lines that are ordinary numbered list items, not references. Consequence: neither existing bib strategy finds a bibliography, so it would ship an EMPTY thebibliography and the bidirectional citation guard would pass vacuously (0 cites, 0 bibitems) - that paper needs either a third bib strategy or a deliberate, documented decision to ship an empty bibliography before it can produce a main.tex, and it needs a '## Abstract' heading if emit_abstract_files is turned on for it. Second open item, the next remaining instance of the duplicate-artifact class: PACKAGES['gated-read-batching']['abstract_metadata'] is a 1883-char hard-coded copy of the abstract-derived ABSTRACT_METADATA.txt; it can drift from MANUSCRIPT.md's abstract and nothing checks it. It must not be derived naively (that would change gated's bytes), so a follow-up unit should compare it against ABSTRACT.txt and add a drift check rather than a rewrite.",
+  "write_paths": [
+    "tools/package/md2tex.py",
+    "tools/package/README.md",
+    "tests/test_md2tex.py",
+    "orchestration/units/UMDTEX1.md",
+    "orchestration/handoffs/UMDTEX1.json",
+    "scratch/umdtex1/"
+  ]
+}

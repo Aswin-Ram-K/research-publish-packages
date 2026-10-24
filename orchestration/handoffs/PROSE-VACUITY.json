@@ -1,0 +1,32 @@
+{
+  "unit": "PROSE-VACUITY",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/PROSE-VACUITY.md",
+    "orchestration/handoffs/PROSE-VACUITY.json"
+  ],
+  "evidence": {
+    "command_or_count": "~150 raw marker hits across the four prose files; SUPPORTED ~143, VACUOUS 1, STALE 6, FALSE-ORPHAN 0",
+    "commands": [
+      "grep -n -E 'not refuted|pending|will be|suggests|consistent with|approximately|roughly|TBD|to be|should|may |likely|appears|~|caveat|limitation' papers/context-cache/MANUSCRIPT.md papers/context-cache/CLAIMS.md papers/context-cache/EVIDENCE.md papers/context-cache/GAPS.md",
+      "grep -n 'CX-V3' orchestration/VERDICTS.md",
+      "sed -n '236,268p' papers/context-cache/EVIDENCE.md",
+      "sed -n '292,300p' papers/context-cache/EVIDENCE.md",
+      "sed -n '310,354p' papers/context-cache/GAPS.md",
+      "sed -n '654,660p' papers/context-cache/MANUSCRIPT.md",
+      "ls experiments/context-cache/cells/*/*.jsonl | wc -l  # 28 cells, U13/U14/CX-V2 offline by design"
+    ],
+    "defect_table": "orchestration/units/PROSE-VACUITY.md#defect-table",
+    "cross_check": "orchestration/VERDICTS.md:12 = '2026-10-21 05:22 | CX-V3 | context-cache | PASS' (recompute.py all 41/41, red→green 1/1 reproduced). Contradicts EVIDENCE.md:251/263-266/293-295/298-299 and GAPS.md:325/335-336 which still say CX-V3 is pending."
+  },
+  "blocker": "",
+  "next_unit_hint": "A fix unit should repair the six STALE lines (four in EVIDENCE.md, two in GAPS.md) and the one VACUOUS closure condition (GAPS.md:341) by rewriting them to reflect CX-V3 PASS; no data or claim-id changes needed.",
+  "write_paths": [
+    "orchestration/handoffs/PROSE-VACUITY.json",
+    "orchestration/units/PROSE-VACUITY.md"
+  ],
+  "assumptions": [
+    "Marker hit count (~150) is an estimate because marker tokens overlap in grep output; the per-class counts are exact for the defect table (only non-SUPPORTED hits are enumerated).",
+    "No FALSE-ORPHAN candidate was found: every asserted result maps to a cell with rows, and U13/U14/CX-V2 are offline/script units that produce markers or scripts, not .jsonl rows, by design."
+  ]
+}

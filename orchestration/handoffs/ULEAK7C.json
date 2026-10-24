@@ -1,0 +1,97 @@
+{
+ "unit": "ULEAK7C",
+ "status": "done",
+ "artifacts": [
+  "scratch/upkg7b/package/data/gated-read-rows.jsonl",
+  "scratch/upkg7b/package/README.md",
+  "scratch/upkg7b/package/verify/recompute-claims.py",
+  "scratch/upkg7b/package/MANIFEST.json",
+  "scratch/upkginstall7/deposit-metadata/README_DEPOSIT.md",
+  "scratch/upkginstall7/build_archive.sh",
+  "papers/gated-read-batching/CLAIMS.md",
+  "papers/gated-read-batching/DISCLOSURE_CHANGES.md",
+  "papers/gated-read-batching/released/gated-read-batching-released.tar.gz",
+  "papers/gated-read-batching/released/gated-read-batching-released/",
+  "scratch/uleak7c/sweep.py",
+  "scratch/uleak7c/sweep-before.txt",
+  "scratch/uleak7c/fix.py",
+  "scratch/uleak7c/scan2.py",
+  "scratch/uleak7c/consexp/",
+  "scratch/uleak7c/build_probe.sh",
+  "scratch/uleak7c/build1.log",
+  "scratch/uleak7c/build2.log",
+  "scratch/uleak7c/cm.log",
+  "scratch/uleak7c/red2.log",
+  "scratch/uleak7c/green2.log"
+ ],
+ "evidence": {
+  "leak_fixed": "rows 9235/9239 DUVAL_HOSTED_LAYER_OK -> HOSTED_LAYER_CHECK_OK (21->21); rows still 2267742 B / 9260 lines; new string exactly 2x; old string 0 in every case form across package+archive+paper",
+  "rows_digest": "md5=bc2b2a5a36f331a621437cdf328d0d77 sha256=e877d05eb3a06069b7cc35b4ffb5fc06e150b6a3b79efd4a9d7f4a3939da47cb",
+  "archive": "127300 B; sha256=1cfbd15b6f4dccbcf85b02f93971f6c44b405a4e071df516d9b372d4f121d86b; md5=8e66f1929db1eae6838b19f5a60a4841; 16 members / 12 files / one top dir; superseded 126639 B / 0e70ba54.../e2af1616...",
+  "check_manifest": "missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0; VERDICT PASS; exit=0 (absolute --package on the installed extraction)",
+  "recompute": "exit=0; checks: 49 passed: 49 failed: 0; VERDICT: PASS",
+  "red_green": "one byte flipped (792->892) -> exit=1 [FAIL] rows_sha256 published='e877d05eb3a06069' recomputed='a7ac8588b31e3005'; restored -> exit=0 and sha256 e877d05eb3a06069...",
+  "determinism": "probe==real1==real2 == 1cfbd15b... ; build_archive internal cmp: out1.tgz == out2.tgz",
+  "sweep_after": "duval loci=0 in package/payload/extraction; DUVAL_HOSTED_LAYER_OK=0 in papers/; unitid=0 in shipped surfaces",
+  "commands": [
+   "python3 scratch/uleak7c/sweep.py",
+   "python3 scratch/uleak7c/fix.py",
+   "python3 tools/package/regen_manifest.py --no-note --generated-utc 2026-10-19T06:55:00Z --package <pkg>",
+   "GENUTC=2026-10-19T07:00:00Z sh scratch/uleak7c/build_probe.sh",
+   "GENUTC=2026-10-19T07:00:00Z sh scratch/upkginstall7/build_archive.sh  (twice)",
+   "python3 tools/package/check_manifest.py --package <extracted-abs>",
+   "cd <extracted> && python3 verify/recompute-claims.py",
+   "python3 scratch/uleak7c/scan2.py  (consonance classification)",
+   "scratch/uleak7c/consexp/ ... replace CONSONANCE->CORPUSFILE, recompute -> 49/49, diff empty except rows digest"
+  ],
+  "consonance": {
+   "payload_total": 437,
+   "payload_lines": 225,
+   "rows_occ": 436,
+   "rows_lines": 224,
+   "readme_prose": "results/GATED_READ_2026.md:327 (1)",
+   "by_key": {
+    "tag": 206,
+    "file": 206,
+    "staged[]": 3,
+    "hit[]": 1,
+    "paths[]": 17
+   },
+   "applied": false,
+   "experiment": "equal-length CORPUSFILE swap leaves 49/49 PASS and every calls[] line byte-identical; only the rows digest moves",
+   "why_not_applied": "rewrites shipped run records (file/tag), falsifies the README byte-provenance sentence, overturns recorded gap G-23; author decision"
+  },
+  "readme_leak": {
+   "file": "papers/gated-read-batching/released/README.md",
+   "lines": [
+    11,
+    15
+   ],
+   "cause": "never applied - the JOB 1 pattern set had no internal-workspace-path pattern; no regression, no rebuild restored it; file is author-side (outside the 12-file archive)",
+   "shipped_tree_internal_paths": 0
+  },
+  "judgements": {
+   "GATED_READ_PROVENANCE.md:7": "names the environment variable DEEPSEEK_API_KEY in a method note, no value - ordinary tooling detail",
+   "rows:9028": "'keyring' is one of three router search terms against docs/BACKLOG.md - not key material"
+  },
+  "untouched": [
+   "papers/*/released/** for other papers",
+   "papers/encoder-crossover-190/**"
+  ],
+  "not_shipped_residuals": [
+   "scratch/upkg7b/clean/ (stale cut)",
+   "scratch/upkginstall7/verify/extract/ (stale extraction)"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "(1) If the parent orders the consonance rename, one cycle does it: equal-length CORPUSFILE in the rows + results/GATED_READ_2026.md:327, rewrite the README/README_DEPOSIT byte-provenance sentences and GAP G-23, regen manifest, update the rows digest sites and the build pins, rebuild. (2) ULEAK7B.md:104-105 still states only the compressed +792 B delta (outside this unit's write paths). (3) papers/gated-read-batching/released/README.md:11,15 are author-side internal-path references (not shipped) - author's call whether to sanitise.",
+ "write_paths": [
+  "scratch/upkg7b/**",
+  "scratch/upkginstall7/**",
+  "papers/gated-read-batching/**",
+  "scratch/uleak7c/**",
+  "orchestration/units/ULEAK7C.md",
+  "orchestration/handoffs/ULEAK7C.json"
+ ],
+ "scope_additions": "See evidence.consonance / evidence.readme_leak / evidence.judgements; all four parent asks folded into this handoff under this added key (no second handoff)."
+}

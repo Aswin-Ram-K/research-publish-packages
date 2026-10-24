@@ -1,0 +1,37 @@
+{
+  "unit": "VPKG7",
+  "overall": "partial",
+  "checks": [
+    "archive 126032 B, sha256 8eedf2e2d255d797ada48334e6950728a88cecb8738621d2fd4cbe80f8f5038d, md5 af51302483c88ceacb6bcb56ad87446b - reproduced",
+    "tar members: 16 = 4 dirs + 12 files; exactly one top-level dir 'gated-read-batching-released' - reproduced",
+    "extraction is byte-identical to payload for all 12 files incl MANIFEST.json (diff -r exit 0) - no differing file",
+    "check_manifest.py on payload and extraction: missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0 VERDICT PASS exit 0 - reproduced",
+    "recompute-claims.py: checks 49 passed 49 failed 0, VERDICT PASS, exit 0 - reproduced",
+    "red-green: byte 0x6c->0x93 at offset 1000000 -> hash_mismatch=1 HASH data/gated-read-rows.jsonl VERDICT FAIL exit 1; restore -> PASS exit 0 md5 3aad1ae29e472ef9f5f54e179510faf5 - reproduced",
+    "MANIFEST.json counts.files=12 counts.bytes_total=2372774 entries=11; independent re-hash: all 11 sizes+digests match, only unlisted on-disk file is MANIFEST.json (documented self-exemption)",
+    "CITATION.cff parses as YAML; no doi; license PolyForm-Noncommercial-1.0.0; author Aswin Ram Kalugasala Moorthy - reproduced",
+    "licence: COMMERCIAL.md byte-identical to template; LICENSE/CONTRIBUTING.md intentionally edited; PolyForm body verbatim at offset 115, 4563 B, sha256 ffcca38841adb694b6f380647e15f17c446a4d1656fed51a1e2041d064c94cc8",
+    "clean-state rebuild from scratch/upkginstall7/build_archive.sh (install destination redirected into scratch/vpkg7): two stages 126032 B, cmp 0, shipped sha256/md5 reproduced, rebuilt payload tree diff -r identical",
+    "LEAK FAIL: UPKG7B (MANIFEST.json:3,5), scratch/ paths (README.md:72,73,125; PROVENANCE.md:276), tools/package (MANIFEST.json:5, README_DEPOSIT.md:140, README.md:129), papers/ internal paths (README.md:3,29; recompute-claims.py:20), state/refresh-verify/duval path (README.md:107), 'duval' trace id in 4 e2e rows of data/gated-read-rows.jsonl",
+    "LICENSE scope section names fixture/ and second-labeller/ as shipped; neither exists in the 12-file package",
+    "release README correctly identifies the .tar.gz as the deposit artifact and warns against hand-zipping; does not warn about in-place extraction colliding with the same-named payload dir"
+  ],
+  "blocker": "Not deposit-clean: internal unit id UPKG7B and workspace paths (scratch/, tools/package/, state/refresh-verify/duval/...) ship in 6 of 12 files; target project name 'duval' appears in 4 e2e data rows; LICENSE scope paragraph names fixture/ and second-labeller/ which are not in the package.",
+  "next_unit_hint": "Regenerate MANIFEST.json with neutral purpose/generated_by text, strip scratch/ and state/refresh-verify/duval paths from README.md, README_DEPOSIT.md and GATED_READ_PROVENANCE.md, neutralise the 4 e2e 'duval' answers (or document them as intended corpus identity), fix the LICENSE scope paragraph to this package's data/results/verify only, rebuild, then re-run check_manifest + recompute-claims + a leak grep before deposit.",
+  "write_paths": [
+    "scratch/vpkg7/**",
+    "orchestration/units/VPKG7.md",
+    "orchestration/handoffs/VPKG7.json",
+    "strategy/VERIFICATION_REPORT_PKG7.md"
+  ],
+  "not_reproduced": [],
+  "overstated": [
+    "MANIFEST.json policy says it 'lists exactly the files on disk in this package'; it lists 11 of 12 (MANIFEST.json omitted by the documented self-exemption)",
+    "LICENSE scope section states fixture/ and second-labeller/ ship; neither is in the package (copied from another paper's release)"
+  ],
+  "unverified": [
+    "README.md:107 pinned-copy path state/refresh-verify/duval/scnB/... and its stated provenance were not traced (it is itself a leak)"
+  ],
+  "tool_calls": 16,
+  "bound": 20
+}

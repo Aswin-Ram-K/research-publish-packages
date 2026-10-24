@@ -1,0 +1,50 @@
+{
+ "unit": "MOE-VLLM",
+ "status": "done",
+ "artifacts": [
+  "experiments/context-cache/cells/MOE-VLLM/rows.jsonl",
+  "experiments/context-cache/cells/MOE-VLLM/analysis.json",
+  "experiments/context-cache/cells/MOE-VLLM/analysis.md",
+  "experiments/context-cache/cells/MOE-VLLM/moe_vllm_cell.py",
+  "experiments/context-cache/cells/MOE-VLLM/launch_moe_vllm.py",
+  "experiments/context-cache/cells/MOE-VLLM/run_moe_live.py",
+  "experiments/context-cache/cells/MOE-VLLM/moe_vllm_analyze.py",
+  "experiments/context-cache/cells/MOE-VLLM/logs/",
+  "orchestration/units/MOE-VLLM.md"
+ ],
+ "evidence": {
+  "rows": "306 rows, 306 status=200, sha256 6658227689a35eeedbe3e2645a9093fb099771ca5b6793bb9bb17582758a07a1; by phase {gate:2, probe:20, battery:284}",
+  "launch": "wv-v3 on :8020, health 200 after 271.9 s, config_sha256 302ebd820e9c7b87dbba18905ad91a20a37ee55060ee97871edb8cfdb43cd060 (identical to the 22-row V3 pilot), no --speculative-config",
+  "engine": "occamy-1.0, vLLM 0.27.1, resolved block 2096, max_model_len 32768",
+  "gate": "tokenize_count 3129 vs served_prompt_tokens 3131 -> offset 2; rep0_cached 0, rep1_cached 2096",
+  "boundary_law": "15/15 repeat rows match 'cached = 0 if L<g; L-(L mod g) if L mod g != 0; 0 on rep1 / L-g on rep2+ if L mod g == 0'; cold rows all zero 5/5; exact multiples L=2096 -> 0/0/0, L=4192 -> 0/2096/2096",
+  "pilot_correction": "the 22-row V3 grid overshot its nominal targets by 1.307-1.318x (target 2095 -> L 2759) because /tokenize named 'qwen3.5-9b' on the occamy server; its five-target law still holds on 15/15 repeat rows at the measured L",
+  "battery": "284 rows = 4 arms x 71 servable turns; hit 0.9012 overall (arms 0.901093-0.901305); uncached/turn 1682.722 (arms 1680.972-1684.972, spread 4.0); gamma 2096; schedule [] so arms are salt-separated replicates; final prompt 32466-32470",
+  "mechanism": "cached(t)==2096*floor(prompt(t-1)/2096) 252/280 (0.900); 28/280 one-block lags at 7 block completions (turns 9,23,27,37,41,51,55), per-arm excess over the rule 14672 = 7*2096 exactly; mean growth 446.9 tokens/turn",
+  "cross_cell_sglang": "284 paired rows vs G3 32k (turns 1-71), chars equal 284/284, prompt_tokens delta {0:144, 4:140}; paired uncached delta +952.958/turn, boot95 [875.5352,1028.1127] (seed 20251023, 10000 resamples), median 1024 [772.0,1124.0], 265/284 positive, ratio 2.306x",
+  "matrix_2x2_32k": "each n=284: occamy MoE vLLM 0.9012/1682.7; occamy MoE SGLang 0.9572/729.8; qwen3.5-9b vLLM 0.8690/2230.8; qwen3.5-9b SGLang 0.9569/733.4",
+  "dense_vllm_contrast": "V1 block 1088: floor rule 0/280, floor-1 230/280; V2 block 1056: floor-1 220/280 -- the dense hybrid permanently forfeits one block per turn, unlike occamy (transient lags only)",
+  "restore": "config_ok=True: :8014 qwen3.5-9b max_model_len 32768 block_size 1056, health 200; occamy :8012 200; wv-v3 removed; lock released 2026-10-24T00:03:38Z with the MOE-VLLM record",
+  "commands": [
+   ".venv/bin/python experiments/context-cache/cells/MOE-VLLM/run_moe_live.py --fresh",
+   "launch_moe_vllm.py --launch (V3 spec, no_spec, port 8020)",
+   "moe_vllm_cell.py --config V3 --phase all --port 8020 --no-lock",
+   "launch_moe_vllm.py --restore (V3)",
+   ".venv/bin/python experiments/context-cache/cells/MOE-VLLM/moe_vllm_analyze.py"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Independent verifier card (0 requests, no lock): re-run moe_vllm_analyze.py from the pinned rows.jsonl and reproduce every number. Red->green: (1) change the mechanism rule to the current prompt -> 192/280 not 252/280; (2) use a plain floor boundary law -> 9/15 not 15/15; (3) drop the one-block lag term -> expected 104961 vs observed 119633, short by exactly 14672 = 7*2096. Then place the row in the manuscript matrix with the licensed sentence. Still open: the lag condition is unidentified; 64k and any compacting depth need a larger max_model_len launch; the four arms at 32k are replicates because no fold fires (same as G3/WIN-VLLM/DENSE-SGL).",
+ "write_paths": [
+  "experiments/context-cache/cells/MOE-VLLM/**",
+  "experiments/context-cache/.occamy.lock",
+  "orchestration/units/MOE-VLLM.md",
+  "orchestration/handoffs/MOE-VLLM.json"
+ ],
+ "assumptions": [
+  "The card prompt was one line; the unit was scoped from the record as the full four-arm battery on G3's 32k schedule (the pilot's own next_step), not a new mechanism.",
+  "32k is the only depth this launch can serve: --max-model-len 32768 is a launch invariant (MTP removed; gpu-memory-utilization 0.32 shares the GB10 with production occamy at 0.45).",
+  "The pilot's grid lengths were nominal because its /tokenize named qwen3.5-9b; this cell names occamy-1.0 and reaches exact L. Both are reported.",
+  "occamy :8012 was never touched; production qwen9b was stopped (never removed) for the variant's lifetime and restored by docker start."
+ ]
+}

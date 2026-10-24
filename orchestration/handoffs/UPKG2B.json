@@ -1,0 +1,43 @@
+{
+  "unit": "UPKG2B",
+  "status": "done",
+  "artifacts": [
+    "scratch/upkg2b/package/ (11 files: README.md, LICENSE, COMMERCIAL.md, CONTRIBUTING.md, MANIFEST.json, data/decision-variants.jsonl, data/l1-head-to-head.jsonl, fixture/{fixture-190.json,reflex-decisions.ts,DECISION_CASE_SCHEMA.ts}, verify/recompute-claims.py)",
+    "scratch/upkg2b/cut_ladder.py",
+    "scratch/upkg2b/cuts/ (11 cut trees)",
+    "scratch/upkg2b/checker-full.txt",
+    "scratch/upkg2b/cut-ladder.txt",
+    "scratch/upkg2b/package/README.md",
+    "orchestration/units/UPKG2B.md"
+  ],
+  "evidence": {
+    "checker": "python3 scratch/upkg2b/package/verify/recompute-claims.py -> 'CHECKS: 36/36 passed', 'ALL PUBLISHED NUMBERS REPRODUCED: True', 'VERDICT: PASS', exit 0",
+    "check_manifest": "python3 tools/package/check_manifest.py --package /home/zer0null/reserach extarctor/scratch/upkg2b/package -> 'missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0', 'manifest_self_recomputes=True', 'VERDICT PASS', exit 0",
+    "clean_extraction": "mktemp -d; cp -a package/. $EX; cd $EX; python3 verify/recompute-claims.py -> exit 0, 36/36 passed",
+    "red_green": "RED: 1 byte flipped at offset 98 of data/l1-head-to-head.jsonl (sha256 6af0e0d8294cf4d7a20e2d8cb9bfe0c11ff70cc4c4b2792fcdedaf9246b2a1e7 -> 9e3280b9024897455f6e2ca10ca23f6d1cad09f05a386ca1741f5acdb9b339c0) -> checker exit 1, 'CHECKS: 32/36 passed', 'FAILED: l1 laya vs decider-0.8b == 98/190 = 51.5789%', 'VERDICT: FAIL'; restored -> sha256 6af0e0d8... -> checker exit 0",
+    "closure_first_break": "python3 scratch/upkg2b/cut_ladder.py -> c03_drop_one_row (drop the LAST row of decision-variants.jsonl) exit=1, VERDICT FAIL; c01_drop_fixture_ts exit=0, c02_drop_unused_fields exit=0, c09_drop_fixture exit=0, c00_full exit=0, c00b_plus_exp7 exit=0; c04 KeyError: 'correct', c05 KeyError: 'decomposable', c06 exit=1, c07/c08 FileNotFoundError",
+    "headline_measurements": "476/1140 = 41.7544%; V1 537/1140 = 47.1053%; V2 456/1140 = 40.0000%; V3 494/1140 = 43.3333%; controls 244/244 and 244/244 identical; prompt 245/760 = 32.2368%; l1 98/190 = 51.5789%; outcome V0 324/1140 = 28.4211%; correct values {0,1,2,3,4} int not bool; l1 line 1 correct=0 picked_index=1",
+    "record_digests": "data/decision-variants.jsonl c5ec44a799ddeb963f862fc5c054ddad6ef2fce6ad90edfafd7c1755ac4370e7 (1197797 B); data/l1-head-to-head.jsonl 6af0e0d8294cf4d7a20e2d8cb9bfe0c11ff70cc4c4b2792fcdedaf9246b2a1e7 (63238 B); fixture/fixture-190.json a15224bada6950ad27f693acd2287dec564134419061baa475f6716d2db3852e; fixture/reflex-decisions.ts 89e77a8e24a907f06345a45485c013799e08c806cc9d8f075db7709fbfd8e169; fixture/DECISION_CASE_SCHEMA.ts be339ddf82d7fab6622d18cb5baf021fdb168a5906d7dd40e519f1b24cf92fc6",
+    "sizes": "files=11, files[]=10, counts.bytes_total=1457223 (excludes MANIFEST.json), on-disk total 1462409; MANIFEST.json 5186 B, README.md 9225 B, verify/recompute-claims.py 13953 B",
+    "census": "python3 tools/package/census.py -> 8 identifiers / 6852 occurrences; 6840 in data/*.jsonl (escalation 1080, worker.class 1080, context.package 1008, memory.admission 1008, acquisition 936, capability.family 936, topology 792) + 12 MATERIALISE in the fixture; paper #3's own shipped package = 15 identifiers / 66 occurrences",
+    "neutralise_measured": "python3 tools/package/neutralise.py --scheme neutral-tag -> exit 0, renamed_occurrences 1872, files_changed 2; census 8 -> 6 identifiers; numbers UNMOVED (V0 binding 476/1140, l1 98/190) -- rejected because it destroys the required byte-identity while clearing only 2 of 7 and the rest would need a widened vocabulary (forbidden)",
+    "commands": [
+      "mkdir -p orchestration/units orchestration/handoffs scratch/upkg2b/package",
+      "python3 scratch/urever2/verify_divergence.py",
+      "python3 scratch/udraft2/recompute_per_variant.py",
+      "python3 tools/package/census.py --package /home/zer0null/reserach extarctor/scratch/upkg2b/package",
+      "python3 scratch/upkg2b/package/verify/recompute-claims.py",
+      "python3 scratch/upkg2b/cut_ladder.py",
+      "python3 tools/package/regen_manifest.py --package /home/zer0null/reserach extarctor/scratch/upkg2b/package --generated-utc 2026-10-19T05:30:00Z",
+      "python3 tools/package/check_manifest.py --package /home/zer0null/reserach extarctor/scratch/upkg2b/package",
+      "cp -a scratch/upkg2b/package/. $(mktemp -d) && cd $_ && python3 verify/recompute-claims.py"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Install the package: copy scratch/upkg2b/package/** into papers/replay-record-not-decision/ (or its released/ tree) as a unit that may write there, then re-run tools/package/check_manifest.py --package papers/replay-record-not-decision/<dir> and verify/recompute-claims.py from a clean extraction. Two things for the installer to keep: (1) data/*.jsonl must stay byte-identical (digests c5ec44a7... / 6af0e0d8...), and (2) the census hits on the seven kind tokens are a recorded, reasoned decision in README.md -- do NOT clear them by widening tools/package/neutralise.py ROLES/ENUMS/FRAGS or by make_data_vocab.py --mode full. Also note MANIFEST.json must be regenerated by regen_manifest.py after any install-time path change, and MANIFEST counts.files INCLUDES MANIFEST.json while counts.bytes_total EXCLUDES it.",
+  "write_paths": [
+    "scratch/upkg2b/**",
+    "orchestration/units/UPKG2B.md",
+    "orchestration/handoffs/UPKG2B.json"
+  ]
+}

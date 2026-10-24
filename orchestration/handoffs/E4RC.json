@@ -1,0 +1,67 @@
+{
+ "unit": "E4RC",
+ "status": "done",
+ "artifacts": [
+  "/home/zer0null/reserach extarctor/orchestration/units/E4RC.md",
+  "/home/zer0null/reserach extarctor/orchestration/handoffs/E4RC.json",
+  "/home/zer0null/reserach extarctor/orchestration/units/E4R.md",
+  "/home/zer0null/reserach extarctor/orchestration/handoffs/E4R.json"
+ ],
+ "evidence": {
+  "correction_1_before_after": {
+   "E4R.md:53 (now :70)": "BEFORE '**One-repeat lag is refuted; transient recovery is refuted.**' -> AFTER '**The one-repeat (transient) lag is refuted; the persistence reading is confirmed** (the transient-recovery reading -- L at rep-3 -- is refuted at 0/40).'",
+   "E4R.md:37 (now :54)": "BEFORE '| one-repeat lag | `L-64` |' -> AFTER '| persistence (was labelled \"one-repeat lag\") | `L-64` |'",
+   "E4R.json evidence.predictions.one_repeat_lag_persists": "BEFORE 'CONFIRMED at rep-3 (40/40 at L-64)' -> AFTER same verdict + 'the PERSISTENCE reading ... the one-repeat (transient) lag reading, i.e. recovery at rep-3, is REFUTED'; added one_repeat_lag_readings {persistence: CONFIRMED, recovery_at_rep3: REFUTED}"
+  },
+  "correction_2_before_after": {
+   "E4R.json evidence.rep3_licensed_sentence": "BEFORE '... then a permanent one-block tax on every later repeat measured (repeats 1-3, one endpoint/model/SGLang build).' -> AFTER '... then a persistent one-block tax on every later repeat measured. Bounded scope: persistent through repeat 3 (repeats 2-3 of 3 measured; rep-4 not reachable, 200 > 180) -- the 64-tax applies to repeats 2-3, and (repeats 1-3) is the measured window, not the tax's range.' plus rep-1 cached 0, tax L, 20/20",
+   "E4R.md:56 (now :74-76)": "BEFORE 'and then a permanent 64-token (one block) tax' -> AFTER 'and then a **persistent** 64-token (one block) tax* **Scope (VE4R):** persistent **through repeat 3** -- repeats 2-3 of 3 measured ... rep-1's tax is `L` (`cached 0` 20/20)'",
+   "E4R.md:57-58 (:84-86) and :70-71": "'\"Permanent\" is licensed for repeats 2-3' -> '\"Persistent\" is licensed for repeats 2-3 ... (5 sends/trial x 40 trials = 200 > 180)'; 'E4C scoped permanent restored as persistent through repeat 3'"
+  },
+  "correction_3_before_after": {
+   "E4R.json evidence.ttft_ms_medians": "BEFORE {1024_miss:231.442, 1024_rep2:116.947, 1024_rep3:116.669, 1088_miss:278.87, 1088_rep2:117.6, 1088_rep3:117.347, 1008_rep1:109.693} -> AFTER adds 1024_cold:232.524 and 1088_cold:279.3, renames *miss -> 1024_rep1/1088_rep1, all prior values byte-identical; added ttft_ms_key_labels note",
+   "E4R.md:61-62 (now :80-84)": "BEFORE '1024 miss 231.4 / rep2 116.9 / rep3 116.7; 1088 miss 278.9 / rep2 117.6 / rep3 117.3' -> AFTER '1024 **rep1** 231.4 / rep2 116.9 / rep3 116.7 (**cold** 232.5); 1088 **rep1** 278.9 / rep2 117.6 / rep3 117.3 (**cold** 279.3) ... `miss` meant rep-1, not cold'"
+  },
+  "correction_4_before_after": {
+   "E4R.json evidence.rep3_counts.eq_ceiling_u10_64floor": "BEFORE '40/40 CP95 [0.9119,1.0]' -> AFTER '40/40 CP95 [0.9119,1.0] (exact Clopper-Pearson 0.025**(1/40) = 0.9119; Wilson would be 0.9124 -- the CP label is correct, VE4R correction 4)'",
+   "E4R.md:52 (now :69)": "unchanged text 'CP95 [0.9119, 1.0]' -- the card already said CP, no rename needed; the interval is named in the new corrections table"
+  },
+  "json_parse_proof": "after rewrite: python3 json.load -> OK; keys ['unit','status','artifacts','evidence','blocker','next_unit_hint','write_paths','assumptions','superseded_text','verifier_corrections','verified_by'] = 7/7 contracted + 4 additive; verifier_corrections = 4 entries, all applied:true, verifier VE4R",
+  "numbers_unchanged": "requests 180 = max_requests 180; cold_isolation '46/46 cold rows cached == 0'; rep3 L_minus_64 40/40; eq_L 0/40; block_tax_64 40/40; rep3_equals_rep2_per_trial 40/40; rows sha256 matches handoff",
+  "rows_untouched_sha256": "05a59f28d169947fd959842ef482e07ec95fb2a96ac8405151e4aaf1920e09a7 (identical before and after; opened read-only)",
+  "md_additive_record": "## Corrections (VE4R, applied by E4RC) at E4R.md:3 (4-row as-written -> corrected-to table + an unchanged-numbers line); body edits are the 4 repairs above; no section deleted",
+  "superseded_text_keys": [
+   "rep3_licensed_sentence",
+   "ttft_ms_medians",
+   "predictions_one_repeat_lag_persists",
+   "next_unit_hint",
+   "eq_ceiling_u10_64floor",
+   "E4R.mdx_corrections_section",
+   "E4R.md:53",
+   "E4R.md:56",
+   "E4R.md:61-62"
+  ],
+  "occurrence_audit": "'One-repeat lag is refuted' survives only inside the corrections table as a quoted as-written string (0 unqualified uses in the body); 'Wilson' appears only in the disambiguation ('Wilson would be 0.9124'); 'permanent' survives only as the superseded word being scoped",
+  "constraints": "0 live requests, 0 POSTs, no .occamy.lock acquisition, no git anywhere, no write outside the 4 declared paths, cells/E4R/* untouched",
+  "commands": [
+   "python3 here-doc: json.load(E4R.json) before edit; 7 string replaces on E4R.md each asserted count==1; json.dumps(temp) -> json.load(temp) -> assert 7 keys -> os.replace",
+   "sha256sum experiments/context-cache/cells/E4R/e4r_rows.jsonl (before + after)"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "E4R record is now internally consistent and the 7 contracted keys still parse: the persistence reading is CONFIRMED, the one-repeat (transient) lag REFUTED, 'permanent' bounded to repeat 3 (repeats 2-3 of 3 measured, rep-1 tax L), TTFT keys renamed to rep1 with cold 232.524/279.3 separate, CP95 named Clopper-Pearson. Nothing re-measured. Still open (unchanged by this unit): rep-4+ (200 requests > 180 cap), full n at 1008/1152, 2048/4096, and the mechanism (G13). A fresh verifier could re-check that no number moved by diffing the two JSON number fields listed in evidence.numbers_unchanged.",
+ "write_paths": [
+  "/home/zer0null/reserach extarctor/orchestration/units/E4RC.md",
+  "/home/zer0null/reserach extarctor/orchestration/handoffs/E4RC.json",
+  "/home/zer0null/reserach extarctor/orchestration/units/E4R.md",
+  "/home/zer0null/reserach extarctor/orchestration/handoffs/E4R.json"
+ ],
+ "tool_calls": 4,
+ "bound": 8,
+ "completed_at": "2026-10-21T16:17:30-0500",
+ "assumptions": [
+  "A1: E4R.md line numbers cited by VE4R are pre-insertion; the corrections table gives the VE4R reference and the audit gives the new line, so both locators resolve.",
+  "A2: 'permanent' in the md's licensed sentence (E4R.md:56) was scoped to 'persistent' as well as the JSON, because correction 2's intent is that both records say the same thing; the original sentence is under superseded_text.",
+  "A3: no re-derivation of any count was performed: VE4R re-derived them from the same sha-pinned rows, and this unit only re-read the JSON fields to prove they did not move."
+ ]
+}

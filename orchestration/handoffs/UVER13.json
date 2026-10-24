@@ -1,0 +1,61 @@
+{
+  "unit": "UVER13",
+  "overall": "pass",
+  "checks": [
+    "C0 hash: sha256(strategy/CPRIME_MEASUREMENT.md)=13d0712ebecf77a086747115fcda7e21d989642aa8a001e5c17d7e015f338dcb, 323 lines, 21748 B -> reproduced",
+    "C1 bytes: live==pinned train 2205127/dev 484922; stripped 509453/118444; bij 501133/116669; tree totals 5158635/3096483/3057949 (44 files each, path diff empty); strip saving 2062152 B; per-field train bytes texts 1625474 id 13600 familyId 17600 clanId 15200 stratum 15800 -> reproduced",
+    "C3 census raw-line (own run): pinned 26344/99, stripped 9247/99, bij 5384/95 -> reproduced; UNEUTRAL3's 8213/99 contradicted; its source file scratch/uneutral3/census-tree-bij.txt exists on disk",
+    "C3b decoded-value walk (own): pinned values 12042/keys 3375; stripped 6476/1375; bij 3294/1169; MIXED method (JSON decoded + non-JSON raw) = 16813/9247/5384 exactly U4 floor.py totals -> reproduced",
+    "C4 escape artifact: gap 9531 = nKind 3177 + nCandidate 3177 + nSituation 3177; raw escape seqs pinned 9536 (7743 train + 1788 dev), stripped 5, bij 5 -> artifact claim reproduced, U4's 9537 is raw-hit not gap",
+    "C5 stale build: diff -rq tree-bij rt/bij = 21 files differ + 11 only-in; fixture-190.json mtimes tree-bij 20:08:25 vs rt/bij 20:06:56; bij.py 20:07:57 -> reproduced",
+    "C5b determinism: scratch/uver13/bij_uver13.py run twice -> runA==runB and runA==on-disk tree-bij (diff -rq empty) -> reproduced",
+    "C6 metrics: routeA ties 120, agreement 0.34210526315789475, kappa 0.32520740993294694, exact 65, zero 41; routeB 0.9052631578947369/0.9013584840356494/172/18; AB 0.3526315789473684; closed kappa 0.8837023738280471; roster 0.9139973672663448; arms 0.347368/0.347368/0.263158/0.452632/0.231579/0.678947; 2x2 39/27/90/34 - identical across live,pinned,stripped,bij -> reproduced",
+    "C6b digests: pinned=stripped 8dd05ce6fe31f6bef484e97bed9ec8c96fb5f2c0b17ebb20ff57afb8716c106a; bij c7696edc0e71d83faafc2e489925788e0f36c6af94913674f8953718352c9a55 -> reproduced, UNEUTRAL3 30b75581 contradicted",
+    "C6c ALL CLAIM NUMBERS PRESERVED: True printed on all three trees incl. bij -> reproduced (and NOT usable as evidence, per card)",
+    "C7 in-stimulus floor: 2171/30 in pinned, stripped AND bij; per-identifier list identical to U4 (editor 398 ... MutationProposal 2) -> reproduced",
+    "C7b prepare.py exit 2 in all three trees with exact 'REFUSED: corpus digest mismatch - expected c78681d6..., got 58b09a3c...'; corpus sha live c78681d6, pinned=stripped 58b09a3c, bij 47fb4a50 -> reproduced",
+    "C8 KIND_ALIAS 4 keys vs corpus kinds K01,K02,K04,K05,K07,K08,K09,K10,context.package -> 0 of 9 resolve in pinned and stripped; bij renames only context.package->N10 -> reproduced",
+    "C9 JSONL parses train 800 / dev 200 / disagreements 18, 0 bad; parse_fixture.py, compare.py, recompute-claims.py, compileall all exit 0 on all three trees -> reproduced",
+    "C10 23/190 fixture questions carry a live kind token (word-boundary alternation over the 7 live kinds) -> reproduced; 25/190 lowercase-substring NOT reproduced (I get 23)",
+    "C2 field audit by grep -n read-sites: train.py loads split at 429-430; options 94,312,322,373; kind 311,322; situation 311,322; goldIndex 105,169,175,315,323,376; gold 367; texts no reader (write-only prepare.py:115, re-derived train.py:103/evaluate.py:79/tccommon.py:162); id/familyId/clanId/stratum write-only tccommon.py:139-143, corpus/fixture readers only -> strip field list correct",
+    "C11 tooling (.py/.sh) census occurrences 308 in pinned, stripped and bij -> reproduced"
+  ],
+  "contradicted": [
+    "CPRIME_MEASUREMENT.md:291 verbatim 'The claimed bij census `8,213` / `99 of 184` has no on-disk source.' is FALSE: scratch/uneutral3/census-tree-bij.txt (mtime 20:06, 11663 B) contains 'TOTAL OCCURRENCES: 8213' and 'distinct identifiers hit: 99 of 184'; sibling files census-tree-pinned.txt (26344) and census-tree-stripped.txt (9247) exist too. What is absent is a SCANNER under scratch/uneutral3/ (the scanner is scratch/uneutral2/census2.py). Section 10's artifact index also omits the three census files. Correct wording: 'the on-disk census is a superseded 20:06 build; no scanner under scratch/uneutral3/ produced it.'",
+    "CPRIME_MEASUREMENT.md:158 verbatim row '| `situation` | `harness/train.py:311`, `:316`, `:322`; `harness/tccommon.py:163` |' is wrong at :316: train.py:316 is print(f\"  fitting on {len(labels)} (situation, option) pairs\"); grep -n '[\"situation\"]' over harness/train.py returns lines 311 and 322 only (pair list built at :313 from the :311 render). Drop :316."
+  ],
+  "overstated": [
+    "CPRIME_MEASUREMENT.md:9-12 verbatim '`verify/recompute-claims.py` prints `ALL CLAIM NUMBERS PRESERVED: True` **even on a tree where route A has moved**. It reads neither JSONL and never recomputes route A.' -> the script DOES read second-labeller/metrics.json (:112-118) and DID print 'ALL CLAIM NUMBERS PRESERVED: False' / exit 1 when I moved stored labelsB numbers (closed_subset kappa 0.8837->0.8731172069825437, AB mutual 0.3526->0.3473684210526316). True-on-bij is real (digest moved, stored metrics did not) and the caution stands, but the stated justification is not reproduced.",
+    "CPRIME_MEASUREMENT.md:197-198 verbatim 'Consequence: **the released tree cannot regenerate its own JSONL; the strip is one-way.**' -> 'the strip is one-way' is false: restoring the matching live corpus (c78681d6...) makes harness/prepare.py exit 0 in BOTH the pinned and the stripped tree and re-emit the full unstripped pinned-shape train.jsonl 2205127 B / dev.jsonl 484922 B. Only the corpus-digest pin blocks regeneration.",
+    "CPRIME_MEASUREMENT.md:136 verbatim 'My value-level walk (`scratch/uneutral4/floor.py`, case-insensitive over JSON values) totals pinned **16,813** ...' -> those totals require a MIXED method (decoded values+keys for the 19 JSON files, raw text for non-JSON). A strict decoded walk gives pinned 15417, stripped 7851, bij 4463. The claimed 'agree with census2.py exactly, which validates the walk' is partly circular; the 9531 escape-artifact finding is independently confirmed.",
+    "CPRIME_MEASUREMENT.md:140-141 verbatim 'counting ... as the identifiers `nKind` / `nCandidate` / `nSituation` (3,180 + 3,179 + 3,178 = 9,537, ~the whole gap)' -> the artifact gap is exactly 9531 (3177+3177+3177); 3180/3179/3178 are raw hits including 3+2+1 genuine tooling hits. 6-count slip.",
+    "CPRIME_MEASUREMENT.md:110 verbatim '`diff -rq tree-bij rt/bij` shows ~20 differing data files' -> measured 21 common files differ (+11 files only in rt/bij, 32 diff lines total); includes diagnostic outputs, not only data files."
+  ],
+  "not_reproduced": [
+    "CPRIME_MEASUREMENT.md:235 verbatim '25 of 190 by lowercase substring' -> my lowercase-substring alternation over the 7 live kinds gives 23/190, identical to the word-boundary count; the printed word-boundary regex '(?<![A-Za-z0-9_.])k(?![A-Za-z0-9_])' is malformed (bare k, not kind). The load-bearing 23/190 reproduces."
+  ],
+  "unverified": [
+    "No model was run: torch/transformers untested, so every 'numbers preserved' statement is metric recomputation from stored labels/results, not retraining or re-rendering.",
+    "Pinned generator invocation is not recorded in scratch/uneutral3/gen-pinned.log; I did not re-run UNEUTRAL1's build.",
+    "The superseded bij.py revision that yields digest 30b75581... is unrecoverable; I reproduced the phenomenon (digest moves) and the current value only.",
+    "'23 fixture questions name their own kind' is a textual count, not a behaviour test.",
+    "No exhaustive on-disk search for a leaked bijection map M."
+  ],
+  "tool_calls": 29,
+  "bound": 40,
+  "red_green": "Guard: harness/prepare.py corpus-digest refusal. RED: (cd scratch/uver13/t/pinned && python3 harness/prepare.py) -> exit 2, 'REFUSED: corpus digest mismatch - expected c78681d6cf35bf23245bd24963c5fbdd6b3ea03e1bf74d1b3ddc5a49ca63fd66, got 58b09a3cd84d3bef0e1a67abcd4445517d447709742991d8afbd56c89ff6df6a'. GREEN: cp repro/encoder-crossover-190-SANITISED/harness/data/corpus.json scratch/uver13/rg-stripped/harness/data/corpus.json; (cd scratch/uver13/rg-stripped && python3 harness/prepare.py) -> exit 0 ('  Candidate option: security'), regenerating train.jsonl 2205127 B / dev.jsonl 484922 B; same in rg-pinned. Second pair: flipping labelsB.json['labels']['acquisition-001'] 1->0 then running second-labeller/compare.py moves closed_subset kappa to 0.8731172069825437 and AB mutual to 0.3473684210526316, and recompute-claims.py then prints 'ALL CLAIM NUMBERS PRESERVED: False' with exit 1 (green baseline on the unmodified copy prints True).",
+  "corrections_verbatim_before_after": [
+    "BEFORE (CPRIME_MEASUREMENT.md:291): 'The claimed bij census `8,213` / `99 of 184` has no on-disk source.' AFTER: 'The on-disk census scratch/uneutral3/census-tree-bij.txt (20:06) still shows 8,213 / 99, but it is a superseded build: no scanner under scratch/uneutral3/ produced it (scanner is scratch/uneutral2/census2.py), and the current tree-bij measures 5,384 / 95.'",
+    "BEFORE (CPRIME_MEASUREMENT.md:158): '| `situation` | `harness/train.py:311`, `:316`, `:322`; `harness/tccommon.py:163` |' AFTER: '| `situation` | `harness/train.py:311`, `:322`; `harness/tccommon.py:163` |'",
+    "BEFORE (CPRIME_MEASUREMENT.md:10-12): 'It reads neither JSONL and never recomputes route A.' AFTER: 'It reads second-labeller/metrics.json and does catch movement in the stored second-labeller numbers (printed False when I moved them), but it never recomputes route A from the data, so True is not evidence that no number moved.'",
+    "BEFORE (CPRIME_MEASUREMENT.md:198): 'the strip is one-way.' AFTER: 'the refusal is purely the corpus-digest pin: restoring the matching corpus makes prepare.py exit 0 in the stripped tree too and re-emit the full unstripped JSONL.'"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Report content is sound (overall pass). If strategy/CPRIME_MEASUREMENT.md is to be cited onward, apply the 4 verbatim corrections above (esp. the :291 'no on-disk source' error and the :197 'strip is one-way' overstatement) — I was barred from editing it. No further measurement is required for the release decision to ship tree-stripped.",
+  "write_paths": [
+    "scratch/uver13/**",
+    "strategy/VERIFICATION_REPORT_13.md",
+    "orchestration/units/UVER13.md",
+    "orchestration/handoffs/UVER13.json"
+  ]
+}

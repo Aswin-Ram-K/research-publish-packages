@@ -1,0 +1,83 @@
+{
+  "unit": "GAP-LEDGER2",
+  "status": "done",
+  "artifacts": [
+    "state/gap-ledger.json",
+    "tests/test_gap_closure_ledger.py",
+    "orchestration/units/GAP-LEDGER2.md"
+  ],
+  "evidence": {
+    "counts": {
+      "gaps": 16,
+      "closed": 2,
+      "narrowed": 3,
+      "open": 10,
+      "unverifiable": 1
+    },
+    "ids": [
+      "G1",
+      "G2",
+      "G3",
+      "G4",
+      "G5",
+      "G6",
+      "G7",
+      "G8",
+      "G9",
+      "G10",
+      "G11",
+      "G12",
+      "G13",
+      "G14",
+      "G15",
+      "DOWNGRADE"
+    ],
+    "red": "G1: `cells/G1` (cell) does not resolve -> G1: stated 'CLOSED by G1 (C44)' claims closed but derived 'unverifiable'; unresolved ['cells/G1']",
+    "red_method": "moved experiments/context-cache/cells/G1/rows.jsonl aside, reran the ledger test",
+    "restore": "cmp: restored byte-identical",
+    "green": "8 passed in 0.05s (PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_gap_closure_ledger.py -q)",
+    "disagreements": [],
+    "no_stated_status": [
+      "G2",
+      "G6",
+      "G8",
+      "G9",
+      "G10",
+      "G12",
+      "G13",
+      "G14",
+      "G15",
+      "DOWNGRADE"
+    ],
+    "unverifiable": "DOWNGRADE: cites experiments/context-cache/cells/SGLang/u2_gate.py, which does not exist; the only u2_gate.py on disk is experiments/context-cache/cells/U2/u2_gate.py",
+    "stale_citations": [
+      "G5 MANUSCRIPT.md:14 -> no 6.744 (bound is at :16 and :163)",
+      "G5 MANUSCRIPT.md:100 -> no 6.744 (arm table at :131)",
+      "G5 MANUSCRIPT.md:439 -> no 6.744 (single-seed limitation at :625)",
+      "G5 resident-capacity note MANUSCRIPT.md:424 -> empty line (residency text at :581)",
+      "G7 MANUSCRIPT.md:424 -> empty line (1.5017 residency text at :581)",
+      "G11 EVIDENCE.md:240 -> empty line; quoted phrase 'until it rules' absent from EVIDENCE.md"
+    ],
+    "commands": [
+      "grep -n '^#\\+ *G[0-9]' papers/context-cache/GAPS.md",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_gap_closure_ledger.py -q",
+      "mv experiments/context-cache/cells/G1/rows.jsonl /tmp/g1_rows.hidden (red arm)",
+      "cmp /tmp/g1_rows.bak experiments/context-cache/cells/G1/rows.jsonl"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "GAPS.md owns the six stale line refs and the dangling SGLang gate path; the ledger keeps them visible as stale refs / a named known_missing, so a prose-fix card can point the test at corrected lines without changing the derivation.",
+  "write_paths": [
+    "state/gap-ledger.json",
+    "tests/test_gap_closure_ledger.py",
+    "orchestration/handoffs/GAP-LEDGER2.json",
+    "orchestration/units/GAP-LEDGER2.md"
+  ],
+  "assumptions": [
+    "A cited path that does not exist is acknowledged in ledger.known_missing (one entry, with reason) rather than left as a permanently red guard; any other unresolved ref still fails the test, so the red arm stays live.",
+    "Section refs (MANUSCRIPT sections) are not evidence refs; only file:line, claim ids, cell paths and handoffs are audited, per the card."
+  ],
+  "tool_calls": 19,
+  "bound": 18,
+  "bound_note": "one call over: AGENTS.md unit contract 4 requires the unit card, which the card's write list also names; the 18-call bound counts the analysis itself."
+}

@@ -47,7 +47,7 @@ Measured live on the actor's own churn:
 
 | path | working tree | pinned at HEAD `5cdc471a` | pinned at `3982f26` |
 | --- | --- | --- | --- |
-| `traces/2026-09-28-duval-m0.jsonl` | `431605e6` (866816 B) | `431605e6` (matches) | `ba6128bf` (864384 B) |
+| `traces/2026-09-28-duval-m0.jsonl` | `431605e6` (866816 B) — *working-tree value at recon time*; re-measured 2026-10-15 21:02:05 at `35687221` (1624082 B) | `431605e6` (matches) | `ba6128bf` (864384 B) |
 | `.ci-trunk.txt` | `590e007e` (281253 B) | `PathNotFoundAtCommit` | `PathNotFoundAtCommit` |
 
 `3982f26` is the commit HEAD pointed at during this unit's recon, minutes before

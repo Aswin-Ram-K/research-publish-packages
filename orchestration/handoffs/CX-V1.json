@@ -1,0 +1,46 @@
+{
+  "unit": "V1",
+  "overall": "pass",
+  "supersedes": "the batch-1 V1 verdict at this path (2026-10-08, kg/graphify); its record is preserved in orchestration/VERDICTS.md:10 and :42, so that link now points at this context-module verdict - re-file if a stable name is wanted",
+  "checks": [
+    "re-ran: PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_context_nodes.py tests/test_context_render.py tests/test_context_meter.py tests/test_context_runner.py -q -> '.................................... [100%]\\n36 passed in 0.06s' (matches U1; no vacuous test: assertions compare independently constructed nodes/rows, not a constant the test just defined)",
+    "read all four test files: test_context_nodes.py (113 lines), test_context_render.py (134), test_context_meter.py (86), test_context_runner.py (234) - 36 tests, 7 of them from the parametrised normalise_cache case",
+    "red->green (render.py): inserted 'return _pointer_messages(...)' as the first statement of the NAIVE_MUTABLE branch so it renders identically to POINTER -> test_naive_mutable_rewrites_the_preamble FAILED (tests/test_context_render.py:81) and test_mutable_policy_prefix_digest_changes_every_turn FAILED (tests/test_context_runner.py:205); 2 failed in 0.04s; restored, sha256 identical, 36 passed again",
+    "structural_search lang=py pattern '$SELF.$FIELD = $VALUE' over src/resextract/context -> 0 matches; the same pattern over src -> 8 matches (journal.py:125-126, cli.py:351/367, web/search.py:217-220), so the pattern does fire and the zero is a real negative, not a broken query",
+    "structural_search lang=py pattern 'object.__setattr__($$$ARGS)' over src/resextract/context -> 0 matches",
+    "grep -rnE 'def (edit|set_|_set|mutate|update)\\(|__setattr__|__delattr__|frozen' src/resextract/context/ -> only nodes.py:42 '@dataclass(frozen=True)' plus two frozenset literals; no def edit/set_*, no __setattr__ override, no object.__setattr__ write path",
+    "probe P1: StateNode.create('same text','delta') vs ('same text','invariant') -> 651cb8d290 vs 6cc61bfff8, no collision; kind is inside the hashed dict at nodes.py:73-80, which is correct (a delta and an invariant are different state and must not share an address)",
+    "probe P2: canonical_bytes({'t':'\\ud800'}) raises UnicodeEncodeError ('utf-8' codec can't encode character) - fails loudly, no silent coercion; NFC 'caf\\u00e9' vs NFD 'cafe\\u0301' -> different ids (7 vs 8 canonical bytes), i.e. no unicode normalisation, so two different texts cannot hash equal; 200k-char CJK node -> 64-hex id, no error",
+    "probe P3: POINTER render_bytes turn2 vs turn3 -> b3.startswith(b2) is False, both 327 bytes; messages[0] and messages[1] are byte-identical across turns, messages[2] (newest delta + volatile) is replaced. Head stability is real; whole-render byte-prefix is not",
+    "probe P4: normalise_cache({'prompt_tokens':5,'prompt_tokens_details':{'cached_tokens':999}}) -> (5, 999): cached>prompt is not clamped to prompt (only negatives are, meter.py:87); runner.py:220 does 'uncached = max(0, prompt - cached)' so recorded rows stay sane, but the meter API can return an impossible pair",
+    "U1.json: valid JSON, exactly the 7 unit-shape keys {unit,status,artifacts,evidence,blocker,next_unit_hint,write_paths}",
+    "no live calls, no git, no installs; only src/resextract/context/render.py was touched for red->green and restored byte-exactly (cmp clean)"
+  ],
+  "blocker": "",
+  "next_unit_hint": "U1's claims hold, so the live gate can proceed (inject functools.partial(ChatClient().chat, max_tokens=N) as runner.send, build_cells over the four RenderPolicy values, meter.to_jsonl, analyze.main). Two cheap hardening items first or alongside: (a) rename or tighten test_pointer_prefix_is_byte_stable - it proves messages[0] (and coincidentally messages[1]) identity, not prefix bytes; add an explicit assertion that messages[2] is replaced so the tail rewrite is documented; (b) clamp cached to prompt in normalise_cache or record the runner.py:220 clamp in the docstring, and fix render.py's claim that NAIVE_APPEND is 'prefix-stable' (its last message is rewritten each turn when the volatile block moves).",
+  "write_paths": [
+    "orchestration/handoffs/V1.json",
+    "orchestration/units/V1.md"
+  ],
+  "not_reproduced": [
+    "turn-N render_bytes is a byte prefix of turn-N+1 for POINTER: measured False (b3.startswith(b2) == False, 327/327 bytes). Only the message-0 head (and the message-1 pointer table) is byte-identical; U1's test asserts exactly b'[' + canonical_bytes(messages[0]) as its prefix, so it cannot detect the tail rewrite"
+  ],
+  "overstated": [
+    "test_pointer_prefix_is_byte_stable (tests/test_context_render.py:48-59): the name promises byte-prefix stability but it asserts only message 0, via first_bytes() = b'[' + canonical_bytes(messages[0]); 'prefix in b_turn_3' is implied by the startswith assertion and is redundant",
+    "render.py:14-17 docstring: NAIVE_APPEND described as 'Also prefix-stable' - at message level the previous last message gains then loses the [volatile] block, so n3[:len(n2)] != n2; only the head up to message N-1 is stable",
+    "test_tax_error_is_zero_on_the_64_token_grid (tests/test_context_runner.py:69-75) is self-consistent rather than discriminating: the fixture sets uncached = prompt_tokens % 64, so the assertion re-checks the definition; the off-by-40 test at :78-80 carries the real discriminating power"
+  ],
+  "unverified": [
+    "live endpoint behaviour (prompt_tokens_details null on cold requests, cached tokens arriving in the final stream chunk, uncached == prompt % 64 on real SGLang) - no live model calls permitted for this unit",
+    "U1's full-suite claim (1098 passed, 2 pre-existing failures) was not re-run - only the four context test files were in scope",
+    "whether src/resextract/context is packaged in pyproject wheels (U1 raised it as a hint; pyproject was outside its write paths and outside this check)"
+  ],
+  "tool_calls": 28,
+  "bound": 30,
+  "red_green": {
+    "guard": "src/resextract/context/render.py NAIVE_MUTABLE branch made to delegate to _pointer_messages(...) so it renders identically to POINTER; expected failures: tests/test_context_render.py::test_naive_mutable_rewrites_the_preamble and tests/test_context_runner.py::test_mutable_policy_prefix_digest_changes_every_turn",
+    "before_sha": "162d6379012ce3da7feb5237ff4dbcbf0f44fc4412f99579e26870cefbbffc3d",
+    "after_sha": "162d6379012ce3da7feb5237ff4dbcbf0f44fc4412f99579e26870cefbbffc3d",
+    "failed_as_expected": true
+  }
+}

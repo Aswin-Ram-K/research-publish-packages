@@ -1,0 +1,107 @@
+{
+  "unit": "R2-A3",
+  "unit_type": "web-research (read-only unit, writes only this handoff)",
+  "status": "done",
+  "budget": {
+    "web_fetch_allowed": 8,
+    "web_fetch_used": 8,
+    "note": "2 of the 8 were 404 path guesses (radix_cache.mdx, server_arguments.md). No fetch made after the 8th."
+  },
+  "fetched": [
+    "https://raw.githubusercontent.com/sgl-project/sglang/main/docs/docs/advanced_features/radix_cache.mdx -> 404 (no such file)",
+    "https://raw.githubusercontent.com/sgl-project/sglang/main/docs/docs/advanced_features/session_radix_cache.mdx -> 200",
+    "https://raw.githubusercontent.com/sgl-project/sglang/main/docs/docs/advanced_features/hicache_design.mdx -> 200",
+    "https://raw.githubusercontent.com/sgl-project/sglang/main/docs/docs/advanced_features/server_arguments.md -> 404 (real file is server_arguments.mdx, 312,382 bytes; not fetched)",
+    "https://api.github.com/repos/sgl-project/sglang/contents/docs/docs/advanced_features -> 200 (directory listing; resolved both 404s)",
+    "https://raw.githubusercontent.com/sgl-project/sglang/main/docs/docs/advanced_features/radix_eviction_policy.mdx -> 200 (PRIMARY source for Q2)",
+    "https://raw.githubusercontent.com/sgl-project/sglang/main/python/sglang/srt/server_args.py -> 200 (fields now live in arg_groups/fields/*.py)",
+    "https://raw.githubusercontent.com/sgl-project/sglang/main/python/sglang/srt/arg_groups/fields/exec_.py -> 200 (PRIMARY source for Q1 help text)"
+  ],
+  "local_reads_not_fetches": [
+    "scratch/vm1/llms-full.txt — 5,601,201 bytes, sha256 d95e5e1edc48e38743a7887c2c34aa413bd901b918892891d1db6af67f0a4027, mtime 2026-10-21 07:05, identical to scratch/vM1/llms-full.txt. It is the docs.sglang.io llms-full export: each section carries its own 'Source: <url>' header. Used because the 312 KB server_arguments.mdx could not be read within budget; its section header is line 75043 'Source: https://docs.sglang.io/docs/advanced_features/server_arguments', i.e. the same page the .mdx renders.",
+    "orchestration/handoffs/R2-A2.json (previous unit; its hypotheses re-checked, see corrections_downstream)"
+  ],
+  "int8_mamba_checkpoint": {
+    "flag": "--enable-int8-mamba-checkpoint (bool, default False)",
+    "what_it_quantises": "verbatim, source code (python/sglang/srt/arg_groups/fields/exec_.py, class ExecMamba): \"Store radix-cached linear-attn (mamba) states in int8 (separate checkpoint pool) for ~2x cached-prefix capacity at fixed memory.\" Identical sentence in the argument table of https://docs.sglang.io/docs/advanced_features/server_arguments (line 77464 of the local mirror).",
+    "documented_memory_saving": "\"for ~2x cached-prefix capacity at fixed memory\" — the only quantified claim; no GB/slot figure is given.",
+    "accuracy_risk": "not documented. No accuracy, tolerance, calibration or quality statement exists for this flag anywhere in the argument table or the cookbook corpus (the string 'int8 mamba' occurs exactly twice in the whole docs export, both in the argument table rows for --enable-int8-mamba-checkpoint and --int8-mamba-ckpt-size). => no authoritative source found.",
+    "safe_with_mamba_ssm_dtype_float32": "not documented => no authoritative source found. The only documented relationship is scope, not safety: the flag says the int8 states live in a 'separate checkpoint pool', while --mamba-ssm-dtype is documented as \"The data type of the SSM states in mamba cache\" for the active pool. Neither page states that the two can or cannot be combined.",
+    "related_flag": "--int8-mamba-ckpt-size: \"Number of int8 mamba checkpoint slots (default: 2x the active mamba pool size).\" (same help text in exec_.py and in the argument table) — note 'slots' again, consistent with Q3.",
+    "live": "off — enable_int8_mamba_checkpoint false on our box"
+  },
+  "eviction_policies": {
+    "source_url": "https://raw.githubusercontent.com/sgl-project/sglang/main/docs/docs/advanced_features/radix_eviction_policy.mdx",
+    "page_note": "There is no radix_cache.mdx in docs/docs/advanced_features (404); the eviction-policy page is radix_eviction_policy.mdx. Its 'Use when' column is the verbatim sentence set requested.",
+    "lfu": {
+      "when_to_use_verbatim": "\"A small set of prompts is reused far more than the rest, and you want those to survive bursts of one-off traffic.\"",
+      "evicts_first_verbatim": "\"The prefix with the fewest cache hits, then the least recent.\""
+    },
+    "tlru": {
+      "when_to_use_verbatim": "\"Agentic / multi-turn workloads where tail TTFT matters more than raw hit rate.\"",
+      "evicts_first_verbatim": "\"The tail of a conversation beyond what its next prefill needs to meet the TTFT budget (\\\"TEL-safe\\\" tokens), then the least recent.\"",
+      "constraint_verbatim": "\"Requires the unified radix cache (the default tree).\""
+    },
+    "priority": {
+      "when_to_use_verbatim": "\"You run [priority scheduling](/docs/advanced_features/server_arguments) and want cache retention to follow the same ranking as admission.\"",
+      "evicts_first_verbatim": "\"The prefix belonging to the lowest-priority request, then the least recent.\"",
+      "caveat_verbatim": "\"Without priority scheduling every node is priority `0` and this policy is equivalent to `lru`.\""
+    },
+    "hybrid_mamba_documented_usability": "no authoritative source found. No policy row, and no other page in the docs export, states that lfu/tlru/priority work with a hybrid/mamba model. The only adjacent evidence: tlru \"Requires the unified radix cache (the default tree)\", and session_radix_cache.mdx documents that UnifiedRadixCache has a Mamba component with its own eviction order — \"Mamba | The reusable state on the registered leaf | Two LRU passes: unreferenced nodes first, then referenced nodes if more space is required\". That row describes the SESSION-aware order over Mamba, not what lfu/tlru/priority do to Mamba state; do not read it as a compatibility guarantee.",
+    "also_verbatim": "\"All of them fall back to least-recently-used order within a tie.\"; \"A policy only scores. It does not decide how much to free, and it cannot pin KV in memory\"."
+  },
+  "max_mamba_cache_size_semantics": {
+    "verdict": "SLOTS, not tokens. A request's cost is S state slots, and S depends on --mamba-radix-cache-strategy.",
+    "documented_default": "--max-mamba-cache-size default `None`; argument-table description is only \"The maximum size of the mamba cache.\" (too thin to settle it — the slot semantics come from the pages below).",
+    "primary_slot_evidence": [
+      {
+        "url": "https://docs.sglang.io/cookbook/autoregressive/Qwen/Qwen3.8-27B (local mirror line 48244)",
+        "quote": "\"--max-mamba-cache-size = target_concurrency x S is the equivalent explicit pin and overrides the ratio; the calculator emits it alongside.\""
+      },
+      {
+        "url": "https://docs.sglang.io/cookbook/autoregressive/Qwen/Qwen3.8 (local mirror line 47955)",
+        "quote": "Low Latency's --max-mamba-cache-size 80 is exactly its 16 concurrent requests \u00d7 5 slots."
+      },
+      {
+        "url": "https://docs.sglang.io/docs/advanced_features/server_arguments (local mirror line 77450, --mamba-radix-cache-strategy)",
+        "quote": "\"extra_buffer supports overlap schedule by allocating extra mamba state buffers to track mamba state for caching (mamba state usage per running req becomes `2x` for non-spec; `1+(1/(2+speculative_num_draft_tokens))x` for spec dec (e.g. 1.16x if speculative_num_draft_tokens==4))\""
+      }
+    ],
+    "slots_per_request_per_strategy": {
+      "extra_buffer": "5 (default where the model's `auto` resolves to extra_buffer; \"this model's auto\" wording in the Qwen3.8-2.4T page), 4 where PP disables the overlap scheduler",
+      "extra_buffer_lazy": "4 (\"lowers extra_buffer's slot cost by allocating one track slot per request instead of two\")",
+      "no_buffer": "3 (\"The resolver forces --mamba-radix-cache-strategy no_buffer (3 slots per request, overlap scheduler off)\")",
+      "disable_radix_cache": "1",
+      "verbatim_table_row": "\"S \u2014 KDA state slots per request: extra_buffer=5, extra_buffer_lazy=4, no_buffer=3, disabled radix cache =1. SGLANG_OPT_MAMBA_SKIP_DECODE_LOCK frees one slot on the extra-buffer strategies; with the overlap scheduler off (or pp > 1, which disables it) the track buffer costs one slot instead of two.\" (Kimi-K3 page, local mirror line 34293)",
+      "spec": "speculation adds verify intermediates D, which the engine sizes in a separate buffer and explicitly does NOT fold into the pin: \"D is not a term here: the engine divides the state pool by S alone and sizes the speculative verify buffer separately, so folding D into the pin would over-provision the pool.\""
+    },
+    "cookbook_5_slots_per_request_claim": "VERIFIED, with scope. '5 state slots per request' is what the docs state for extra_buffer on hybrid GDN/KDA models (three independent cookbook pages: Kimi-K3 line 34293, Qwen3.8 line 47955 table 'extra_buffer (this model's auto) | 5, or 4 where PP disables the overlap scheduler', Qwen3.8-Flash-Next line 48735 \"5 with the default exact extra_buffer radix strategy, 4 with extra_buffer_lazy\"). It is NOT a universal constant: it is 3 for no_buffer, 1 with radix cache off, and the server_arguments page says `auto` \"currently defaults to `no_buffer`\" — so 5 applies only where auto resolves to extra_buffer for that model.",
+    "clamp_mechanism_verbatim": "\"So --max-mamba-cache-size has to match the ratio in force, or it silently clamps max_running_requests to a fraction of the target\" and \"the scheduler caps --max-running-requests to what the mamba pool admits; read the effective value from the startup log, not from /get_server_info.\"",
+    "recommended_value_for_our_box": {
+      "inputs": "declared live: max_mamba_cache_size 64, mamba_full_memory_ratio 0.9 (ratio default 0.9 is now confirmed by the argument table: \"The ratio of mamba state memory to full kv cache memory\", default `0.9`), --max-running-requests 5",
+      "arithmetic": "5 requests x 5 slots (extra_buffer) = 25 slots; x 4 (extra_buffer_lazy) = 20; x 3 (no_buffer) = 15",
+      "recommendation": "Pin 25 (30 for one request of headroom) rather than 64, AFTER confirming from the boot log which strategy `auto` resolved to. 64 admits 64/S = 12 requests at S=5, i.e. it is NOT binding at --max-running-requests 5 and is over-provisioned by ~39 slots; the docs state the trade is one-for-one with the KV pool (\"It will decrease KV cache space as a trade-off\"), so those 39 slots are KV tokens we are not using.",
+      "consequence_for_the_16pct_window": "This REFUTES the R2-A2 hypothesis that 64 slots (~12 requests) is the clamp on the 15.9-16.5% resident window: at max-running-requests 5 the slot budget is satisfied (25 <= 64), so the resident window is a KV-pool / concurrency-of-5 effect, not a slot ceiling. Raising max-mamba-cache-size cannot lift it; lowering it to ~25 returns memory to the KV pool.",
+      "caveat": "If our model instead resolves to no_buffer (3 slots) or extra_buffer_lazy (4), the pin math changes to 15 or 20; and if max-running-requests is not actually honoured above 5 the strategy must be re-read from the startup log, per the doc quote above."
+    }
+  },
+  "unresolved": [
+    "Accuracy risk of --enable-int8-mamba-checkpoint: no authoritative source found (flag appears only in the argument table; zero accuracy/cookbook prose across the whole docs export).",
+    "Safety of --enable-int8-mamba-checkpoint together with --mamba-ssm-dtype float32: no authoritative source found. The docs only say the int8 states go to a 'separate checkpoint pool'; no page states interaction, precedence or numerical consequence.",
+    "Whether lfu/tlru/priority are usable with a hybrid/mamba model: no authoritative source found. Only tlru's 'requires the unified radix cache' constraint is documented.",
+    "docs/docs/advanced_features/server_arguments.mdx (312,382 bytes) was not fetched (budget); its rows were read from the docs-site llms-full mirror (sha256 recorded) and the int8 help string was cross-checked word-for-word against the fetched exec_.py.",
+    "The live value of --mamba-radix-cache-strategy was not captured by this read-only web unit; the R2-A2 handoff records only mamba_max_states_per_path -1 and int8 off."
+  ],
+  "corrections_downstream": [
+    "R2-A2 listed --mamba-full-memory-ratio default as DISPUTED (0.3 vs 0.9): resolved 0.9 by the argument table (\"The ratio of mamba state memory to full kv cache memory\", default `0.9`), which matches the 0.9 measured live.",
+    "R2-A2's '64 slots / 5 = ~12 requests caps us' inference is wrong at max-running-requests 5 — see recommended_value_for_our_box; the slot pool is not the binding clamp.",
+    "R2-A2's 'radix_cache.mdx exists but 404'd by bad path guess' is resolved: the file does not exist; the eviction guidance lives in radix_eviction_policy.mdx (fetched, 200).",
+    "R2-A2 marked --enable-int8-mamba-checkpoint 'no authoritative source found': it IS documented (argument table + source help string), but only its capacity claim — accuracy and float32 compatibility are genuinely undocumented."
+  ],
+  "write_paths": ["orchestration/handoffs/R2-A3.json"],
+  "assumptions": [
+    "Counting: 8 web_fetch calls made, 2 of them 404 path guesses; no further fetch attempted. Directory listing via api.github.com counted against the budget.",
+    "Reads of scratch/vm1/llms-full.txt and R2-A2.json are local file reads, not web_fetch; the mirror is cited with its size/sha256 so a verifier can re-check the same bytes.",
+    "docs.sglang.io/cookbook/* pages are treated as first-party SGLang documentation (same site, same authors) but labelled with their own URLs so a strict 'docs/docs only' reader can discount them."
+  ]
+}

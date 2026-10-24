@@ -1,0 +1,56 @@
+{
+ "unit": "FIX-RUN-R2",
+ "status": "done",
+ "artifacts": [
+  "papers/context-cache/RUN.json",
+  "tests/test_run_record_digests.py",
+  "scratch/fixrunr2/check_run_pin.py",
+  "scratch/fixrunr2/RUN.json.green",
+  "scratch/fixrunr2/RUN.json.before-recompute-refresh",
+  "scratch/fixrunr2/RUN.json.final",
+  "scratch/fixrunr2/recompute.tail.txt",
+  "scratch/fixrunr2/recompute.after.txt",
+  "scratch/fixrunr2/test_run_record_digests.py.new",
+  "orchestration/units/FIX-RUN-R2.md",
+  "orchestration/handoffs/FIX-RUN-R2.json"
+ ],
+ "evidence": {
+  "defect_as_named": "V-FINAL3.next_unit_hint item (a), labelled FIX-RUN, taken as the card's 'mis-pinned digest': papers/context-cache/RUN.json:350 verification.verifier_handoff_sha256_prefix = 2f17f26215d5fa77 beside verifier_handoff = orchestration/handoffs/CX-V2.json.",
+  "measured_before": "sha256(orchestration/handoffs/CX-V2.json) = 0887c656baaa3748...; sha256(orchestration/handoffs/V-FINAL.json) = 2f17f26215d5fa77...; so the pinned prefix belonged to a second file and the pin did not resolve.",
+  "walnut_gap": "Five pins named no file, so no re-hash was possible: pins/{u4_sessions_payload_sha256, u5_cases_json_sha8, u5_render_py_sha8, u4_cell_py_sha256} and verification.synthesis_recompute.script_sha256. Three of them also did not resolve: u4_sessions_payload_sha256 78b725cb... is the payload digest recorded INSIDE experiments/context-cache/cells/U4/u4_sessions.json:5 (the file itself is 0ca987d910bdbb9f...), u5_cases_json_sha8 e8e3e981c22808e was one hex digit short (file: e8e3e9819c22808e), script_sha256 4845bd8d... is a recompute.py no longer on disk (now 85917e480d1aea24...).",
+  "no_consumer": "grep for every pin key across papers/ tools/ tests/ src/ docs/ strategy/ experiments/*.py returned no consumer before the edit: nothing read these keys, so naming them changes no behaviour.",
+  "pins_after": "27 pins in papers/context-cache/RUN.json: 25 verified against the file they name, 2 superseded and explained (u4_sessions_payload_sha256, script_sha256). Both keep the superseded value in the record (_claimed + the repair sentence).",
+  "red_historical": "python3 scratch/fixrunr2/check_run_pin.py with the recorded value restored in the real record -> 'FAIL: orchestration/handoffs/CX-V2.json sha256 0887c656baaa3748 but the record pins 2f17f26215d5fa77', exit 1; pytest -> 'E verification.verifier_handoff_sha256_prefix: pinned 2f17f26215d5fa77 does not occur in sha256(orchestration/handoffs/CX-V2.json) = 0887c656baaa3748...'.",
+  "green": "python3 scratch/fixrunr2/check_run_pin.py -> 'OK: orchestration/handoffs/CX-V2.json sha256 0887c656baaa3748 matches the pinned prefix', exit 0; cmp of the record before/after the red planting -> byte-identical restore.",
+  "guard_suite": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_run_record_digests.py -q -> 5 passed. The suite contains three planted-red tests (the historical prefix, a pin stripped of its name, a malformed prefix) plus one that forbids a _repair silently disagreeing with its _claimed value.",
+  "packages_gates": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/verify_package.py -> 'verify_package: PASS - 62 claims in CLAIMS.md, 62 mapped 1:1, ... UNVERIFIED: none', exit 0. .venv/bin/python papers/context-cache/recompute.py all -> exit 0, 'GRID GUARD PASS 7/7 configs', '59 claims checked, all match', 'COVERAGE GUARD PASS 62 claims documented, 60 runnable here + 2 script-backed'.",
+  "full_suite": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q --ignore=tests/test_kg_policy.py -> '1190 passed, 1 skipped in 66.85s', exit 0; the skip is the @pytest.mark.live smoke test (not run, not passed). test_kg_policy.py was excluded because FIX-MAN2 and V-FINAL3 record it as red on this tree for a pre-existing target-config reason.",
+  "record_digest": "papers/context-cache/RUN.json sha256 019e27469e9f7ceab4fbd21db74e7dcf98d4b62fc5cbb8ec02e9cad648172e34, 32322 B; tests/test_run_record_digests.py sha256 be0719a7fbea4eb2e7fe914a574d3fd7291b6ed92b17f083c18f9570922fa760, 13694 B.",
+  "commands": [
+   "sha256sum orchestration/handoffs/CX-V2.json orchestration/handoffs/V-FINAL.json",
+   "python3 scratch/fixrunr2/check_run_pin.py",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_run_record_digests.py -q",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/verify_package.py",
+   ".venv/bin/python papers/context-cache/recompute.py all",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q --ignore=tests/test_kg_policy.py"
+  ],
+  "tool_calls": 38,
+  "bound": 40
+ },
+ "assumptions": [
+  "The card's one line ('resolve RUN.json's mis-pinned digest') and its reference to a fresh unit are read as pointing at the most recent verification of the same record: V-FINAL3's next_unit_hint item (a), which is labelled FIX-RUN and is a single re-measurable defect. The displaced previous unit, orchestration/handoffs/FIX-RUN.json, was read (not trusted) and its own chain -- the package record scratch/uneutral10/package/second-labeller/RUN.json -- is a DIFFERENT artefact that was measured and found intact (160 lines, 13064 B, sha256 0737ac88...e2355, matching that handoff byte-for-byte), with its three defended defects still present at :7 and :12-13. That chain is unfinished work, not a wrong measurement, and was left untouched: the card names 'the mis-pinned digest', not 'the package record'.",
+  "No value in scratch/ was invented: every substituted digest was recomputed from bytes on disk, and both superseded values are preserved in the record rather than overwritten (each with a _claimed key and a repair sentence saying why the old value does not resolve).",
+  "The previous unit's guard scratch/fixrun/check_digest_pins.py was NOT adopted into the suite: it checks the package record and, per its author's own handoff, has never printed PASS. A guard shipped green-on-arrival by construction would have been the same defect this card fixes.",
+  "The .venv was used for pytest and recompute.py (tests/conftest.py imports resextract and recompute.py uses numpy); python3 was used for the standalone guard so its independence is not the .venv's.",
+  "The task-board execution recorded as 'succeeded writing nothing' was not investigated; this unit's own artefacts are on disk and named above, so no claim depends on it."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Two chains remain, and neither is this unit's: (1) the package chain in scratch/uneutral10/package/second-labeller/RUN.json -- :12 _sha256_labels still names a fabricated source (a digest that MANIFEST.json lists only as an entry sha256, not a source_sha256) and still gives the read-only target's absolute path and an unstated 145031 B; :13 _sha256_labels_note corrects only the instrument and repeats the target path; :7 _fixture_path_in_target is the token 'P05'. Its own source digest in MANIFEST.json (e68b4f9e...5a4b for second-labeller/RUN.json, declared source 'G46/RUN.json') does not round-trip to any payload file; the workspace copy repro/encoder-crossover-190/second-labeller/RUN.json is 32da4d51.... (2) the same guard shape should be pointed at the package record: tests/test_run_record_digests.py can be run against any record with a ROOT argument, so a card can extend it to scratch/uneutral10/package/**/RUN.json once that record's labels are repaired. Also carried: artifact review left two superseded pins recorded but unexplained (u4_sessions_payload 78b725cb..., u5_render_py 4184c932... describes a pre-U14 renderer that is not on disk).",
+ "write_paths": [
+  "papers/context-cache/RUN.json",
+  "tests/test_run_record_digests.py",
+  "scratch/fixrunr2/**",
+  "orchestration/units/FIX-RUN-R2.md",
+  "orchestration/handoffs/FIX-RUN-R2.json"
+ ]
+}

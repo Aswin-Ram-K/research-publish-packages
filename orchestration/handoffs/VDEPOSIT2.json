@@ -1,0 +1,42 @@
+{
+  "unit": "VDEPOSIT2",
+  "overall": "pass",
+  "scope": "Independent re-check of UFIXDEP2: (1) three corrected reversed-policy assertions in strategy/DEPOSIT_ARCHIVE.md and a full-file sweep of it plus strategy/DEPOSIT_METADATA.md; (2) self-containment of scratch/ufixman1/build_archive.sh; (3) byte-identity against the shipped archive; (4) shipped checks on an extraction; (5) custody; (6) the open :42 item.",
+  "checks": [
+    "sites :54-57, :81-86, :98-102 (card hinted :56, :80, :94-95): each now asserts unlisted=0/VERDICT PASS/exit 0 as current, and each retains the reversed policy in explicitly dated past-tense form ('Superseded 2026-10-17 (retained as history)', 'was, on 2026-10-17, held to be by design', 'the then-current design, reversed on 2026-10-18'). Nothing deleted.",
+    "sweep survivors: strategy/DEPOSIT_ARCHIVE.md 9 class matches, all either current-policy-correct or dated/superseded -> zero survivors; strategy/DEPOSIT_METADATA.md zero hits for unlisted / 'by design' / 'only the 29' / VERDICT FAIL, reproducing UFIXDEP2's no-hits claim. Adjacent strategy/ZENODO_DEPOSIT.md:377 states the same defect in past tense ('The defect that was fixed') -> not a survivor.",
+    "digests: DEPOSIT_ARCHIVE.md 10,759 B sha256 b7e04cd5acf93f76be5e2fb8eaea8b31136a333ae72f52a7b9d55944d8f12a57 (matches); DEPOSIT_METADATA.md 29,867 B sha256 953cbc28bc07fb4ce15b2e90432946d9429ee6db813c7e141549b302be7c1afb (matches, unchanged).",
+    "self-containment (adversarial): built in scratch/vdeposit2/root containing only the declared inputs, 42 files, find -name 'prev-*.tar.gz' | wc -l = 0; script copy differs by one line (ROOT=); grep -n prev on the copy returns comments only (lines 6,7,11). Green build exit 0.",
+    "byte-identity: shipped 158,762 B sha256 956d6363db4563ddd3d848790a4026590a38c86ced993ccd76aecdad66a7910a; out1/out2/build all 158,762 B same sha256; cmp(out1,out2)=0; cmp(out1,shipped)=0; members 37 = 6 '/'-terminated dirs + 31 files.",
+    "shipped checks on extraction: check_manifest.py --package <ABS> -> missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0, manifest_self_recomputes=True, VERDICT PASS, exit 0; verify/recompute-claims.py -> ALL PUBLISHED NUMBERS REPRODUCED: True, VERDICT: PASS, fixture digest c7696edc0e71d83faafc2e489925788e0f36c6af94913674f8953718352c9a55, exit 0.",
+    "custody before==after: shipped archive 158,762 B 956d6363...; scratch/uneutral10/package/MANIFEST.json d41d82cf8aa838737a55d300bd77b74c787c44d482a5f964c4c446e40c2aac02; both strategy docs unchanged; scratch/ufixman1/prev-encoder-crossover-190-released.tar.gz still 157,650 B 7389bd879e970d840a528a9a19bfb9a6623babf3ec10746b18fc616bf2b4dad3 (untouched).",
+    "open item :42: NOT a live claim - the row sits under '## Superseded - retained, never upload' (:37); the retired unpacked dir is ABSENT from disk; the dated marker papers/encoder-crossover-190/released/SUPERSEDED-UNPACKED-TREE.md (2,404 B sha256 72dfdddf810737ec7dfc6a7bd6a54b12ac8294905b300b716c79c75b34ee73b8, 'Dated: 2026-10-17 (UDEPOSIT2)') stands there; the moved tree exists at scratch/udeposit2/superseded-unpacked-tree/; UDEPOSIT2 section 1 (:65-72) records the move. Residual: the row's own prose is present-tense about the vanished path with no inline dated supersession sentence."
+  ],
+  "red_green": [
+    "RED: append one newline to the sandbox copy of scratch/uzenodo2/run2/CITATION.cff -> stderr 'CITATION.cff drifted: b32e9a916ab619efab71d826226576395b9e483ccbae2297e05e0e5bd85b6c8a', exit 1 (re-run while perturbed also exit 1).",
+    "RED: append one newline to the sandbox copy of papers/encoder-crossover-190/released/README_DEPOSIT.md -> stderr 'README_DEPOSIT.md drifted: a1481ceee92cf6e36ccbed3dff1a13213757e593477f054258834bdf474038d2', exit 1.",
+    "GREEN: restore both from scratch/vdeposit2/*.good -> exit 0; cmp(out1.tgz, shipped archive) exit 0. Both guards are live, not inert."
+  ],
+  "contradicted": [
+    "strategy/DEPOSIT_ARCHIVE.md:17 ('inputs' row) names scratch/uzenodo2/run2/README_DEPOSIT.md as the third build input, but that file on disk is 6,396 B sha256 baf134595ecb65bb94fcd42d7587acce7655e1a3ad7cb4eaab92b6cece8673f4 - the SUPERSEDED README that the same document records as 'was' at :95 and as superseded at :125. The build script (scratch/ufixman1/build_archive.sh:29) reads papers/encoder-crossover-190/released/README_DEPOSIT.md = 10,477 B sha256 503751f19ad71f6efa4d42217449948178b164521d4acc37ca9ddc4834970085, which equals the in-archive copy (verified by tar xzOf | sha256sum). Pointed at the documented path, the build fails its own digest guard. This is a different class from the three sites UFIXDEP2 reported fixing and was found only by the mandated full-file sweep; correcting it is a new unit's work."
+  ],
+  "overstated": [
+    "strategy/DEPOSIT_ARCHIVE.md:42 - present-tense assertions about the retired unpacked tree ('its COMMERCIAL.md is still the pre-fix 3,512-byte file', 'its README_DEPOSIT.md is b10762...', 'Un-git-tracked. Left unmodified by URELEASE9') describe a path that no longer exists on disk. It is marked superseded by section placement (:37) and by UDEPOSIT2 section 1 (:65-72), so it is NOT a live claim - but it carries no inline dated supersession marker, unlike the two sites UFIXDEP2 corrected, so the wording overstates the tree's current status."
+  ],
+  "not_reproduced": [],
+  "unverified": [
+    "The pre-edit state of strategy/DEPOSIT_ARCHIVE.md claimed by UFIXDEP2 (10,127 B sha256 91f1843ac42fbd42a3766a8377a0d55f5c00cb08789c979484055796e5194de2) cannot be recomputed: the file is untracked in git (status --porcelain -> '??') and no pre-image is preserved anywhere on disk. It is corroborated only as UFIXDEP1's handoff output digest (orchestration/handoffs/UFIXDEP1.json:15, 6,660 B b6f0c8a9... -> 10,127 B 91f1843a...).",
+    "strategy/DEPOSIT_ARCHIVE.md:18 proof row ('diff -r against the inputs is empty, exit 0') was measured by UFIXDEP1, is not in this unit's remit, and was not re-run."
+  ],
+  "containment": "No file outside strategy/VERIFICATION_REPORT_DEPOSIT_2.md, orchestration/units/VDEPOSIT2.md, orchestration/handoffs/VDEPOSIT2.json and scratch/vdeposit2/** was written. The shipped archive, the 29-file package, both strategy documents, the build script and scratch/ufixman1/prev-*.tar.gz were read only. No network calls.",
+  "blocker": "",
+  "next_unit_hint": "UFIXDEP2's two claims are verified end to end - advance the gate. Spawn a small fresh unit to fix the one contradicted ancillary claim: strategy/DEPOSIT_ARCHIVE.md:17 names scratch/uzenodo2/run2/README_DEPOSIT.md (baf13459..., 6,396 B, superseded) as the README input, while build_archive.sh:29 reads papers/encoder-crossover-190/released/README_DEPOSIT.md (503751f1..., 10,477 B, the digest actually in the archive). Optionally add an inline dated supersession sentence to the :42 row (retired unpacked tree) to match the style of :54-57 and :81-86. Note for that unit: editing strategy/DEPOSIT_ARCHIVE.md will change its b7e04cd5... digest, so re-measure and record the new digest.",
+  "tool_calls": 15,
+  "bound": 18,
+  "write_paths": [
+    "strategy/VERIFICATION_REPORT_DEPOSIT_2.md",
+    "orchestration/units/VDEPOSIT2.md",
+    "orchestration/handoffs/VDEPOSIT2.json",
+    "scratch/vdeposit2/**"
+  ]
+}

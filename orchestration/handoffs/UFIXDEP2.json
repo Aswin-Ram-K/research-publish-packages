@@ -1,0 +1,38 @@
+{
+  "unit": "UFIXDEP2",
+  "status": "done",
+  "artifacts": [
+    "strategy/DEPOSIT_ARCHIVE.md",
+    "strategy/DEPOSIT_METADATA.md",
+    "scratch/ufixman1/build_archive.sh",
+    "scratch/ufixdep2/build/out1.tgz",
+    "scratch/ufixdep2/build/out2.tgz",
+    "scratch/ufixdep2/verify-extract/",
+    "orchestration/units/UFIXDEP2.md"
+  ],
+  "evidence": {
+    "doc_sizes_before_after": "DEPOSIT_ARCHIVE.md 10127 B sha256 91f1843ac42fbd42a3766a8377a0d55f5c00cb08789c979484055796e5194de2 -> 10759 B sha256 b7e04cd5acf93f76be5e2fb8eaea8b31136a333ae72f52a7b9d55944d8f12a57; DEPOSIT_METADATA.md 29867 B sha256 953cbc28bc07fb4ce15b2e90432946d9429ee6db813c7e141549b302be7c1afb -> unchanged (already corrected by UFIXDEP1; grep for unlisted|by design|'only the 29' returned no hits, so nothing of that class survived)",
+    "self_contained_build": "GENUTC=2026-10-18T08:05:47Z sh scratch/ufixman1/build_archive.sh -> bytes=158762 members=37, run twice (out1 and out2 both sha256 956d6363db4563ddd3d848790a4026590a38c86ced993ccd76aecdad66a7910a), cmp out1 out2 exit 0",
+    "byte_identity": "cmp scratch/ufixdep2/build/out1.tgz papers/encoder-crossover-190/released/encoder-crossover-190-released.tar.gz -> exit 0 BYTE-IDENTICAL; tar tzvf member+mode lists differ by zero lines; archive MANIFEST.json digest e9e5e5e07fc63c6887c88127bb2a1c03300c8d6dac692b31ba288757d5457a4d, manifest_self 8daf32ea280059b26b3b43edb0709a3c0c389025fc426e901170925f836a8839",
+    "check_manifest_at_extracted_root": "python3 tools/package/check_manifest.py --package /home/zer0null/reserach extarctor/scratch/ufixdep2/verify-extract/encoder-crossover-190-released -> 'missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0 / manifest_self_recomputes=True / VERDICT PASS' exit 0",
+    "recompute_claims": "cd <extraction>/encoder-crossover-190-released && python3 verify/recompute-claims.py -> 'ALL PUBLISHED NUMBERS REPRODUCED: True / VERDICT: PASS / fixture correctness digest: c7696edc0e71d83faafc2e489925788e0f36c6af94913674f8953718352c9a55' exit 0",
+    "archive_unchanged": "papers/encoder-crossover-190/released/encoder-crossover-190-released.tar.gz before=after: 158762 B sha256 956d6363db4563ddd3d848790a4026590a38c86ced993ccd76aecdad66a7910a (build script writes only scratch/ufixdep2/build/, never the shipped path)",
+    "package_unchanged": "scratch/uneutral10/package/MANIFEST.json sha256 d41d82cf8aa838737a55d300bd77b74c787c44d482a5f964c4c446e40c2aac02, 29 files, no package file written",
+    "commands": [
+      "sh scratch/ufixman1/build_archive.sh",
+      "python3 tools/package/check_manifest.py --package <abs extracted root>",
+      "python3 verify/recompute-claims.py",
+      "sha256sum / cmp / tar tzvf / diff"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Artifact and documents now agree: archive 158,762 B / 956d6363..., self-contained build reproduces it byte-for-byte from scratch/uneutral10/package + CITATION.cff + README_DEPOSIT.md with no prior tarball. A verifier (new unit, not UFIXDEP2) should re-run build_archive.sh from a tree where scratch/ufixman1/prev-*.tar.gz is renamed away, and confirm the script's input-digest guards fire (red) when CITATION.cff/README_DEPOSIT.md drift. Note for follow-up, NOT fixed here: strategy/DEPOSIT_ARCHIVE.md:42 still cites the retired unpacked path papers/encoder-crossover-190/released/encoder-crossover-190-released/ (a dated marker SUPERSEDED-UNPACKED-TREE.md now stands there).",
+  "write_paths": [
+    "strategy/DEPOSIT_ARCHIVE.md",
+    "strategy/DEPOSIT_METADATA.md",
+    "scratch/ufixman1/build_archive.sh",
+    "scratch/ufixdep2/**",
+    "orchestration/units/UFIXDEP2.md",
+    "orchestration/handoffs/UFIXDEP2.json"
+  ]
+}

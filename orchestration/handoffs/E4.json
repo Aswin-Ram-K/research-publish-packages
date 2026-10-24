@@ -1,0 +1,147 @@
+{
+ "unit": "E4",
+ "status": "done",
+ "artifacts": [
+  "orchestration/units/E4.md",
+  "experiments/context-cache/cells/E4/e4_cell.py",
+  "experiments/context-cache/cells/E4/e4_analyze.py",
+  "experiments/context-cache/cells/E4/e4_rows.jsonl",
+  "experiments/context-cache/cells/E4/e4_report.json",
+  "experiments/context-cache/cells/E4/e4_run.json",
+  "experiments/context-cache/cells/E4/e4_rows_dryrun.jsonl"
+ ],
+ "evidence": {
+  "live_run": "python3 e4_cell.py -> requests=220 probes=10 rows=220 failures=0 aborted='' lock_wait_s=5.501 elapsed_s=54.2 rows_sha256=5f10b3160a8c7b394512b841a991e5f1cc5956d2c6c252aaa1645d0fae8a2560",
+  "rows_sha256": "5f10b3160a8c7b394512b841a991e5f1cc5956d2c6c252aaa1645d0fae8a2560",
+  "trials_per_cell": {
+   "960": 5,
+   "1023": 20,
+   "1024": 20,
+   "1025": 20,
+   "1088": 20
+  },
+  "sends_per_trial": {
+   "960": 2,
+   "1023": 2,
+   "1024": 3,
+   "1025": 2,
+   "1088": 3
+  },
+  "rep1_full_misses": {
+   "960": "5/5",
+   "1023": "0/20",
+   "1024": "20/20",
+   "1025": "0/20",
+   "1088": "20/20"
+  },
+  "rep1_cached": {
+   "960": "0x5",
+   "1023": "960x20",
+   "1024": "0x20",
+   "1025": "1024x20",
+   "1088": "0x20"
+  },
+  "rep2_cached": {
+   "1024": "960x20 (== L-64)",
+   "1088": "1024x20 (== L-64)"
+  },
+  "pooled_multiples": "45/45 CP95 [0.9213,1.0]",
+  "pooled_non_multiples": "0/40 CP95 [0.0,0.0881]",
+  "fisher_two_sided_p": "3.46e-25",
+  "l_minus_1_form": "refuted as the miss rule by L=1025 (0/20 misses where (L-1)%64==0); accepted as the rep-2 ceiling (40/40 at L-64)",
+  "tax_law_fails_at_multiples": "plain 64*floor(L/64): 20/20 at 1023, 20/20 at 1025, 0/20 at 1024, 0/20 at 1088",
+  "cold_isolation": "0/85 cold rows reported cached != 0",
+  "lengths_exact": "85/85 trials at the exact target prompt_tokens",
+  "ttft_ms_medians": {
+   "1024_miss": 205.216,
+   "1088_miss": 256.796,
+   "960_miss": 193.89,
+   "1023_hit": 89.061,
+   "1025_hit": 66.864
+  },
+  "lock_wait_s": 5.501,
+  "elapsed_s": 54.2,
+  "requests": 220,
+  "probes": 10,
+  "failures": 0,
+  "trials_total": 85,
+  "commands": [
+   "cd \"/home/zer0null/reserach extarctor/experiments/context-cache/cells/E4\" && python3 e4_cell.py",
+   "python3 experiments/context-cache/cells/E4/e4_analyze.py",
+   "python3 experiments/context-cache/cells/E4/e4_cell.py --dry-run   # offline control-flow check, no network",
+   "sha256sum experiments/context-cache/cells/E4/e4_rows.jsonl"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Verifier: re-run e4_analyze.py on the pinned rows (sha256 5f10b316...); red->green on the 1025 cell (flip it to 1024 and the boundary-specific claim must fail) and on Fisher (0/40 vs 45/45 must return p<1e-20). The cause needs a server-side trace or a third repeat at 1024; the boundary condition itself is settled at n=20 for 960/1023/1024/1025/1088 and was NOT run at 1152/2048/4096/1008.",
+ "write_paths": [
+  "experiments/context-cache/cells/E4/**",
+  "orchestration/units/E4.md",
+  "orchestration/handoffs/E4.json"
+ ],
+ "assumptions": [
+  "A1: 9 cells x 20 x 3 = 540 > 220 hard cap; dropped 4096/2048/1152/1008, kept 960, controls got 2 sends; 960 reached n=5 not 7 because the 220 cap was hit",
+  "A2: repeat-2 only where a first miss can occur (the two multiple cells)",
+  "A3: mechanism not established; no server-side trace (G13); candidates C1/C2/C3 and the predictions the rows exclude are named instead",
+  "A4: cached_tokens accepted as the server reports it (G13)"
+ ],
+ "verifier_corrections": [
+  {
+   "claim": "the rep-1 boundary miss is deterministic",
+   "as_written": "E4.md:42 `The miss is deterministic, not a race with a distribution.`; E4.md:47 `It is deterministic at n=20, not a 1-in-k race`",
+   "corrected_to": "Licensed as description of the 45 observed trials only: rep-1 `cached == 0` in 45/45 boundary rows (40/40 at 1024+1088), Clopper-Pearson 95% lower 0.9213, never an intermediate value, no TTFT variance (205.2/256.8 ms miss vs 89.1/66.9 ms hit, cold-to-repeat gap 0.14-0.16 ms). Not licensed as inference: a race with escape probability up to ~7.9% is not excluded at 95%, there is no rep-3, and only two boundary lengths on one endpoint/model/SGLang build. Licensed wording: 'reproduced in 45/45 (CP95 lower 0.9213, no variance observed)'.",
+   "ruling": "overstated as inference; descriptive use for the 45 trials is licensed",
+   "verifier": "VE4 + VE24 (agree)",
+   "applied": true
+  },
+  {
+   "claim": "`(L-1)` is the ceiling rule at the boundary",
+   "as_written": "E4.md:48 `only at 64*floor((L-1)/64) = L - 64`; E4.md:49 `The (L-1) form is the right ceiling rule at the boundary`",
+   "corrected_to": "Steady-state (rep-2) ceiling: attained 40/40 at `L-64`, 0/40 at `L`. It is not a rep-1 ceiling - at a multiple it predicts `L-64` while rep-1 observed 0 in 40/40. As the miss rule it is refuted in both directions: 1025 (`(L-1)%64 == 0`) predicted a miss, got 0/20; 1024/1088 (`(L-1)%64 == 63`) predicted a hit, got 20/20.",
+   "ruling": "scope corrected to the steady state (rep-2), refuted as the miss rule",
+   "verifier": "VE4 + VE24 (agree)",
+   "applied": true
+  },
+  {
+   "claim": "a multiple of 64 pays a permanent 64-token shortfall on every later repeat",
+   "as_written": "E4.md:48 `pays one extra full prefill on the first repeat and a permanent 64-token (one whole block) shortfall on every later repeat`",
+   "corrected_to": "The licensed sentence: a multiple-of-64 prompt pays a full first-repeat prefill and a one-repeat 64-token lag at rep-2 (`cached == L-64` in 40/40, 0/40 at `L`); it is unmeasured at rep-3, so persistence is a prediction, not a finding. E4.md:58 already concedes that a one-more-repeat lag is equally consistent.",
+   "ruling": "overstated extrapolation from a rep-2-only measurement; 'permanent' dropped",
+   "verifier": "VE4 + VE24 (agree)",
+   "applied": true
+  },
+  {
+   "claim": "the plain tax law `cached == 64*floor(L/64)` is falsified at multiples",
+   "as_written": "E4.md:49 `The U2 tax law cached == 64*floor(L/64) holds 20/20 at 1023 and 20/20 at 1025 but 0/20 at 1024 and 0/20 at 1088` / `the plain tax law is wrong there`; E4.json evidence `tax_law_fails_at_multiples`",
+   "corrected_to": "Falsified only as an equality at the multiple boundary on the first repeat: 40/40 counterexamples on rep-1 and 40/40 on rep-2 (960 0/5 is an n=5 spot-check). As an upper bound `cached <= L` it survives untouched. The general law away from the boundary is 'not observed at n=20' (E2's warm rows hold on 33/37 turns), not falsified.",
+   "ruling": "scope narrowed to the equality at the multiples; general form is not-observed, not falsified",
+   "verifier": "VE4 + VE24 (agree)",
+   "applied": true
+  },
+  {
+   "claim": "assumption A1's drop order followed the card and the 220 rows are fully accounted",
+   "as_written": "E4.md:26 `Resolution (assumption A1): kept the drop-order survivors plus 960 ... dropped the redundant non-multiple control 1,008`; E4.md:71; the card's drop order was 4096 -> 2048 -> 1152 -> 960",
+   "corrected_to": "Carried honestly: the drop order departed from the card - 1008, a real non-multiple control, was dropped while 960 was kept as a 5-trial spot-check. Final rows 220 = 85 cold + 85 rep1 + 40 rep2 + 10 cal, exactly at max_requests 220 with zero headroom (planned 224 > 220 explains 960 cut to n=5).",
+   "ruling": "deviation recorded as a disclosure, not a measurement defect",
+   "verifier": "VE4 + VE24 (agree)",
+   "applied": true
+  },
+  {
+   "claim": "one-repeat lag",
+   "as_written": "E4.md:48 `pays one extra full prefill on the first repeat and a permanent 64-token (one whole block) shortfall on every later repeat`; E4C's restored wording: `pays a full first-repeat prefill and a one-repeat 64-token lag at rep-2 (cached == L-64 in 40/40)`; `it is unmeasured at rep-3, so a continuing lag is a prediction, not a finding`",
+   "corrected_to": "A multiple-of-64 prompt pays one full extra prefill at the first repeat, then a **persistent one-block (64-token) tax** on every later repeat measured - on repeat 3 it equals `L-64` in **40/40** boundary trials and never `L` (0/40). Scoped: repeats **2-3 of 3** measured, one boundary length pair (1024, 1088), one endpoint/model/build; rep-4 unreachable; the mechanism is not established (G13).",
+   "ruling": "superseded by rep-3 measurement",
+   "verifier": "VE4R / E4R",
+   "applied": true
+  }
+ ],
+ "corrections_note": "Applied by unit E4C from VE4 (verdict pass) and VE24 (E4 half, pass). Wording only, additive: every original sentence above stands verbatim; the numbers are unchanged and were reproduced by both verifiers from e4_rows.jsonl sha256 5f10b3160a8c7b394512b841a991e5f1cc5956d2c6c252aaa1645d0fae8a2560 (960 5/5, 1023 0/20, 1024 20/20, 1025 0/20, 1088 20/20; pooled 45/45 vs 0/40; Fisher two-sided 3.46e-25; rep-2 40/40 at L-64). E4C3 (2026-10-21): correction 3 re-scoped - E4R measured rep-3 (40/40 at L-64, 0/40 at L; 1024 0->960->960, 1088 0->1024->1024, 180/180 rows), so the one-repeat-lag reading is superseded by bounded persistence through repeat 3 (VE4R check 6 licensed words).",
+ "superseded_text": {
+  "verdict/determinism": "boundary-specific, deterministic, mechanism **not established**",
+  "Result/rep1_miss": "The miss is deterministic, not a race with a distribution.",
+  "Result/deterministic_n20": "It is deterministic at n=20, not a 1-in-k race",
+  "Result/permanent_shortfall": "a permanent **64-token (one whole block) shortfall** on every later repeat",
+  "Result/L_minus_1_ceiling": "The (L-1) form is the right ceiling rule at the boundary, and the plain tax law is wrong there"
+ },
+ "superseded_text_note": "REPAIRV 2026-10-21: exact retracted strings converted to `> original (superseded)` quotations in the unit card; no datum, sha or numeric payload touched."
+}

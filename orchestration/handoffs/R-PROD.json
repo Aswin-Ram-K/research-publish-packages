@@ -1,0 +1,69 @@
+{
+  "unit": "R-PROD",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/R-PROD.md",
+    "docs/serving-options/R-PROD.md"
+  ],
+  "evidence": {
+    "sources_checked": 24,
+    "configs_with_exact_flags": 11,
+    "primary_sources": 24,
+    "tool_calls": 32,
+    "bound": 45,
+    "live_requests": 0,
+    "occamy_lock_taken": false,
+    "key_measured_numbers": [
+      "SGLang HiCache official: up to 6x throughput, up to 80% TTFT reduction; Novita Qwen3-Coder-480B >25K-token/8-turn sessions: TTFT -56%, throughput 2x, hit rate 40% -> 80%; Ant DeepSeek-R1-671B+Mooncake: 84% TTFT reduction vs recompute",
+      "llm-d: 13.9x throughput with hierarchical KV offloading at 250 concurrent users vs GPU-only (4x H100); 3x output throughput / 2x faster TTFT with prefix-cache-aware routing vs round-robin (Llama 3.1 70B, 4x MI300X)",
+      "Dynamo Qwen3.6-35B-A3B SGLang 1-GPU agentic (64K in/400 out/90% KV reuse/conc 32/3541 reqs): GB200 p50 TTFT 156.07 ms, 3035.98 out tok/s/GPU; B200 286.90 ms / 2988.50; H200 360.31 ms / 1332.03",
+      "Dynamo agentic: Claude Code 85-97% cache hit on subsequent calls, 97.2% aggregate across 4 Opus teammates, 11.7x KV read/write ratio",
+      "SGLang stability: token usage >0.9 healthy; schedule-conservativeness ~0.3 if queue>0 and usage<0.9, ~1.3 on frequent retraction; ~1 retraction/min acceptable; activations reserve 5-8 GB (available_gpu_mem 5-8 GB)"
+    ],
+    "commands": [
+      "local_web_search 'vLLM production stack llm-d reference deployment configuration KV cache offloading'",
+      "local_web_search 'SGLang HiCache radix cache production deployment configuration large scale'",
+      "local_web_search 'NVIDIA Dynamo TensorRT-LLM reference config agentic long context serving'",
+      "local_web_search 'prefix cache hit rate production LLM serving agentic prompt layout measurement'",
+      "local_web_crawl https://www.lmsys.org/blog/2025-09-10-sglang-hicache/",
+      "local_web_crawl https://github.com/vllm-project/production-stack",
+      "local_web_crawl https://developer.nvidia.com/blog/full-stack-optimizations-for-agentic-inference-with-nvidia-dynamo/",
+      "local_web_crawl https://vllm.ai/blog/2026-09-10-tiered-kv-offloading",
+      "local_web_crawl https://raw.githubusercontent.com/vllm-project/production-stack/main/README.md",
+      "local_web_crawl https://raw.githubusercontent.com/llm-d/llm-d/main/README.md",
+      "local_web_crawl https://docs.sglang.io/advanced_features/server_arguments.html",
+      "local_web_crawl https://mlcommons.org/benchmarks/inference-datacenter/",
+      "local_web_crawl https://docs.vllm.ai/en/latest/deployment/integrations/production-stack/",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/hyperparameter_tuning",
+      "local_web_crawl https://llm-d.ai/docs/well-lit-paths/foundations/tiered-prefix-cache",
+      "local_web_crawl https://raw.githubusercontent.com/mlcommons/inference/master/language/llama2-70b/README.md",
+      "local_web_crawl https://raw.githubusercontent.com/vllm-project/production-stack/main/tutorials/05-offload-kv-cache.md",
+      "local_web_crawl https://raw.githubusercontent.com/sgl-project/sglang/main/benchmark/hicache/README.md",
+      "local_web_crawl https://raw.githubusercontent.com/ai-dynamo/dynamo/main/README.md",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/session_radix_cache",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/radix_eviction_policy",
+      "local_web_crawl https://raw.githubusercontent.com/vllm-project/production-stack/main/helm/values.yaml",
+      "local_web_crawl https://arxiv.org/abs/2506.02634",
+      "local_web_crawl https://raw.githubusercontent.com/ai-dynamo/dynamo/main/recipes/README.md",
+      "local_web_crawl https://llm-d.ai/docs/well-lit-paths/foundations/optimized-baseline",
+      "local_web_crawl https://raw.githubusercontent.com/ai-dynamo/dynamo/main/recipes/qwen3.6-35b-a3b/README.md",
+      "local_web_crawl https://raw.githubusercontent.com/ai-dynamo/dynamo/main/docs/fern/pages/recipes/model-recipes/qwen3-6-35b-a3b.mdx",
+      "local_web_crawl https://raw.githubusercontent.com/ai-dynamo/dynamo/main/recipes/qwen3.6-35b-a3b/sglang/agg-gb200-mtp/deploy.yaml"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Before designing the tuned config: (1) set --mamba-radix-cache-strategy extra_buffer (hybrid GDN/SSM radix path) on the baseline and re-run the 64-token grid — no production recipe runs a hybrid model on a stock dense radix cache, so the current plateau may be an unsupported cache path, not a capacity limit; (2) do not hand-pick --mem-fraction-static near the computed floor (our 0.500 vs 0.4993) — use the default heuristic or a high value with available_gpu_mem verified in 5-8 GB; (3) reproduce in this order: Dynamo Qwen3.6-35B-A3B single-GPU SGLang flags (closest architecture match, has a published 90%-KV-reuse agentic trace and p50 TTFT), then SGLang HiCache collapsed to 1 GPU at --hicache-ratio 2 with the file backend, then the SGLang 4-arm HiCache ablation as the comparator; (4) keep page_size fixed across arms (production recipes pin 64, SGLang radix default is 1) or the comparison is confounded; (5) never run two cache owners at once (production-stack disables enablePrefixCaching when LMCache is on).",
+  "write_paths": [
+    "orchestration/units/R-PROD.md",
+    "docs/serving-options/R-PROD.md",
+    "orchestration/handoffs/R-PROD.json"
+  ],
+  "assumptions": [
+    "The unit was run fully offline as instructed: local_web_search + local_web_crawl only; no live inference endpoint was contacted, so every number in the note is quoted from a primary source rather than re-measured.",
+    "'Production' was operationalised as: shipped as the vendor's/operator's reference deployment path (helm/kustomize/manifests) or backed by named production deployments or nightly E2E validation. A published benchmark recipe for a served configuration is recorded as 'benchmark-only' even when the surrounding stack is production.",
+    "GB10 (Grace Blackwell-class, single node) was treated as Blackwell-family for precision/backend transferability (NVFP4 weights, fp8_e4m3 KV, trtllm_mha) but the note flags attention/MoE backends as the hardware-specific part that may need substitution; this is an inference, not a measured result.",
+    "Where a blog had a performance section that this pass did not extract (vLLM tiered offloading 'Scaling to More Users'), the throughput claim is marked reported-only rather than quoted.",
+    "Tool-call accounting: 32 of the 45 allowed calls were used (4 misc filesystem, 4 searches, 24 crawls). Remaining budget was left unused deliberately once each of the six requested evidence areas had at least one primary source.",
+    "No files outside the three declared write paths were touched; docs/serving-options/ was created if missing and nothing else under docs/ was modified."
+  ]
+}

@@ -1,0 +1,39 @@
+{
+ "unit": "UTEX1",
+ "status": "done",
+ "artifacts": [
+  "papers/encoder-crossover-190/rendered/encoder-crossover-190-latex.pdf",
+  "strategy/LATEX_TOOLCHAIN.md",
+  "orchestration/units/UTEX1.md",
+  "scratch/utex1/bin/tectonic",
+  "scratch/utex1/tectonic.tar.gz",
+  "scratch/utex1/logs/pass1.log",
+  "scratch/utex1/logs/pass2.log",
+  "scratch/utex1/out/main.log"
+ ],
+ "evidence": {
+  "command_or_count": "tectonic 0.15.0 installed in-workspace; main.tex compiled TWICE: PASS1_EXIT=0 PASS1_SECONDS=4 | PASS2_EXIT=0 PASS2_SECONDS=1; output encoder-crossover-190-latex.pdf = 185377 bytes, 27 pages, letter 612x792 (Chrome baseline: 20 pages / 727811 bytes / A4 / 0 page numbers). Byline proof from pdftotext: 'Aswin Ram Kalugasala Moorthy' = 1 occurrence, 'AUTHOR SLOT' = 0. Page numbers: 27 numeric footer lines, one per page. Specials, tectonic vs source-macro ground truth: kappa 31, approx 3, ge 10, le 1, times 13, pm 4, to 23, psi 7, chi 1, S 64 (= 68 section marks minus the 4 broken macros); Delta = 8 but encoded U+2206 in tectonic vs U+0394 in Chrome (present in both). 4 distinct error sites: 'Undefined control sequence' at main.tex:62 (macro SB), main.tex:335 x2 and main.tex:339 (macro SF); the literal string matches 8 lines in pass2.log. 42 Overfull + 98 Underfull hbox warnings (document sets sloppy). pdftotext -bbox over all 27 pages: no word xMax exceeds the 540pt right margin, so no table or text is off-page; 5 tabular environments extract as aligned rows/columns; 0 replacement/notdef glyphs; 13 bibliography entries rendered.",
+  "commands": [
+   "sudo -n true 2>&1",
+   "command -v apt-get tlmgr pdflatex xelatex lualatex latexmk tectonic bibtex",
+   "curl -sS -L -o scratch/utex1/tectonic.tar.gz https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.15.0/tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz",
+   "sha256sum scratch/utex1/tectonic.tar.gz",
+   "tar -xzf scratch/utex1/tectonic.tar.gz -C scratch/utex1/bin",
+   "scratch/utex1/bin/tectonic --version",
+   "export TECTONIC_CACHE_DIR=$PWD/scratch/utex1/cache TMPDIR=$PWD/scratch/utex1/tmp HOME=$PWD/scratch/utex1",
+   "scratch/utex1/bin/tectonic -Z continue-on-errors -r 1 --keep-logs -o scratch/utex1/out papers/encoder-crossover-190/submission/main.tex",
+   "pdfinfo papers/encoder-crossover-190/rendered/encoder-crossover-190-latex.pdf",
+   "pdftotext -layout papers/encoder-crossover-190/rendered/encoder-crossover-190-latex.pdf scratch/utex1/latex.txt",
+   "pdftotext -bbox papers/encoder-crossover-190/rendered/encoder-crossover-190-latex.pdf scratch/utex1/bbox.html"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Author must fix 2 undefined macros in the manuscript (main.tex:62 macro SB3; main.tex:335 x2 and :339 macro SF.3) -- 4 sites where a section reference is dropped from the PDF, a defect no renderer fixes. Then re-run the recorded tectonic command. For a TMLR submission, tmlr.sty plus fancyhdr/natbib/hyperref/booktabs must be supplied separately via -Z search-path; not installed or tested.",
+ "write_paths": [
+  "papers/encoder-crossover-190/rendered/encoder-crossover-190-latex.pdf",
+  "strategy/LATEX_TOOLCHAIN.md",
+  "orchestration/units/UTEX1.md",
+  "orchestration/handoffs/UTEX1.json",
+  "scratch/utex1/**"
+ ]
+}

@@ -1,0 +1,46 @@
+{
+  "unit": "UVER24",
+  "overall": "pass-with-corrections",
+  "checks": [
+    "rename completeness: grep -rl D09|D15|D25|D35|D44 in scratch/udtag1/tree-five -> 0 files each, raw occurrences 0 each; base-copy 4/7/11/9/3",
+    "rename injectivity: replacements P02/P03/P05/P04/P01 present in 4/7/11/9/3 files matching base D-id file counts exactly; none of the five pre-existed in base-copy (files=0 occ=0)",
+    "path names: find tree-five | grep -E 'D09|D15|D25|D35|D44' -> 0 hits; diff -rq base vs five -> 0 'Only in' lines (no path renamed, nothing added/removed)",
+    "17-file rewrite: diff -rq base-copy tree-five -> 18 'Files differ', 0 'Only in'; the 17 D-id-carrying files are exactly the changed payload set, 18th is MANIFEST.json",
+    "census (workspace scanner scratch/ubij1/census_one.py, PYTHONHASHSEED=0): tree-five inside-stimulus 2171 distinct=30 total=3354 74/184; base-copy inside-stimulus 2171 distinct=30 total=3354 74/184; full reports byte-identical apart from the tree: path line; INSIDE-STIMULUS DELTA = 0",
+    "census caveat: none of D09/D15/D25/D35/D44/P01..P05 is in scratch/uagnostic1/census.tsv (184 ids), so the census is insensitive to this swap; it proves no census-vocabulary stimulus moved",
+    "cd scratch/udtag1/tree-five && python3 verify/recompute-claims.py -> exit 0; output byte-identical to base-copy; ALL CLAIM NUMBERS PRESERVED: True; fixture digest c7696edc0e71d83faafc2e489925788e0f36c6af94913674f8953718352c9a55",
+    "claims vs published: papers/encoder-crossover-190/CLAIMS.md:18 0.3474/0.3474/0.2632/0.4526/0.2316, :19 0.2911, :20 0.6684/0.6789, :33 b=27 c=90 p=4.17e-09 MDE 0.1595 - all match recompute output",
+    "exit codes in copies under scratch/uver24 (verified trees not written): compileall 0/0; train.jsonl 800 rec 0 malformed; dev.jsonl 200/0; second-labeller/disagreements.jsonl 18/0; parse_fixture.py 1/1; compare.py 1/1",
+    "second-labeller failures PRE-EXISTING and identical: parse_fixture.py FileNotFoundError reflex-decisions.sandbox.ts; compare.py FileNotFoundError cases.json; neither file shipped; metrics.json sha256 6bf39077261f00bed589a4ae8e9fe90324e2435fd28e42a4fc8de7684cba34bf identical in both trees",
+    "manifest via OWN checker scratch/uver24/check_manifest_uver24.py: missing 0, size_mismatch 0, hash_mismatch 0, unlisted_present 0, listed_but_absent 0, duplicates 0; counts.files 45 = entries 44 + MANIFEST.json = disk 45; bytes_total 3008830 = disk_sum = entries_sum 2986505 + manifest 22325; manifest bytes 22325 sha256 8527a83be8c7259d230a1eb90452ad818287747dc6646e5b9d21f820cd03c8c1; VERDICT PASS",
+    "manifest self-reference convention STATED not implied: manifest_self field says MANIFEST.json is the only file absent from files[] and counts.files/counts.bytes_total count it",
+    "idempotence: diff -rq scratch/udtag1/tree-five scratch/udtag1/tree-five-b | wc -l -> 0",
+    "red-green on my own checker: PASS -> append 1 byte to harness/data/train.jsonl -> size_mismatch=1 hash_mismatch=1 naming harness/data/train.jsonl, VERDICT FAIL exit 1 -> restore -> PASS",
+    "scope: newest file mtimes tree-five 2026-10-15 21:58, tree-five-b 21:58, ubij3/tree-three-r2 21:39, all precede handoff UDTAG1.json 22:01:50; tree-five/MANIFEST.json still hashes to the recorded 8527a83b..., pinning all 44 payload files"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Two record defects to fix before this can be cited: (a) correct counts.bytes_total from 3,009,198 to 3,008,830 in strategy/DTAG_NEUTRALISATION.md:8 and orchestration/handoffs/UDTAG1.json:25 (the manifest is self-consistent at 3,008,830; the recorded number is stale); (b) scratch/udtag1/udtag1_facts.json is listed as an artifact but does not exist. Content verdict is unaffected: the neutralisation, census, claims, manifest, and idempotence all reproduce. Open author decisions remain: ship second-labeller/reflex-decisions.sandbox.ts + cases.json so parse_fixture.py/compare.py can run at all, and the manifest source/source_sha256 exposure policy.",
+  "write_paths": [
+    "strategy/VERIFICATION_REPORT_23.md",
+    "orchestration/units/UVER24.md",
+    "orchestration/handoffs/UVER24.json",
+    "scratch/uver24/**"
+  ],
+  "contradicted": [
+    "counts.bytes_total: record says 3,009,198 (strategy/DTAG_NEUTRALISATION.md:8, orchestration/handoffs/UDTAG1.json:25); the manifest on disk and the tree say 3008830 (disk_sum 3008830 = entries_sum 2986505 + manifest bytes 22325). Delta 368. The artifact is right, the record is wrong.",
+    "scratch/udtag1/udtag1_facts.json is listed in UDTAG1.json artifacts[] but does not exist on disk (find scratch/udtag1 -maxdepth 1 -name '*.json' -> empty)"
+  ],
+  "overstated": [
+    "The unit's 'both second-labeller tools exit 1 because reflex-decisions.sandbox.ts is not shipped' is imprecise for compare.py: its own FileNotFoundError names second-labeller/cases.json (also absent). The pre-existing/identical verdict stands."
+  ],
+  "not_reproduced": [
+    "counts.bytes_total 3,009,198 - the only published number that failed to reproduce"
+  ],
+  "unverified": [
+    "No pre-unit snapshot digest of tree-five/tree-five-b/tree-three-r2 exists, so non-modification rests on the recorded manifest sha256 still matching disk plus mtime ordering, not a byte snapshot diff",
+    "The four second-labeller numbers (0.3252/0.8837/0.914/0.3526) were not re-derived from raw data; I only confirmed metrics.json is byte-identical across the two trees and that recompute-claims.py matches it"
+  ],
+  "containment": "wrote only strategy/VERIFICATION_REPORT_23.md, orchestration/units/UVER24.md, orchestration/handoffs/UVER24.json, scratch/uver24/**; no git command run; /home/zer0null/Duval and /home/zer0null/research-publish-packages never written; verified trees read-only (copies used for compileall/tool runs)",
+  "tool_calls": 17,
+  "bound": 25
+}

@@ -1,0 +1,45 @@
+{
+  "unit": "U8",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/context/render.py",
+    "src/resextract/context/meter.py",
+    "tests/test_context_render.py",
+    "tests/test_context_meter.py",
+    "experiments/context-cache/README.md",
+    "orchestration/handoffs/CX-V1.json",
+    "orchestration/units/CX-V1.md",
+    "orchestration/handoffs/V1.json",
+    "orchestration/units/V1.md",
+    "orchestration/handoffs/U8.json",
+    "orchestration/units/U8.md"
+  ],
+  "evidence": {
+    "command_or_count": "45 passed in 0.06s (tests/test_context_*.py); full tests dir: 2 failed, 1107 passed, 1 skipped in 66.06s",
+    "context_tests": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_context_*.py -q -> '............................................. [100%]\\n45 passed in 0.06s'",
+    "full_suite": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests -q -> '2 failed, 1107 passed, 1 skipped in 66.06s'. Pre-existing failures, not in this unit's write paths: tests/test_kg_policy.py::test_real_target_config_declares_the_decision (real-target config), and tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps -> NEW gaps U-BENCH-PROTOCOL.json ['blocker'], U-CACHE-INSTRUMENT.json ['overall','checks'] (files authored by other units). 'pytest -q' from the repo root is NOT a usable full-suite command here: it collects state/verify/**/test_*.py copies and ended '1126 errors in 651.48s' during collection (pre-existing; no source file involved).",
+    "red_green": "old NAIVE_APPEND branch replayed in-process: test_naive_append_never_rewrites_an_emitted_message FAILED with 'the turn-2 message must be the node's own text, not text plus the turn-2 volatile block ...'; new renderer passes. render.py sha256 before 162d6379012ce3da7feb5237ff4dbcbf0f44fc4412f99579e26870cefbbffc3d, after 4184c9321b9a9406c4e9997e0d0de4bfa17fc4a9f3a9edec2564e537668072ba. meter.py before f781a59878805c968a59ef580b8a62bc58f38a4ce40d9c4d56a20c6654f5553b, after 3f80145e62d8e943b5c9ec7e932c078edb917d384c957d1811a8bd0358f68c2e.",
+    "equal_information": "4-turn chain: POINTER messages=5 concatenated_chars=168; NAIVE_APPEND messages=5 concatenated_chars=168; identical content: True; equal_information(): True; pointer bodies = every node text in order.",
+    "defect_1": "NAIVE_APPEND/POINTER render node.text verbatim in chain order; volatile is only interpolated into the invariant header of NAIVE_MUTABLE. test asserts new[:len(old)] == old across 1..4 turns with changing volatile.",
+    "defect_2": "POINTER now emits salted preamble + every non-invariant body in order; equal_information(chain, preamble, salt) asserts equal message count and concatenated content. POINTER_FORK labels the fork root in the invariant preamble; NAIVE_MUTABLE unchanged as the sensitivity bound.",
+    "defect_3": "test_append_only_prefix_stability asserts message-list prefix, concatenated-content prefix, and canonical-JSON relation b_new.startswith(b_old[:-1] + b',') for turns 1..4 (JSON closing bracket accounted for and documented).",
+    "defect_4": "normalise_cache clamps cached to [0, prompt] (negative prompt -> 0); every upper clamp increments meter.clamp_stats()['clamped'] and reports 'max_overrun'; test asserts {'clamped': 2, 'max_overrun': 994} and that legitimate/negative values are not counted. client.py callers unaffected (uncached already floored at 0).",
+    "defect_5": "Overwritten context-cache verdict refiled byte-identically: V1.json 81f549af... -> CX-V1.json 81f549af..., V1.md 9057e88d... -> CX-V1.md 9057e88d.... Originals restored from git: V1.json 868d45fb... (== git show HEAD), V1.md cceea6fe... (== git show HEAD). Old record recoverable: yes. CX- convention documented in experiments/context-cache/README.md (sha256 1c7da0c2...).",
+    "workspace_git_status": "git status --porcelain shows V1.json/V1.md modified (restoration) plus pre-existing unrelated modifications; no target repo touched, no git state changes."
+  },
+  "blocker": "",
+  "next_unit_hint": "Independent verifier (CX- prefixed) should (a) re-run the context tests and the red->green, (b) check equal_information over a forked chain, (c) re-run pytest tests -q and treat the two named failures as pre-existing, (d) note runner.py:131-143 prefix_sha256 still documents a 'pointer table' that the renderer no longer emits (runner.py was outside this unit's write paths) - its digest remains stable because messages[1] is the first body.",
+  "write_paths": [
+    "src/resextract/context/render.py",
+    "src/resextract/context/meter.py",
+    "tests/test_context_render.py",
+    "tests/test_context_meter.py",
+    "experiments/context-cache/README.md",
+    "orchestration/handoffs/CX-V1.json",
+    "orchestration/units/CX-V1.md",
+    "orchestration/handoffs/V1.json",
+    "orchestration/units/V1.md",
+    "orchestration/handoffs/U8.json",
+    "orchestration/units/U8.md"
+  ]
+}

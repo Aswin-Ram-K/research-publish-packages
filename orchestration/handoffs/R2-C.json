@@ -1,0 +1,255 @@
+{
+  "unit": "R2-C",
+  "status": "done",
+  "scope": "read-only web research against vLLM source pinned at tag v0.27.1 (raw.githubusercontent.com / codeload tarball) plus current docs.vllm.ai; zero model requests, no GX10 access, no papers/** edits, no board operations",
+  "write_paths": [
+    "orchestration/handoffs/R2-C.json"
+  ],
+  "method": {
+    "pinned_tag": "v0.27.1",
+    "how": "downloaded full source tarball of tag v0.27.1 and grepped locally; every quote below is from that tree, URL given per claim; release-bisected candidate flags by fetching individual files at intervening tags",
+    "note": "downloads were transient scratch and were deleted after extraction; all evidence below is URL-addressable and reproducible by curl"
+  },
+  "version_pins": [
+    {
+      "flag": "--enable-prefix-caching",
+      "exists_in_0_27_1": true,
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/engine/arg_utils.py#L1207-L1214",
+      "quote": "cache_group.add_argument(\"--enable-prefix-caching\", **{**cache_kwargs[\"enable_prefix_caching\"], \"default\": None,})",
+      "note": "PITFALL: default is NOT simply on. arg_utils.py:2604-2608, 'Hybrid models support prefix caching but keep it opt-in for now while the feature matures.' -> default_prefix_caching = model_config.is_prefix_caching_supported and not model_config.is_hybrid. For a hybrid MoE the flag must be passed explicitly."
+    },
+    {
+      "flag": "--prefix-match-unit",
+      "exists_in_0_27_1": true,
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/config/cache.py#L56-L67",
+      "quote": "The finest token boundary (in tokens) a prefix-cache hit can land on. Prefix-cache keys are computed every `prefix_match_unit` tokens. It can be set finer than the physical KV cache block sizes (e.g. 32 vs a 1024-token hybrid-model block) as long as every KV cache group's `block_size` is divisible by it, enabling cache hits at boundaries inside a physical block. It controls matching granularity only, not how often states are stored. This equals to the `hash_block_size` used throughout the KV cache code.",
+      "note": "registered at arg_utils.py:1235-1237; default None -> falls back to GCD of group block sizes (kv_cache_utils.py:678-681)"
+    },
+    {
+      "flag": "--enable-mamba-shared-prefix-checkpoint",
+      "exists_in_0_27_1": false,
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.30.1rc0/vllm/config/cache.py#L199-L204",
+      "quote": "enable_mamba_shared_prefix_checkpoint: bool = False\n    \"\"\"Also register a Mamba \"align\" checkpoint at the shared-prefix junction --\n    where an EAGLE/MTP sibling was observed to resume -- instead of only at the\n    prompt tail. Off by default; only takes effect with `mamba_cache_mode`\n    \"align\", EAGLE on the Mamba group, and a prefix match unit smaller than the\n    Mamba block size.\"\"\"",
+      "note": "INTRODUCED IN v0.30.1 (release bisect, grep count for enable_mamba_shared_prefix_checkpoint in vllm/config/cache.py): v0.27.1=0, v0.28.0=0, v0.29.0=0, v0.30.0rc2=0, v0.30.0=0, v0.30.1rc0=2, v0.31.0=2, v0.32.0=2, v0.32.1rc0=2. Absent from the whole v0.27.1 tree (0 hits for 'mamba_shared_prefix' or 'shared_prefix_checkpoint' under vllm/**)."
+    },
+    {
+      "flag": "--kv-offloading-size + --kv-offloading-backend",
+      "exists_in_0_27_1": true,
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/config/cache.py#L191-L200",
+      "quote": "kv_offloading_size: float | None = None\n    \"\"\"Size of the KV cache offloading buffer in GiB. When TP > 1, this is\n    the total buffer size summed across all TP ranks. By default, this is set\n    to None, which means no KV offloading is enabled. When set, vLLM will\n    enable KV cache offloading to CPU using the kv_offloading_backend.\"\"\"\n\n    kv_offloading_backend: KVOffloadingBackend = \"native\"\n    \"\"\"The backend to use for KV cache offloading. Supported backends include\n    'native' (vLLM native CPU offloading), 'lmcache'.\n    KV offloading is only activated when kv_offloading_size is set.\"\"\"",
+      "note": "KVOffloadingBackend = Literal[\"native\", \"lmcache\"] (cache.py:40); registered arg_utils.py:1245-1250"
+    },
+    {
+      "flag": "--cpu-offload-gb",
+      "exists_in_0_27_1": true,
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/engine/arg_utils.py#L1262-L1263",
+      "quote": "offload_group.add_argument(\"--cpu-offload-gb\", **uva_kwargs[\"cpu_offload_gb\"])",
+      "note": "NOT a KV-cache tier: it lives in the OffloadConfig group (arg_utils.py:1252-1258, OffloadConfig 'Configuration for model weight offloading to reduce GPU memory usage') i.e. UVA weight offload, so it raises KV capacity only indirectly by freeing weight memory. Do not confuse with --kv-offloading-size."
+    },
+    {
+      "flag": "--enable-chunked-prefill",
+      "exists_in_0_27_1": true,
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/engine/arg_utils.py#L2598-L2603",
+      "quote": "default_chunked_prefill = model_config.is_chunked_prefill_supported",
+      "note": "registered arg_utils.py:1500-1502; must be on for mamba 'align' mode (vllm/config/vllm.py:634-637 assert)"
+    },
+    {
+      "flag": "--num-gpu-blocks-override",
+      "exists_in_0_27_1": true,
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/config/cache.py#L100-L102",
+      "quote": "num_gpu_blocks_override: int | None = None\n    \"\"\"Number of GPU blocks to use. This overrides the profiled `num_gpu_blocks`\n    if specified. Does nothing if `None`. Used for testing preemption.\"\"\"",
+      "note": "not a capacity lever for production; the documented purpose is testing preemption. Registered arg_utils.py:1204-1206"
+    },
+    {
+      "flag": "--kv-cache-dtype",
+      "exists_in_0_27_1": true,
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/config/cache.py#L19-L37",
+      "quote": "CacheDType = Literal[\n    \"auto\",\n    \"float16\",\n    \"bfloat16\",\n    \"fp8\",\n    \"fp8_e4m3\",\n    \"fp8_e5m2\",\n    \"fp8_inc\",\n    \"fp8_ds_mla\",\n    \"turboquant_k8v4\",\n    \"turboquant_4bit_nc\",\n    \"turboquant_k3v4_nc\",\n    \"turboquant_3bit_nc\",\n    \"int4_per_token_head\",\n    \"int8_per_token_head\",\n    \"fp8_per_token_head\",\n    \"nvfp4\",\n]",
+      "note": "nvfp4 is a legal KV dtype in 0.27.1 and it runs through _align_heterogeneous_kv_block_size (platforms/interface.py:637-646), a SECOND block-size override we did not control"
+    },
+    {
+      "flag": "--swap-space",
+      "exists_in_0_27_1": false,
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/docs/design/metrics.md#L510-L514",
+      "quote": "In this mode, when a request was preempted (e.g. to make room in KV\ncache to complete other requests), kv cache blocks were swapped out to\nCPU memory. The `--swap-space` flag has been removed as this feature\nis no longer used in V1.",
+      "note": "0 hits for 'swap_space' or 'swap-space' outside that doc note anywhere under vllm/** in v0.27.1"
+    },
+    {
+      "flag": "--enforce-eager",
+      "exists_in_0_27_1": true,
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/engine/arg_utils.py#L863-L864",
+      "quote": "model_group.add_argument(\"--enforce-eager\", **model_kwargs[\"enforce_eager\"])",
+      "note": "model/exec config group, not CacheConfig; no interaction with prefix-cache granularity found"
+    },
+    {
+      "flag": "--max-num-batched-tokens",
+      "exists_in_0_27_1": true,
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/engine/arg_utils.py#L2539-L2544",
+      "quote": "# NOTE(Kuntai): Setting large `max_num_batched_tokens` for A100 reduces\n        # throughput, see PR #17885 for more details.\n        # So here we do an extra device name check to prevent such regression.\n        if device_memory >= 70 * GiB_bytes and \"a100\" not in device_name:",
+      "note": "defaults are resolved per usage context: {LLM_CLASS: 16384, OPENAI_API_SERVER: 8192} on >=70GiB non-A100, else {8192, 2048} (arg_utils.py:2545-2560)"
+    },
+    {
+      "flag": "--enable-prompt-tokens-details",
+      "exists_in_0_27_1": true,
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/entrypoints/openai/cli_args.py#L132-L133",
+      "quote": "enable_prompt_tokens_details: bool = False\n    \"\"\"If set to True, enable prompt_tokens_details in usage.\"\"\"",
+      "note": "this is the flag that makes cached-token accounting visible per response (usage.prompt_tokens_details.cached_tokens) - relevant because our 0.9012/0.9572 comparison depends on how cached tokens are counted"
+    }
+  ],
+  "hybrid_mamba_semantics": {
+    "state_snapshot_grid": {
+      "evidence_url": "https://docs.vllm.ai/en/latest/features/automatic_prefix_caching.html",
+      "quote": "With prefix caching enabled, Mamba state is stored only on the Mamba block grid, so a prefix-cache hit can resume only at a block boundary. `--enable-mamba-shared-prefix-checkpoint` also stores a checkpoint at the shared-prefix junction, the point where an earlier request with the same prefix stopped. Requests whose shared prefix ends inside a block can then reuse it.",
+      "reading": "block grid = the resolved block size (1088 / 1056 / 2096 in our cells), NOT --block-size as passed"
+    },
+    "why_unset_prefix_match_unit_floors_every_hit": {
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/v1/core/kv_cache_utils.py#L678-L688",
+      "quote": "requested = cache_config.prefix_match_unit\n    hash_block_size = (\n        requested if requested is not None else math.gcd(*group_block_sizes)\n    )\n    if any(bs % hash_block_size != 0 for bs in group_block_sizes):\n        raise ValueError(\n            f\"Invalid prefix_match_unit={hash_block_size}; all KV cache group \"\n            f\"block sizes must be divisible by prefix_match_unit. \"\n            f\"Got group block sizes={group_block_sizes}.\"\n        )\n    return scheduler_block_size, hash_block_size",
+      "reading": "for a hybrid model the mamba group block_size is forced equal to the attention block (platforms/interface.py:900 / :918), so GCD = block size. Hash keys therefore exist only on the big block grid and every hit rounds down to it - which is exactly the measured reuse law cached = block*floor(L/block)."
+    },
+    "partial_tail_registration_is_disabled_by_default": {
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/v1/core/single_type_kv_cache_manager.py#L786-L789",
+      "quote": "hash_block_size = self.block_pool.hash_block_size\n        if self.block_size == hash_block_size:\n            return\n        self._cache_partial_tail_block(request, num_tokens)",
+      "reading": "prompt-tail caching at hash granularity exists in 0.27.1 but is dead code while prefix_match_unit is unset (hash_block_size == block_size). Setting --prefix-match-unit re-enables it for BOTH the attention group and the mamba 'align' group (MambaManager._cache_partial_tail_block, :1683-1730)."
+    },
+    "can_prefix_match_unit_go_below_block": {
+      "answer": "yes, explicitly supported, with a divisibility contract",
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/config/cache.py#L56-L67",
+      "quote": "It can be set finer than the physical KV cache block sizes (e.g. 32 vs a 1024-token hybrid-model block) as long as every KV cache group's `block_size` is divisible by it, enabling cache hits at boundaries inside a physical block. It controls matching granularity only, not how often states are stored.",
+      "caveat": "the last sentence is the catch: finer keys do not create finer state snapshots. A mamba group can only hit at a boundary that actually has a registered state (dense block grid, or the registered prompt tail). So the win is on turn tails, not on arbitrary interior boundaries - closure of that gap is exactly what v0.30.1's --enable-mamba-shared-prefix-checkpoint adds."
+    },
+    "capacity_tiers": {
+      "native_tier_wiring": {
+        "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/config/vllm.py#L900-L921",
+        "quote": "if kv_offloading_backend == \"native\":\n            if envs.VLLM_USE_SIMPLE_KV_OFFLOAD:\n                config_connector = \"SimpleCPUOffloadConnector\"\n            else:\n                config_connector = \"OffloadingConnector\"\n            self.kv_transfer_config.kv_connector = config_connector\n            self.kv_transfer_config.kv_connector_extra_config.update(\n                {\"cpu_bytes_to_use\": kv_offloading_size * (1 << 30)}\n            )",
+        "reading": "--kv-offloading-size N is sugar: it builds a KVTransferConfig whose connector is OffloadingConnector (or SimpleCPUOffloadConnector when VLLM_USE_SIMPLE_KV_OFFLOAD is set) with cpu_bytes_to_use = N GiB. The same tier is reachable explicitly via --kv-transfer-config {\"kv_connector\":\"OffloadingConnector\",...,\"cpu_bytes_to_use\":...}."
+      },
+      "documented_sizing_rule": {
+        "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/docs/features/kv_offloading_usage.md",
+        "quote": "For single-tier (CPU-only) setups, set `cpu_bytes_to_use` larger than the aggregate GPU KV cache. Because offloading is immediate, a smaller CPU tier just mirrors what the GPU already holds and adds no hit rate.",
+        "reading": "sizing rule is: CPU tier must exceed aggregate GPU KV capacity, otherwise no extra hit rate. Also 'cpu_bytes_to_use ... Total bytes of host memory reserved for the CPU tier across all workers (not per-worker).'"
+      },
+      "mamba_is_supported_by_the_offload_tier": {
+        "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/distributed/kv_transfer/kv_connector/v1/offloading/scheduler.py#L148-L159",
+        "quote": "For MambaSpec groups in \"align\" cache mode the hit window must be rounded",
+        "reading": "resolve_mamba_align_size() exists, so the native offload connector does handle mamba 'align' groups; but the kv_offloading_usage.md events note says 'Full-attention groups only; sliding-window/SSM groups keep the placeholder fallback' for self-describing events - i.e. telemetry for SSM blocks is degraded even where offload works. Disk/secondary tiers exist only in the TieringOffloadingSpec path (fs/obj/p2p secondary_tiers), not as a --kv-offloading-size sub-flag."
+      }
+    }
+  },
+  "block_size_resolution": {
+    "claim": "--block-size is NOT honoured for this architecture family: it is a floor that Phase 2 then overrides",
+    "code_path": {
+      "entry": "Platform.update_block_size_for_backend(vllm_config), called from vllm/v1/executor/uniproc_executor.py:69 (and :662 multiproc, :366 ray) after model layers exist",
+      "phase_markers_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/platforms/interface.py#L609-L646",
+      "phase_quotes": [
+        "# Phase 1: Pick block size from backend (skip if user set --block-size)",
+        "# Phase 2: Align block/mamba sizes for hybrid models\n        # (may override user settings).",
+        "# Phase 3: Align block/page sizes when multiple KV dtypes share the\n        # block pool (e.g. nvfp4 primary + unquantized skip layers).\n        # May override the user's --block-size."
+      ],
+      "resolution_math_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/platforms/interface.py#L890-L915",
+      "resolution_quote": "if cache_config.mamba_cache_mode == \"all\":\n            # With prefix caching, align to mamba chunk size for kernel perf\n            ...\n            base_chunk_size = mamba_block_size or model_config.get_mamba_chunk_size()\n            attn_tokens_per_mamba_state = cdiv(mamba_page_size, attn_page_size_1_token)\n            chunk_size = lcm(base_chunk_size, kernel_block_alignment_size)\n            attn_block_size = chunk_size * cdiv(attn_tokens_per_mamba_state, chunk_size)\n            cache_config.mamba_block_size = attn_block_size\n        else:\n            ...\n            attn_block_size = kernel_block_alignment_size * cdiv(\n                mamba_page_size,\n                kernel_block_alignment_size * attn_page_size_1_token,\n            )\n\n        if cache_config.block_size < attn_block_size:\n            cache_config.block_size = attn_block_size",
+      "how_user_block_size_enters": "only through kernel_block_alignment_size = max(min(backend supported kernel block size), cache_config.block_size) (interface.py:874-884), which then feeds lcm() and the rounding-up cdiv(). So a larger --block-size can only raise the resolved value, never lower it, and the final number is always a multiple of chunk_size derived from the Mamba page size.",
+      "consistent_with_our_evidence": "resolved 1088 (user 64) > resolved 1056 (user 16) is exactly the predicted direction: the 64 case floors kernel_block_alignment_size to 64, the 16 case to the backend's smallest supported kernel block (32), and lcm(base_chunk, align) then yields a larger chunk for 1088 than 1056. The default cell (2096) is the same formula with Phase 1's backend-preferred block plus Phase 3's nvfp4 heterogeneous-KV bump.",
+      "cannot_pin_exact_constants": "1088 / 1056 / 2096 cannot be reconstructed from public source alone: attn_tokens_per_mamba_state = cdiv(mamba_page_size, attn_page_size_1_token) needs the model's get_mamba_state_shape_from_config shapes/dtypes and get_mamba_chunk_size (vllm/config/model.py:1531), i.e. the served checkpoint's head layout and linear-attention state width. Verify by reading the startup log lines rather than by formula."
+    },
+    "doc_anchor": {
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/docs/design/hybrid_kv_cache_manager.md",
+      "quote": "Increase the `block_size` of attention layers until\n    $$\n    \\text{block_size} \\times \\text{kv_hidden_size}_{\\text{att}} \\ge \\text{state_size}_{\\text{mamba}}\n    $$\n2. Pad the mamba state per layer to ...\n\n!!! note\n    This can lead to more than 400 `block_size` for attention layers, which is too large.",
+      "stale_warning": "this design doc is explicitly pinned to an old commit ('This document was written based on commit 458e74') and still says 'The prefix caching support of the mamba model is work in progress', while v0.27.1 code ships mamba_cache_mode all/align. Use it for the allocation principle only, never for the prefix-caching status."
+    }
+  },
+  "prompt_layout_and_invalidation": {
+    "chain_hash": {
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/docs/design/prefix_caching.md",
+      "quote": "Block 2: |<------- prefix ------>| |<--- block tokens --->|\n...Therefore, we can build the block hash of `hash(tuple[components])`, where components are:\n\n* Parent hash value: The hash value of the parent hash block.\n* Block tokens: A tuple of tokens in this block.\n* Extra hashes: Other values required to make this block unique, such as LoRA IDs, multi-modality input hashes (see the example below), and cache salts to isolate caches in multi-tenant environments.",
+      "reading": "strictly chained prefix: any token change at or before block k changes the hash of block k and therefore of every block after it. There is no suffix/delta cache. Mid-context insertion invalidates the tail from the insertion point onward regardless of --prefix-match-unit."
+    },
+    "full_blocks_only": {
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/docs/design/prefix_caching.md",
+      "quote": "!!! note \"Note 1\"\n    We only cache full blocks.",
+      "reading": "at hash granularity 'full block' means full hash unit; that is why --prefix-match-unit is the only knob that moves the granularity of that sentence"
+    },
+    "cache_salt": {
+      "evidence_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/docs/design/prefix_caching.md",
+      "quote": "By including a `cache_salt` in the request, this value is injected into the hash of the first block, ensuring that only requests with the same salt can reuse cached KV blocks.",
+      "reading": "whole-prefix isolation, not suffix pinning; use only if you need tenant isolation"
+    },
+    "no_suffix_pinning_feature_found": "grep of docs/** at v0.27.1 for 'suffix pinning', 'mid-context', 'insertion' returns nothing cache-related; the only 'suffix' hits are CLI unit suffixes (docs/cli/README.md) and benchmark flags. Treat 'pin the suffix, recompute the middle' as unsupported in vLLM."
+  },
+  "options": [
+    {
+      "flag": "--prefix-match-unit",
+      "our_value": "unset (None) in every measured cell -> hash_block_size = GCD(group block sizes) = resolved block size (1088 / 1056 / 2096)",
+      "recommended": "16 (or 32 only where every group block size is divisible by 32: valid for 1088 and 1056, INVALID for 2096 because 2096 % 32 = 16)",
+      "why": "This is the only knob in 0.27.1 that moves the reuse boundary off the block grid. Unset, vLLM hashes only at block granularity and _cache_partial_tail_block is skipped (block_size == hash_block_size), so a 71-turn schedule loses every turn that ends mid-block - which reproduces our cached = block*floor(L/block) law exactly. Set to 16, hashes exist every 16 tokens and the prompt-tail partial registration re-activates for both the attention and mamba 'align' groups, so the next turn can resume at 16-token granularity instead of the block floor.",
+      "source_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/config/cache.py#L56-L67",
+      "quote": "It can be set finer than the physical KV cache block sizes (e.g. 32 vs a 1024-token hybrid-model block) as long as every KV cache group's `block_size` is divisible by it, enabling cache hits at boundaries inside a physical block. It controls matching granularity only, not how often states are stored.",
+      "expected_effect": "measured hit fraction should move from floor-to-block (0.9012) toward floor-to-16 behaviour; the size of the gain is exactly the fraction of turns whose prompt length did not end on a block multiple. Startup risk: a wrong value raises ValueError naming the offending sizes (kv_cache_utils.py:682-687), so this fails loud, never silently. Estimate: if turn ends are uniformly distributed over a 2096-token block, floor-to-16 recovers ~99% of the block-rounding loss; this is the single highest-expected-value flag for the 0.9012 vs 0.9572 gap.",
+      "priority": 1
+    },
+    {
+      "flag": "--enable-prefix-caching (must be explicit) + read the resolved mamba mode from the log",
+      "our_value": "not recorded in this lane's evidence - our 0.9012 hit fraction implies caching was active, but the flag line was not captured",
+      "recommended": "pass --enable-prefix-caching explicitly and capture the startup log lines 'Mamba cache mode is set to ... by default when prefix caching is enabled' and 'Setting attention block size to N tokens ...'",
+      "why": "For hybrid models prefix caching is opt-in in 0.27.1, and the mamba state mode ('all' if the model class advertises supports_mamba_prefix_caching, else 'align') is chosen for you. 'align' stores state only at the last token of a scheduler step at i*block_size, so it is the mode where the block floor bites hardest; 'all' snapshots every block boundary. You cannot reason about capacity or hit rate until you know which branch ran.",
+      "source_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/model_executor/models/config.py#L613-L623",
+      "quote": "if cache_config.enable_prefix_caching:\n            if cache_config.mamba_cache_mode == \"none\":\n                cache_config.mamba_cache_mode = (\n                    \"all\" if model_config.supports_mamba_prefix_caching else \"align\"\n                )",
+      "expected_effect": "removes the largest silent-configuration risk in the whole comparison: an 'align' cell and an 'all' cell are not the same experiment, and the opt-in default means an un-flagged launch caches nothing at all.",
+      "priority": 2
+    },
+    {
+      "flag": "--kv-offloading-size (with --kv-offloading-backend native)",
+      "our_value": "None in every cell (no offload tier at all)",
+      "recommended": "set it to comfortably more than the aggregate GPU KV cache, e.g. headroom x that figure, host RAM permitting; keep backend native for the in-process tier, and only reach for lmcache/TieringOffloadingSpec if you need a disk tier",
+      "why": "This is the capacity lever: it is the only documented way to hold more reusable prefix than the GPU pool, and the documented sizing rule says a smaller-than-GPU CPU tier adds no hit rate because offload is immediate. A 71-turn schedule's early turns are exactly what eviction costs us.",
+      "source_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/docs/features/kv_offloading_usage.md",
+      "quote": "For single-tier (CPU-only) setups, set `cpu_bytes_to_use` larger than the aggregate GPU KV cache. Because offloading is immediate, a smaller CPU tier just mirrors what the GPU already holds and adds no hit rate.",
+      "expected_effect": "raises the ceiling on how much of a 32k-token, 71-turn prefix survives across turns; hit fraction becomes capacity-bound instead of eviction-bound. Semantics: GiB, summed across TP ranks (not per rank); activates only when non-None; forwards to cpu_bytes_to_use = N GiB on the OffloadingConnector.",
+      "priority": 3
+    },
+    {
+      "flag": "--enable-mamba-shared-prefix-checkpoint (requires upgrade to >= v0.30.1)",
+      "our_value": "does not exist in 0.27.1 (introduced v0.30.1) - not applicable to the current build",
+      "recommended": "only if the schedule contains divergent siblings sharing a long prefix (regenerate/edit-a-turn style); otherwise --prefix-match-unit already covers monotone appends",
+      "why": "This is the upstream-documented fix for the residual gap after --prefix-match-unit: shared-prefix junctions inside a block. Current docs state the limitation plainly, which is the strongest available confirmation that our block-floor observation is a known-and-addressed design property rather than a misconfiguration.",
+      "source_url": "https://docs.vllm.ai/en/latest/features/automatic_prefix_caching.html",
+      "quote": "With prefix caching enabled, Mamba state is stored only on the Mamba block grid, so a prefix-cache hit can resume only at a block boundary. `--enable-mamba-shared-prefix-checkpoint` also stores a checkpoint at the shared-prefix junction, the point where an earlier request with the same prefix stopped. Requests whose shared prefix ends inside a block can then reuse it.",
+      "expected_effect": "recovers reuse for requests that branch mid-block; per current docs it takes effect only with prefix caching + EAGLE/MTP on the mamba group + prefix-match-unit < mamba block size, and it is off by default. NOTE the MTP tension for us: our serving needed --speculative-config mtp REMOVED, so the flag's own precondition ('EAGLE/MTP speculative decoding on the Mamba group') is NOT met on our box - treat this as roadmap, not a switch.",
+      "priority": 4
+    },
+    {
+      "flag": "--mamba-cache-mode (0.27.1: all | align | none)",
+      "our_value": "not recorded",
+      "recommended": "do not force it in 0.27.1 (auto-derived when prefix caching is on); if you do force 'align', chunked prefill must be on",
+      "why": "Forcing 'all' on an architecture that does not advertise supports_mamba_prefix_caching gets silently downgraded to 'align' with a warning, so an A/B on this flag can silently be a no-op. In newer releases the flag is deprecated entirely (no effect, removal in v0.33.0), so it is a bad axis to build an experiment on.",
+      "source_url": "https://docs.vllm.ai/en/latest/configuration/engine_args.html",
+      "quote": "--mamba-cache-mode is deprecated and will be removed in v0.33.0. It has no effect: Mamba prefix caching follows --enable-prefix-caching.",
+      "expected_effect": "no reliable effect to expect in either version; keep it out of the experiment matrix",
+      "priority": 5
+    },
+    {
+      "flag": "--enable-chunked-prefill / --max-num-batched-tokens",
+      "our_value": "not recorded",
+      "recommended": "leave chunked prefill at its default (on when supported) and record max-num-batched-tokens explicitly, since its default is 8192 for the OpenAI server path on non->=70GiB devices",
+      "why": "chunked prefill is a hard precondition for align mode; batched-token size determines how many blocks get committed per scheduler step, and align mode only snapshots state at the last token of a step - so it indirectly governs how many mamba snapshots exist to hit.",
+      "source_url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/config/vllm.py#L2303-L2310",
+      "quote": "if self.cache_config.mamba_cache_mode == \"align\":\n            assert not self.scheduler_config.disable_chunked_mm_input, (\n                \"Chunked MM input is required because we need the flexibility \"\n                \"to schedule a multiple of block_size tokens even if they are \"\n                \"in the middle of a mm input\"",
+      "expected_effect": "keeps the align-mode configuration legal and makes the snapshot cadence reproducible across cells",
+      "priority": 6
+    }
+  ],
+  "top3": [
+    "1. --prefix-match-unit 16 (NOT 32 if the default 2096 block is in play: 2096 % 32 = 16) - the only 0.27.1 knob that moves the reuse boundary off the block grid; unset it and _cache_partial_tail_block is dead code, which is precisely why we observe cached = block*floor(L/block).",
+    "2. --enable-prefix-caching explicitly + capture the auto-derived mamba cache mode ('all' vs 'align') and the 'Setting attention block size to N tokens' log line - hybrid prefix caching is opt-in in 0.27.1 and the two modes are different experiments.",
+    "3. --kv-offloading-size (GiB, summed over TP ranks) with native backend, sized ABOVE the aggregate GPU KV cache per the documented rule - the only documented capacity tier, and a smaller tier provably adds no hit rate."
+  ],
+  "unresolved": [
+    "Exact provenance of 1088 / 1056 / 2096 is formula-level explained (interface.py:890-915) but not reproducible numerically from public source: attn_tokens_per_mamba_state needs the checkpoint's mamba state shape and get_mamba_chunk_size. Resolve by capturing the startup log ('Setting attention block size to %d tokens to ensure that attention page size is >= mamba page size') and the 'Padding mamba page size by %.2f%%' line per cell.",
+    "Which of 'all' / 'align' ran in each of our cells is not in this lane's evidence; the two modes differ in both snapshot density and hit semantics, so any cross-engine number without this pinned is not a controlled comparison.",
+    "Whether nvfp4 KV dtype (Phase 3, _align_heterogeneous_kv_block_size, interface.py:647-780) fired in our cells: it can raise block size a second time and it also sets skip_page_size_padded/mamba_page_size_padded, which would change the mamba page geometry. Needs --kv-cache-dtype from the actual launch line plus the 'Setting attention block size to %d tokens so the quantized primary KV page covers the higher-precision padded-spec page.' log.",
+    "No documented suffix-pinning / mid-context-insertion feature exists in vLLM at v0.27.1 or in current docs; invalidation is a hard chained-prefix property. If a paper claim needs 'suffix reuse', vLLM cannot support it and the claim must be scoped to SGLang/other engine or dropped.",
+    "kv_offloading_size is undocumented in docs/** at v0.27.1 (only --kv-transfer-config OffloadingConnector is documented); the 'larger than aggregate GPU KV' rule is stated for cpu_bytes_to_use. Treat the mapping as source-verified (config/vllm.py:909-917) but doc-silent, and note the events limitation: 'Full-attention groups only; sliding-window/SSM groups keep the placeholder fallback.'",
+    "Interaction between --num-gpu-blocks-override and hybrid group-aware capacity is unverified: CacheConfig.kv_cache_size_tokens is documented as 'group-aware capacity since num_gpu_blocks * block_size can be wrong for hybrid models', so any tokens-per-block arithmetic done from num_gpu_blocks alone (as our earlier notes may have) is wrong for this model family."
+  ],
+  "parent_note": "Answers to the four questions: (1) flag existence table above - --enable-mamba-shared-prefix-checkpoint does NOT exist in 0.27.1 (landed v0.30.1) and --swap-space is removed from V1; everything else on the list exists. (2) prefix_match_unit may go below block if it divides every group block size; the single best capacity lever is --kv-offloading-size sized above aggregate GPU KV; the single best hit-rate lever is --prefix-match-unit. (3) prefix cache is strictly chained-prefix, full hash units only, no suffix pinning anywhere. (4) --block-size is only a floor: Phase 2 _align_hybrid_block_size overrides it via lcm(mamba chunk, kernel alignment) rounded up to cover the mamba page size, and Phase 3 can raise it again for nvfp4 KV."
+}

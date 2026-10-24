@@ -1,0 +1,79 @@
+{
+  "unit": "PROTOCOL-DOC",
+  "status": "done",
+  "topic": "External-workspace pointer protocol, specified to be implementable, with every number attributed",
+  "artifacts": [
+    "docs/EXTERNAL_WORKSPACE_POINTER_PROTOCOL.md"
+  ],
+  "write_paths": [
+    "docs/EXTERNAL_WORKSPACE_POINTER_PROTOCOL.md",
+    "orchestration/handoffs/PROTOCOL-DOC.json"
+  ],
+  "deliverable_shape": {
+    "path": "docs/EXTERNAL_WORKSPACE_POINTER_PROTOCOL.md",
+    "lines": 191,
+    "sha256": "1edc6307780edfc1e9044e1fe93958d43e54f76468346a0a4e1819061b9c9110",
+    "sections": 9,
+    "roles": 3,
+    "statuses": 3,
+    "rules": 6,
+    "attributed_numbers": 20
+  },
+  "evidence": {
+    "command_or_count": "9/9 protocol claims reproduce; 0 numbers unattributed; 0 live requests",
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_r2_opt_sim.py -q -> '.....................    [100%]  21 passed in 0.07s'",
+      ".venv/bin/python -c \"... cost_model.check_pointers(MANIFEST, {'own': ROOT}) ...\" -> 4 OK / 1 MISSING (Cursor OK, external:gpu-prefill-throughput MISSING)",
+      ".venv/bin/python -c \"... cost_model.check_pointers(MANIFEST) ...\" -> 3 OK / 2 MISSING; degraded == ['cross-feed-cursor','external:gpu-prefill-throughput'] == scratch/r2-opt-sim/report.json pointers.degraded",
+      "sha256sum experiments/context-cache/cells/LIVE-MEAS/rows.jsonl -> 6150e534c4f52553771172fe988a70a49d65917f85d0c9e1b5a336cf1d119b65 (matches constants.json sources.files)",
+      "sha256sum experiments/context-cache/cells/LIVE-MEAS/plan.json -> 8b787e94f23a4f3428f5a37d92e37ba7da477ed69b95bcca93101d10a002469f (matches constants.json sources.files)",
+      "sha256sum experiments/context-cache/cells/U9/u9_trials.jsonl -> 863df39ec2c8c9236ab413dc5365fbd763ff5d37671e5ade1236b653f580663f (matches constants.json and PAPERS CLAIMS.md U9-rows)",
+      "wc -l experiments/context-cache/cells/LIVE-MEAS/rows.jsonl -> 960, consistent with plan.json planned_requests/chains_checked 960 = 4 arms x 3 epochs x 80 turns",
+      "cross-tab over rows.jsonl -> 12 distinct (arm, epoch) pairs, each exactly 80 rows; arms {A,C,F,R}; turns 1-80",
+      "wc -l experiments/context-cache/cells/U9/u9_trials.jsonl -> 139 rows, 139 with completion_tokens == 1",
+      "stat -c %s experiments/context-cache/cells/U9/u9_trials.jsonl -> 50417 (matches CLAIMS.md U9-rows)"
+    ]
+  },
+  "corrections": [
+    {
+      "what": "LIVE-MEAS design in the R2-OPT-SIM unit card read 'arms C/A/R/F x 2 epochs x 80 turns'",
+      "problem": "4 x 2 x 80 = 640, inconsistent with the stated 960 rows",
+      "measured": "arms {A,C,F,R} x epochs {1,2,3} x turns 1-80 = 960 rows; plan.json epochs == 3",
+      "resolution": "recorded as a correction of record in the document (§8); source files untouched"
+    },
+    {
+      "what": "cursor pointer reported MISSING while orchestration/cursors/r2-opt-sim.json exists",
+      "problem": "cost_model.Pointer.resolve() fell through to manifest_path.parent / path when no own root was supplied, yielding orchestration/units/orchestration/cursors/r2-opt-sim.json",
+      "measured": "with {'own': ROOT} the cursor is OK served_from /home/zer0null/reserach extarctor/orchestration/cursors/r2-opt-sim.json, sha256 d461f3d76e76b30b50262a188c4fe58102569376ee137519d492bd8d707e3f01; without it, MISSING",
+      "resolution": "specified as normative resolution order (own root first) in §4 and recorded as a correction of record; the implementation was not modified because it is outside this unit's write paths"
+    }
+  ],
+  "assumptions": [
+    {
+      "what": "Deliverable location docs/EXTERNAL_WORKSPACE_POINTER_PROTOCOL.md",
+      "why": "The card listed strategy/R2_OPT_SIM.md (the cost-model report) but no home for a standalone normative spec; docs/ already holds sibling normative documents (ACCEPTANCE_PROTOCOL.md, TARGET_POLICY.md). The report remains the card's own deliverable and was not touched."
+    },
+    {
+      "what": "Unit name PROTOCOL-DOC",
+      "why": "The task line names the unit; no card of that name existed, so this handoff carries the name the task line used rather than borrowing R2-OPT-SIM's, whose card is a different (larger) unit."
+    }
+  ],
+  "blocker": "",
+  "pre_existing_failures": [
+    {
+      "test": "tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps",
+      "flagged": "R2-A2.json, R2-A3.json, R2-B2.json, R2-C.json",
+      "proof_it_predates_this_unit": "with orchestration/handoffs/PROTOCOL-DOC.json moved aside the same assertion fails with the same four files (1 failed in 0.13s); the file was restored immediately after. The four handoffs were last written 20:11-20:17, before this unit's first tool call.",
+      "why_not_fixed": "Another unit's handoffs; this unit's write paths do not include them."
+    }
+  ],
+  "next_unit_hint": "(1) Fix the four pre-existing unit-shape contract gaps above by back-filling artifacts/evidence/blocker/next_unit_hint (plus write_paths for R2-B2) from their unit cards. (2) Report the §4 resolution-order finding to the owner of scratch/r2-opt-sim/cost_model.py: rerun the report with {'own': ROOT} so report.json stops recording a false MISSING on the cursor and degraded shrinks to the one genuinely-absent external pointer; then repin tests/test_r2_opt_sim.py::test_pointer_report_is_degraded_by_design. (3) Settle whether the LIVE-MEAS card text needs its '2 epochs' corrected at source.",
+  "bound": {
+    "live_requests": 0,
+    "network": "none",
+    "occamy_lock": "not taken",
+    "target_repos_touched": 0,
+    "git_commands": 0,
+    "tool_calls": 34
+  }
+}

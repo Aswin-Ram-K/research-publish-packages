@@ -1,0 +1,52 @@
+{
+  "unit": "G3-CLOSE",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/GAPS.md",
+    "experiments/context-cache/cells/G3/analysis.json",
+    "experiments/context-cache/cells/G3/rows.jsonl"
+  ],
+  "evidence": {
+    "decision": "narrowed (not closed-refuted)",
+    "scheduled_compaction_true_rows": "0/888",
+    "compaction_events": "0 (cells/G3/events.jsonl empty)",
+    "run_log_schedules": "depth=32k budget=32768 turns=74 schedule=[] ; depth=64k budget=65536 turns=148 schedule=[]",
+    "mean_uncached_per_turn_32k": {
+      "R": 721.9,
+      "A": 723.4,
+      "C": 734.4,
+      "H": 723.3,
+      "spread_pct_of_min": 1.722
+    },
+    "mean_uncached_per_turn_64k": {
+      "R": 742.3,
+      "A": 749.0,
+      "C": 749.6,
+      "H": 743.2,
+      "spread_pct_of_min": 0.976
+    },
+    "final_prompt_tokens": "R 33824/67014, A 33822/67012, C 33820/67010, H 33821/67011",
+    "cached_tokens_identical_before_first_limit": "4/4 arms 33344 (32k) and 66496 (64k) at final turn",
+    "nodes_eq_R_all_turns": "74/74 at 32k, 148/148 at 64k",
+    "chars_eq_R_all_turns": "equal (4,910,846 / 18,932,614)",
+    "est_chain_tokens_before_eq_R": "74/74 and 148/148",
+    "A_available": "False at 32k and 64k",
+    "rows_sha256": "d6313f72c2eca0bc2192922bfcf1bad08c853c9dd11fbd67b0e65f85428759ee",
+    "generator_note": "g3_cell.py: `if arm == 'A' and scheduled:` (A compacts only under APPEND_NOTE, never summarise_in_place); H sets crossed only on scheduled turns; budgets 32768/65536 with keep_last=2 over a 1,187-token start need 65,555 estimated tokens, so no row could compact; 888 rows vs REQUEST_CAP 900 leaves no room for the missing turns",
+    "commands": [
+      "python3 papers/context-cache/recompute.py all | tail -2 -> 52 claims checked, all match",
+      ".venv/bin/python -m pytest tests/test_paper_attribution_guard.py -q | tail -2 -> 11 passed in 0.03s"
+    ]
+  },
+  "assumptions": [
+    "Treated the 1-token-per-turn difference between arms as the control token (arms share nodes, chars and est_chain_tokens_before on every turn; est excludes the token), so the 1.7%/1.0% spread is not an arm effect.",
+    "Read 'closed-refuted' as requiring at least one arm to have compacted; since scheduled_compaction is false on 888/888 rows, the refutation test cannot be run from these rows and (b) is the conservative default.",
+    "Kept the historical G3 text and marked it superseded rather than deleting it, matching the file's G1/G5 convention."
+  ],
+  "blocker": "",
+  "next_unit_hint": "G3-LIMIT-V2: boundary-triggered run (request prompt_tokens > budget, real keep_last 800/1600, compaction-free baseline arm, request cap > 900, ~150 turns at 32k / ~300 at 64k); live requests needed, none available on disk",
+  "write_paths": [
+    "papers/context-cache/GAPS.md",
+    "orchestration/handoffs/G3-CLOSE.json"
+  ]
+}

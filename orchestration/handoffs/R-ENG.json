@@ -1,0 +1,53 @@
+{
+  "unit": "R-ENG",
+  "status": "done",
+  "artifacts": [
+    "docs/serving-options/R-ENG.md",
+    "orchestration/units/R-ENG.md",
+    "orchestration/handoffs/R-ENG.json"
+  ],
+  "evidence": {
+    "sources_checked": 19,
+    "claims_with_numbers": 15,
+    "primary_sources": 19,
+    "commands": [
+      "local_web_search x4 (TRT-LLM / LMDeploy / TGI / FastGen) -> SearXNG returned bing spam; usable hits re-fetched from primary URLs",
+      "local_web_crawl x4 (nvidia.github.io TRT kv-cache-reuse, TRT features/kvcache, lmdeploy turbomind_config, HF TGI launcher) -> nav-dominated, truncated before body",
+      "web_fetch https://lmdeploy.readthedocs.io/en/latest/_sources/inference/turbomind_config.md -> 'cache_block_seq_len ... default value 128'; 'if the identical prompt prefix is less than one block ... no improvement'",
+      "web_fetch https://github.com/huggingface/text-generation-inference/blob/main/docs/source/conceptual/chunking.md -> '3x more tokens, 13x faster'; 8xH100 Llama-3.1-70B long test 2.0s vs vLLM 27.5s; L4 30k tokens vs vLLM 10k; 'Zero config'",
+      "web_fetch https://github.com/InternLM/lmdeploy/blob/main/docs/en/quantization/kv_quant.md -> int8 +27% RPS, int4 +39% RPS llama2-7b tp1 bs256 10000 prompts; TurboQuant Qwen3-30B-A3B H200 2195.8 vs 2368.8 tok/s (-7.3%), ~5x KV",
+      "bash inline fetch+strip https://nvidia.github.io/TensorRT-LLM/advanced/kv-cache-reuse.html -> 'block defaults to 128 tokens', 'trtllm-build --tokens_per_block 32', 'must be a power of 2', 'Only full blocks can be shared', offload '--kv_host_cache_bytes'",
+      "bash inline fetch https://nvidia.github.io/TensorRT-LLM/reference/memory.html -> 'KV cache will by default allocate 90% of the remaining free GPU memory'",
+      "bash inline fetch https://nvidia.github.io/TensorRT-LLM/latest/features/paged-attention-ifb-scheduler.html -> 'max_num_tokens is set to 8192 by default starting from v0.11'",
+      "bash inline fetch https://developer.nvidia.com/blog/5x-faster-time-to-first-token-with-nvidia-tensorrt-llm-kv-cache-early-reuse/ -> 'up to 5x', 'blocks adjustable from 64 down to 2 tokens ... up to 7% on H100 ... LLAMA70B'",
+      "bash inline fetch https://huggingface.co/docs/text-generation-inference/en/reference/launcher -> '--max-concurrent-requests ... [default: 128]'; '--max-batch-prefill-tokens ... Default to max_input_tokens + 50'",
+      "bash inline fetch https://raw.githubusercontent.com/InternLM/lmdeploy/main/lmdeploy/messages.py -> 'cache_block_seq_len ... default to 64'; 'enable_prefix_caching ... default to False'; 'cache_max_entry_count: float = 0.8'",
+      "bash inline fetch https://raw.githubusercontent.com/ggml-org/llama.cpp/master/tools/server/README.md -> '--cache-reuse N ... via KV shifting ... (default: 0)'; '-ctk/-ctv default f16'",
+      "bash inline fetch https://arxiv.org/abs/2401.08671 -> 'up to 2.3x higher effective throughput, 2x lower latency, up to 3.7x lower tail latency, compared to ... vLLM'",
+      "bash inline fetch https://developer.nvidia.com/blog/introducing-nvidia-dynamo-... -> 'up to 30x' DeepSeek-R1 671B GB200 NVL72; '>2x Llama 70B Hopper'; Smart Router + Distributed KV Cache Manager + NIXL",
+      "python3 -c 'json.load(open(orchestration/handoffs/R-ENG.json))' -> valid JSON"
+    ],
+    "tool_calls_used": 39,
+    "tool_calls_bound": 45,
+    "live_model_requests": 0,
+    "occamy_lock_taken": false
+  },
+  "blocker": "",
+  "next_unit_hint": "Three benchmark picks, in order: (1) TensorRT-LLM with tokens_per_block 128 vs 2 vs 16 (only engine that can put a reuse boundary inside a 64-block; build-time flag so each variant needs a re-engine + restart; arm64/GB10 + Qwen3.5-MoE support both unverified). (2) LMDeploy TurboMind with --enable-prefix-caching True and cache_block_seq_len=64 (cheapest same-quantum A/B; prefix caching ships OFF there; documented kernel matrix stops at sm90). (3) llama.cpp --cache-reuse 256 as the falsification test for 'no suffix recovery anywhere' (KV shifting, token-level, not block-aligned). Deliberately excluded: TGI (13x claim, but our model is not in its supported list), FastGen/MII (no prefix cache at all), Dynamo (needs a cluster; it is a router and inherits backend granularity). Also hand to whoever tunes SGLang: the 64-grid is more likely the hybrid-attention state cache (uses_mamba_radix_cache=true, max_mamba_cache_size=64) than the pager (page_size=1); decisive test = serve a dense model on the same deployment and re-measure the hit grid.",
+  "write_paths": [
+    "orchestration/units/R-ENG.md",
+    "docs/serving-options/R-ENG.md",
+    "orchestration/handoffs/R-ENG.json"
+  ],
+  "assumptions": [
+    "'GB10-class node' interpreted as one NVIDIA GB10 (Grace-Blackwell, arm64, sm_121-class, unified memory), no second node, no NVL72 fabric; used to judge runnability.",
+    "Added a fifth runnability value 'unverified' alongside the contract's yes/needs-restart/needs-cluster/not-supported-for-this-model: no vendor documents our exact Qwen3.5-MoE hybrid-attention variant, so guessing one of the four would have manufactured evidence.",
+    "Version pins: TensorRT-LLM docs 'latest' = 1.4.0rc1 with the 1.1.0 stable pages; LMDeploy main-branch docs + lmdeploy/messages.py on main; TGI main-branch docs (v3). Numbers may drift with releases.",
+    "TGI v3 block size left unverified: the docs do not publish it and the PagedAttention page only says it reuses vLLM kernels. No number invented.",
+    "TensorRT-LLM 1.x chunked-prefill flag name left unverified: trtllm-serve CLI docs expose no chunking flag (0 grep hits); treated as the max_num_tokens budget under in-flight batching, with the 0.x --enable_chunked_context noted as historical.",
+    "Vendor technical blogs (developer.nvidia.com) were treated as primary but labelled 'vendor-measured', not independent; no SEO comparison blog (spheron/particula/atomic.chat/tensormesh) was cited.",
+    "arXiv 2401.08671 abstract used for FastGen's 2.3x/2x/3.7x; the full paper was not read, so 'no prefix cache in FastGen' is an absence-of-evidence claim from the abstract + MII docs, flagged as such in the note.",
+    "SearXNG was degraded/noisy (bing spam on every query); every retained fact was re-fetched from its own primary URL rather than from a search snippet.",
+    "The 64-token-grid explanation (hybrid-attention state cache rather than paged KV) is recorded as an explicitly labelled hypothesis with its decisive test, not as a finding; no experiment was run."
+  ]
+}

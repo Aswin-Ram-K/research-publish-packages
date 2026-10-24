@@ -1,0 +1,52 @@
+{
+  "unit": "URENDER2",
+  "status": "done",
+  "artifacts": [
+    "papers/encoder-crossover-190/rendered/encoder-crossover-190.html",
+    "papers/encoder-crossover-190/rendered/encoder-crossover-190.pdf",
+    "papers/encoder-crossover-190/rendered/encoder-crossover-190.docx",
+    "papers/encoder-crossover-190/rendered/encoder-crossover-190-libreoffice.pdf",
+    "papers/encoder-crossover-190/rendered/convert.py",
+    "papers/gated-read-batching/rendered/gated-read-batching.html",
+    "papers/gated-read-batching/rendered/gated-read-batching.pdf",
+    "papers/gated-read-batching/rendered/gated-read-batching.docx",
+    "papers/gated-read-batching/rendered/gated-read-batching-libreoffice.pdf",
+    "papers/gated-read-batching/rendered/convert.py",
+    "strategy/PDF_ROUTE.md",
+    "orchestration/units/URENDER2.md"
+  ],
+  "evidence": {
+    "root_cause": "old PDF rendered 22:25:57; byline source submission/main.tex written 22:28:15. pdftotext -layout on the stale PDF: AUTHOR SLOT count=1 (page-1 line 5), Aswin count=0.",
+    "byline_proof_encoder": "pdftotext -layout encoder-crossover-190.pdf | grep -c 'Aswin Ram Kalugasala Moorthy' -> 1 ; grep -c 'AUTHOR SLOT' -> 0 ; page-1 line 6 = 'Aswin Ram Kalugasala Moorthy', line 7 = 'Byline carried into this render from submission/main.tex.'",
+    "byline_proof_gated": "pdftotext -layout gated-read-batching.pdf | grep -c 'Aswin Ram Kalugasala Moorthy' -> 1 ; grep -c 'AUTHOR SLOT' -> 0 ; page-1 line 7 = 'Aswin Ram Kalugasala Moorthy'",
+    "html_proof": "convert.py prints 'AUTHOR SLOT occurrences in HTML: 0' and 'name occurrences in HTML: 2' for both papers; grep -c 'AUTHOR SLOT' on both HTMLs -> 0",
+    "docx_proof": "python zipfile: encoder w:tbl=5 name_in_body=1 slot_in_body=0 slot_in_docProps=0 ; gated w:tbl=4 name_in_body=1 slot_in_body=0 slot_in_docProps=0",
+    "chrome": "encoder: '727811 bytes written to file .../encoder-crossover-190.pdf', exit 0, 0.4 s wall. gated: '315333 bytes written to file .../gated-read-batching.pdf', exit 0, 0.3 s wall. No 'Multiple targets' error, no hang (timeout 120 never fired).",
+    "pages": "pdfinfo: encoder 20 pages, 594.96 x 841.92 pts (A4); gated 10 pages, A4",
+    "fonts": "pdffonts: encoder 11 rows, gated 7 rows, 0 rows with emb/sub/uni = no (all 'yes yes yes', CID TrueType Identity-H)",
+    "tables": "html table count 5 (encoder) / 4 (gated); no page or word box crosses the 594.96 pt page edge; max xMax 547.50 pt in both, identical to the pre-byline max 547.50",
+    "unicode": "extracted text mojibake markers all zero (U+FFFD, I-hat, A-hat, a-euro, A-tilde); encoder glyph counts kappa 31, approx 3, >= 10, x 13, +- 4, arrow 23, Delta 8, psi 7, section 63, minus 32 - identical to pre-byline counts",
+    "digests": "encoder html 85507 a1cfad186219cd1cf19d06cca5827c0189f2621b3df3f8392ded92e853fa2e95 ; encoder pdf 727811 5c7f82a76a0ca5e9dafd8b73d0cbd0d5dd42fde7b760298959410a371895e1e0 ; encoder docx 42290 1fefced69b37fac1fe47857f41b4b82df6a01c127826eac10a4b4418587e2ee5 ; gated html 39761 d4be5707a96dcf52c56465fc7272047aea024d8d6f60ab8dfa0c398e3643cb3e ; gated pdf 315333 4f3e7aff416e60c8e85be24249d756ab7836340b12b6ed7449e6e6764902852f ; gated docx 24344 a154b52f005ac351188339227c47b39d69277162d978e79ed61370c86d2d24f4",
+    "commands": [
+      "pdftotext -layout papers/encoder-crossover-190/rendered/encoder-crossover-190.pdf -",
+      "pdftotext -layout papers/gated-read-batching/rendered/gated-read-batching.pdf -",
+      "google-chrome --headless=new --disable-gpu --no-sandbox --no-pdf-header-footer --run-all-compositor-stages-before-draw --virtual-time-budget=15000 --user-data-dir=<quoted> --print-to-pdf=<quoted> file://<quoted>.html",
+      "pdfinfo papers/encoder-crossover-190/rendered/encoder-crossover-190.pdf",
+      "pdffonts papers/encoder-crossover-190/rendered/encoder-crossover-190.pdf",
+      "pdftotext -bbox papers/encoder-crossover-190/rendered/encoder-crossover-190.pdf -",
+      "soffice -env:UserInstallation=file:///%20-encoded-profile --headless --norestore --convert-to odt|docx|pdf",
+      "python3 -c \"import zipfile; ... count <w:tbl> and docProps\"",
+      "sha256sum <each artifact>"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Verify independently: re-run pdftotext -layout on both Chrome PDFs and confirm exactly 1 'Aswin Ram Kalugasala Moorthy' and 0 'AUTHOR SLOT'; confirm 20/10 A4 pages and pdffonts all-embedded. Do NOT compare PDF bytes against the recorded digests as a pass criterion - Skia stamps /CreationDate and struct-tree object numbers, so PDFs are content-reproducible but not bit-reproducible (already documented in PDF_ROUTE.md section 3). Note the new trap: LibreOffice --convert-to pdf writes the input's basename, so it must go to a scratch outdir or it clobbers the Chrome deliverable. Also: the old papers/encoder-crossover-190/rendered/convert.py:114 hardcoded '<meta name=\"author\" content=\"AUTHOR SLOT: ...\">' - a second, invisible placeholder source now removed.",
+  "write_paths": [
+    "papers/encoder-crossover-190/rendered/**",
+    "papers/gated-read-batching/rendered/**",
+    "strategy/PDF_ROUTE.md",
+    "orchestration/units/URENDER2.md",
+    "orchestration/handoffs/URENDER2.json",
+    "scratch/urender2/**"
+  ]
+}

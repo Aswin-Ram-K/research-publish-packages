@@ -1,0 +1,72 @@
+{
+  "unit": "U0b",
+  "name": "baseline-fairness",
+  "status": "done",
+  "artifacts": [
+    "orchestration/handoffs/U0b-BASELINE.md",
+    "orchestration/handoffs/U0b-BASELINE.json"
+  ],
+  "evidence": {
+    "command_or_count": "8 verified / 9 attempted sources; 20 tool calls (bound 35); 0 live model calls",
+    "sources_verified": [
+      "https://raw.githubusercontent.com/Aider-AI/aider/main/aider/coders/chat_chunks.py",
+      "https://raw.githubusercontent.com/Aider-AI/aider/main/aider/coders/base_prompts.py",
+      "https://aider.chat/docs/usage/caching.html",
+      "https://raw.githubusercontent.com/SWE-agent/SWE-agent/main/sweagent/agent/history_processors.py",
+      "https://developers.openai.com/api/docs/guides/prompt-caching",
+      "https://docs.langchain.com/oss/python/langgraph/add-memory",
+      "https://arxiv.org/abs/2311.04934",
+      "https://arxiv.org/abs/2606.11869"
+    ],
+    "sources_unverified": [
+      "OpenHands/OpenHands prompts/system_prompt.j2 (2 searches + 2 raw fetches, all 404)",
+      "Roo-Code src/core/prompts/sections/environment.ts (404)",
+      "Cline/Roo environment_details behaviour",
+      "summarisation-based compaction for any named harness",
+      "OpenAI Agents SDK, AutoGen/AgentChat, CrewAI, Continue.dev (not inspected)"
+    ],
+    "key_findings": [
+      "Aider all_messages() order = system + examples + readonly_files + repo + done + chat_files + cur + reminder; add_cache_control_headers() sets ephemeral breakpoints on examples/system, repo/readonly_files, chat_files",
+      "Aider docs: caches system prompt, read-only files, repository map, editable files; Anthropic default TTL 5 min; --cache-keepalive-pings to keep warm",
+      "SWE-agent LastNObservations docstring: 'will break prompt caching (as the history of every query will change every time due to the elided observations)'; polling param 'useful for caching'",
+      "OpenAI docs: 'Cache reuse requires the entire rendered prefix to match'; tools changes include ordering; parallel_tool_calls also affects prefix",
+      "LangGraph: model.invoke(state['messages']) with checkpointer; append-only state, compaction is an added node not a default",
+      "Prompt Cache (MLSys 2024): prompt modules + schema for positional accuracy; 8x GPU / 60x CPU TTFT",
+      "arXiv 2606.11869: precondition (P1) 'framed as tools, then system, then messages under prompt-caching'"
+    ],
+    "commands": []
+  },
+  "recommended_baseline": "static prefix + append-only history (a), with mandatory second arm static prefix + periodic compaction (b), and dynamic-state-in-prefix (c) only as a labelled sensitivity bound",
+  "baseline_spec": {
+    "static_segments": ["S1 invariant preamble", "S2 tool definitions incl. deterministic ordering", "S3 task charter (frozen per session)"],
+    "append_only": "H = prior (role, content) deltas, never rewritten/re-ordered/re-summarised between compaction events",
+    "volatile_location": "D_t = the current turn's delta (cwd, date/time, step index, token counters, session id, model name, env snapshot, last tool result, mode)",
+    "fairness_controls": [
+      "no volatile value in S1-S3",
+      "byte-identical re-serialisation from frozen buffer (whitespace/key order/float format are prefix)",
+      "explicit cache_control breakpoints at end of S3 and end of previous delta",
+      "equal information: same token multiset in both arms, only placement differs",
+      "identical TTL and keepalive policy (5-minute default; keepalive pings)",
+      "compaction recorded as a forced cache miss, never averaged away",
+      "same session lengths; report per-turn cache-hit tokens plus aggregate"
+    ]
+  },
+  "strawman_risk": "Reviewer: no real agent rewrites its system prompt every turn — Aider ships a deliberately cache-optimal prefix and keepalive, so a dynamic-prefix comparator is a fiction and any gain is the distance to a strawman. Answer sentence: the comparator is the incumbent's own cache-optimal renderer (fixed chunk order + cache_control breakpoints + keepalive), so the incumbent is granted every stability trick it ships and the only variable moved is where post-prefix state lives.",
+  "novelty_check": {
+    "prior_quantified_prefix_churn_for_named_harnesses": "none found",
+    "nearest_prior_art": [
+      "arXiv:2311.04934 Prompt Cache (MLSys 2024) — stable-prefix module reuse + schema for positional accuracy; high threat to the idea, not the measurement",
+      "arXiv:2606.11869 Agents All the Way Down (Jun 2026) — states ordering 'tools, then system, then messages under prompt-caching' as a build precondition",
+      "Aider and SWE-agent source comments — practitioners already reason about cache invalidation"
+    ],
+    "required_scoping": "claim only the first controlled renderer-level measurement of cacheable-prefix preservation against the incumbent's own cache-optimal layout at equal information; do NOT claim stable-prefix-first as novel, do NOT claim harnesses rewrite system prompts every turn, do NOT claim compaction is universal"
+  },
+  "blocker": "",
+  "next_unit_hint": "Implement the baseline renderer exactly as §2.1 (frozen S1-S3 byte buffer, append-only H, volatile state only in D_t, cache_control at S3-end and previous-delta-end, same keepalive/TTL as the pointer arm). Run arm (a) as headline, (b) as second arm with compaction counted as a forced miss, (c) only as sensitivity. Do not add an OpenHands or Cline row to the paper until a source is fetched.",
+  "write_paths": [
+    "orchestration/handoffs/U0b-BASELINE.md",
+    "orchestration/handoffs/U0b-BASELINE.json"
+  ],
+  "tool_calls": 20,
+  "bound": 35
+}

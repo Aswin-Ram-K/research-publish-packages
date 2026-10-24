@@ -1,0 +1,39 @@
+{
+  "unit": "GUARD-U4-R2",
+  "status": "done",
+  "artifacts": [
+    "tests/test_context_cache_qualifier.py",
+    "orchestration/units/GUARD-U4-R2.md",
+    "orchestration/handoffs/GUARD-U4-R2.json",
+    "papers/context-cache/MANUSCRIPT.md"
+  ],
+  "evidence": {
+    "guard_tests": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_context_cache_qualifier.py -q -> 14 passed",
+    "full_suite": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q -> 1 failed, 1178 passed, 1 skipped in 66.28s; the failure is the PRE-EXISTING, unrelated tests/test_kg_policy.py::test_real_target_config_declares_the_decision (PolicyWideningError over '.lane-j-scratch' in config/targets.toml; recorded since U13). Deselecting it: 1178 passed, 1 skipped, 1 deselected in 62.76s.",
+    "red_green": {
+      "green_baseline": "14 passed",
+      "RED-1": "MANUSCRIPT SS5 consequence reverted to 'was refuted by the comparison' + the 'null experiment' sentence deleted -> 1 failed, 13 passed ([DENY] MANUSCRIPT.md SS5)",
+      "RED-2": "PACKAGE bullet reverted to 'The edit-vs-fork hypothesis is **refuted**;' and CLAIMS correction 3 to 'the hypothesis is refuted' -> 2 failed, 12 passed ([PRESENCE] PACKAGE.md:95, CLAIMS.md:197)",
+      "RED-3": "recompute.py C13 expectation flipped to pointer_fork/POINTER_FORK_in_source True -> 1 failed, 13 passed (code-side test D)",
+      "green_restored": "14 passed; MANUSCRIPT restored byte-identically to sha256 a3defdf3e3a7118c093450ac1549585c4dd3e64ab66fed540b39e105960b1f07; PACKAGE dd5688a1f5e657a701f6fb27bbc83760813be05bf331904deec608f72d1e9065; CLAIMS abcae72076134e83439fd41c7166a41f746b94511ea7d2b740793da5b82d6986; recompute.py 4845bd8d0026696c29498b2b9b95056ea2d8487c5f5f03447bd9b017da2197c6"
+    },
+    "prose_repair": "MANUSCRIPT.md:216-218 stated the U4 refutation as fact with the void only in the NEXT paragraph; appended the void in the same paragraph: '**That conclusion is void**: the paragraph below shows the pairs measured renderer identity, so the hypothesis is not refuted but **untested at n>0** (C13, C16).' No other document needed a prose edit.",
+    "commands": [
+      "ls tests/test_context_cache_qualifier.py  # absent before this unit -- GUARD-U4's claimed artifact did not exist",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_context_cache_qualifier.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "GUARD-U4's own handoff (orchestration/handoffs/GUARD-U4.json) still reports status='redirected' with an artifact that did not exist; it is outside this unit's write paths and should be marked superseded by a settlement, not edited. Two measured traps worth carrying into the next guard: (1) under this .venv's Python 3.14, re's '[^\\n]' did not match across the qualifying text -- '[^\\x0a]' failed too, '[[\\s\\S]]' works -- the first RED-1 attempt passed only because the deny regex could not span the sentence, so a guard whose pattern silently cannot match reads as green; (2) a '.' inside the qualifying prose terminates '[^.]' spans, so span caps must be measured against the real sentence. Next natural guard, untouched here: GAPS.md:11's '**One-line verdict (G1):** NOT REFUTED' is a DIFFERENT, legitimate G1 (C44) reading (dated, rows that discriminate, 2 of 6 events within 10%) -- any future terminology cleanup must not fold it into U4's null result.",
+  "write_paths": [
+    "orchestration/handoffs/GUARD-U4-R2.json",
+    "orchestration/units/GUARD-U4-R2.md",
+    "tests/test_context_cache_qualifier.py",
+    "papers/context-cache/MANUSCRIPT.md"
+  ],
+  "assumptions": [
+    "Write scope widened by one file relative to the stub: papers/context-cache/MANUSCRIPT.md, because the guard found a real hole (the refutation stated as fact at :216-218) rather than only needing a pin. Conservative reading of 'pin the qualifier': repair the one sentence that prints the absence of a refutation as a finding, and touch nothing else.",
+    "The 'not refuted' phrase is shared with GAPS G1's dated C44 measurement; the deny list is therefore scoped to claims about U4/U5 and its 21 pairs, not to the word."
+  ]
+}

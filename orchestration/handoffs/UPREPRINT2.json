@@ -1,0 +1,60 @@
+{
+ "unit": "UPREPRINT2",
+ "status": "partial",
+ "artifacts": [
+  "papers/encoder-crossover-190/submission/main.tex",
+  "papers/gated-read-batching/submission/main.tex",
+  "papers/replay-record-not-decision/submission/main.tex",
+  "papers/encoder-crossover-190/MANUSCRIPT.md",
+  "papers/gated-read-batching/MANUSCRIPT.md",
+  "papers/replay-record-not-decision/MANUSCRIPT.md",
+  "papers/encoder-crossover-190/rendered/encoder-crossover-190.pdf",
+  "papers/gated-read-batching/rendered/gated-read-batching.pdf",
+  "papers/replay-record-not-decision/rendered/replay-record-not-decision.pdf",
+  "papers/encoder-crossover-190/preprints/encoder-crossover-190-preprints.zip",
+  "papers/gated-read-batching/preprints/gated-read-batching-preprints.zip",
+  "papers/replay-record-not-decision/preprints/replay-record-not-decision-preprints.zip",
+  "tools/package/md2tex.py",
+  "tests/test_md2tex.py",
+  "strategy/LATEX_TOOLCHAIN.md",
+  "strategy/PREPRINTS_SUBMISSION.md",
+  "orchestration/units/UPREPRINT2.md"
+ ],
+ "evidence": {
+  "commands": [
+   "python3 tools/package/md2tex.py --package <slug>   (x2, byte-identical)",
+   "python3 -m pytest tests/test_md2tex.py --noconftest -q",
+   "MD2TEX_TOOL=scratch/upreprint2/md2tex_noemail.py python3 -m pytest tests/test_md2tex.py::test_ships_author_slot_and_bibliography --noconftest -q",
+   "TECTONIC_CACHE_DIR=$PWD/scratch/utex1/cache TMPDIR=$PWD/scratch/upreprint2/tmp HOME=$PWD/scratch/upreprint2/home scratch/utex1/bin/tectonic -r 1 --keep-logs -o <out> main.tex   (NO -Z)",
+   "unzip -q papers/<slug>/preprints/<slug>-preprints.zip -d <clean scratch>; cmp <extracted>/main.tex papers/<slug>/submission/main.tex",
+   "pdftotext -f 1 -l 1 -layout papers/<slug>/rendered/<slug>.pdf -"
+  ],
+  "byline": "grep -n author_line tools/package/md2tex.py -> all three packages now carry \\author{Aswin Ram Kalugasala Moorthy\\\\ Independent researcher\\\\ \\texttt{aswinram.k.1603@gmail.com}}",
+  "tests": "7 passed in 0.68s (byte identity, idempotence, citation guard red/green, shipped-artifact guard, #2 bidirectional guard, control-word regression, byline+bibliography)",
+  "red_proof": "FAILED tests/test_md2tex.py::test_ships_author_slot_and_bibliography - AssertionError: gated-read-batching: registry byline is not the shared three-line byline (affiliation+contact required for every package): '\\\\author{Aswin Ram Kalugasala Moorthy}' ; same test GREEN with the real tool (1 passed)",
+  "compile": "encoder-crossover-190 EXIT=0 UndefinedControlSequence=0 bang=0 pages=25 bytes=189042 sha256=d94eb6723776a760 | gated-read-batching EXIT=0 0 0 pages=13 bytes=110205 | replay-record-not-decision EXIT=0 0 0 pages=10 bytes=94542 ; grep continue-on-errors in stdouts = 0",
+  "zips": "encoder 28712 B sha256 705bc498c7c7eb7c | gated 14046 B d95d744bd9ee4f78 | replay 10306 B 139bef54aade088b ; each members=[main.tex], extracted main.tex == submission/main.tex",
+  "numeric": "#3 main.tex 1320/351 -> 1320/351 delta {} ; #7 550/130 -> 551/131 delta +1 x '1603' ; #2 388/123 -> 389/124 delta +1 x '1603' (the byline contact email; nothing removed) ; MANUSCRIPT.md all three unchanged: 1193/337, 539/136, 379/118 ; literal diff pristine-vs-shipped main.tex shows only the byline line, the #3 keywords line, and the COI heading rename/move",
+  "cites": "#3 bibitems=13 cite_commands=23 cite_keys=23 distinct=13 uncited=[] unresolved=[] ; #7 13/14/15/13 [] [] ; #2 8/8/8/8 [] [] -- identical pre and post (the earlier 14-vs-15 reading was commands-vs-keys, not a change)",
+  "page1_after": "#3 {title:T,author:T,affiliation:T,contact:T,abstract:T,keywords:T}; #7 {title:T,author:T,affiliation:T,contact:T,abstract:T,keywords:F}; #2 same as #7 -- keywords absent because no recorded set exists",
+  "coi": "Preprints.org 'Instructions for Authors' (fetched read-only): 'The corresponding author must include a summary statement in the manuscript in a separate section \"Conflicts of Interest\" placed just before the reference list.' Section renamed to 'Conflicts of Interest' (heading + mirror bold label) and moved before the reference list; 'The author declares no competing interests.' verbatim; one declaration per paper",
+  "toolchain_doc": "strategy/LATEX_TOOLCHAIN.md -Z claim corrected with dated CORRECTED 2026-10-19 (UPREPRINT2) note, old claim kept struck through"
+ },
+ "blocker": "Papers #2 (replay-record-not-decision) and #7 (gated-read-batching) have NO recorded keyword set anywhere in the workspace: no keyword field in any submission/METADATA.md, and no keyword list in strategy/ or the manuscripts. Card claim 'Each has keywords recorded in its submission/METADATA.md' is FALSE (only #3 has one, in strategy/DEPOSIT_METADATA.md §1/§2). Because the card forbids inventing keywords, page-1 keywords were added to #3 only.",
+ "next_unit_hint": "If the author wants keywords on #2/#7 too, ask the author for the two sets (do not derive them from the manuscripts); then add a keywords= entry per package in the PACKAGES table and regenerate - the emission point after \\maketitle already handles it. Separately, strategy/PREPRINTS_SUBMISSION.md and the preprints zips still need a human decision on whether the 'Conflicts of Interest' rename should also be mirrored into papers/encoder-crossover-190/released/** (read-only, not touched).",
+ "write_paths": [
+  "papers/encoder-crossover-190/MANUSCRIPT.md",
+  "papers/gated-read-batching/MANUSCRIPT.md",
+  "papers/replay-record-not-decision/MANUSCRIPT.md",
+  "papers/*/submission/**",
+  "papers/*/preprints/**",
+  "papers/*/rendered/**",
+  "tools/package/md2tex.py",
+  "tests/test_md2tex.py",
+  "strategy/LATEX_TOOLCHAIN.md",
+  "strategy/PREPRINTS_SUBMISSION.md",
+  "scratch/upreprint2/**",
+  "orchestration/units/UPREPRINT2.md",
+  "orchestration/handoffs/UPREPRINT2.json"
+ ]
+}

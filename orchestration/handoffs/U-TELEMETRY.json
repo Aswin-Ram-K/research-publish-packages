@@ -1,0 +1,104 @@
+{
+  "unit": "U-TELEMETRY",
+  "status": "done",
+  "artifacts": [
+    "scratch/telemetry/population_table.py",
+    "orchestration/handoffs/U-TELEMETRY.md",
+    "orchestration/handoffs/U-TELEMETRY.json"
+  ],
+  "evidence": {
+    "command_or_count": "python3 scratch/telemetry/population_table.py -> 1278 sessions, 55720 requests, sum(inputTokens)=3,808,452,785, sum(cachedTokens)=3,601,299,289, hit=94.56%",
+    "commands": [
+      "sqlite3.connect('file:/home/zer0null/.local/share/billion-context/sessions/index.db?mode=ro',uri=True) # only access mode used",
+      "SELECT COUNT(*) FROM sessions -> 1278; SELECT COUNT(*) FROM blocks -> 3029; COUNT(DISTINCT session_id) FROM blocks -> 332",
+      "SELECT SUM(json_extract(stats_json,'$.inputTokens')), SUM(json_extract(stats_json,'$.cachedTokens')) FROM sessions -> 3808452785, 3601299289 (94.56%)",
+      "python3 scratch/telemetry/population_table.py   # regenerates every table in the md handoff, 0.4 s"
+    ]
+  },
+  "headline": {
+    "confirmed_ratio": "94.56% CONFIRMED; totals moved +5 sessions/+13M tokens while unit ran (live DB)",
+    "requests": 55720,
+    "input_tokens": 3808452785,
+    "cached_tokens": 3601299289,
+    "multiplier": 18.38
+  },
+  "bands": {
+    "90-99%": {
+      "sessions": 474,
+      "share_sessions": "37.09%",
+      "share_tokens": "90.60%"
+    },
+    "0-1%": {
+      "sessions": 139,
+      "share_tokens": "0.01%"
+    },
+    "note": "387 sessions <10k tokens = 0.021% of corpus; none has a compression block; low bands are near-empty probe sessions"
+  },
+  "cost_decomposition": {
+    "uncached_tokens": 207153496,
+    "reuse_multiplier": 18.38,
+    "sensitivity_w_0.10": "14.90% of no-cache baseline",
+    "sensitivity_w_0.50": "52.72% of baseline",
+    "range": "1.9x-6.7x reduction for w in 10%-50%; no price used"
+  },
+  "contamination": {
+    "verdict": "IMMATERIAL",
+    "narrow_rule_regex": "(?i)reserach|research[ _]extractor",
+    "narrow": {
+      "sessions": 41,
+      "tokens": 44497015,
+      "share": "1.17%",
+      "hit": 0.9091,
+      "headline_without": "94.60%"
+    },
+    "upper_bound_incl_all_YouAre_agents": {
+      "sessions": 588,
+      "tokens": 1522875159,
+      "share": "39.99%",
+      "headline_without": "95.16%"
+    },
+    "top10_are_own_project": false
+  },
+  "per_request": {
+    "stored": false,
+    "reason": "no per-request usage table; messages carry no token counts",
+    "session_mean_prompt_tokens_per_request": {
+      "p50": 40435,
+      "p90": 82963,
+      "p99": 126584,
+      "max": 223279,
+      "pooled_mean": 68350
+    }
+  },
+  "compression": {
+    "with_blocks": {
+      "n": 332,
+      "tokens": 3366177028,
+      "hit": 0.9506,
+      "mean_session_hit": 0.9082,
+      "mean_requests": 90.3
+    },
+    "without_blocks": {
+      "n": 946,
+      "tokens": 442275757,
+      "hit": 0.9076,
+      "mean_session_hit": 0.6191,
+      "mean_requests": 27.2
+    },
+    "verdict": "confounded by length; stratified on requests: <=18 req -5.18pp (84.31 vs 89.50), >18 req +3.93pp (95.19 vs 91.27); schema forbids within-session pre/post test"
+  },
+  "snapshot": {
+    "bytes": 969879552,
+    "mtime": 1792535614.24,
+    "sessions": 1278,
+    "blocks": 3029,
+    "messages": 134323
+  },
+  "blocker": "",
+  "next_unit_hint": "If a causal compression-vs-cache number is wanted, the DB must record per-request (seq -> prompt_tokens, cached_tokens) rows; without them only cross-sectional bounds are possible.",
+  "write_paths": [
+    "scratch/telemetry/population_table.py",
+    "orchestration/handoffs/U-TELEMETRY.md",
+    "orchestration/handoffs/U-TELEMETRY.json"
+  ]
+}

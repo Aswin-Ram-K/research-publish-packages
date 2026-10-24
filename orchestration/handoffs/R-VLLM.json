@@ -1,0 +1,52 @@
+{
+  "unit": "R-VLLM",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/R-VLLM.md",
+    "docs/serving-options/R-VLLM.md",
+    "orchestration/handoffs/R-VLLM.json"
+  ],
+  "evidence": {
+    "sources_checked": 16,
+    "sources_breakdown": "12 primary pages fully read (vLLM docs/design/prefix_caching.md, docs/features/automatic_prefix_caching.md, docs/features/disagg_prefill.md, docs/configuration/optimization.md, docs/features/speculative_decoding/README.md, vllm/config/cache.py, production-stack kv-cache-aware-routing.rst, LMCache README, Mooncake README, arXiv:2510.09665, arXiv:2407.00079, llm-d README) + 4 primary URLs attempted but body truncated by mkdocs nav (docs.vllm.ai design/prefix_caching, features/disagg_prefill, features/speculative_decoding x2, production-stack prefix-aware-routing) + 3 facts taken from search-result metadata only (ACM TOS Mooncake 59-498%, arXiv:2610.21249 LMCache SSD, vllm.ai EAGLE-3.1 blog)",
+    "claims_with_numbers": 21,
+    "claims_number_note": "19 verified against fetched primary text; 2 explicitly labelled vendor/unverified in the note (EAGLE-3.1 2x acceptance length; AIBrix has no number at all)",
+    "tool_calls": 38,
+    "bound": 40,
+    "commands": [
+      "bash: ls -la; ls orchestration/units; ls docs  -> docs/serving-options did not exist",
+      "read: AGENTS.md (121 lines) -> unit contract, no-ask rule, handoff shapes",
+      "local_web_search x6 (prefix caching block size; LMCache architecture; Mooncake OSDI/FAST; KV connector; production-stack routing; spec decode) -> primary URLs",
+      "local_web_crawl x5 (docs.vllm.ai design/prefix_caching, features/disagg_prefill, features/speculative_decoding x2, production-stack prefix-aware-routing) -> all truncated inside mkdocs nav, 0 body bytes usable; lesson recorded in the card",
+      "web_fetch: raw.githubusercontent.com/vllm-project/vllm/main/docs/design/prefix_caching.md -> 200, full text (hash chain, only full blocks cached, LRU order)",
+      "web_fetch: raw.githubusercontent.com/vllm-project/vllm/main/docs/features/disagg_prefill.md -> 200, full text (9 connectors, 'DOES NOT improve throughput')",
+      "web_fetch: raw.githubusercontent.com/vllm-project/vllm/main/docs/features/automatic_prefix_caching.md -> 200 (hybrid Mamba section, --prefix-match-unit 64)",
+      "web_fetch: raw.githubusercontent.com/vllm-project/vllm/main/vllm/config/cache.py -> 200, DEFAULT_BLOCK_SIZE = 16; enable_prefix_caching default True; KVOffloadingBackend Literal['native','lmcache']",
+      "web_fetch: raw.githubusercontent.com/vllm-project/vllm/main/docs/configuration/optimization.md -> 200 (chunked prefill default-on, max_num_batched_tokens 8192 guidance)",
+      "web_fetch: raw.githubusercontent.com/vllm-project/vllm/main/docs/features/speculative_decoding/README.md -> 200 (method list, --speculative-config schema, qualitative gain table only)",
+      "web_fetch: raw.githubusercontent.com/LMCache/LMCache/dev/README.md -> 200 (tiers, CacheBlend, SERDE)",
+      "web_fetch: raw.githubusercontent.com/kvcache-ai/Mooncake/main/README.md -> 200 (FAST'25 pp.155-170, TE 87/190 GB/s, vLLM connectors)",
+      "web_fetch: arxiv.org/abs/2510.09665 -> 200 (15x throughput; context truncation halves hit ratio)",
+      "web_fetch: arxiv.org/abs/2407.00079 -> 200 (525% simulated, 75% more requests real)",
+      "web_fetch: raw.githubusercontent.com/llm-d/llm-d/main/README.md -> 200 (3x throughput / 2x TTFT vs round-robin, Llama 3.1 70B, 4x MI300X; 13.9x hierarchical offload)",
+      "web_fetch: raw.githubusercontent.com/vllm-project/production-stack/main/docs/source/use_cases/kv-cache-aware-routing.rst -> 200 (KV-aware vs prefix-aware routing distinction)",
+      "bash: mkdir -p docs/serving-options -> created",
+      "write: orchestration/units/R-VLLM.md; docs/serving-options/R-VLLM.md; orchestration/handoffs/R-VLLM.json"
+    ],
+    "no_experiment_confirmation": "0 commands run against the Occamy server; 0 requests of any kind; .occamy.lock not touched (mtime unchanged by this unit); no experiment/cell/paper file modified"
+  },
+  "blocker": "",
+  "next_unit_hint": "Verifier: re-fetch the 5 load-bearing URLs and confirm (a) DEFAULT_BLOCK_SIZE = 16 in vllm/config/cache.py, (b) the 15x figure is LMCache-with-tier and NOT attributed to vLLM APC alone in docs/serving-options/R-VLLM.md, (c) the hybrid-Mamba caveat is present. Next research unit worth spawning: AIBrix + SGLang HiCache (the gap this unit left open) and an SGLang-side counterpart note so the 64-token grid is documented from SGLang's own source, not only from our measurements.",
+  "write_paths": [
+    "orchestration/units/R-VLLM.md",
+    "docs/serving-options/R-VLLM.md",
+    "orchestration/handoffs/R-VLLM.json"
+  ],
+  "assumptions": [
+    "The three setups were chosen to be runnable on a single node / single GPU, because that is the existing bench; KV-aware routing and P/D disaggregation are therefore deferred to a later phase rather than recommended now, even though they carry the largest published numbers.",
+    "A 64-token arm on vLLM is expressed with --block-size 64 (or --prefix-match-unit 64 when the physical block is coarser); I assumed this is the intended apples-to-apples arm, since vLLM's default 16 cannot represent our measured grid.",
+    "The model is treated as a hybrid Mamba/attention model (as stated in the unit background: hybrid-attention Qwen3.5-MoE), so --enable-mamba-shared-prefix-checkpoint is required rather than optional for any 64-token comparison.",
+    "Where the upstream docs publish no number (APC alone, chunked prefill, speculative decoding) I recorded 'no number' instead of substituting a vendor blog figure; the two vendor figures that were used are labelled as vendor.",
+    "The vLLM version read is docs main (banner v0.32.0) and code from the main branch; flags may differ in an older pinned release, so the benchmark phase should pin before comparing."
+  ]
+}

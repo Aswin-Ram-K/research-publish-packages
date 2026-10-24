@@ -1,0 +1,57 @@
+{
+  "unit": "FIX-VXSTACK",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/FIX-VXSTACK.md",
+    "experiments/context-cache/cells/TUNED/win_tuned_analyze.py",
+    "experiments/context-cache/cells/TUNED/rows.jsonl",
+    "experiments/context-cache/cells/TUNED/run.json",
+    "experiments/context-cache/cells/TUNED/analysis.json",
+    "state/config/restore-diff.json",
+    "state/config/tuned-restore-diff.json",
+    "experiments/context-cache/cells/WIN-VLLM/logs/V1-restore.json",
+    "experiments/context-cache/cells/WIN-VLLM/logs/V2-restore.json",
+    "experiments/context-cache/cells/WIN-VLLM/logs/V3-restore.json",
+    "experiments/context-cache/cells/WIN-VLLM/win_vllm_analyze.py",
+    "papers/context-cache/GAPS.md",
+    "orchestration/units/WIN-TUNED.md"
+  ],
+  "evidence": {
+    "rows_backfill": "289 rows now carry stack=tuned, config_id=TUNED; sha256 be59b3bf8d5572cca38a5c74f5b8348152ec6b8a29b4b270fc4374baa62905cc matches run.json rows_sha256",
+    "analyzer_run": "python3 experiments/context-cache/cells/TUNED/win_tuned_analyze.py -> exit 0; analysis.json regenerated with page_size_reconciliation and g0",
+    "restore_diff": "state/config/restore-diff.json created as copy; tuned-restore-diff.json and restore-diff.json server_info_sha256=040b3113e35ed67993463695c145cf108e2c0b12dfecd0403e24c0bfb77322e8",
+    "vllm_restore": "V1/V2/V3 restore records now include compared_keys and all_compared_ok=true; analyzer restore section updated",
+    "red_green": {
+      "red": "strip stack/config_id from one scratch row -> exit 1, stderr 'line 1: missing or empty stack', analysis.json unchanged (43306ea291c2accb9df7eab098109e362e76123a5ef020135977e13b8dcc6365)",
+      "green": "restore row -> exit 0; analysis.json matches baseline and committed (43306ea291c2accb9df7eab098109e362e76123a5ef020135977e13b8dcc6365)"
+    }
+  },
+  "blocker": "",
+  "next_unit_hint": "V-XSTACK-b",
+  "write_paths": [
+    "orchestration/units/FIX-VXSTACK.md",
+    "experiments/context-cache/cells/TUNED/win_tuned_analyze.py",
+    "experiments/context-cache/cells/TUNED/rows.jsonl",
+    "experiments/context-cache/cells/TUNED/run.json",
+    "experiments/context-cache/cells/TUNED/analysis.json",
+    "state/config/restore-diff.json",
+    "state/config/tuned-restore-diff.json",
+    "experiments/context-cache/cells/WIN-VLLM/logs/V1-restore.json",
+    "experiments/context-cache/cells/WIN-VLLM/logs/V2-restore.json",
+    "experiments/context-cache/cells/WIN-VLLM/logs/V3-restore.json",
+    "experiments/context-cache/cells/WIN-VLLM/win_vllm_analyze.py",
+    "papers/context-cache/GAPS.md",
+    "orchestration/units/WIN-TUNED.md",
+    "orchestration/handoffs/FIX-VXSTACK.json"
+  ],
+  "assumptions": [
+    "D3 is addressed as a recorded downgrade because no in-cell G0 exists for S1/S2/TUNED; no live gate was run.",
+    "vLLM compared_keys uses the fields actually present and checked in each restore record.",
+    "Run JSON formatting changed only by adding cache_grid_tokens and page_size_claim_reconciliation."
+  ],
+  "red_green": {
+    "red_exit": 1,
+    "green_exit": 0,
+    "analysis_sha": "43306ea291c2accb9df7eab098109e362e76123a5ef020135977e13b8dcc6365"
+  }
+}

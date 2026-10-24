@@ -1,0 +1,32 @@
+{
+ "unit": "UBOUND1",
+ "status": "done",
+ "artifacts": [
+  "strategy/BOUNDARY_ANALYSIS.md",
+  "scratch/ubound1/perk_analysis.py",
+  "scratch/ubound1/perk_table.json",
+  "orchestration/units/UBOUND1.md"
+ ],
+ "evidence": {
+  "command_or_count": "per-case outcomes SHIP: every eval-*.json carries perCase with 190 records and baselines.json models['decider-4b-exp11-reproduction'].perCase carries 190 rows (join on id: 0 misses). K distribution len(options) = {2:33, 3:27, 4:76, 5:54} = 190 cases / 721 options, identical in all four packages. Per-K (best encoder vs decider): K=2 0.666667 vs 0.848485 gap -0.181818; K=3 0.333333 vs 0.703704 gap -0.370370; K=4 0.328947 vs 0.684211 gap -0.355263; K=5 0.259259 vs 0.555556 gap -0.296296. Encoders below the majority-class control at K=3,4,5 for all three heads; at K=2 the best head TIES the control (22/33 = 0.666667 both). 'perK tables identical across all four dirs: True'; per-position correct-flag sequences identical to repro for all 5 arms in all 4 packages. repro == SANITISED byte-identical (md5, all 8 files). No data-fraction, fixed-label-layer or decider order-probe arms exist in the release; nvidia-smi fails, no *.safetensors anywhere, ~/.cache/huggingface absent.",
+  "commands": [
+   "for d in repro/encoder-crossover-190/results repro/encoder-crossover-190-SANITISED/results scratch/uneutral10/package/results scratch/urecut1/package/results; do ls -la \"$d\"; done",
+   "md5sum repro/encoder-crossover-190/results/*.json repro/encoder-crossover-190-SANITISED/results/*.json  # all 8 IDENTICAL",
+   "python3 scratch/ubound1/perk_analysis.py",
+   "python3 -c \"import json; d=json.load(open('repro/encoder-crossover-190/results/baselines.json')); print(list(d['models'].keys()))\"",
+   "python3 -c \"import json; d=json.load(open('repro/encoder-crossover-190/results/eval-modernbert-base.json')); print(list(d.keys())); print(d['perCase'][0])\"",
+   "wc -c repro/encoder-crossover-190/harness/data/*.json repro/encoder-crossover-190/harness/data/*.jsonl",
+   "nvidia-smi --query-gpu=name,memory.total --format=csv",
+   "grep -n \"options\\|orderPermutation\\|permut\" repro/encoder-crossover-190/harness/evaluate.py repro/encoder-crossover-190/harness/tcmodel.py",
+   "cat repro/encoder-crossover-190/results/DEFECT-EVIDENCE.json"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "A boundary paragraph can only assert: per-case rows ship for all five arms + the decider and the per-K table reproduces identically across all four packages; the encoder loses at every K in 2..5; the gap is non-monotone in K (widest at K=3, narrowest at K=2) with the K=2 contrast being the only clean one (n=33, Wilson CI +/-0.16); encoders fall below the majority-class control only at K>=3; both arms are per-case named-option scorers with only 15 of 215 fixture option labels shared with the 34-label training corpus; encoder arms are order-equivariant (0/190 flips) while the majority control is not (58/190) and the decider has no order probe. It must NOT assert any data-scale effect (no data-fraction arm exists), anything about K>5 or fixed label spaces, or decider order-insensitivity. A learning-curve sweep is the decisive test for data scale; the harness (12 files) and data (train.jsonl 800 rows / dev.jsonl 200) exist locally at repro/encoder-crossover-190/harness/, but there is no GPU (nvidia-smi fails), no checkpoint anywhere, and MANIFEST.json:3 records 'all model weights withheld' - so it is re-training a model, not re-analysis. Any unit that quotes the harness as available must also note AVAILABILITY.md:24,43-44 declares it withheld.",
+ "write_paths": [
+  "strategy/BOUNDARY_ANALYSIS.md",
+  "orchestration/units/UBOUND1.md",
+  "orchestration/handoffs/UBOUND1.json",
+  "scratch/ubound1/**"
+ ]
+}

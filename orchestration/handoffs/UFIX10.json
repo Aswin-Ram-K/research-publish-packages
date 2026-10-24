@@ -1,0 +1,42 @@
+{
+ "unit": "UFIX10",
+ "status": "done",
+ "artifacts": [
+  "repro/encoder-crossover-190-SANITISED/MANIFEST.json",
+  "repro/encoder-crossover-190-SANITISED/README.md",
+  "repro/encoder-crossover-190-SANITISED/REDACTION_REPORT.md",
+  "repro/encoder-crossover-190-SANITISED/INTEGRITY.md",
+  "repro/encoder-crossover-190-SANITISED/RESIDUALS.md",
+  "repro/encoder-crossover-190-SANITISED/verify/integrity-table.md",
+  "repro/encoder-crossover-190-SANITISED/verify/VERIFICATION.txt"
+ ],
+ "evidence": {
+  "manifest_sha_removed": "yes",
+  "sha_replacement": "harness_revision = 'unmerged private branch - branch name and commit id withheld' + per-file source_sha256 for every recovered harness file + INTEGRITY.md section 1 sha256 of every shipped file + the preserved byte-identity claim (blob digests 18966eff5 / 68c39632 / 15858fcd) with the unresolvable pointer dropped; the commit id remains only in the workspace audit trail, never in the release",
+  "readme_hits_before": "8",
+  "readme_hits_after": "4",
+  "leak_scope_corrected": "yes",
+  "src_ts_count_corrected": "yes",
+  "section_7d_corrected": "yes",
+  "residuals_listed": "25",
+  "reproduction_still_holds": "yes",
+  "numbers_moved": "0",
+  "commands": [
+   "bash verify/run-verification.sh -> exit 0",
+   "python3 verify/recompute-claims.py -> exit 0, ALL CLAIM NUMBERS PRESERVED: True",
+   "diff <(python3 verify/recompute-claims.py) verify/RECOMPUTE-CLAIMS.txt -> IDENTICAL to the pre-edit log (sha256 0640585b), 0 numbers moved",
+   "grep -rIE STRICT . | wc -l -> whole 330, stated-exclusion 216, instrument-only 154, README.md 4",
+   "grep -rn a5ef1b28 . | wc -l -> 0 (was 27 occurrences: MANIFEST.json 19, README.md 3, INTEGRITY.md 1, REDACTION_REPORT.md 4)",
+   "find . -name .git -o -name *.pack -o -name *.idx -o -name *.bundle -o -name packed-refs -o -name ORIG_HEAD | wc -l -> 0",
+   "python3 verify of the as-audited MANIFEST.json -> entries 42 ok 42 mismatched 0 missing 0",
+   "sha256sum MANIFEST.json README.md REDACTION_REPORT.md RESIDUALS.md -> 10268cd1 / ff7ec987 / b6ae7b9c / a1ae5560; INTEGRITY.md rows re-patched to match"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Independent re-verify on a fresh copy: re-run verify/run-verification.sh and verify/recompute-claims.py (expect exit 0 and diff-identical recompute output), confirm a5ef1b28=0 and VCS objects=0 tree-wide, whole=330 / exclusion=216 / instrument=154 / README=4, and that INTEGRITY.md section 1 hashes match sha256sum for the five edited files. The only remaining decision is the author's (a) rewrite the 47 questions vs (b) ship as-is; no re-run is needed for it, and RESIDUALS.md is the single list to decide from.",
+ "write_paths": [
+  "repro/encoder-crossover-190-SANITISED/",
+  "orchestration/units/UFIX10.md",
+  "orchestration/handoffs/UFIX10.json"
+ ]
+}

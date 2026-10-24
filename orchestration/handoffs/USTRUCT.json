@@ -1,0 +1,40 @@
+{
+  "unit": "USTRUCT",
+  "status": "done",
+  "artifacts": [
+    "STRUCTURE.md",
+    "archive/README.md",
+    "jobs/README.md",
+    "experiments/README.md"
+  ],
+  "evidence": {
+    "paths_moved": "2",
+    "what_file_colon_was": "An empty 5-level directory tree named 'file:' that a shell redirect created by treating 'file:/home/zer0null/reserach extarctor/state/' as a relative path; it contained 0 regular files and was removed with rmdir.",
+    "moved_nothing_under": "orchestration/handoffs, orchestration/units, src, tests, config, state, dockets",
+    "tree_roots_documented": "18",
+    "commands": [
+      "find \"file:\" -type f | head -20   # -> no output: 0 regular files; 5 empty dirs",
+      "ls -laR \"file:\"   # -> only '.' and '..' at every level; mirrors file:/home/zer0null/reserach extarctor/state/",
+      "ls -A orchestration/handoffs | wc -l   # -> 231 (unchanged after USTRUCT)",
+      "ls -A orchestration/units | wc -l   # -> 218 (unchanged after USTRUCT)",
+      "for d in state strategy journal; do ls -A $d | wc -l; done   # -> 58, 9, 16",
+      "sha256sum U5.3_red1.txt U5.3_red2.txt state/logs/U5.3_red1.txt state/logs/U5.3_red2.txt   # -> f6bfde35.., 68af787f.., 74859190.., f7cfe21b.. : root dumps are NOT duplicates of state/logs pytest logs",
+      "diff <(sed 's/[0-9]//g' U5.3_red1.txt) <(sed 's/[0-9]//g' U5.3_red2.txt)   # -> red2 adds the outside_target_root branch and the MaterializeRefused guard (the red/green pair)",
+      "grep -rn 'U5\\.3_red' journal strategy orchestration docs   # -> only historical records + docstrings naming state/logs/U5.3_red{1,2}.txt; no test reads the root files",
+      "mkdir -p archive jobs experiments && mv U5.3_red1.txt archive/U5.3_red1.txt && mv U5.3_red2.txt archive/U5.3_red2.txt   # -> moved 2 files",
+      "rmdir \"file:/home/zer0null/reserach extarctor/state\" \"file:/home/zer0null/reserach extarctor\" \"file:/home/zer0null\" \"file:/home\" \"file:\"   # -> succeeded: every level was empty",
+      "git status --porcelain   # -> root strays gone; handoffs/units untouched; nothing staged (no git add/commit/rm/mv run)",
+      "ls -A   # -> .git .gitignore .pytest_cache .venv AGENTS.md archive config dockets docs experiments jobs journal orchestration pyproject.toml src state strategy tests"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Root is now tidy and documented; jobs/README.md and experiments/README.md are in place for the five job-search units (us-nonprofit-research, us-national-labs, scandinavia-europe, evals-safety-foundations, india-ai) and the second-labeller experiment (experiments/second-labeller-190/). Nothing under those child dirs may be moved by a later unit. Deliberately NOT done, and should stay undone unless the user re-scopes: regrouping orchestration/handoffs/ or orchestration/units/ (breaks tests/test_orchestration_handoffs.py), and any touch of src/ tests/ config/ state/ dockets/. Two open user decisions remain recorded in orchestration/VERDICTS.md: whether state/state.sqlite should ever be committed, and whether root dockets/ should be versioned. A verifier should re-check: (a) 231/218 file counts unchanged; (b) archive/U5.3_red{1,2}.txt hashes unchanged and no longer at root; (c) 'file:' and U5.3_red*.txt absent from the root; (d) tests/test_repo_hygiene.py is unaffected because it asserts .gitignore semantics via git check-ignore and never names archive/. The test suite was not run (concurrent state/ writes), so test-neutrality is an argued, not measured, claim: the verifier should run tests/test_repo_hygiene.py and tests/test_orchestration_handoffs.py when state/ is quiescent.",
+  "write_paths": [
+    "STRUCTURE.md",
+    "archive/",
+    "jobs/README.md",
+    "experiments/README.md",
+    "orchestration/units/USTRUCT.md",
+    "orchestration/handoffs/USTRUCT.json"
+  ]
+}

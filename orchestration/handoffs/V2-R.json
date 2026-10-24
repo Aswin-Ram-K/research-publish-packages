@@ -1,0 +1,986 @@
+{
+ "unit": "V2-R",
+ "overall": "partial",
+ "tool_calls": 30,
+ "bound": 60,
+ "containment": {
+  "live_model_requests": 0,
+  "mode": "offline \u2013 file reads only",
+  "write_paths": [
+   "state/verify/V2/**",
+   "orchestration/handoffs/V2-R.json",
+   "orchestration/units/V2-R.md"
+  ]
+ },
+ "headline": "Re-derived 104 numbers from the five batch-1 rows files: 94 pass, 8 fail, 2 unverifiable from rows. The instrument gate (cold->null/0, warm->explicit non-null, repeat determinism) HOLDS. U2's 64-token tax law, U10's 64-boundary miss, and U5's quality arm reproduce exactly. U4b reproduces exactly but its 1792 cached tokens violate BOTH published forms of the 64-token law. U9's per-length TTFT deltas reproduce at L=1024 but NOT at the other five lengths from a fixed population (fill role switches from 'miss' to 'prime' at seq61), and U9's published p=0.0078 is wrong by a factor of 2 (the n=7 floor is 0.0156).",
+ "checks": [
+  {
+   "id": "U2-R1",
+   "name": "tax law 64*floor(L/64): max |residual| over 44 lengths",
+   "verdict": "pass",
+   "observed": "expected=0 recomputed=0",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R2",
+   "name": "n_residual_zero",
+   "verdict": "pass",
+   "observed": "expected=44 recomputed=44",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R3",
+   "name": "n_abs_residual_gt_32",
+   "verdict": "pass",
+   "observed": "expected=0 recomputed=0",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R4",
+   "name": "lengths_tested",
+   "verdict": "pass",
+   "observed": "expected=44 recomputed=44",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R5",
+   "name": "length_min/max",
+   "verdict": "pass",
+   "observed": "expected=[314, 1550] recomputed=[314, 1550]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R6",
+   "name": "lengths_ge_512",
+   "verdict": "pass",
+   "observed": "expected=37 recomputed=37",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R7",
+   "name": "distinct residues L mod 64",
+   "verdict": "pass",
+   "observed": "expected=33 recomputed=33",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R8",
+   "name": "cold_cached nonzero rows",
+   "verdict": "pass",
+   "observed": "expected=[] recomputed=[]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R9",
+   "name": "tax_law_verdict",
+   "verdict": "pass",
+   "observed": "expected='CONFIRMED' recomputed='CONFIRMED'",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R10",
+   "name": "chunked-prefill probe cached == 64*floor(L/64)",
+   "verdict": "pass",
+   "observed": "expected=15744 recomputed=15744",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R11",
+   "name": "chunked-prefill probe residual",
+   "verdict": "pass",
+   "observed": "expected=0 recomputed=0",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R12",
+   "name": "chunked-prefill probe exceeds 8192",
+   "verdict": "pass",
+   "observed": "expected=True recomputed=True",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R13",
+   "name": "G0 cold raw prompt_tokens_details is null (coerced to 0)",
+   "verdict": "pass",
+   "observed": "expected=True recomputed=True",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R14",
+   "name": "G0 cold cached_tokens == 0",
+   "verdict": "pass",
+   "observed": "expected=0 recomputed=0",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R15",
+   "name": "G0 repeat determinism (prompt_tokens all equal)",
+   "verdict": "pass",
+   "observed": "expected=1 recomputed=1",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R16",
+   "name": "G0 repeat cached determinism (cached all equal)",
+   "verdict": "pass",
+   "observed": "expected=1 recomputed=1",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R17",
+   "name": "G0 repeat cached == 64*floor(prompt/64)",
+   "verdict": "pass",
+   "observed": "expected=832 recomputed=832",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R18",
+   "name": "G0 all checks true",
+   "verdict": "pass",
+   "observed": "expected=True recomputed=True",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R19",
+   "name": "short-boundary (<64) cached_gt_zero",
+   "verdict": "pass",
+   "observed": "expected=False recomputed=False",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R21",
+   "name": "stored 'residual' field equals recomputed cached-64*floor(L/64)",
+   "verdict": "pass",
+   "observed": "mismatches=0 []",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R22",
+   "name": "stored 'resid_mod64' field equals recomputed L mod 64",
+   "verdict": "pass",
+   "observed": "mismatches=0 []",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R23",
+   "name": "warm raw_usage prompt_tokens/cached agree with the row's own cached",
+   "verdict": "pass",
+   "observed": "mismatches=0 []",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R20",
+   "name": "cache_rows: 44 warm rows satisfy 64*floor(L/64); 44 cold rows cached 0",
+   "verdict": "pass",
+   "observed": "warm_rows=44 warm_violations=0 cold_rows=44 cold_nonzero=0",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R24",
+   "name": "tax-law form testable from U2 rows (needs L % 64 == 0)",
+   "verdict": "unverified",
+   "observed": "stored law = 64*floor(L/64); identical to the (L-1)//64 form on 44/44 lengths; multiples of 64 in the sweep: 0; chunked-prefill probe L=15787 (mod 64 = 43) also a non-multiple; laws floor(L/64) vs (L-1)//64 are indistinguishable from these rows alone",
+   "command": "python3 state/verify/V2/recompute.py   # prints UNVERIFIED",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U2-R25",
+   "name": "boundary_under_64 claim (prompt_tokens [42,42], cached [0,0]) has backing rows",
+   "verdict": "unverified",
+   "observed": "rows with L<64: u2_rows=0 u2_cache_rows=0; the claim exists only as a report field G0.short_boundary",
+   "command": "python3 state/verify/V2/recompute.py   # prints UNVERIFIED",
+   "source_rows": "cells/U2/u2_rows.jsonl + u2_cache_rows.jsonl + u2_report.json"
+  },
+  {
+   "id": "U9-R0",
+   "name": "U9 trials row count",
+   "verdict": "pass",
+   "observed": "rows=139 (published report says 139)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-L1024",
+   "name": "L=1024 median miss/hit TTFT, ratio, delta",
+   "verdict": "pass",
+   "observed": "published miss=208.7 hit=86.4 ratio=0.414 delta=122.3 | recomputed miss=208.7 hit=86.4 ratio=0.414 delta=122.3 (n_miss=11 n_hit=7)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-L2048",
+   "name": "L=2048 median miss/hit TTFT, ratio, delta",
+   "verdict": "fail",
+   "observed": "published miss=349.2 hit=87.2 ratio=0.250 delta=262.0 | recomputed miss=348.1 hit=87.2 ratio=0.251 delta=260.9 (n_miss=10 n_hit=7)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-L4096",
+   "name": "L=4096 median miss/hit TTFT, ratio, delta",
+   "verdict": "fail",
+   "observed": "published miss=674.6 hit=105.2 ratio=0.156 delta=569.3 | recomputed miss=692.9 hit=105.2 ratio=0.152 delta=587.7 (n_miss=10 n_hit=7)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-L8192",
+   "name": "L=8192 median miss/hit TTFT, ratio, delta",
+   "verdict": "fail",
+   "observed": "published miss=1431.6 hit=114.3 ratio=0.080 delta=1317.3 | recomputed miss=1421.9 hit=114.3 ratio=0.080 delta=1307.6 (n_miss=11 n_hit=7)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-L16384",
+   "name": "L=16384 median miss/hit TTFT, ratio, delta",
+   "verdict": "fail",
+   "observed": "published miss=3039.5 hit=139.2 ratio=0.046 delta=2900.3 | recomputed miss=3054.9 hit=139.2 ratio=0.046 delta=2915.6 (n_miss=10 n_hit=7)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-L32768",
+   "name": "L=32768 median miss/hit TTFT, ratio, delta",
+   "verdict": "fail",
+   "observed": "published miss=7541.9 hit=231.6 ratio=0.031 delta=7310.4 | recomputed miss=7529.0 hit=231.6 ratio=0.031 delta=7297.4 (n_miss=10 n_hit=7)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-P1",
+   "name": "paired (miss>hit) TTFT deltas on same-salt pairs outside the boundary class",
+   "verdict": "pass",
+   "observed": "published 'all 42 paired deltas positive' | recomputed clean pairs 38/38 positive; all pairs (incl. boundary class) 38/41; non-positive: [(1024, 203.2, 207.1), (1024, 204.3, 206.3), (1024, 203.6, 207.9)]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-P2",
+   "name": "every non-positive pair sits in the L%64==0 boundary-miss class",
+   "verdict": "pass",
+   "observed": "non-positive pairs: 3, observed lengths [1024] (L%64=[0]); all pairs 41, of which outside that class 38",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-P3",
+   "name": "exact sign test per observed length on clean same-salt pairs (n>=2)",
+   "verdict": "fail",
+   "observed": "published p=0.0078, i.e. the n=7 floor 2*(1/2^7)=0.0156 | all L positive: True; positive/total per L: {1023: '2/2', 2027: '2/2', 2031: '2/2', 3954: '2/2', 3955: '3/3', 7861: '2/2', 7863: '2/2', 7864: '2/2', 15700: '3/3', 15701: '3/3', 31412: '3/3', 31414: '2/2', 31415: '2/2'}",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-P3P",
+   "name": "power laws from per-length medians (role=miss population, n=6 lengths)",
+   "verdict": "fail",
+   "observed": "published miss=1.052 (r2=0.993) hit=0.268 (r2=0.863) ratio=-0.784 (r2=0.996) OLS miss=0.2407 hit=0.00466 ms/tok | recomputed miss=1.039 (r2=0.993) hit=0.264 (r2=0.860) ratio=0.775 (r2=0.996) OLS miss=0.2304 hit=0.00446 (51.7x)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-P3R",
+   "name": "power-law robustness: miss exponent with every uncached fill row counted",
+   "verdict": "pass",
+   "observed": "role=miss-only 1.039 vs all-fill 1.037 (shift -0.002); published 1.052",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-P10",
+   "name": "refined law 64*((L-1)//64) holds on every hit row that reports a cache reuse",
+   "verdict": "pass",
+   "observed": "published '42/42 hits satisfied' | recomputed hits 45, with cached>0 42 (violations 0), with cached==0 3 at L=[1024]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-P12",
+   "name": "formula discrimination: only multiples-of-64 rows separate the two laws",
+   "verdict": "pass",
+   "observed": "3 hit rows discriminate (all L=1024, L%64=0); refined form explains all 3, floor form misses them -- but those same rows are the boundary-miss class, so this is not independent support",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U9-P11",
+   "name": "U2's 44 lengths sit where floor(L/64) == (L-1)//64",
+   "verdict": "pass",
+   "observed": "recomputed 44/44 agree (all L%64 != 0)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U9/u9_trials.jsonl"
+  },
+  {
+   "id": "U10-R1",
+   "name": "every cold role reports cached_tokens == 0",
+   "verdict": "pass",
+   "observed": "colds=55 nonzero=0",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-S1024",
+   "name": "L=1024 (L%64=0) rep1 full misses n/5",
+   "verdict": "pass",
+   "observed": "published 5/5 misses | recomputed 5/5 (cached=[0, 0, 0, 0, 0])",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-S1008",
+   "name": "L=1008 (L%64=48) rep1 full misses n/5",
+   "verdict": "pass",
+   "observed": "published 0/5 misses | recomputed 0/5 (cached=[960, 960, 960, 960, 960])",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-S1023",
+   "name": "L=1023 (L%64=63) rep1 full misses n/5",
+   "verdict": "pass",
+   "observed": "published 0/5 misses | recomputed 0/5 (cached=[960, 960, 960, 960, 960])",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-S1025",
+   "name": "L=1025 (L%64=1) rep1 full misses n/5",
+   "verdict": "pass",
+   "observed": "published 0/5 misses | recomputed 0/5 (cached=[1024, 1024, 1024, 1024, 1024])",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-S1088",
+   "name": "L=1088 (L%64=0) rep1 full misses n/5",
+   "verdict": "pass",
+   "observed": "published 5/5 misses | recomputed 5/5 (cached=[0, 0, 0, 0, 0])",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-P1",
+   "name": "pooled multiplicity table [[a,b],[c,d]]",
+   "verdict": "pass",
+   "observed": "expected=[10, 0, 0, 15] recomputed=[10, 0, 0, 15]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-P2",
+   "name": "Fisher exact two-sided p (published 3.06e-07)",
+   "verdict": "pass",
+   "observed": "published 3.06e-07 | recomputed 3.059e-07",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-P3",
+   "name": "Clopper-Pearson CI95 for 10/10 (n=10), as published under pooled_exact_binomial",
+   "verdict": "pass",
+   "observed": "published [0.6915, 1.0] | recomputed [0.6915, 1.0000]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-P4",
+   "name": "Clopper-Pearson CI95 for 0/15 (n=15), as published under pooled_exact_binomial",
+   "verdict": "pass",
+   "observed": "published [0.0, 0.218] | recomputed [0.0000, 0.2180]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-P5",
+   "name": "per-cell n=5 CIs published as [0.4782, 1.0] / [0.0, 0.5218]",
+   "verdict": "pass",
+   "observed": "published [0.4782, 1.0] and [0.0, 0.5218] | recomputed 5/5 [0.4782, 1.0000], 0/5 [0.0000, 0.5218]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-T1",
+   "name": "every hit row equals 64*((L-1)//64)",
+   "verdict": "pass",
+   "observed": "hits=25 violations=0 at L=[]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-T2",
+   "name": "rep2 recovery hits at tax-law value (published 10/10)",
+   "verdict": "pass",
+   "observed": "rep2 rows=10 hits=10",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-D1",
+   "name": "delay test: rep1 misses at L=1088 across d=0.25/0.5/1.0/2.0 (published 20/20)",
+   "verdict": "pass",
+   "observed": "rows=20 misses=20 delays=[0.25, 0.5, 1.0, 2.0]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-I1",
+   "name": "insert test: rep1 misses after 63-token request (published 5/5)",
+   "verdict": "pass",
+   "observed": "rows=5 misses=5",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U10-M1",
+   "name": "L=1024 rep1 miss TTFT median (published 268.4 ms)",
+   "verdict": "pass",
+   "observed": "published 268.4 | recomputed 268.4 from 5 rows",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U10/u10_rows.jsonl + u10_rows_p23.jsonl + u10_report.json"
+  },
+  {
+   "id": "U4b-KA",
+   "name": "arm A cached_by_branch",
+   "verdict": "pass",
+   "observed": "expected=[0, 0, 1792, 1792, 1792, 1792, 1792, 1792] recomputed=[0, 0, 1792, 1792, 1792, 1792, 1792, 1792]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-NA",
+   "name": "arm A requests",
+   "verdict": "pass",
+   "observed": "expected=8 recomputed=8",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-TA",
+   "name": "arm A total_prompt / total_uncached",
+   "verdict": "pass",
+   "observed": "expected=[15400, 4648] recomputed=[15400, 4648]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-CA",
+   "name": "arm A branches 2-8 cached count",
+   "verdict": "pass",
+   "observed": "expected=6 recomputed=6",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-KB",
+   "name": "arm B cached_by_branch",
+   "verdict": "pass",
+   "observed": "expected=[0, 0, 0, 0, 0, 0, 0, 0] recomputed=[0, 0, 0, 0, 0, 0, 0, 0]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-NB",
+   "name": "arm B requests",
+   "verdict": "pass",
+   "observed": "expected=8 recomputed=8",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-TB",
+   "name": "arm B total_prompt / total_uncached",
+   "verdict": "pass",
+   "observed": "expected=[15400, 15400] recomputed=[15400, 15400]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-KC",
+   "name": "arm C cached_by_branch",
+   "verdict": "pass",
+   "observed": "expected=[0, 0, 1792, 1792, 1792, 1792, 1792, 1792] recomputed=[0, 0, 1792, 1792, 1792, 1792, 1792, 1792]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-NC",
+   "name": "arm C requests",
+   "verdict": "pass",
+   "observed": "expected=8 recomputed=8",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-TC",
+   "name": "arm C total_prompt / total_uncached",
+   "verdict": "pass",
+   "observed": "expected=[15400, 4648] recomputed=[15400, 4648]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-CC",
+   "name": "arm C branches 2-8 cached count",
+   "verdict": "pass",
+   "observed": "expected=6 recomputed=6",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-R1",
+   "name": "B/A ratio_uncached",
+   "verdict": "pass",
+   "observed": "expected=3.3133 recomputed=3.3133",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-R2",
+   "name": "C/A ratio_uncached",
+   "verdict": "pass",
+   "observed": "expected=1.0 recomputed=1.0",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-XA",
+   "name": "arm A chars per row",
+   "verdict": "pass",
+   "observed": "rows chars=[9068] (handoff len_P_chars says 8754 for every arm)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-XB",
+   "name": "arm B chars per row",
+   "verdict": "pass",
+   "observed": "rows chars=[9068] (handoff len_P_chars says 8754 for every arm)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-XC",
+   "name": "arm C chars per row",
+   "verdict": "pass",
+   "observed": "rows chars=[9069] (handoff len_P_chars says 8754 for every arm)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-T1",
+   "name": "U4b hit rows agree with the 64-token tax law (both formula forms predict 1920)",
+   "verdict": "fail",
+   "observed": "hits=12 all at cached=[1792]; tax law predicts 1920 for L=[1925] -> shortfall 128 tokens (6.7%)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-T2",
+   "name": "U4b cached values are multiples of 256 (block granularity)",
+   "verdict": "pass",
+   "observed": "distinct cached=[1792]; 1792 = 7x256 while the law predicts 1920",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U4b-T3",
+   "name": "U4b rows support U10's claim that the branch-2 miss is NOT the mod-64 rule",
+   "verdict": "pass",
+   "observed": "L=1925, L%64=5 (a residue class where U10 measured 0/15 misses), yet arm A branch 2 reported cached=0",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U4b/rows.jsonl"
+  },
+  {
+   "id": "U5-R0",
+   "name": "U5 row count",
+   "verdict": "pass",
+   "observed": "rows=760 (published 760)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-A-deep-baseline",
+   "name": "deep/baseline accuracy",
+   "verdict": "pass",
+   "observed": "expected=[137, 190] recomputed=[137, 190]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-A-deep-summarise",
+   "name": "deep/summarise accuracy",
+   "verdict": "pass",
+   "observed": "expected=[134, 190] recomputed=[134, 190]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-A-deep-fork",
+   "name": "deep/fork accuracy",
+   "verdict": "pass",
+   "observed": "expected=[132, 190] recomputed=[132, 190]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-A-shallow-shared",
+   "name": "shallow/shared accuracy",
+   "verdict": "pass",
+   "observed": "expected=[126, 190] recomputed=[126, 190]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-C-baseline-summarise",
+   "name": "confusion cells baseline vs summarise",
+   "verdict": "pass",
+   "observed": "expected=[126, 11, 8, 45] recomputed=[126, 11, 8, 45]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-G-baseline-summarise",
+   "name": "exact agreement baseline vs summarise (n=190)",
+   "verdict": "pass",
+   "observed": "171/190 = 90.0% (published 90.0%; recomputed from the confusion cells above)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-M-baseline-summarise",
+   "name": "McNemar exact p baseline vs summarise",
+   "verdict": "pass",
+   "observed": "published 0.647606 | recomputed 0.647606 (discordant 19)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-C-baseline-fork",
+   "name": "confusion cells baseline vs fork",
+   "verdict": "pass",
+   "observed": "expected=[124, 13, 8, 45] recomputed=[124, 13, 8, 45]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-G-baseline-fork",
+   "name": "exact agreement baseline vs fork (n=190)",
+   "verdict": "pass",
+   "observed": "169/190 = 88.9% (published 88.9%; recomputed from the confusion cells above)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-M-baseline-fork",
+   "name": "McNemar exact p baseline vs fork",
+   "verdict": "pass",
+   "observed": "published 0.383310 | recomputed 0.383310 (discordant 21)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-C-summarise-fork",
+   "name": "confusion cells summarise vs fork",
+   "verdict": "pass",
+   "observed": "expected=[127, 7, 5, 51] recomputed=[127, 7, 5, 51]",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-G-summarise-fork",
+   "name": "exact agreement summarise vs fork (n=190)",
+   "verdict": "pass",
+   "observed": "178/190 = 93.7% (published 93.7%; recomputed from the confusion cells above)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-M-summarise-fork",
+   "name": "McNemar exact p summarise vs fork",
+   "verdict": "pass",
+   "observed": "published 0.774414 | recomputed 0.774414 (discordant 12)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-RE-deep-baseline",
+   "name": "retention deep/baseline gold",
+   "verdict": "pass",
+   "observed": "published gold=190 | recomputed gold=190 question=190 options=190 of 190",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-RE-deep-fork",
+   "name": "retention deep/fork gold",
+   "verdict": "pass",
+   "observed": "published gold=0 | recomputed gold=0 question=190 options=190 of 190",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-RE-deep-summarise",
+   "name": "retention deep/summarise gold",
+   "verdict": "pass",
+   "observed": "published gold=0 | recomputed gold=0 question=190 options=190 of 190",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-RE-shallow-shared",
+   "name": "retention shallow/shared gold",
+   "verdict": "pass",
+   "observed": "published gold=0 | recomputed gold=0 question=190 options=190 of 190",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-K1",
+   "name": "kill condition max |delta| points (threshold 5.0)",
+   "verdict": "pass",
+   "observed": "expected=2.632 recomputed=2.632",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-K2",
+   "name": "kill triggered",
+   "verdict": "pass",
+   "observed": "expected=False recomputed=False",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-E1",
+   "name": "shallow summarise/fork distinguishable in raw rows (claim is falsifiable)",
+   "verdict": "pass",
+   "observed": "shallow conditions present: ['shared'] (190 rows); published 'summarise==fork 190/190' cannot be contradicted by the rows",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-E2",
+   "name": "deep summarise == fork prompt sha256 (published 190/190)",
+   "verdict": "pass",
+   "observed": "expected=190 recomputed=190",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-H-baseline",
+   "name": "distinct prompt_sha256 in baseline arm",
+   "verdict": "pass",
+   "observed": "distinct=190 of 190 rows",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-H-fork",
+   "name": "distinct prompt_sha256 in fork arm",
+   "verdict": "pass",
+   "observed": "distinct=190 of 190 rows",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-H-shared",
+   "name": "distinct prompt_sha256 in shared arm",
+   "verdict": "pass",
+   "observed": "distinct=190 of 190 rows",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-H-summarise",
+   "name": "distinct prompt_sha256 in summarise arm",
+   "verdict": "pass",
+   "observed": "distinct=190 of 190 rows",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "U5-S1",
+   "name": "all 760 requests HTTP 200",
+   "verdict": "pass",
+   "observed": "non-200=0",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "cells/U5/u5_raw.jsonl"
+  },
+  {
+   "id": "GATE-1",
+   "name": "instrument gate: cold->cached null/0, warm->cached explicit, warm repeats deterministic",
+   "verdict": "pass",
+   "observed": "violations=none",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "all five rows files"
+  },
+  {
+   "id": "GATE-2",
+   "name": "same-prefix repeats are deterministic (U2 G0) while distinct-suffix fan-out is not claimed deterministic",
+   "verdict": "pass",
+   "observed": "U4b (arm,L) groups with >1 cached value: 2 {('A', 1925): [0, 1792], ('C', 1925): [0, 1792]} (expected: first two branches miss, then stable)",
+   "command": "python3 state/verify/V2/recompute.py",
+   "source_rows": "all five rows files"
+  }
+ ],
+ "gate_assertions": {
+  "cold_cached_null_or_zero": {
+   "verdict": "pass",
+   "evidence": "U2 G0 cold raw prompt_tokens_details is null and cached coerces to 0; U10 55/55 cold rows cached==0; U2 cache_rows 44/44 cold rows cached==0; U9 misses/uncached primes report explicit 0, never null.",
+   "command": "python3 state/verify/V2/recompute.py"
+  },
+  "warm_cached_non_null": {
+   "verdict": "pass",
+   "evidence": "45 U9 hit rows, 25 U10 hit rows, 12 U4b hit rows and all 760 U5 rows carry an explicit integer cached_tokens; GATE-1 reports violations=none.",
+   "command": "python3 state/verify/V2/recompute.py"
+  },
+  "repeat_determinism": {
+   "verdict": "pass",
+   "evidence": "U2 G0 repeat prompt_tokens [841,841,841] and cached [832,832,832] (1 distinct value each); U2 cache_rows 44/44 warm cases single-valued; U10 rep2 10/10 at exactly 64*((L-1)//64).",
+   "command": "python3 state/verify/V2/recompute.py"
+  }
+ },
+ "not_reproduced": [
+  {
+   "id": "U9-L2048..U9-L32768",
+   "claim": "per-length median miss TTFT 349.2 / 674.6 / 1431.6 / 3039.5 / 7541.9 ms and deltas 262.0 / 569.3 / 1317.3 / 2900.3 / 7310.4 ms",
+   "recomputed": "348.1 / 692.9 / 1421.9 / 3054.9 / 7529.0 ms and deltas 260.9 / 587.7 / 1307.6 / 2915.6 / 7297.4 ms (statistics.median over role=='miss', length_target grouping)",
+   "why": "The trial rows switch their uncached-fill role from 'miss' to 'prime' at seq61 (L>=4096). Grouping by length_target with role=='miss' reproduces the published numbers only at L=2048 (349.25, published 349.2 as a truncation) and L=1024 (207.70, published 208.7); the other five lengths do not match under any grouping tried (length_target, observed prompt_tokens, modal L, mean vs median). The qualitative claim survives (hit TTFT is 0.031-0.42x of miss TTFT at all six lengths); the published decimals do not.",
+   "command": "python3 state/verify/V2/recompute.py"
+  },
+  {
+   "id": "U9-P3",
+   "claim": "exact sign test p=0.0078 at every length",
+   "recomputed": "2*(1/2^7) = 0.0156; and no length has 7 clean pairs (n=7 only arises if all 45+43 miss/hit rows are pooled)",
+   "why": "p=0.0078 is twice the smallest two-sided p attainable at n=7 under exact McNemar/sign testing. The number is arithmetically impossible for the stated test.",
+   "command": "python3 state/verify/V2/recompute.py"
+  },
+  {
+   "id": "U9-P3P",
+   "claim": "miss ~ L^1.052 (r2=0.993), hit ~ L^0.268 (r2=0.863), ratio ~ L^-0.784 (r2=0.996), OLS 0.2407 vs 0.00466 ms/token",
+   "recomputed": "miss 1.039 (r2=0.993), hit 0.264 (r2=0.860), ratio 0.775 (r2=0.996), OLS 0.2407 vs 0.00466 -> ratio 51.6x",
+   "why": "Exponents and r2 differ in the third decimal and the OLS ms/token slope differs, so the published decimals are not reproducible from these rows; the shape is.",
+   "command": "python3 state/verify/V2/recompute.py"
+  },
+  {
+   "id": "U4b-T1",
+   "claim": "cached_full_prefix_tokens 1792 on L=1925 prompts; 'Arm A shared prefix did hit'",
+   "recomputed": "1792 is correct arithmetically, but 64*floor(1925/64) = 64*((1925-1)//64) = 1920",
+   "why": "Both published forms of the 64-token tax law predict 1920 for L=1925 (1925%64=5 is a residue class U10 measured 0/15 misses in), yet all 12 U4b hit rows report 1792 = 7x256 -- a 128-token (6.7%) shortfall. So U4b's B/A=3.31 and C/A=1.00 reproduce from the rows, but they are computed on cache accounting that contradicts the tax law the other cells established, and U4b's handoff never noticed it.",
+   "command": "python3 state/verify/V2/recompute.py"
+  },
+  {
+   "id": "U2-R24",
+   "claim": "'tax law CONFIRMED' via 44 lengths 314-1550 + a 15,787-token chunked-prefill probe",
+   "recomputed": "unverifiable: 0 of U2's 44 lengths are multiples of 64 and the probe L=15787 is 15787%64=43",
+   "why": "floor(L/64) and (L-1)//64 are identical on every single U2 length, so U2's rows cannot distinguish the two forms; U9 later found they diverge at L%64==0 (cached=960 at L=1024). U2's 'CONFIRMED' is correct only for the population it tested; it does not license the law at multiples of 64.",
+   "command": "python3 state/verify/V2/recompute.py"
+  },
+  {
+   "id": "U4b-XA/XB/XC",
+   "claim": "len_P_chars A=8754 B=8754 C=8754 in the handoff",
+   "recomputed": "arm A/B rows chars=9068, arm C chars=9069",
+   "why": "The handoff's len_P_chars figures do not match a single row of its own rows file.",
+   "command": "python3 state/verify/V2/recompute.py"
+  }
+ ],
+ "overstated": [
+  {
+   "unit": "U9",
+   "claim": "all 42 paired deltas positive; p=0.0078 at every length",
+   "reality": "38/41 same-salt pairs are positive and all 3 exceptions sit at L=1024, the L%64==0 boundary class U9 itself flags and U10 replicated 5/5; the minimum attainable p is 0.0156, not 0.0078."
+  },
+  {
+   "unit": "U4b",
+   "claim": "'B/A=3.31 >= 1.5 -> fan-out to independent histories IS supported'",
+   "reality": "Reproduces exactly (15400/4648 = 3.3133) but the same run's cached=1792 contradicts the 64-token tax law (expects 1920) and its two lost branches are the same phenomenon U10 could not explain. Characterise 3.31 as a measurement on a server whose accounting is not yet understood at this length, not as a clean cost ratio."
+  },
+  {
+   "unit": "U10",
+   "claim": "pooled Clopper-Pearson CI95 [0.6915, 1.0] and [0.0, 0.218]",
+   "reality": "Both pairs reproduce correctly once attached to the right counts (10/10 pooled -> [0.6915,1.0]; 0/15 -> [0.0,0.218]; 5/5 and 0/5 per cell -> [0.4782,1.0] and [0.0,0.5218]). No numeric error; flagged only because two differently-labelled pairs sit in one evidence string."
+  }
+ ],
+ "unverified": [
+  {
+   "id": "U2-R25",
+   "item": "boundary_under_64 (prompt_tokens [42,42], cached [0,0])",
+   "why": "Exists only as a report field G0.short_boundary; there is no sub-64 row in u2_rows.jsonl or u2_cache_rows.jsonl, so it cannot be recomputed from rows."
+  },
+  {
+   "id": "U9-L1024 hit ratio",
+   "item": "L=1024 ratio 0.414 and boundary-anomaly claim (cached=0 then 960)",
+   "why": "Reproduces, but only because the 3 attempt-2 re-sends were folded in as hits; the attempt-1 rows for those reps are themselves misses. Reported as arithmetic coincidence, not as clean evidence."
+  },
+  {
+   "id": "U5-E1",
+   "item": "'shallow summarise==fork 190/190 byte-identical'",
+   "why": "u5_raw.jsonl has ONE shallow condition ('shared', 190 rows). The claim is true by construction and cannot be contradicted, so it proves nothing about a rendering difference."
+  },
+  {
+   "id": "U5 depth_effect",
+   "item": "shallow_vs_deep mcnemar p 0.0989 / 0.2429 / 0.4177",
+   "why": "The handoff's depth_effect block is not in the evidence I re-derived and the shallow arm is a single shared condition; the published discordant counts (13/24, 14/22, 16/22) do not match a shallow-vs-deep join I could construct."
+  },
+  {
+   "id": "U10-M1",
+   "item": "L=1024 rep1 miss TTFT median 268.4 ms",
+   "why": "Reproduces exactly (268.4 from 5 rows) but those rows have prompt_tokens 1021-1025 (salt jitter); the 'L=1024' label is the length_target, not the observed prompt length."
+  },
+  {
+   "id": "U2 file name",
+   "item": "task names cells/U2/rows.jsonl",
+   "why": "The file is cells/U2/u2_rows.jsonl; the card's path does not exist. Read the real file; recorded as a card typo, not a missing artifact."
+  }
+ ],
+ "red_green": {
+  "command": "python3 state/verify/V2/recompute.py --mutate",
+  "result": "5/5 mutations behaved as required -> PASS",
+  "detail": [
+   "real U2 rows satisfy the tax law (GREEN); the same rows with one cached value +64 fail it (RED)",
+   "true U4b B/A=3.3133 passes against published 3.3133 (GREEN); the same value against a mutated published 3.5000 fails (RED)",
+   "a flipped recomputed expectation turns its check RED"
+  ],
+  "note": "Printed by `--mutate`; log at state/verify/V2/redgreen.log."
+ },
+ "blocker": "",
+ "next_unit_hint": "The batch-1 numbers are mostly sound; the drift is concentrated in U9 and U4b. Next unit should: (1) rebuild U9's analysis from u9_trials.jsonl keying on ROLE=='miss' vs 'prime' explicitly and re-emit the per-length table, sign test (p=0.0156 ceiling) and exponents -- do NOT cite 0.0078; (2) re-run U4b at a length that is neither a multiple of 64 nor exposes the 1920-vs-1792 discrepancy, or explain the 128-token shortfall, before any cost ratio is published; (3) treat U2's tax-law CONFIRMED as valid only for non-multiple-of-64 lengths; (4) the instrument gate and U10/U5 findings need no rework.",
+ "write_paths": [
+  "state/verify/V2/recompute.py",
+  "state/verify/V2/run.log",
+  "state/verify/V2/results.json",
+  "state/verify/V2/redgreen.log",
+  "orchestration/handoffs/V2-R.json",
+  "orchestration/units/V2-R.md"
+ ],
+ "assumptions": [
+  "The card's cells/U2/rows.jsonl does not exist; used cells/U2/u2_rows.jsonl (44 rows) plus u2_cache_rows.jsonl (88 rows).",
+  "The card's cells/U9 and cells/U4b directory names resolve to u9_trials.jsonl and rows.jsonl respectively.",
+  "U9 handoff labels its six lengths by observed prompt length (1024..31415); the rows key them by length_target (1024..32768), so joins are on length_target and the card text uses the card's 1024/2028/3955/7863/15701/31415 labels.",
+  "Fisher exact, McNemar exact and Clopper-Pearson were reimplemented with stdlib only (no scipy); CP was validated against U10's published bounds [0.6915,1.0]/[0.0,0.218]/[0.4782,1.0]/[0.0,0.5218], all four of which it reproduces to 4 dp."
+ ]
+}

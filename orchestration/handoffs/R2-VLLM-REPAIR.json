@@ -1,0 +1,61 @@
+{
+  "unit": "R2-VLLM-REPAIR",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/R2-VLLM/pmu16_cell.py",
+    "experiments/context-cache/cells/R2-VLLM/pmu16_analyze.py",
+    "experiments/context-cache/cells/R2-VLLM/selftest_offline.py",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair-offline.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair-offline.txt",
+    "orchestration/units/R2-VLLM-REPAIR.md",
+    "orchestration/handoffs/R2-VLLM-REPAIR.json"
+  ],
+  "evidence": {
+    "cmd": ".venv/bin/python experiments/context-cache/cells/R2-VLLM/selftest_offline.py --json experiments/context-cache/cells/R2-VLLM/logs/repair-offline.json",
+    "counts": "pass=14 fail=0 n_checks=14 red_green=True (exit 0; three identical runs)",
+    "stdout_tail": [
+      "red->green flag_dropped_from_OH1: red=True green=True OH1: flag count 0",
+      "red->green arms_forced_to_one_policy: red=True green=True arm identity collapsed: {\"ok\": false, \"n_arms\": 4, \"turns\": 16, \"min_distinct_prefix_sha256_per_turn\": 4, \"per_turn_prom",
+      "SUMMARY pass=14 fail=0 red_green=True"
+    ],
+    "c1_flag": "test_R1 ok | OH1_flag_count=1 A1_flag_count=1; OCCAMY_FLAGS carries the flag; A1 cmd = prod Cmd with pmu 16 plus this one flag",
+    "c2_none_vs_zero": "test_R2 ok | absent -> cached=None details=False; present -> cached=1234 details=True; observed miss -> cached=0 details=True; fake-transport client path -> cached=None; battery pass 2 unobserved / zero_cached 0; usage_coverage n_unobserved=2 blind=True; uncached=None",
+    "c3_row_schema": "test_R3 ok {\"prefix_sha256\": \"c3f238f6af14470e4d2e410963ac53982f79d43854d769e55696f472f965e474\", \"recomputed\": \"c3f238f6af14470e4d2e410963ac53982f79d43854d769e55696f472f965e474\", \"http_status\": 200, \"status\": 200, \"basis\": \"canonical_json(messages, sort_keys=True, separators=(',',':'))|utf-8\", \"blocks_available\": 2, \"fail_row\": {\"http_status\": 500, \"status\": 500, \"has_error\": true}}",
+    "c3_blocks_math": "test_R4 ok {\"4595//2096\": 2, \"2105//2096\": 1, \"2095//2096\": 0, \"None\": null, \"row_blocks\": 2, \"row_blocks_no_blocksize\": null}",
+    "c4_arms": "test_R6 ok | identity_ok=True min_distinct_sha_per_turn=None per_turn_distinct=null render_policy_by_arm=null compaction_events=null",
+    "c4_cold_pass": "test_R5 ok | {\"distinct_pass1_prompts\": 16, \"pass1_equals_pass2\": true, \"per_turn_salt_prevents_prefix\": true}",
+    "c5_red_green": "flag_dropped_from_OH1: red=True green=True via R1_flag_in_oh1_oh1l_a1_unchanged error=OH1: flag count 0; arms_forced_to_one_policy: red=True green=True via R6_real_arms error=arm identity collapsed: {\"ok\": false, \"n_arms\": 4, \"turns\": 16, \"min_distinct_prefix_sha256_per_turn\": 4, \"per_turn_prompt_nodes\": [{\"turn\": 1, \"n_arms\": 4, \"di",
+    "cE_guard": "test_R7 ok | {\"fresh\": \"write\", \"stale_refused\": true, \"moved_refused\": true, \"forced\": \"forced: previous copied to analysis.stale-adb4ac6f.json\", \"real_repo_refused\": true, \"real_repo_n_rows\": 420, \"real_repo_prev_n_rows\": 222}",
+    "legacy_checks": "test_a1_scrubs_and_sets_pmu16=ok ; test_analyser_reproduces_block_grids=ok ; test_battery_render_is_prefix_stable=ok ; test_config_sha_moves_with_pmu=ok ; test_log_parser=ok ; test_oh1_recipe_has_one_pmu16=ok ; test_plan_is_within_cap=ok",
+    "rows_untouched": "sha256 2737125f917fe212ad54bf67521a5ccb66a740eb35a064665d7516282de5045c (equals the declared 2737125f917fe212ad54bf67521a5ccb66a740eb35a064665d7516282de5045c)",
+    "analysis_untouched": "sha256 8e9e45cf310ccb802c84a5ec34afe4d4bfe9ff33354487f6e5fe6fabd1bb9515; never rewritten -- test_R7 proves the guard refused it (previous n_rows 222 vs rows now 420)",
+    "network": "0 ssh/docker/HTTP calls, by construction",
+    "not_verified": "no project lint/pytest run (out of scope, write paths untouched); the live battery was not run per the card"
+  },
+  "blocker": "",
+  "next_unit_hint": "Re-run card (live, holds .occamy.lock): .venv/bin/python pmu16_cell.py --all. Cells/arms: OH1 (A,C,R,H), OH1L (launch-only leniency probe), A1 (A,C,R,H) + restore. Expected rows per config: gate 2 + grid 2x7=14 + baseline 2x3=6 + battery 2 passes x 4 arms x 16 turns = 128 => 150 per config, 300 total, plus length-probe requests when /tokenize is absent (it is on this build). Caps: ARM_REQUEST_CAP 200/config, TOTAL_REQUEST_CAP 1000 per unit -- the previous run hit 1000 because all three configs ran as one unit; run OH1 first and size the cap for two configs or raise it explicitly. Read rows via usage_has_details: an OH1 row with usage_has_details=false means the flag did not reach the engine, and phase_grid returns 'usage-unobserved' (not 'instrument-dead'), which skips baseline/battery instead of measuring blind zeros. A and H share CompactionPolicy.APPEND_NOTE (distinct seeds): a POLICY replicate pair, not a salt merge -- never report A-vs-H as a policy contrast; the contrasts are A-vs-C (in-place rewrite) and A-vs-R (fork with provenance marker). Regenerate analysis.json with `--phase analyse`: it exits 3 against the current stale analysis, so run it once with --force (keeps analysis.stale-8e9e45cf.json), after which the digest guard is armed. The 420 existing rows remain a discarded dry run.",
+  "write_paths": [
+    "experiments/context-cache/cells/R2-VLLM/pmu16_cell.py",
+    "experiments/context-cache/cells/R2-VLLM/pmu16_analyze.py",
+    "experiments/context-cache/cells/R2-VLLM/selftest_offline.py",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair-offline.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair-offline.txt",
+    "orchestration/units/R2-VLLM-REPAIR.md",
+    "orchestration/handoffs/R2-VLLM-REPAIR.json"
+  ],
+  "tool_calls": 43,
+  "bound": 30,
+  "bound_note": "43 tool calls against a 30-call bound (overrun 13). Cause: the red->green loop on repair D -- a body-level and then a transcript-level arm-identity predicate were each FALSIFIED by evidence (equal-information renderers; no fold before turn 6 on a shared chain), and the predicate was corrected to declared-plan observability instead of being weakened to match the result. Objective completed; the overrun is reported rather than hidden.",
+  "assumptions": [
+    "prefix_sha256 basis is the canonical JSON of the messages list (sort_keys, compact separators, utf-8), named on every row via prefix_sha256_basis; it is the exact list json.dumps'd into the POST body the server tokenises.",
+    "cached is None only when prompt_tokens_details (or its cached_tokens) is absent; a present cached_tokens=0 stays an observed miss (cached=0, usage_has_details=true).",
+    "uncached is None whenever cached is None; the analyser reports total_cached, total_uncached and mean_uncached as None unless every row of the chain was observed, and always reports n_unobserved.",
+    "Pass 1 salt is battery_salt(seed*1000+turn) (first sight per turn); pass 2 salt is battery_salt(seed) over the same rendered bytes, so pass 2 is the repeat of pass 1 (asserted in test_R5).",
+    "Compaction geometry fixed offline: COMPACT_KEEP_LAST=4, trigger at 3000 estimated tokens (default_est_tokens about 4 chars/token), so the first fold lands at turn 6 for every arm; the summariser is a deterministic stub (no model, no network).",
+    "Arm identity is asserted on POSTed bytes (at least 2 distinct prefix_sha256 per turn; measured 4 of 4) and on the declared plus observed plan carried in prompt_nodes: A/H share a policy so they may share a plan, every other pair must differ.",
+    "ARM_RENDER maps APPEND_NOTE to POINTER, SUMMARISE_IN_PLACE to NAIVE_APPEND and FORK to POINTER_FORK. POINTER and NAIVE_APPEND are equal-information on one chain, so A-vs-C body divergence comes from the in-place rewrite; documented, not engineered away.",
+    "phase_grid returns 'usage-unobserved' when the identical-prompt gate carries no usage details, and run_config then skips baseline/battery rather than recording blind zeros.",
+    "analysis_guard compares provenance: the existing file's _source.submitted_rows_sha256 (or, for a legacy file with no digest, its per-chain row counts) against the rows on disk BEFORE the write; FORCE is set only by run_analyse --force, never at import.",
+    "The live battery was not run and no container was touched, per the card; every claim above is offline evidence."
+  ]
+}

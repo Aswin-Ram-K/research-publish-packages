@@ -1,0 +1,53 @@
+{
+ "unit": "POLL-VLLM",
+ "status": "done",
+ "artifacts": [
+  "experiments/context-cache/cells/R2-VLLM-FIX/OH1/rows.jsonl",
+  "state/config/r2-vllm-fix-oh1.json",
+  "orchestration/handoffs/POLL-VLLM.json",
+  "orchestration/units/POLL-VLLM.md",
+  ".scratch/poll_vllm_analysis.json"
+ ],
+ "evidence": {
+  "rows": "284 (4 arms x 71 turns)",
+  "rows_sha256": "895cf6d1847c0a7ba970e1c14dce862151ae732902fb17b2e98d438b57d883ec",
+  "null_cached": 0,
+  "non200": 0,
+  "zero_cached_observed": 120,
+  "status": "STARTED 2026-10-24T03:35:22Z; HEALTH=200 attempt=49; DONE rc=0 2026-10-24T03:41:48Z",
+  "arms_identical": "0 occurrences in run.out.log and /tmp/r2oh1.log",
+  "per_arm": {
+   "R": "hit=0.887475 CI=[0.867459,0.903734] mean_unc=1384.9577 CI=[1235.2535,1532.1690] delta_hit=-0.013737 delta_unc=-297.76",
+   "A": "hit=0.405844 CI=[0.329005,0.474841] mean_unc=1350.0141 CI=[1218.7465,1480.4648] delta_hit=-0.495368 delta_unc=-332.71",
+   "C": "hit=0.493816 CI=[0.421381,0.556251] mean_unc=1158.6761 CI=[1030.2113,1286.7746] delta_hit=-0.407396 delta_unc=-524.05",
+   "H": "hit=0.360813 CI=[0.282298,0.431194] mean_unc=1528.1972 CI=[1359.6620,1699.6197] delta_hit=-0.540399 delta_unc=-154.52"
+  },
+  "pooled": "hit=0.718493 CI=[0.674601,0.754672]; mean_unc=1355.4613 CI=[1280.6268,1430.5528] (descriptive, 4 different policies)",
+  "delta_vs_round1": "pooled hit -0.182719 (CI -0.226611..-0.146540); mean_unc -327.26 (CI -402.10..-252.17) vs 0.901212 / 1682.7218",
+  "grid": "164/164 nonzero cached are multiples of 16; 0/164 multiples of 2096; 163/164 multiples of 64; gcd=48; 105/164 == 16 (mod 2096) -> grid changed from 2096 to 16-token alignment",
+  "startup": "block_size 64; prefix_match_unit 16; mamba_cache_mode align; kv-cache-dtype fp8; gpu_memory_utilization 0.34; max_model_len 32768; KV cache 13.93 GiB / 1,029,213 tokens",
+  "restore": "r2oh1 stopped+removed, :8020 free; qwen9b restarted (running|2026-10-24T03:44:19.988344512Z|0), :8014 models health 200 model qwen3.5-9b max_model_len 32768; prod :8012 health 200 occamy-1.0 max_model_len 131072; gx10-occamy-nvfp4 StartedAt 2026-10-23T07:58:48.659913191Z|running unchanged before/after",
+  "commands": [
+   "ssh gx10 'cat /home/zer0null/r2/OH1/status; wc -l .../rows.jsonl; cat .../startup.txt; tail .../run.out.log'",
+   "scp gx10:/home/zer0null/r2/OH1/rows.jsonl experiments/context-cache/cells/R2-VLLM-FIX/OH1/rows.jsonl",
+   "python3 bootstrap 10,000 resamples seed 20251023",
+   "ssh gx10 'docker stop r2oh1; docker rm r2oh1; docker start gx10-qwen9b; curl 192.168.2.168:8014/v1/models; curl 192.168.2.168:8012/health'"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "None. Battery complete (284/284, 0 null, 0 non-200) and restore proven. For a controlled Round-1 comparison, rerun with R1's salt-separated replicate arms: this cell's four arms are different policies, so the delta is descriptive, not an engine effect.",
+ "write_paths": [
+  "experiments/context-cache/cells/R2-VLLM-FIX/OH1/**",
+  "state/config/r2-vllm-fix-oh1.json",
+  "orchestration/handoffs/POLL-VLLM.json",
+  "orchestration/units/POLL-VLLM.md"
+ ],
+ "assumptions": [
+  "Round-1 0.901212 / 1682.7218 is the MOE-VLLM overall figure whose four arms are salt-separated replicates of one policy; this battery's R/A/C/H are four different render policies, so per-arm and pooled deltas are descriptive, not controlled.",
+  "No Round-1 CI is carried in the cited record (MOE-VLLM/analysis.json holds point estimates and arm spread only); delta CIs are this run's bootstrap intervals shifted by the fixed Round-1 point.",
+  "qwen9b maps 192.168.2.168:8014->30000 only; a 127.0.0.1:8014 probe returns 000 and is a probe-address artefact, not a dead server.",
+  "Restore = restart gx10-qwen9b (stopped by MEASURE-VLLM-3) and prove :8012 untouched; gx10-occamy-nvfp4 was never stopped."
+ ],
+ "bound": 15,
+ "calls_used": 15
+}

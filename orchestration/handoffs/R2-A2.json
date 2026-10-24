@@ -1,0 +1,124 @@
+{
+  "unit": "R2-A2",
+  "status": "partial",
+  "unit_type": "web-research (read-only)",
+  "budget": {"web_fetch_allowed": 6, "web_fetch_used": 6, "web_search": "unavailable (no DEEPSEEK_API_KEY); used local_web_search (SearXNG) for discovery only"},
+  "fetch_log": [
+    "raw.githubusercontent.com/sgl-project/sglang/main/docs/advanced_features/session_radix_cache.md -> 404 (wrong path)",
+    "raw.githubusercontent.com/sgl-project/sglang/main/docs/advanced_features/radix_cache.md -> 404 (wrong path)",
+    "api.github.com/repos/sgl-project/sglang/contents/docs/advanced_features -> 404 (dir absent)",
+    "api.github.com/repos/sgl-project/sglang/contents/docs -> 200 (structure: docs live under docs/docs/, mintlify; plus docs/docs.json nav, 71KB)",
+    "raw.githubusercontent.com/sgl-project/sglang/main/docs/docs/advanced_features/radix_cache.mdx -> 404 (path guess exhausted budget)",
+    "pytorch.org/blog/hybrid-models-meet-sglang-more-than-full-attention/ -> 200 but body truncated to title only (no quotable text)"
+  ],
+  "evidence_quality_note": "No primary SGLang doc page was successfully read in this unit. Facts below are labelled: [snippet] = verbatim text returned by the local search index for that URL (not re-fetched); [secondhand] = from this workspace's docs/serving-options/R-SGL.md, itself a prior lane's note; [live] = this box's own config (orchestration/units/U-GRID.md:37-40). Treat [secondhand] as a lead, not a verified quote.",
+  "capacity_levers": [
+    {
+      "flag": "--max-mamba-cache-size",
+      "default": "no authoritative default captured this unit; live box shows 64 [live]",
+      "recommended": "320-640 for this shape (5 slots/request under extra_buffer -> 64 slots caps you at ~12 concurrent; 320 slots ~ 64 concurrent)",
+      "works_with_hybrid": "yes - mamba/hybrid only; it is a SLOT COUNT, not a token budget",
+      "source_url": "https://lmsysorg.mintlify.app/cookbook/autoregressive/Qwen/Qwen3.8-27B",
+      "quote": "[snippet] \"--mamba-full-memory-ratio 4.59 ... --max-mamba-cache-size 320 state/slot 153.9 MB ... the ratio prices 5 state slots per request; ... so 64 concurrent requests pin 320 slots\"",
+      "expected_effect": "Raises the number of resident recurrent-state slots. This is the most plausible clamp on our 15.9-16.5% resident window: 1,620,892 declared tokens with only ~16% resident is a CONCURRENCY/SLOT ceiling (64 slots / 5 per req = ~12 requests), not a KV-token shortage."
+    },
+    {
+      "flag": "--mamba-full-memory-ratio",
+      "default": "DISPUTED - two secondary sources disagree: 0.9 vs 0.3 (see contradictions)",
+      "recommended": "unresolved; do not set blind. It re-splits one fixed memory budget between mamba pool and KV pool",
+      "works_with_hybrid": "yes - hybrid only (it is the split knob between state pool and KV pool)",
+      "source_url": "https://pytorch.org/blog/hybrid-models-meet-sglang-more-than-full-attention/",
+      "quote": "[snippet of that page] \"In SGLang, hybrid linear models separate the memory pool into two parts: Mamba pool and KV cache pool. Both Mamba pool and KV cache pool memory sizes are fixed, hence the risk of CUDA out-of-memory errors is eliminated. Users can adjust the size ratio between Mamba pool and KV cache pool by changing server argument -mamba-full-memory-ratio\" (fetch of the page returned title only - quote is from the search snippet, not the fetched body)",
+      "expected_effect": "Trades KV tokens for state slots inside the SAME --mem-fraction-static budget. On our box mem-fraction-static 0.45 already sits at the crash-loop boundary, so raising this without raising the budget can only move capacity, not create it."
+    },
+    {
+      "flag": "--enable-hierarchical-cache (+ --hicache-ratio, --hicache-size)",
+      "default": "off [live: enable_hierarchical_cache=false]; --hicache-ratio default not captured this unit",
+      "recommended": "only after the slot/concurrency clamp above is ruled out. If used: --hicache-ratio 2 (host tier = 2x device pool)",
+      "works_with_hybrid": "PARTIALLY - HiCache tiers KV pages (L1 HBM / L2 host DRAM / L3 storage). No source found saying mamba/recurrent state is offloaded by HiCache; assume state stays on-device.",
+      "source_url": "https://docs.nvidia.com/dynamo/zh-CN/v-0-9-1/integrations/sg-lang-hi-cache",
+      "quote": "[snippet] \"--enable-hierarchical-cache: Enables hierarchical KV cache/offload --hicache-ratio: The ratio of the size of host KV cache memory pool to the size of device pool. Lower this number if your machine has less CPU memory. --hicache-write-policy: Write policy (e.g., write_through for synchronous host writes)\"",
+      "expected_effect": "Adds host-DRAM KV capacity, so it can raise resident KV tokens - but it does NOT raise mamba slots, and on a unified-memory GB10 box the host pool competes with the same physical memory."
+    },
+    {
+      "flag": "--enable-int8-mamba-checkpoint",
+      "default": "off [live: enable_int8_mamba_checkpoint false, and mamba_max_states_per_path -1]",
+      "recommended": "unknown - no authoritative source found this unit",
+      "works_with_hybrid": "presumably yes (mamba-only flag), unverified",
+      "source_url": "",
+      "quote": "no authoritative source found",
+      "expected_effect": "Name implies int8-compressed recurrent-state checkpoints, which would shrink per-slot state (more slots per GB). Unverified; do not rely on it."
+    }
+  ],
+  "eviction_policies": [
+    {
+      "policy": "lru",
+      "when_recommended": "default; our current setting [live: radix_eviction_policy=lru]. Works with the standard HiRadixCache tree.",
+      "quote": "no authoritative quote captured this unit (docs page https://docs.sglang.io/docs/advanced_features/radix_cache existed but the repo path guess 404'd and the fetch budget was spent)",
+      "source_url": "https://docs.sglang.io/docs/advanced_features/radix_cache"
+    },
+    {
+      "policy": "lfu",
+      "when_recommended": "[secondhand, docs/serving-options/R-SGL.md:37] behaviour candidate for 'a small set of prompts reused far more than the rest' - that is exactly the frequency-skew case. CAVEAT from the same note: hit counts are not incremented for chunked-prefill steps, evicted nodes, or under write-back HiCache, so LFU can be blind on our workload.",
+      "quote": "no authoritative quote captured this unit",
+      "source_url": "https://docs.sglang.io/docs/advanced_features/radix_cache"
+    },
+    {
+      "policy": "tlru",
+      "when_recommended": "[secondhand, R-SGL.md:37,39] requires the unified radix tree (SGLANG_ENABLE_UNIFIED_RADIX_TREE=1); a time-aware recency policy - plausible fit for agentic multi-turn where recent turns matter more. Unverified this unit.",
+      "quote": "no authoritative quote captured this unit",
+      "source_url": "https://docs.sglang.io/docs/advanced_features/radix_cache"
+    },
+    {
+      "policy": "priority",
+      "when_recommended": "[secondhand, R-SGL.md:37] policy scores evictable leaves only; it cannot pin. No published A/B number found by the prior lane either.",
+      "quote": "no authoritative quote captured this unit",
+      "source_url": "https://docs.sglang.io/docs/advanced_features/radix_cache"
+    },
+    {
+      "policy": "slru",
+      "when_recommended": "NOT recommended - our measurement already shows it is indistinguishable from lru and costs 8.69% capacity; no doc claim contradicts that.",
+      "quote": "no authoritative source found",
+      "source_url": ""
+    }
+  ],
+  "session_cache": {
+    "flag": "--enable-session-radix-cache (+ per-request top-level session_id, /close_session)",
+    "live": false,
+    "what_it_protects": "[secondhand, R-SGL.md:39] keeps a session's nodes alive past the request as SOFT protection (not a pin); eviction order is unreferenced -> fewest session refs -> policy score.",
+    "single_agent_long_session": "[secondhand] only implemented by UnifiedRadixCache; a wrong or forgotten session_id silently degrades to plain LRU. Published figure attributed to it (same blog as unified tree): 2.9%-16.6% lower TTFT vs HiRadixCache+LRU on SWE-bench. For ONE agent holding ONE long session this is the closest documented fit, but it protects the session's prefix - it does not create mamba slots, so it cannot lift the ~16% resident ceiling by itself.",
+    "source_url": "https://docs.sglang.io/docs/advanced_features/session_radix_cache",
+    "quote": "no authoritative quote captured this unit; figure and eviction order are [secondhand] from docs/serving-options/R-SGL.md:39"
+  },
+  "prompt_layout": {
+    "found": "no authoritative source found this unit",
+    "detail": "Could not reach the radix-cache / attention-backend pages needed to check documented guidance on message ordering, per-request cache hints, or mid-context insertion vs append. Nothing here is asserted.",
+    "related_lead": "[secondhand, R-SGL.md:37] the radix tree matches a shared PREFIX; inserting content mid-context invalidates every token after the insertion point, so append-only ordering is the structurally safe layout. This is inference from how prefix trees match, not a quoted doc claim."
+  },
+  "top3": [
+    {"rank": 1, "flag": "--max-mamba-cache-size", "why": "64 slots x 5 slots/request (extra_buffer) ~ 12 concurrent requests; with --max-running-requests 5 the resident window is slot-bound, which is the most consistent explanation of 15.9-16.5% of 1,620,892 declared tokens. Try 320-640.", "confidence": "medium-high on the slot arithmetic [snippet+secondhand], untested on our box"},
+    {"rank": 2, "flag": "--mamba-full-memory-ratio", "why": "the only documented knob that re-splits the same fixed budget between state slots and KV tokens; DISPUTED default (0.3 vs 0.9), so read it off the running server instead of assuming.", "confidence": "low until default is read from the live config"},
+    {"rank": 3, "flag": "--enable-hierarchical-cache + --hicache-ratio 2", "why": "the documented capacity lever, but it adds host KV pages, not mamba slots - only worth it if measurement shows the KV pool (not slots) is the binding constraint.", "confidence": "medium on mechanism, low on benefit for this shape"}
+  ],
+  "best_capacity_lever": "--max-mamba-cache-size: it is the only lever that plausibly explains and lifts the 15.9-16.5% resident ceiling on a hybrid model, because the ceiling is a slot/concurrency arithmetic, not a KV-token shortage (1,620,892 declared tokens, ~16% resident).",
+  "contradictions": [
+    {"topic": "--mamba-full-memory-ratio default", "claim_a": "[snippet] mindstudio.ai blog: \"The default of 0.3 is deliberately lower than SGLang's usual 0.9\"", "claim_b": "[snippet] fixstars blog: \"We realized after launch that the default value of --mamba-full-memory-ratio is 0.9\"", "resolution": "unresolved; both are third-party blogs. Read the live value (U-GRID config dump line 37-40 does not show it, so it is at default). No first-party doc read."},
+    {"topic": "page-size vs our null result", "claim": "docs: page size sets matching granularity (page-size 64: a 65-token prompt caches only the first 64) [secondhand, R-SGL.md:35]", "ours": "page-size 64/128 changed nothing", "resolution": "NOT a contradiction - granularity is not capacity. If the clamp is mamba slots, page size cannot move the resident window."},
+    {"topic": "slru cost", "claim": "no doc claim about capacity cost found", "ours": "slru indistinguishable from lru, -8.69% capacity", "resolution": "no doc claim to contradict; our measurement stands unchallenged."}
+  ],
+  "unresolved": [
+    "Primary SGLang doc pages were never read this unit: repo docs live under docs/docs/ (mintlify), and both .md and .mdx guesses under docs/ and docs/docs/advanced_features/ 404'd; fetch budget (6) was exhausted on path discovery.",
+    "web_search (host tool) returned no result: 'DeepSeek search has no API key for DEEPSEEK_API_KEY'; bash/curl to api.github.com produced no output (no shell network). Only local_web_search (SearXNG) worked.",
+    "--enable-int8-mamba-checkpoint has no authoritative description found; semantics unverified.",
+    "No verbatim doc text captured for lfu/tlru/priority/lru 'when to use' guidance.",
+    "Prompt-layout levers (message ordering, per-request cache hints, mid-context insertion) not documented from any source this unit.",
+    "Whether HiCache L2 can hold mamba/linear state at all - no source says either way; do not assume it can.",
+    "Whether raising max-mamba-cache-size actually raises the resident window on OUR box is untested (no GX10 access, per unit contract)."
+  ],
+  "assumptions": [
+    "Budget rule honoured literally: 6 web_fetch, 0 further after the 6th even though it returned truncated content - so Q2/Q4 are documented as unresolved rather than guessed.",
+    "local_web_search (local SearXNG worker) is treated as a local read, not a web_fetch, for budget accounting; it was used for discovery only.",
+    "This workspace's docs/serving-options/R-SGL.md is cited as [secondhand] evidence only, never as a primary quote."
+  ],
+  "write_paths": ["orchestration/handoffs/R2-A2.json"]
+}

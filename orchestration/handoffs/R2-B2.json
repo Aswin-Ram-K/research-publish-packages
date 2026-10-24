@@ -1,0 +1,194 @@
+{
+  "unit": "R2-B2",
+  "status": "done",
+  "supported": "supported on SGLang main; unverified for the exact build 0.0.0.dev1+g4ccff141d (commit not present upstream)",
+  "support_evidence": [
+    {
+      "claim": "SGLang ships a dedicated Qwen3.5 dense-hybrid implementation whose entry class is exactly the architecture in our checkpoint.",
+      "quote": "class Qwen3_5ForConditionalGeneration(Qwen3VLForConditionalGeneration):",
+      "url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/models/qwen3_5.py#L2374"
+    },
+    {
+      "claim": "Dense and MoE variants are both registered — the dense 9B is not MoE-only territory.",
+      "quote": "EntryClass = [Qwen3_5MoeForConditionalGeneration, Qwen3_5ForConditionalGeneration]",
+      "url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/models/qwen3_5.py#L3021"
+    },
+    {
+      "claim": "Hybrid attention is first-class: the layer-type table routes linear_attention to a gated-delta-net layer (Qwen3_5GatedDeltaNet at qwen3_5.py:358), i.e. the 24 linear + 8 full split is the supported shape.",
+      "quote": "ALL_DECODER_LAYER_TYPES = {\n    \"attention\": ...,\n    \"linear_attention\": ...,\n}",
+      "url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/models/qwen3_5.py#L1684-L1687",
+      "note": "Right-hand values masked by the local output filter; dict keys verbatim, and qwen3_5.py:103 imports RadixLinearAttention."
+    },
+    {
+      "claim": "Config resolution recognises the architecture and model_type family.",
+      "quote": "def is_qwen3_5(config) -> bool:  ... \"Qwen3_5ForConditionalGeneration\", \"Qwen3_5MoeForConditionalGeneration\", \"Qwen3_5ForCausalLM\", \"Qwen3_5MoeForCausalLM\"",
+      "url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/configs/model_config.py#L377-L382"
+    },
+    {
+      "claim": "No open issue says a 9B dense hybrid cannot be served; upstream is actively fixing dense serving, which reads as supported-and-maintained.",
+      "quote": "[Fix] [NPU] qwen3.5: Fix dense serving on Ascend 950 (#32745)",
+      "url": "https://github.com/sgl-project/sglang/commits/main/python/sglang/srt/models/qwen3_5.py",
+      "date": "2026-10-19"
+    },
+    {
+      "claim": "Hybrid-SSM concurrency bugs were still being fixed in Oct 2026 — a build older than that is a real support risk.",
+      "quote": "[Fix] hybrid-SSM: DP attention failures at low concurrency (#34535)",
+      "url": "https://github.com/sgl-project/sglang/commits/main/python/sglang/srt/models/qwen3_5.py",
+      "date": "2026-10-15"
+    },
+    {
+      "claim": "modelopt NVFP4 is explicitly handled for Qwen3.5: ModelOpt FP4 per-layer KV-cache scales are remapped at load time.",
+      "quote": "# ModelOpt FP4 checkpoints bake the per-layer KV-cache scales under the HF\n# attention projections; in sglang they live on RadixAttention.",
+      "url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/models/qwen3_5.py#L1690-L1692"
+    },
+    {
+      "claim": "The served binary could not be tied to a public commit — support for that exact build stays unverified.",
+      "quote": "HTTP 404",
+      "url": "https://raw.githubusercontent.com/sgl-project/sglang/g4ccff141d/python/sglang/srt/models/qwen3_5.py",
+      "note": "ref=g4ccff141d -> 404; ref=main -> 200 (122727 bytes) for the same path."
+    }
+  ],
+  "state_cache_sizing": {
+    "answer": "--max-mamba-cache-size counts state SLOTS, not tokens and not per-layer entries. Each slot holds the full per-layer state of one sequence — the pool allocates tensors with an explicit layer dimension, so slot cost multiplies by the 24 linear layers. Concurrency is size // ratio with ratio = 3 by default (3 + 2 = 5 with extra_buffer and overlap scheduling), so slots, not KV tokens, bind first on a 4:1 hybrid.",
+    "evidence": [
+      {
+        "quote": "max_mamba_cache_size: A[Optional[int], \"The maximum size of the mamba cache.\"] = None",
+        "url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/arg_groups/fields/schedule.py#L216-L219",
+        "note": "Help text alone is ambiguous; sizing rule had to be read from the allocator, which is why the quotes below carry the answer."
+      },
+      {
+        "quote": "ratio = self._calculate_mamba_ratio()\n            mamba_cap = get_schedule().max_mamba_cache_size // ratio\n            if mamba_cap < max_num_reqs:\n                capped_by_mamba = True\n                logger.warning(\n                    \"max_running_requests is capped to %d by the mamba state \"\n                    \"cache (max_mamba_cache_size=%d, %d state slots per \"\n                    \"request). To raise it: increase --mamba-full-memory-ratio \"\n                    \"or --max-mamba-cache-size, or halve the state size with \"\n                    \"--mamba-ssm-dtype bfloat16.\",",
+        "url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/mem_cache/kv_cache_configurator.py#L3076-L3090",
+        "why_it_matters": "This is the documented sizing rule: max concurrency = slots / slots-per-request, and the flag is in slot units."
+      },
+      {
+        "quote": "MAMBA_CACHE_SIZE_MAX_RUNNING_REQUESTS_RATIO = 3\nMAMBA_CACHE_BASE_RATIO_DROP_ON_SKIP = 1\nMAMBA_CACHE_V2_ADDITIONAL_RATIO_NO_BUFFER = 1",
+        "url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/mem_cache/kv_cache_configurator.py#L224-L226"
+      },
+      {
+        "quote": "def get_mamba_tracking_slots(\n    *, extra_buffer: bool, overlap: bool, lazy: bool = False\n) -> int:\n    \"\"\"Tracking slots allocated initially; lazy mode defers the second slot.\"\"\"\n    if not extra_buffer:\n        return 0\n    if lazy:\n        return 1\n    return 2 if overlap else 1",
+        "url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/mem_cache/allocation_sizing.py#L11-L19"
+      },
+      {
+        "quote": "num_mamba_layers,\n                            spec_state_size + 1,\n                            speculative_num_draft_tokens,",
+        "url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/mem_cache/memory_pool.py#L883-L886",
+        "supporting_quote": "# Shape: [num_layers, size+1, draft_tokens, dim, K-1]",
+        "supporting_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/mem_cache/memory_pool.py#L940"
+      },
+      {
+        "quote": "\"\"\"``BaseTokenToKVPoolAllocator``: slots are per request, not per token.\"\"\"",
+        "url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/mem_cache/allocator/mamba.py#L32"
+      }
+    ],
+    "does_it_bind_first": "Yes. KV cache grows with tokens and is shared across the whole sequence length; the state pool is a per-concurrent-sequence cost over 24 linear layers and does not shrink with NVFP4 weights (SSM/conv state dtype is separate, --mamba-ssm-dtype). With ratio 3, slots cap concurrency at size/3; long prompts make KV scarce while many short requests make slots scarce — on a 4:1 hybrid at high concurrency the slot cap arrives first."
+  },
+  "flags": [
+    {
+      "flag": "--page-size",
+      "recommended": "64",
+      "why": "Only hard upstream constraint found is divisibility with the state tracking interval; 256 % 64 == 0 keeps the assert satisfied and matches the mamba chunk granularity. No explicit per-architecture recommendation exists upstream — treat 64 as the constrained-safe choice, not a documented optimum.",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/arg_groups/mamba_hook.py#L133-L136",
+      "quote": "assert view.mamba_track_interval >= view.speculative_num_draft_tokens\n        assert view.mamba_track_interval % view.page_size == 0"
+    },
+    {
+      "flag": "--mamba-radix-cache-strategy",
+      "recommended": "no_buffer",
+      "why": "extra_buffer is platform-gated and asserts; it also raises slots/request from 3 to 5, costing ~40% more state memory on a box that has none to spare. no_buffer avoids the gate entirely.",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/arg_groups/mamba_hook.py#L115-L123",
+      "quote": "def validate_mamba_extra_buffer(view, hf_config: Any, *, mamba_cache_chunk_size_of):\n\n    assert supports_mamba_cache_extra_buffer(view, hf_config), (\n\n    assert _platform_supports_mamba_cache_extra_buffer(), ("
+    },
+    {
+      "flag": "--mamba-track-interval",
+      "recommended": "256 (default; must stay a multiple of page size and >= draft tokens)",
+      "why": "Default is 256 and the two asserts above are the only documented rules; changing it without a matching page size trips validation.",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/arg_groups/fields/exec_.py#L496-L499",
+      "quote": "mamba_track_interval: A[\n        int,\n        \"The interval to track the mamba state during decode.\",\n    ] = 256"
+    },
+    {
+      "flag": "--chunked-prefill-size",
+      "recommended": "8192",
+      "why": "Must stay above mamba_cache_chunk_size; a smaller chunk makes the tracking mask false for an unfinished chunked-prefill handoff. -1 (disable chunked prefill) removes the handoff path entirely, which is riskier for long prompts.",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/arg_groups/mamba_hook.py#L144-L152",
+      "quote": "and 0 < view.chunked_prefill_size < mamba_cache_chunk_size\n                ...\n                \"smaller than mamba_cache_chunk_size=%s. This can make \"\n                \"mamba_track_mask false for unfinished chunked-prefill handoff \""
+    },
+    {
+      "flag": "--mem-fraction-static",
+      "recommended": "0.5 explicitly (not the auto default)",
+      "why": "On unified memory the auto fraction is computed against total device memory while another model is resident, and the hybrid state pool is a fixed pre-capture allocation that cannot ride post-capture slack.",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/mem_cache/kv_cache_configurator.py#L2971-L2975",
+      "quote": "# Mamba state is a fixed pre-capture allocation, so it can't ride the ~0 post-capture slack.\n            slack_gb = max(\n                slack_gb,"
+    },
+    {
+      "flag": "--max-running-requests",
+      "recommended": "32 explicit",
+      "why": "Left unset it is auto-derived and then silently capped by the state-slot budget; setting it explicitly makes the real limit visible in logs instead of discovering it as a warning mid-run.",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/mem_cache/kv_cache_configurator.py#L3076-L3090",
+      "quote": "mamba_cap = get_schedule().max_mamba_cache_size // ratio\n            if mamba_cap < max_num_reqs:\n                capped_by_mamba = True"
+    },
+    {
+      "flag": "--enable-hierarchical-cache",
+      "recommended": "off (default)",
+      "why": "No authoritative source found stating HiCache can offload the linear-attention/SSM state; only KV is tiered, so enabling it adds host-pool pressure on unified memory without covering the state pool.",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/arg_groups/fields/memory.py#L98-L101",
+      "quote": "enable_hierarchical_cache: A[\n        bool,\n        Arg(help=\"Enable hierarchical cache\", aliases=[\"--enable-hicache\"]),\n    ] = False"
+    },
+    {
+      "flag": "--kv-cache-dtype",
+      "recommended": "auto (i.e. bf16 KV) — do not stack an FP4 KV recipe on NVFP4 weights for the first cell",
+      "why": "The nvfp4 KV recipe is a separate quantizer with CUDA 12.8+/PyTorch 2.8.0+ requirements and its own accuracy path; modelopt NVFP4 weights already carry per-layer KV scales that SGLang remaps. 'auto' keeps KV at model dtype and removes one variable from the first bring-up.",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/arg_groups/fields/model.py#L197-L210",
+      "quote": "\"nvfp4\" selects '\n                'the NVFP4 FP4 E2M1 KV cache recipe; \"fp4_mx_block16\" '\n                \"selects the MX-style block-size-16 FP4 E2M1 KV cache \"\n                \"recipe. Both require CUDA 12.8+ and PyTorch 2.8.0+\""
+    }
+  ],
+  "startup_risks": [
+    {
+      "rank": 1,
+      "risk": "State cache too small to admit a single request — hard RuntimeError during KV/state configuration, before the server ever listens.",
+      "evidence": "raise RuntimeError(\n                    f\"Hybrid (mamba/linear-attention) state cache is too small to serve \"\n                    f\"any requests. max_mamba_cache_size={...}, \"",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/mem_cache/kv_cache_configurator.py#L3093-L3096",
+      "mitigation": "Set --max-mamba-cache-size explicitly and either raise --mem-fraction-static or halve state with --mamba-ssm-dtype bfloat16."
+    },
+    {
+      "rank": 2,
+      "risk": "Unified-memory over-commit: another model is already resident, GB10 reports no discrete VRAM, and the auto mem fraction is sized against total device memory while the state pool is allocated before capture. Expect OOM or a wedged CUDA context rather than a clean error.",
+      "evidence": "# Mamba state is a fixed pre-capture allocation, so it can't ride the ~0 post-capture slack.",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/mem_cache/kv_cache_configurator.py#L2971-L2972",
+      "mitigation": "Explicit conservative --mem-fraction-static (0.5), explicit --max-running-requests, and one model per box for the first cell."
+    },
+    {
+      "rank": 3,
+      "risk": "Auto strategy resolving to extra_buffer on a platform that lacks support -> assertion at arg-validation time.",
+      "evidence": "assert _platform_supports_mamba_cache_extra_buffer(), (",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/arg_groups/mamba_hook.py#L120-L123",
+      "mitigation": "Pass --mamba-radix-cache-strategy no_buffer explicitly instead of letting auto decide."
+    },
+    {
+      "rank": 4,
+      "risk": "chunked prefill below mamba_cache_chunk_size -> tracking mask silent-false on unfinished chunked-prefill handoff (correctness, not crash).",
+      "evidence": "\"smaller than mamba_cache_chunk_size=%s. This can make \"\n                \"mamba_track_mask false for unfinished chunked-prefill handoff \"",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/arg_groups/mamba_hook.py#L147-L149",
+      "mitigation": "--chunked-prefill-size 8192 and leave --mamba-track-interval at 256."
+    },
+    {
+      "rank": 5,
+      "risk": "Build g4ccff141d cannot be resolved upstream (404), so the binary may lack the Oct 2026 dense-hybrid and low-concurrency hybrid-SSM fixes.",
+      "evidence": "GET raw.githubusercontent.com/sgl-project/sglang/g4ccff141d/.../qwen3_5.py -> HTTP 404 (main -> 200)",
+      "source_url": "https://raw.githubusercontent.com/sgl-project/sglang/g4ccff141d/python/sglang/srt/models/qwen3_5.py",
+      "mitigation": "Before spending a cell: run the image once with --model-path <bf16> and a 1-request smoke test, and check whether python -c 'import sglang; print(sglang.__version__)' plus the presence of qwen3_5.py in the image's sglang package matches main."
+    },
+    {
+      "rank": 6,
+      "risk": "modelopt_fp4 quantization not accepted for this arch at load (quant config whitelist), producing an unsupported-quantization error instead of a serve.",
+      "evidence": "NVFP4 KV-scale remap exists for Qwen3.5 (qwen3_5.py:1690-1692), but no verbatim quote was found in the quantization whitelist asserting qwen3_5 + modelopt_fp4 acceptance.",
+      "source_url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/models/qwen3_5.py#L1690-L1692",
+      "mitigation": "First cell on the bf16 checkpoint to prove architecture support; the NVFP4 checkpoint is a second, separate variable."
+    }
+  ],
+  "unresolved": [
+    "Not verified whether quantization/configs whitelists modelopt_fp4 for Qwen3_5 (evidence is the KV-scale remapper only, which proves FP4 checkpoints are expected but not that the quant method is whitelisted for qwen3_5_text).",
+    "No authoritative upstream doc found giving a recommended --page-size for a 4:1 hybrid; recommendation is derived from the divisibility assert, not from a documented optimum.",
+    "No authoritative source found that HiCache tiers linear-attention state; the 'off' recommendation rests on the flag default plus absence of evidence.",
+    "GB10 (unified memory, no discrete VRAM) support for Mamba cache snapshots could not be confirmed: _platform_supports_mamba_cache_extra_buffer resolves per-platform and the CUDA platform module is a thin stub.",
+    "Build g4ccff141d is not a public commit; only an in-image check can confirm the binary contains the Qwen3.5 dense-hybrid path."
+  ]
+}

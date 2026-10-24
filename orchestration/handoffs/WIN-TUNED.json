@@ -1,0 +1,84 @@
+{
+  "unit": "WIN-TUNED",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/TUNED/rows.jsonl",
+    "experiments/context-cache/cells/TUNED/analysis.json",
+    "experiments/context-cache/cells/TUNED/run.json",
+    "experiments/context-cache/cells/TUNED/run_tuned.py",
+    "experiments/context-cache/cells/TUNED/win_tuned_analyze.py",
+    "experiments/context-cache/cells/TUNED/variant_server_info.json",
+    "experiments/context-cache/cells/TUNED/step0-pre-diff.json",
+    "experiments/context-cache/cells/TUNED/logs/run.log",
+    "experiments/context-cache/cells/TUNED/logs/variant-launch.json",
+    "experiments/context-cache/cells/TUNED/logs/restore.json",
+    "state/config/tuned-pre.json",
+    "state/config/tuned-restored.json",
+    "state/config/tuned-restore-diff.json",
+    "orchestration/units/WIN-TUNED.md"
+  ],
+  "evidence": {
+    "answer": "indistinguishable_in_all_bands -- slru does not beat lru under 1.5x-capacity pressure on M4's protocol",
+    "step0_production_intact": "config_ok=true, 6/6 keys equal to state/config/occamy-restore-baseline.json: page_size 1, mamba_radix_cache_strategy extra_buffer, radix_eviction_policy lru, mem_fraction_static 0.45, kv_cache_dtype fp8_e4m3, max_mamba_cache_size 64 (capacity reported, not gated: 1620892 live vs 1644272 in the baseline snapshot)",
+    "variant_launched": "wt-slru on :8012, flag ACCEPTED: server_args radix_eviction_policy='slru' and /get_server_info radix_eviction_policy=slru; health 200 at 07:50:18Z (~224 s after create/start); argv 51 -> 53 tokens, exactly ['--radix-eviction-policy','slru'] added (logs/variant-launch.json)",
+    "variant_identity": "page_size 1, mamba_radix_cache_strategy extra_buffer, mem_fraction_static 0.45, kv_cache_dtype fp8_e4m3, max_mamba_cache_size 64, mamba_track_interval 256, context_length 131072, disable_chunked_prefix_cache true(state)/false(top) -- all identical to tuned-pre.json; the only differences are radix_eviction_policy=slru and token_capacity",
+    "capacity": "1480094 (variant's own, read from its /get_server_info; M4's lru run was 1620892, -8.69%)",
+    "pressure": "total_pressure_tokens 2227665, ratio 1.505083 of the variant's own capacity, 259 documents, pool not exhausted",
+    "replay_bands_slru": {
+      "oldest": 0.0,
+      "middle": 0.0,
+      "newest": 0.996109
+    },
+    "replay_bands_lru": {
+      "oldest": 0.0,
+      "middle": 0.0,
+      "newest": 0.997033
+    },
+    "per_band_delta_slru_minus_lru": {
+      "oldest": 0.0,
+      "middle": 0.0,
+      "newest": -0.000924
+    },
+    "per_band_verdict": {
+      "oldest": "indistinguishable",
+      "middle": "indistinguishable",
+      "newest": "indistinguishable"
+    },
+    "requests_used": 289,
+    "requests_cap": 600,
+    "requests_by_phase": {
+      "P": 259,
+      "R": 30
+    },
+    "rows": "289 rows, all status 200, 0 failures, sha256 d66baf63ccfc1de1df5ee193122a87cdd72a96c3e51c86ad39033adcd80425d5",
+    "window_bracket": "replay brackets the resident window to [10, 125] documents (oldest surviving replayed position 250 of 259, newest evicted replayed position 134); M4's [30,31] sits inside it, so the coarse bands are consistent with the same ~30-document window and do not re-measure it",
+    "restore": "docker rm -f wt-slru -> systemctl --user start gx10-occamy-nvfp4.service, attempt 1: service active, container running, health 200 after 194.2 s; /v1/models ['occamy-1.0'] max_model_len 131072; 9/9 config keys equal to tuned-pre.json (page_size 1, mamba_radix_cache_strategy extra_buffer, radix_eviction_policy lru, mem_fraction_static 0.45, kv_cache_dtype fp8_e4m3, max_mamba_cache_size 64, mamba_track_interval 256, disable_chunked_prefix_cache false, context_length 131072); only max_total_num_tokens differs (1620892 -> 1440049, -180843, re-profiled at start, excluded from the gate)",
+    "qwen9b": "http://192.168.2.168:8014/health = 200 at the end; container never touched",
+    "commands": [
+      ".venv/bin/python experiments/context-cache/cells/TUNED/run_tuned.py --launch",
+      ".venv/bin/python experiments/context-cache/cells/TUNED/run_tuned.py --measure",
+      ".venv/bin/python experiments/context-cache/cells/TUNED/win_tuned_analyze.py",
+      ".venv/bin/python experiments/context-cache/cells/TUNED/run_tuned.py --restore"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "The null is mechanistically expected and now measured: the protocol submits each document once, so a segmented/frequency policy has no re-access to promote anything on and slru degenerates to lru on a scan. Any further eviction work must change the WORKLOAD, not the flag: e.g. a hot set of ~10 documents re-requested every K insertions with total pressure > capacity (that is the only shape where slru's protected segment can hold anything), or M4's 8-request boundary probe repeated under slru to see whether the 30-31 document window moves. Separately, token_capacity is re-profiled at every start and fell 1620892 -> 1480094 (variant) -> 1440049 (restored production) across two restarts with no flag changed; a capacity-sensitive comparison needs the pool pinned (e.g. --max-total-tokens), not merely re-read.",
+  "write_paths": [
+    "experiments/context-cache/cells/TUNED/",
+    "state/config/tuned-pre.json",
+    "state/config/tuned-restored.json",
+    "state/config/tuned-restore-diff.json",
+    "experiments/context-cache/.occamy.lock",
+    "orchestration/units/WIN-TUNED.md",
+    "orchestration/handoffs/WIN-TUNED.json"
+  ],
+  "assumptions": {
+    "stop_surface": "MEASURED AGAIN: gx10-occamy-nvfp4 carries HostConfig.AutoRemove=true and is the ExecStart of the systemd USER unit gx10-occamy-nvfp4.service (Restart=on-failure), so `docker stop` deletes the container and `docker start` would have nothing to start. The card's stop/start pair is therefore executed one level up: `systemctl --user stop` / `systemctl --user start`. The production container was never `rm`-ed by this unit (docker events: die+destroy at 07:46:24Z caused by the unit stop, then create+start wt-slru only).",
+    "capacity_not_a_config_key": "max_total_num_tokens / token_capacity is re-profiled from free memory at every start (WIN-SGL measured the same drift). It is reported with its delta and excluded from the restore gate; all nine configuration keys matched exactly.",
+    "capacity_difference_vs_lru": "the variant's pool came up at 1480094 vs M4's 1620892 for the lru run (-8.69%). The card requires the pressure target to use the variant's OWN capacity, so the comparison is pressure-normalised by construction: both runs stop at ~1.5x their own pool, which puts the bands at the same relative positions (the centre shifts by 12 document positions, far less than the ~259-document span and irrelevant to a ~30-document resident window). Absolute cached-token comparisons are additionally reported as a fraction of each run's own capacity. The cause of the capacity difference is NOT attributed -- it may be slru memory accounting or free-memory noise from the concurrently running gx10-qwen9b.",
+    "launcher_health_recheck": "launch_variant.wait_health reported 'container absent' at 40.4 s, which was a transient `docker inspect` failure over ssh while the container was in fact loading (docker events show create+start and no die/destroy; the container was Up throughout and reached health 200 at 07:50:18Z). The launch record keeps both the original verdict and the recheck, and no second launch was spent.",
+    "corpus_reuse": "documents are M4's cells/M4/corpus.jsonl verbatim (byte-identical prompt_sha256, same 4-word per-doc salts, same offline sizing); measured prompt_tokens 8514-8703 match M4's 8514-8703 range, so the two runs are paired, not merely similar.",
+    "protocol_scope": "phase D (append-note discipline) was NOT repeated -- M4 already answered it (note_unusable) and it is not part of this unit's one question; phase B (boundary probe) was not repeated either, which is why the resident window is only bracketed to [10,125].",
+    "budget": "289 of 600 live requests, 1 variant launch, 1 restore launch, ~19 min wall clock; no extra config was attempted, so page_size x eviction-policy interaction and LFU remain untested."
+  }
+}

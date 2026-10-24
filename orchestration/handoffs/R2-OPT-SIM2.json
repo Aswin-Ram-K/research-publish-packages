@@ -1,0 +1,90 @@
+{
+  "artifacts": [
+    "strategy/R2_OPT_SIM2.md",
+    "scratch/r2-opt-sim/cost_model2.py",
+    "scratch/r2-opt-sim/report2.json",
+    "scratch/r2-opt-sim/selfcheck2.py",
+    "scratch/r2-opt-sim/selfcheck2.json",
+    "src/resextract/pointers.py",
+    "tests/test_r2_opt_sim2.py",
+    "orchestration/handoffs/R2-OPT-SIM2.json"
+  ],
+  "assumptions": [
+    "COVER=0: no 600-token 'already billed' discount, because the prompt and miss columns are separate regressors and SIM's 600 was an unmeasured credit",
+    "the level multiple is reported but NOT folded into the price: its own hold-out lands right_sign=false, so carrying it would assert a solved tail",
+    "the arm-C and arm-A hold-out bands are recorded as failures of the interval (degenerate/narrow), not as passes",
+    "candidates sharing an evidence arm are aliases priced from the same rows; they are listed but never counted as separate evidence",
+    "the SIM card and its artefacts were left untouched as the model under test",
+    "external:gpu-prefill-throughput is declared-absent; every constant is derived from own-root cells"
+  ],
+  "blocker": "",
+  "bound": "0 live requests, 0 network calls, no .occamy.lock held",
+  "digests": {
+    "scratch/r2-opt-sim/cost_model2.py": "12375e923dedf145b6cb2d9c8db358cfbb45f4050497a186cd88367f245e618b",
+    "scratch/r2-opt-sim/report2.json": "a4da828eaedddeac588225db134d7fea3c50071ef77cce609ad8c036f8114e1e",
+    "src/resextract/pointers.py": "eb6ede56c2acd55c73eba9a846fa94f1028e9ad5440055c4ac6a576cd0489ab8",
+    "strategy/R2_OPT_SIM2.md": "c6b4a73834227bd1722542c01870dd991f009aba214961da8590c95cf8334361",
+    "tests/test_r2_opt_sim2.py": "069c3cb4afcf7fc7f31fb05d9b68d10eaa0840ef191b255efeb1f7656f01cc51"
+  },
+  "evidence": {
+    "constants": 21,
+    "holdout_error_pct": {
+      "A": -60.8,
+      "C": -72.8,
+      "F": -10.5,
+      "R": -8.7
+    },
+    "no_live_requests": true,
+    "no_lock_held": true,
+    "pointers_degraded": [
+      "external:gpu-prefill-throughput"
+    ],
+    "ranking": [
+      "live-C",
+      "pointer+pads",
+      "mutable+movable",
+      "live-A",
+      "append+notes",
+      "live-F",
+      "live-R",
+      "pointer+fold",
+      "mutable"
+    ],
+    "rebuild": [
+      ".venv/bin/python scratch/r2-opt-sim/cost_model2.py",
+      "fit 160 rows r2 0.8683 MAE 27.2 ms; unidentified ['c2.lookup_ge20k_ktok', 'c4.miss_ge20k_us_tok', 'c5.compacted_ms', 'c6.turn_ms', 'c7.scheduled_fold_ms', 'c8.regime_ge20k_ms']"
+    ],
+    "red_green": [
+      ".venv/bin/python scratch/r2-opt-sim/selfcheck2.py",
+      "green PASS 33 passed; K1 c0.intercept x2 RED; K2 c1.lookup_lt20k_ktok x4 RED; K3 c3.miss_us_tok x50 RED; K4 lookup_level_multiple_ge20k set 0.25 RED; K6 cold_slope_us_per_tok_u9 x2 RED (K5 documented as a designed invariance, not a red case)"
+    ],
+    "report_sha256": "39f8a38eba98d02796440ac6f49be4f4a6e6d10918c9e7a56f7f1845ec942403",
+    "sim_defect": [
+      "derived in cost_model2.py",
+      "SIM live_miss slope 495.6 us/tok = x2.059 the U9 cold prefill 240.748, band [442, 560], hold-out mean 919.0"
+    ],
+    "steady_state_ms": 717.0,
+    "tests": [
+      ".venv/bin/python -m pytest tests/test_r2_opt_sim2.py -q",
+      "33 passed"
+    ]
+  },
+  "known_unrelated_failure": "tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps fails on R2-A2/R2-A3/R2-B2/R2-C/V-R2VLLM-TRIAGE, all written 20:11-21:24 before this unit wrote its handoff at 21:40; R2-OPT-SIM2.json itself carries all seven unit-shape keys",
+  "measured_against": [
+    "experiments/context-cache/cells/LIVE-MEAS/rows.jsonl",
+    "experiments/context-cache/cells/LIVE-MEAS/plan.json",
+    "experiments/context-cache/cells/U9/u9_trials.jsonl",
+    "scratch/r2-opt-sim/constants.json"
+  ],
+  "next_unit_hint": "measure the >=20k regime directly (one arm held above 20k prompt for 40 turns) to identify c2/c4/c8 and close the -60..-73% C/A hold-out error; then run live-A to 80 turns at >=30k",
+  "status": "done",
+  "tool_calls": 0,
+  "unit": "R2-OPT-SIM2",
+  "write_paths": [
+    "strategy/R2_OPT_SIM2.md",
+    "scratch/r2-opt-sim/**",
+    "src/resextract/pointers.py",
+    "tests/test_r2_opt_sim2.py",
+    "orchestration/handoffs/R2-OPT-SIM2.json"
+  ]
+}

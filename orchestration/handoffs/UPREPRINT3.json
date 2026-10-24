@@ -1,0 +1,44 @@
+{
+  "unit": "UPREPRINT3",
+  "status": "done",
+  "artifacts": [
+    "tools/package/md2tex.py",
+    "tests/test_md2tex.py",
+    "papers/gated-read-batching/submission/main.tex",
+    "papers/replay-record-not-decision/submission/main.tex",
+    "papers/gated-read-batching/rendered/gated-read-batching.pdf",
+    "papers/replay-record-not-decision/rendered/replay-record-not-decision.pdf",
+    "papers/gated-read-batching/preprints/gated-read-batching-preprints.zip",
+    "papers/replay-record-not-decision/preprints/replay-record-not-decision-preprints.zip",
+    "strategy/PREPRINTS_SUBMISSION.md",
+    "orchestration/units/UPREPRINT3.md"
+  ],
+  "evidence": {
+    "mechanism": "grep -n 'keywords=' tools/package/md2tex.py -> 3 hits, one per package; both new sets are per-package data in PACKAGES (single source of truth), emitted by the existing after-\\maketitle code path; no per-paper branch added",
+    "test_green": "python3 -m pytest tests/test_md2tex.py --noconftest -q -p no:cacheprovider -> '8 passed in 0.68s'; ::test_keywords_pinned_per_package -s -> encoder 186 chars, gated 122, replay 140, each 'keywords pinned exactly, in order ... between \\maketitle and \\begin{abstract}'",
+    "test_red_reorder": "MD2TEX_TOOL=scratch/upreprint3/md2tex_reorder.py python3 -m pytest tests/test_md2tex.py::test_keywords_pinned_per_package --noconftest -q -> '1 failed'; AssertionError: replay-record-not-decision: registry keywords are not the author-approved set, in order: 'replay determinism, LLM decision replication, binding divergence, option-index encoding, record versus decision, agent trace reproducibility' != 'replay determinism, LLM decision replication, binding divergence, record versus decision, option-index encoding, agent trace reproducibility'",
+    "test_red_drop": "MD2TEX_TOOL=scratch/upreprint3/md2tex_drop.py ... -> '1 failed'; AssertionError: gated-read-batching: registry keywords are not the author-approved set, in order: 'tool-call gating, batched decisions, read-gate classification, binary gate decisions, low-effort prompting' != 'tool-call gating, batched decisions, read-gate classification, binary gate decisions, token exposure, low-effort prompting'",
+    "regen": "python3 tools/package/md2tex.py --package <slug> --outdir scratch/upreprint3/build1|build2/<slug> --quiet (x2 each) -> all exit 0; cmp run1 vs run2 IDENTICAL for main.tex + ABSTRACT.txt + ABSTRACT_METADATA.txt; encoder build1 == shipped (SHIPPED-MATCH); #2/#7 build1-vs-shipped differed only at the keyword line (byte 651 line 16 gated, byte 477 line 16 replay)",
+    "diff": "diff scratch/upreprint3/pristine/<slug>.main.tex papers/<slug>/submission/main.tex -> encoder: no diff; gated and replay: '15a16,17' adding only '\\noindent\\textbf{Keywords:} ...' plus one blank line",
+    "compile": "scratch/utex1/bin/tectonic -r 1 --keep-logs -o <out> main.tex (NO -Z continue-on-errors; HOME/TMPDIR/TECTONIC_CACHE_DIR inside the workspace; run from an extraction of each own zip) -> gated EXIT=0 UndefinedControlSequence=0 bang=0 pages=13 A4 110521 B sha256 5f563b2bba9f7a2bcded85125d8089ddefe653f3bdf82545632c25fa994f81e2 ; replay EXIT=0 0 0 pages=10 A4 94683 B sha256 4ac73a5177f2c60409d375fc3c832d06c859eac647f1bd59b15527db8f4f3537 ; grep continue-on-errors in logs = 0",
+    "page1": "pdftotext -f 1 -l 1 -layout <pdf> - | grep 'Keywords:' -> gated 'Keywords: tool-call gating, batched decisions, read-gate clas-si\ufb01cation, bi-' page1 hits=1 page2 hits=0 ; replay 'Keywords: replay determinism, LLM decision replication, binding diver-' page1 hits=1 page2 hits=0",
+    "zips": "unzip -Z1 -> exactly ['main.tex'] each; unzip to clean dir + cmp vs submission/main.tex -> IDENTICAL both; gated 14094 B sha256 feecb7f7879766bf9ecedaa03bbae3b8817eaab47513d092e42052a4127b74f5 ; replay 10372 B sha256 251af28e2141da640abf4b8dc29d821c6ceeec60f0e942936943a15cad14c15a",
+    "paper3_zip_untouched": "papers/encoder-crossover-190/preprints/encoder-crossover-190-preprints.zip -> 28712 B sha256 705bc498c7c7eb7cf1e53cae8f49fb8656787694c39dbc7c5f4064f9aa7caf7f (equals the card's stated value; paper #3 files not written)",
+    "numeric": "numeric-literal multiset (total/distinct) before -> after: encoder-crossover-190 MANUSCRIPT.md 1193/337 -> 1193/337, main.tex 1320/351 -> 1320/351; gated-read-batching 539/136 -> 539/136, 551/131 -> 551/131; replay-record-not-decision 379/118 -> 379/118, 389/124 -> 389/124; every added/removed delta {} (keywords introduce no numeric literal)",
+    "cites": "#3 bibitems=13 cite_cmds=23 distinct=13 uncited=none unresolved=none; #7 13/14/13 none none; #2 8/8/8 none none -- identical to the pre-change values recorded by UPREPRINT2",
+    "coi": "gated: \\section*{Conflicts of Interest} at main.tex:269, \\section*{References} at :273, \\begin{thebibliography} at :277; replay: \\section*{Conflicts of Interest} at :229, \\begin{thebibliography} at :233 -- still immediately before the reference list in both",
+    "card_disagreement": "The card claims \"paper #3's abstract alone fills page 1, so its keyword line lands on page 2\" and that #3 \"already has that problem\". MEASURED FALSE: pdftotext -f 1 -l 1 on papers/encoder-crossover-190/rendered/encoder-crossover-190.pdf gives page1 Keywords hits=1 and page2 hits=0 ('Keywords: text classification benchmark, encoder classifiers, fine-tuned'). The after-\\maketitle emission keeps paper #3's keywords on page 1 as well; no paper has a page-2 keyword problem. Reported rather than silently accepted."
+  },
+  "blocker": "",
+  "next_unit_hint": "Optional follow-up, not required by this card: (1) papers/{gated-read-batching,replay-record-not-decision}/submission/<slug>.tar.gz were NOT regenerated and are now stale relative to submission/main.tex -- rebuild with `tar -czf <slug>.tar.gz -C submission main.tex` if the upload path uses them (the preprints/*.zip bundles ARE current). (2) Carried from UPREPRINT2: decide whether the 'Conflicts of Interest' rename should also be mirrored into the read-only papers/encoder-crossover-190/released/** tree. (3) The card's page-2 claim for paper #3 should not be reused in future cards -- it is not what the PDF shows.",
+  "write_paths": [
+    "tools/package/md2tex.py",
+    "tests/test_md2tex.py",
+    "papers/gated-read-batching/**",
+    "papers/replay-record-not-decision/**",
+    "strategy/PREPRINTS_SUBMISSION.md",
+    "scratch/upreprint3/**",
+    "orchestration/units/UPREPRINT3.md",
+    "orchestration/handoffs/UPREPRINT3.json"
+  ]
+}

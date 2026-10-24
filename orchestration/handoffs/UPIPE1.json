@@ -1,0 +1,43 @@
+{
+  "unit": "UPIPE1",
+  "status": "done",
+  "artifacts": [
+    "tools/package/README.md",
+    "tools/package/_pkg.py",
+    "tools/package/neutralise.py",
+    "tools/package/census.py",
+    "tools/package/classify.py",
+    "tools/package/scan_markers.py",
+    "tools/package/regen_manifest.py",
+    "tools/package/check_manifest.py",
+    "tools/package/gate.sh",
+    "tests/test_package_tools.py",
+    "orchestration/units/UPIPE1.md",
+    "scratch/upipe1/ (equivalence logs: census/, neutral/, regen/, classify/, gate/, check/)"
+  ],
+  "evidence": {
+    "command_or_count": "5/5 tests OK; 7/7 new-vs-old equivalences (neutral-tag, bij, census-decoded, census-raw, classify, regen byte-identical to shipped MANIFEST.json sha256 707dcf0b1c591c4817a4bd98c19c8a9e1f07b18a4bd7f6a9faaebe8fbedda0dd, gate byte-identical 1398 flagged)",
+    "commands": [
+      "python3 tests/test_package_tools.py -> Ran 5 tests in ~2s / OK",
+      "census: diff <(python3 scratch/ubij1/census_one.py scratch/uneutral10/package) <(python3 tools/package/census.py --package scratch/uneutral10/package) -> header + '-- by class' BYTE-IDENTICAL; identifier lines equal as multiset; OLD is nondeterministic across runs, new tiebreak deterministic (only intended difference). Measured on the 29-file scratch/uneutral10/package: files scanned: 29 / distinct identifiers hit: 18 of 184 / TOTAL OCCURRENCES (decoded walk): 75 / inside 20 distinct=1 / outside 55 / JSON keys 0; by class data-jsonl-other 2, json 48, prose-md 7, tooling 12, ts 6",
+      "census raw: diff <(python3 scratch/uneutral1/scan.py scratch/uneutral10/package) <(python3 tools/package/census.py --package scratch/uneutral10/package --mode raw) -> only the 'tree:' line differs (absolute vs verbatim arg); counts identical (18 of 184, total 75)",
+      "scratch/uneutral9/rename.py vs tools/package/neutralise.py --scheme neutral-tag on scratch/uneutral9/before_pkg -> stdout + diff -r BYTE-IDENTICAL; renamed_tokens: 32 / renamed_occurrences: 6177 / files_changed: 17",
+      "scratch/ubij1/bij_one.py vs tools/package/neutralise.py --scheme bij -> stdout + diff -r BYTE-IDENTICAL; 10 kinds, 1639 pinned prose values, 1774 mask needles, 24 files changed {ts:3,tooling:2,data:15,prose:4}, prose-integrity failures: none, map_shipped: false",
+      "scratch/ugate1/classify_oov.py vs tools/package/classify.py --legacy-names on scratch/ugate1/emit/research-publish-packages -> stdout AND classified TSV BYTE-IDENTICAL; distinct tokens: 1464; a-schema 268/19576, b-thirdparty 1156/9924, c-mechanism-outside 27/88, c-mechanism-stimulus 10/332, d-artifact 3/16",
+      "regen: python3 tools/package/regen_manifest.py --package <copy> --no-note --generated-utc 2026-10-16T18:56:15Z -> BYTE-IDENTICAL to shipped scratch/uneutral10/package/MANIFEST.json (sha256 707dcf0b1c591c4817a4bd98c19c8a9e1f07b18a4bd7f6a9faaebe8fbedda0dd); counts.files 29, counts.bytes_total 829422 (excludes the 11884-byte manifest), manifest_self 5acbb952a4deff08...",
+      "check_manifest: good tree -> 'missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0' VERDICT PASS rc=0; append 1 byte to results/REPORT.md -> 'hash_mismatch=1 size_mismatch=1' HASH: results/REPORT.md rc=1; rm LICENSE + add NEWFILE.txt -> missing=1 unlisted=1 listed_but_absent=1 rc=1",
+      "gate: bash tools/package/gate.sh --package scratch/ugate2/dest/research-publish-packages -> BYTE-IDENTICAL to bash scratch/ugate2/gate_scoped_v2.sh <ABSOLUTE_ROOT>; 'flagged tokens: 1398' / 'GATE RESULT: FAIL' rc=1; scratch/uneutral10/package (no vocabulary/) -> rc=2 'FATAL: cannot read vocabulary file'; empty vocabulary/english.txt -> rc=2 'FATAL: vocabulary file has no declared terms'",
+      "scan_markers: python3 tools/package/scan_markers.py --package scratch/uneutral10/package -> encoder-crossover-190 6, (?i)CONSONANCE 0, U[A-Z]+[0-9]+ 39, total_hits=45, FAIL rc=1; --no-defaults --marker ZZZ_NO_SUCH_MARKER_ZZZ -> PASS rc=0",
+      "28-vs-29: python3 -c \"import json,os;m=json.load(open('scratch/uneutral10/package/MANIFEST.json'));print(len(m['files']),m['counts']['files'],len([f for _,_,fs in os.walk('scratch/uneutral10/package') for f in fs]))\" -> 28 29 29"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "28-vs-29 DEFECT RESOLVED, no record edited: scratch/uneutral10/package has 28 entries in MANIFEST.json files[] (shipped content) and 29 files on disk INCLUDING MANIFEST.json; counts.files=29. Both records are correct under their stated convention; prove with the 28/29/29 command above. DISCLOSURE (I wrote outside my paths): running the OLD scratch/udtag1/regen_manifest.py during equivalence rewrote scratch/udtag1/tree-five/MANIFEST.json (generated_utc only; 0 of 44 file hashes changed) because its TREE is hard-coded; I restored the exact original bytes from scratch/udtag1/tree-five-b/MANIFEST.json (md5 a35f59199faa65e4aab0b820fb849222, == scratch/uver24/five/MANIFEST.json) \u2014 only the mtime differs. Also: named source scratch/ugate2/gate.sh is ABSENT (only gate_old.sh, datavocab_block.sh, gate_scoped_v2.sh); tools/package/gate.sh was built from scratch/ugate1/gate_scoped.sh + scratch/ugate2/gate_scoped_v2.sh and is byte-identical to the latter. Separate report item, not fixed: scan_markers.py finds 45 default-marker hits inside the shipped package (39 unit-ID-shaped U[A-Z]+[0-9]+, 6 'encoder-crossover-190', 0 CONSONANCE).",
+  "write_paths": [
+    "tools/package/**",
+    "tests/test_package_tools.py",
+    "orchestration/units/UPIPE1.md",
+    "orchestration/handoffs/UPIPE1.json",
+    "scratch/upipe1/**"
+  ]
+}

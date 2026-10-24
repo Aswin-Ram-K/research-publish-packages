@@ -1,0 +1,128 @@
+{
+  "unit": "UWIRE1",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/UBUILD1.build.sh",
+    "strategy/BUILD_WIRING.md",
+    "orchestration/units/UWIRE1.md",
+    "orchestration/handoffs/UWIRE1.json",
+    "scratch/uwire1/UBUILD1.build.sh.orig",
+    "scratch/uwire1/run-default.log",
+    "scratch/uwire1/run-override.log",
+    "scratch/uwire1/census-default.log",
+    "scratch/uwire1/census-override.log",
+    "scratch/uwire1/redgreen.sh",
+    "scratch/uwire1/delta-A-sanitised-only.txt",
+    "scratch/uwire1/delta-B-newtree-only.txt",
+    "scratch/uwire1/shipcheck.py"
+  ],
+  "evidence": {
+    "what_the_build_consumed_before": "SAN_SRC=\"$SRC/repro/encoder-crossover-190-SANITISED\" at UBUILD1.build.sh:108 (pre-edit) — the original, least-processed sanitised tree. Consumers of $SAN_SRC: the assignment; the staged copy (fixture/ harness/ verify/ -> code/, preregistration/ results/ second-labeller/ -> eval/); SHIP_STAGED=() (52 names, anything staged-but-unlisted is DROPPED); NEVER_SHIP (17 names asserted absent after the prune); LIC_SRC / licence sha guard; the positive-vocabulary gate.",
+    "what_it_consumes_now": "SAN_SRC=\"${SAN_SRC_OVERRIDE:-$SRC/repro/encoder-crossover-190-SANITISED}\" at UBUILD1.build.sh:125. Default byte-identical to before; SAN_SRC_OVERRIDE (environment only, never guessed from disk) selects a later tree. Ship list, NEVER_SHIP, licence plumbing and gate are IDENTICAL on both paths.",
+    "edit_diff": "=== HUNK 1: header INPUTS block — BEFORE (verbatim):\n#   COMMIT_DATE    pinned so re-runs are byte-identical.\n#                  Set COMMIT_DATE=\"$(date -Iseconds)\" for a real timestamp.\n#\n=== HUNK 1: AFTER (verbatim):\n#   COMMIT_DATE    pinned so re-runs are byte-identical.\n#                  Set COMMIT_DATE=\"$(date -Iseconds)\" for a real timestamp.\n#   SAN_SRC_OVERRIDE\n#                  absolute path of the SANITISED tree to stage from. DEFAULT\n#                  (unset) = $SRC/repro/encoder-crossover-190-SANITISED, i.e.\n#                  today's behaviour is unchanged and the frozen input stays\n#                  reproducible BY DEFAULT. The chosen release artifact is\n#                  $SRC/scratch/ubij3/tree-three-r2 (UWIRE1), so:\n#                    SAN_SRC_OVERRIDE=\"$SRC/scratch/ubij3/tree-three-r2\" \\\n#                      bash orchestration/units/UBUILD1.build.sh\n#                  The swap is reversible by one variable. The ship-list,\n#                  licence plumbing, anchor asserts and gate are IDENTICAL on\n#                  both paths — only the staged bytes change. See\n#                  strategy/BUILD_WIRING.md.\n#\n=== HUNK 2: SAN_SRC assignment — BEFORE (verbatim):\nPAPER_SRC=\"$SRC/papers/encoder-crossover-190\"\nSAN_SRC=\"$SRC/repro/encoder-crossover-190-SANITISED\"\nLAB_SRC=\"$SRC/experiments/second-labeller-190\"\n=== HUNK 2: AFTER (verbatim):\nPAPER_SRC=\"$SRC/papers/encoder-crossover-190\"\n# The SANITISED tree — the safety boundary the build stages code/ and eval/ from.\n# DEFAULT = the original sanitised tree (unchanged behaviour, frozen input).\n# SAN_SRC_OVERRIDE (UWIRE1) selects a later re-tagged tree WITHOUT editing this\n# default, so the swap is reversible by one env var. The override is honoured\n# only from the environment, never guessed from disk.\nSAN_SRC=\"${SAN_SRC_OVERRIDE:-$SRC/repro/encoder-crossover-190-SANITISED}\"\nLAB_SRC=\"$SRC/experiments/second-labeller-190\"\n=== net: +17 lines. bash -n: 'syntax OK'. Pre-edit sha256 a2a1df178fbc8fca01c573f283327fe6ca96d2d7bdca89ef539b17987e007a69 (identical to scratch/uwire1/UBUILD1.build.sh.orig). Licence guard text intact at :601: [ \"$LIC_SHA\" = \"3d364676a91dc579954b585e9d3a3c9f0dc03b723715805cc9431f757ce6f900\" ] (was :584; LIC_SRC now :592, was :575 — pure line shift, no regression).",
+    "file_set_delta": {
+      "sanitised_files_on_disk": 59,
+      "tree_three_r2_files": 45,
+      "card_states_sanitised_files": 58,
+      "delta_A_sanitised_only_count": 14,
+      "delta_A_sanitised_only": ["INTEGRITY.md", "README.md", "REDACT3_REPORT.md", "REDACTION_REPORT.md", "redact.py", "RESIDUALS.md", "SCRUB_REPORT.md", "variants/no-union/README.md", "verify/integrity-table.md", "verify/RECOMPUTE-CLAIMS.txt", "verify/RESIDUAL-SCAN.txt", "verify/run-verification.sh", "verify/scrub-uscrub1.py", "verify/VERIFICATION.txt"],
+      "delta_B_newtree_only_count": 0,
+      "delta_B_note": "The re-tagging renamed NOTHING inside the staged buckets: all 45 new-tree paths exist in the sanitised tree under the same name. No moved-path trap.",
+      "operational_reconciliation": "SHIP_STAGED = 52 names; 40 under code/ or eval/; 2 of those 40 come from LAB_SRC (eval/second-labeller-190/ROBUSTNESS.md, RUN2.json), leaving 38 derived from SAN_SRC. Staged-and-kept from SAN_SRC = 38 on BOTH trees, identical path sets (default 46-8, override 40-2). MISSING (listed but not staged -> would FATAL): NONE. UNLISTED (staged, not listed -> dropped fail-closed): override drops exactly 2 — code/verify/redaction-log.json (also on NEVER_SHIP) and eval/second-labeller/OWED_CORRECTIONS.md. => The ship list reconciles CLEANLY; no edit was required and no judgement call was deferred (unit-card step 6 NOT triggered). Both trees ship the same 52-file package; only bytes differ.",
+      "shipcheck_output": "SHIP_STAGED entries: 52 | default tree: staged from SAN_SRC buckets 46, code/+eval/ listed 40, MISSING ['eval/second-labeller-190/ROBUSTNESS.md','eval/second-labeller-190/RUN2.json'] (= LAB_SRC, supplied upstream), UNLISTED 8 | tree-three-r2: staged from SAN_SRC buckets 40, code/+eval/ listed 40, MISSING same 2 (LAB_SRC), UNLISTED 2"
+    },
+    "run_default": {
+      "command": "cd '/home/zer0null/reserach extarctor' && DEST=\"$PWD/scratch/uwire1/run-default/research-publish-packages\" bash orchestration/units/UBUILD1.build.sh",
+      "literal_output": [
+        "using SANITISED tree only: /home/zer0null/reserach extarctor/repro/encoder-crossover-190-SANITISED",
+        "  DEDUP   PREREGISTRATION.md — byte-identical to the sanitised copy; sanitised copy kept",
+        "  DEDUP   metrics.json — byte-identical to the sanitised copy; sanitised copy kept",
+        "  DEDUP   labelsB.json — byte-identical to the sanitised copy; sanitised copy kept",
+        "  ADDED   ROBUSTNESS.md -> eval/second-labeller-190/ (exists only upstream)",
+        "  SKIPPED RUN.json — DIVERGENT and the upstream copy is UNSANITISED (it re-leaks",
+        "  ADDED   RUN2.json -> eval/second-labeller-190/ (exists only upstream)",
+        "  staged 66 file(s): 52 kept, 14 dropped",
+        "  ship-list enforced: 52 staged file(s) present",
+        "  never-ship list enforced: 17 names checked absent",
+        "  commits: 1   sha: 7b61bed   remote: ''",
+        "  repo total     : 64 files, 7.6M",
+        "  paper/         : 13 files, 252K",
+        "  code/          : 22 files, 4.5M",
+        "  eval/          : 19 files, 680K",
+        "flagged tokens: 95606",
+        "GATE RESULT: FAIL -- 95606 out-of-vocabulary token(s).",
+        "BUILD COMPLETE — the exclusion gate FAILED (exit 1)."
+      ],
+      "staged": 66, "kept": 52, "dropped": 14,
+      "ship_list_check": "PASSED — 'ship-list enforced: 52 staged file(s) present'",
+      "never_ship_check": "PASSED — 17 names checked absent",
+      "emitted_tree": "64 files, 7.6M (paper/ 13 files 252K, code/ 22 files 4.5M, eval/ 19 files 680K)",
+      "gate_verdict_line": "GATE RESULT: FAIL -- 95606 out-of-vocabulary token(s).",
+      "failure_is_gate_not_shiplist": true,
+      "exit_code": 1
+    },
+    "run_override": {
+      "command": "cd '/home/zer0null/reserach extarctor' && DEST=\"$PWD/scratch/uwire1/run-override/research-publish-packages\" SAN_SRC_OVERRIDE=\"$PWD/scratch/ubij3/tree-three-r2\" bash orchestration/units/UBUILD1.build.sh",
+      "literal_output": [
+        "using SANITISED tree only: /home/zer0null/reserach extarctor/scratch/ubij3/tree-three-r2",
+        "  SKIPPED PREREGISTRATION.md — DIVERGENT and the upstream copy is UNSANITISED (it re-leaks",
+        "  SKIPPED metrics.json — DIVERGENT and the upstream copy is UNSANITISED (it re-leaks",
+        "  SKIPPED labelsB.json — DIVERGENT and the upstream copy is UNSANITISED (it re-leaks",
+        "  ADDED   ROBUSTNESS.md -> eval/second-labeller-190/ (exists only upstream)",
+        "  SKIPPED RUN.json — DIVERGENT and the upstream copy is UNSANITISED (it re-leaks",
+        "  ADDED   RUN2.json -> eval/second-labeller-190/ (exists only upstream)",
+        "  staged 60 file(s): 52 kept, 8 dropped",
+        "  ship-list enforced: 52 staged file(s) present",
+        "  never-ship list enforced: 17 names checked absent",
+        "  commits: 1   sha: 502f030   remote: ''",
+        "  repo total     : 64 files, 5.3M",
+        "  paper/         : 13 files, 252K",
+        "  code/          : 22 files, 2.4M",
+        "  eval/          : 19 files, 588K",
+        "flagged tokens: 29936",
+        "GATE RESULT: FAIL -- 29936 out-of-vocabulary token(s).",
+        "BUILD COMPLETE — the exclusion gate FAILED (exit 1)."
+      ],
+      "staged": 60, "kept": 52, "dropped": 8,
+      "ship_list_check": "PASSED — 'ship-list enforced: 52 staged file(s) present'",
+      "never_ship_check": "PASSED — 17 names checked absent",
+      "emitted_tree": "64 files, 5.3M (paper/ 13 files 252K, code/ 22 files 2.4M, eval/ 19 files 588K)",
+      "gate_verdict_line": "GATE RESULT: FAIL -- 29936 out-of-vocabulary token(s).",
+      "failure_is_gate_not_shiplist": true,
+      "exit_code": 1,
+      "emitted_file_set_identical_to_default": true,
+      "note": "Both emitted trees are 64 files at the same paths; only bytes differ. Emitted tree size 5.3M vs 7.6M."
+    },
+    "residual_census": {
+      "convention": "python3 scratch/ubij1/census_one.py <emitted PKG dir>  — same tool, same 184-identifier list at scratch/uagnostic1/census.tsv, same scope (the emitted package, 55 files scanned each), so the two numbers are comparable.",
+      "default": {"tree": "scratch/uwire1/run-default/research-publish-packages/packages/exp12-encoder-crossover", "files_scanned": 55, "distinct_identifiers_hit": "163 of 184", "TOTAL_OCCURRENCES": 44056, "inside_stimulus": 2722, "inside_stimulus_distinct": 36, "outside_stimulus": 18042, "json_object_keys": 23292, "by_class": "data-jsonl-other inside=1252 outside=6888 keys=3072 total=11212; json inside=1470 outside=9277 keys=20220 total=30967; other inside=0 outside=1; prose-md inside=0 outside=594; tooling inside=0 outside=315; ts inside=0 outside=967"},
+      "override": {"tree": "scratch/uwire1/run-override/research-publish-packages/packages/exp12-encoder-crossover", "files_scanned": 55, "distinct_identifiers_hit": "84 of 184", "TOTAL_OCCURRENCES": 3317, "inside_stimulus": 2171, "inside_stimulus_distinct": 30, "outside_stimulus": 1063, "json_object_keys": 83, "by_class": "data-jsonl-other inside=1239 outside=0 keys=0 total=1239; json inside=932 outside=189 keys=83 total=1204; other inside=0 outside=1; prose-md inside=0 outside=354; tooling inside=0 outside=220; ts inside=0 outside=299"},
+      "delta": "TOTAL 44,056 -> 3,317 = -40,739 (12.4x fewer). inside-stimulus 2,722 -> 2,171 = -551. outside 18,042 -> 1,063. keys 23,292 -> 83. distinct identifiers 163 -> 84 of 184.",
+      "honesty_note": "The override's inside-stimulus count 2,171 EQUALS tree-three-r2's own census baseline (delta 0), which is exactly the property UVER20 verified. The gate's independent out-of-vocabulary count agrees on direction: 95,606 -> 29,936 (3.19x fewer). The override is better on this measurement by a wide, reproducible margin — this is a measured claim, not an asserted one. Note the census scope here is the whole emitted package (55 files, including paper/ and upstream second-labeller-190 material), so these totals are NOT the same quantity as tree-three-r2's 3,348 source-tree census printed on the batch card; they are comparable to each other, which is what the claim needs."
+    },
+    "red_green": {
+      "script": "scratch/uwire1/redgreen.sh",
+      "RED_1_inject_unlisted": {"action": "injected harness/INJECTED_UNLISTED.txt into a scratch copy of tree-three-r2", "command": "DEST=.../rg-dest/research-publish-packages SAN_SRC_OVERRIDE=.../rg-tree bash orchestration/units/UBUILD1.build.sh", "literal_output": ["staged 61 file(s): 52 kept, 9 dropped", "ship-list enforced: 52 staged file(s) present"], "exit_code": 1, "result": "PASS — injected unlisted file ABSENT from the emitted tree (fail-closed: it cannot ship; drop count moved 8 -> 9)"},
+      "GREEN_1_remove_injected": {"literal_output": ["staged 60 file(s): 52 kept, 8 dropped", "ship-list enforced: 52 staged file(s) present"], "exit_code": 1, "result": "PASS — build proceeds (drop count back to 8); exit 1 is the gate, not the ship list"},
+      "RED_2_listed_file_missing": {"action": "removed the LISTED file code/harness/lint.ts (staged as harness/lint.ts) from the scratch copy", "literal_output": ["FATAL: ship-list names a file the package does not have: code/harness/lint.ts"], "exit_code": 1, "result": "PASS — build stopped BEFORE the gate (no GATE RESULT line emitted); the ship-list guard still drops the build"},
+      "GREEN_2_restore_listed": {"literal_output": ["staged 60 file(s): 52 kept, 8 dropped", "ship-list enforced: 52 staged file(s) present", "GATE RESULT: FAIL -- 29936 out-of-vocabulary token(s)."], "exit_code": 1, "result": "PASS — build proceeds and reaches the gate"},
+      "RED_3_wrong_destination": {"action": "DEST set to a path not ending in /research-publish-packages, containing a SENTINEL.txt", "literal_output": ["FATAL: refusing to rm -rf '/home/zer0null/reserach extarctor/scratch/uwire1/rg-baddest' — DEST must end in /research-publish-packages"], "exit_code": 2, "result": "PASS — sentinel intact, the 'removing any previous target' step was never reached, so no rm -rf ran"},
+      "conclusion": "Neither fail-closed character was weakened: a wrong destination still exits non-zero before any rm -rf, and an unlisted staged file still cannot ship (dropped, and asserted absent)."
+    },
+    "containment": {
+      "wrote_only": ["orchestration/units/UBUILD1.build.sh", "strategy/BUILD_WIRING.md", "orchestration/units/UWIRE1.md", "orchestration/handoffs/UWIRE1.json", "scratch/uwire1/**"],
+      "never_wrote": ["scratch/ubij1/**", "scratch/ubij2/**", "scratch/ubij3/**", "scratch/upack1/**", "scratch/unoncensus1/**", "scratch/unoncensus2/**", "scratch/uver20/**", "scratch/uver21/**", "scratch/uver22/**", "scratch/ufix25/**", "repro/**", "/home/zer0null/research-publish-packages"],
+      "read_only_targets_note": "No git command was run at all (including against /home/zer0null/Duval). The chosen tree was read in place and copied into scratch/uwire1/rg-tree for the guard tests.",
+      "real_destination_untouched": "A first default-path attempt (before DEST was overridden) hit the sandbox: \"rm: cannot remove '/home/zer0null/research-publish-packages': Read-only file system\" and the build stopped there. Nothing was written outside the workspace; the real destination is unmodified."
+    }
+  },
+  "blocker": "",
+  "next_unit_hint": "The ship list reconciles cleanly on both trees (same 52 kept, same emitted 64-file set) — NO ship-list edit is needed, and step 6 was not triggered. What remains is a decision, not a defect: (1) PROMOTE `scratch/ubij3/tree-three-r2` to be the default (e.g. copy into repro/, or flip the SAN_SRC_OVERRIDE default) — until then the release is one environment variable away from shipping the wrong bytes and nothing warns you; (2) the gate still FAILS on both paths by design (95,606 vs 29,936 out-of-vocabulary tokens) and needs a separate vocabulary unit before the release can pass its own gate; (3) `repro/encoder-crossover-190-SANITISED` is NOT frozen — REDACT3_REPORT.md (mtime 2026-10-15 21:04:58) was added by a concurrent unit during this batch, so the tree is 59 files, not the 58 the card states; it is top-level and never staged so it does not change the build, but the frozen-input claim should be re-verified; (4) add a regression test that fails if SAN_SRC is edited back to a literal path — today nothing guards the wiring. NOTE for any unit editing UBUILD1.build.sh: line numbers shifted +17 (SAN_SRC :108 -> :125, SHIP_STAGED :133 -> :150, LIC_SRC :575 -> :592, licence sha guard :584 -> :601, gate :904-:912, GATE_RC :1023).",
+  "write_paths": [
+    "orchestration/units/UBUILD1.build.sh",
+    "strategy/BUILD_WIRING.md",
+    "scratch/uwire1/**",
+    "orchestration/units/UWIRE1.md",
+    "orchestration/handoffs/UWIRE1.json"
+  ]
+}

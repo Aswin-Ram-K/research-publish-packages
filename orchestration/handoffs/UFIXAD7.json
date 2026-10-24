@@ -1,0 +1,31 @@
+{
+  "unit": "UFIXAD7",
+  "status": "done",
+  "artifacts": [
+    "strategy/WITHHELD.md",
+    "strategy/GATED_READ_DISCLOSURE.md",
+    "orchestration/units/UFIXAD7.md",
+    "orchestration/handoffs/UFIXAD7.json"
+  ],
+  "evidence": {
+    "command_or_count": "GATED: 9 UFIXAD6 note-occurrences re-stamped 2026-10-15 -> 2026-10-16 on lines [27,28,37,139,140,175,182,218]; 0 stale tokens remain. WITHHELD:450 -> 2026-10-16 + drift parenthetical; WITHHELD:152 got a one-sentence forward pointer to SS8.7 / :398 with original wording intact. No non-target line changed.",
+    "commands": [
+      "date '+%Y-%m-%d %H:%M:%S %z' -> 2026-10-16 16:37:35 -0500",
+      "grep -rl --include=\"*.md\" \"2026-10-15\" . | wc -l -> 1108 ; grep -rl --include=\"*.md\" \"2026-10-16\" . | wc -l -> 189",
+      "git ls-files -z '*.md' | xargs -0 grep -l \"2026-10-15\" | wc -l -> 3 ; \"2026-10-16\" -> 1",
+      "grep -c '2026-10-15' strategy/GATED_READ_DISCLOSURE.md -> 0",
+      "grep -n 'Dated correction (2026-10-16, unit UFIXAD6)' strategy/WITHHELD.md -> 450",
+      "grep -n 'Forward pointer (UFIXAD7)' strategy/WITHHELD.md -> 152",
+      "sed -n '152p' strategy/WITHHELD.md shows the original sentence 'Withholding the blanket paper means the architectural/system claim is never published...' still present"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Scope deviation (documented in the unit card): the brief named GATED lines :37,:175,:182,:218, but VERIFICATION_REPORT_AD6.md:51/:136 measures ALL 9 UFIXAD6 notes on lines :27,:28,:37,:139,:140,:175,:182,:218 as contradicted, so UFIXAD7 re-stamped every UFIXAD6 note in the two in-scope files. Remaining work: ~1100 workspace *.md files still carry the stale 2026-10-15 token (measured: `grep -rl --include=\"*.md\" \"2026-10-15\" . | wc -l` -> 1108; `... \"2026-10-16\" . | wc -l` -> 189; tracked-only via `git ls-files -z '*.md' | xargs -0 grep -l` -> 3 vs 1). The brief's 'roughly 136 vs 71' did NOT reproduce under any command tried, so the parenthetical in WITHHELD:450 uses the measured 1108 vs 189. Do NOT re-stamp those other files in this unit; schedule a separate workspace-wide date-drift unit. Also note WITHHELD:450's parenthetical deliberately contains the string '2026-10-15' (it names the stale token), so a naive grep for zero stale tokens in WITHHELD.md will show >0 by design.",
+  "write_paths": [
+    "strategy/WITHHELD.md",
+    "strategy/GATED_READ_DISCLOSURE.md",
+    "orchestration/units/UFIXAD7.md",
+    "orchestration/handoffs/UFIXAD7.json",
+    "scratch/ufixad7/**"
+  ]
+}

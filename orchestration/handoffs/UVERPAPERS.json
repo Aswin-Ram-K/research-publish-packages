@@ -1,0 +1,40 @@
+{
+  "unit": "UVERPAPERS",
+  "overall": "pass",
+  "checks": [
+    "A: regenerated both packages on copies -> sha256 enc=4efa575442b2878037d625bc604e2ae7aab7e1faf9d9515bd9c9747ebf28885a, grb=a5d32dd7da1a2b9b920ffb9cb272749339edd954f9a1e63b11bb59df6d8886b4, both == claimed and == shipped; ran each twice, cmp clean (deterministic).",
+    "A: PACKAGES registry at tools/package/md2tex.py:84-151 selected by --package (:598); per-paper divergence is config data, not logic branches.",
+    "A: guard is real, not print-only. guard_citations (tools/package/md2tex.py:443-457) raises SystemExit. Red case 1 (deleted the docs/DECIDER_STACK_DECISION.md paragraph11.6 anchor) rc=1: R18 FAILED: uncited=['source_decider_stack_2026'] unknown=[] bibitems=13 bibkeys=13. Red case 2 (injected [[CITE:nosuchkey]]) rc=1: R18 FAILED: uncited=[] unknown=['nosuchkey'] bibitems=13 bibkeys=13.",
+    "B: pre-relabel manuscript scratch/uverpkg10/mdrun/papers/encoder-crossover-190/MANUSCRIPT.md has UEXP(word)=7, UEXP2=1, UREFS=1 (exact claimed counts); converting it gives numeric-literal n=819 sha256=a0762fd5a407cc75053bfe74aa7d9c8066da3913e1a703eec1bff048b60f15c0 == shipped main.tex numlit sha; raw digit delta {'190': 5, '2': 10}.",
+    "B: 0 UEXP/UEXP2/UREFS in MANUSCRIPT.md and in shipped main.tex. Bookkeeping measured on shipped main.tex: 13 bibitem (13 distinct) / 23 cite occurrences / 13 distinct keys / uncited=[] / unresolved=[].",
+    "C: de-escaped shipped main.tex has 0 occurrences of REFS.md, CLAIMS.md, CHECKLIST.md, OPEN_QUESTIONS.md, UNSOURCED_RETAINED.md, EVIDENCE_NOTES.md, PAPER_CANDIDATES.md, LEARNINGS.md, ROBUSTNESS.md, experiments/second-labeller-190/ (0 in MANUSCRIPT.md too).",
+    "C: red->green on the absence check: planting `OPEN_QUESTIONS.md` and `EVIDENCE_NOTES.md` in a copy gives shipped-format tex with naive count 0 but de-escaped count 1 (converter escapes _ as \\_), so a naive grep would miss what the check catches. Green file: de-escaped 0.",
+    "C: kept name justified. docs/DECIDER_STACK_DECISION 14x in shipped main.tex (claimed 14); removing its anchor makes the run fail uncited=['source_decider_stack_2026'] -> keeping it was correct.",
+    "C: scratch/uneutral10/package = 29 files; results/REPORT.md, second-labeller/EVIDENCE.md, second-labeller/PREREGISTRATION.md, README.md all present. Shipped tex names results/REPORT.md x4, PREREGISTRATION.md x2, README.md x2, and does not name second-labeller/EVIDENCE.md (its original reference was the unreleased experiments/second-labeller-190/EVIDENCE.md, correctly de-named).",
+    "Records: 15/16 rows of scratch/ufixpaper5/edits.tsv replay onto the shipped manuscript exactly; row 16 (EVIDENCE_NOTES.md + subset README.md) requires whitespace-flexible matching and its recorded new text carries a stray leading 'in ' that both pre-edit copies already supply, so forward replay doubles 'in'. No effect on shipped bytes or regeneration."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Claims A/B/C pass; optional cosmetic: rebuild scratch/ufixpaper5/edits.tsv row 16 without the leading 'in'. If a later unit needs it, verify MANIFEST.json <-> 29-file disk agreement and the tar member bytes, which this bound did not cover.",
+  "write_paths": [
+    "strategy/VERIFICATION_REPORT_PAPERS.md",
+    "orchestration/units/UVERPAPERS.md",
+    "orchestration/handoffs/UVERPAPERS.json",
+    "scratch/uverpapers/**"
+  ],
+  "contradicted": [
+    "The asserted RELATED_WORK_NOTES.md x2: measured 0 in shipped main.tex (naive and de-escaped), 0 in MANUSCRIPT.md, 0 in both pre-edit copies (scratch/ufixpaper5/MANUSCRIPT.before.md and scratch/uverpkg10/mdrun/papers/encoder-crossover-190/MANUSCRIPT.md). The concurrent unit that could not reproduce it was right."
+  ],
+  "overstated": [
+    "UFIXPAPER5 evidence 'job2: 16 de-naming edits applied, 0 skipped' holds as an outcome, but the record is not exactly replayable: edits.tsv row for `papers/encoder-crossover-190/EVIDENCE_NOTES.md` and the subset's own `README.md`. records the after-text with a leading 'in ' that the pre-edit text already contains, so applying the row forward yields 'in\\n  in this record's internal evidence notes' (verified against two pre-edit copies)."
+  ],
+  "not_reproduced": [],
+  "unverified": [
+    "tests/test_md2tex.py not run (pytest cannot collect here without --noconftest; tests/conftest.py:19 imports an absent module).",
+    "MANIFEST.json <-> 29-file disk agreement and the shipped tar.gz member bytes not re-checked (outside claims A/B/C).",
+    "Neither shipped main.tex was compiled with LaTeX."
+  ],
+  "tool_calls": 25,
+  "bound": 25,
+  "containment": "All regeneration/mutation ran on copies under scratch/uverpapers/**; papers/** read-only. No writes to /home/zer0null/Duval and no git command against it. Source sha256 before and after work unchanged: papers/encoder-crossover-190/MANUSCRIPT.md=653d05db01ec00eff22f90211ef059b480463754f1a7cf850b87f0bf62a6db81, REFERENCES.bib=fd9bafd6944f5f1f544fabe69766b51b38450b0d7b4d9493b56e542c99863394, papers/gated-read-batching/MANUSCRIPT.md=2a4cc287e8509b2cf2492cf1edff989ff57f352d8d0d2d2bf7666de023b8a2a7.",
+  "red_green": "Guard red: two constructed failures (uncited bibitem rc=1; unresolved cite rc=1) vs green byte-identical regeneration. Absence check red: planted banned names appear de-escaped (1) while naive grep sees 0; green file 0. Both perturbations are non-vacuous."
+}

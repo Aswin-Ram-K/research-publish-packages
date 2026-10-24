@@ -1,0 +1,53 @@
+{
+  "unit": "U0",
+  "slug": "occamy-cache-methodology",
+  "status": "done",
+  "artifacts": [
+    "orchestration/handoffs/U0-METHODOLOGY.md",
+    "orchestration/handoffs/U0-METHODOLOGY.json"
+  ],
+  "evidence": {
+    "command_or_count": "21 research tool calls (local_web_search x3, local_web_crawl x12, read/bash x2 local); 0 live model calls; 0 requests sent to 192.168.2.168:8012",
+    "claims_total": 30,
+    "claims_verified_primary": 15,
+    "claims_verified_secondary_citing_sglang_file_line": 10,
+    "claims_partial": 1,
+    "claims_unverified": 3,
+    "claims_internal_workspace": 1,
+    "tool_calls_total": 23,
+    "bound": 35,
+    "commands": [
+      "local_web_crawl https://www.lmsys.org/blog/2026-08-11-unified-radix-cache/ -> Unified Radix Cache: FULL/SWA/MAMBA components; 'a recurrent state is valid only at an exact prefix checkpoint'; match_prefix advances the boundary only when all validators accept (traversal depth != reusable depth)",
+      "local_web_crawl https://raw.githubusercontent.com/outerarc-ai/state-bench/main/docs/SGLANG_MAMBA_CHECKPOINTS.md -> cache_chunk_size = max(model mamba_chunk_size, else FLA chunk size 64; page_size); checkpoint_grid = lcm(cache_chunk_size, page_size); WORKED EXAMPLE 'Qwen3.5 (GDN) with page_size=1 gives cache_chunk_size=64, checkpoint_grid=64, track_grid=256'; branching_seqlen = floor(full_kv_hit/checkpoint_grid)*checkpoint_grid",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/session_radix_cache -> --enable-session-radix-cache REQUIRED at launch; 'implemented only by UnifiedRadixCache'; /close_session removes references but does not free KV; session refs are soft protection not pins",
+      "local_web_crawl https://docs.sglang.io/docs/basic_usage/native_api.md -> /flush_cache EXISTS (POST, query timeout seconds, default 0 = fail fast if not idle, 400 when HiCache async in flight, auto-triggered by /update_weights); /server_info merges get_server_args + get_memory_pool_size + get_max_total_num_tokens",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/radix_eviction_policy -> eviction only considers evictable leaves (KV present, unlocked, not shadowed); root never evictable; default lru; 'a policy only scores ... cannot pin KV'",
+      "local_web_crawl https://docs.sglang.io/docs/references/production_metrics.md -> sglang:time_to_first_token_seconds: streaming ends at first output AFTER detokenization (may contain no printable text); non-streaming ends when the scheduler produced the first token; sglang:cache_hit_rate is a server gauge",
+      "local_web_crawl https://docs.sglang.io/docs/advanced_features/hyperparameter_tuning.md -> max_total_num_tokens from --mem-fraction-static; reference startup line 'max_total_num_tokens=665690, chunked_prefill_size=8192, ...'; --schedule-policy lpm reorders requests to encourage cache hits",
+      "local_web_crawl https://arxiv.org/abs/2411.19379 -> Marconi: in-place recurrent state updates 'preclude rolling back cache entries for partial sequence overlaps, and instead mandate only exact-match cache hits'",
+      "local_web_crawl https://arxiv.org/abs/2608.30310 -> Tail-Replay: token-level matches 'directly usable only at positions aligned with stored checkpoints, constraining prefix reuse to a discrete set of boundaries'; Gated DeltaNet hybrids",
+      "local_web_crawl https://arxiv.org/abs/2609.19657 -> PrefixBench-H100 verified; local_web_crawl https://arxiv.org/abs/2412.10319 -> SCBench verified",
+      "local_web_crawl https://github.com/ai-dynamo/dynamo/issues/16533 -> title (rendered): 'SGLang worker omits prompt_tokens_details on a cache miss instead of reporting cached_tokens: 0' (body did NOT render; the --enable-cache-report gating detail is UNVERIFIED)",
+      "grep -rhoi 'qwen|kimi|inkling|nemotron|llama' docs/ orchestration/handoffs/*.md -> only stray mentions; served model is the alias 'occamy-1.0' (OPENAI_MODEL), architecture NOT recorded anywhere in the workspace"
+    ],
+    "grid_arithmetic_check": "612 mod 64 = 36 -> 612-36 = 576 = 9*64 OK; 807 mod 64 = 39 -> 807-39 = 768 = 12*64 OK; both observations fit cached = 64*floor(len/64) with zero free parameters"
+  },
+  "headline": {
+    "answer_d_mechanism": "The 64 grid is the recurrent-state checkpoint grid of a hybrid linear-attention model, not page alignment: cache_chunk_size = max(FLA chunk size 64, page_size=1) = 64, checkpoint_grid = lcm(64, 1) = 64, and match_prefix floors the full-KV hit onto that grid (floor(hit/64)*64), so cached = 64*floor(len/64) and uncached == len mod 64.",
+    "flush": "POST /flush_cache exists (timeout param, 400 if not idle). Blast radius = the whole server process for every tenant: it resets the shared radix tree, so any other user's next request pays a full cold prefill and any concurrent measurement of theirs is corrupted. No scoped/per-prefix flush. Do NOT call it; use a nonce prefix instead.",
+    "biggest_pitfall": "Coercing the absent prompt_tokens_details (SGLang omits it on a miss) to something other than 0 -- i.e. dropping null rows -- which silently deletes every cache miss and inflates the hit rate.",
+    "second_pitfall": "Cross-tenant contamination on a shared server: a 'cold' first request that already reports cached_tokens > 0. Only a fresh nonce prefix proves coldness.",
+    "caveat_to_carry": "The page_size=1 premise is INHERITED, not re-verified. page_size=64 would reproduce the identical 64-grid signature by pure radix-key alignment with no recurrent layer involved -- two read-only GETs (/server_info, /get_model_info) exclude it."
+  },
+  "blocker": "",
+  "next_unit_hint": "Before citing the hybrid-checkpointing explanation, spend 2 read-only GETs: /server_info (page_size, chunked_prefill_size, max_total_num_tokens, schedule_policy, enable_session_radix_cache, uptime) and /get_model_info (model_type/architectures). If page_size != 1, section (d) of U0-METHODOLOGY.md must be rewritten as page alignment. Optionally close the version gap by grepping the installed sglang/srt/mem_cache/unified_cache/components/mamba.py for checkpoint_grid/cache_chunk_size rather than trusting the commit 166b4ae7f citations.",
+  "write_paths": [
+    "orchestration/handoffs/U0-METHODOLOGY.md",
+    "orchestration/handoffs/U0-METHODOLOGY.json"
+  ],
+  "not_done": [
+    "No live server read (constraint: no model calls). page_size=1, chunked_prefill_size=8192 and session-cache-off are inherited premises.",
+    "arXiv full texts not read (abstracts only) -- SCBench/PrefixBench reset protocols remain UNVERIFIED.",
+    "--enable-cache-report semantics UNVERIFIED: the Dynamo issue body did not render, only its title."
+  ]
+}

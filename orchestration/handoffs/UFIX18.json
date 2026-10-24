@@ -1,0 +1,167 @@
+{
+ "unit": "UFIX18",
+ "status": "done",
+ "artifacts": [
+  "strategy/CODE_AGNOSTIC_RELEASE_POLICY.md",
+  "orchestration/units/UFIX18.md",
+  "orchestration/handoffs/UFIX18.json",
+  "scratch/ufix18/policy_sweep.txt",
+  "scratch/ufix18/anchors.txt",
+  "scratch/ufix18/others.txt"
+ ],
+ "evidence": {
+  "script_identity": {
+   "path": "orchestration/units/UBUILD1.build.sh",
+   "sha256": "a2a1df178fbc8fca01c573f283327fe6ca96d2d7bdca89ef539b17987e007a69",
+   "sha256_command": "sha256sum orchestration/units/UBUILD1.build.sh",
+   "lines": 1019,
+   "lines_command": "wc -l orchestration/units/UBUILD1.build.sh",
+   "unchanged_after_edits": true,
+   "matches_ufix16_report": true
+  },
+  "anchor_grep_command": "grep -n \"GATE_EOF|'CODE_VOCAB_EOF'|'PUBLIC_VOCAB_EOF'|vocabulary/english.txt\\\"|bash \\\"$DEST/gate.sh\\\"|chmod +x \\\"$DEST/gate.sh\\\"\" orchestration/units/UBUILD1.build.sh",
+  "anchor_grep_output": [
+   "=== anchor grep (UBUILD1) ===",
+   "691:  | LC_ALL=C sort -u > \"$DEST/vocabulary/english.txt\"",
+   "692:echo \"  vocabulary/english.txt: $(wc -l < \"$DEST/vocabulary/english.txt\") words (frozen from:$WORDS_SRC)\"",
+   "695:cat > \"$DEST/vocabulary/code.txt\" <<'CODE_VOCAB_EOF'",
+   "748:cat > \"$DEST/vocabulary/public.txt\" <<'PUBLIC_VOCAB_EOF'",
+   "771:cat > \"$DEST/gate.sh\" <<'GATE_EOF'",
+   "896:GATE_EOF",
+   "897:chmod +x \"$DEST/gate.sh\"",
+   "1005:bash \"$DEST/gate.sh\""
+  ],
+  "real_gate_anchors": [
+   "positive vocabulary checker heredoc opens :771 (`cat > \"$DEST/gate.sh\" <<'GATE_EOF'`), body ends with terminator :896, `chmod +x \"$DEST/gate.sh\"` :897",
+   "vocabulary/english.txt created :691 (line 691 writes it; :692 echoes its word count)",
+   "vocabulary/code.txt heredoc `cat > \"$DEST/vocabulary/code.txt\" <<'CODE_VOCAB_EOF'` :695, terminator :743 (body :696-:742)",
+   "vocabulary/public.txt heredoc `cat > \"$DEST/vocabulary/public.txt\" <<'PUBLIC_VOCAB_EOF'` :748, word list :748-:769",
+   "invocation `bash \"$DEST/gate.sh\"` :1005, inside the gate block :1003-:1017",
+   "no PATTERNS_HARD/PATTERNS_REVIEW heredoc exists in the current script (deleted by ULICENCE3)"
+  ],
+  "policy_sweep_command": "grep -n '613\\|636\\|640\\|647\\|PATTERNS_HARD\\|PATTERNS_REVIEW' strategy/CODE_AGNOSTIC_RELEASE_POLICY.md",
+  "policy_sweep_output_raw": [
+   "=== policy sweep: 613|636|640|647|PATTERNS_HARD|PATTERNS_REVIEW ===",
+   "40:`PATTERNS_HARD`/`PATTERNS_REVIEW` heredocs that then occupied `orchestration/units/UBUILD1.build.sh` (since",
+   "208:| `caseId` | 1,214 | 1 | LS | packages/exp12-encoder-crossover/code/harness/data/corpus.json:568, packages/exp12-encoder-crossover/code/harness/data/corpus.json:592, packages/exp12-encoder-crossover/code/harness/data/corpus.json:616, packages/exp12-encoder-crossover/code/harness/data/corpus.json:640, packages/exp12-encoder-crossover/code/harness/data/corpus.json:664 … |",
+   "215:| `caseIds` | 210 | 1 | LS | packages/exp12-encoder-crossover/code/harness/data/corpus.json:568, packages/exp12-encoder-crossover/code/harness/data/corpus.json:592, packages/exp12-encoder-crossover/code/harness/data/corpus.json:616, packages/exp12-encoder-crossover/code/harness/data/corpus.json:640, packages/exp12-encoder-crossover/code/harness/data/corpus.json:664 … |",
+   "595:#        ! grep -RIl 'PATTERNS_HARD\\|PATTERNS_REVIEW\\|HARD_FILE\\|GATE_EOF\\|CODE_VOCAB_EOF\\|PUBLIC_VOCAB_EOF' \"$REL\""
+  ],
+  "policy_sweep_verdict": "After the edits the ONLY remaining 613/636/640/647 hits are the unrelated data-file line numbers `corpus.json:640` at :208 and :215 (202/209 pre-edit) — NOT gate citations. Zero PATTERNS_HARD/PATTERNS_REVIEW location citations remain in the policy file; the two survivors of those names are the intentional heredoc-name reference and the T5 grep-marker line, both now explicitly dated as the removed denylist.",
+  "edited_regions_after": [
+   "=== edited regions now ===",
+   "39:The gate's denylist era — the 24 HARD patterns and the 6 REVIEW patterns, written as the",
+   "40:`PATTERNS_HARD`/`PATTERNS_REVIEW` heredocs that then occupied `orchestration/units/UBUILD1.build.sh` (since",
+   "41:deleted by ULICENCE3) — was a **leak detector, not an inventory**: it named 30 strings someone already",
+   "42:thought of, which is the list the census below is measured against. The gate today is not a denylist at all:",
+   "43:it is the **positive vocabulary checker** written by the heredoc beginning",
+   "44:`cat > \"$DEST/gate.sh\" <<'GATE_EOF'`, currently `:771`–`:896` (`chmod +x` at `:897`), which fails the build",
+   "45:when a token outside `vocabulary/english.txt` (created `:691`), `vocabulary/code.txt` (`:695`–`:743`) or",
+   "46:`vocabulary/public.txt` (`:748`–`:769`) appears (invoked at `bash \"$DEST/gate.sh\"`, `:1005`). The",
+   "47:census was therefore built empirically, from the bytes:",
+   "48:",
+   "594:#    T5  no released file contains a scanner/denylist:",
+   "595:#        ! grep -RIl 'PATTERNS_HARD\\|PATTERNS_REVIEW\\|HARD_FILE\\|GATE_EOF\\|CODE_VOCAB_EOF\\|PUBLIC_VOCAB_EOF' \"$REL\"",
+   "596:#          the first three names are the character strings of the denylist that `orchestration/units/UBUILD1.build.sh`",
+   "597:#          no longer contains (ULICENCE3 deleted those heredocs); the last three name the positive vocabulary",
+   "598:#          checker that replaced it, written by the heredoc beginning `cat > \"$DEST/gate.sh\" <<'GATE_EOF'`",
+   "599:#          (currently `:771`–`:896`, `chmod +x` at `:897`)",
+   "600:",
+   "601:# 3. Variant fuzz — substrings and separators. For every identifier in M's domain, generate its"
+  ],
+  "edits": [
+   {
+    "file": "strategy/CODE_AGNOSTIC_RELEASE_POLICY.md",
+    "lines_before": "39-41",
+    "lines_after": "39-47",
+    "class": "LIVE DEFECT (present-tense gate location)",
+    "before": "The 24 HARD patterns in `orchestration/units/UBUILD1.build.sh:613–636` and the 6 REVIEW patterns at\n`:640–647` are a **leak detector, not an inventory**: they name 30 strings someone already thought of. The\ncensus was therefore built empirically, from the bytes:",
+    "after": "The gate's denylist era — the 24 HARD patterns and the 6 REVIEW patterns, written as the\n`PATTERNS_HARD`/`PATTERNS_REVIEW` heredocs that then occupied `orchestration/units/UBUILD1.build.sh` (since\ndeleted by ULICENCE3) — was a **leak detector, not an inventory**: it named 30 strings someone already\nthought of, which is the list the census below is measured against. The gate today is not a denylist at all:\nit is the **positive vocabulary checker** written by the heredoc beginning\n`cat > \"$DEST/gate.sh\" <<'GATE_EOF'`, currently `:771`–`:896` (`chmod +x` at `:897`), which fails the build\nwhen a token outside `vocabulary/english.txt` (created `:691`), `vocabulary/code.txt` (`:695`–`:743`) or\n`vocabulary/public.txt` (`:748`–`:769`) appears (invoked at `bash \"$DEST/gate.sh\"`, `:1005`). The\ncensus was therefore built empirically, from the bytes:",
+    "before_unique_pre_edit": "python str.count(before)==1 in the pre-edit probe",
+    "before_count_post_edit": 0,
+    "after_present_post_edit": true,
+    "anchors_named": [
+     "the `PATTERNS_HARD`/`PATTERNS_REVIEW` heredocs (historical, deleted by ULICENCE3)",
+     "positive vocabulary checker written by the heredoc beginning `cat > \"$DEST/gate.sh\" <<'GATE_EOF'`, currently :771-:896, `chmod +x` :897",
+     "vocabulary/english.txt created :691",
+     "vocabulary/code.txt :695-:743",
+     "vocabulary/public.txt :748-:769",
+     "invocation `bash \"$DEST/gate.sh\"` :1005"
+    ]
+   },
+   {
+    "file": "strategy/CODE_AGNOSTIC_RELEASE_POLICY.md",
+    "lines_before": 589,
+    "lines_after": "595-599",
+    "class": "LIVE DEFECT (stale gate-scanner marker set in the T5 check comment)",
+    "before": "#        ! grep -RIl 'PATTERNS_HARD\\|PATTERNS_REVIEW\\|HARD_FILE' \"$REL\"",
+    "after": "#        ! grep -RIl 'PATTERNS_HARD\\|PATTERNS_REVIEW\\|HARD_FILE\\|GATE_EOF\\|CODE_VOCAB_EOF\\|PUBLIC_VOCAB_EOF' \"$REL\"\n#          the first three names are the character strings of the denylist that `orchestration/units/UBUILD1.build.sh`\n#          no longer contains (ULICENCE3 deleted those heredocs); the last three name the positive vocabulary\n#          checker that replaced it, written by the heredoc beginning `cat > \"$DEST/gate.sh\" <<'GATE_EOF'`\n#          (currently `:771`–`:896`, `chmod +x` at `:897`)",
+    "before_unique_pre_edit": "python str.count(before)==1 in the pre-edit probe",
+    "before_count_post_edit": 0,
+    "after_present_post_edit": true,
+    "why": "The T5 check `no released file contains a scanner/denylist` grepped only for `PATTERNS_HARD|PATTERNS_REVIEW|HARD_FILE` - names of a construct ULICENCE3 deleted, so it could never fire on today's checker. The marker set now also carries the live checker's heredoc names `GATE_EOF|CODE_VOCAB_EOF|PUBLIC_VOCAB_EOF`, and the comment names the current checker with its anchor line numbers."
+   }
+  ],
+  "same_class_defect_in_other_files_report_only": {
+   "command": "grep -rnE '612[-–]637|613[-–]636|640[-–]647|423[-–]458|PATTERNS_HARD|PATTERNS_REVIEW' strategy/ experiments/ repro/ --include='*.md' --include='*.sh'",
+   "raw_output": [
+    "=== same-class sweep in OTHER files (report-only) ===",
+    "strategy/REGEN_ASSESSMENT.md:23:The pattern lists the denylist-era gate hard-coded — the `PATTERNS_HARD`/`PATTERNS_REVIEW` heredocs that then",
+    "strategy/VERIFICATION_REPORT_15.md:15:  - `strategy/REGEN_ASSESSMENT.md:23`: \"The pattern lists are the gate's own heredoc, `orchestration/units/UBUILD1.build.sh:612-637`\" — presented as current fact.",
+    "strategy/VERIFICATION_REPORT_15.md:16:  - `repro/encoder-crossover-190-SANITISED/REDACT3_REPORT.md:296`: `PATTERNS_HARD` heredoc + \"lines 612–637\".",
+    "strategy/VERIFICATION_REPORT_15.md:18:- Scope correction: of the four documents, only PUBLISH_PACKAGE_MANIFEST.md cited `612-637`/`640-647`. UCURATE1.md, UTOK1.md and REPORT.md cited `423-458` and STILL show it (annotated with the anchor). The \"four documents used to cite 612-637\" framing is not supported by UFIX15's own edits.",
+    "strategy/VERIFICATION_REPORT_11.md:19:(`UBUILD1.build.sh:612–637`, patterns at 613–636 = 24 patterns) into",
+    "strategy/VERIFICATION_REPORT_11.md:268:   `UBUILD1.build.sh:423–458`; the **HARD** heredoc is actually at `UBUILD1.build.sh:612–637`",
+    "strategy/VERIFICATION_REPORT_11.md:269:   (patterns 613–636) and **REVIEW** at `UBUILD1.build.sh:640–647`. Lines 423–458 of the script are",
+    "experiments/token-substitution-test/gate-scan.sh:5:cat >\"$HARD\" <<'PATTERNS_HARD'",
+    "experiments/token-substitution-test/gate-scan.sh:30:PATTERNS_HARD",
+    "experiments/token-substitution-test/gate-scan.sh:31:cat >\"$REVIEW\" <<'PATTERNS_REVIEW'",
+    "experiments/token-substitution-test/gate-scan.sh:38:PATTERNS_REVIEW",
+    "experiments/token-substitution-test/REPORT.md:168:they then occupied — the `PATTERNS_HARD`/`PATTERNS_REVIEW` heredocs of `orchestration/units/UBUILD1.build.sh`, since deleted by ULICENCE3 and replaced with the positive vocabulary checker written by `cat > \"$DEST/gate.sh\" <<'GATE_EOF'` (`:771`–`:896`, `chmod +x` at `:897`) —",
+    "repro/encoder-crossover-190-SANITISED/REDACT3_REPORT.md:296:Pattern list transcribed **verbatim** from the `PATTERNS_HARD` heredoc in `orchestration/units/UBUILD1.build.sh` — the denylist that then occupied that script's HARD/REVIEW block (the card's cited range was that script's README prose, not the patterns) and that ULICENCE3 has since deleted. *Superseded-citation note, 2026-10-15 (UFIX16): this is a frozen measurement record; the gate today is the positive vocabulary checker written by the heredoc beginning `cat > \"$DEST/gate.sh\" <<'GATE_EOF'`, currently `:771`–`:896` (`chmod +x` at `:897`), fed by `vocabulary/english.txt` (created `:691`) plus the `code.txt`/`public.txt` heredocs `:695`–`:743` and `:748`–`:769`; the counts below stand as measured.* 24 fixed patterns, matched with `grep -rn -I -i -F -f` over the whole tree. Cross-checked: my list is byte-identical (as a sorted set) to UTOK2's `experiments/token-substitution-test/work2-scan/hard.txt`, also 24 patterns, `diff` empty — so the counts below are directly comparable to UTOK2's."
+   ],
+   "candidates": [
+    {
+     "path": "strategy/VERIFICATION_REPORT_11.md",
+     "lines": "19, 268-269",
+     "text": "`UBUILD1.build.sh:612–637`, patterns at 613–636 = 24 patterns` / `(patterns 613–636) and **REVIEW** at `UBUILD1.build.sh:640–647`. Lines 423–458 of the script are`",
+     "class": "SAME CLASS, unedited - a verification unit's frozen record of a past transformation (UTOK2->UTOK1) that still states the dead range as fact with no superseded marker; outside this unit's write paths by instruction."
+    },
+    {
+     "path": "strategy/VERIFICATION_REPORT_15.md",
+     "lines": "16-17",
+     "text": "`repro/encoder-crossover-190-SANITISED/REDACT3_REPORT.md:296`: `PATTERNS_HARD` heredoc + \"lines 612–637\".` ... `strategy/CODE_AGNOSTIC_RELEASE_POLICY.md:40` ... `:589` (comment)",
+     "class": "FROZEN RECORD that already quotes the UFIX16 finding; mentions the policy file by number - it is a record of that audit, not a live location claim."
+    },
+    {
+     "path": "repro/encoder-crossover-190-SANITISED/REDACT3_REPORT.md",
+     "lines": "296",
+     "text": "`PATTERNS_HARD` heredoc in `orchestration/units/UBUILD1.build.sh` - the denylist that then occupied that script's HARD/REVIEW block ... ULICENCE3 has since deleted. *Superseded-citation note ... currently :771–:896 ...*",
+     "class": "ALREADY FIXED by UFIX16 (past tense + superseded note)."
+    },
+    {
+     "path": "strategy/REGEN_ASSESSMENT.md",
+     "lines": "23",
+     "text": "The pattern lists the denylist-era gate hard-coded — the `PATTERNS_HARD`/`PATTERNS_REVIEW` heredocs that then occupied `orchestration/units/UBUILD1.build.sh` (since deleted by ULICENCE3; ... currently `:771`–`:896`, `chmod +x` at `:897`)",
+     "class": "ALREADY FIXED by UFIX16."
+    },
+    {
+     "path": "experiments/token-substitution-test/gate-scan.sh",
+     "lines": "5, 30-31, 38",
+     "text": "its own `PATTERNS_HARD`/`PATTERNS_REVIEW` heredocs",
+     "class": "NOT A DEFECT - the script defines its own pattern lists; content, not a citation of UBUILD1."
+    }
+   ],
+   "frozen_baselines_also_showing_the_dead_range": "orchestration/units/UFIX12.md:17-18, orchestration/handoffs/UFIX12.json:16, orchestration/units/UCURATE1.md:37 (annotated), orchestration/units/UTOK1.md:36 (annotated), scratch/** copies - records of the removal itself, correctly historical."
+  },
+  "check_note": "Pre-edit uniqueness asserted with python str.count==1 for both edit regions before slicing (A count=1, B count=1). Post-edit: pol.count(before)==0 for both and pol.count(after)==1 for both, verified in the same run that wrote this handoff. Script sha256 and line count re-read after the edits: identical to pre-edit (a2a1df178fbc8fca01c573f283327fe6ca96d2d7bdca89ef539b17987e007a69 / 1019). Policy file grew 703 -> 713 lines (wc -l): +6 from edit 1 (3 lines -> 9) and +4 from edit 2 (1 line -> 5)."
+ },
+ "blocker": "",
+ "next_unit_hint": "Same-class residue is confined to frozen records. If the batch wants the present tense gone there too, the next unit should own strategy/VERIFICATION_REPORT_11.md:19,268-269 (dead range 612-637/640-647 stated as fact, no superseded marker) - read-only for UFIX18 by instruction; VERIFICATION_REPORT_15.md:16-17 merely records the UFIX16 finding and needs no change.",
+ "write_paths": [
+  "strategy/CODE_AGNOSTIC_RELEASE_POLICY.md",
+  "scratch/ufix18/**",
+  "orchestration/units/UFIX18.md",
+  "orchestration/handoffs/UFIX18.json"
+ ]
+}

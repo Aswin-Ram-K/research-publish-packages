@@ -1,0 +1,54 @@
+{
+  "unit": "V-XSTACK2",
+  "overall": "partial",
+  "status": "done",
+  "checked_cells": ["WIN-SGL", "WIN-VLLM", "WIN-TUNED", "G3"],
+  "checks": [
+    "1 PASS — grid laws re-derived from rows: SGL S1 gcd64, S2 gcd128, S0/G3 gcd64; vLLM V1 1088, V2 1056, V3 2096; TUNED replay gcd64 (10/30 exact). Rows: WIN-SGL 1800, WIN-VLLM 692 (V-XSTACK's 950 count was stale), TUNED 289, G3 888; all status 200 and stack/config_id populated.",
+    "2 PASS — TUNED page_size reconciled: variant_server_info top-level page_size=1 but _mamba_cache_chunk_size=64, so the delivered 64-token grid is consistent; analysis.json page_size_reconciliation records this. TUNED is not a no-grid baseline.",
+    "3 PASS — no claim rests outside delivered rows: all 3669 rows status 200 with stack/config_id; TUNED rows_sha256 be59... matches run.json; G3 A availability false at 32k/64k due to limit_hit, as recorded.",
+    "4 PASS — schema guard fixed: 289/289 TUNED rows now stack=tuned/config_id=TUNED; win_tuned_analyze.read_rows rejects missing/empty stack or config_id. TUNED analysis.json sha 43306ea... matches FIX-VXSTACK.",
+    "5 PASS with residual — restore-diff now exists and matches tuned-restore-diff: only max_total_num_tokens, random_seed, internal_states, startup_time differ; server_info sha 040b... matches. V1/V2/V3 restore records have compared_keys and all_compared_ok=true; committed analysis restore fields are still null until analyzer rerun, though source code supports them.",
+    "6 DOWNGRADED/FAIL — no in-cell G0 exists for S1/S2/TUNED; GAPS.md records the downgrade. vLLM V1/V2/V3 gates remain pass (weighted_score 0.975, config_ok true). This repair did not add SGLang gates."
+  ],
+  "evidence": {
+    "rows_sha256_verified": {
+      "WIN-SGL": "ea5728760540352a752bca501fe77aaae054ec0a88deba4db9bdf8a9f3c5e6c7 (1800 rows)",
+      "WIN-VLLM": "a606ca06a23145a52d2bb50f82baff1b6e8d0689164c80ce987c441ce83cf1d7 (692 rows)",
+      "TUNED": "be59b3bf8d5572cca38a5c74f5b8348152ec6b8a29b4b270fc4374baa62905cc (289 rows)",
+      "G3": "d6313f72c2eca0bc2192922bfcf1bad08c853c9dd11fbd67b0e65f85428759ee (888 rows)"
+    },
+    "tuned_analysis_sha256": "43306ea291c2accb9df7eab098109e362e76123a5ef020135977e13b8dcc6365",
+    "server_info_sha256": "040b3113e35ed67993463695c145cf108e2c0b12dfecd0403e24c0bfb77322e8",
+    "page_size_reconciliation": "variant_server_info page_size=1; _mamba_cache_chunk_size=64; rows follow 64-token grid",
+    "vllm_restore": "V1/V2/V3 health 200, qwen3.5-9b, max_model_len 32768, config_ok true, all_compared_ok true"
+  },
+  "red_green": {
+    "guard": "TUNED win_tuned_analyze.read_rows stack/config_id",
+    "red": "strip stack/config_id from one in-memory row -> SystemExit 1, 'line 1: missing or empty stack'; analysis.json not rewritten",
+    "green": "original rows -> exit 0, 289 rows read; TUNED analysis.json sha 43306ea... unchanged",
+    "red_exit": 1,
+    "green_exit": 0
+  },
+  "not_reproduced": [
+    "V-XSTACK's WIN-VLLM row count 950 / sha 6a7f... is stale; delivered rows are 692 / a606...",
+    "Committed WIN-VLLM analysis.json restore.compared_keys and all_compared_ok are null until win_vllm_analyze.py is rerun after the restore-record change"
+  ],
+  "overstated": [],
+  "unverified": [
+    "In-cell G0 for S1/S2/TUNED: none exists; U2 predates the protocol and box restarts",
+    "vLLM pre/post /get_server_info byte equality beyond recorded config_ok boolean"
+  ],
+  "assumptions": [
+    "G3 directory is the intended G3-LIMIT cell; no separate G3-LIMIT directory exists",
+    "WIN-VLLM analysis stale restore fields are a rerun gap, not a source-code gap",
+    "Guard red/green was reproduced in memory without modifying rows or analysis files"
+  ],
+  "blocker": "",
+  "next_unit_hint": "V-XSTACK-c: either add in-cell G0 for S1/S2/TUNED or accept the downgrade; rerun WIN-VLLM analyzer to populate restore compared_keys; reconcile V-XSTACK's stale 950-row count.",
+  "write_paths": [
+    "orchestration/handoffs/V-XSTACK2.json"
+  ],
+  "tool_calls": 34,
+  "bound": 40
+}

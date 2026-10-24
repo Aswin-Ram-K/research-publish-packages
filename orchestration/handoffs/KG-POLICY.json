@@ -1,0 +1,40 @@
+{
+  "unit": "KG-POLICY",
+  "status": "done",
+  "artifacts": [
+    "config/targets.toml",
+    "tests/test_kg_policy.py",
+    "state/logs/kg-policy-analysis.md",
+    "orchestration/units/KG-POLICY.md",
+    "orchestration/handoffs/KG-POLICY.json"
+  ],
+  "evidence": {
+    "before": "pytest tests/test_kg_policy.py -q -> 1 failed, 11 passed; PolicyWideningError: [targets.duval] include would WIDEN admission past graphify's predicate - refused (config may narrow admission, never widen it): '.lane-j-scratch/*.md' ... '.lane-j-scratch/**' (raised src/resextract/kg/policy.py:327)",
+    "after": "pytest tests/test_kg_policy.py -q -> 12 passed in 0.08s",
+    "full_suite": "pytest tests/ -q -> 1202 passed, 1 skipped in 63.28s (skip = documented live test requiring --live; 0 failures)",
+    "guard_B_red_green": "re-adding '.lane-j-scratch/**' to a throwaway config copy re-raises PolicyWideningError with the identical message -> guard live, not neutered",
+    "policy_module_untouched": "sha256 f8f1f7db1559a0e9990801afd4e4d96a64bf73c40251432c9a126c7c8ca90c64, mtime 2026-10-08, unchanged across the fix (defect was config-vs-predicate drift, not wiring)",
+    "live_audit": "policy_audit('/home/zer0null/Duval', fixed policy) -> violations [], admitted 908, assertions 3 ok, unreadable 0, '.lane-j-scratch/' rejected source='ignored_dir' reason=\"directory excluded by graphify's predicate; never walked\"",
+    "root_cause": "Duval owner (foreign actor) commit 90ba6d3 2026-10-14 20:23:54 -0500 added '.lane-j-scratch/' to Duval .gitignore:93 (machine-local 'lane J' scratch, another owner's; also .run-dashboard/, .selftest/); GIT_OPTIONAL_LOCKS=0 git check-ignore -v -> .gitignore:93:.lane-j-scratch/; before Oct 14 the untracked-but-not-ignored dir was admitted (U1.7R audit HEAD 5cdc471a: 537 admitted, violations [])",
+    "commands": [
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_kg_policy.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q",
+      "GIT_OPTIONAL_LOCKS=0 git -C /home/zer0null/Duval check-ignore -v .lane-j-scratch"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Doc-sync card: docs/PLAN.md:198 still lists '.lane-j-scratch/*.md' in the include and docs/TARGET_POLICY.md §5's observation block still documents the old admission - both predate Duval commit 90ba6d3 (2026-10-14) and need date-stamping like the config. Restore path if the owner un-ignores: re-add include '.lane-j-scratch/**' + both assert_present entries + the U1.7R positive pins. Also: verification-independence gap - rule (b) forbids this author unit spawning a verifier, so a fresh V-KG-POLICY card should red->green the inverted test-12 pins independently.",
+  "write_paths": [
+    "config/targets.toml",
+    "tests/test_kg_policy.py",
+    "state/logs/kg-policy-analysis.md",
+    "orchestration/units/KG-POLICY.md",
+    "orchestration/handoffs/KG-POLICY.json"
+  ],
+  "assumptions": [
+    "card HARD RULES write-list omitted config/targets.toml but card step 3(b) sanctions 'fix the config/wiring' - the fix is exactly that: the config (and the test assertion that pinned the old decision), not a waiver and not a silent delete",
+    "throwaway probe file state/logs/kg-policy-probe.toml was created and deleted within one command (red->green probe; not a deliverable)",
+    "docs/PLAN.md and docs/TARGET_POLICY.md were NOT edited (outside the write list) - the drift they carry is flagged in next_unit_hint",
+    "resolution chosen over xfail/skip: xfail would leave the REAL target config broken for pipeline use, not merely the test red"
+  ]
+}

@@ -1,0 +1,45 @@
+{
+ "unit": "VAUDIT",
+ "overall": "partial",
+ "checks": [
+  "1 licensed-text fidelity: all 5 key licensed sentences present in current files (E3 verbatim; E2/E4/E4R/LIVE-MEAS emphasis-only). Machine corrected_to strings are condensed rewrites, not byte-identical md prose (1/26 verbatim) - consistency gap, no claim lost.",
+  "2 unlicensed survivor: FAIL 4/5 files. LIVE prose carrying retracted wording: E2.md:159,160; E3.md:160 (identity),167 (43 snapshots),172 (fails); E4.md:24,63,68 (deterministic),69 (permanent),70 ((L-1) ceiling); LIVE-MEAS.md:46,73,75,81,83. E4R clean. Correctly quoted: E2.md:13,24; E4.md:9,13; E4R.md:12-13,54; LIVE-MEAS.md:15-19.",
+  "3 no datum lost: PASS. json.load OK all 5, contracted 7 keys present; row shas unchanged (E2 47980b49/250dcf04, E3 7d123dd4/b9969992, E4 5f10b316 + report f3a341c3, E4R 05a59f28, LIVE-MEAS 6150e534); payload intact (E2 1658.9=456.7+30.2+1172.0 rounded in JSON/exact in md; E3 31/35 + 70/70 + stored -1728; E4 45/45 vs 0/40 + 3.4646074215706565e-25 in e4_report; E4R 180/180, 40/40 L-64, 0/40 L; LIVE-MEAS 960, 1.2988, 113166=5081+108085).",
+  "4 STATUS §7 accuracy: 20+ numbers match source; FAIL STATUS.md:163 'pad-adj 1.2964' vs LIVE-MEAS.json pad_adjusted_R_over_A_pooled=1.2963 (analysis 1.2962747633). DRIFT §3 617 handoffs/599 cards vs 619 .json/600 cards now (623->625 entries) - STATUS-E + U6-R wrote after the sweep, dated count.",
+  "5 red->green: mutate E4 licensed sentence to 'deterministic' -> audit MISSING; mutate STATUS 1.2988->1.2999 -> token absent. Real files untouched.",
+  "6 containment: PASS. Every cell dir's newest mtime precedes its repair (E2 15:49<15:59, E3 15:45<E3C, E4 15:49<16:00, E4R 16:12<16:17, LIVE-MEAS 16:12<16:15); client.py/runner.py/analyze.py untouched; VERDICTS.md appended by VLIVE only, no rewrite."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Either (a) accept the top-corrections-section as the only citable text and stop citing bodies, or (b) run one additive follow-up per body that converts the 15 live survivors into `> original` quotations (E2:159-160, E3:160/167/172, E4:24/63/68/69/70, LIVE-MEAS:46/73/75/81/83) and adds `superseded_text` to E3.json/E4.json. Also correct STATUS.md:163 1.2964->1.2963 and refresh §3 counts (617/599 -> 619/600).",
+ "write_paths": [
+  "orchestration/units/VAUDIT.md",
+  "orchestration/handoffs/VAUDIT.json",
+  "orchestration/VERDICTS.md",
+  "scratch/vaudit/"
+ ],
+ "not_reproduced": [],
+ "overstated": [
+  "E2C/E3C/E4C/E4C3/LMC/E4RC headers say the originals are 'retained verbatim' and the corrected wording is present (true), but the retracted wording also stands unquoted as live prose in the body, so a reader who skips the top section reads the retracted claim (E2, E3, E4, LIVE-MEAS; E4R clean)."
+ ],
+ "unverified": [
+  "The 1.2964/1.2963 pad-adjusted figure was traced to the handoff and analysis mean only; analysis.json was not re-run (offline read only).",
+  "E3C/E4C left E3.json/E4.json without a `superseded_text` key; the md carries inline as-written quotations for E3 and two `>` blockquotes for E4, which is a style gap the check named but could not mechanically score."
+ ],
+ "corrections": [
+  "STATUS.md:163: pad-adj 1.2964 -> 1.2963 (source handoffs/LIVE-MEAS.json pad_adjusted_R_over_A_pooled; analysis mean 1.2962747633).",
+  "STATUS.md §3: 617 parseable handoffs / 599 unit cards / 623 entries -> 619 json / 600 cards / 625 entries at this read (617 was the pre-STATUS-E/U6-R set).",
+  "E2.json and E4.json store rounded payload strings (1658.9 / 3.46e-25); exact values live in E2.md:56 and e4_report.json - not a loss, but the handoff is not the precision-bearing record.",
+  "Machine verifier_corrections[].corrected_to are condensed paraphrases; only 1 of 26 matches the md prose after emphasis folding. Cite the md sentence, not the JSON string."
+ ],
+ "red_green": [
+  "scratch/vaudit/E4_mut.md: licensed 'reproduced in 45/45 (CP95 lower 0.9213...)' -> 'deterministic' => that check flips PRESENT -> MISSING (audit fails it).",
+  "scratch/vaudit/STATUS_mut.md: 1.2988 -> 1.2999 => audit reports 1.2988 absent from the copy while it is present in LIVE-MEAS.json."
+ ],
+ "assumptions": [
+  "Read-only audit: no repaired file was written; scratch copies only. Automated session - no questions asked.",
+  "Fidelity judged on the verifier's key licensed sentence plus the repair's corrected_to list; whitespace/bold/typographic-dash differences folded, paraphrase counted as MISSING by design.",
+  "Survivor classification: a hit is 'quoted' only inside a `>` blockquote or an explicit as-written table cell in a corrections section; the LIVE-MEAS Result body is live prose even though the C1-C6 table labels it 'retained verbatim below'."
+ ],
+ "tool_calls": 22,
+ "bound": 24
+}

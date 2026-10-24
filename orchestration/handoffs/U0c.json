@@ -1,0 +1,57 @@
+{
+  "unit": "U0c",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/corpora/build_corpora.py",
+    "experiments/context-cache/corpora/volatility.json",
+    "experiments/context-cache/corpora/compaction.json",
+    "experiments/context-cache/corpora/endtoend.json",
+    "experiments/context-cache/corpora/MANIFEST.json",
+    "orchestration/units/U0c.md"
+  ],
+  "evidence": {
+    "builder_sha256": "343dc17b8ff6cc162e1ffd46c5cd34b4b1c79885e46ec882a7644a0e6df07de7",
+    "builder_bytes": 79587,
+    "manifest_sha256": "bd089b05e112771429cb3fb4e760d1a82dd9bc36d5deea19c8b3446754830291",
+    "volatility_sha256": "6e2fe8979f67e1fe762c3daaa0ff53c30bd59c0d607b796d503e7d710e2bc7db",
+    "compaction_sha256": "d702f8f4af2f9d34f68fbca3aa2a096fc8b9cb5f7f7fb32f282c869cbd1f2961",
+    "endtoend_sha256": "f853d3ea1ecda7e6fd11e6b732e55493725041acb8bc741abf539aeadcf79ff2",
+    "sizes_bytes": {
+      "volatility.json": 388652,
+      "compaction.json": 351975,
+      "endtoend.json": 240410
+    },
+    "est_tokens": {
+      "volatility": 82392,
+      "compaction": 73815,
+      "endtoend": 50774,
+      "total": 206981
+    },
+    "counts": {
+      "volatility": {"scenarios": 4, "turns": 192, "turns_per_scenario": 48, "depths": [2, 4, 8, 16, 32, 48]},
+      "compaction": {"scenarios": 3, "turns": 174, "turns_per_scenario": 58},
+      "endtoend": {"scenarios": 2, "turns": 120, "turns_per_scenario": 60}
+    },
+    "determinism": "two builds into .det_a and .det_b: cmp OK for volatility.json, compaction.json, endtoend.json, MANIFEST.json; diff -r clean; sha256 pairs identical (volatility 6e2fe897..., compaction d702f8f4..., endtoend f853d3ea...); temp dirs removed afterwards",
+    "commands": [
+      "cd experiments/context-cache/corpora && python3 build_corpora.py",
+      "python3 build_corpora.py --out .det_a && python3 build_corpora.py --out .det_b && cmp .det_a/volatility.json .det_b/volatility.json && cmp .det_a/compaction.json .det_b/compaction.json && cmp .det_a/endtoend.json .det_b/endtoend.json && cmp .det_a/MANIFEST.json .det_b/MANIFEST.json && diff -r .det_a .det_b",
+      "sha256sum .det_a/volatility.json .det_a/compaction.json .det_a/endtoend.json",
+      "sha256sum .det_b/volatility.json .det_b/compaction.json .det_b/endtoend.json",
+      "python3 - <<'EOF' (independent re-parse: json.load of the 3 corpora; MANIFEST sha256/bytes vs disk; non-empty turns; est_tokens == max(1,(len+3)//4); volatile task_id unique per turn; turn texts unique; volatility depths == [2,4,8,16,32,48] and 48 turns; compaction_points cover 8000/16000/24000; endtoend last turn role user and gold occurrences == 1) EOF"
+    ],
+    "check_output": "MANIFEST: 3 sha256 + byte sizes match disk; total est tokens 206981 | all corpora: parse OK, no empty turns, est_tokens consistent, volatile+turn text unique | volatility: 4 x 48 turns, depths [2,4,8,16,32,48], preamble 818-863 est, assistant turns 378-447 | compaction C1: 58 turns total 25092 points [(8000,17,8343),(16000,36,16317),(24000,55,24282)] | compaction C2: 58 turns total 24383 points [(8000,17,8139),(16000,37,16253),(24000,57,24383)] | compaction C3: 58 turns total 24340 points [(8000,17,8092),(16000,37,16249),(24000,57,24340)] | endtoend E1: 60 turns, final user question, gold 0042_rename_fingerprint occurrences=1 at turn 17 | endtoend E2: gold anchor_mode=bbox_y1 occurrences=1 at turn 23",
+    "neighbours_untouched": "experiments/context-cache/client.py, runner.py, analyze.py, __init__.py, README.md mtimes unchanged (17:57-17:58); no src/, tests/ or papers/ writes"
+  },
+  "blocker": "",
+  "next_unit_hint": "Load corpora as Case(preamble=scenario['preamble'], turns=[Turn(text=t['text'], volatile=t['volatile']) ...]). E3: compaction_points[].at_turn is the 0-based turn index to fire compaction (cumulative includes preamble); summary_hint is the canned summariser input. E5: gold_answer occurs exactly once before the final user question; use gold_turn_index to locate it.",
+  "write_paths": [
+    "experiments/context-cache/corpora/build_corpora.py",
+    "experiments/context-cache/corpora/volatility.json",
+    "experiments/context-cache/corpora/compaction.json",
+    "experiments/context-cache/corpora/endtoend.json",
+    "experiments/context-cache/corpora/MANIFEST.json",
+    "orchestration/units/U0c.md",
+    "orchestration/handoffs/U0c.json"
+  ]
+}

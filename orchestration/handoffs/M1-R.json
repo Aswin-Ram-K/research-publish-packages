@@ -1,0 +1,91 @@
+{
+  "unit": "M1-R",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/M1-R.md",
+    "orchestration/handoffs/M1-R.json",
+    "scratch/m1r/verify_laws.py",
+    "scratch/m1r/laws.txt",
+    "scratch/m1r/metrics.txt",
+    "scratch/m1r/provenance.txt"
+  ],
+  "evidence": {
+    "command_or_count": ".venv/bin/python scratch/m1r/verify_laws.py -> 5 blocks, every number below; NO live model request in this unit (0 POST, 6 read-only GET)",
+    "prefix_law_u2": "44/44 warm repeats satisfy cached == 64*floor(L/64) and uncached == L mod 64; 0 violations; L range 314..1550; 20 distinct cached values, all 64-multiples",
+    "prefix_law_u9": "139 rows carrying a cached count; law 64*((L-1)//64) has 0 violations; law 64*floor(L/64) has 3 violations, all at L=1024 where the server reuses 960 not 1024",
+    "grid_invariant_global": "954 non-zero cached counts across every jsonl under experiments/context-cache/; counts NOT divisible by 64 = 0",
+    "sub_64_prompt": "42-token prompt -> cached 0 on both sends (orchestration/handoffs/U2.json:15 boundary_under_64)",
+    "multiple_of_64_penalty": "L=1024: rep1 cached 0 (5/5), rep2 cached 960 (5/5); L=1088: rep1 0 (30/30), rep2 1024 (5/5); rows at cells/U10/u10_rows.jsonl:3-4; Fisher exact 2x2 p=3.06e-07 per U10.json",
+    "break_lands_at_head": "U5 fork arm at ~3.1k tokens: cached=64 on 187/190 deep rows; summarise_in_place cached=0 on 187/190; baseline 0 on 189/190 (cells/U5/u5_raw.jsonl)",
+    "suffix_collapse_vs_append": "U15 turn 18 (compaction): arm R (head rewritten) cached 0 / 1928 prompt (rows.jsonl:18); arm A (append) cached 8448 / 9263 (rows.jsonl:98). Arm hit rates: A 0.9270, C 0.9243, F 0.7627, R 0.7373",
+    "reconciliation": "0/813 and 384 are one law, not two: cached = 64*floor(min(k,L-1)/64). 0 => byte-identical prefix < 64 tokens (break inside block 0); 384 = 64*6 => prefix was 384..447 tokens. 384 is NOT evidence of a matchable mid-prompt boundary",
+    "live_config": {
+      "disable_radix_cache": false,
+      "radix_cache_backend": null,
+      "radix_eviction_policy": "lru",
+      "enable_hierarchical_cache": false,
+      "hicache_storage_backend": null,
+      "hicache_ratio": 2.0,
+      "hicache_size": 0,
+      "enable_session_radix_cache": false,
+      "enable_lmcache": false,
+      "lmcache_config_file": null,
+      "page_size": 1,
+      "chunked_prefill_size": 8192,
+      "max_total_num_tokens": 1306681,
+      "uses_mamba_radix_cache": true,
+      "mamba_radix_cache_strategy": "extra_buffer",
+      "max_mamba_cache_size": 64,
+      "enable_cache_report": true,
+      "metrics_cache_type": "UnifiedRadixCache",
+      "metrics_cache_hit_rate": 0.9747562582345191,
+      "metrics_cached_tokens_total": 3800640
+    },
+    "stack_verdict": "prefix reuse: ON (plain radix + hybrid UnifiedRadixCache). Any suffix recovery: OFF/ABSENT - hierarchical cache False, hicache storage None, lmcache False, session radix False. Only --enable-session-radix-cache and --enable-hierarchical-cache are flippable flags; both are eviction/capacity changes, not matching changes. --radix-cache-backend is defined as a backend registered via register_radix_cache_backend, i.e. server-side code, not a config line.",
+    "docs_negative": "docs.sglang.io/llms-full.txt (5,518,111 chars, sha256 671770ab...) contains 0 occurrences of 'non-prefix', 'CacheBlend', 'match_prefix'. LMCache CacheBlend + Blending docs mention SGLang 0 times: the blend engine is documented for vLLM.",
+    "sources_fetched": [
+      "https://arxiv.org/abs/2405.16444 (CacheBlend v3: 'regardless prefix or not'; TTFT 2.2-3.3x, throughput 2.8-5x, 'without compromising generation quality')",
+      "https://arxiv.org/html/2405.16444v3 (body: 'at most 0.002 in F1 score or Rouge-L score ... with 5%~18% recomputation ratio'; '4.1-6.6x TTFT reduction'; 'prefix caching can only save the prefill of the first text chunk')",
+      "https://arxiv.org/abs/2311.04934 (Prompt Cache v2, MLSys 2024: schema of prompt modules; 'ensures positional accuracy during attention state reuse'; 8x GPU / 60x CPU TTFT)",
+      "https://docs.sglang.io/llms-full.txt (HiCache flags; --enable-session-radix-cache; --radix-eviction-policy lru|lfu|slru|priority|tlru; --radix-cache-backend; --enable-lmcache; --mamba-track-interval default 256)",
+      "https://docs.vllm.ai/en/latest/features/automatic_prefix_caching.html ('Mamba state is stored only on the Mamba block grid, so a prefix-cache hit can resume only at a block boundary'; --enable-mamba-shared-prefix-checkpoint; --prefix-match-unit 64)",
+      "https://docs.lmcache.ai/kv_cache_optimizations/cacheblend.html ('lmcache server --engine-type blend')",
+      "https://docs.lmcache.ai/kv_cache_optimizations/blending.html (LMCACHE_ENABLE_BLENDING, LMCACHE_BLEND_SPECIAL_STR, LMCACHE_USE_LAYERWISE, LMCACHE_BLEND_CHECK_LAYERS=1, LMCACHE_BLEND_RECOMPUTE_RATIOS=0.15)"
+    ],
+    "literature_from_verified_table": [
+      "arXiv:2411.19379 Marconi (MLSys 2025) - in-place state updates mandate exact-match hits - orchestration/handoffs/U-LIT-REVIEW.md:32",
+      "arXiv:2608.30310 Tail-Replay - recurrent state reusable only at stored checkpoints; 5-10% replay keeps 92.8-99.9%; 9.1-14.3x at 32K - U-LIT-REVIEW.md:33",
+      "arXiv:2410.15332 EPIC - 'existing context caching requires exact prefix matches'; 8x TTFT / 7x throughput - U-LIT-REVIEW.md:25",
+      "arXiv:2610.15186 SAFE-KV - prefix-conditioned composition preserves only 47.2% / 37.8% of full-prefill answers - U-LIT-REVIEW.md:29",
+      "arXiv:2610.18014 LatentRemedy - non-prefix reuse with conflicting tasks: up to 90% drop - U-LIT-REVIEW.md:30",
+      "arXiv:2510.09665 LMCache - 15x throughput with vLLM - U-LIT-REVIEW.md:48",
+      "LMSYS unified-radix blog ('a recurrent state is valid only at an exact prefix checkpoint') - U-LIT-REVIEW.md:44"
+    ],
+    "ranked_recommendation": [
+      "1. Never rewrite the head: keep 1..200 append-only and append the item-165 correction. (a) 1..164 yes (floored to 64); (b) 166..200 yes, nothing invalidated; (c) low, prompt-assembly only; (d) strong, live on this server - U15 rows.jsonl:18 (0/1928) vs :98 (8448/9263).",
+      "2. Status quo plain radix prefix. (a) yes floored to 64; (b) 0; (c) zero; (d) strongest - 954/954 counts are 64-multiples.",
+      "3. --enable-session-radix-cache. (a) yes; (b) no; (c) one flag + restart; (d) medium - eviction protection only.",
+      "4. HiCache L2/L3. (a) yes; (b) no; (c) low-med; (d) medium-strong - capacity, not matching.",
+      "5. CacheBlend / LMCache blend. (a) yes as chunk prefix; (b) partial - 5-18% recompute, <=0.002 F1 loss; (c) high - different engine, chunk-separated pre-tokenised prompt; (d) strong on full-attention, unverified on hybrid.",
+      "6. Position-independent caching (Prompt Cache / EPIC / TurboRAG). (a) yes; (b) only unchanged text at shifted positions; (c) high; (d) medium; inapplicable to 30/40 linear layers.",
+      "7. Item-level isolation / per-item requests. (a) n/a; (b) yes by construction; (c) medium; (d) weak - loses cross-item attention."
+    ],
+    "commands": [
+      ".venv/bin/python scratch/m1r/verify_laws.py  # offline law re-derivation -> scratch/m1r/laws.txt",
+      "curl -s --max-time 20 http://192.168.2.168:8012/get_server_info  # read-only, config keys in evidence.live_config",
+      "curl -s --max-time 25 http://192.168.2.168:8012/metrics -o scratch/m1r/metrics.txt  # cache_type=UnifiedRadixCache, cache_hit_rate 0.9748",
+      "curl -sL https://docs.sglang.io/llms-full.txt  # 5540603 B, sha256 671770ab...; grep: 0 hits for non-prefix / CacheBlend / match_prefix",
+      "curl -sL https://arxiv.org/abs/2405.16444 ; curl -sL https://arxiv.org/html/2405.16444v3",
+      "curl -sL https://arxiv.org/abs/2311.04934",
+      "curl -sL https://docs.vllm.ai/en/latest/features/automatic_prefix_caching.html",
+      "curl -sL https://docs.lmcache.ai/kv_cache_optimizations/{cacheblend,blending}.html"
+    ]
+  },
+  "blocker": "Two of the three inputs to the reconciliation are not re-derivable: (1) the PREFIX|INSERT|SUFFIX 384-token cell has no artifact anywhere on disk (searched experiments/, state/, strategy/, papers/, orchestration/), so its 384-447-token prefix length is INFERRED from the grid law; (2) the 0/813 probe exists only as an in-hand prior at orchestration/handoffs/U-BENCH-PROTOCOL.json:238, and the protocol phase designed to settle it (C3) has experiments_run=false. Additionally, no mid-prompt insertion has ever been measured on this server: the prefix law rests on whole-prompt repeats (U2/U9/U10) and head rewrites (U4/U5/U15), so the mid-prompt case is inference. Closed by the bounded 8-12 request probe named in next_unit_hint.",
+  "next_unit_hint": "M1-S: run the mid-prompt probe this unit could not (no live requests were permitted here). 8-12 requests, one at a time: (i) cold PREFIX(~400 tok)+X+SUFFIX; (ii) PREFIX+X'+SUFFIX with X' same token count (in-place replacement); (iii) PREFIX+X''+SUFFIX with +7 tokens (insertion); (iv) repeat (i) byte-identically. Falsifiable prediction: cached == 64*floor(len(PREFIX)/64) ~= 384 on (ii) and (iii), full L on (iv), and the suffix contributes 0 in every case. Also pad the prompt OFF the 64-boundary (U10 penalty) and record prompt_tokens % 64 per row. If (iii) shows any suffix reuse, M1-R Part B is wrong and must be re-written.",
+  "write_paths": [
+    "orchestration/units/M1-R.md",
+    "orchestration/handoffs/M1-R.json",
+    "scratch/m1r/"
+  ]
+}

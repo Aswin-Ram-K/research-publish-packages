@@ -1,0 +1,28 @@
+{
+  "unit": "UREVER2",
+  "status": "done",
+  "artifacts": [
+    "strategy/PAPER2_REVERIFICATION.md",
+    "orchestration/units/UREVER2.md",
+    "orchestration/handoffs/UREVER2.json",
+    "scratch/urever2/verify_divergence.py"
+  ],
+  "evidence": {
+    "command_or_count": "python3 scratch/urever2/verify_divergence.py -> decision-variants.jsonl rows=3040, l1-head-to-head.jsonl rows=380; CONTROL (V0<->V2) non-decomposable pairs=244 identical=244 divergent=0 0.00%; CONTROL (V1<->V3) pairs=244 identical=244 divergent=0; BINDING POOLED numerator=476 denominator=1140 rate=41.7544%; PROMPT POOLED numerator=245 denominator=760 rate=32.2368%; STABLE cases=190 all-four-agree=60 31.5789%; l1 decider-0.8b vs laya cases=190 agree=92 disagree=98 divergence=51.5789%; per-variant binding V0=41.7544% V1=47.1053% V2=40.0000% V3=43.3333%",
+    "commands": [
+      "sha256sum <engine-a>/decision-variants.jsonl -> c5ec44a799ddeb963f862fc5c054ddad6ef2fce6ad90edfafd7c1755ac4370e7 (1197797 bytes, 3040 lines); l1-head-to-head.jsonl -> 6af0e0d8294cf4d7a20e2d8cb9bfe0c11ff70cc4c4b2792fcdedaf9246b2a1e7 (63238 bytes, 380 lines)",
+      "find state -name 'decision-variants.jsonl' -exec sha256sum {} \\; -> 15/15 copies byte-identical; same for l1-head-to-head.jsonl, 15/15 identical",
+      "python3 -c \"sorted({r['correct'] for r in rows})\" -> [0,1,2,3,4] in BOTH files: 'correct' is the INDEX of the correct option, not a right/wrong flag",
+      "python3 (shared-field identity) -> l1 vs decision-variants V0: picked_index identical 190/190 for decider-0.8b AND laya; ms/p_chosen identical 0/190 -> l1-head-to-head is a re-execution, not an independent decision set",
+      "python3 (accuracy) -> picked_index==correct: laya 71/190=0.3737, decider-0.8b 100/190=0.5263, matching L1_HEAD_TO_HEAD.md 0.374/0.526"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "A2 is draftable NOW: all inventoried figures reproduce exactly (41.8% = 476/1140 binding divergence at V0; 32.2% = 245/760 prompt; 0% control 244/244; 31.6% = 60/190 stable). Three framing corrections the drafter must absorb: (1) the 41.8% denominator is 1140 model-pair-case comparisons at V0 only, not the 3040-row corpus; the four variants give 41.75/47.11/40.00/43.33%, so '41.8% across four variants' mis-describes the design; (2) the pooled 32.2% prompt figure hides laya at 119/190=62.63% vs deciders at 15.8-26.8%; (3) the 'second, independent corpus' l1-head-to-head is NOT independent -- same 190 cases, same two models, picked_index identical 190/190 while ms/p_chosen differ on every row, so its 51.6% is arithmetically the same 98 disagreements as the decider-0.8b-vs-laya pair at V0. Largest reproducibility gap: the corpora carry no stimulus text -- the 190 questions/options/labels live only in engine-a/evals/fixtures/reflex-decisions.ts (not audited). A paper resting on the .jsonl alone rests on a corpus whose stimuli are withheld.",
+  "write_paths": [
+    "strategy/PAPER2_REVERIFICATION.md",
+    "orchestration/units/UREVER2.md",
+    "orchestration/handoffs/UREVER2.json",
+    "scratch/urever2/**"
+  ]
+}

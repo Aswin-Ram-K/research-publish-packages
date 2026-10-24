@@ -1,0 +1,56 @@
+{
+ "unit": "VLIVE",
+ "overall": "pass",
+ "checks": [
+  "1 PASS offline --analyse: 0.048 s, 0 requests, no lock (returns before acquire_lock); rows sha 6150e534…119b65 unchanged, 960/960 rows, 80/(epoch,arm), 0 non-200; analysis.json + report.md byte-identical",
+  "2 PASS headline AND horizon recomputed from rows: R/A 1.2597/1.3195/1.3171 -> pooled 1.2988 (sd .03383, t95 [1.2147,1.3828], df=2), pad-adj 1.2964, F/A 1.0661, R/F 1.2187, hit R .7791/.7667/.7653 A .9532/.9529/.9527; t1-40 1.7046/1.7682/1.7195 (mean 1.7308), t41-80 0.9508/1.0296/1.0561 (mean 1.0122)",
+  "3 PASS decomposition is arithmetic (payload note 'Not a mechanism'): R 113166=5081(4.49%)+108085, F 61214=8960(14.64%)+52254, A 46461=3658(7.87%)+42803; per-epoch break parts sum to pooled; steady denominator 228",
+  "4 PASS with correction: 4 folds [18,35,53,71], card records 8k trigger assumption and rejects ~7/~14; lag R 1152/99 -> 448/78, F 896->224, A 384->896, e1 R 1248->1088->384->0; 'does not worsen' holds for R,F only",
+  "5 PASS numbers / label caveat: E3 912 = 335 clean + 6 grid + 308 one-body + 182 (104+78) + 81 unexplained; E4 195/960 padded, 3 residue-0 listed and flagged; 'unexplained' honest, 'ambient' not (54/81 within 2 turns of a fold)",
+  "6 PASS design fix with correction: t1 cached 0 in all 12 runs; e2/e3 t10/t17 cached identical (4864/7616); prompt identical only in e3 (e2 spread 9 tokens); e1 R one block high from pads; max prompt 38440, no context event",
+  "7 PASS red-green: R<->A swap 1.2988->0.7699 and decomposition exchanges A/R; +10k on one fold row moves break 5081->15081 (steady fixed); fold-flag off -> break 3695/steady 109471; cached->0 moves E3 one-body 308->307, unexplained 81->82",
+  "8 PASS containment: only cells/LIVE-MEAS/** + units/LIVE-MEAS.md + handoffs/LIVE-MEAS.json + its own .occamy.lock (released 21:07:58Z, held 420.2 s, waited 0.0, one acquisition); client/runner/analyze/render mtimes 2026-10-20; VERDICTS.md untouched; root .occamy.lock is U6-R's"
+ ],
+ "blocker": "",
+ "next_unit_hint": "Manuscript may print: R/A = 1.30x over 80 turns/4 folds (t95 1.22-1.38, df=2); '1.700x is a 40-turn figure'; R/A falls to parity (0.95-1.06) over turns 41-80, A cheaper only in e1. Do not print 1.700 as a law, 'ambient' for the 81 unexplained rows, 'does not worsen' for arm A, or 'prompt identical in epochs 2-3'. A stable 80-turn law needs a ~4k-trigger rerun (more folds); the card's ~7/~14 remains untestable at 8k.",
+ "write_paths": [
+  "orchestration/units/VLIVE.md",
+  "orchestration/handoffs/VLIVE.json",
+  "orchestration/VERDICTS.md"
+ ],
+ "not_reproduced": [
+  "card claim 'prompt and cached identical across all four arms at t10/t17 in epochs 2-3': cached identical holds in e2/e3, prompt identical only in e3 (e2: R 5347, C 5354, F 5355, A 5356)"
+ ],
+ "overstated": [
+  "'81 unexplained ambient misses' - 54/81 lie within 2 turns of a fold (R 37 / F 25 / A 19), so 'ambient' is not licensed",
+  "'the post-fold lag does not worsen' - true for R (1152->448) and F (896->224), false for A (384->896); since-fold medians non-monotone (896,1344,928,1344,896,960)",
+  "'U15's 1.700 is confirmed inside its own window' - t1-40 is 1.705-1.768 (mean 1.731), i.e. 0.3-4.0% above 1.700 (mean +1.8%); no epoch reproduces 1.700",
+  "'A overtakes R after ~40 turns' - only e1 (0.951); e2/e3 are 1.030/1.056 = parity"
+ ],
+ "unverified": [
+  "max_model_len 131072 comes from a live GET /v1/models and cannot be re-derived offline (largest prompt 38440, no non-200, no context anomaly are verified)",
+  "request-level 0-live-request proof for the original --run rests on rows/ts and the single lock record; only the --analyse path was executed here"
+ ],
+ "corrections": [
+  "card: prompt+cached identical in epochs 2-3 -> cached identical, prompts identical only in e3",
+  "card: 'A overtakes R' -> R/A falls to parity (0.951-1.056, mean 1.012)",
+  "card: 'confirmed 1.700' -> reproduced to within 0.3-4.0%",
+  "card: 'does not worsen' -> restrict to R and F",
+  "'ambient' -> 'unexplained'",
+  "E4 residue-0 rows flagged but not excluded: e1 A t19 and e2 A t31 remain inside the 912-row E3 population"
+ ],
+ "red_green": [
+  "swap R<->A labels: R/A 1.2988 -> 0.7699 (=1/1.2988); decomposition exchanges A/R exactly (R excess 113166 -> 46461, break 5081 -> 3658)",
+  "e1 R t18 uncached +10000: excess 113166 -> 123166, break 5081 -> 15081, steady unchanged 108085",
+  "e1 R t18 scheduled_compaction off: break 5081 -> 3695, steady 108085 -> 109471",
+  "one cached_tokens -> 0 (e1 R t5): E3 one-body 308 -> 307, unexplained 81 -> 82",
+  "policy string flip alone: no movement - decomposition reads numeric fields, not labels"
+ ],
+ "containment": "cells/LIVE-MEAS/{plan.json,rows.jsonl,events.jsonl,analysis.json,report.md,live_meas.py}, units/LIVE-MEAS.md, handoffs/LIVE-MEAS.json, own experiments/context-cache/.occamy.lock (released 21:07:58Z, 420.2 s after first row, lock_wait_s 0.0); shared modules client.py/runner.py/analyze.py and src/resextract/context/render.py mtimes 2026-10-20; VERDICTS.md untouched (15:58); root .occamy.lock belongs to U6-R",
+ "assumptions": [
+  "pad cost per arm taken from the author's figures and cross-checked with pad_chars*0.263979; both give 1.296",
+  "fold-lag recomputation used the author's definition (turns strictly inside a fold interval, non-compaction); an all-turns<=40 median would give 896, so the 1152 figure is definition-dependent and the definition is the right one for the claim"
+ ],
+ "tool_calls": 18,
+ "bound": 22
+}

@@ -1,0 +1,45 @@
+{
+  "unit": "URESID3",
+  "status": "done",
+  "artifacts": [
+    "strategy/RESIDUAL_TRIAGE_3.md",
+    "orchestration/units/URESID3.md",
+    "orchestration/handoffs/URESID3.json",
+    "scratch/uresid3/flagged.json",
+    "scratch/uresid3/{base,after}.{recompute,parse,compare}.txt",
+    "scratch/uresid3/copy/package",
+    "scratch/uresid3/after"
+  ],
+  "evidence": {
+    "flagged_lines_parsed": "1133 flagged lines / 303 distinct tokens in scratch/urelease3/gate.json",
+    "gate_result": "scratch/urelease3/gate.json:1145 GATE RESULT: FAIL -- 1133 out-of-vocabulary token(s).",
+    "emitted_tree_files": "39 (find scratch/urelease3/dest/research-publish-packages -type f -not -path '*/.git/*' | wc -l)",
+    "top60_buckets": "a=4 distinct/63 occ; b=26/255; c=6/32; d=24/331; unplaced=2/18 (kk 10, REC 8)",
+    "bucket_a_total": "109 occurrences / 37 distinct (80 unit-name + 29 working-dir path artefacts)",
+    "partB_exit_codes": "recompute 0->0, parse 0->0, compare 0->0; diff of captured stdout: IDENTICAL for all three",
+    "digest_a15224ba": "fixture/fixture-190.json bytes=76897, payload and emitted tree identical",
+    "digest_076164ac": "repro/encoder-crossover-190/fixture/reflex-decisions.ts 145031 bytes = instrument (as-audited), NOT the fixture; shipped package instrument = 369159b0...",
+    "digest_c7696edc": "recompute-claims.py:140-142 sha256 over [[id,correct,len(options)],...]; grep workspace -> 0 hits",
+    "exit_logic": "recompute-claims.py:143 sys.exit(0 if ok else 1); ok only set at :105-106 and :132-133; PUBLISHED_STALE loop :135-138 has no ok &=",
+    "wrong_document": "papers/encoder-crossover-190/CLAIMS.md:39 and :46 label the instrument digest as 'fixture sha256'"
+  },
+  "commands": [
+    "find scratch/urelease3/dest/research-publish-packages -type f -not -path '*/.git/*' | wc -l",
+    "python3 parse of scratch/urelease3/gate.json flagged lines -> scratch/uresid3/flagged.json",
+    "sha256sum scratch/urelease3/dest/research-publish-packages/packages/encoder-crossover-190/fixture/fixture-190.json",
+    "sha256sum repro/encoder-crossover-190/fixture/reflex-decisions.ts",
+    "grep -rn c7696edc --include=* . | grep -v /.venv/",
+    "cd scratch/uresid3/copy/package && python3 verify/recompute-claims.py; echo $?",
+    "cd scratch/uresid3/copy/package && python3 second-labeller/parse_fixture.py; echo $?",
+    "cd scratch/uresid3/copy/package && python3 second-labeller/compare.py; echo $?",
+    "diff scratch/uresid3/copy/base.recompute.txt scratch/uresid3/after.recompute.txt"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Fixing pass: (1) genericise the 109 bucket-(a) occurrences (free for all three tools - measured) then regenerate MANIFEST.json sha256/bytes and re-run gate.sh; ~1024 tokens will remain flagged. (2) Correct papers/encoder-crossover-190/CLAIMS.md:39,46 and second-labeller/RUN.json:8-10 / REPORT.md:5 to label 076164ac... as the instrument (reflex-decisions.ts, as-audited) and cite a15224ba... for fixture/fixture-190.json. (3) Give recompute-claims.py a real exit path for PUBLISHED_STALE (ok &= hit at :137) or change the :139 message; 0.3526 is stale by 3/190 cases due to the rename.",
+  "write_paths": [
+    "strategy/RESIDUAL_TRIAGE_3.md",
+    "orchestration/units/URESID3.md",
+    "orchestration/handoffs/URESID3.json",
+    "scratch/uresid3/**"
+  ]
+}

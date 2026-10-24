@@ -1,0 +1,44 @@
+{
+  "unit": "FIX-PKG",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/READER-MAP.md",
+    "papers/context-cache/PACKAGE.md",
+    "papers/context-cache/RUN.json",
+    "orchestration/handoffs/FIX-PKG.json"
+  ],
+  "evidence": {
+    "verify_before": "verify_package: FAIL\n  - missing claim ids in READER-MAP: C53, C54\nexit=1",
+    "verify_after": "verify_package: PASS — 54 claims, 54 mapped, all recompute functions present, all referenced cells non-empty\nexit=0",
+    "recompute_tail": "52 claims checked, all match",
+    "recompute_tail3": "  PASS  19/19 values match / (blank) / 52 claims checked, all match",
+    "stale_count_after": "grep -rn \"50 claim\\|50/50\\|50, 50\" papers/context-cache/ | wc -l -> 0",
+    "recompute_sha256": "6fd5bec16ed3c7e93ca8fb875aa6aa8ffafdcdb8db30df9437ab4aebfe54c8e9",
+    "captured_utc": "2026-10-23T09:47:35Z",
+    "run_json_units": "U2,U4,U4b,U5,U9,U10,U13,U14,U15,G1,G5,M4",
+    "run_json_valid": "json.load OK; synthesis_recompute.claims=52, claims_matching=52, captured_utc set, prose_attribution_guard preserved",
+    "recompute_c54_vs_expected": "0 mismatches; ratio [0.1592,0.1645] of 1620892 at 1.501724x (2434133 tokens, 283 docs), binding state_cache",
+    "commands": [
+      "python3 papers/context-cache/verify_package.py; echo \"exit=$?\"",
+      "python3 papers/context-cache/recompute.py all | tail -2",
+      "sha256sum papers/context-cache/recompute.py",
+      "grep -rn \"50 claim\\|50/50\\|50, 50\" papers/context-cache/ | wc -l",
+      "python3 -c \"import json;json.load(open('papers/context-cache/RUN.json'))\""
+    ]
+  },
+  "assumptions": [
+    "The handoff and contract prescribe `recompute.py all`, so the 52-claim definition (C01 and C16 externally verified by CX-V2/u5_recon.py and u4_recon.py, not value-checked by recompute.py, as CLAIMS.md states) is authoritative; verify_package.py therefore legitimately prints 54 (it counts CLAIMS.md table rows), and PACKAGE.md :116 was corrected to report 54 rather than 52.",
+    "verify_package.py hard-coded no count and needed no fix (it derives ids from CLAIMS.md); the READER-MAP gap was the whole failure.",
+    "RUN.json units table exists; G5 and M4 appended in the existing per-unit schema (unit, purpose, status, requests_run, rows, rows_file, rows_sha256, analysis_file, analysis_sha256, config_id/verifier), with no keys invented outside that shape; request/row totals were NOT recomputed and left as recorded history.",
+    "G5 config_id S0 taken from the rows' config_id field; M4 config_id LIVE and config_sha256 taken from M4/analysis.json run block.",
+    "CLAIMS.md C54 'Value' column is empty; the value lives in the claim-in-manuscript text. Left untouched (not this card's write path), noted for a claims-prose unit."
+  ],
+  "blocker": "",
+  "next_unit_hint": "CLAIMS.md:160 (C54) has an empty Value column — backfill it with the recomputed bracket; CLAIMS.md:159-160 sit under the 'Cross-stack cache-hit granularity' heading although G5 is fan-out and M4 is eviction, so consider a section re-home. request_totals in RUN.json still excludes G5 (192) and M4 (327) and needs a decision, not a silent edit.",
+  "write_paths": [
+    "papers/context-cache/READER-MAP.md",
+    "papers/context-cache/PACKAGE.md",
+    "papers/context-cache/RUN.json",
+    "orchestration/handoffs/FIX-PKG.json"
+  ]
+}

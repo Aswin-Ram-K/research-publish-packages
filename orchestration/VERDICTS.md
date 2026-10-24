@@ -9,6 +9,9 @@ red→green check on at least one guard. The main session makes the phase-gate c
 | 2026-10-08 05:40 | **V0** | 0 | **PASS** | `docs/PLAN.md` §0–§11 (spec of record) | plan byte-identical (29875 B / 308 lines / 12 h2); doctor 3/3 rc 0 core 4/4, docling DOWN; U0.2 33p+1s, U0.3 64p exact; sqlite 12 tables + WAL; journal tamper→`(False,2)`, redaction safe; live off 152 ms/0 rt, on 7.44 s/256 rt | **2/2 reproduced** (`if not thinking:` and journal hash recompute), both sha-restored | **advance** |
 | 2026-10-08 05:55 | **V1** | 1 | **PARTIAL** | `docs/PLAN.md` §4 stage 1 (:198), §3 (:99), §11 (:288), Phase-1 gate (:256) | Gate A rebuild rc 0 / 2.75 s / 2695 n / 7151 e / 119 comm at `b44e0e1`; U1.1 artifact `built_at_commit=6deaed0` = exactly 2685/7102/128; pollution 0/0/0, `.lane-j-scratch` 23; `file_type` {code,concept,rationale}, no `edges` key, links 7102/7102 with confidence+confidence_score; `--no-viz` absent for extract; labels≠ids; relative `--graph` from `/tmp` exit 1; 22/22 scoped tests | **2/2 reproduced** (`returncode != 0 and check:` and `timeout=limit`), sha `fd1b6d30…` before == after | **PARTIAL — Gate B UNVERIFIED (Occamy HTTP 000), Gate C never run** |
 | 2026-10-08 06:25 | **V3** | 3 | **PARTIAL** | `docs/PLAN.md`:201 (web research), :61 (SearXNG symptom), :237 (mitigations) | 78 passed (17+61); 4/4 guards reverted -> failed -> sha-restored; 3 paced genuine empties (3rd latches `consecutive_empty`), 2 rapid forced empties at 1.617/1.315 ms latch `fast_empty` on the 1st; arXiv 9408 ch sha8 `0dde6e26` page_date 2025-05-29 `changed=false`; stub 22 usable `suspect` first40 `404: Not Found`; cache hit 0 HTTP; SSRF 4/4 `blocked_url` + seeded cache hit; raw `unresponsive_engines` **non-empty** | **4/4 reproduced** (a–d), sha256 before == after each | **advance code; live-search half PARTIAL** |
+| 2026-10-21 05:22 | **CX-V3** | context-cache | **PASS** | `docs/PLAN.md` §9, §10; `experiments/context-cache/README.md` | `recompute.py all` 41/41; u5_recon 760/760; u4_recon body 11/44, divergence turn 12; 13/13 digests match; C22 20,649=1,620+19,029, C24 32,143=30,523+1,620 (own script) | **1/1 reproduced** (1.7002→1.6002 ⇒ `FAIL 4/5`; restored ⇒ `PASS 5/5`) | **advance (recommended)** |
+| 2026-10-21 12:12 | **VM1** | batch 1 (M1) | **PARTIAL** | `docs/PLAN.md` §9, §10; `experiments/context-cache/README.md` | M1-M 99 rows: cached%64 99/99, control 3/3 floor64 (10,432 at 10,446/10,445/10,444), 30 edited = 22 floor64 + 8 −64 (8581→8512, 5201→5184, 5190→5120, 514→448), trunc 8,192 → 8,576/10,368; M1-R U2 44/44, U9 65/65 non-zero, U15 0/1,928 vs 8,448/9,263 (rates .9270/.9243/.7627/.7373), live config 17/17; **M1-M base cold 9/33**; global 954→1044 (0 non-multiples both) | **2/2 reproduced** (in-memory +1 ⇒ 98/99, U2 +64 ⇒ 43/44; pristine 99/99 & 44/44) | **advance with corrections** |
+| 2026-10-23 08:20 | **V-XSTACK** | cross-stack cells | **FAIL** | `docs/PLAN.md` §9–§10; `experiments/context-cache/README.md` "How to reproduce the win protocol" rows 1–5 | grids re-derived: SGL 64/128/64, vLLM 1088/1056/2096, TUNED replay 64; TUNED claims `page_size 1` but its 30 delivered replay rows are the G3 64-law (10/30 exact, 19 evicted-to-0, max abs residual 8641; `/get_server_info` page_size 64); 289/289 TUNED rows `stack=null config_id=null` and the analyzer accepts them (red 900→899, `n_rows_total` still 1800); TUNED pre vs restored 477/481 keys identical (4 restart artefacts); no in-cell G0 for S1/S2/TUNED — only U2 (2026-10-20 18:05) predates; vLLM gate 0.975 / config_ok true; 1800/1800/950 rows, 0 status≠200 | **red→green reproduced** (strip `stack`+`config_id` ⇒ exit 0, silent bucket loss; restore ⇒ analysis byte-equal to committed) | **reject TUNED page_size claim; re-gate S1/S2/TUNED** |
 
 ## V0 — Batch 0 independent verification (U0.1, U0.1b, U0.2, U0.3) → PASS
 
@@ -337,11 +340,15 @@ set is corrected; neither makes the docket lie about its own provenance.
 `docs/FINDINGS.md` 3f85d0a8/47603939 · `README.md` 2c34d208/1f6bbdf6 — recorded blob ==
 `git rev-parse <commit>:<path>`, docket file sha == recorded sha, docket bytes == `git cat-file blob`.
 
+> **Superseded 2026-10-16 (UFIX22, dated record left unrewritten):** `94495930…` is the workspace docket repo's own recorded blob, **not a target object** — it is absent from `/home/zer0null/Duval/.git/objects`. The pinned copy is `dockets/duval/duval-u55-pinned/material/data/2026-09-28-duval-m0.jsonl` — 866,816 B / 573 records / 573 gated lines / 712 gate occurrences, sha256 `431605e6…` (`AGENTS.md` `## Hard constraints`; `strategy/CONTAINMENT_CHECK.md` §2, currently `:166`). Verify the anchors before relying on the figures.
+
 **Why pinning matters, observed live:** Duval's self-build loop committed while V5 worked
 (`5cdc471a → 63cbc36d`); the tracked trace file moved blob `94495930 → e2d64679` (sha `431605e6 →
 37bdb77c`). The docket still holds the `5cdc471a` bytes — the mechanism working, not a defect. The
 three untracked files (`.ci-trunk.txt 590e007e`, `monograph.txt 033b1547`, evidence review
 `d141f139`) are unchanged, which is luck, not a guarantee — exactly why they must stay flagged.
+
+> **Superseded 2026-10-16 (UFIX22, dated record left unrewritten):** the tracked trace's move is parent `e25ac80f…` (1,567,661 B / 1029 lines) → HEAD `2ec22a67…` (1,570,243 B / 1031 lines); `94495930…` is the docket repo's own recorded blob, **not a target object**. The live path has since measured **1,624,082 B / 1087 lines / sha256 `35687221…` at 2026-10-15 21:02:05** (`strategy/CONTAINMENT_CHECK.md` §7, currently `:270`).
 
 **C7 judgement — defect.** The docket does not lie (the ref is reported `not_a_file_in_target`), but
 pinning exists to obtain the bytes that existed *at the commit*, and deletion is the extreme case of
@@ -3008,3 +3015,894 @@ rubber stamp.
 **Blocker:** none. **Next:** the main session may advance past Checkpoint 4.
 
 **Evidence:** `orchestration/handoffs/U8.72.json` · `orchestration/units/U8.72.md` · `state/logs/U8.72-c3-commit-files.txt` · **tool calls: 9 work / 10 bound** (U8.72's own count, carried from the handoff, not re-measured by U8.75) · section reconstructed by `U8.75`.
+
+---
+
+## Session 2026-10-15 — current-session verifier verdicts (transcribed by `UVERD1`)
+
+**Provenance.** Seven independent verifier units (`UVER1`–`UVER7`) returned verdicts for the 2026-10-15
+strategy/paper/licence batch. Their records lived only in `strategy/VERIFICATION_REPORT{,_2..7}.md`;
+`UVERD1` read each report and transcribed the verdicts below. **No verdict, count or replacement below is
+invented** — every line traces to a report `UVERD1` read. Nothing above this line was altered, including the
+`U8.72`/Checkpoint 4 material. **Totals: 7 verdicts · 15 `contradicted` · 19 `overstated` · 24
+`not_reproduced`.** (`unverified` items are listed per report; UVER2's are an unnumbered list and are not
+summed. `UVER3`, `UVER5`, `UVER6` record no red→green; `UVER1` records none.)
+
+---
+
+## UVER1 — PASS (VISA) / PASS-WITH-CORRECTIONS (PUB) — visa & publication strategy docs (`UH2`, `UV1`)
+
+Report: [`strategy/VERIFICATION_REPORT.md`](../strategy/VERIFICATION_REPORT.md) · subjects
+`strategy/VISA_INDIA_EUROPE.md` (322 L) → **pass**; `strategy/PUBLICATION_STRATEGY.md` (406 L) →
+**pass-with-corrections**. All load-bearing claims re-fetched against live primary sources.
+
+- **`contradicted` — none.**
+- **`overstated` (1)** — PUB §5 L185: the JOSS unblock date "≈2027-03-28" is derived from commit history
+  while §11.10 marks the repo's *public* visibility `UNVERIFIED`. **Replacement:** *"The six-month gate
+  cannot clear before **2027-03-29**, and only if the repository has been publicly available since
+  2026-09-28 — a premise that is itself `UNVERIFIED` (§11.10). If public availability began later, the gate
+  clears later."*
+- **`not_reproduced` (6)** — ERC-2027-STG call dates (`VISA` L98); MLSys 2027 dates (`PUB` L67/S21, already
+  self-flagged §11.5); Software Heritage ISO/IEC 18670 (`PUB` L76/S25); Preprints.org footer (`PUB`
+  L73/S26); `make-it-in-germany.com` bot-block (`VISA` L206 — HTTP 200 to the verifier); two cosmetic
+  metadata stamps (`VISA` L49, L74).
+- **`unverified` (1)** — the two cosmetic metadata stamps (`VISA` L49, L74). Author `UNVERIFIED` lists (§5's
+  23 items; §11's 13) confirmed honest and complete; udi.no and migri.fi blocks reproduced as HTTP 403.
+- **Red→green:** none recorded in the report.
+
+---
+
+## UVER2 — PASS-WITH-CORRECTIONS ×2 — US visa routes & paper inventory (`UH1`, `UP1`/`UCORR1`)
+
+Report: [`strategy/VERIFICATION_REPORT_2.md`](../strategy/VERIFICATION_REPORT_2.md) · subjects
+`strategy/VISA_US_ROUTES.md` and `strategy/PAPER_CANDIDATES.md` — both **pass-with-corrections**; neither
+`fail`.
+
+- **`contradicted` (2)**
+  1. `VISA_US_ROUTES.md` §4.1 :347–362 and §6.1 :550 — the *"Contributions to repositories of software…"*
+     example is attributed to **6 USCIS-PM F.2(B) criterion 5**; F.2 contains **0** occurrences of
+     `repositories`. Verbatim in **2 USCIS-PM M.4** (O-1A). **Replacement:** cite 2 USCIS-PM M.4, not
+     6 USCIS-PM F.2.
+  2. `PAPER_CANDIDATES.md` :305 — *"3,590 imajev rows"* → **3,690** (re-derived from
+     `docs/research/EXP#11-evidence/imajev-rows.jsonl`; 3,590 was a `imajev-progress.json` mid-run
+     snapshot). Same correction owed to `docs/research/FINDINGS_REGISTER.md:47`.
+- **`overstated` (3)** — §1 :45/:47 quota figures (H-1B1 6,800/yr; E-3 10,500/yr) stated as fact while
+  §13.12 lists quota figures `UNVERIFIED` (**values correct**: INA 214(g)(8)(B)(ii)); repair narrows §13.12
+  to the implementing regs. §2.2 :87 *"(C) would not help them even if they had one"* — too strong; (C)
+  confers a separate 20,000 pool. §1 :40 *"No cap, no lottery"* flat in the summary table vs §13.9/§9's
+  flag. *(Also noted, not listed: §4.3 :433–434 — (C) has no per-country element.)*
+- **`not_reproduced` (1)** — the pre-revision citation census's literal "0×" counts (pre-revision file
+  superseded in place, no backup); method and result recorded in `UP2`'s handoff, the 38-file count and the
+  current file's post-correction counts re-measure correctly.
+- **`unverified`** — author-flagged list retained (fees, O-1 premium-processing fee, India backlog premise,
+  `travel.state.gov` 403, etc.), plus the verifier's own coverage limits. **Upgrade:** *Matter of Dhanasar*
+  decoded via `pdftotext` (30,129 chars), three prongs verbatim ⇒ §13.6's flag is closable.
+- **Red→green:** `evals/prevention.ts` `prevention.detector-coverage`, check F — regex against the real
+  `docs/MISTAKES.md` is **GREEN** (sentence 19/12/3/4 == parsed table); mutating the sentence to "20
+  classes — 13 automated" against the same table is **RED**.
+- **Drift note:** root `docs/*.md` byte total moved +474 B from a concurrent unrelated session (38-file count
+  stable).
+
+---
+
+## UVER3 — PASS-WITH-CORRECTIONS — `second-labeller-190` experiment + journal corrections (`UEXP`)
+
+Report: [`strategy/VERIFICATION_REPORT_3.md`](../strategy/VERIFICATION_REPORT_3.md) · subject
+`experiments/second-labeller-190/` (UEXP) over `evals/fixtures/reflex-decisions.ts` (read-only target).
+Every re-derivable number reproduced identically; all six artifacts regenerated byte-for-byte in a `/tmp`
+copy; UEXP's originals never rewritten.
+
+- **`contradicted` — none.**
+- **`overstated` (3)**
+  1. `RUN.json:104` / `EVIDENCE.md:258` — *"independently corroborating"* `FINDINGS_REGISTER.md:47`.
+     Different referents (fixture's authored `correct` vs model-emitted answers in EXP#11), both 0.
+     **Replacement:** *"the same defect class is separately measured absent from the fixture's authored
+     labels (0/190); this is an additional, independent measurement, not corroboration of the model-run
+     register entry."*
+  2. `metrics.json:22–25` carries `kappa: 0.9013584840356494` with no limitation, contrary to
+     `PREREGISTRATION.md:12–16`. **Fix:** add a `limitation` key.
+  3. `EVIDENCE.md:278` — *"The 191st match"*; line 63 is the **first** `id:` match by line order (the one
+     non-case id), not the 191st. Cosmetic.
+- **`not_reproduced` (2)** — the **14:28:31** timestamp on the 8 `.git/objects/` writes (shape reproduces: 8
+  paths, 7 loose + 1 pack, none under `evals/fixtures`, none tracked — but found at **14:38:30**, after
+  UEXP's declared window); the `_before` half of the read-only proof.
+- **`unverified` (2)** — Route B's blindness (result checkable, blindness is a self-report, no transcript);
+  the stood-down `mimo-v2.6-flash` pass (no file; `metrics.json` has exactly one pass).
+- **Red→green:** none recorded as a guard revert; controls instead: the naive non-greedy regex produces
+  exactly one false `answer ∉ option set` (`context.package-014`), while the verifier's independent
+  JSON-transform parser (no bracket regex) yields **0/190** and agrees field-for-field on all 190 records;
+  pooled κ matched to 1e-15 and all seven strata to 1e-6. §6 adjudication ruled unblinded judgement,
+  disclosed as such — pass.
+
+---
+
+## UVER4 — PASS-WITH-CORRECTIONS — `MANUSCRIPT.md` disclosure + limitations (`UPAPER1d`, `UPAPER1e`)
+
+Report: [`strategy/VERIFICATION_REPORT_4.md`](../strategy/VERIFICATION_REPORT_4.md) · subject
+`papers/encoder-crossover-190/MANUSCRIPT.md` @ 2026-10-15 15:30 (857 L, 65,875 B), authors UPAPER1d/e.
+**`numbers_changed = 0` is true for every measured value; no value moved or disappeared.** The edits
+*added* B2 figures.
+
+- **`contradicted` (2)**
+  1. `MANUSCRIPT.md:809` / `AVAILABILITY.md:9` — `harness_self_contained = partial` attributed to
+     `repro/encoder-crossover-190/README.md` §5. The token occurs **nowhere** in the released subset; the
+     key lives **only** in `orchestration/handoffs/UREPRO.json:16`. **Replacement:** drop the pseudo-key and
+     quote README §5's own heading prose ("Is the harness genuinely self-contained? **Partial —
+     precisely:**"), **or** attribute the key to UREPRO's handoff. Substance (partial self-containment) is
+     fully supported by README §5.
+  2. `MANUSCRIPT.md:620-625` — §6.2's *"14-case shared contested core"* enumerates only **13**;
+     `memory.admission-018` (`DROP→EPISODIC`) is omitted (`RUN2.json .disagreement_structure.shared_contested_core`
+     = 14; `ROBUSTNESS.md:202`). **Replacement:** insert `memory.admission-018`. Counts (14/12/4) correct.
+- **`overstated` (1)** — `AVAILABILITY.md:29-30`'s parenthetical implies `reproducesAt3dp` and
+  `absoluteDifference` sit at `.models["decider-4b-exp11-reproduction"]`; they sit at
+  `.models[…].strata.instrument190`. Values exact (`true`, `4.7368421052684795e-05`; 190 `.perCase` rows).
+- **`not_reproduced` (3)** — literal byte-identity of §6.6 (no pre-edit copy of an untracked file); the
+  changelogs' literal "before" strings; recount of `sentences_changed = 20`. All coverage limits.
+- **`unverified` (2)** — attribution of target-repo dirtiness (by exclusion/timestamp, not direct capture);
+  §2.1 novelty/priority wording (judgement call, not adjudicated).
+- **Red→green (on `/tmp` copies; `MANUSCRIPT.md` never modified):** **RED** (disclosure fix reverted) — 7
+  `/home/zer0null` occurrences, 0 `repro/` pointers, §7 anchored to the private read-only repo ⇒ an
+  unverifiable availability claim and 7 local-path exposures. **GREEN** (real file) — 0 local-path
+  occurrences, 7 `repro/` pointer occurrences, 5 distinct subset paths, 0 missing ⇒ claim holds.
+
+---
+
+## UVER5 — PASS-WITH-CORRECTIONS — `strategy/TRADE_SECRET_AUDIT.md` (`UTS1`)
+
+Report: [`strategy/VERIFICATION_REPORT_5.md`](../strategy/VERIFICATION_REPORT_5.md) · subject
+`strategy/TRADE_SECRET_AUDIT.md` (507 L). All five statutory citations hold verbatim; every
+reproduction-critical count (32/30/30/6/4/3, 2,220 lines, 7 `DecisionKind` kinds, 6 namespaces, 16-section
+list) reproduced exactly. Conclusions survive; one is **strengthened**.
+
+- **`contradicted` (1)** — **X1**: `U9`/§4.3's *"`EXCLUDED.md` says 42"* and *"a one-file discrepancy"*
+  **both fail**. `EXCLUDED.md` contains **no file count** (it names 15 exclusion classes E1–E15, matching
+  `MANUSCRIPT.md:832`). The "42" is `repro/encoder-crossover-190/MANIFEST.json:37`, which explains itself
+  (*"MANIFEST.json is the only file absent from its own list"*); physical count **43** = 42 + `MANIFEST.json`.
+  **Replacement source:** `repro/encoder-crossover-190/MANIFEST.json:36–42`; `U9` should be **closed, not
+  carried as unverified.**
+- **`overstated` (4)** — **O1** §5.2's "cheap option" (redact `rationale` + `namespaces`, removing "the 335
+  lines that narrate kernel internals"): the **`question` text is itself disclosure-bearing and carries
+  more** kernel vocabulary than the rationales (71 vs 38 prose lines; e.g. `:288`, `:571–575`, `:620–627`);
+  questions are the only load-bearing field ⇒ the fixture is closer to `withhold`. **O2** §5.3's three
+  passages *"already recompose into a buildable specification"* — accurate as *"a credible skeleton that
+  names the parts and fixes two interfaces"*; much of it is public prior art. **O3** `F1`–`F8` under
+  "measurements without construction": F3/F4/F7/F8 measurements; F1/F2 structural/logical; F5/F6 method.
+  **O4** §4.1 M12 cites `fixture :627`; `:627` is an `options:` line (term at `:629`).
+- **`not_reproduced` (5)** — **N1** the exact "335 mechanism-narrating lines" (vocabulary unpublished; the
+  verifier's stated vocabularies give 317 whole-file / 121 prose / 419 broad+ / 519 very broad); **N2**
+  `MANUSCRIPT.md` line citations §7 `:772–780` and availability `:738–754` (on disk `:782`, `:826–827`;
+  mtime 15:35:50 postdates the audit's 15:31:34 ⇒ post-audit concurrent edit, **not** a UTS1 error; quoted
+  text confirmed); **N3** U6 — what suffices as "reasonable measures"; **N4** U8 — non-US regimes (EUR-Lex
+  HTTP 202, empty body); **N5** cross-host races behind the consume-once gate.
+- **`unverified` (4)** — **V1** U7 spillover; **V2** U13 prior disclosure (the largest untested
+  assumption); **V3** U1–U4/U12 (partial advance: no released harness step consumes `rationale`/`namespaces`
+  — `harness/prepare.py` renders from `question`/`options`/`correct`); **V4** §1839(3)(A)'s present-perfect
+  gloss.
+- **Upgrades:** `U5`'s "no case law fetched" retired — *Ruckelshaus v. Monsanto Co.*, 467 U.S. 986 (1984),
+  supplies the principle verbatim; the 16-section list confirmed with §4.1.2 as the **weakest** entry (a
+  capability inventory — vocabulary/roadmap, not construction).
+- **Red→green:** none recorded.
+
+---
+
+## UVER6 — PASS-WITH-CORRECTIONS; `WITHHELD.md` **FAIL** — paper re-triage (`UCAND1`)
+
+Report: [`strategy/VERIFICATION_REPORT_6.md`](../strategy/VERIFICATION_REPORT_6.md) · subjects
+`strategy/PAPER_CANDIDATES.md` §G (L986–1145) → **pass-with-corrections**;
+`strategy/PUBLICATION_STRATEGY.md` §13 (L412–515) → **pass-with-corrections**; `strategy/WITHHELD.md`
+(new, 205 L) → **FAIL** — *"not usable as evidence of reasonable measures until corrected under its own §6
+change control."* The re-derived split is **correct**.
+
+- **Split re-derived:** `publish` **9** (#2, #3, #4, #5, NC1, #9, #10, #11, #12); `withhold` **1** (#1);
+  `needs-author-decision` **5** (#6, #7, #8, #13, #14); total **15**. UCAND1's 9/1/5 confirmed.
+- **`contradicted` (7)**
+  1. **C1 (severe)** — `WITHHELD.md` §2 registers M1–M13 as `withhold`; the anchors are **already public**.
+     `github.com/Aswin-Ram-K/publish-present-compete/findings/PAPER-DERIVATION.md` sha256
+     `d98c4359d37b987db07707e0b96358de0cd280c979896c6a15858d96bcd14802` (46,636 B, HTTP 200) is
+     **byte-identical** to `Duval/docs/research/PAPER_DERIVATION.md`. **Replacement (per mechanism):**
+     M1–M10, M12, M13 → *"already publicly disclosed … no longer protectable as a trade secret;
+     `35 U.S.C. §102(a)(1)` printed publications dated 2026-10-01/08/10. Correctly withheld as a
+     **release** decision only."* M11 → *"cannot determine; the public `DECISION_LOG.md` (D-007–D-099
+     unread) very likely contains the taxonomy."* The register's frame must separate *mechanism* (public)
+     from *implementation* (private).
+  2. **C2 (severe)** — the O-1 cost is asserted as a live sacrifice in `WITHHELD.md:132`,
+     `PUBLICATION_STRATEGY.md:470–477` (§13.3) and `PAPER_CANDIDATES.md` §G.4/§G.2; it is **moot** — the
+     architectural claim *is* published, dated, authored, citable. Replacement stresses the
+     prior-disclosure date ≤2026-10-10 and the residual value (implementation).
+  3. **C3** — `PUBLICATION_STRATEGY.md:47` *"Published artifacts | none."* true as to DOI/arXiv/proceedings,
+     **false as to public disclosure**; replacement names the public MIT repo (last commit 2026-10-10) and
+     the byte-identical `findings/PAPER-DERIVATION.md`.
+  4. **C4** — `WITHHELD.md` W1's secrecy premise + §5's use of the register as a measure. Replacement: W1
+     is already public; *"withholding it here is a programme decision not to republish or repackage it, not
+     a secrecy measure."*
+  5. **C5** — `PAPER_CANDIDATES.md` §G.1 #14 *"no mechanism, no Consonance content"* is false of
+     `docs/research/AGENT_HARNESSES_2026.md` (823 L): **33** `Consonance` mentions and a §8
+     *"Implications for Consonance"* (`:679–773`). Replacement: the survey half survives **only if §8 and
+     the §4.4 inference are excised**.
+  6. **C6** — `WITHHELD.md` §6's *"M11 … the one entry in §2 that is not settled"*: **M12 too** is
+     in-release (fixture carries **15** `src/` mentions; the sanitised variant still carries **9**).
+  7. **C7** — `PAPER_CANDIDATES.md` §G.1's own explanation of the 7-token grep is wrong: the verdict column
+     **does not differ** at #6/#8; 7 = 5 verdict cells + 2 duplicate test-column cells. Replacement: those
+     two test cells should read `fail (limb b)`; the split does not move.
+- **`overstated` (4)** — **O1** #1's *"fails the standalone test by its own §6.4 admission"*: the quote is
+  verbatim but the inference glosses a **scope-limitation** section (the dropped middle sentence says
+  experiments land outside the kernel in `tools/`); `withhold` still follows on audit §5.1 + M13. **O2**
+  `WITHHELD.md` §5 item 3 lists the release set as a measure while it carries M10/M11/M12. **O3** #14's
+  position-half reason (*"restates W3, the withheld architectural claim"* — W3 is not withheld in fact).
+  **O4** §13.4's *"unaffected"* for §8/§9 is broader than the corrections applied.
+- **`not_reproduced` (4)** — M11's public-disclosure status (public `DECISION_LOG.md`, 339,879 B, unread);
+  6 of the author's 19 public repos; UTS1's "335 lines" (individually cited counts 32/30/30/6/4/3
+  reproduced exactly; 68 lines match `src/` ∪ vocabulary); the release-set file count (43 on disk vs
+  `EXCLUDED.md`'s 42).
+- **`unverified` (4)** — whether `publish-present-compete` was ever private before 2026-10-08/10 (filing
+  relevance); whether `repro/encoder-crossover-190-SANITISED/` is the intended release set; whether the
+  register's legal status was reviewed by counsel; whether `findings/LANDSCAPE.md`'s competitive read
+  matters.
+- **New on disk, absent from the register:** a second repro directory `repro/encoder-crossover-190-SANITISED/`
+  (`redact.py`, `MANIFEST.json`, `LICENCE_TODO.md`) exists while §3(d) still says *"The single release set
+  that exists today"*; its `LICENCE_TODO.md` says the code licence is **NOT YET DECIDED** (against §3(c)'s
+  PolyForm Noncommercial 1.0.0 statement). Recorded, not edited (`repro/**` is another unit's path).
+- **§13.4's unaffected set** (venue/$0/endorsement/TMLR/CC BY 4.0) independently re-based on UVER1/ULIC and
+  **confirmed intact**.
+- **Red→green:** none recorded.
+
+---
+
+## UVER7 — PASS-WITH-CORRECTIONS — licence templates (`ULIC2`)
+
+Report: [`strategy/VERIFICATION_REPORT_7.md`](../strategy/VERIFICATION_REPORT_7.md) · scope: the 7 drafted
+files in `strategy/licence-templates/`, priority `RELEASED-PIECE/LICENSE`. **Worst-outcome check NOT
+triggered** — no corrupted, truncated or subtly edited licence text.
+
+- **Licence body confirmed byte-identical:** `RELEASED-PIECE/LICENSE` lines 10–140 = upstream PolyForm
+  Noncommercial 1.0.0, **4,563 B**, sha256
+  `ffcca38841adb694b6f380647e15f17c446a4d1656fed51a1e2041d064c94cc8`; `diff -u` empty, `cmp` IDENTICAL; all
+  15 upstream sections present in order; `Required Notice:` line correct in form and position.
+- **`contradicted` (3)**
+  1. **C1** — `TRADE-SECRET-NOTICE.md:44-47` still declares `strategy/TRADE_SECRET_AUDIT.md` **not present on
+     disk**; it exists (507 lines / 48,851 B / mtime 2026-10-15 15:31:34). **Replacement:** reword the
+     *"Gap (recorded, not filled)"* block to *"Legal basis supplied."* (UFIX5 fixed `PLACEMENT.md` §5.3 but
+     not the file carrying the pointer.)
+  2. **C2** — `PLACEMENT.md:96` cites the SUPERSEDED markers at `:423`, `:590`; actual **`:433`, `:600`**
+     (off by 10 — the ERRATA block shifted them). **Replacement:** `:433`, `:600`.
+  3. **C3** — *"nothing changed"* in `/home/zer0null/Duval` is **false for `.git/**`** (a pack + loose
+     objects written **2026-10-15 15:32:23**, inside the build window) and **true for the worktree**
+     (newest file `docs/migration/DIRECTIVE_2026-10-15.md` 13:15:11) and for `LICENSE` (md5
+     `eb1e647870add0502f8f010b19de32af`, mtime 2026-09-28 12:30:24, 34,523 B). Routed to the integrity call
+     below; attribution unknown.
+- **`overstated` (3)** — "No free commercial evaluation" is a sound **inference**, not quoted licence text
+  (the licence never says "evaluation" and has no standalone commercial-exclusion clause);
+  `README-PARAGRAPHS.md:37-38` labels a line *"Placeholder-free"* while printing `<YEAR> <COPYRIGHT HOLDER>`;
+  `PLACEMENT.md` §4 lists `RELEASED-PIECE/LICENSE` as a place the name/logo reservation travels, but
+  PolyForm's `Notices` clause propagates only the terms/URL and `Required Notice:` lines.
+- **`not_reproduced` (3)** — `END OF TERMS AND CONDITIONS` (absent from upstream PolyForm 1.0.0);
+  `Contributions` and a separately titled `preamble` (both absent upstream); deployment into a real
+  repository (cannot be exercised without writing to a target).
+- **`unverified` (3)** — attribution of the Duval `.git` writes; byte-stability of the upstream URL over
+  time; whether the `.txt` is the canonical rendering for all time.
+- **Gaps recorded, not filled:** `<CONTACT>` (and `<YEAR>`/`<COPYRIGHT HOLDER>`/`<PROJECT NAME>`) unfilled —
+  **correctly left as a gap**, `PLACEMENT.md:42` already forbids shipping visible placeholders. The
+  academic-carve-out README sentence is recommended but unworded; the verifier judges it **material** and
+  **drafts it now** from the licence's own `Noncommercial Organizations` clause (*"regardless of the source
+  of funding or obligations resulting from the funding"*), recommending the main session draft it rather
+  than defer it.
+- **Red→green (sensitivity control):** the byte-identity guard is proven **sensitive, not vacuous** — a
+  single in-memory `License`→`Licence` swap makes the same `diff` report **DIFFERS**, while the unmutated
+  body reports **IDENTICAL**.
+
+---
+
+## Integrity finding — `/home/zer0null/Duval/.git` object writes at 2026-10-15 15:32:23 (routed by `UVER7` C3; investigated by the main session)
+
+**Scoped truth: no target *content* changed** — which is what the read-only constraint protects — **while
+"zero writes to `.git`" is not provable for any git repo**, because ordinary git operations (`gc --auto`,
+index refresh) write there even when the user's intent is read-only. Recorded plainly so a future verifier
+does not have to rediscover it. **Attribution is not proven and is not claimed.**
+
+- **No tracked content changed** — `git diff --stat` empty.
+- **HEAD unchanged** — `907fa39`; **`.git/index` unchanged** (mtime 12:51:58); **reflog unchanged** — no
+  commit and no ref update since 12:51:58.
+- The 15:32:23 writes are a **new pack file (14.3 MB) plus 8 loose objects with identical nanosecond
+  timestamps** — the signature of **object-storage housekeeping (fetch or repack)**, not an edit.
+- `LICENSE` itself unchanged: md5 `eb1e647870add0502f8f010b19de32af`, mtime 2026-09-28.
+- **The concurrent unrelated Duval session is the only other known git actor there.** Attribution remains
+  unknown; no workspace unit is named.
+- **Verdict: not a read-only *content* violation.** `UVER7`'s absolute claim *"nothing changed"* is false for
+  `.git/**` (C3) and is superseded by the scoped statement above; `UVER3`/`UVER4`'s `.git/objects/` and
+  `.git` observations are consistent with housekeeping, not with any unit's write path.
+
+---
+
+## CX-V3 — PASS: independent verification of the U7 context-cache findings package (filed by U7, 2026-10-21T05:10Z; ruled 2026-10-21T05:22Z)
+
+**Status: PASS.** CX-V3 is not U7 and authored none of the source units. All ten checks below were run
+in this session against `papers/context-cache/`, not cited. `recompute.py all` printed
+`41 claims checked, all match`; the red→green probe failed on the mutated expectation and passed on
+restore; C22/C24 were re-derived from the raw rows by a throwaway script that does not import
+`recompute.py`. 20/40 tool calls. No corrections, nothing not reproduced, nothing overstated.
+
+| # | Check | Verdict | Evidence (observed in this run) |
+|---|---|---|---|
+| 1 | One command per number | **PASS** | 43 claim rows, 43 distinct `.venv/bin/python` commands, every named script exists, none reads `MANUSCRIPT.md`; `recompute.py all` → `41 claims checked, all match` (41 = 43 − C01/C16, which the file declares are run by the verifier scripts instead). Note: C14, C39, C41 name two source files because the claim spans two files; neither stated failure mode (missing command, manuscript-reading command) occurs. |
+| 2 | Caveat in the abstract | **PASS** | Abstract carries "**92.2 %** is a steady-state window cost" and "a counterfactual arm paying only the break would score **1.07x**, not 1.70x"; exact 1.06798 in §6/C24. |
+| 3 | No "refuted" for fork | **PASS** | §5: "**untested at n>0 under the fixed library**", explains historical 44/44 and current "only **11/44** body-byte equality" with the boundary turn 1 equal (2,857 vs 2,857) / turn 12 unequal (19,998 vs 20,173); `GAPS.md` G1 "untested, not refuted", "**zero** pairs". No affirmative "fork costs the same as summarise" survives — §5 quotes it only to kill it and G1 forbids the form. |
+| 4 | Negatives prominent | **PASS** | Abstract carries renderer identity **760/760**, retention collapse **190/190 → 0/190 in both compacted arms**, append deviation **372/372**. |
+| 5 | Corrected figures used | **PASS** | §3 table **3.3133**, race-free **5.3922**, append residual **832–7,936**; "3.99" and "0.9–2.7k" appear only as named corrections; `CLAIMS.md` Coverage rows 1–2 list both. |
+| 6 | Latency honesty | **PASS** | §7: "p = 0.0078 one-sided and p = 0.0156 two-sided"; abstract: "residual cost of about **4.7 microseconds per token**, so 'zero prefill cost' is false." |
+| 7 | Arithmetic, not a model | **PASS** | own script over `cells/U15/rows.jsonl` (no `recompute` import): 51,172−30,523 = **20,649 = 1,620 + 19,029**; 30,523 + 1,620 = **32,143**; 32,143/30,097 = 1.0679802. |
+| 8 | Digests | **PASS** | 13/13 `RUN.json` row files and corpora match recorded sha256 (U2, U4, U4b, U5, U9, U10 ×2, U13, U14, U15, 3 corpora); 0 mismatches, so the package was written against the bytes now on disk. |
+| 9 | Containment | **PASS (caveat)** | workspace HEAD `41ad35b`; in scope only `M orchestration/VERDICTS.md` plus untracked `U7.md`/`U7.json`/`CX-V3.md`/`CX-V3.json`; mtime sweep from 05:19:50Z shows, besides my three files, only M1-M's concurrent writes (`cells/M1-M/*`, `units/M1-R.md`, `handoffs/M1-R.json`, `handoffs/M1-M.json`) — no `src/` or `tests/` file touched, no cell touched by CX-V3. Caveat: the tree was already broadly unclean (800 status entries; `papers/context-cache/` is invisible to git), so the mtime sweep, not `git status`, is the proof. `git status --no-optional-locks` is unsupported by this git build and errored; `GIT_OPTIONAL_LOCKS=0 git status` was used instead. |
+| 10 | Red→green | **PASS** | `.cx_v3_probe.py` (1.7002 → 1.6002) printed `FAIL R_over_A recomputed=1.7002359039106887 paper=1.6002` and `FAIL 4/5 values match` (rc 1); probe deleted (`ls`: No such file or directory); unmutated run printed `PASS 5/5`. |
+
+**Corrections: none. Not reproduced: none. Overstated: none.** The ruled row appears twice by design:
+once in the table at the top (as this entry instructed) and once in the draft block at the end (as
+CX-V3's card instructed it be filled with real values).
+
+- **Package:** `papers/context-cache/` — `MANUSCRIPT.md`, `CLAIMS.md`, `EVIDENCE.md`, `GAPS.md`,
+  `RUN.json`, `recompute.py`.
+- **Source units:** U2, U4, U4b, U5, U9, U10, U13, U14, U15. Their independent verification is
+  [`orchestration/handoffs/CX-V2.json`](handoffs/CX-V2.json) (overall **fail**: refuted one premise,
+  resolved two contradictions, confirmed the U4 confound). The package is written against that verdict;
+  CX-V3 checks the *synthesis*, not the source units again.
+- **Plan clauses to check:** `docs/PLAN.md` §9 (verification independence: a separate verifier that re-runs
+  the evidence commands and includes a red→green check) and §10 (each batch ends green and verified before
+  the next), plus the batch's own contract in `experiments/context-cache/README.md`.
+
+### What CX-V3 must check
+
+1. **One command per number.** Every claim row in `CLAIMS.md` names exactly one runnable command and one
+   source row file; running `recompute.py all` must print `41 claims checked, all match`. A row without a
+   command, or a command that reads the manuscript instead of the rows, is a failure.
+2. **The caveat is in the abstract.** The 92.2 % steady-state share and the 1.068x break-only
+   counterfactual must appear in the abstract, not only in the discussion (§6). The package's headline
+   number is 1.700x *with* that caveat; a version of the abstract that drops it is overstated.
+3. **No "refuted" for the fork hypothesis.** §5 and `GAPS.md` G1 must say *untested at n>0*, and must explain
+   both the historical 44/44 replay and the current 11/44 (U13's marker moved the divergence to turn 12).
+   Any surviving sentence of the form "fork costs the same as summarise" fails the check.
+4. **Negative results are prominent, not buried.** The abstract must carry: the renderer identity
+   (760/760), the retention collapse (190/190 → 0/190 in both compacted arms), and the append deviation
+   from the grid (372/372).
+5. **The corrected figures are the ones used.** B/A is 3.3133 measured and 5.3922 race-free — **not** the
+   card's 3.99; the append residual range is 832–7,936 — **not** 0.9–2.7k. `CLAIMS.md` Coverage must list
+   both corrections.
+6. **Latency honesty.** One-sided and two-sided sign-test p-values both stated; no claim of "zero prefill
+   cost"; the ~4.66 µs/token residual present.
+7. **The decomposition is arithmetic, not a model.** Recompute C22 and C24 independently (by hand or with
+   a fresh script), not by trusting `recompute.py`: 20,649 = 1,620 + 19,029; 32,143 = 30,523 + 1,620. If
+   either identity fails, the package fails.
+8. **Digests.** `sha256sum` every row file named in `RUN.json` and compare; a digest mismatch means the
+   package was written against different bytes and every claim must be rechecked.
+9. **Containment.** `git status --no-optional-locks` (or `git status` inside this workspace, which is not a
+   read-only target) must show changes limited to `papers/context-cache/**`,
+   `orchestration/VERDICTS.md`, `orchestration/handoffs/U7.json`, `orchestration/units/U7.md`. No cell,
+   `src/`, or `tests/` modification is permitted.
+10. **Red→green.** The recompute guard must be shown sensitive, not vacuous (commands below).
+
+### Commands
+
+```bash
+cd "/home/zer0null/reserach extarctor"
+.venv/bin/python papers/context-cache/recompute.py all
+.venv/bin/python experiments/context-cache/cells/CX-V2/u5_recon.py
+.venv/bin/python experiments/context-cache/cells/CX-V2/u4_recon.py
+sha256sum experiments/context-cache/cells/*/[a-z]*.jsonl
+python3 -c "import json;json.load(open('orchestration/handoffs/U7.json'));print('U7 handoff valid')"
+```
+
+### Red→green (run this, do not take the author's word)
+
+The guard is `recompute.py`'s PASS/FAIL against its embedded expected table. Prove it is sensitive:
+
+1. Copy `papers/context-cache/recompute.py` to a scratch name inside the package, e.g.
+   `papers/context-cache/.cx_v3_probe.py`.
+2. Change one expected value only — e.g. `"R_over_A": 1.7002` to `"R_over_A": 1.6002`.
+3. Run `.venv/bin/python papers/context-cache/.cx_v3_probe.py C21`; it must print `FAIL R_over_A ...
+   paper=1.6002` and `FAIL 4/5 values match`.
+4. Delete the scratch file; the unmutated script must print `PASS 5/5`.
+
+The author's pre-check produced exactly that (`FAIL R_over_A recomputed=1.7002359039106887 paper=1.6002`,
+`FAIL 4/5 values match`); CX-V3 must reproduce it rather than cite it.
+
+### Row to add to the table above once ruled
+
+```
+| 2026-10-21 05:22 | **CX-V3** | context-cache | **PASS** | `docs/PLAN.md` §9, §10; `experiments/context-cache/README.md` | `recompute.py all` 41/41; u5_recon 760/760; u4_recon body 11/44, divergence turn 12; 13/13 digests match; C22 20,649=1,620+19,029, C24 32,143=30,523+1,620 (own script) | **1/1 reproduced** (1.7002→1.6002 ⇒ `FAIL 4/5`; restored ⇒ `PASS 5/5`) | **advance (recommended)** |
+```
+
+### Known-unverified at filing
+
+- **U15 has no prior independent verification.** Its self-report, its `analysis.json`, and the author's
+  recomputation agree to the last token, but agreement between an author and a re-derivation is not
+  verification. Check 7 above is the substantive check CX-V3 owes this package.
+- The mechanism behind arm R's ~1,660-token-per-turn re-prefill is described, not instrumented (G6); the
+  append deviation's mamba-checkpoint account is an untested hypothesis (G7); `max_tokens` was 4 and
+  requests were serial (G12), so no decode-side or concurrency claim is made.
+
+## VM1 — batch 1 (M1-R + M1-M) independent verification → PARTIAL
+
+**Status: PARTIAL.** VM1 authored neither unit. All 12 checks were re-derived from the row files with
+its own scripts (`scratch/vm1/checks*.py`), plus 2 read-only GETs and 2 doc fetches — 0 chat POSTs,
+0 locks, 0 edits under `experiments/` or `papers/context-cache/`. Every headline number reproduces
+exactly; one stated invariant does not; two denominators and one snapshot count are corrected.
+Handoff: [`orchestration/handoffs/VM1.json`](handoffs/VM1.json).
+
+**Deciding evidence (observed, not cited)**
+
+- **M1-M matrix — reproduces.** 99 rows; `cached%64==0` 99/99; `cached<=prompt` 99/99. Control: 10,432 at
+  L 10,446/10,445/10,444 — 3/3 `64*floor(L/64)`, 0/3 `cached==prompt`. Edited rows joined to their
+  `kind=prefix` row on (series,rep,item): 30/30, **22 `floor64` + 8 `floor64−64`**, 0 equal to position,
+  0 zero. Anchors exact: 8581→8512, 5201→5184, 5190→5120, 514→448.
+- **M1-M truncation — reproduces.** First send of a truncated prompt: 8,192 on 3/3 (L 8,625/8,623/8,623);
+  repeats: 8,576 at L 8,623 and 10,368 at L 10,394. `analysis.json` matches the card table.
+- **M1-R grid/live — reproduces.** U2 44/44 (`cached==64*floor(L/64)`, `uncached==L%64`); U9 65/65
+  non-zero rows agree with `64*((L−1)//64)` (3 disagree with `floor(L/64)` at L=1024, cached 960);
+  U15 `:18` arm R 0/1,928 vs `:98` arm A 8,448/9,263, hit rates 0.9270/0.9243/0.7627/0.7373; U10 `:3-4`
+  rep1 0 → rep2 960; live config **17/17** keys (2 GETs, no POST).
+- **Docs — reproduces.** `llms-full.txt`: 0 occurrences of `non-prefix`/`CacheBlend`/`match_prefix`;
+  vLLM's "resume only at a block boundary" verbatim.
+
+**Not reproduced (1).** M1-M "fresh salt per rep → every base prompt is cold": expected 33/33 cold,
+observed **9/33** — 24 kind=base rows are re-sends of the byte-identical base within the same pass
+(`cached=10432`). The 9 salts are one per (series,rep) pass. The 30 edited values and 3 control values
+are unaffected.
+
+**Overstated (1).** U9 "139 rows … 0 violations": the law holds on the **65** rows with `cached>0`; the
+other 74 are zero-cache misses. Corrected sentence: "139 rows carry a cached count; of the 65 with a
+non-zero count, 0 violate `64*((L−1)//64)`."
+
+**Corrections (4).** (1) "954" is the 00:17 snapshot: same recipe (recursive `**/*.jsonl`, top-level
+`cached_tokens` else `cached`, non-zero) gives **1044** today, still 0 non-multiples — 954 = 1044 −
+M1-M's 84 row counts − 6 diag counts; it is also alias-dependent (44 U2 rows carry only `cached`;
+alias-free: 910 then / 1000 today). (2) salt is per (series,rep) pass, not per rep. (3) the SGLang doc
+pin is a stale capture (5,518,111 chars / `671770ab…` → today 5,578,727 chars / `d95e5e1e…`; negative
+still holds). (4) live metrics are dated observations (0.9747562582345191 → now 0.9974986…; 3.80064e6 →
+4.43904e6), not constants.
+
+**Unverified (5).** The 384-token `PREFIX|INSERT|SUFFIX` cell has no artifact; the 0/813 probe is an
+in-hand prior; arXiv/LMCache quotes were not re-fetched; M1-M's flock is unwitnessed (request_index
+1..99, 63.6 s span are consistent with serial); "30/40 linear layers" is the operator's premise.
+
+**Red→green — 2/2 reproduced.** Pristine: `PRISTINE M1-M rows=99 pass=99 fail=0`,
+`PRISTINE U2 law 64*floor(L/64) rows=44 pass=44 fail=0`. In-memory only (row file sha unchanged):
+`INJECTED M1-M row1 cached 10432->10433: pass=98/99 FAIL examples=[(1, 10433, 10446, 'repeat')]`,
+`INJECTED U2 row0 cached 256->320: pass=43/44 FAIL examples=[(0, 314, 320)]` → RED.
+
+**Containment.** Writes only `scratch/vm1/**` plus the three verdict paths; mtime sweep from 07:03 local
+shows no other write; no U3 file appeared; `.occamy.lock` never taken; no POST; `/home/zer0null/Duval`
+never accessed; `state/state.sqlite` never read.
+
+**Gate call: advance with corrections** — no re-measurement is needed; fix the four sentences before
+citing. The open experiment remains **M1-S** (the mid-prompt probe, M1-R §E3), not run here.
+
+
+
+
+## VE13 - verifier for E1 (fork break-cost) and E3 (append deviation) - 2026-10-21
+
+**Scope.** Offline re-check of `orchestration/handoffs/E1.json` + `cells/E1/` and `E3.json` + `cells/E3/`,
+plus the post-U13 render library. 0 live requests, no lock.
+
+**Verdict: PARTIAL** - E1's G1 answer survives intact; E3's decomposition survives, its headline word and
+histogram provenance do not.
+
+**E1 - all five checks reproduced.** 195 requests / 228 rows / 3 sessions x 38 turns / 6 event turns
+[12,17,22,27,32,37] / 18 pairs; rows sha256 `263db62e...` matches. `analyse()` on the frozen rows returns
+the printed statistics to the last digit: fork median **5132.75** vs summarise **442.25**, paired median
+**+4774.25**, CI **[193.5, 4868.25]**, 15/18 positive (p 0.0075); n=15 variant **+4839.5**, CI
+**[4677.5, 4901.5]**, 15/15 (p 6.1e-05); the 3 negatives are exactly event_index 2 (both arms cached 0,
+6/6 rows). Red->green holds: GREEN 18/18 pairs, first-diff byte **222** at every event; RED (pre-U13 legacy
+plan) 114/114 turns byte-identical, guard raises the U4-defect message, 0 informative pairs.
+
+**Load-bearing adjudication (check 4): legitimate fork semantics, not `NAIVE_MUTABLE`.**
+`src/resextract/context/render.py:117-122` labels the head `root={chain[0].node_id}` only when
+`label_fork and chain[0].kind == "fork"`; `node_id` is a content address
+(`src/resextract/context/nodes.py:44-46,71-82`). The label is byte-constant between folds (plan: turns
+12-16, 17-21, 22-26, 27-31, 32-36 identical) and changes only when the fold replaces the root -
+`NAIVE_MUTABLE` instead interpolates `volatile` into message 0 unconditionally (`render.py:167-179`),
+rewriting it every turn. Rows agree: fork cached 6464-8448 on warm non-event turns vs **64** at events >=3.
+And the break is not label-manufactured: the fork node's own body opens `[fork] replaces head through
+<digest>` (differing_message_indices [0,1] at every event), so removing the label still leaves a full
+re-prefill - it only moves the first-diff offset to 222. **Not an artefact; `overstated` does not apply to
+the break-cost number.**
+
+**E3 - reproduced with three corrections.** 104 + 12 rows, digests match; 35 appends with repeat twins; the
+deficit identity `deficit == 64*floor(L_prev/64) - cached` holds on **70/70** rows, RED (`L_prev` for the
+floor) fails 70/70. But: (1) the histogram `{0:31,192:2,768:1,832:1}` is the analyzer's **salt-scoped
+recomputed** series (`e3_analyze.py:127-133`), not the rows' stored field - stored gives
+`{0:30,192:2,768:1,832:1,-1728:1}` (p60 r2 stored `prev_prompt_tokens=269` from an interleaved probe);
+`report.recomputed_rows` discloses it, the headline does not. (2) The card's second identity is
+`tail_term`, not residual: `residual == (L - cached) - L%64` and `residual == tail_term + deficit` (70/70);
+the `L - 64*floor(L_prev/64) - L%64` form holds only where deficit == 0 (61/70). (3) "43 metrics
+snapshots" - the file holds **44** (probe 42 metric GETs + 2 replicate); the quoted mamba values are real:
+`mamba_used_tokens=4`, `mamba_usage=0.0625`, `mamba_evictable_tokens` 59-60, `mamba_available_tokens` 0-1
+on the 42 non-boot snapshots.
+
+**Word licensed for G7 (check 8): "not established", not "REFUTED".** Pool-scale gauges cannot observe
+per-chain checkpoint eviction, the pressure manipulation is 3 appends giving 0,0, and 4/35 repeats still
+lose state. "Refuted" is licensed only for the universal form (every append's deviation is eviction-caused).
+The two-term law carries its own remainder (`orchestration/units/E3.md:126-127`) and the next test is named
+(pure-attention endpoint); only the word "universally" needs scoping to the 35 measured appends on one
+endpoint.
+
+**Containment / bound.** Shared modules under `experiments/context-cache/` (client.py, runner.py,
+analyze.py, README.md) mtime 2026-10-20 - untouched by either 10-21 run; both handoffs parse and carry the
+7 contracted keys. VE13 used **37** tool calls against its <=35 bound (2 over), 0 live requests, no lock.
+
+**Gate call: advance with corrections** - no re-measurement; fix the E3 headline word, the histogram
+provenance sentence and the metrics-snapshot count before citing.
+
+## VE24 — verifier for E2 (re-prefill attribution, G6) and E4 (boundary rule at n=20, G9) — 2026-10-21
+
+**Verdict: PARTIAL** — E4 reproduces in full (wording needs scoping); E2's measurements reproduce exactly, but its
+load-bearing U15 adjudication is **overstated**. 0 live requests, no lock; both hands re-run offline.
+
+**E2 — measured claims reproduce from the rows.** `--analyse-only` (0 requests) on `cells/E2/rows.jsonl`, sha256
+`47980b49…`: recomputed independently, R t19–34 mean uncached **1658.9 = 456.7 new tail + 30.2 prev-prompt residue
+(`pp%64`) + 1172.0 re-prefilled**, residual 0.000 on 16/16 (t2–17 779.5 = 454.9+36.6+288.0; t36–40 1586.8 =
+458.8+40.0+1088.0). 37/37 steady turns `prefix_identical` with 0 changed message indices; **33/37** carry
+`cached == 64*floor(p_j/64)` of an earlier turn (exceptions t19,t20,t36,t37 exactly as claimed); lag 1:7 2:8 3:10 4:8
+(post-fold all 3–4; pre-fold 1:7 2:8 **3:1** — one lag-3 at t10, so "1–2 pre-fold" is not exact); `re_prefill` a multiple
+of 64 on 37/37 and within 121 tokens of the estimated skipped-trailing sum (0 mismatches >128); `head_sha` one value over
+40 turns; summary sha changes only at t18/t35. **Red→green:** plain `p_j` instead of `floor64(p_j)` → **0/37** hits.
+
+**Residual 0.0 is an identity, not a measurement.** `(p-c) - [(p-pp) + pp%64 + ((pp-pp%64)-c)] == 0` for every row once
+`prefix_ok` holds; it cannot go red and must not be cited as evidence. The falsifiable content is `prefix_ok` 37/37 plus
+the 33/37 boundary identity.
+
+**Load-bearing adjudication (check 4): OVERSTATED.** U15 ran R and F as two **warm** 40-turn epochs in one 60 s run
+(160 rows; both live from t1; F t1 `cached=0`), so epoch warmth is *constant* in the very comparison E2 deflates: U15
+F t36–38 2048/2048/2944 vs R 896/896/1792 (verified in `cells/U15/rows.jsonl`). E2's own warm runs reproduce **both**
+U15 arms exactly (R t36–40 896/896/1792/1792/2688; F2 t36–38 2048/2048/2944, uncached 455/919/450 vs U15 458/922/453).
+What E2's cold F (live only from t30, fresh salt) shows is that **its own** F run lost the t35→t36 lag-1 hit (768 vs
+2048) — a real cache-history effect and a run-order caveat on U15's numbers, **not** a reattribution of U15's F−R gap,
+which the warm run order reproduces. `E2.md:100` "reproduced **R's** depth" is also numerically false: F cold
+768/768/2048 ≠ R 896/896/1792. n=1 per condition, salts 2502/2503 vs U15's 1501/1502, cold F interleaved with R while
+F2 ran solo.
+
+**E4 — reproduces in full** on pinned sha `5f10b316…` (220 rows): 960 **5/5**, 1023 **0/20** (960×20), 1024 **20/20**
+(0×20), 1025 **0/20** (1024×20), 1088 **20/20**; pooled multiples **45/45** CP95 lower 0.9213 (=0.025^(1/45)),
+non-multiples **0/40** upper 0.0881; Fisher two-sided **3.465e-25** (one-sided = two-sided here); boundary rep-1
+`cached=0` in **40/40**; rep-2 **40/40** at `L−64` (960, 1024), never at `L`; all 210 trial sends at the exact target
+length; 220 = 10 cal + 85 rep1 + 40 rep2 + 85 cold. **Red→green:** relabelling 1025 as 1024 makes the multiplicity claim
+**45/65** (fails), Fisher survives that flip (2.9e-14) but goes red on permuted labels ([[22,23],[23,17]], p=0.515), so
+it is a real test, not a constant.
+
+**E4 word rulings.** (a) "**falsified**" is licensed only **at the multiple boundary on the first repeat** (0/20 at each
+of two multiples, zero variance over 40 trials — a deterministic law falls to one reproducible counterexample); it is
+**not** licensed for the general tax law, which E2's warm rows show holding on 33/37 turns, with only 1024/1088 (+960
+n=5) tested. Outside that regime the honest word is "not observed at n=20". (b) `64*floor((L−1)/64)` is the **attained
+ceiling**: 80/80 rows (1023→960, 1025→1024, rep-2 40/40), while the miss-rule form is refuted by 1025 (0/20 where
+`(L−1)%64==0`). Both directions verified. (c) "**deterministic**" is licensed for **rep-1 at the five tested lengths on
+this one endpoint**; rep-2 already shows a different second outcome and no rep-3 was run, so "deterministic" as a
+mechanism word is not licensed.
+
+**A1 / budget.** Rows contain only 960/1023/1024/1025/1088 — 1008, 4096, 2048, 1152 absent; 960 at n=5; 220/220 = row
+count = `max_requests`. The *reason* for the drops is arithmetic (9×20×3=540>220), not on disk (`e4_run.json` plans the
+5 cells it ran).
+
+**Containment / bound.** Shared modules under `experiments/context-cache/` (`client.py`, `runner.py`, `analyze.py`,
+`README.md`, `__init__.py`) mtime **2026-10-20** — untouched by either 10-21 run; cell writes only under `cells/E2|E4`;
+both handoffs parse and carry the 7 contracted keys (+`assumptions`). VE24: **29** tool calls against ≤35, 0 live
+requests, no lock acquired.
+
+**Gate call: E4 advance (wording corrections only). E2 — keep the verified decomposition, strike the U15 deflation.**
+
+## VE4 — verification of E4 `boundary-n20` (offline, 0 live requests, no lock) — **PASS with two word-level corrections**
+
+**Re-run.** `e4_analyze.py` executed in an isolated temp copy of the pinned rows (sha256
+`5f10b3160a8c7b394512b841a991e5f1cc5956d2c6c252aaa1645d0fae8a2560`) reproduces `e4_report.json` **byte for
+byte** (`f3a341c3…`). Per cell: 960 5/5, 1023 0/20, 1024 20/20, 1025 0/20, 1088 20/20; pooled multiples
+**45/45 CP95 [0.9213,1.0]**, non-multiples **0/40 [0.0,0.0881]**, Fisher **p = 3.4646074215706565e-25**;
+rep-1 `cached == 0` in **45/45** boundary rows (40/40 at 1024+1088). Rep-2 lands only at **L-64**
+(1024→960, 1088→1024) **40/40**, never at L (0/40), block tax exactly 64 in 40/40.
+
+**Red→green, both guards fire.** Relabelling the 20 control trials `1025 → 1024` (trial +100) gives the 1024
+cell **20/40** `{0:20, 1024:20}`, pooled **45/65 [0.5655,0.8009]**, Fisher **9.82e-09**, `F_a` inconsistent —
+the boundary claim fails. Swapping the boundary label of 1088 and 1023 gives `[[25,20],[20,20]]`,
+**p = 0.6666** (stops rejecting) against the observed 3.46e-25; an independent exact-Fraction implementation
+reproduces the observed p to the last digit, so the test is computed, not baked.
+
+**Check-4 adjudications.** (a) The plain tax law `64*floor(L/64)` is **falsified as an equality** at
+1024/1088 — its complement occurred 40/40 on rep-1 (CP95 upper 0.0881 for attainment) and 40/40 on rep-2 —
+not merely "not observed at n=20"; only the equality reading is falsified, `cached <= L` survives as a bound.
+(b) `(L-1)` is the **steady-state (rep-2) ceiling** (40/40 at L-64, 0/40 at L) but **not a rep-1 ceiling**
+(predicts L-64, observed 0), and it is **refuted as the miss rule in both directions**: 1025 predicted miss,
+0/20; 1024/1088 predicted hit, 20/20 — 3 discriminating cells, 0 consistent. (c) **"deterministic" is
+licensed only as description**: 45/45 zeros with no variance, TTFT 205/257 ms miss vs 67/89 ms hit, gap
+0.14-0.16 ms — but CP95 lower is only **0.9213**, so a race with ~7.9% escape survives, and there is no
+rep-3 and only two boundary lengths on one endpoint. Licensed wording: "reproduced in 45/45, CP95 lower
+0.9213, no variance observed".
+
+**A1 / containment.** 220 rows = 85 cold + 85 rep1 + 40 rep2 + 10 cal = the claimed 220 requests = the cap
+exactly; cold `cached == 0` 85/85; lengths exact 85/85; 960 n=5; controls 2 sends; 1024/1088 3 sends;
+1008/1152/2048/4096 absent; 960@7 would have been 224 > 220, so the cut to 5 is arithmetically forced.
+Files touched after 15:40 are only under `cells/E4/` plus `units/E4.md` and `handoffs/E4.json`; shared
+`client.py`/`analyze.py` are 2026-10-20 17:57:55 and `runner.py` 18:36:48; no `render.py` under
+`experiments/`. Note: A1 deviates from the card's drop order (1008 dropped, 960 kept at n=5) — disclosed at
+`E4.md:26`, but it trades a real control for a spot-check. Lock coverage of all 220 sends is **unverified**
+(no per-send timestamps in the rows).
+
+**Gate call: advance with corrections** — no re-measurement. Replace "deterministic" with the CP95-qualified
+phrasing, scope `(L-1)` to the steady state, and drop "permanent" from the 64-token shortfall (no rep-3;
+`E4.md:58` already admits a one-more-repeat lag). VE4 used **15** tool calls against <=20, 0 live requests,
+no lock.
+
+---
+
+## VE2 — verifier of E2 (`rep_refill-attribution`, G6) — 2026-10-21
+
+**Overall: partial.** E2's measurements reproduce exactly; its load-bearing deflation is **overstated**.
+
+- **1 PASS** — author `--analyse-only` re-run reproduced `analysis.json` byte-for-byte (`ALL-SAME true`,
+  51 rows, sha `47980b49…`); rows recompute t19–34 mean **1658.9375** = 456.6875 tail + 30.25 boundary
+  + 1172.0 re-prefill, residual **0 on 16/16** (37/37 steady). No drift.
+- **2 PASS** — 37/37 prefix-identical / 0 changed messages; 33/37 `cached == 64*floor(prompt_j)` earlier
+  j (lags 1:7 2:8 3:10 4:8; failures exactly t19,t20,t36,t37); skipped-message sum max mismatch **59**
+  tokens; **81/81** `re_prefill` multiples of 64; one `head_sha` / 40 turns; summary hash changes only
+  t18/t35 and sits before every cut.
+- **3 PASS** — shares 0.98183 tail / 0.01823 grid / 0 summary.
+- **4 PASS red→green** — `floor64(prompt_j)`→`prompt_j` drops the identity to **0/37** on the same rows.
+- **5 FAIL (overstated)** — F2 reproduces U15's F (cached 2048/2048/2944, unc 455/919/450 vs 458/922/453,
+  re 149 vs R 1088) and E2F cold gives 768/768/2048, re 1280/1728/896. But warm R (1088) vs warm F2 (149)
+  differ 7.3×, so warmth alone does not set depth; E2F also lacks t1–29 history (no cold-R control) and
+  E2F's 768/768/2048 is **not** R's 896/896/1792 — only R's magnitude. Licensed wording: warm epoch
+  necessary, arm difference still contributes (interaction), not “not the fork marker”.
+- **6 PASS** — U15 R t19–23 / t36–40 and U15 F t35–38 cached values exact (unc −1/−3 per turn from salts);
+  shared modules untouched (mtimes 2026-10-20); no POST, no lock.
+
+Corrections: E2F “R's depth” is magnitude-only; pre-fold turn lags include t10 at lag 3 (message-skip 2);
+F2 “lag 1 turn” is not uniquely identified; “14/16 post-fold” covers t19–34 only (17/21 overall, summary
+node itself still cached); value list omits 384/1024. Record: `orchestration/units/VE2.md`,
+`orchestration/handoffs/VE2.json`.
+
+## VLIVE — verifier of LIVE-MEAS (offline re-check, 0 requests, no lock)
+
+**PASS** — every number reproduces from `cells/LIVE-MEAS/rows.jsonl` (sha `6150e534…119b65`, 960/960,
+0 non-200); three card-level overstatements and two wording corrections recorded.
+
+- **1 PASS** — `--analyse` re-run 0.048 s, 0 requests, returns before `acquire_lock`; rows/analysis/report
+  byte-identical afterwards. 960 rows, 80 per (epoch,arm).
+- **2 PASS** — per-epoch R/A **1.2597 / 1.3195 / 1.3171** → pooled **1.2988** (sd .03383, t95
+  **[1.2147, 1.3828]**, df=2), pad-adj **1.296**, F/A 1.0661, R/F 1.2187, hit R .779/.767/.765 A .953/.953/.953.
+  Horizon from rows: t1–40 **1.7046 / 1.7682 / 1.7195** (mean 1.7308); t41–80 **0.9508 / 1.0296 / 1.0561**
+  (mean 1.0122). Licensed sentence: **"1.700x is a 40-turn figure"**; an 80-turn headline must be **1.30x**
+  (t95 1.22–1.38). 1.700 itself is reproduced only to 0.3–4.0 % (mean +1.8 %), and A is cheaper than R only
+  in e1 — e2/e3 are parity (1.030/1.056), not overtaking.
+- **3 PASS** — arithmetic split, payload note "Not a mechanism": R 113166 = 5081 (4.49 %) + 108085;
+  F 61214 = 8960 (14.64 %) + 52254; A 46461 = 3658 (7.87 %) + 42803; per-epoch parts sum to pooled.
+- **4 PASS (correction)** — **4 folds [18,35,53,71]**, card records the 8k trigger and rejects ~7/~14.
+  Lag R 1152 (n=99) → 448 (n=78), F 896 → 224, A 384 → 896, e1 R 1248→1088→384→0. "Does not worsen" holds
+  for R,F only; A worsens and since-fold medians are non-monotone (896,1344,928,1344,896,960).
+- **5 PASS (label caveat)** — E3 912 = 335 clean + 6 grid + **308** one-body + **182** (104+78) +
+  **81 unexplained**; E4 **195/960** padded, **3** residue-0 rows listed and flagged (e1 F t53 2176,
+  e1 A t19 9792, e2 A t31 15232). "Unexplained" is honest; **"ambient" is not** — 54/81 lie within 2 turns
+  of a fold (R 37 / F 25 / A 19).
+- **6 PASS (correction)** — t1 cached 0 in all 12 runs; e2/e3 t10/t17 **cached** identical (4864/7616);
+  **prompt** identical only in e3 (e2 spans 9 tokens); e1 R one 64-block high from pads (5394 vs 5339–5366).
+  No non-200, no context event, max prompt 38440.
+- **7 PASS red→green** — R↔A swap: 1.2988 → **0.7699** (=1/1.2988) and decomposition exchanges A/R;
+  +10 000 on e1 R t18 uncached: break 5081 → **15081**, steady fixed; fold flag off: break 3695 /
+  steady 109471; one cached→0: E3 one-body 308 → 307, unexplained 81 → 82.
+- **8 PASS containment** — only `cells/LIVE-MEAS/**`, `units/LIVE-MEAS.md`, `handoffs/LIVE-MEAS.json`, plus
+  its own `.occamy.lock` (released 21:07:58Z, 420.2 s ≈ lock_held 420.6, waited 0.0, one acquisition);
+  client/runner/analyze/render mtimes 2026-10-20; `VERDICTS.md` untouched; root `.occamy.lock` is **U6-R**'s.
+
+Corrections: warmth claim → cached in e2/e3, prompt only e3; "A overtakes" → parity; "confirmed 1.700" →
+within 0.3–4.0 %; "does not worsen" → R/F only; "ambient" → "unexplained"; residue-0 rows flagged, not
+excluded (two are inside the E3 population). Record: `orchestration/units/VLIVE.md`,
+`orchestration/handoffs/VLIVE.json`.
+
+## VE4R — verification of E4R `rep3-probe` (offline, 0 live requests, no lock) — **PASS with two word-level corrections**
+
+Re-derived every headline count from `e4r_rows.jsonl` (sha256 `05a59f28d169947fd959842ef482e07ec95fb2a96ac8405151e4aaf1920e09a7`, 180 rows): roles cal 8 / cold 46 / rep1 46 / rep2 40 / rep3 40; cold `cached == 0` 46/46; exact length 46/46 trials; 180 requests, all `status 200`. 1024 rep1 `0x20` -> rep2 `960x20` -> rep3 `960x20`; 1088 rep1 `0x20` -> rep2 `1024x20` -> rep3 `1024x20`; pooled rep-3 `L-64` 40/40, `L` 0/40, block tax 64 40/40, `rep3 == rep2` 40/40, CP95 [0.9119, 1.0] (= Clopper-Pearson `0.025**(1/40)`, not Wilson). Red->green: one 1024 rep-3 flipped 960->0 gives 39/40 and the claim fails; 960->L gives eq-L 1/40; restore returns 40/40 at the original sha. Neighbours not inflated: 1008 n=5 (`cached` 960, tax 48, non-multiple), 1152 n=1 (rep-1 miss only), both labelled spot checks.
+
+**Check 6 ruling — "permanent":** licensed only as bounded persistence. The series is rep-1 `cached 0` (full prefill, block tax `L`), rep-2 and rep-3 `L-64` (40/40 each), so the shortfall does not decay after the first repeat; rep-4 is unreachable in 180 (5 sends/trial x 40 trials = 200), so "permanent" means "persists unchanged through repeat 3 (repeats 2-3 of 3 measured)", never "forever". Surviving words: "persistent steady-state ceiling"; "on repeat 3 it equals `L-64` in 40/40 boundary trials (CP95 lower 0.9119)"; "never `L` (0/40)"; "one full extra prefill at the first repeat"; "one-block tax on every later repeat measured". Must carry scope: "permanent"; and "(repeats 1-3)" is the measured window, not the tax-bearing repeats (rep-1 tax is `L`; the 64-tax is repeats 2-3). `E4R.md:57-58` already states the scope correctly; the JSON licensed sentence needs it. Scope of the sentence: one endpoint / one model / one SGLang build; 1024 and 1088 n=20 each; 1152 has rep-1 only (n=1), so one boundary length at rep-3.
+
+Corrections (word-level, no number changes): (1) "one-repeat lag" is used with opposite verdicts — `E4R.md:5`/`:53` (recovers at rep-3 -> refuted) vs `E4R.md:37` + `E4R.json one_repeat_lag_persists` (incurred once, then persists -> confirmed); the rows support persistence, so split the label. (2) scope "permanent" + "(repeats 1-3)" in the JSON licensed sentence as above. (3) TTFT keys `1024_miss`/`1088_miss` are the rep-1 medians (231.442/278.87), not the cold medians (232.524/279.3) — same `cached == 0` regime, label only. Containment: only `cells/E4R/**`, `units/E4R.md`, `handoffs/E4R.json` written; E4 inputs byte-identical to E4C's pinned `5f10b316...` / `f3a341c3...`; shared modules untouched (2026-10-20); `.occamy.lock` mtime 16:07:58 predates E4R's 16:11:57 start; one `flock`, `lock_wait_s 0.0`; no E4R/VE4R line in this file before this append. Record: `orchestration/units/VE4R.md`, `orchestration/handoffs/VE4R.json`.
+
+## VAUDIT — post-repair licensed-text audit (2026-10-21, offline, 0 live requests)
+
+**Verdict: `partial`** — licensed headlines survived repair; retracted prose did not.
+
+- **Fidelity (check 1): PASS.** All five key licensed sentences are in the current files: E3 verbatim; E2/E4/E4R/LIVE-MEAS emphasis-only. The `verifier_corrections[].corrected_to` machine strings are condensed rewrites (1/26 byte-identical to the md prose) — cite the md sentence.
+- **Survivors (check 2): FAIL 4/5.** Retracted wording still stands as **live, unquoted prose** in `E2.md:159-160`, `E3.md:160/167/172`, `E4.md:24/63/68/69/70`, `LIVE-MEAS.md:46/73/75/81/83`. `E4R.md` is clean. Cause: additive-only repairs overrode the body from a top section but never quoted it. Only `E2.json`/`E4R.json`/`LIVE-MEAS.json` carry `superseded_text`.
+- **Datums (check 3): PASS.** Parse + 7 keys on all five; row shas unchanged (E2 `47980b49…`, E3 `7d123dd4…`, E4 `5f10b316…` + report `f3a341c3…`, E4R `05a59f28…`, LIVE-MEAS `6150e534…`); payload intact (45/45 vs 0/40, Fisher `3.4646074215706565e-25`; 180/180, 40/40 at `L-64`; 960, 1.2988, `113166 = 5081 + 108085`).
+- **STATUS §7 (check 4): one wrong number.** `STATUS.md:163` "pad-adj **1.2964**" vs `LIVE-MEAS.json` `pad_adjusted_R_over_A_pooled = 1.2963` (analysis mean 1.2962747633). 20+ other numbers reproduce. §3 counts drifted: 617/599 cited, 619 `.json`/600 cards on disk (STATUS-E + U6-R wrote after the sweep).
+- **Red→green (check 5): PASS.** Mutating the E4 licensed sentence to "deterministic", and STATUS `1.2988→1.2999` in `/tmp`-style copies under `scratch/vaudit/`, each makes the audit fail; real files untouched.
+- **Containment (check 6): PASS.** Every cell dir's newest mtime predates its repair; shared modules untouched; `VERDICTS.md` appended by VLIVE only, never rewritten.
+- **Next:** convert the 15 listed survivors into `> original` quotations (and add `superseded_text` to `E3.json`/`E4.json`), or stop citing the bodies; correct `STATUS.md:163` to 1.2963 and refresh §3 counts.
+| 2026-10-21 21:35 | **V-RES** | R-lanes (R-SGL/R-VLLM/R-CROSS/R-PROD) | **PASS** | claim 1: SGLang `--mamba-radix-cache-strategy extra_buffer` + `--page-size 64` | re-fetched server_arguments.html + raw `docs/cookbook/.../Qwen3.5.mdx:134` verbatim | n/a (literature re-fetch, no guard) | **keep** |
+| 2026-10-21 21:35 | **V-RES** | R-lanes | **OVERSTATED** | claim 2: FLA_CHUNK_SIZE 64 == `--mamba-track-interval` grid | `--mamba-track-interval` default **256** (server_arguments.html); only Qwen3.8-Flash-Next sets 64 | n/a | **do not build on it** — read live argv first |
+| 2026-10-21 21:35 | **V-RES** | R-lanes | **PASS** | claim 3: vLLM `DEFAULT_BLOCK_SIZE=16`, `--prefix-match-unit`, `--enable-mamba-shared-prefix-checkpoint` | `vllm/config/cache.py:182`; `arg_utils.py:1424,1435`; `automatic_prefix_caching.md:18,33` | n/a | **keep** (add MTP precondition) |
+| 2026-10-21 21:35 | **V-RES** | R-lanes | **PASS** | claim 4: Dynamo Qwen3.6-35B-A3B 1-GPU SGLang manifest + 156.07 ms / 3035.98 tok/s/GPU | real `deploy.yaml` (tp 1, gpu 1, all four flags verbatim); catalog `simulated acc_len=3.3153` | n/a | **keep, relabel** (simulated acceptance) |
+| 2026-10-21 21:35 | **V-RES** | R-lanes | **OVERSTATED** | claim 5: HiCache 6x/80% as the headline for our hybrid class | lmsys blog wording exact, but 0 occurrences of "hybrid"/"Mamba"; evidence is DeepSeek-R1-671B + Qwen3-Coder-480B | n/a | **label class** |
+| 2026-10-21 21:35 | **V-RES** | R-lanes | **OVERSTATED** | claim 6: alpha 0.038 vs 0.68 ⇒ MTP not a lever | arXiv:2605.01106 numbers verbatim; mechanism is component-aware SELF-speculation; LayerSkip 12x higher on same family | n/a | **adjudicated in favour of R-SGL's gate** |
+
+## V-XSTACK — cross-stack cells (WIN-SGL · WIN-VLLM · TUNED) → **FAIL**
+
+Verifier of none of the three cells; re-derived every number from the delivered `rows.jsonl` files (row
+sha256 checked against the handoffs). Two independent defects plus a gate gap; everything else reproduced.
+Full report: [`orchestration/handoffs/V-XSTACK.json`](handoffs/V-XSTACK.json); work note
+[`orchestration/units/V-XSTACK.md`](units/V-XSTACK.md).
+
+- **Grids + laws (check 1) — PASS with the residual reported.** SGLang gcd 64/128/64; vLLM 1088/1056/2096
+  (= D/8, D/4, D/4 with D=8704 — the 8704 grid inferred from the measured gcds); TUNED replay 64. The
+  declared repeat laws are exact on the controlled points (SGL 8/8 probe at a=1; V1 20/20, V2 11/11, V3 5/5
+  rep-1; TUNED 10/30) but battery rows are appends and do not follow a per-row identity: S1/S2 6/888 exact
+  (max |res| 1408, ladder −448 ×319 / −896 ×235 / −960 ×117); V1 122/284, 161 rows at −1088, one **+2176**
+  at L=4352 (exact multiple, cached 2176 — a counter-example to "0 at multiples" outside repeats); V2
+  140/284; V3 8/284.
+- **Granularity vs launch (check 2) — FAIL for TUNED.** TUNED claims `page_size 1 / no-grid`, but its 30
+  delivered replay rows are the G3 64-token law (10/30 exact; all 19 non-exact rows cached=0; max |res|
+  8641), and the 32k rows match G3 up to L≈30k. `page_size 1` predicts cached=0 on every repeat. Its own
+  launch artefacts disagree: copy_config page_size 1, `/get_server_info` page_size 64 and
+  `disable_radix_cache false`. S1/S2/V1/V2/V3 pass (measured gcd equals the launched page/block).
+- **Claims vs rows (check 3) — PASS.** Every delivered claim line re-derived from delivered rows; no claim
+  rests on a row outside the population (1800/1800/950 rows; all status 200). The only line that does not
+  reproduce is TUNED page_size (above).
+- **Identity schema (check 4) — FAIL.** `stack`+`config_id` are declared mandatory; **289/289 TUNED rows
+  have both null**. No guard exists: stripping one S1 battery row's identity makes `win_sgl_analyze.py` exit
+  0 and silently drop it from the bucket (900→899) while `n_rows_total` still counts 1800; restoring it
+  reproduces the committed `analysis.json` byte-for-byte. So the whole TUNED cell cannot be attributed by
+  the shipped reader, and a lost identity row is invisible.
+- **Launch restore (check 5) — PARTIAL.** TUNED pre vs restored: 481 keys, 477 identical; the 4 differing are
+  `max_total_num_tokens` (1620892→1440049, a capacity counter), `random_seed`, `internal_states`,
+  `startup_time` — no config key differs. vLLM restore records `config_ok=true` (health 200,
+  qwen3.5-9b/max_model_len 32768) at 06:18:19 / 06:28:34 / 06:42:07Z; the pre/post `/get_server_info` key
+  lists are not stored, so only the recorded boolean is re-checkable. The card's `state/config/restore-diff.json`
+  does not exist (delivered: `tuned-config/tuned-restore-diff.json`, whose `server_info_sha256` 5583ab44… does
+  not match the stored capture's 9c6ee8bb… — values agree with the live bytes, provenance cannot be re-derived).
+- **G0 before battery (check 6) — FAIL for S1/S2/TUNED.** No gate code exists in the SGL or TUNED cells;
+  vLLM gates each battery (kind=battery_gate, 0.975, config_ok true). The only SGLang G0 is U2 — **2026-10-20
+  18:05 UTC**, 97 requests, 6/6 — which predates the `warm_retry_empty_sleep` protocol S1/S2 measured, and the
+  box has been restarted for every cell since (capacity drift: max_total_num_tokens 1624261→1306681 for the
+  same launched config). TUNED has no gate at any point.
+- **Red→green — 1/1 reproduced** (the identity guard above). Red = the analyzer accepts the stripped row;
+  green = restored rows reproduce the committed analysis exactly.
+- **Containment.** 2 GETs on :8012 (health, `/v1/models`), 0 model requests, 0 engine restarts, no lock;
+  no target repo touched.
+- **Next:** correct TUNED's page_size claim to 64 (or re-derive on a real page_size 1 engine) and backfill
+  `stack`/`config_id` on its rows; add an in-cell G0 to SGL/TUNED and a hard reject for identity-less rows;
+  then re-verify.
+
+
+## RECON-ARCHIVED — reconciler must not fail on archived cards (2026-10-23, **AUTHOR SELF-CHECK, not a gate**)
+
+Scope: `tools/board/session_recon.py` exit-code plausibility. Read-only over `~/.dsh`; no card created,
+moved or settled.
+
+- **Defect 1 — archived cards graded as live lags.** `find_settled_lag` skipped only `schedule`-bearing
+  cards. `archive` does not rewrite `status`, so GATE-RUNNER `7a7424d4-fbcd-49af-b0aa-c095bf83bf7a` and
+  FIX-PROSE2 `75e1f3b7-343f-4f74-b9f5-2b35ac2fca6a` still read `todo` (last exec `result: cancelled`) after
+  being archived and were counted as `settled-lag`. Fix: a truthy `archivedAt` routes the card to
+  `archivedWithSettledExecution` (+ `summary.archived`, + an `ARCHIVED` stdout block) and it never raises the
+  exit code. Live, non-scheduled cards still lag.
+- **Defect 2 — settled-lag double-count.** The branch appended the raw `session-<uuid>` key to `offenders`
+  (already holding the normalized `<uuid>`), and the print loop re-listed every lagging card. Two lagging
+  cards printed four OFFENDERS lines. Fix: normalize before dedupe; print `offenderDetails` only.
+- **Red→green→red, real ledger:**
+  `offenders=2 lagging=2 archived=0 historical=35 exit=1` (pre-fix copy) →
+  `offenders=0 lagging=0 archived=2 historical=35 exit=0` (fixed) →
+  `3 failed, 7 passed` → `10 passed` (`tests/test_session_recon_archived.py`).
+- **Control that the check is not dead:** same ledger plus one synthetic live unsettled card →
+  `offenders=1 lagging=1 archived=2 exit=1`, exactly one printed offender line.
+- **Limit:** authored and checked by the same unit. An independent `V-RECON-ARCHIVED` card owns the gate.
+
+## V-RECON-ARCHIVED — independent re-run of the archived-card reconciler fix (2026-10-23, **verdict: pass**)
+
+Verifier, not the author (`RECON-ARCHIVED`). Read-only over `~/.dsh`; ledger under test `ledger-v2.json`,
+md5 `f931c2dccbe01de23180e7efbafdf7a0`, revision **1052**, unchanged before and after.
+
+- **Red reproduced** — pre-fix copy `.scratch/recon-archived/session_recon_prefix.py` on the real ledger:
+  `offenders=2 lagging=2 archived=0 historical=35 exit=1`, **4** printed `class=settled-lag` lines — both
+  archived cards double-counted (raw `session-<uuid>` beside the normalized `<uuid>`).
+- **Green reproduced** — `tools/board/session_recon.py`: `offenders=0 lagging=0 archived=2 historical=35
+  exit=0`, no OFFENDERS block; the two archived cards (`7a7424d4…`, `75e1f3b7…`) print under `ARCHIVED`.
+- **Control reproduced** — same ledger plus one synthetic live unsettled card: `offenders=1 lagging=1
+  archived=2 exit=1`, exactly **1** settled-lag line. The check is live, not deleted.
+- **Tests:** `10 passed` on HEAD; `3 failed, 7 passed` against the pre-fix module (same three tests the author
+  named). Handoff guard `13 passed`.
+- **Independent coverage check (beyond the author's evidence):** of 16 archived cards in revision 1052, 10 are
+  archived+unsettled; the 8 scheduled ones are dropped by the pre-existing schedule exemption and the 2
+  non-scheduled ones are exactly the reported pair — **no archived card escapes the exemption**. `backlog` and
+  `running` archived cards route to `archivedWithSettledExecution`, not to lag.
+- **Recorded gaps (reporting, not regressions):** an archived card that also carries a `schedule` is invisible
+  in `archivedWithSettledExecution` (8/10 today); `archivedAt = 0/null` is graded live — untriggered, since the
+  archive action writes epoch ms.
+- **Containment:** `~/.dsh` sweep moved only DSH-runtime-owned files (`storages/session_projcache`,
+  `memos-plugin`, `dsh-bottom-info-bar`); ledger untouched; no card created/moved/settled; no target touched.
+
+## V-FINAL3 — independent end-to-end verification after the repair chain (2026-10-23 11:49–12:0x)
+
+**Verdict: `partial`** — all gates, values and guards are green; two defects survive, both in the
+package's *records of verification* rather than in its numbers.
+
+- **Green, re-derived by a non-author:** `verify_package.py` PASS (62 claims, 62 mapped 1:1, UNVERIFIED: none,
+  exit 0); `recompute.py all` exit 0 (`59 claims checked, all match`, `GRID GUARD PASS 7/7`,
+  `COVERAGE GUARD PASS 62 documented, 60 runnable + 2 script-backed`); READER-MAP 62/62, `comm -23` empty;
+  both script-backed claims **re-executed** (`u5_recon.py` 760/760 byte-identical; `u4_recon.py`
+  body equal 11/44, `POINTER_FORK never imported: True`) — V-FINAL2's unverified[1] closed.
+- **Bites, reproduced on the real tree (each restored byte-identically):** G5 attribution, M4 attribution,
+  GUARD-INDEP RED-1 (abstract "independently implemented") and RED-2 (SS 2 mechanism deleted),
+  qualifier RED-1 (presence) and an independent deny probe. V-FINAL2's **RED E** (unmatchable row) now
+  **fails both gates** — FIX-PKG2 holds.
+- **Defect 1 (new, FIX-MAN2):** `RUN.json:350` records `verifier_handoff_sha256_prefix` `2f17f26215d5fa77`
+  for `verifier_handoff: orchestration/handoffs/CX-V2.json`, but that prefix is `sha256(V-FINAL.json)[:16]`;
+  the CX-V2 digest is `0887c656baaa3748`. The pinned reference does not resolve — introduced by FIX-MAN2's
+  "refresh", which overwrote the correct value.
+- **Defect 2 (pre-existing, inherited):** a planted `| C63 | … | recompute.py C63 |` row passes **both**
+  gates (exit 0). FIX-PKG2's claimed red (`no runner for 1 claim(s): C63`) does not reproduce; FIX-MAN2
+  saw it once and could not reproduce it either. `C\d{2}`-shaped ids are not claims to either census.
+- **Suite:** 1188 passed, 1 skipped, 1 failed (pre-existing `tests/test_kg_policy.py`, files dated
+  2026-10-08, outside the package).
+- **Containment:** zero writes in `/home/zer0null/Duval` by this unit; a `find` sweep shows another actor
+  provisioning `.worktrees/BASELINE-M2-CHECK` at 11:54 — flagged for orchestration hygiene, not caused here.
+
+## V-R2-VLLM-RERUN — the repaired vLLM instrument re-run (2026-10-24, **verdict: partial**)
+
+Verifier, not the author (`R2-VLLM-REPAIR` · `REPAIR2` → live `R2-VLLM-RERUN` → `R2-VLLM-ANALYSE`). Offline
+re-check of `cells/R2-VLLM/rows.jsonl`, sha256 `6f7f05fa…de0ad1`, **418 rows**, 0 blank, 0 non-200, 0 rows with
+an `error` key. Every number reproduced; **one guard weakness and two precision overstatements** remain, all in
+the record, none in the data.
+
+- **C1 — the instrument is no longer blind: PASS.** The flag sits once per launch spec, in `cmd` as well as
+  `extra`: OH1/OH1L `extra[0]` + `cmd[27]` (A1 `cmd[31]` + `cmd[33]`), each launch also carrying
+  `--prefix-match-unit` (OH1/OH1L `cmd[30]`). `usage_has_details` is true on **418/418** rows, `cached_tokens`
+  is `None` on **0**, and rows that are `usage_has_details != True` *and* `cached_tokens == 0` number **0**
+  (no fabricated zero). The 194 battery rows with `cached_tokens == 0` are observed misses. A1's launch is
+  prod's own `Cmd` plus `pmu 16` and this one flag (`test_R1` asserts exact equality).
+- **C2 — arm identity is real, from the bytes: PASS.** **64** `(config, rep, turn)` groups, **64/64** with
+  **4 distinct `prefix_sha256`**; pairwise arm coincidences across them **0**; **256/256** battery rows carry
+  `arm_compaction` + `arm_render` + `prompt_nodes`; declared concatenation violations **0**
+  (A `append_note`/`pointer`, C `summarise_in_place`/`naive_append`, R `fork`/`pointer_fork`, H
+  `append_note`/`pointer`, 64 rows each); `prompt_nodes` disagreeing with the row labels **0**;
+  `prompt_nodes.turn == turn` **256/256**.
+- **C3 — cold pass: PASS.** Battery `rep=0` rows **128** (and `rep=1` **128**); `rep=0` battery rows with
+  `cached_tokens != 0`: **0**. The 66 `cached_tokens>0` rows in `rep=0` are **all probe-phase (`arm:null`)** —
+  legitimate probe reuse, kept and listed, not deleted; no battery row among them.
+- **C4 — repeat pass: PASS.** `rep0`/`rep1` key sets identical (128 cells each), `prefix_sha256` mismatches
+  **0** (byte-identical repeat). Battery hits at `rep1`: **OH1 62/64** — A 15, C 16, R 16, H 15 — the two
+  misses being **(A, turn 1)** and **(H, turn 2)**; **A1 0/64**.
+- **C5 — independent re-derivation: PASS.** Own script over the rows reproduces all **20** `(config, arm)`
+  cells × **7** fields of `R2-VLLM-ANALYSE` byte-for-byte (e.g. `OH1|A` 32 rows / 17 eq-0 / 15 >0 / 0 None /
+  total 80240 / mean unc 2967.75 / med 1799.5; `A1|A` 32 / 32 / 0 / 0 / 0 / 5475.25 / 5359.5); config rows
+  **OH1 236 + A1 182 = 418**, matching `analysis.json` `_source.rows_sha256` and `n_rows`.
+- **C6 — A1's zero pattern: PASS.** A1's **182** rows: `cached>0` **27**, `==0` **155**, `None` **0**; all 27
+  hits are `arm:null` probe rows of the *same* launch (grid 10, tokens 10, baseline 6, gate 1). A1 battery
+  `rep=1` is **64/64 observed misses** (`prompt_tokens` 1183..10368, `blocks_available >= 1` on 64/64).
+  Battery byte-prefixes that had hit earlier in the same launch: **0** (OH1 likewise 0). No causal
+  explanation is accepted — eviction, tokenizer divergence and scheduler behaviour are not discriminated.
+- **C7 — containment / safety: PASS.** `occamy=200` at every launch and teardown; `rm` targets only
+  `r2v-oh1` / `r2v-oh1l` / `r2v-a1`; prod restored `proven=true` (health 200, `qwen3.5-9b`, block 1056→1056,
+  `cmd`/`binds`/`image` same); `.occamy.lock` carries its own `released_utc` `2026-10-24T03:27:40Z`;
+  `discarded-r1/rows.jsonl` sha `2737125f…de5045c` (420 lines) = the declared digest.
+- **C8 — red→green: PASS with a guard weakness.** Live suite **pass=16 fail=0 red_green=True** (16 `ok`
+  lines). The verifier's own mutation (deleting `pmu16_cell.py:134`) **aborts the suite before any check
+  summary** — `AssertionError: revert pattern drifted from the source: flag_dropped_from_OH1: '"--reasoning-parser",
+  "qwen3", "--trust-remote-code",\n    # '` — because the mutation changes `test_R1`'s *output* (flag count
+  1→0) but not its *input*, and the revert-guard matches a source-text pattern (three-dot placement of the
+  flag) that has drifted from the current file (the flag now sits **beside** `--trust-remote-code`).
+  Recorded as a **guard weakness**: the two RED defects are genuinely guarded (the suite halts rather than
+  passing when the flag is dropped), but a future genuine regression in that vicinity is a Traceback, not a
+  named FAIL; the suite is also **not relocation-safe** (temp copies outside the repo fail 7 checks on
+  `FileNotFoundError` for `corpora/*` and the real `rows.jsonl`). Neither touches the committed green state
+  (live `pmu16_cell.py` sha `2ae22c6c…35d0c9d` unchanged before and after).
+- **C9 — the four operator facts.** (a) OH1 battery hits: `rep0` 0/16 per arm (0/64); `rep1` A 15/16, C 16/16,
+  R 16/16, H 15/16 = **62/64**. (b) A1 battery: `rep0` 0/64, `rep1` **0/64**. (c) **`--prefix-match-unit` is
+  NOT discriminated**: `2096 % 16 == 0` and `1056 % 16 == 0`, so an honoured flag is indistinguishable from an
+  ignored one; OH1L launched `pmu 8` on the same recipe and produced **0 rows**; prod metrics report
+  `prefix_match_unit="None"`. (d) Requests: `run.json requests_this_run` **182** (final launch); rows carry
+  `request_index` 1..418, all unique per config. Cap `ARM_REQUEST_CAP` **260**; worst config **236 rows**;
+  **0** `arm cap reached` lines.
+- **Three overstated items, corrected against the rows:**
+  (i) `R2-VLLM-ANALYSE` "OH1 62/64 with **one arm with a miss**" — the total 62/64 reproduces exactly, but the
+  misses are **A (turn 1) and H (turn 2), 15/16 each**; no arm carries the miss twice.
+  (ii) `R2-VLLM-REPAIR2` "worst 219" — the rows on disk hold **236 rows for OH1**; 219 was measured against an
+  earlier 54-row prefix. The conclusion holds (236 < 260 cap) but the figure is stale.
+  (iii) `R2-VLLM-ANALYSE` "pass 15/16" — **16/16 now**: the 15 came from `test_R7_analysis_guard` finding no
+  `analysis.json` mid-rerun; it is a timestamp-dependent figure, not a standing result.
+- **Gate call: advance on the instrument.** Both defects are fixed and visible in the data (418/418 rows carry
+  usage details, 0 fabricated zeros, 64/64 groups with 4 distinct arm prefixes, cold pass clean, repeat pass
+  byte-identical, per-`(config, arm)` table re-derived byte-for-byte). **A1's 0/128 battery miss is a finding,
+  not an instrument defect** — it needs an attributing experiment, and `--prefix-match-unit` validity is still
+  untested because both block sizes are multiples of 16.

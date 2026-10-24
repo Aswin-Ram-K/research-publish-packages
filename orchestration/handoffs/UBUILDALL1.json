@@ -1,0 +1,50 @@
+{
+  "unit": "UBUILDALL1",
+  "status": "done",
+  "artifacts": [
+    "orchestration/packages/gated-read-batching.toml",
+    "orchestration/packages/gated-read-batching/readme-head.md",
+    "orchestration/packages/gated-read-batching/readme-tail.md",
+    "orchestration/packages/gated-read-batching/vocabulary-code.txt",
+    "orchestration/packages/gated-read-batching/vocabulary-public.txt",
+    "orchestration/units/UBUILD1.build.sh",
+    "tests/test_package_build.py",
+    "strategy/PACKAGE_BUILD.md",
+    "orchestration/units/UBUILDALL1.md",
+    "scratch/ubuildall1/refactor.py",
+    "scratch/ubuildall1/orig/UBUILD1.build.sh",
+    "scratch/ubuildall1/old.files.sha256",
+    "scratch/ubuildall1/new.files.sha256",
+    "scratch/ubuildall1/old.build.log",
+    "scratch/ubuildall1/new.build.log"
+  ],
+  "evidence": {
+    "command_or_count": "BYTE-IDENTITY: `diff -r --exclude=.git $W/old/dest/research-publish-packages $W/new/dest/research-publish-packages` printed NOTHING and exited 0; content-hash manifests over all 39 emitted files were equal (`diff -u old.files.sha256 new.files.sha256` exit 0, 'IDENTICAL: 39 files, all sha256 equal'); git HEAD was 245449617de274d8b7ee3059e399d25f5c30a965 in BOTH trees (1 commit, clean, ls-files -s identical). Both builds exit 1, both reporting the SAME pre-existing gate failure: 'flagged tokens: 1133 / GATE RESULT: FAIL -- 1133 out-of-vocabulary token(s)' -- unchanged from the pristine script, so it is the shipped material's state, not the refactor. TESTS: `PYTHONPATH=src:. python3 -m pytest tests/test_build_wiring.py tests/test_package_build.py -q` -> '26 passed in 0.44s' (test_build_wiring.py UNMODIFIED, 11 of those). RED->GREEN: mutating one ship_staged entry ('results/STALE-ENTRY.json') gave '3 failed, 12 passed' with 'E  only in ship_staged: [\\'results/STALE-ENTRY.json\\']', and the driver independently refused it with 'driver exit: 2' + 'FATAL: manifest ship_staged disagrees with the built-in default block'; after restore, '26 passed in 0.43s'.",
+    "commands": [
+      "bash -n orchestration/units/UBUILD1.build.sh   # SYNTAX OK",
+      "DEST=\"$W/old/dest/research-publish-packages\" bash scratch/ubuildall1/orig/UBUILD1.build.sh   # OLD exit=1",
+      "DEST=\"$W/new/dest/research-publish-packages\" bash orchestration/units/UBUILD1.build.sh --package gated-read-batching   # NEW exit=1",
+      "diff -r --exclude=.git \"$W/old/dest/research-publish-packages\" \"$W/new/dest/research-publish-packages\"   # no output, exit 0",
+      "( cd \"$W/old/dest/research-publish-packages\" && find . -path ./.git -prune -o -type f -print0 | sort -z | xargs -0 sha256sum ) > $W/old.files.sha256",
+      "( cd \"$W/new/dest/research-publish-packages\" && find . -path ./.git -prune -o -type f -print0 | sort -z | xargs -0 sha256sum ) > $W/new.files.sha256",
+      "diff -u \"$W/old.files.sha256\" \"$W/new.files.sha256\"   # exit 0, 39 files, all sha256 equal",
+      "git -C \"$W/old/dest/research-publish-packages\" rev-parse HEAD   # 245449617de274d8b7ee3059e399d25f5c30a965 (== new)",
+      "PYTHONPATH=src:. python3 -m pytest tests/test_build_wiring.py -q   # 11 passed in 0.11s (unmodified)",
+      "PYTHONPATH=src:. python3 -m pytest tests/test_build_wiring.py tests/test_package_build.py -q   # 26 passed in 0.44s",
+      "bash orchestration/units/UBUILD1.build.sh --package no-such-package-xyz   # exit 2, FATAL: no manifest for package, DEST untouched",
+      "python3 scratch/ubuildall1/refactor.py   # driver 969 -> 1033 lines, 22 anchored edits, ship=29 never=15"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "A verifier should re-run the two builds + `diff -r` and both pytest files, and check that the default package's literal block in orchestration/units/UBUILD1.build.sh still trips with exit 2 when only one of manifest/literal is edited. Open follow-ups, deliberately NOT done here because each edits a guard: (1) re-target tests/test_build_wiring.py at the manifest and then delete the duplicated literal block from the driver; (2) the built tree still FAILS its own exclusion gate with 1133 flagged tokens (.DS_Store in .gitignore, licensor in COMMERCIAL.md) -- pre-existing, unchanged by this refactor, but it means no release package currently builds clean; (3) a multi-package root README index is not modelled -- each manifest writes the whole README.md, so two packages in one destination collide. The two other papers need only a new orchestration/packages/<slug>.toml plus its fragment directory.",
+  "write_paths": [
+    "orchestration/units/UBUILD1.build.sh",
+    "orchestration/packages/**",
+    "tests/test_build_wiring.py",
+    "tests/test_package_build.py",
+    "strategy/PACKAGE_BUILD.md",
+    "orchestration/units/UBUILDALL1.md",
+    "orchestration/handoffs/UBUILDALL1.json",
+    "scratch/ubuildall1/**"
+  ]
+}

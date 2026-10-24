@@ -1,0 +1,47 @@
+{
+  "unit": "MEASURE-VLLM-2",
+  "status": "partial",
+  "artifacts": [
+    "orchestration/handoffs/MEASURE-VLLM-2.json",
+    "orchestration/units/MEASURE-VLLM-2.md",
+    "GX10:/home/zer0null/r2/run.sh",
+    "GX10:/home/zer0null/r2/vllm_cell.py",
+    "GX10:/home/zer0null/r2/driver.pid",
+    "GX10:/home/zer0null/r2/run.out.log",
+    "GX10:/home/zer0null/r2/OH1/status",
+    "GX10:/tmp/r2oh1.log"
+  ],
+  "evidence": {
+    "available_mb": "52211",
+    "container": "r2oh1 349a0ce069661ab943e8f23527cd57c3422dae65186a4a8bac0ceb4db1c28f18 Up 0.0.0.0:8020->30000/tcp",
+    "driver_pid": "3778667 (bash run.sh, alive at 01:07 elapsed)",
+    "driver_pid_file": "PID=3778667 STARTED=2026-10-24T03:24:31Z",
+    "status_file": "STARTED 2026-10-24T03:24:31Z",
+    "log_paths": [
+      "/home/zer0null/r2/run.out.log",
+      "/home/zer0null/r2/OH1/status",
+      "/home/zer0null/r2/OH1/rows.jsonl",
+      "/tmp/r2oh1.log"
+    ],
+    "production_untouched": "gx10-occamy-nvfp4 Up 19 hours; :8012 never contacted",
+    "model_loading": "Checkpoint size 22.28 GiB, 5 shards, FLASHINFER NvFp4 MoE backend",
+    "commands": [
+      "scp vllm_cell.py zer0null@192.168.2.168:/tmp/vllm_cell.py  -> SCP_OK 245 lines",
+      "ssh ... 'docker run -d --name r2oh1 ... -p 8020:30000 ... --prefix-match-unit 16 ...' -> RUN_RC=0",
+      "ssh ... 'ps -o pid,etime,cmd -p 3778667' -> PID 3778667 ELAPSED 01:07 CMD bash run.sh"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "POLL-VLLM collects /home/zer0null/r2/OH1/rows.jsonl + startup.txt + status (DONE rc=); driver PID 3778667, container r2oh1 on :8020",
+  "write_paths": [
+    "orchestration/handoffs/MEASURE-VLLM-2.json",
+    "orchestration/units/MEASURE-VLLM-2.md"
+  ],
+  "assumptions": [
+    "Image sha256:2c211a1273b4... used (the proven WIN-VLLM vLLM image); its entrypoint already runs `vllm serve`, so argv was passed starting at --model rather than with a literal 'vllm serve' prefix (the proven working form).",
+    "run.sh dumps `docker logs r2oh1` to /tmp/r2oh1.log before grepping startup fields: a detached container's logs never flow through a shell redirect on `docker run -d`.",
+    "Arms run as one invocation `--arm all` (284 rows, single append-only rows.jsonl that POLL reads) instead of four sequential invocations.",
+    "Cell CLI requires --base-url and --model; supplied http://127.0.0.1:8020/v1 and occamy-1.0.",
+    "gx10-qwen9b was NOT stopped (card forbids it); the occamy variant coexists at --gpu-memory-utilization 0.22 with 52.2 GB available."
+  ]
+}

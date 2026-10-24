@@ -1,0 +1,53 @@
+{
+  "unit": "MATRIX-FOLD",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/recompute.py",
+    "papers/context-cache/CLAIMS.md",
+    "papers/context-cache/READER-MAP.md",
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/PACKAGE.md",
+    "papers/context-cache/EVIDENCE.md",
+    "papers/context-cache/GAPS.md",
+    "papers/context-cache/RUN.json",
+    "tests/test_paper_matrix_fold.py",
+    "state/gap-ledger.json",
+    "state/logs/MATRIX-FOLD-redgreen.txt",
+    "orchestration/units/MATRIX-FOLD.md"
+  ],
+  "evidence": {
+    "command_or_count": "recompute.py all -> '60 claims checked, all match' + 'GRID GUARD PASS  7/7 configs' + 'COVERAGE GUARD PASS  63 claims documented, 61 runnable here + 2 script-backed'; recompute.py C63 -> 'PASS 43/43 values match'; verify_package.py -> 'PASS — 63 claims in CLAIMS.md, 63 mapped 1:1, 2 script-backed + 61 recompute.py-backed functions'; tests/test_paper_matrix_fold.py -> '8 passed' (RED: 1 failed / 7 passed when a §9b cell figure was drifted 1,682.72 -> 1,682.71, captured in state/logs/MATRIX-FOLD-redgreen.txt)",
+    "commands": [
+      ".venv/bin/python papers/context-cache/recompute.py all",
+      ".venv/bin/python papers/context-cache/recompute.py C63",
+      ".venv/bin/python papers/context-cache/verify_package.py",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_matrix_fold.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_claim_census.py tests/test_paper_boundary_attribution.py tests/test_paper_attribution_guard.py tests/test_gap_closure_ledger.py tests/test_gap_triage.py tests/test_run_record_digests.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "V-MATRIX-FOLD (different agent, do not reuse this session): independently re-derive C63 from the four row files (MOE-VLLM 306/283,033/66582276..., G3 888/721,318/d6313f72..., WIN-VLLM 692/579,172/a606ca06..., DENSE-SGL 894/712,756/7a0beb4e...) and compare against EXPECTED['C63']; re-run the red->green on tests/test_paper_matrix_fold.py (drift one §9b value, then restore); check §9b and the abstract against c63() output, and re-check that the model effect is engine-conditional (+548.06 vLLM vs +3.61 SGLang) rather than a model main effect.",
+  "write_paths": [
+    "papers/context-cache/recompute.py",
+    "papers/context-cache/CLAIMS.md",
+    "papers/context-cache/READER-MAP.md",
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/PACKAGE.md",
+    "papers/context-cache/EVIDENCE.md",
+    "papers/context-cache/GAPS.md",
+    "papers/context-cache/RUN.json",
+    "tests/test_paper_matrix_fold.py",
+    "state/gap-ledger.json",
+    "state/logs/MATRIX-FOLD-redgreen.txt",
+    "orchestration/units/MATRIX-FOLD.md",
+    "orchestration/handoffs/MATRIX-FOLD.json"
+  ],
+  "assumptions": [
+    "C63's resampling unit is the turn (71), not the 284 (arm, turn) rows: no compaction fires at 32k, so the four arms are salt-separated replicates and resampling rows would understate the interval.",
+    "Prompt identity is stated as 'same prefix digest and length' (`prefix_sha256` 284/284, `chars` 284/284 on all six cell pairs): the rows do not carry the full rendered text, so 'byte-identical prompts' is not claimed for the matrix.",
+    "GAPS.md G4 keeps its status token (NARROWED) and gains a dated paragraph rather than a new G16, because state/gap-ledger.json enumerates gaps G1..G15 and a new heading would fail the ledger guard.",
+    "The four state/gap-ledger.json MANUSCRIPT.md line refs that shifted when §9b was inserted were repointed to their current lines (15, 114, 453, 643) after re-locating the same quotes; expect/found were kept as evidence of the re-audit.",
+    "Author-side only: no independent verifier has re-checked C63 in this pass; the next_unit_hint names that verifier."
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "unit": "WIN-VLLM",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/WIN-VLLM/rows.jsonl",
+    "experiments/context-cache/cells/WIN-VLLM/analysis.json",
+    "experiments/context-cache/cells/WIN-VLLM/launch_variant.py",
+    "experiments/context-cache/cells/WIN-VLLM/win_vllm_cell.py",
+    "experiments/context-cache/cells/WIN-VLLM/win_vllm_analyze.py",
+    "experiments/context-cache/cells/WIN-VLLM/logs/",
+    "state/config/qwen9b-inspect-pre.json",
+    "state/config/V1-server-info.json",
+    "state/config/V2-server-info.json",
+    "state/config/V3-server-info.json",
+    "orchestration/units/WIN-VLLM.md"
+  ],
+  "evidence": {
+    "rows": "692 rows, all status 200, sha256 a606ca06a23145a52d2bb50f82baff1b6e8d0689164c80ce987c441ce83cf1d7",
+    "requests": "692/900 live; by config/phase {\"V1/battery\": 284, \"V1/gate\": 4, \"V1/grid\": 70, \"V2/battery\": 284, \"V2/gate\": 2, \"V2/grid\": 26, \"V3/gate\": 2, \"V3/grid\": 20}",
+    "V1": "block_size requested 64 -> resolved 1088; instrument works; law '1088*(floor(L/1088)-1) for L mod 1088 != 0; 0 at L mod 1088 == 0' exact 20/20; battery 4 arms x 71 turns, hit 0.8689-0.8691, unc/turn 2229.0-2233.0, gcd 1088",
+    "V2": "block_size requested 16 -> resolved 1056; instrument works; law '1056*(floor(L/1056)-1) for L mod 1056 != 0; 0 at L mod 1056 == 0' exact 11/11; battery 4 arms x 71 turns, hit 0.8679-0.8687, unc/turn 2237.1-2250.0, gcd 1056",
+    "V3": "occamy NVFP4 MoE on vLLM 0.27.1: attempt 1 (with --speculative-config mtp) FAILED 'RuntimeError: No Qwen3Next layer found in the model.layers.'; attempt 2 without it LOADED and served occamy-1.0 on :8020, resolved block 2096, law '2096*floor(L/2096)' exact 5/5",
+    "sglang_baseline": "S0 (page_size 1) 32k: hit 0.9592, unc/turn 725.75 -- vLLM 9B is ~3.1x the per-turn uncached cost, hit 0.869",
+    "restores": "V1 True, V2 True, V3 True; production :8014 health 200, qwen3.5-9b, max_model_len 32768, block_size 1056 after every variant",
+    "occamy": "http://192.168.2.168:8012/health = 200 at capture-pre, after every launch and every restore; container never stopped/restarted (Up throughout)",
+    "commands": [
+      ".venv/bin/python experiments/context-cache/cells/WIN-VLLM/launch_variant.py --capture-pre",
+      ".venv/bin/python experiments/context-cache/cells/WIN-VLLM/launch_variant.py --launch V1|V2|V3 [--no-spec]",
+      ".venv/bin/python experiments/context-cache/cells/WIN-VLLM/win_vllm_cell.py --config V1|V2|V3 --phase gate|grid|battery|probe [--port 8020]",
+      ".venv/bin/python experiments/context-cache/cells/WIN-VLLM/launch_variant.py --restore V1|V2|V3",
+      ".venv/bin/python experiments/context-cache/cells/WIN-VLLM/win_vllm_analyze.py"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "A verifier unit re-derives the grid law from rows.jsonl (g=1088/1056, 0 at exact multiples stands on 3 lengths x 3 reps) and re-runs win_vllm_analyze.py; red->green: relax the law to g*floor(L/g) and V1 drops to 3/20. The 64k depth and the 'same weights' comparison remain open (max_model_len 32768; SGLang side is occamy).",
+  "write_paths": [
+    "experiments/context-cache/cells/WIN-VLLM/**",
+    "state/config/qwen9b-inspect-pre.json",
+    "state/config/V1-server-info.json",
+    "state/config/V2-server-info.json",
+    "state/config/V3-server-info.json",
+    "orchestration/units/WIN-VLLM.md",
+    "orchestration/handoffs/WIN-VLLM.json",
+    "experiments/context-cache/.occamy.lock"
+  ],
+  "assumptions": {
+    "gate_length": "the G0 gate prompt spans >=2 resolved blocks (3131 tokens); the first 211-token gate pair is kept as a negative control because a sub-block prompt cannot cache by design",
+    "depth_64k": "not runnable: prompts reach ~67k tokens but --max-model-len is pinned at 32768 by the launch invariants; 32k battery truncated at turn 71/74 (turn 72 would be 32,919 tokens), computed offline from /tokenize",
+    "v3_flags": "V3 dropped --speculative-config (attempt 1 failure above) and used --gpu-memory-utilization 0.32 (0.15 cannot hold 22.4 GiB of MoE weights); every other flag copied from production",
+    "v3_battery": "V3 got gate + 5 boundary lengths only (bounded probe, no four-arm battery)"
+  }
+}

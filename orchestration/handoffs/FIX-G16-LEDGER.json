@@ -1,0 +1,41 @@
+{
+ "unit": "FIX-G16-LEDGER",
+ "status": "done",
+ "artifacts": [
+  "state/gap-ledger.json (G16 entry added with 13 evidence refs re-checked against disk; regenerated_by block; G5/G7 MANUSCRIPT refs repointed :643 -> :645)",
+  "state/gap-triage.json (G16 decision appended, stated-limitation; counts 17/11/9/2; note)",
+  "papers/context-cache/GAPS.md (G16 heading now names its classification; header note superseded-in-part by FIX-G16-LEDGER; the 2026-10-23 tally is cross-referenced, not rewritten)",
+  "tests/test_gap_triage.py (hardcoded ten-gap expectations updated to eleven and named as EXPECTED_OPEN/EXPECTED_COUNTS; docstring)",
+  "state/logs/FIX-G16-LEDGER-redgreen.txt",
+  "orchestration/units/FIX-G16-LEDGER.md",
+  "orchestration/handoffs/FIX-G16-LEDGER.json"
+ ],
+ "evidence": {
+  "command_or_count": "G16's 13 evidence refs re-verified by content, not existence: pins match their recorded sizes/digests (radix 6,243 B 4ba2e6210d27ed1d; hicache 22,005 B 6e6d0d845539b1d6; session 2,820 B 0b50a3e5b8b5e97d; vllm cache.py 14,663 B 0b603decec748713; arg_utils.py 122,054 B 165f9ec6e3b067bb; kv_offloading_size at cache.py:191, --kv-offloading-size at arg_utils.py:1246; lru|lfu|slru|priority|tlru all present, protected_threshold default 2 at radix line 63)",
+  "s3_attempt": "experiments/context-cache/cells/WIN-SGL/logs/S3-startup-failure.log:42 'sglang serve: error: unrecognized arguments: --enable-chunked-prefix-cache'; S3-config.json launch=startup_failed, restore_health ok 188.9 s — the flag never reached the runtime",
+  "derived": "G16 derives open (no closure ref) and is consistent with its stated STATUS: OPEN; ledger now 17 entries = 2 closed, 3 narrowed, 11 open, 1 unverifiable",
+  "commands": [
+   ".venv/bin/python -m pytest tests/test_gap_closure_ledger.py tests/test_gap_triage.py -q -> 17 passed",
+   ".venv/bin/python papers/context-cache/verify_package.py -> PASS — 63 claims, 63 mapped 1:1, UNVERIFIED: none",
+   ".venv/bin/python papers/context-cache/serving_brief.py --check -> FAIL C63.model_effect_ratio_vllm_over_sglang recomputed 151.8172 != paper 152.0 (pre-existing, V-MATRIX-FOLD)",
+   ".venv/bin/python -m pytest tests/ -q -> see handoff 'full_suite'"
+  ],
+  "red_green": "state/logs/FIX-G16-LEDGER-redgreen.txt — dropping G16 fails test_gap_ids_match_ledger with \"gaps in GAPS.md missing from the ledger: ['G16']\" and test_gap_triage's coverage check; restoring the refs to MANUSCRIPT.md:643 fails test_stale_citation_audit_is_accurate with \"G5: `MANUSCRIPT.md:643` ... expect '258,035' is not on the line\" and the G7 twin; restored -> 17 passed",
+  "full_suite": "1243 passed, 1 skipped in 76.26s (the skip is the live test, NOT run and NOT passed); 0 failed. The 9 failures seen in one earlier run of the same suite did not reproduce: each failed test passes in isolation and in this run (recompute.py is rewritten during red->green by tests/test_paper_matrix_fold.py and tests/test_c63_ratio_raw_operands.py, so parallel reads of it see a transient state)."
+ },
+ "blocker": "",
+ "next_unit_hint": "Two prose facts this unit re-checked but did not edit, because their owners are PACKAGE.md/CLAIMS.md: (1) PACKAGE.md:94-96 'Chunked-prefix cannot start' — S3 actually died at flag parsing ('unrecognized arguments: --enable-chunked-prefix-cache'), the flag changed name in this SGLang build, and the effective live value is disable_chunked_prefix_cache true (state/config/live-server-config.json:34 runtime_effective, overriding the top-level false), so S3 was not a no-op AND 'cannot start' is not a feature result; (2) GAPS.md:546 quotes that flag as the live default while GAPS.md:519 correctly treats the v0.27.1 source as authoritative. Also still open for a paper unit: V-MATRIX-FOLD's 151.8172 -> 152.0 understatement (serving_brief.py --check currently FAILs on it).",
+ "write_paths": [
+  "state/gap-ledger.json",
+  "state/gap-triage.json",
+  "papers/context-cache/GAPS.md",
+  "tests/test_gap_triage.py",
+  "state/logs/FIX-G16-LEDGER-redgreen.txt",
+  "orchestration/units/FIX-G16-LEDGER.md",
+  "orchestration/handoffs/FIX-G16-LEDGER.json"
+ ],
+ "assumptions": [
+  "Unit provenance: a task-board session with no human present, so no question was asked; the card prompt ('FIX-G16-LEDGER — the gap ledger predates G16, so test_gap_ids_match_ledger fails on a real entry') was treated as the whole contract and the objective was taken to be: make the ledger represent G16 truthfully, not make the test pass by weakening it.",
+  "Scope widened by one item on evidence: after G16 was added the same guard surfaced a second, independent staleness (G5/G7 cite MANUSCRIPT.md:643 where the figure moved to :645). It was repaired as a ledger ref defect rather than left to fail, because leaving it would have meant shipping a ledger whose 'resolves=true' flags disagree with the cited content."
+ ]
+}

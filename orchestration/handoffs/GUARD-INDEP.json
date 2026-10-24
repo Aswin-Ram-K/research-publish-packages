@@ -1,0 +1,52 @@
+{
+  "unit": "GUARD-INDEP",
+  "status": "done",
+  "artifacts": [
+    "tests/test_paper_attribution_guard.py",
+    "orchestration/units/GUARD-INDEP.md",
+    "orchestration/handoffs/GUARD-INDEP.json"
+  ],
+  "evidence": {
+    "what_the_guard_is": "GUARD-INDEP block appended to tests/test_paper_attribution_guard.py (prose guard section), before the X-CITE2 block. Same deny/assert idiom as the existing guards; not a second guard file.",
+    "red_1_abstract_revert": "Replacing MANUSCRIPT.md's abstract renderer sentence with FIX-MAN2's verbatim overclaim ('two independently implemented prompt renderers emitted byte-identical prompts in all 760 cells') -> '1 failed, 17 passed', finding 'MANUSCRIPT.md:9 [INDEP-DENY] the document claims the renderers were separate implementations (\\'independently implemented\\')'. Before this unit the same revert gave '11 passed' (FIX-MAN2 unverified[0]).",
+    "red_2_section_2_mechanism_removed": "Removing only SS 2's mechanism clause ('a property of one library, not of two independent implementations: both render modes are the RenderPolicy variants ...') with the abstract restored -> '2 failed, 16 passed', finding 'MANUSCRIPT.md:96 [INDEP] a sentence states the renderer identity without naming the mechanism'. Measured in isolation.",
+    "green_restore": "MANUSCRIPT.md restored byte-identically; sha256 342cd4dd3067cd35c36cc1b396bd95b236d387111014b8bb4e92f88393240e34 -- the exact digest FIX-MAN2 recorded for its repaired file -- and the guard returned '18 passed'.",
+    "premise_derived_from_code": "u5_recon.py:47-48 calls u5.build_cell(..., policy=u5.RenderPolicy.POINTER) and the same call with NAIVE_APPEND; u5_cells.py:50-57 does 'from resextract.context import (CompactionPolicy, RenderPolicy, StateNode, compact, render)'. test_the_independence_mechanism_still_holds_in_code asserts both, so the guard fails if the mechanism ever genuinely changes.",
+    "gates_after": [
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_attribution_guard.py -q -> '18 passed in 0.04s'",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_attribution_guard.py tests/test_paper_boundary_attribution.py tests/test_paper_g3_bands.py -q -> '39 passed'",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q --ignore=tests/test_dashboard.py --deselect tests/test_kg_policy.py -> '1078 passed, 1 skipped, 12 deselected in 52.75s'",
+      ".venv/bin/python papers/context-cache/recompute.py all -> 'COVERAGE GUARD PASS  62 claims documented, 60 runnable here + 2 script-backed', exit 0",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/verify_package.py -> 'verify_package: PASS - 62 claims', exit 0"
+    ],
+    "commands": [
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_attribution_guard.py -q",
+      ".venv/bin/python papers/context-cache/recompute.py all",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/verify_package.py",
+      "sha256sum papers/context-cache/MANUSCRIPT.md tests/test_paper_attribution_guard.py",
+      "GIT_OPTIONAL_LOCKS=0 git -C /home/zer0null/Duval status --porcelain"
+    ],
+    "target_repo_untouched": "GIT_OPTIONAL_LOCKS=0 git -C /home/zer0null/Duval status --porcelain shows only the pre-existing ' M traces/2026-09-28-duval-m0.jsonl', '?? .m1-salvage/', '?? .relay/', '?? .test-write.txt'. /home/zer0null/Duval/.git/index mtime 2026-10-23 07:04:01, an hour before this unit started (08:10). No target file was written."
+  },
+  "assumptions": [
+    "The card named the guard's behaviour but not its file. I extended tests/test_paper_attribution_guard.py rather than creating tests/test_paper_independence_guard.py: the package already has one prose-guard file with a documented deny/assert idiom and a docstring that records its red->green transcripts; a second file would split the 'which prose must not regress' question across two places. The card's write-path bullet allowed either."
+  ],
+  "not_reproduced": [
+    "The mechanism-window width I first chose (+-1 sentence fragment, 200-character regex cap) reported the HONEST abstract as a gap. The abstract's first result runs ~460 characters from 'renderer' to the mechanism clause, because _sentences splits on '. ' and the em-dash clause starts a new fragment. Both were widened (+-2 fragments, 600-character cap) and the reason is recorded in the code comments.",
+    "The 90-character negation look-back I first wrote for the deny side swallowed the ACTUAL revert: 'the renderer is not the lever: two independently implemented ... renderers' put an unrelated 'not' 60 characters before the match. Replaced with a clause-scoped check (since the nearest ':;' '--' or ',' ), which still exempts 'not of two independent implementations'."
+  ],
+  "overstated": [],
+  "unverified": [
+    "The guard's assert side exempts CLAIMS.md table rows wholesale (because C01/C37/C38 state the claim in a cell and the mechanism in the SS 2 paragraph they point at). A future edit that moves the renderer claim into prose inside CLAIMS.md would be covered by the deny side but not by the assert side.",
+    "tests/test_kg_policy.py::test_real_target_config_declares_the_decision fails on the current target config (PolicyWideningError: '.lane-j-scratch' excluded by graphify's predicate, config would widen admission). Pre-existing and unrelated -- the file makes no reference to papers/context-cache -- but it means a bare 'pytest tests/' is red on this tree for a reason outside this unit. Recorded, not fixed: the target is read-only and the config is not mine to change."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Still open from FIX-MAN2's next_unit_hint and untouched here: verify_package.py's CLAIM_RE admits a non-C-row into the ledger, and V-FINAL2's RED E (planted unmatchable row) was never re-run against the current surface_defects(). Separately, this guard protects the renderer sentence and the 1.700x/G5/M4 attributions; the abstract's other figures (6.744 band, 1.700x decomposition, the 7.8 % split) are pinned by tests/test_paper_g3_bands.py and the X-CITE2 block, so what is NOT pinned is the U4 'tested at n>0, not refuted' reading at MANUSCRIPT.md:249-252 -- the same 'measuring nothing' failure mode, and the natural next guard.",
+  "write_paths": [
+    "tests/test_paper_attribution_guard.py",
+    "orchestration/units/GUARD-INDEP.md",
+    "orchestration/handoffs/GUARD-INDEP.json"
+  ],
+  "tool_calls": 34,
+  "bound": 45
+}

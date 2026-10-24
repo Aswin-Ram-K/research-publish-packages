@@ -1,0 +1,46 @@
+{
+  "unit": "LATENCY-DERIVE-PERSIST",
+  "status": "done",
+  "artifacts": [
+    "state/latency-derive.json"
+  ],
+  "evidence": {
+    "command_or_count": "state/latency-derive.json written and parsed as valid JSON (17 top-level keys, 5 derivable D1-D5, 6 refused R1-R6). Verdict persisted: partial. Containment after write: .occamy.lock mtime still 2026-10-21 16:18:54.950289390 -0500, 18 row files still 10161 lines, md5-of-md5sums still 6c988ecb87913e4f7c038fed6d5a49e2.",
+    "commands": [
+      ".venv/bin/python -c 'import json; json.load(open(\"state/latency-derive.json\"))'  # valid",
+      "independent control re-read of all 18 rows.jsonl (status==200, wall_ms or latency_ms alias)",
+      "ls -l --time-style=full-iso .occamy.lock  # unchanged",
+      "md5sum experiments/context-cache/cells/*/rows.jsonl | md5sum  # 6c988ecb..."
+    ],
+    "key_figures": "D1 corrected: sum_ttft 5061656.5 / sum_wall 6107229.9 ms, ttft share 0.8288, 200400870 prompt tokens, 0.030475 wall-ms/token. D2 corrected: wall covers 0.6514 of observed span, unaccounted 3268417.4 ms = 34.9%. D5 corrected: U6 n=233 paired rows, median wall-ttft 1700.3 ms (min 1499.9, max 4559.7) = 26.567 ms per completion token, lower bound.",
+    "corrections_found_while_persisting": "derive_latency.py:213-219 sums D1/D2 over cells with a parseable ts_utc, silently excluding U3 (192 rows), U6 (240 rows) and CROSS-HTTP (3 rows) = 435 paired rows / 709114.3 ms wall. Reproduced the published 5398115.6 only by applying that filter, which proves the cause. Effects: ttft share overstated 0.8946 -> 0.8288; D2 unaccounted overstated 42.4% -> 34.9%; D5 minimum misquoted as 792.9 ms (a row with no paired wall) instead of 1499.9 ms.",
+    "guard_status": "T3 red->green recorded from the LATENCY-DERIVE2 handoff (green=10/red=9/expected=9 exit 0; --red FAIL exit 1). NOT re-run by this unit. Known gap recorded: no guard asserts D1_aggregate_wall_ms against all paired rows, which is why the omission survived."
+  },
+  "blocker": "",
+  "next_unit_hint": "Two cards. (1) FIX-D1-FILTER: correct derive_latency.py:213-219 to sum over all paired rows, re-emit summary.json and state/logs/LATENCY-DERIVE2.md, and add a guard asserting D1_aggregate_wall_ms == sum over every cell's sum_wall_ms so red->green covers the filter (T3 cannot catch it). (2) V-LATENCY-DERIVE2 still has not run and is the gate the LATENCY-DERIVE2 handoff named: independent re-derivation of D1 and D5, forced T3 red, containment confirm. Until both are done, do not let the manuscript cite any D1 ttft-share or D2 'queueing headroom' figure, and keep C40 (268.4 ms is a boundary repeat; cold send at L=1024 is 531 ms) and S12 (11.2344x is a token ratio; time ratio is 3.6693x) out of latency prose.",
+  "write_paths": [
+    "state/latency-derive.json",
+    "orchestration/handoffs/LATENCY-DERIVE-PERSIST.json",
+    "orchestration/units/LATENCY-DERIVE-PERSIST.md"
+  ],
+  "assumptions": [
+    "Card prompt was a single line naming only the deliverable path; the verdict content was taken from the on-disk LATENCY-DERIVE2 handoff and this unit's own re-derivation. Written instead of asked for, because the automated tag forbids ask_user_question and no answerer exists.",
+    "The previous unit reported done and skipped this file: confirmed by direct check — state/ existed but no state/latency-derive.json, and grep for 'latency-derive' across .md/.json/.py/.sh returned 0 hits, so the path had no existing schema or consumer to match.",
+    "Where this file disagrees with state/logs/LATENCY-DERIVE2/summary.json, both figures are preserved side by side with the traced cause, rather than overwriting the prior numbers; a reader can audit the change instead of taking it on trust.",
+    "No re-run of selfcheck.py: the unit bound and the 0-requests rule were respected, and the guard outcome is recorded as inherited from the prior handoff rather than re-verified.",
+    "0 live requests, no lock taken, no target repo accessed, no server started or stopped; only the three declared write paths touched."
+  ],
+  "tool_calls": 14,
+  "bound": 40,
+  "containment": "0 live requests, no lock taken, no target repo read or written, no git command against a target, no server started or stopped, no systemd action. Only 3 declared write paths created. experiments/ and papers/ untouched: 18 rows.jsonl files still 10161 lines, md5-of-md5sums 6c988ecb87913e4f7c038fed6d5a49e2; .occamy.lock mtime still 2026-10-21 16:18:54.950289390 -0500.",
+  "overstated": [
+    "A first pass of this unit trusted summary.json's D1/D2/D5 verbatim; an independent control re-read disagreed on sum_wall (6107229.9 vs 5398115.6). The disagreement was traced to a ts_utc filter in the derivation rather than to the reader, so the corrected values are persisted with the published ones alongside them. Had the re-derivation not been run, three wrong 'corrected' figures would have been written into the state file."
+  ],
+  "not_reproduced": [
+    "The T3 red->green was not re-executed by this unit; it is quoted from the LATENCY-DERIVE2 handoff and labelled as inherited, not verified."
+  ],
+  "unverified": [
+    "Whether the corrected 34.9% unaccounted share of observed time is mostly harness overhead or mostly server-side queueing: the rows carry neither, so the split stays unmeasured rather than uncertain.",
+    "The true duration of any M4/TUNED/U3/U6 request: only the lower bound ts(next)-ts(row) exists, and 536 rows across those 4 cells sit above it (overlap), so the client clock and the row clock disagree on when a request starts."
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "unit": "GUARD-ATTR",
+  "status": "done",
+  "artifacts": [
+    "tests/test_paper_attribution_guard.py",
+    "papers/context-cache/RUN.json",
+    "state/logs/GUARD-ATTR-redgreen.txt",
+    "orchestration/units/GUARD-ATTR.md",
+    "orchestration/handoffs/GUARD-ATTR.json"
+  ],
+  "evidence": {
+    "command_or_count": "tests/test_paper_attribution_guard.py: 9 passed on the current tree; RED-1 (MANUSCRIPT.md abstract reverted to the U15 break-cost reading): 2 failed, 7 passed with tests/test_claims_decompose.py still 13 passed and recompute.py all still '42 claims checked, all match'; RED-2 (CLAIMS.md C44 row re-described as a break-cost win): 1 failed, 8 passed; both documents restored bit-identically (MANUSCRIPT.md c22656c8c55f8f198ffd63305b00b018be94b836bdacf95bf8b907ac40c203e5, CLAIMS.md dd3c2d8c7635008c80e788b0d4d657951829dbddca2efce9f824a566e1e64b7d)",
+    "commands": [
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_attribution_guard.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_attribution_guard.py tests/test_claims_decompose.py tests/test_orchestration_handoffs.py -q",
+      ".venv/bin/python papers/context-cache/recompute.py all",
+      ".venv/bin/python papers/context-cache/recompute.py C44",
+      "sha256sum papers/context-cache/MANUSCRIPT.md papers/context-cache/CLAIMS.md",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q"
+    ]
+  },
+  "red_green": {
+    "test": "tests/test_paper_attribution_guard.py",
+    "transcript": "state/logs/GUARD-ATTR-redgreen.txt",
+    "green": "9 passed in 0.03s (current tree)",
+    "red_1": "MANUSCRIPT.md abstract paragraph's G1 sentence replaced with 'Avoiding the break is what buys the 1.700x: an arm that never creates the break keeps the prefix and saves the tokens, which is why appending beats compacting here.' -> 2 failed, 7 passed; findings MANUSCRIPT.md:21 [ATTR] '1.700x' and MANUSCRIPT.md:28 [ATTR] '1.70x' / '1.700x' (the paragraph's other figures lose their attribution with it)",
+    "red_1_control": "same reverted tree: tests/test_claims_decompose.py 13 passed, recompute.py all '42 claims checked, all match' -- the repo's existing checks are blind to it, which is the V-PAPER hole",
+    "red_2": "CLAIMS.md:127 C44 row 'the 1.700x is post-compaction window truncation, not break-event cost' replaced with 'the 1.700x is a break-cost win' -> 1 failed, 8 passed; findings CLAIMS.md:127 [DENY-1] plus CLAIMS.md:94 and CLAIMS.md:97 [ATTR] (C21/C24 lost their re-attribution)",
+    "restored": "both files rewritten from byte-identical pre-edit copies and compared by sha256 in the same process (assert sha(M)==sha0 / assert sha(C)==sha0, 'RESTORE FAILED' otherwise); identical to pre-revert: True; green run afterwards 9 passed"
+  },
+  "design": {
+    "shape": "presence + denial, not a table of known-good phrasings",
+    "presence": "ATTRIBUTION_EFFECT (window truncat / compaction-window / steady-state truncat / truncation *plus*) AND ATTRIBUTION_NEGATION (not ... break|fork|append cost) within +/-6000 chars of every 1.700x / 1.7002x / 1.70x statement",
+    "window_measurement": "measured, not guessed: abstract figure-to-attribution distance 1,077 chars (one paragraph); CLAIMS.md C21/C24 row to C44 row 5,034-5,171 chars because the table is column-aligned; 6,000 is wider than the table padding and still narrower than the distance to any unrelated attribution",
+    "denials": [
+      "DENY-1 the 1.700x / the win *is* a break-cost effect",
+      "DENY-2 avoiding / skipping / never creating the break *saves* the prefix or tokens",
+      "DENY-3 forking instead of compacting *preserves* the prefix",
+      "DENY-4 not compacting *is what buys* the 1.700x",
+      "DENY-5 compacting less often *saves* prefix tokens",
+      "DENY-6 the figure framed as resting on the break (is what / is bought / rests on)"
+    ],
+    "no_bare_noun_rule": "'break' appears legitimately throughout (MANUSCRIPT.md's SS 6 table column is 'Net break cost'), so only assertions are findings",
+    "negation_exemption": "a DENY match whose own sentence negates it is not a finding, so G1's corrective wording 'the 1.700x is post-compaction window truncation, not break-event cost' does not read as the claim it corrects",
+    "historical_quotes": "exempt via double-quoted spans -- the marker CLAIMS.md already uses ('U15: \"avoiding the break saves the prefix\"' in Corrections row 7, and Supersessions by G1); no new/invisible syntax invented",
+    "scope": "causal claims only; inline code spans (cards, files, claim ids) are skipped"
+  },
+  "registration": "papers/context-cache/RUN.json -> verification.prose_attribution_guard (test path, command, scope, red_green log, registered_by). Justification for RUN.json over a separate list: the repo has no test list file (pyproject.toml carries only a [tool.pytest.ini_options] markers block and pytest discovers tests/ automatically), and every papers/* package ships its own RUN.json as its registry of record (papers/context-cache is the only one).",
+  "c44_untouched": "papers/context-cache/recompute.py sha256 9dc09ee4a75d781f8ee6bcdf9a7b07b4d0119fb979a3137c22080a60db138e12 (unchanged); recompute.py C44 still PASS 12/12 values match; the new test also asserts that source still carries u15_1_700x_survives_decomposition: False, so it cannot be weakened to make the prose test easier",
+  "suite_state": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q -> 1 failed, 1134 passed, 1 skipped (the failure is tests/test_kg_policy.py::test_real_target_config_declares_the_decision, pre-existing and unrelated: PolicyWideningError for '.lane-j-scratch/*.md' vs graphify's .gitignore; identical before this unit's changes: 1 failed, 1125 passed, 1 skipped; the +9 passed are this unit's tests)",
+  "offline": "zero live requests; no cache lock; the test reads two Markdown files and one Python source",
+  "blocker": "",
+  "next_unit_hint": "C44's prose half is now guarded. Next open items are unchanged: CX-V3 on U15 (RUN.json verification.still_unverified) and G15's residual per-break variation. The new guard is pattern-based, so a future verifier should red-team it with a paraphrase it has not seen rather than trusting the five DENY sentences chosen here.",
+  "assumptions": [
+    "Registration location: no test list exists in this repo (pytest auto-discovers tests/ from pyproject's rootdir); papers/context-cache/RUN.json is the package's registry of record, so the guard is registered in verification.prose_attribution_guard rather than invented as a new list file.",
+    "Read scope: the brief named MANUSCRIPT.md and CLAIMS.md; GAPS.md sentence 'Arm A wins on uncached tokens (1.700x over R) precisely because it never shrinks' was read and left alone -- the 'because' clause attributes the win to A's non-shrinking window, which is the truncation reading, not break-avoidance, and the brief limited scope to the two named documents.",
+    "Window size 6,000 was derived from the measured C21-to-C44 distance in the current tree (5,171 chars); a future re-layout that widens the table could move an attribution outside the window and would surface as an ATTR failure, not a silent pass."
+  ],
+  "write_paths": [
+    "tests/test_paper_attribution_guard.py",
+    "papers/context-cache/RUN.json",
+    "state/logs/GUARD-ATTR-redgreen.txt",
+    "orchestration/units/GUARD-ATTR.md",
+    "orchestration/handoffs/GUARD-ATTR.json"
+  ],
+  "tool_calls": 58,
+  "bound": 60
+}

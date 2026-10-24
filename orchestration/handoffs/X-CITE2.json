@@ -1,0 +1,50 @@
+{
+  "unit": "X-CITE2",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/CLAIMS.md",
+    "papers/context-cache/GAPS.md",
+    "papers/context-cache/recompute.py",
+    "tests/test_paper_attribution_guard.py",
+    "orchestration/handoffs/X-CITE2.json"
+  ],
+  "evidence": {
+    "baseline_grep_count": 0,
+    "end_grep_count": 5,
+    "baseline_claims": 50,
+    "end_claims": 52,
+    "recompute_all_tail": "PASS  19/19 values match\n\n52 claims checked, all match",
+    "pytest_both_tail": "24 passed in 0.10s",
+    "recompute_C53": "PASS 18/18 values match",
+    "recompute_C54": "PASS 19/19 values match",
+    "red_green": {
+      "green_before": "11 passed in 0.03s",
+      "red_g5": "FAILED ...::test_g5_fanout_attribution_is_present\n1 failed, 10 passed in 0.03s",
+      "red_m4": "FAILED ...::test_m4_resident_capacity_attribution_is_present\n1 failed, 10 passed in 0.02s",
+      "green_after": "11 passed in 0.02s"
+    },
+    "commands": [
+      "grep -rn \"6\\.744\\|resident_capacity_ratio_of_capacity\" papers/context-cache/ | wc -l",
+      "python3 papers/context-cache/recompute.py all | tail -3",
+      "python3 papers/context-cache/recompute.py C53",
+      "python3 papers/context-cache/recompute.py C54",
+      ".venv/bin/python -m pytest tests/test_paper_attribution_guard.py tests/test_claims_decompose.py -q | tail -3"
+    ]
+  },
+  "assumptions": [
+    "STEP 0 at 04:24 returned grep 0 and 50 claims; the G5 paragraph and M4 capacity paragraph were already on disk when read at 04:25 (mtime 04:25), so they are treated as concurrent partial work and were verified/extended rather than re-inserted.",
+    "C54 reads max_mamba_cache_size 64 from experiments/context-cache/cells/M4/analysis.json because the server knob is not carried in rows.jsonl; every other C54 value is re-derived from the rows.",
+    "The /tmp red-green copies are throwaway evidence, not artifacts; the real files were restored and re-run green."
+  ],
+  "blocker": "",
+  "next_unit_hint": "G5/C53 and M4/C54 are claim-mapped and guard-pinned; cite 6.744 [4.045, 9.443] and 0.1592-0.1645 with cells/G5 and cells/M4. Optional next: add both units to RUN.json's unit table.",
+  "write_paths": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/CLAIMS.md",
+    "papers/context-cache/GAPS.md",
+    "papers/context-cache/recompute.py",
+    "tests/test_paper_attribution_guard.py",
+    "orchestration/handoffs/X-CITE2.json"
+  ]
+}

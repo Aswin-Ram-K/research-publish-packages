@@ -1,0 +1,59 @@
+{
+  "unit": "UNEUTRAL1",
+  "status": "partial",
+  "artifacts": [
+    "repro/encoder-crossover-190-SANITISED/redact.py",
+    "scratch/uneutral1/tree/",
+    "scratch/uneutral1/vlive/",
+    "scratch/uneutral1/vtree/",
+    "scratch/uneutral1/gen-run1.log",
+    "scratch/uneutral1/gen-run3.log",
+    "scratch/uneutral1/gen-run4.log",
+    "strategy/NEUTRALIZATION_REPORT.md",
+    "orchestration/units/UNEUTRAL1.md"
+  ],
+  "evidence": {
+    "census_live_tree": "files=59 distinct_ids_hit=183(of 184) total_occurrences=55278",
+    "census_emitted_tree_excluding_verify": "files=43 distinct_ids_hit=96(of 184) total_occurrences=26314",
+    "census_emitted_tree_including_verify": "files=45 distinct_ids_hit=99(of 184) total_occurrences=26351",
+    "census_command": "for every row of scratch/uagnostic1/census.tsv column 2: re.findall(re.escape(ident), text, re.I) over every UTF-8 file of the tree, .git/node_modules pruned",
+    "claims_check": "ALL CLAIM NUMBERS PRESERVED: True -- 9 numeric claims OK, exit=0, run in scratch/uneutral1/tree with verify/recompute-claims.py copied in",
+    "digest_train_jsonl": "24c39afa8606942ac2f4fb3e6f1ce5c2b0c9ee581b67d1aed38260d4aa020c09 (live == emitted, byte-identical)",
+    "digest_dev_jsonl": "d311a99f0d5b2bd8bcff03e9913b3857ec4c98ffd3714ce9a7afa42514eaa976 (live == emitted, byte-identical)",
+    "digest_fixture_correctness": "8dd05ce6fe31f6bef484e97bed9ec8c96fb5f2c0b17ebb20ff57afb8716c106a (live == emitted, byte-identical)",
+    "fixture_sha256_old_vs_new": "751dc007ba115dccc5815fdf97c9ce7b34b0dc990a6e57802d762e9b35ad9cae -> f0a2abceed6a2be2e892ec9cb234eafe665e77a001573971042aef7ce151bc37",
+    "scoring_projection_digest_old_vs_new": "57a29b4e78bff60f84309e2e95b56f49663884a13b801345eecd93813ecbf300 -> f549a2bdcf0a7dea9ec1da8ad2e68dbca376045cb38f507b7e18a611df0e34e5",
+    "scoring_projection_recipe": "second-labeller/parse_fixture.py then sha256(json.dumps([{k:c[k] for k in ('id','kind','question','options','correct')} for c in cases], sort_keys=True, separators=(',',':'), ensure_ascii=False)); run on the live tree it reproduces 57a29b4e... exactly",
+    "routeA_old_vs_new": "ties 120->120, agreement 0.34210526315789475->0.34210526315789475, kappa 0.32520740993294694->0.32520740993294694, exact_index_matches 65->65, zero_score_cases 41->41",
+    "AB_mutual_agreement_old_vs_new": "0.3526315789473684 -> 0.3526315789473684",
+    "stratification_kappa_old_vs_new": "closed_subset 0.8837023738280471 -> 0.8837023738280471; roster_and_bespoke_subset 0.9139973672663448 -> 0.9139973672663448",
+    "diagnostic_rerun_command": "cp -a <tree> scratch/uneutral1/{vlive,vtree}; in each second-labeller/: cp ../fixture/reflex-decisions.ts ./reflex-decisions.sandbox.ts && python3 parse_fixture.py && python3 compare.py -- exit=0, stderr empty in both trees",
+    "idempotence": "run1==run2==5962224c45eac413363997683209a6fb6fc3568872309dcd0aae96b95730daad (pre-edit); run3==run4==4aeeda03a03d74c8252f9a97e188dd51b0e46e3f39287090dee73a6ce29e5144 (post-edit); digest = sha256 over sorted sha256sum listing of every file in the tree",
+    "map_does_not_ship": "build_neutral_map() return value is never written/logged/returned; stage-E log keys are exactly [distinct_identifiers_tagged, files_changed, files_left_untagged_by_pin, tagged_by_ext, map_shipped, mode, pins, step, tagged_occurrences] with map_shipped=false; census.tsv lives outside the emitted tree",
+    "stage_e_counts": "files_changed=30, tagged_occurrences=26511, distinct_identifiers_tagged=184, files_left_untagged_by_pin=13, file-skipped pin files are harness/data/train.jsonl, harness/data/dev.jsonl, MANIFEST.json and 10 shipped .py files",
+    "residual_attribution": "train.jsonl 17025, dev.jsonl 3562, results/baselines.json 564, fixture/reflex-decisions.ts 519, variants/no-union/files/fixture/reflex-decisions.ts 518, harness/data/fixture-190.json 517, results/eval-*.json 467/452/451/449/446, second-labeller/labelsB.json 190, MANIFEST.json 103, .py tooling 338, remainder kind/option-label echoes + prose",
+    "commands": [
+      "python3 redact.py --out ../../scratch/uneutral1/tree   (REDACT_PINS=1, four times)",
+      "cd scratch/uneutral1/tree && python3 verify/recompute-claims.py",
+      "cd scratch/uneutral1/vlive/second-labeller && python3 parse_fixture.py && python3 compare.py",
+      "cd scratch/uneutral1/vtree/second-labeller && python3 parse_fixture.py && python3 compare.py"
+    ]
+  },
+  "blocker": "Census 0 over the emitted tree and the card's digest-invariance clause are mutually exclusive by construction, so the card's requirement 1 and requirement 4 cannot both hold. Three measured proofs, all in strategy/NEUTRALIZATION_REPORT.md section 3: (a) verify/recompute-claims.py:126-128 hashes [[c['id'], c['correct'], len(c['options'])] ...] and c['id'] is '<kind>-NNN', so 190 residual occurrences sit inside the fixture-correctness digest's own input and all 7 censused kind values appear there; (b) harness/data/train.jsonl (2205127 bytes) and harness/data/dev.jsonl (484922 bytes) carry the censused field names nCandidate/nKind/nSituation/clanId/familyId/goldIndex per record and hold 20587 of the 26314 residual occurrences (78.2%) while their sha256 values are published; (c) the census counts 13 shipped .py/.sh files the generator does not regenerate (338 occurrences) and MANIFEST.json's files[].path column (103), which must keep resolving or stage D can refresh no hash at all. The unit kept the numbers (they are the release) and made the residue visible; REDACT_PINS=0 is the one-variable way to take the other branch and it moves the train/dev/fixture-correctness/projection digests and route A together. DECISION NEEDED FROM THE PARENT - not guessed. No tag assignment was undecidable. Also exceeded the <=45 tool-call bound.",
+  "next_unit_hint": "Parent decision, then one of: (A) accept the pinned tree as the release and fold section 8 of strategy/NEUTRALIZATION_REPORT.md (new fixture sha256 f0a2abceed6a2be2e892ec9cb234eafe665e77a001573971042aef7ce151bc37 and new scoring-projection digest f549a2bdcf0a7dea9ec1da8ad2e68dbca376045cb38f507b7e18a611df0e34e5, plus the stated 96-of-184 residual) into the release notes; or (B) re-task a fresh unit to run REDACT_PINS=0 into scratch/uneutral1/tree-full, measure the moved digests and route A, and re-declare them - the switch is already implemented and documented. Either way a SEPARATE verifier unit must re-run: the census scan on both the live and emitted trees, verify/recompute-claims.py inside the emitted tree, the parse_fixture.py+compare.py re-run in both trees, and the two-run tree-hash idempotence. Do not let the verifier assert routeA unchanged from the rename alone - it was re-run here, and UVER12 measured a 120->119 shift from a single injected token.",
+  "write_paths": [
+    "repro/encoder-crossover-190-SANITISED/redact.py",
+    "scratch/uneutral1/**",
+    "strategy/NEUTRALIZATION_REPORT.md",
+    "orchestration/units/UNEUTRAL1.md",
+    "orchestration/handoffs/UNEUTRAL1.json"
+  ],
+  "verbatim_edits": {
+    "redact.py_edit_1_anchor": "a ~200-line stage-E block (CENSUS_TSV, NEUTRAL_PINS, PIN_FILES, PIN_SKIP_TOP, PIN_SKIP_EXT, PIN_LITERAL_SOURCES, PIN_LITERAL_KEYS, NEUTRAL_TAG_ORDER, NEUTRAL_TAG_PREFIX, NEUTRAL_TEXT_EXT, NEUTRAL_FIXTURE_HEADER, _census_rows, build_neutral_map, _neutral_rules, _neutral_pins, _neutral_mask, _neutral_unmask, _neutral_header, stage_e_neutral_tags, _neutralise_rules) inserted immediately BEFORE the line 'def main() -> None:'; the following three lines were left untouched",
+    "redact.py_edit_2_before": "    stage_c_substitution(generated)\n    write_log()\n    stage_d_manifest(WORKSPACE)",
+    "redact.py_edit_2_after": "    stage_c_substitution(generated)\n    write_log()\n    stage_e_neutral_tags(generated)\n    write_log()\n    stage_d_manifest(WORKSPACE)",
+    "redact.py_edit_3_before": "        if NEUTRAL_PINS and (r in PIN_FILES or r.split(\"/\")[0] in PIN_SKIP_TOP\n                             or ext in PIN_SKIP_EXT):",
+    "redact.py_edit_3_after": "        # MANIFEST.json's `files[].path` column is an integrity index: it must keep resolving, or\n        # stage D can no longer refresh a single hash.  Its path strings are pointers, which the\n        # policy deletes rather than renames; keeping them resolving is the lesser evil, and the\n        # residue it leaves is reported rather than hidden.\n        if NEUTRAL_PINS and (r in PIN_FILES or r.split(\"/\")[0] in PIN_SKIP_TOP\n                             or ext in PIN_SKIP_EXT\n                             or os.path.basename(r) == \"MANIFEST.json\"):",
+    "note": "repro/encoder-crossover-190-SANITISED/redact.py is the only file under the live trees that was modified; strategy/NEUTRALIZATION_REPORT.md is a new untracked file and its full text lives on disk (section 2 carries the same anchors)."
+  }
+}

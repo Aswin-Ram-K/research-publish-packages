@@ -31,8 +31,15 @@ include = [
   "evals/",
   "tools/",
   "source-material/",
-  ".lane-j-scratch/*.md",
-  ".lane-j-scratch/**",
+  # KG-POLICY (2026-10-23): U1.7's two scratch entries (.lane-j-scratch/*.md,
+  # .lane-j-scratch/**) were REMOVED — the TARGET OWNER gitignored .lane-j-scratch/
+  # (Duval .gitignore:93, commit 90ba6d3, 2026-10-14, "machine-local ... 'lane J'
+  # research workstream's scratch (another owner's)"), so graphify's predicate now
+  # EXCLUDES it and re-admitting it via config is a WIDENING attempt (guard B
+  # PolicyWideningError, policy.py:327). Admission follows the predicate.
+  # RESTORE PATH: if the owner un-ignores the dir, re-add ".lane-j-scratch/**" here
+  # plus the two scratch assert_present entries (files still on disk: monograph
+  # 83832 B, consonance evidence review 159408 B).
 ]
 # Narrowing globs only; config can never widen. NO exclusion is declared
 # currently because none applies: every build/run artefact found outside .git/
@@ -44,9 +51,11 @@ exclude = []
 # Silent-loss guard. Every path below was confirmed to exist before being
 # asserted (HEAD 5cdc471); observed sizes are in docs/TARGET_POLICY.md.
 # monograph.txt = 83832 B (~83 KB); the evidence review = 159408 B (~159 KB).
+# KG-POLICY (2026-10-23): the two U1.7 scratch asserts (monograph.txt, consonance
+# evidence review — both still on disk) were REMOVED with the include entries:
+# the owner gitignored .lane-j-scratch/ (Duval commit 90ba6d3, 2026-10-14) so the
+# predicate excludes them; asserting an unadmitted path is unsatisfiable.
 assert_present = [
-  ".lane-j-scratch/monograph.txt",
-  ".lane-j-scratch/consonance-external-evidence-2026-10-07.md.txt",
   "README.md",
   "CITATION.cff",
   "docs/FINDINGS.md",

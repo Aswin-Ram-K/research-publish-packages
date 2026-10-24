@@ -1,0 +1,305 @@
+{
+ "unit": "U-BENCH-PROTOCOL",
+ "status": "done",
+ "kind": "protocol_design",
+ "design_only": true,
+ "experiments_run": false,
+ "artifacts": [
+  "orchestration/handoffs/U-BENCH-PROTOCOL.md",
+  "orchestration/handoffs/U-BENCH-PROTOCOL.json"
+ ],
+ "written": "2026-10-20",
+ "frozen": false,
+ "freeze_condition": "G0 instrument-validity verdict; on freeze copy verbatim to experiments/cache-tax-bench/PREREGISTRATION.md and never edit after first run",
+ "hypothesis": "H1 partitioning law: billable (uncached) prompt tokens for a fixed token subsequence equal tokens beyond the last 64-aligned reusable boundary, so state-render (invariant prefix + appended delta) costs a per-turn delta flat in n while full re-render grows linearly in n",
+ "causal_isolation_argument": {
+  "same_subsequence": "both arms transmit P + delta_1..delta_n in the same order; asserted per pair by tokenising both bodies (control C5), not assumed",
+  "same_envelope": "temperature 0, thinking off, same max_tokens, tools absent in Arm A (build_request_body order fixed at src/resextract/llm/occamy.py:456-495)",
+  "between_run_isolation": "prefix cache flushed before every (arm, depth) cell so depth-n measurement is not contaminated by the other arm",
+  "only_differing_respect": "longest reusable prefix is P (arm a) versus P + delta_1..delta_{n-1} (arm b)",
+  "explicit_limit": "arms differ in cache state, so a TTFT difference is confounded and is reported only as a magnitude/sanity check, never as mechanism"
+ },
+ "phases": [
+  {
+   "id": "G0",
+   "name": "Instrument validity gate",
+   "blocks": "everything",
+   "probes": [
+    "G0-a repeat 807-token prompt, raw JSON capture",
+    "G0-b identify cached key path (usage | usage.prompt_tokens_details | sglang extension)",
+    "G0-c monotone in exact prefix (300/700/900)",
+    "G0-d depth-sensitive, not a constant or prompt-length passthrough",
+    "G0-e record server version and launch flags"
+   ],
+   "verdicts": [
+    "V-SERVER",
+    "V-DERIVED",
+    "V-TIMING",
+    "V-FAIL"
+   ],
+   "note": "V-DERIVED permits reconstructed counts labelled RECONSTRUCTED; V-TIMING withdraws P1 and P2 and restates P3 in latency; V-FAIL blocks Arm A"
+  },
+  {
+   "id": "C3",
+   "name": "Collapse disambiguation",
+   "blocks": "P2 freeze",
+   "note": "runs first after G0 because the in-hand prior (0/813 cached for a ~40-token offset) contradicts P2's neighbourhood-collapse form"
+  },
+  {
+   "id": "A",
+   "name": "Arm A controlled replay",
+   "grid": "2 arms x 9 depths (1,2,4,8,16,32,64,128,190) x 3 reps = 54 runs, <=2670 requests",
+   "corpus": "CORP-MAIN primary, CORP-LONG for depth > 190"
+  },
+  {
+   "id": "B",
+   "name": "Arm B telemetry",
+   "claim_class": "descriptive only; mandatory disclaimer section 4.3 travels with every table"
+  },
+  {
+   "id": "C",
+   "name": "Controls C0-C6",
+   "note": "each control names its zero; C1 is the 244/244 analogue"
+  },
+  {
+   "id": "P",
+   "name": "Paper readiness",
+   "note": "digest pins, recompute.py command per number class, CLAIMS.md skeleton CB-01..CB-12"
+  }
+ ],
+ "corpora": [
+  {
+   "id": "CORP-MAIN",
+   "path": "experiments/second-labeller-190/cases.json",
+   "bytes": 141703,
+   "lines": 3382,
+   "cases": 190,
+   "kinds": 7,
+   "sha256_16": "e8e3e9819c22808e",
+   "approx_tokens": 33174,
+   "role": "PRIMARY",
+   "fields": [
+    "_line",
+    "correct",
+    "id",
+    "kind",
+    "namespaces",
+    "options",
+    "question",
+    "rationale"
+   ],
+   "note": "correct withheld from prompt; permutation seed 20261020 over 190 ids fixed before first request"
+  },
+  {
+   "id": "CORP-LONG",
+   "path": "dockets/duval/duval-u55-pinned/material/data/2026-09-28-duval-m0.jsonl",
+   "bytes": 866816,
+   "lines": 573,
+   "sha256_16": "431605e624ca9059",
+   "role": "SECONDARY long-context replication, depths > 190",
+   "fields": [
+    "detail",
+    "discoveredBy",
+    "hash",
+    "kind",
+    "refs",
+    "seq",
+    "session",
+    "subject",
+    "ts"
+   ]
+  },
+  {
+   "id": "CORP-CAND",
+   "path": "state/mine/live-u21-replay/candidates.jsonl",
+   "bytes": 7190,
+   "lines": 10,
+   "sha256_16": "973194a166199d2a",
+   "role": "SMOKE ONLY",
+   "note": "siblings state/mine/live-u21-r1/candidates.jsonl and live-u21-r2/candidates.jsonl are 0 lines and not replayable"
+  },
+  {
+   "id": "ABSENT-templates",
+   "path": "templates/",
+   "role": "MISSING",
+   "note": "docs/PLAN.md section 3.1 lists Jinja2 templates at templates/; directory is absent at workspace root, so no state-renderer emitter exists to reuse"
+  }
+ ],
+ "arm_a_metrics": {
+  "BM": "sum(u_i)/sum(p_i) token-weighted, pooled over n requests of the cell",
+  "BM_tail": "u_n / p_n at the final turn",
+  "W": "sum(c_i mod 64) and sum(u_i mod 64) separately",
+  "R": "u_n arm(a) / u_n arm(b) at same n; <1 favours state rendering",
+  "TTFT": "send to first streamed byte, reported only where the arms' p_n differ by < 5%",
+  "throughput_sanity": "completion tokens / generation wall time; flag, do not report, a collapsing cell",
+  "aggregation": "mean [min, max] over 3 reps plus pooled; with 3 reps no CI is claimed"
+ },
+ "arm_b_fields": [
+  "session_id",
+  "turn_index",
+  "prompt_tokens",
+  "cached_tokens",
+  "cache_field_origin",
+  "rendering",
+  "prefix_drift",
+  "cache_event",
+  "prompt_token_band"
+ ],
+ "arm_b_statistics": [
+  "band distribution (count and token-weighted share per prompt_token_band)",
+  "request-weighted pooled rate AND median per-session rate, both required"
+ ],
+ "arm_b_disclaimer": "These are descriptive statistics from recorded production traffic. Turns are not randomised, renderer choice correlates with prompt length and with the task itself, and sessions are not independent. No causal claim is made from this table.",
+ "controls": {
+  "C0": {
+   "name": "cache flush before every cell",
+   "zero": "throwaway probe cached < 64",
+   "if_fails": "nothing runs"
+  },
+  "C1": {
+   "name": "repeat-run identical requests (THE ZERO, 244/244 analogue)",
+   "zero": "cached = L - (L mod 64), identical in all 3 reps",
+   "if_fails": "no ratio in the protocol is interpretable"
+  },
+  "C2": {
+   "name": "64-aligned vs unaligned",
+   "lengths": [
+    640,
+    641,
+    703,
+    704
+   ],
+   "zero": [
+    0,
+    1,
+    63,
+    0
+   ],
+   "if_fails": "P1 mechanism mis-specified"
+  },
+  "C3": {
+   "name": "single-token early mutation collapse",
+   "offsets_in_900_token_prompt": [
+    1,
+    40,
+    600
+   ],
+   "zero": [
+    0,
+    0,
+    576
+   ],
+   "recovery_check": "re-issue original must return full cached",
+   "if_fails": "decides P2 versus total-collapse law"
+  },
+  "C4": {
+   "name": "tool-array change (hashes before system prompt)",
+   "steps": [
+    "no tools",
+    "tool set A",
+    "tool set A again",
+    "tool set A with one description altered",
+    "tool set A again"
+   ],
+   "zero": [
+    "cold",
+    "~0",
+    "~full",
+    "~0",
+    "~full"
+   ],
+   "if_fails": "(iv) not collapsing refutes the early-hash claim; (v) not recovering means eviction not invalidation"
+  },
+  "C5": {
+   "name": "subsequence identity assertion",
+   "zero": "100% of pairs tokenise identical",
+   "if_fails": ">10% failures means Arm A is not measurable on this chat template and that IS the result"
+  },
+  "C6": {
+   "name": "negative control, sliding newest-first window",
+   "zero": "never reaches arm-(a) parity",
+   "if_fails": "measurement is not distinguishing renderings; re-read C1"
+  }
+ },
+ "predictions": [
+  {
+   "id": "P1",
+   "name": "tax law",
+   "statement": "on a full repeat, billable u = L mod 64 exactly",
+   "numeric_point": "u = L mod 64 (+-0) for L in {300, 700, 900, 1000}",
+   "kill": "K1: >= 2 of 4 lengths miss L mod 64 by more than 32 tokens; observed relationship then reported as fitted, not derived"
+  },
+  {
+   "id": "P2",
+   "name": "collapse law",
+   "statement": "insertion before a cached boundary invalidates all after it; after the boundary only what follows",
+   "numeric_point": "marker of k tokens at offset o into cached L gives cached ~ 64*floor((o-1)/64); o > L gives ~L",
+   "kill": "K2: a post-prompt insertion ever drops cached below L-32 refutes the prefix-only instrument model",
+   "pre_registered_tension": "prior probe recorded 0/813 cached for a marker at char 2000 of an 807-token prompt (a ~40-token offset), which P2 as stated would not predict; C3 resolves this and if it reproduces total collapse P2 is replaced by the total-collapse law as a DATED ADDENDUM, original text kept"
+  },
+  {
+   "id": "P3",
+   "name": "depth law",
+   "statement": "per-turn billable flat in n for state renderer, ~linear for full re-render",
+   "numeric_point": "arm(a) BM_tail spread <= 64 tokens across all nine depths; arm(b) BM(cell) >= 5x arm(a) BM(cell) at n=190",
+   "kill": "K3: arm(a) fitted growth over n=8..190 exceeding 32 tokens per 10 turns kills the flat half; arm(b) failing to grow monotonically kills the linear half"
+  }
+ ],
+ "paper_readiness": {
+  "pins": [
+   "corpus sha256 + bytes + lines re-taken on run day",
+   "model id, server version, launch flags, page size, checkpoint interval",
+   "client source digests at src/resextract/llm/occamy.py:456 and :524",
+   "host, GPU, load state",
+   "serving date and analysis date"
+  ],
+  "commands": [
+   "python3 experiments/cache-tax-bench/recompute.py --runs <run-dir> --metric bm",
+   "python3 experiments/cache-tax-bench/recompute.py --telemetry <session-dir> --metric bands",
+   "python3 experiments/cache-tax-bench/recompute.py --controls <run-dir>",
+   "sha256sum <corpus>"
+  ],
+  "claims_skeleton_rows": 12,
+  "claims_skeleton_range": "CB-01..CB-12",
+  "forbidden": [
+   "Arm B number in a causal sentence",
+   "timing claim where arms' p_n differ by >= 5%",
+   "a number with no command in its CLAIMS row",
+   "the word benchmark for Arm A (it is a controlled replay)"
+  ]
+ },
+ "blocker": "templates/ absent at workspace root though docs/PLAN.md section 3.1 lists it; no state-renderer emitter exists to reuse, mitigated by the byte-exact renderer spec in section 3.2\nUsage model at src/resextract/llm/occamy.py:314-322 has prompt_tokens, completion_tokens, reasoning_tokens, total_tokens ONLY; no cached-token field, so every cached number must come from raw_usage or raw HTTP and G0 must establish the key path\ninstrument validity unresolved at write time; another unit is checking whether the cache field is server-reported or estimated; section 2 is written so either outcome yields a defined run without assuming the favourable one\nin-hand prior (0/813 for a ~40-token offset) is in tension with P2's neighbourhood form; C3 is the disambiguator and runs first after G0\nthe 64-token checkpoint interval is an input, not a finding; if the run-day configuration differs, B changes and every prediction in section 5 must be re-stated before the run, not after",
+ "blockers": [
+  "templates/ absent at workspace root though docs/PLAN.md section 3.1 lists it; no state-renderer emitter exists to reuse, mitigated by the byte-exact renderer spec in section 3.2",
+  "Usage model at src/resextract/llm/occamy.py:314-322 has prompt_tokens, completion_tokens, reasoning_tokens, total_tokens ONLY; no cached-token field, so every cached number must come from raw_usage or raw HTTP and G0 must establish the key path",
+  "instrument validity unresolved at write time; another unit is checking whether the cache field is server-reported or estimated; section 2 is written so either outcome yields a defined run without assuming the favourable one",
+  "in-hand prior (0/813 for a ~40-token offset) is in tension with P2's neighbourhood form; C3 is the disambiguator and runs first after G0",
+  "the 64-token checkpoint interval is an input, not a finding; if the run-day configuration differs, B changes and every prediction in section 5 must be re-stated before the run, not after"
+ ],
+ "evidence": {
+  "commands": [
+   "ls dockets experiments state repro orchestration",
+   "sed -n '1,120p' docs/PLAN.md",
+   "sed -n '1,80p' papers/replay-record-not-decision/CLAIMS.md",
+   "grep -n '244' papers/replay-record-not-decision/CLAIMS.md",
+   "sed -n '1,70p' experiments/second-labeller-190/PREREGISTRATION.md",
+   "sed -n '400,445p' strategy/PAPER_CANDIDATES.md",
+   "sed -n '456,500p' src/resextract/llm/occamy.py",
+   "sed -n '524,560p' src/resextract/llm/occamy.py"
+  ],
+  "corpus_measurements_observed": {
+   "experiments/second-labeller-190/cases.json": "141703 B, 3382 lines, 190 cases, 132698 chars total, ~33174 tokens, sha256[:16] e8e3e9819c22808e",
+   "dockets/duval/duval-u55-pinned/material/data/2026-09-28-duval-m0.jsonl": "866816 B, 573 lines, sha256[:16] 431605e624ca9059",
+   "state/mine/live-u21-replay/candidates.jsonl": "7190 B, 10 lines, sha256[:16] 973194a166199d2a",
+   "state/mine/live-u21-r1/candidates.jsonl": "0 lines",
+   "state/mine/live-u21-r2/candidates.jsonl": "0 lines",
+   "templates/": "absent at workspace root"
+  },
+  "house_convention_followed": "244/244 zero control in papers/replay-record-not-decision/CLAIMS.md section E (C38-C40): control arm must return identical on every comparison, and C40 records that the control caught an inverted predicate that would have published '51 % replication divergence'"
+ },
+ "write_paths": [
+  "orchestration/handoffs/U-BENCH-PROTOCOL.md",
+  "orchestration/handoffs/U-BENCH-PROTOCOL.json"
+ ],
+ "next_unit_hint": "Run G0 (instrument validity) as a bounded unit; its verdict selects V-SERVER / V-DERIVED / V-TIMING / V-FAIL and gates the freeze. Then run C3 before freezing P2. Only after both should Arm A be scheduled."
+}

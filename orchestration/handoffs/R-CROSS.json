@@ -1,0 +1,49 @@
+{
+  "unit": "R-CROSS",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/R-CROSS.md",
+    "docs/serving-options/R-CROSS.md",
+    "orchestration/handoffs/R-CROSS.json"
+  ],
+  "evidence": {
+    "sources_checked": 34,
+    "pages_fetched_directly": 5,
+    "claims_with_numbers": 19,
+    "unverified_rows": 4,
+    "requests_to_occamy": 0,
+    "experiments_run": 0,
+    "tool_calls_used": 35,
+    "tool_call_bound": 40,
+    "commands": [
+      "read AGENTS.md; ls workspace/docs/units; read orchestration/units/R-SGL.md",
+      "local_web_search x13 (CacheBlend, Prompt Cache, EPIC, DeepSeek hit rate, H2O, SnapKV, Mooncake, AttentionStore, llm-d, AIBrix, EAGLE-3, Cloudflare, PyramidKV, LMCache)",
+      "local_web_crawl arxiv.org/abs/2405.16444 -> TTFT 2.2-3.3x, throughput 2.8-5x",
+      "local_web_crawl arxiv.org/abs/2311.04934 -> 8x GPU / 60x CPU TTFT",
+      "local_web_crawl arxiv.org/abs/2510.09665 -> LMCache abstract (headline numbers truncated)",
+      "local_web_scrape digitalocean.com/blog/reduce-llm-inference-costs-prefix-caching -> only full blocks hashed/cached; block_size 16 default",
+      "local_web_crawl usenix.org ATC24 AttentionStore page -> 404 (number not captured)",
+      "web_search x2 -> FAILED, no DEEPSEEK_API_KEY"
+    ],
+    "falsification_candidates": [
+      "F1 EPIC/Prompt Cache position-independent reuse: up to 8x TTFT (arXiv:2410.15332); cheapest test = 4-8 requests measuring the recoverable-suffix share after a mid-context edit",
+      "F2 CacheBlend selective recompute 10-15%: TTFT 2.2-3.3x (arXiv:2405.16444); cheapest test = 2 prompts x 3 seeds x 2 modes greedy-token comparison, or a 0-request audit of the EuroSys quality table",
+      "F3 Offload economics Mooncake/LMCache: 75% more requests at Kimi (arXiv:2407.00079); cheapest test = KV-bytes-per-64-block / measured read bandwidth vs measured 64-token prefill time"
+    ],
+    "corroboration": "SAFE-KV (arXiv:2610.15186): non-prefix composition preserves only 47.2%/37.8% of full-prefill answers; faithful repair 're-encodes most of the context' -> supports our no-suffix-recovery conclusion; reuse exact up to 4 documents, degrades at 16."
+  },
+  "blocker": "",
+  "next_unit_hint": "R-CROSS is literature-only and ran 0 experiments. If the parent wants F1/F2/F3 tested, open a fresh measurement unit carrying this note: F1 needs ~4-8 requests on the existing harness (suffix-share bound after a mid-context edit) and must NOT be run while another unit holds the .occamy.lock. Rows tagged `unverified` (H2O 29x, LMCache headline numbers, AttentionStore, Hydragen/ChunkAttention/CacheGen, llm-d) need a second pass against published PDFs before any of them is cited as fact.",
+  "write_paths": [
+    "orchestration/units/R-CROSS.md",
+    "docs/serving-options/R-CROSS.md",
+    "orchestration/handoffs/R-CROSS.json"
+  ],
+  "assumptions": [
+    "web_search (DeepSeek-backed) has no API key in this session; all searching fell back to local_web_search, so coverage is bounded by that index.",
+    "Where a headline number was widely cited but the fetched page truncated before it (H2O 29x, LMCache 3-10x/2.5-15x, AttentionStore, Hydragen, ChunkAttention, CacheGen, llm-d), the row is marked `unverified` rather than importing the number from memory.",
+    "Post-2025 arXiv IDs (2604.13226, 2605.01106, 2609.31415, 2610.15186) are abstract-level only in this pass.",
+    "EPIC's venue was not confirmed; it is cited by arXiv ID 2410.15332 only.",
+    "Feasibility verdicts assume a single GB10-class node running SGLang with the fixed baseline config (no hierarchical cache, no LMCache, chunked_prefill_size=8192)."
+  ]
+}

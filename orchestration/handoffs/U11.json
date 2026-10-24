@@ -1,0 +1,45 @@
+{
+ "unit": "U11",
+ "status": "partial",
+ "title": "Repair two handoff contract gaps and one stale docstring",
+ "artifacts": [
+  "orchestration/handoffs/U-BENCH-PROTOCOL.json",
+  "orchestration/handoffs/U-CACHE-INSTRUMENT.json",
+  "experiments/context-cache/runner.py",
+  "orchestration/handoffs/U11.json",
+  "orchestration/units/U11.md"
+ ],
+ "values_added": {
+  "U-BENCH-PROTOCOL.json blocker": "newline-join of the five entries of that file's own pre-existing `blockers` array, verbatim (one line added at line 271; the array itself is untouched). NOT \"\": the file records blockers, notably 'instrument validity unresolved at write time', so blanking it would have contradicted the file.",
+  "U-CACHE-INSTRUMENT.json overall": "\"partial\", derived from `verdict: \"server-reported\"` + `claim_verdict: \"94.56% SURVIVES as a server-reported instrument, WITH THREE STATED LIMITS ... must use a MEDIAN-OVER-SESSIONS headline, not the sum ratio\"` + findings[12] 'THE REAL FRAGILITY IS NOT CONTAMINATION, IT IS DISPERSION'. The number survives; the claim as presented does not pass unchanged. A provenance-only reading would be 'pass' -- the conservative derivation is stated here, not silently guessed.",
+  "U-CACHE-INSTRUMENT.json checks": "nine short strings, each restating one entry of that file's own `findings` array and citing its index (findings[0..6], [10], [11], [12]); no new measurement, nothing invented."
+ },
+ "evidence": {
+  "guard_before": "1 failed, 12 passed in 2.57s -- AssertionError: NEW unit-shape handoff contract gaps: {'U-BENCH-PROTOCOL.json': ['blocker']} {} ; NEW verifier-shape gaps: {'U-CACHE-INSTRUMENT.json': ['overall', 'checks']} {}",
+  "guard_after": "13 passed in 2.55s -- both named files green immediately after the two JSON repairs",
+  "guard_after_with_u11_handoff": "13 passed -- re-run once U11.json existed, so the new handoff adds no gap",
+  "guard_recheck_18_41": "1 failed, 12 passed -- NEW unit-shape handoff contract gaps: {} {} ; NEW verifier-shape gaps: {'U10.json': ['overall', 'checks']} {}. U11's two repaired files are NOT in the gap set.",
+  "audit_my_files": "audit() at 18:41: failures [], shapes U11.json=unit / U-BENCH-PROTOCOL.json=unit / U-CACHE-INSTRUMENT.json=verifier, and gaps for all three are None",
+  "suite_before": "2 failed, 1107 passed, 1 skipped in 64.96s (0:01:04) -- FAILED tests/test_kg_policy.py::test_real_target_config_declares_the_decision and tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps",
+  "suite_after": "1 failed, 1108 passed, 1 skipped in 62.70s (0:01:02) -- only the pre-existing kg_policy failure; measured with U11's three repairs applied, before the sibling U10.json appeared",
+  "suite_final_18_41": "2 failed, 1107 passed, 1 skipped in 61.38s -- kg_policy (pre-existing, not this unit) + test_no_new_contract_key_gaps, which is now red ONLY on the sibling U10.json; the 1108->1107 passed shift is exactly that one guard test flipping",
+  "json_parse": "both edited handoffs parse: U-BENCH-PROTOCOL.json 25 top-level keys, U-CACHE-INSTRUMENT.json 13 top-level keys",
+  "edit_isolation": "git diff --stat for the three paths is EMPTY because all three are untracked in this worktree ('?? ' in git status: experiments/ is untracked wholesale and both handoffs are new). Scope was therefore proven byte-wise instead: deleting the added lines and re-hashing reproduces each pre-edit digest exactly -- U-BENCH-PROTOCOL.json 0062585d73462a5b40e414d62d1a93d8ee1112cc480b92cbe682eaaf8582bf4c (1 line added), U-CACHE-INSTRUMENT.json d984e0403d99d83b7919c5ab7d956f42aa5b8289642baea2eee3ceaf862152b3 (12 lines added), experiments/context-cache/runner.py a6d9ae44784f5c7d0b86a514f3621d9076250100e45d2f495cc5040b869c37ff (docstring block only; current 7ea8e607dc1982ae6afa9b0f3bdff75a971522095448a1d8d36e67acc5085773)",
+  "runner_docstring": "renderer is src/resextract/context/render.py (no renderer.py exists), sha256 4184c9321b9a9406c4e9997e0d0de4bfa17fc4a9f3a9edec2564e537668072ba as the card states. It emits no pointer-table message: message 0 is the salted invariant head, every later message one body node verbatim in chain order (_linear_messages, render.py:116-126). New docstring states keep=2 for POINTER/POINTER_FORK covers head + the chain's opening body (the message compaction rewrites: summary, fork, or a later kept delta under a sliding window), keep=1 for NAIVE_MUTABLE covers message 0 where its volatile block lives, and an append cannot change either digest. No executable line changed (keep/return now at runner.py:146-147 are untouched).",
+  "commands": [
+   ".venv/bin/python -m pytest tests/test_orchestration_handoffs.py -q  (before: 1 failed, 12 passed; after: 13 passed; recheck 18:41: 1 failed, 12 passed, gap only U10.json)",
+   ".venv/bin/python -m pytest tests -q  (before: 2 failed, 1107 passed, 1 skipped; after repairs: 1 failed, 1108 passed, 1 skipped; final with sibling U10.json: 2 failed, 1107 passed, 1 skipped)",
+   "python3 -c 'json.load(...)' on both edited handoffs (both parse)",
+   "sha256sum on the three edited paths, before and after"
+  ]
+ },
+ "blocker": "orchestration/handoffs/U10.json (written 18:40:27 by a sibling unit, outside U11's declared write paths) is a unit-shaped handoff that also carries a `verdict` key, so classify() reads it as verifier-shaped and it is missing ['overall', 'checks']; test_no_new_contract_key_gaps is red on that file alone. This is the loud-failure mode the guard documents: 'an AMBIGUOUS file -- one classified as a verifier only because it carries ... [verdict] -- is then judged against the verifier contract, which requires checks'. U11 must not edit it. Owner-side fix (U10's author): either rename `verdict` (e.g. `boundary_verdict`) so the file classifies as unit and keeps all 7 unit keys, or add `overall` + `checks` derived from its own text.",
+ "next_unit_hint": "U11's three repairs are complete and independently re-checkable: the two repaired handoffs report gap None and the docstring is comment-only. The remaining red is the sibling U10.json -- dispatch a one-key repair to U10's author (rename `verdict`) before any gate call that requires the guard green. Also note `.venv/bin/python` is the working interpreter: bare python3 cannot import resextract, fastapi or graphify, and the guard's own docstring expects the full-corpus run.",
+ "write_paths": [
+  "orchestration/handoffs/U-BENCH-PROTOCOL.json",
+  "orchestration/handoffs/U-CACHE-INSTRUMENT.json",
+  "experiments/context-cache/runner.py",
+  "orchestration/handoffs/U11.json",
+  "orchestration/units/U11.md"
+ ]
+}

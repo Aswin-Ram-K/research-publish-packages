@@ -1,0 +1,41 @@
+{
+  "unit": "FIX-COVERAGE",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/recompute.py",
+    "papers/context-cache/CLAIMS.md",
+    "papers/context-cache/PACKAGE.md",
+    "orchestration/handoffs/FIX-COVERAGE.json"
+  ],
+  "evidence": {
+    "the_defect": "CLAIMS.md:140-141 said '58 claims, all re-derived' / '58 claims checked, all match' while CLAIMS.md carries 62 claim rows and recompute.py all prints '59 claims checked, all match'. Nothing compared either file to the run: recompute.py main() only printed len(claims); verify_package.py compared CLAIMS.md to READER-MAP.md. Filed as V-CLAIMAUD2 overstatement #1 and as the guard hole in next_unit_hint.",
+    "fix_1_counts_now_derived": "CLAIMS.md Coverage rewritten: 62 documented, with the 59 + 1 (C61 grid guard) + 2 (C01/C16 external scripts) split stated and the reason the run's own line says 59 and not 62.",
+    "fix_2_guard_added": "recompute.py: coverage_guard() runs automatically at the end of any full run (claims == list(FUNCS)) and exits non-zero on: (a) a CLAIMS.md claim id with no FUNCS/SPECIAL runner and no script-backed command, (b) a runner absent from CLAIMS.md, (c) a duplicate claim row, (d) a script-backed claim whose script is missing on disk, (e) census size != runner set. Claim ids are parsed from CLAIMS.md (CLAIM_RE r'^\\|\\s*(C\\d{2})\\s*\\|'); script-backed claims are parsed from each claim's own command cell (only those pointing outside recompute.py, resolved against ROOT_DIR), so nothing is hard-coded except the regexes.",
+    "green": [
+      ".venv/bin/python papers/context-cache/recompute.py all  ->  exit 0",
+      "tails: '59 claims checked, all match' / 'GRID GUARD PASS  7/7 configs' / 'COVERAGE GUARD ok    every documented claim has a runner: 62/62 (60 in recompute.py, 2 script-backed)' / 'COVERAGE GUARD ok    every runner has a claim row: 60/60' / 'COVERAGE GUARD ok    census matches runner set: 62 ids' / 'COVERAGE GUARD PASS  62 claims documented, 60 runnable here + 2 script-backed'",
+      ".venv/bin/python papers/context-cache/verify_package.py -> 'verify_package: PASS - 62 claims in CLAIMS.md, 62 mapped 1:1, ... UNVERIFIED: none', exit 0"
+    ],
+    "red": [
+      "RED A - appended '| C63 | planted red-test claim | ... | recompute.py C63 |' after the C62 row -> 'COVERAGE GUARD FAIL  census 63 ids != runners 62' + 'COVERAGE GUARD FAIL  2 coverage defect(s)', exit 1. Full FAIL lines in output: the no-runner line listed C63 as well.",
+      "RED B - moved experiments/context-cache/cells/CX-V2/u4_recon.py aside -> 'COVERAGE GUARD FAIL  script-backed claim(s) with no script on disk: C16 -> .../u4_recon.py' + 'COVERAGE GUARD FAIL  1 coverage defect(s)', exit 1.",
+      "GREEN - both mutations reverted; 'diff -q' against the pre-mutation copies printed nothing (byte-identical); exit 0 with 'COVERAGE GUARD PASS  62 claims documented, 60 runnable here + 2 script-backed'."
+    ],
+    "stale_count_grep": "grep -n '58 claims\\|58/52' papers/context-cache/*.md -> 0 hits. Remaining '59 claims checked' hits (CLAIMS.md:141,153; PACKAGE.md:155,176) are the run's own printed line, quoted as such, not a claim count.",
+    "commands": [
+      ".venv/bin/python papers/context-cache/recompute.py all",
+      ".venv/bin/python papers/context-cache/verify_package.py",
+      "cp papers/context-cache/CLAIMS.md /tmp/CLAIMS.bak; cp .../u4_recon.py /tmp/u4.bak  (red-test backups, restored; /tmp is outside the workspace)",
+      "grep -n '58 claims\\|58/52' papers/context-cache/*.md"
+    ],
+    "tool_calls": 14
+  },
+  "blocker": "",
+  "next_unit_hint": "The remaining V-CLAIMAUD2 hole is unmoved and still open: verify_package.py's CLAIM_RE only matches C\\d{2} first cells, so a CLAIMS.md table row whose first cell is 'UNVERIFIED' (or anything else) is invisible to the census - a red test confirmed verify_package stays PASS, exit 0, for it. The new coverage_guard inherits the same regex, so it cannot see such a row either; a malformed row is a hole in BOTH guards, not just one. Card it: reject any CLAIMS.md table row whose first cell is neither C\\d{2} nor a known source key. Separately open from FIX-G3BANDS: the C62 weak spot at 64k S turn 151 (cached_tokens 0 with a larger prompt, +5,473 uncached).",
+  "write_paths": [
+    "papers/context-cache/recompute.py",
+    "papers/context-cache/CLAIMS.md",
+    "papers/context-cache/PACKAGE.md",
+    "orchestration/handoffs/FIX-COVERAGE.json"
+  ]
+}

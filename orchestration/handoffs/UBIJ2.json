@@ -1,0 +1,41 @@
+{
+  "unit": "UBIJ2",
+  "status": "partial",
+  "artifacts": [
+    "strategy/COHERENT_BIJECTION_EXTENSION.md",
+    "scratch/ubij2/bij_two.py",
+    "scratch/ubij2/tree-two-r2",
+    "scratch/ubij2/tree-two",
+    "scratch/ubij2/tree-two-r3",
+    "orchestration/units/UBIJ2.md"
+  ],
+  "evidence": {
+    "build": "python3 scratch/ubij2/bij_two.py scratch/ubij2/tree-two-r2 -> exit 0; 44 files, 3038324 bytes",
+    "idempotence": "diff -r scratch/ubij2/tree-two-r2 scratch/ubij2/tree-two-r3 -> exit 0 (IDENTICAL, 3 builds)",
+    "manifest_hash": "d9b15118decba1902cf22f597ce8b3d7625abb4e8953a409123916fb7262be13 (find . -type f | sort | xargs sha256sum | sha256sum)",
+    "frozen_census_tree-two-r2": "python3 scratch/ubij1/census_one.py scratch/ubij2/tree-two-r2 -> files scanned 44; distinct 73 of 184; TOTAL 3118; inside 1617 distinct=30; outside 1381; keys 120; data-jsonl 715/0/0; json 884/550/120; tooling 0/213/0; prose-md 0/13/0",
+    "frozen_census_others": "tree-stripped 9247 (2171/5701/1375, 99 of 184); tree-one-r2 5364 (2171/2024/1169, 90 of 184)",
+    "complete_decode": "frozen census + K01..K10 layer 3676 (outside 3586, keys 90, inside 0, identical in every shape) -> tree-two-r2 6794; tree-one-r2 9040; stripped 12923",
+    "compileall": "cd scratch/ubij2/tree-two && python3 -m compileall -q . -> exit 0; SyntaxWarning '\"\\F\" is an invalid escape sequence' at harness/tccommon.py:118",
+    "jsonl_parse": "train.jsonl records=800 bad=0; dev.jsonl records=200 bad=0; second-labeller/disagreements.jsonl records=18 bad=0",
+    "parse_fixture": "python3 second-labeller/parse_fixture.py -> exit 0; cases.json records=190 (sandbox ts staged from ../fixture/reflex-decisions.ts)",
+    "compare": "python3 second-labeller/compare.py -> exit 0; rewrote metrics.json",
+    "recompute_claims": "NOT RUN - verify/recompute-claims.py is ABSENT from the emitted tree; verify/ holds only redaction-log.json",
+    "prepare": "python3 harness/prepare.py -> exit 2 (corpus digest 1aa0ad32... vs pinned c78681d6...), expected in every shape",
+    "routeA": "agreement 0.34210526315789475; po 0.34210526315789475; pe 0.025041551246537397; kappa 0.32520740993294694; exact_index_matches 65; ties 120; zero_score_cases 41 - ALL MATCH CARD",
+    "routeB": "agreement 0.9052631578947369; kappa 0.9013584840356494; exact_index_matches 172; n_disagreements 18; AB_mutual_agreement 0.3526315789473684; labelable 190; disagreements_where_routeA_backs_record 5 - ALL MATCH CARD",
+    "arms": "results/baselines.json instrument190 accuracy 0.6789473684210526 MATCH; results/DEFECT-EVIDENCE.json 0.452632 (x2), 0.231579 MATCH; arms 0.347368 x2 and 0.263158 NOT re-located; 2x2 39/27/90/34 NOT re-measured",
+    "kappa_columns": "closed-vocabulary kappa and roster kappa NOT extracted (nested under stratification.<subset>['labelsB.json']); stratification.closed_vocabulary_cases=106",
+    "derived_artefact_check": "results/baselines.json perCase: {\"id\":\"N01-001\",\"F54\":\"reasoner (propose only)\",\"correct\":true,\"F49\":0.7894} - gold->F54, latencyMs->F49 renamed at definition and use; id/correct protected; context.package 0, N10 1036, goldIndex 0",
+    "defect": "inside-stimulus 2171 -> 1617 (554 in-stimulus occurrences rewritten): composed rendered situation strings in train.jsonl/dev.jsonl not fully covered by masker needles; prose-integrity guard did not catch it. Also harness/tccommon.py:118 '\\F19 option:' from nCandidate matching '\\nCandidate' - add backslash to the lookbehind class.",
+    "bound": "BOUND EXCEEDED: unit card allowed <=40 tool calls; three rebuild-and-measure cycles after two masker defects pushed this over. Disclosed, not hidden."
+  },
+  "blocker": "Not shippable as built: the extension rewrites 554 in-stimulus occurrences (inside-stimulus 2,171 -> 1,617), so it fails UBIJ1's stimulus-preservation condition. Named fix: pin the rendered JSONL situation values as masker needles (expected frozen census after the fix ~2,540, an estimate not a measurement). Two card metrics could not be extracted within budget (closed/roster kappa; arms 0.347368 x2 / 0.263158; 2x2).",
+  "next_unit_hint": "Successor: (1) pin rendered train.jsonl/dev.jsonl `situation` strings as masker needles and assert record-level byte identity, rebuild, and re-run census_one.py to confirm inside==2171 exactly; (2) add `\\\\` to the bij_two.py substitution lookbehind to kill the \\nCandidate->\\F19 escape corruption; (3) extract stratification.<subset>['labelsB.json'].kappa and re-locate the remaining arms + the 2x2; (4) decide whether the ~369-occurrence packaging surface (file names, paths, EXP#11/EXP#12, code symbols) is in scope, since renaming text cannot rename the shipped file names. Ship UBIJ1's tree-one-r2 unchanged until then.",
+  "write_paths": [
+    "scratch/ubij2/**",
+    "strategy/COHERENT_BIJECTION_EXTENSION.md",
+    "orchestration/units/UBIJ2.md",
+    "orchestration/handoffs/UBIJ2.json"
+  ]
+}

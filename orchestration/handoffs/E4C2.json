@@ -1,0 +1,57 @@
+{
+ "unit": "E4C2",
+ "status": "done",
+ "artifacts": [
+  "orchestration/units/E4C2.md",
+  "orchestration/handoffs/E4C2.json",
+  "orchestration/units/E4.md"
+ ],
+ "evidence": {
+  "purpose": "restore the originals E4C reported as overwritten; record repair only, 0 live requests, no lock, no new analysis",
+  "restored_sentence_primary": "It is deterministic at n=20, not a 1-in-k race",
+  "restored_sentence_second": "a permanent 64-token (one whole block) shortfall",
+  "source_of_wording": "orchestration/handoffs/E4C.json evidence.before_after (BEFORE halves 'deterministic' and 'permanent_shortfall'), byte-identical to E4.json verifier_corrections[0].as_written and [2].as_written; VE4.md/VE4.json/VE24.md carry neither string (0 hits)",
+  "defect_class": "not an overwrite - E4C's substring check was broken by markdown emphasis ('**It is deterministic at n=20**, not a 1-in-k race' at E4.md:61; 'a permanent **64-token (one whole block) shortfall**' at E4.md:62); the text was present all along",
+  "before_after": {
+   "E4.md_sha256": "1bc91ca1666fe6a8 -> f3c8d6bc1590baec5b4b0e23117a2098608b3e603d8f7af11430961e4e2d9c98",
+   "E4.md_lines": "88 -> 93",
+   "E4.md_inserted": [
+    "E4.md:9   > original (restored): \"It is deterministic at n=20, not a 1-in-k race\"  (inside the Corrections section, after correction 1)",
+    "E4.md:13   > original (restored): \"a permanent 64-token (one whole block) shortfall\"  (after correction 3)"
+   ],
+   "body_unchanged": "no line rewritten or reflowed outside the two inserted blockquotes"
+  },
+  "originals_intact_5_of_5": true,
+  "originals_intact": {
+   "The miss is deterministic, not a race with a distribution.": true,
+   "It is deterministic at n=20, not a 1-in-k race": true,
+   "only at `64*floor((L-1)/64) = L - 64`": true,
+   "The (L-1) form is the right ceiling rule at the boundary": true,
+   "a permanent 64-token (one whole block) shortfall": true
+  },
+  "search_command": "grep -cF '<string>' orchestration/units/E4.md",
+  "hit_counts": {
+   "The miss is deterministic, not a race with a distribution.": 1,
+   "It is deterministic at n=20, not a 1-in-k race": 1,
+   "only at `64*floor((L-1)/64) = L - 64`": 1,
+   "The (L-1) form is the right ceiling rule at the boundary": 1,
+   "a permanent 64-token (one whole block) shortfall": 1
+  },
+  "e4_json_unchanged": "sha256 ad523b518ca40b1a426e159d712e7d9bfb7e7ece2251d246434eb8306ba46a8c (7/7 contracted keys, 5 verifier_corrections all applied:true, both originals already in as_written entries 1 and 3 -> no write, no churn)",
+  "no_live_requests": true,
+  "no_lock": true,
+  "git_read_only": "git log/show on orchestration/units/E4.md: 0 hits at HEAD and HEAD~1; no git write verbs run"
+ },
+ "blocker": "",
+ "next_unit_hint": "E4C2's disclosure is closed: the five originals are literal-present in E4.md and quoted in E4.json. A future containment check must compare emphasis-stripped text (or grep '**'-aware), otherwise bold-split sentences keep producing false 'overwrite' alarms. Remaining E4 gaps unchanged: rep-3 at 1024 (or 1088), lengths 1008/1152/2048/4096, server-side cause (G13).",
+ "write_paths": [
+  "orchestration/units/E4C2.md",
+  "orchestration/handoffs/E4C2.json",
+  "orchestration/units/E4.md"
+ ],
+ "assumptions": [
+  "A1: restored both false entries, not only the one named in the card - same emphasis artifact, and literal 5/5 needs both; both quotes additive in the same section",
+  "A2: E4.json not written - verifier_corrections[].as_written already carries both originals verbatim, so writing again would churn a compliant file (sha verified unchanged)",
+  "A3: no git write verbs; git show used read-only and returned no prior copy, so E4C.json.evidence.before_after was the carrying source"
+ ]
+}

@@ -1,0 +1,49 @@
+{
+ "unit": "U-GRID",
+ "status": "done",
+ "artifacts": [
+  "state/config/live-server-config.json",
+  "orchestration/units/U-GRID.md"
+ ],
+ "evidence": {
+  "command_or_count": "curl -s -w %{http_code} http://192.168.2.168:8012/get_server_info -> HTTP 200, 32585-byte JSON, 2 HTTP requests total (0 to /metrics, 0 to /chat/completions)",
+  "endpoint": "http://192.168.2.168:8012/get_server_info",
+  "mamba_track_interval": "256 (present, explicit; equals the SGLang default, so the flag was not passed)",
+  "effective_mamba_cache_chunk_size": "_mamba_cache_chunk_size = 64 (internal_states[0], runtime effective, not a CLI flag)",
+  "page_size": "1 (c128_page_size 16)",
+  "mamba_radix_cache_strategy": "extra_buffer",
+  "max_mamba_cache_size": "64",
+  "chunked_prefill_size": "8192 (enable_dynamic_chunking false, max_prefill_tokens 16384)",
+  "mem_fraction_static": "0.45",
+  "attention_backend": "triton",
+  "speculative_algorithm": "null / absent",
+  "uses_mamba_radix_cache": "true",
+  "fla_chunk_size": "not reported anywhere in the payload",
+  "model": "occamy-1.0 (served_model_name) = /root/.cache/huggingface/hub/models--Accio-Lab--occamy-1.0-NVFP4/snapshots/fa865dc5e80a13b9a2d8ae8d65ed2ee332f33652; sglang 0.0.0.dev1+g4ccff141d, status ready",
+  "discrepancy": "top-level disable_chunked_prefix_cache=false vs internal_states[0]=true; internal_states is the runtime-effective config",
+  "verdict": "grid-refuted",
+  "verdict_qualifier": "refuted only at the --mamba-track-interval level (256, not 64). The live runtime does carry _mamba_cache_chunk_size=64, so a 64-token mamba chunk granularity exists under a different name - the grid is not 'unexplained', it is mis-attributed to the wrong flag.",
+  "commands": [
+   "curl -s -o /tmp/gs.json -w '%{http_code}' --max-time 8 http://192.168.2.168:8012/get_server_info",
+   "curl -s --max-time 10 -o state/config/.raw_server_info.json http://192.168.2.168:8012/get_server_info",
+   "python3 -c \"import json;d=json.load(open('state/config/.raw_server_info.json'));print(d['internal_states'][0]['_mamba_cache_chunk_size'])\""
+  ]
+ },
+ "blocker": "",
+ "assumptions": [
+  "The admin endpoint is the origin root, not the /v1 base the chat client uses; confirmed by the 200 on the first probe.",
+  "internal_states[0] is treated as authoritative over the top-level echo where they disagree (it is the scheduler's effective config).",
+  "_mamba_cache_chunk_size is reported as found; no claim is made here that it is the sole cause of the 64 grid - that needs a measurement, not a config read."
+ ],
+ "next_unit_hint": "Point the page-size sweep at _mamba_cache_chunk_size (=64, runtime) rather than at --mamba-track-interval (=256); the flag-page sweep would be testing a value that is not 64. If a flag sweep is still wanted, the only honest one is track_interval 256 vs 64 as a *restart-level* A/B, and it should be run alongside a check of whether cached-token accounting snaps to 64-token mamba chunks with track_interval held at 256. Also reconcile disable_chunked_prefix_cache: runtime says true, top-level echo says false.",
+ "write_paths": [
+  "orchestration/units/U-GRID.md",
+  "state/config/live-server-config.json",
+  "orchestration/handoffs/U-GRID.json"
+ ],
+ "tool_calls": 10,
+ "bound": 12,
+ "http_requests": 2,
+ "http_bound": 3,
+ "lock_taken": false
+}

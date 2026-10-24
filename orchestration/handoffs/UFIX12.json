@@ -1,0 +1,78 @@
+{
+  "unit": "UFIX12",
+  "status": "done",
+  "artifacts": [
+    "strategy/PUBLISH_PACKAGE_MANIFEST.md",
+    "papers/gated-read-batching/REFS.md",
+    "orchestration/units/UFIX12.md"
+  ],
+  "evidence": {
+    "corrections_applied": "4/4",
+    "citations_fixed_in_manifest": 2,
+    "files_edited": 2,
+    "papers_refs_lines": "96 -> 98 (one legend line added after :13)",
+    "manifest_lines": "499 -> 519 (baseline reworded in place; new 12.5 appended)",
+    "remaining_423_in_manifest": "0 (grep '423' strategy/PUBLISH_PACKAGE_MANIFEST.md -> NONE)",
+    "verified_build_ranges": "UBUILD1.build.sh:612 cat <<'PATTERNS_HARD' ... :637 terminator (body 613-636, 24 patterns); :640 cat <<'PATTERNS_REVIEW' ... :647 terminator (body 641-646, 6 patterns)",
+    "git_status": "?? papers/ and ?? strategy/ - BOTH untracked, so all five edits are git-unrecoverable (not only papers/)",
+    "commands": [
+      "grep -rn '423[-\\u2013458' --include='*.md' --include='*.json' . | grep -v node_modules",
+      "sed -n '605,654p' orchestration/units/UBUILD1.build.sh",
+      "sed -n '1,22p' papers/gated-read-batching/CLAIMS.md",
+      "grep -n 'identical_to_source\\|sha256' repro/encoder-crossover-190-SANITISED/redact.py",
+      "grep -rn 'stage D' repro/encoder-crossover-190-SANITISED/REDACT3_REPORT.md",
+      "grep -n '423' strategy/PUBLISH_PACKAGE_MANIFEST.md  # -> NONE",
+      "wc -l strategy/PUBLISH_PACKAGE_MANIFEST.md papers/gated-read-batching/REFS.md  # -> 519 / 98",
+      "git status --porcelain strategy papers  # -> ?? papers/  ?? strategy/"
+    ],
+    "edits": [
+      {
+        "file": "strategy/PUBLISH_PACKAGE_MANIFEST.md",
+        "line_before_edit": 8,
+        "note": "card said :7; the citation text is on line 8 (line 7 is 'The gate is the arbiter, not opinion:')",
+        "before": "pattern list transcribed verbatim from `UBUILD1.build.sh:423\u2013458` (24 HARD + 6 REVIEW patterns), run over the",
+        "after": "pattern list transcribed verbatim from `UBUILD1.build.sh:612\u2013637` (24 HARD patterns; REVIEW list at `:640\u2013647`), run over the"
+      },
+      {
+        "file": "strategy/PUBLISH_PACKAGE_MANIFEST.md",
+        "line_before_edit": 252,
+        "before": "`UBUILD1.build.sh:423\u2013458`, not invented (24 HARD lines + 6 REVIEW lines).",
+        "after": "`UBUILD1.build.sh:612\u2013637`, not invented (24 HARD lines; REVIEW list at `:640\u2013647`)."
+      },
+      {
+        "file": "strategy/PUBLISH_PACKAGE_MANIFEST.md",
+        "line_before_edit": "284-288 (baseline paragraph, section 8)",
+        "before": "**Baseline.** The contract fixes `gate_before = \"158\"` \u2014 UTOK2's figure over the **whole 58-file SANITISED\ntree with prose substitution applied**, a different tree measured with a different transform, and measured\nwithout the gate's `--exclude=\"$SELF\"`. UCURATE1's own comparable measurement of **the unmodified build's\nship set with no transform at all** is **218**; with the three path rules it is **152**. Both are reported so\nnobody compares incomparable numbers.",
+        "after": "**Baseline.** The contract fixes `gate_before = \"158\"` \u2014 UTOK2's figure over the **whole 58-file SANITISED\ntree with prose substitution applied**, a different tree measured with a different transform, and measured\nwithout the gate's `--exclude=\"$SELF\"`. UCURATE1's own comparable measurement of **the unmodified build's\nship set with no transform at all** is **156** \u2014 the 152 post-transform lines plus the 4 path-only lines the\nthree path rules neutralise, which the build's own neutralise log reports as `4 occurrence(s) in 2 file(s)`;\nwith the three path rules it is **152**. The two figures differ by 2, so they are broadly comparable rather\nthan incommensurable \u2014 the earlier framing overstated the gap.",
+        "headline_152_unchanged": true
+      },
+      {
+        "file": "strategy/PUBLISH_PACKAGE_MANIFEST.md",
+        "line_before_edit": "appended after :499 (end of section 12)",
+        "placement_reason": "section 12 was not full; 12.4 is the unit's 'what I did NOT do' list, so the new open-defect item is a new subsection 12.5 rather than an edit to an existing defect heading (none exists for redact.py)",
+        "before": "- Left the staged tree in place, as instructed.",
+        "after": "- Left the staged tree in place, as instructed.\n\n### 12.5 OPEN DEFECT \u2014 `redact.py` stage D can assert identity it does not have\n\n**Recorded by UFIX12 from UREDACT3; deliberately NOT fixed here** (`repro/encoder-crossover-190-SANITISED/redact.py`\nis outside this unit's write paths and was left untouched).\n\n`redact.py:873\u2013883` (`stage_d_manifest`'s per-entry `sha256`/`bytes` recomputation; file-digest helper at\n`:625`) recomputes hashes only for entries the stage itself produced. For a file it does **not** regenerate it\nfalls back to the **source** file, so it writes the source digest into the `sha256` field while leaving\n`identical_to_source: true` \u2014 a regenerated entry can then assert an identity it does not have, with a wrong\n`sha256` besides. The own-artefact skip set covers the **unit-owned** `README.md` and `INTEGRITY.md`, which are\nnever regenerated.\n\nUREDACT3 found **6** stale identity rows (the card claimed 5): **4 are fixed by stage D**, and **2 remain\nopen** \u2014 `README.md` and `INTEGRITY.md`, whose entries keep `identical_to_source: true` with the *source*\ndigest in `sha256`. The fix belongs in stage D (skip entries it cannot hash, or write the owning unit's\nrecorded digest) \u2014 **not** in a hand-edit of `MANIFEST.json`, which would create a third inconsistent state.\nEvidence: `repro/encoder-crossover-190-SANITISED/REDACT3_REPORT.md:281-290`."
+      },
+      {
+        "file": "papers/gated-read-batching/REFS.md",
+        "line_before_edit": 13,
+        "before": "section (`P:193-232`), and its fetched-URL list (`P:259-272`).",
+        "after": "section (`P:193-232`), and its fetched-URL list (`P:259-272`).\n\n**Source of the `G:` locators:** `docs/research/GATED_READ_2026.md` (abbreviated **G**, the run report) in the same read-only source material (name and location withheld).",
+        "style_source": "CLAIMS.md:12 legend row (G = docs/research/GATED_READ_2026.md, run report, 340 lines); wording mirrors REFS.md:11 P-declaration"
+      }
+    ],
+    "out_of_scope_wrong_citations_not_edited": [
+      "orchestration/units/UCURATE1.md:37",
+      "orchestration/units/UTOK1.md:36",
+      "experiments/token-substitution-test/REPORT.md:168"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Manifest and REFS.md corrections are applied and verified; 152 headline, ship list, anchors and exit-1 gate untouched. Remaining out-of-scope copies of the stale 423-458 citation live at orchestration/units/UCURATE1.md:37, orchestration/units/UTOK1.md:36 and experiments/token-substitution-test/REPORT.md:168 - a fresh unit owning those write paths can fix them. redact.py stage D remains unpatched by design (see manifest 12.5). Both papers/ AND strategy/ are untracked in this repo, so no edit here is git-recoverable.",
+  "write_paths": [
+    "strategy/PUBLISH_PACKAGE_MANIFEST.md",
+    "papers/gated-read-batching/REFS.md",
+    "orchestration/units/UFIX12.md",
+    "orchestration/handoffs/UFIX12.json"
+  ]
+}

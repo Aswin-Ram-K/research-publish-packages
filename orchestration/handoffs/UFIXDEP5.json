@@ -1,0 +1,31 @@
+{
+  "unit": "UFIXDEP5",
+  "status": "done",
+  "artifacts": [
+    "strategy/ZENODO_DEPOSIT.md",
+    "orchestration/units/UFIXDEP5.md"
+  ],
+  "evidence": {
+    "before": "29637 bytes, sha256 074974fcb4eb0c76570d700e0808d037cd320caa4ecc4aa296bec6c00b885fcf",
+    "after": "29795 bytes, sha256 d6629c2a9599e299df9dda3d2cf46f40303c80b4bce265d5ca520ad47d64b88b",
+    "fix": "strategy/ZENODO_DEPOSIT.md:22-23 -- replaced the phrase live value with the dated form 'the value current on that date' on BOTH the Bytes row (157,650) and the sha256 row (7389bd879e970d840a528a9a19bfb9a6623babf3ec10746b18fc616bf2b4dad3); neither the rows nor the digests were deleted. The two-line old_string occurred exactly once (edit tool enforces uniqueness).",
+    "sweep_hits": "grep -nE 'live value|live:|current|LIVE': :22 :23 FALSE present-tense (fixed); :138 'currently 2026-10-17' = plan field for CITATION.cff date-released, not an archive-live claim, left; :415 'then-current'/the current extras = inside dated UFIXMAN1 2026-10-17 section, correctly dated history, left; :422 'current directory' = ordinary English, left; :433 'Live values (measured): bytes 158,956, sha256 bcdbf75e...' = TRUE current live value matching the shipped archive, left; :439 'authoritative live values are in strategy/DEPOSIT_METADATA.md §0' = correct pointer, left.",
+    "broad_live_sweep": "grep -niE '\blive\b' after the fix returns only :433 and :439 (plus none else); no other present-tense live claim remains false.",
+    "archive_untouched": "papers/encoder-crossover-190/released/encoder-crossover-190-released.tar.gz sha256 bcdbf75eff70eec77fc1f4a181947c86dd9c12862871315e1dfeec8578fbb6a2 (still the current shipped archive; no rebuild, no network)",
+    "commands": [
+      "sha256sum strategy/ZENODO_DEPOSIT.md; wc -c strategy/ZENODO_DEPOSIT.md",
+      "grep -nE 'live value|live:|current|LIVE' strategy/ZENODO_DEPOSIT.md",
+      "edit strategy/ZENODO_DEPOSIT.md:22-23 (old_string address the two live value rows)",
+      "sha256sum strategy/ZENODO_DEPOSIT.md; wc -c strategy/ZENODO_DEPOSIT.md; grep -niE '\blive\b' strategy/ZENODO_DEPOSIT.md",
+      "sha256sum papers/encoder-crossover-190/released/encoder-crossover-190-released.tar.gz"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "strategy/ZENODO_DEPOSIT.md now carries no false present-tense live claim: :22-23 are dated history, :433 states the true current value 158,956 B / bcdbf75e..., :439 defers to DEPOSIT_METADATA.md §0. A verifier (V-shaped) should re-run the live/current sweep and confirm the two :22-23 rows still carry 157,650 and 7389bd87... as dated history. Out of scope by the card: the frozen verifier reports _1.._3 and old handoffs still quote 956d6363/158,762 within their own dates.",
+  "write_paths": [
+    "strategy/ZENODO_DEPOSIT.md",
+    "scratch/ufixdep5/**",
+    "orchestration/units/UFIXDEP5.md",
+    "orchestration/handoffs/UFIXDEP5.json"
+  ]
+}

@@ -1,0 +1,65 @@
+{
+ "artifacts": [
+  "experiments/context-cache/cells/CROSS-HTTP/cross_http.py",
+  "experiments/context-cache/cells/CROSS-HTTP/rows.jsonl",
+  "experiments/context-cache/cells/CROSS-HTTP/analysis.json",
+  "experiments/context-cache/cells/CROSS-HTTP/events.jsonl",
+  "experiments/context-cache/cells/CROSS-HTTP/runs/",
+  "experiments/context-cache/cells/CROSS-HTTP/history/",
+  "docs/serving-options/CROSS-HTTP.md",
+  "orchestration/units/CROSS-HTTP.md",
+  "orchestration/handoffs/CROSS-HTTP.json"
+ ],
+ "assumptions": [
+  "Requests 4-9 are confirmatory re-runs of the same 3-request probe under new salts; the engine counter is shared with another team's traffic, so a single delta is not attributable but a recurring identical delta is.",
+  "seed fixed at 1729 to share one seed with the SGLang corpus; temperature 0.",
+  "The latency fallback was measured and labelled latency-only; no latency grid was presented as cache data.",
+  "Where the card's steps 2-4 conflict with its own step-1 branch (cached tokens absent), the step-1 branch won.",
+  ":8000 ornith-1.5-35b was touched with one GET /v1/models only; engine unidentified, so no rows and its stack stays 'unknown'."
+ ],
+ "blocker": "usage.prompt_tokens_details is absent because :8014 was not launched with --enable-prompt-tokens-details. Steps 2-4 (grid sweep, append cost, fan-out) need a per-request cached_tokens value that this build does not emit; enabling it requires a restart of another team's service, which this unit is forbidden to do.",
+ "evidence": {
+  "analysis_digest": "29bdca913ea2aa2db94c28b97cb776075c356ca3964981540b07ef5084fa31cb",
+  "append_mean_uncached_per_turn": null,
+  "append_reason": "not measurable without per-request cached_tokens",
+  "block_size_from_metrics": 1056,
+  "cached_tokens_reported": false,
+  "commands": [
+   "python3 experiments/context-cache/cells/CROSS-HTTP/cross_http.py --probe --salt crosshttp-r3-1729 --bound 8",
+   "python3 experiments/context-cache/cells/CROSS-HTTP/cross_http.py --analyse",
+   "sha256sum experiments/context-cache/cells/CROSS-HTTP/rows.jsonl"
+  ],
+  "config_id": "vllm0.27.1-qwen3.5-9b-b?",
+  "config_sha256": "d09e755b6ad0efd04a689d6b43cf2c796455192d39f66a139584b642532cb3f5",
+  "engine_counter_delta_tokens": 1056,
+  "engine_counter_reproduced": [
+   1056,
+   1056
+  ],
+  "failures": 0,
+  "fanout_B_over_A": null,
+  "fanout_reason": "prefix residency unreadable; unmeasurable, NOT 1.0",
+  "grid_reason": "per-request cached_tokens absent; block size recovered from engine counter instead",
+  "grid_recovered": null,
+  "latency_repeat_over_cold": [
+   0.6,
+   0.693
+  ],
+  "lock": "flock held for every live run, released in finally; wait_s=0.0 each run",
+  "prompt_tokens_details": "null on 9/9 responses across 3 runs",
+  "requests_bound": 120,
+  "requests_live": 9,
+  "rows": 3,
+  "rows_sha256": "f94eef2e70583e7cc31a9a05b5c5461d2a57d5da8b3d5a097852afee6ba72ff9",
+  "runs_archived": 2
+ },
+ "next_unit_hint": "If :8014 is relaunched with --enable-prompt-tokens-details, run cross_http.py --run unchanged: grid 512..8192 (32 req) + append (9) + fan-out K=8 (9) + probe (3) = 53 requests, inside the 120 bound. Expected block 1056, so a 64*floor((L-1)/64) fit should FAIL there while a 1056 fit may hold.",
+ "status": "partial",
+ "unit": "CROSS-HTTP",
+ "write_paths": [
+  "experiments/context-cache/cells/CROSS-HTTP/",
+  "docs/serving-options/CROSS-HTTP.md",
+  "orchestration/units/CROSS-HTTP.md",
+  "orchestration/handoffs/CROSS-HTTP.json"
+ ]
+}

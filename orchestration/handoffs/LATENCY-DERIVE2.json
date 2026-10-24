@@ -1,0 +1,57 @@
+{
+  "unit": "LATENCY-DERIVE2",
+  "status": "partial",
+  "artifacts": [
+    "state/logs/LATENCY-DERIVE2.md",
+    "state/logs/LATENCY-DERIVE2/derive_latency.py",
+    "state/logs/LATENCY-DERIVE2/selfcheck.py",
+    "state/logs/LATENCY-DERIVE2/summary.json",
+    "state/logs/LATENCY-DERIVE2/run.txt",
+    "state/logs/LATENCY-DERIVE2/redgreen.txt",
+    "orchestration/units/LATENCY-DERIVE2.md"
+  ],
+  "evidence": {
+    "command_or_count": "derive_latency.py streamed 18 rows.jsonl files = 10161 rows (9945 with ttft+wall) in one line-at-a-time pass. DERIVABLE: D1 aggregate ttft 4828916.2 ms / wall 5398115.6 ms -> ttft share 0.8946, residual 569199.4 ms, 198613277 prompt tokens, 0.027179 wall-ms per prompt token; D2 observed span 9375647.3 ms vs claimed wall 5398115.6 ms -> coverage 0.5758, unaccounted 3977531.7 ms (42.4%); D3 234 rows (M4 118/327, TUNED 116/289) claim a wall_ms longer than the span to the next request (median ratio 0.9961/0.9971); D4 residual-per-token medians 7.03-23.04 ms across cells with ct median 4; D5 U6 240/240 rows ct=64, median wall-ttft 1699.8 ms (min 792.9, max 4559.7) = 26.565 ms/token median, lower bound only. REFUSED (6): queue factor, server-side service time, decode rate, network latency, harness queued->started delay, queue-cause attribution - each with its missing field. selfcheck.py: T1 containment PASS, T2 refusal coverage PASS, T3 counter red->green PASS (green=10 red=9 expected=9), exit 0; --red -> T3 FAIL (green=10 red=9 expected=10), exit 1 (state/logs/LATENCY-DERIVE2/redgreen.txt).",
+    "commands": [
+      ".venv/bin/python state/logs/LATENCY-DERIVE2/derive_latency.py",
+      ".venv/bin/python state/logs/LATENCY-DERIVE2/derive_latency.py --json",
+      ".venv/bin/python state/logs/LATENCY-DERIVE2/selfcheck.py",
+      ".venv/bin/python state/logs/LATENCY-DERIVE2/selfcheck.py --red"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "V-LATENCY-DERIVE2 (different agent): re-derive D1 and D5 from experiments/context-cache/cells with an independent streaming reader (D1 = sum ttft_ms / sum wall_ms over status==200 rows carrying both; D5 = median(wall_ms - ttft_ms) over U6 rows with completion_tokens==64), force the T3 red, and confirm containment: .occamy.lock mtime still 2026-10-21 16:18:54 -0500, the 18 rows.jsonl files still total 10161 lines with md5-of-md5sums 6c988ecb87913e4f7c038fed6d5a49e2. Open question worth one unit if the queue factor is ever wanted: a ~12-request cell at max_tokens=1 that records the server-side startedAt (vLLM --enable-log-requests or SGLang per-request started_at) plus a client timestamp taken immediately before and after the send; without one of those three fields the queue factor stays unmeasurable, and the D3 finding shows the current wall_ms is an understatement in at least 4 cells.",
+  "write_paths": [
+    "state/logs/LATENCY-DERIVE2.md",
+    "state/logs/LATENCY-DERIVE2/",
+    "orchestration/units/LATENCY-DERIVE2.md",
+    "orchestration/handoffs/LATENCY-DERIVE2.json"
+  ],
+  "assumptions": [
+    "The card that launched this turn was a two-line tag prompt ('same feasibility question, streaming only'), so the question is taken from the LATENCY-DERIVE trace recalled in memory: what service latency can be computed from rows we already have, and what honestly cannot. The interpretation is recorded here rather than asked for, because no human is present.",
+    "No artefact from the earlier LATENCY-DERIVE attempt existed on disk (grep for LATENCY-DERIVE across .md/.json returned nothing; no orchestration/handoffs/LATENCY*): the work was redone from the rows, not resumed.",
+    "'Derivable' means computable from fields present in the rows with no model assumption; anything requiring an unrecorded timestamp is refused even when an estimate could be produced.",
+    "D2's 'unaccounted' figure is a bound on harness gap + prompt assembly + transport, NOT a queue measurement; the report says so in the same sentence as the number.",
+    "wall_ms in M4/TUNED/U3/U6 is treated as a lower bound on the request's true duration because ts_utc is stamped before the client call begins; the other 14 cells carry batch-ordered lines, so no span bound can be computed there and none is claimed.",
+    "U6's per-token figure is reported as 'ms per completion token, median, lower bound' and explicitly not as a decode rate (residual varies 5.8x at an identical token count).",
+    "0 live requests: no .occamy.lock mtime change (2026-10-21 16:18:54 -0500, unchanged from a prior unit), no server start/stop, no target repo touched, no systemd action."
+  ],
+  "not_reproduced": [],
+  "overstated": [
+    "A first draft of this report stated 'median completion_tokens is 4 in every cell' and 'the patch has no cell with a large completion budget'. FALSE: U6 has 240/240 rows at completion_tokens=64 (U3 max 8). Corrected before the handoff; the U6 row is now D5 and the refusal for decode rate is scoped to the 16 small-completion cells.",
+    "A selfcheck scratch test used one path for two different synthetic files and read back the wrong content; the cause is a case-insensitive-filesystem module-identity split, not a scan bug. Recorded in the report (section 5) so the symptom is not mistaken for a derivation defect."
+  ],
+  "unverified": [
+    "Whether the 42.4% 'unaccounted' share of observed time (D2) is mostly harness overhead or mostly server-side queueing: the rows carry neither, so the split is unmeasured, not merely uncertain.",
+    "The true duration of any M4/TUNED/U3/U6 request: only the lower bound ts(next)-ts(row) is available, and 234 rows sit at exactly the bound (overlap), which means the client clock and the row clock disagree about when a request starts.",
+    "Whether SGLang's own logs (server-side) recorded per-request timings during the cells: no server log was captured under experiments/context-cache for the SGLang endpoint (only docker-level launch helpers exist), so a server-side re-derivation from logs is not available offline."
+  ],
+  "tool_calls": 41,
+  "bound": 60,
+  "containment": "0 live requests, no lock taken, no target repo read or written, no git command against a target, no server started or stopped, no systemd action. Only the 7 declared write paths were created; experiments/, papers/ and src/ untouched (18 rows.jsonl files still total 10161 lines, md5-of-md5sums 6c988ecb87913e4f7c038fed6d5a49e2; .occamy.lock mtime still 2026-10-21 16:18:54 -0500).",
+  "red_green": {
+    "guard": "state/logs/LATENCY-DERIVE2/selfcheck.py T3 — rows_with_ttft_and_wall must drop by exactly one when a synthetic row loses ttft_ms",
+    "green": "python state/logs/LATENCY-DERIVE2/selfcheck.py -> T1 PASS, T2 PASS, T3 PASS (green=10 red=9 expected=9), exit 0",
+    "red": "python state/logs/LATENCY-DERIVE2/selfcheck.py --red -> T3 FAIL (green=10 red=9 expected=10), exit 1"
+  }
+}

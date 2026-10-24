@@ -1,0 +1,49 @@
+{
+  "unit": "UAUTHOR1",
+  "status": "done",
+  "artifacts": [
+    "tools/package/md2tex.py",
+    "tests/test_md2tex.py",
+    "papers/encoder-crossover-190/submission/main.tex",
+    "papers/encoder-crossover-190/submission/encoder-crossover-190.tar.gz",
+    "papers/encoder-crossover-190/submission/METADATA.md",
+    "scratch/uauthor1/pre/main.tex",
+    "scratch/uauthor1/numeric_proof.py",
+    "scratch/uauthor1/tarball/pkg1.tar.gz",
+    "orchestration/units/UAUTHOR1.md"
+  ],
+  "evidence": {
+    "registry_change": "tools/package/md2tex.py PACKAGES['encoder-crossover-190']: require_author_slot False->True and author_line now \"\\\\author{Aswin Ram Kalugasala Moorthy\\\\\\\\ Independent researcher\\\\\\\\ \\\\texttt{aswinram.k.1603@gmail.com}}\" (one \\author line, `\\\\` row breaks). gated-read-batching and replay-record-not-decision entries untouched (both still \"\\\\author{Aswin Ram Kalugasala Moorthy}\").",
+    "main_tex": "84285 bytes, sha256 4ef2032ff6cba57f42c5a629b7a300157e0df7df48a278428da8f9b4a228046e (was 84223 bytes, sha256 8374fd28b1fc6c9faa3cb91884e30e097dbb1828361c418c431fdeec8e8461a1); diff vs pre = exactly line 12, the byline, +62 bytes, 467 lines unchanged.",
+    "tarball": "28464 bytes, sha256 d0eb7856d4d7c943f10dd658d6f69a071f5e5bbfa32fc4c01e64841c8486e405 (was 28556 bytes, sha256 dc4da66c401497ab7bfe882a210664df0f111d76fc26f14cd1905023de8360ed); single member main.tex at top level; extracted member sha256 = 4ef2032ff6cba57f42c5a629b7a300157e0df7df48a278428da8f9b4a228046e.",
+    "two_build_identity": "cmp scratch/uauthor1/p1/main.tex scratch/uauthor1/p2/main.tex -> identical; cmp scratch/uauthor1/tarball/pkg1.tar.gz scratch/uauthor1/tarball/pkg2.tar.gz -> identical. Tarball built reproducibly: tar --mtime='@0' --sort=name -cf - -C <submission> main.tex | gzip -n -9 (member mtime is epoch 0; this is the only way two builds of the same input are byte-identical).",
+    "numeric_proof": "scratch/uauthor1/numeric_proof.py (binary strips \\begin{thebibliography}..\\end{thebibliography}, then Counter over /(?<![\\w.])[0-9]+(?:\\.[0-9]+)?(?:e[-+]?[0-9]+)?/). pre_total=891 post_total=891 identical=True; added=Counter() removed=Counter(); counts pre=post: bibitem 13, cite occurrences 23, distinct cite keys 13, bib keys 13 distinct 13, uncited none, unresolved none.",
+    "tectonic": "scratch/utex1/bin/tectonic --outdir ... main.tex with HOME/TECTONIC_CACHE_DIR/TMPDIR under scratch/uauthor1/texenv (cache seeded from scratch/utex1/cache) -> literal exit code 0; 'Undefined control sequence' count 0; lines starting with '!' count 0; 25 pages. Pre-change control compiled the same way: exit 0, 0 undefined, 0 '!', 25 pages -> page count unchanged.",
+    "page1": "pdftotext -f 1 -l 1 shows title, then 'Aswin Ram Kalugasala Moorthy', 'Independent researcher', 'aswinram.k.1603@gmail.com'. Whole-document occurrence counts: affiliation 1, email 1; a per-page sweep (pages 1..25) found the tokens on page 1 only -> nowhere unexpected.",
+    "pytest": "PYTHONPATH=src pytest tests/test_md2tex.py -q -> '7 passed in 0.67s'.",
+    "test_guard": "tests/test_md2tex.py: AUTHOR_SLOT kept as the name-only literal, assert_author_slot(slug, shipped) now pins PACKAGES[slug]['author_line'] exactly per package, rejects any other \\author line, requires AFFILIATION_TOKEN/CONTACT_TOKEN exactly once where the package declares them and ZERO times for papers #2 and #7 -> invented author or affiliation still fails.",
+    "tmlr_staleness": "scripts/utmlr2/tmlr/main.tex carries '\\author{Anonymous authors}' and scratch/utmlr2/evidence.json pins its source as scratch/utmlr1/anonymous/main.tex (84206 bytes, sha256 370472969027759c15d3efd980a2b6246c76aecdd130176f37c98ab9733bbcc9), i.e. the pre-change identified source (84223 bytes). STALE: must be rebuilt from the new 84285-byte main.tex; not rebuilt by this unit.",
+    "docs": "papers/encoder-crossover-190/submission/METADATA.md: appended dated 'Update 2026-10-17 (UAUTHOR1)' section with the live affiliation/contact and new digests; earlier 'name only, no affiliation' text retained above as dated history (the file's own SUPERSEDED convention). MANUSCRIPT.md untouched (it carries no byline/affiliation sentence); BUILD_NOTES.md untouched (its rows are dated build history).",
+    "commands": [
+      "python3 tools/package/md2tex.py --package encoder-crossover-190 --outdir scratch/uauthor1/p1",
+      "python3 tools/package/md2tex.py --package encoder-crossover-190 --outdir scratch/uauthor1/p2",
+      "cmp scratch/uauthor1/p1/main.tex scratch/uauthor1/p2/main.tex",
+      "tar --mtime='@0' --sort=name -cf - -C papers/encoder-crossover-190/submission main.tex | gzip -n -9 > scratch/uauthor1/tarball/pkg1.tar.gz",
+      "python3 scratch/uauthor1/numeric_proof.py scratch/uauthor1/pre/main.tex papers/encoder-crossover-190/submission/main.tex",
+      "scratch/utex1/bin/tectonic --outdir scratch/uauthor1/pdf main.tex",
+      "pdftotext -f 1 -l 1 scratch/uauthor1/pdf/main.pdf -",
+      "PYTHONPATH=src pytest tests/test_md2tex.py -q"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "A verifier should (a) re-run the two-build cmp and the numeric_proof.py pre/post pair, (b) red->green the byline guard by reverting PACKAGES['encoder-crossover-190']['author_line'] to the name-only line (test must fail on the shipped main.tex, pass after restore), (c) confirm papers #2/#7 main.tex bytes are unchanged, and (d) rebuild the anonymised TMLR variant (scratch/utmlr2) from the new identified source 4ef2032f..., which is now stale.",
+  "write_paths": [
+    "tools/package/md2tex.py",
+    "papers/encoder-crossover-190/submission/**",
+    "papers/encoder-crossover-190/METADATA.md",
+    "tests/test_md2tex.py",
+    "scratch/uauthor1/**",
+    "orchestration/units/UAUTHOR1.md",
+    "orchestration/handoffs/UAUTHOR1.json"
+  ]
+}

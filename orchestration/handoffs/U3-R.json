@@ -1,0 +1,108 @@
+{
+  "unit": "U3-R",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/U3/rows.jsonl",
+    "experiments/context-cache/cells/U3/analysis.json",
+    "experiments/context-cache/cells/U3/plan.json",
+    "experiments/context-cache/cells/U3/live_meta.json",
+    "experiments/context-cache/cells/U3/u3r_cell.py",
+    "experiments/context-cache/cells/U3/u3r_analyze.py",
+    "orchestration/units/U3-R.md"
+  ],
+  "evidence": {
+    "command_or_count": "192 live requests (bound 200), 0 failures, clamp_stats={clamped:0,max_overrun:0}; kill median retention of naive_mutable after turn 2 = 1.0 > 0.50",
+    "commands": [
+      ".venv/bin/python experiments/context-cache/cells/U3/u3r_cell.py --mode plan  -> corpus_sha_match=True pointer==naive_append=True mutable_differs_all_turns=True",
+      ".venv/bin/python experiments/context-cache/cells/U3/u3r_cell.py --mode live --turns 16  -> requests_spent=192 rows=192 stop_reason=''",
+      ".venv/bin/python experiments/context-cache/cells/U3/u3r_analyze.py  -> mutable_median_after_turn2=1.0 verdict=REFUTED"
+    ],
+    "requests_spent": 192,
+    "request_bound": 200,
+    "failures": 0,
+    "rows": 192,
+    "scenarios": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "turns_per_scenario": 16,
+    "kill_statistic": {
+      "arm": "naive_mutable",
+      "from_turn": 3,
+      "threshold": 0.5,
+      "median_retention": 1.0,
+      "n": 56,
+      "verdict": "REFUTED"
+    },
+    "retention_after_turn2_median": {
+      "pointer": 0.576744,
+      "naive_append": 0.576744,
+      "naive_mutable": 1.0
+    },
+    "share_of_last_prompt_cached": {
+      "pointer": {
+        "S1": 0.939783,
+        "S2": 0.942005,
+        "S3": 0.932697,
+        "S4": 0.93908
+      },
+      "naive_append": {
+        "S1": 0.939783,
+        "S2": 0.942005,
+        "S3": 0.932697,
+        "S4": 0.93908
+      },
+      "naive_mutable": {
+        "S1": 0.101973,
+        "S2": 0.103935,
+        "S3": 0.100999,
+        "S4": 0.099896
+      }
+    },
+    "pointer_equals_naive_append_byte_identical": true,
+    "corpus_sha256": "6e2fe8979f67e1fe762c3daaa0ff53c30bd59c0d607b796d503e7d710e2bc7db",
+    "artifacts_sha256": {
+      "experiments/context-cache/cells/U3/rows.jsonl": "2211830af93f35da274b98338cb45683fed8f05d89c1cea6dafd5b76dc16827d",
+      "experiments/context-cache/cells/U3/analysis.json": "a74483b604da00ae0272a276ac277339d7703a2f17c5401476a55ebd2dce64a2",
+      "experiments/context-cache/cells/U3/plan.json": "3adb453965eac479cc8b0125119a97de2a18fe03648d699bf88831da1c6a6ed0"
+    },
+    "lock": "flock(LOCK_EX) on .occamy.lock held for the whole batch; waited 0.0 s"
+  },
+  "finding": {
+    "headline": "Moving volatile values from the append-only delta into the mutable system/header block destroys prefix reuse: naive_mutable holds a flat ~800-token floor (10.1-10.4% of the final prompt) while pointer/naive_append reach 93.3-94.2% at turn 16.",
+    "mechanism": "naive_mutable rewrites message 0 every turn, so the served prefix breaks at the header. The ~768/832-token plateau is the surviving constant floor (64-token grid) of the unchanged remainder of the header, not the conversation history.",
+    "after_turn2_median_retention": {
+      "pointer": 0.576744,
+      "naive_append": 0.576744,
+      "naive_mutable": 1.0
+    },
+    "after_turn2_note": "The 1.0 is a self-normalisation artefact: naive_mutable's cached_max IS its floor, so retention pins at 1.0 by construction. On the absolute scale the ordering inverts.",
+    "absolute_windows_naive_mutable": {
+      "turns_2_2_mean_hit_rate": 0.0,
+      "turns_13_16_mean_hit_rate": 0.111862
+    },
+    "absolute_windows_pointer": {
+      "turns_2_2_mean_hit_rate": 0.709042,
+      "turns_13_16_mean_hit_rate": 0.883526
+    },
+    "verdict": "REFUTED"
+  },
+  "kill_condition_evaluation": "Pre-registered test applied literally: median retention of naive_mutable over turns>=3 is 1.0, which is > 0.50, so the volatility claim is reported REFUTED as instructed. CAVEAT recorded, not used to overturn the verdict: the statistic is degenerate for this arm because cached_max(naive_mutable) is the ~800-token floor, so any constant-cached arm scores 1.0. The absolute measurements in the same deliverable contradict a 'no penalty' reading.",
+  "blocker": "",
+  "assumptions": [
+    "Turns per scenario = 16, not the full 48: 3 arms x 4 scenarios x 48 turns = 576 live requests, 2.9x the 200 hard bound. 16 is the largest depth covering 4 of the 6 registered depths (2/4/8/16) inside the bound (192). Depths 32 and 48 are the named remainder.",
+    "'After turn 2' read as turn >= 3; statistic = median across all arm x scenario x turn cells.",
+    "Volatile values are generated deterministically from sha256(scenario:turn:seed=1729) rather than a wall clock, so a rerun renders identical bytes; all four fields (ts, counter, run_id, tool_calls) change every turn.",
+    "pointer and naive_append share the SAME salt tag (accounting for their being equal-information); naive_mutable gets its own. Radix crossing is prevented structurally by running arms as separate passes. Without this the recipe control could not be byte-identical.",
+    "Server-side prefix cache was used as configured; no cache flush was requested (not ours to toggle). Each arm was a single serial pass so ordering effects are disclosed by the naive_append reproduction.",
+    "max_tokens=8, thinking=false, temperature=0.0 \u2014 the completion length is irrelevant to cache accounting."
+  ],
+  "next_unit_hint": "The kill statistic is degenerate for any constant-cached arm: prefer an ABSOLUTE measure (cached_tokens/prompt_tokens at a fixed turn) before re-running a kill test of this shape. If depths 32/48 matter, re-run only naive_mutable (4 scenarios x 16 extra turns = 64 requests) against the existing pointer rows in rows.jsonl; a fresh verifier should re-read rows.jsonl and recompute the medians independently.",
+  "write_paths": [
+    "experiments/context-cache/cells/U3/**",
+    "orchestration/handoffs/U3-R.json",
+    "orchestration/units/U3-R.md"
+  ]
+}

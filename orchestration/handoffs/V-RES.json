@@ -1,0 +1,85 @@
+{
+  "unit": "V-RES",
+  "overall": "partial",
+  "checks": [
+    {
+      "id": "V-RES-1",
+      "claim": "--mamba-radix-cache-strategy extra_buffer is a real SGLang flag and the published hybrid recipes pair it with --page-size 64",
+      "verdict": "pass",
+      "quoted": "**V2 (`extra_buffer`)**: Enables overlap scheduling and branching point caching with `--mamba-radix-cache-strategy extra_buffer --page-size 64`.",
+      "url": "https://raw.githubusercontent.com/sgl-project/sglang/main/docs/cookbook/autoregressive/Qwen/Qwen3.5.mdx",
+      "note": "server_arguments.html also lists it: 'auto currently defaults to no_buffer ... 2a. extra_buffer is strictly better for non-KV-cache-bound cases'. R-SGL quoted 'strictly superior'; docs say 'strictly better' (cosmetic)."
+    },
+    {
+      "id": "V-RES-2",
+      "claim": "FLA_CHUNK_SIZE=64 and the mamba state checkpoint interval (--mamba-track-interval, recipes use 64) are the same 64-token grid, explaining cached = 64*floor((L-1)/64)",
+      "verdict": "overstated",
+      "quoted": "--mamba-track-interval The interval (in tokens) to track the mamba state during decode. Only used when --mamba-radix-cache-strategy is extra_buffer. Must be divisible by page_size if set, and must be >= speculative_num_draft_tokens when using speculative decoding. 256 Type: int",
+      "url": "https://docs.sglang.io/advanced_features/server_arguments.html",
+      "note": "FLA_CHUNK_SIZE=64 reproduces (Qwen3.5.mdx:134 '`--page-size` must satisfy `FLA_CHUNK_SIZE % page_size == 0` ... (`FLA_CHUNK_SIZE` is currently 64)'). The track-interval default is 256 and only Qwen3.8-Flash-Next sets it to 64: '`--mamba-track-interval 64`: the default of 256 tokens satisfies the constraints ... at the cost of coarser prefix-cache reuse of the recurrent state.' Qwen3.5/Qwen3.8 never set it. Two independent knobs, not one grid."
+    },
+    {
+      "id": "V-RES-3",
+      "claim": "vLLM V1 DEFAULT_BLOCK_SIZE = 16, and --prefix-match-unit / --enable-mamba-shared-prefix-checkpoint exist and mean what R-VLLM says",
+      "verdict": "pass",
+      "quoted": "DEFAULT_BLOCK_SIZE: ClassVar[int] = 16",
+      "url": "https://raw.githubusercontent.com/vllm-project/vllm/main/vllm/config/cache.py",
+      "note": "arg_utils.py:1424 registers --prefix-match-unit, :1435 registers --enable-mamba-shared-prefix-checkpoint. automatic_prefix_caching.md:18,33 confirm the meanings ('Mamba state is stored only on the Mamba block grid ... also stores a checkpoint at the shared-prefix junction'; 'defaults to the greatest common divisor of the prefix-cacheable KV cache group block sizes'). R-VLLM omits the precondition: the checkpoint takes effect only with 'EAGLE/MTP speculative decoding on the Mamba group'."
+    },
+    {
+      "id": "V-RES-4",
+      "claim": "Dynamo Qwen3.6-35B-A3B single-GPU SGLang recipe is a real published manifest with --attention-backend trtllm_mha --moe-runner-backend flashinfer_cutlass --kv-cache-dtype fp8_e4m3, p50 TTFT 156.07 ms on GB200, 3035.98 out tok/s/GPU",
+      "verdict": "pass",
+      "quoted": "summary: 3035.98 output tok/s/GPU, 111.47 user tok/s P50, TTFT P50 156.07 ms at concurrency 32 (3,541-request agentic trace, simulated acc_len=3.3153 from SpeedBench coding)",
+      "url": "https://raw.githubusercontent.com/ai-dynamo/dynamo/main/docs/fern/pages/recipes/_catalog/recipes/qwen3-6-35b-a3b.yaml",
+      "note": "Manifest: recipes/qwen3.6-35b-a3b/sglang/agg-gb200-mtp/deploy.yaml, replicas 1, nvidia.com/gpu '1', --tp-size 1, all four flags verbatim, plus --mamba-radix-cache-strategy extra_buffer and EAGLE 3/1/4; no page-size/mem-fraction/chunked-prefill override. CAVEAT: performance is under SIMULATED acceptance (SGLANG_SIMULATE_ACC_LEN, acc_len=3.3153), so 156.07 ms is a modelled projection, not a served EAGLE measurement. The NVIDIA blog URL cited in the lane's commands contains none of these strings; the fact is true via the repo, the attribution is wrong."
+    },
+    {
+      "id": "V-RES-5",
+      "claim": "HiCache delivers up to 6x throughput / 80% TTFT reduction as the headline win for our hybrid model class",
+      "verdict": "overstated",
+      "quoted": "In our measurements, HiCache achieved up to 6x throughput improvement and up to 80% reduction in TTFT, closely mirroring the results reported by the community.",
+      "url": "https://www.lmsys.org/blog/2025-09-10-sglang-hicache/",
+      "note": "Wording exact. But the page's evidence base is dense/MLA: 'we tested the DeepSeek-R1-671B model under PD-disaggregated deployment' (Ant, 84% TTFT cut) and Novita's Qwen3-Coder-480B (-56% TTFT, 40%->80% hit rate). 'hybrid' and 'Mamba' occur 0 times on the page. Not a GDN-hybrid result: must be labelled dense/MLA-class before it heads the case for a host tier on our box."
+    },
+    {
+      "id": "V-RES-6",
+      "claim": "Speculation on sequential hybrids has acceptance alpha=0.038 vs 0.68 for parallel hybrids (arXiv:2605.01106), so MTP/NEXTN is not a lever",
+      "verdict": "overstated",
+      "quoted": "Parallel hybrids achieve acceptance rates of alpha = 0.68 at draft length k=2 under greedy decoding, while sequential hybrids yield only alpha = 0.038 -- an 18x gap attributable to how each architecture integrates its components.",
+      "url": "https://arxiv.org/abs/2605.01106",
+      "note": "Numbers reproduce verbatim. The mechanism is 'component-aware self-speculative decoding ... isolating the SSM/linear-attention subgraph as a zero-cost internal draft' - a drafterless scheme, NOT MTP/NEXTN. Same abstract: 'For sequential hybrids, generic LayerSkip achieves 12x higher acceptance rates than the component-aware strategy' (approx 0.46). ADJUDICATION: the negative transfer applies to component-aware self-speculation only, so R-CROSS's 'buys almost nothing on our model family' is over-generalised and R-SGL's 'gate MTP on the checkpoint actually shipping MTP weights' is what the evidence supports. Interacts with V-RES-3: vLLM's shared-prefix checkpoint REQUIRES MTP, so 'MTP is not a lever' and 'use --enable-mamba-shared-prefix-checkpoint' cannot both be adopted as written."
+    }
+  ],
+  "not_reproduced": [],
+  "overstated": [
+    "V-RES-2: the two 64s are not one grid - --mamba-track-interval defaults to 256; 64 is a deliberate per-recipe trade",
+    "V-RES-5: 6x/80% is a DeepSeek-R1-671B / Qwen3-Coder-480B (dense/MLA) result, not a hybrid-model result",
+    "V-RES-6: alpha=0.038 is component-aware SELF-speculation, not MTP/NEXTN; LayerSkip is 12x better on the same family"
+  ],
+  "unverified": [
+    "FLA_CHUNK_SIZE=64 constant not read from SGLang source, only from the cookbook prose",
+    "the NVIDIA developer blog cited by R-PROD's command list does not contain the recipe flags or numbers; the claim was verified instead at ai-dynamo/dynamo recipes + catalog (attribution error, not a fact error)"
+  ],
+  "corrections": [
+    "R-SGL.md:13-14 parenthetical '(published Qwen3.8 recipes use 64)' -> true for Qwen3.8-Flash-Next only; Qwen3.5/Qwen3.8 never set --mamba-track-interval and the default is 256",
+    "R-PROD.md:211 '156.07 ms' -> add 'under simulated acc_len=3.3153'; it is a modelled projection, not a served EAGLE measurement",
+    "R-PROD.md:41 'SGLang's own run' 6x/80% -> name the model class (DeepSeek-R1-671B / dense MLA), not a hybrid",
+    "R-CROSS.md:34 conclusion -> scope to component-aware self-speculation; do not carry it as a verdict on MTP/NEXTN",
+    "R-VLLM.md:37 -> add the precondition 'EAGLE/MTP speculative decoding on the Mamba group' for --enable-mamba-shared-prefix-checkpoint"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Cheapest decisive follow-up, 0 restarts and 0 load on Occamy: read the live server argv / GET /get_server_info and record --mamba-track-interval and --page-size. If track-interval is unset (256) the mamba-grid explanation of cached=64*floor((L-1)/64) is refuted and the planned page-size sweep is mis-aimed; if it is 64 the mechanism is confirmed and the sweep is the right lever. Then, before any MTP work, (a) confirm the checkpoint ships MTP weights (R-SGL's own gate) and (b) note that vLLM's shared-prefix checkpoint needs MTP, so do not adopt both R-CROSS's 'not a lever' and R-VLLM's flag together.",
+  "write_paths": [
+    "orchestration/units/V-RES.md",
+    "orchestration/handoffs/V-RES.json",
+    "orchestration/VERDICTS.md"
+  ],
+  "tool_calls": 24,
+  "bound": 30,
+  "containment": "0 live requests to Occamy; .occamy.lock untouched; only the three declared paths written; no experiment/cell/paper file modified",
+  "assumptions": [
+    "Verdicts are against the primary sources as served on 2026-10-21 (main branches), not against any pinned release; the lanes read the same branches.",
+    "A claim whose wording reproduces but whose model class or mechanism does not transfer to our GDN-hybrid / Qwen3.5 class is scored 'overstated', not 'pass' - because the next phase's design hangs on the transfer, not on the wording."
+  ]
+}

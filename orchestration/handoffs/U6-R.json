@@ -1,0 +1,79 @@
+{
+ "unit": "U6-R",
+ "status": "done",
+ "artifacts": [
+  "experiments/context-cache/cells/U6/rows.jsonl",
+  "experiments/context-cache/cells/U6/analysis.json",
+  "experiments/context-cache/cells/U6/u6_cell.py",
+  "experiments/context-cache/cells/U6/u6_nb.py",
+  "experiments/context-cache/cells/U6/u6_plan.json",
+  "experiments/context-cache/cells/U6/u6_runlog.json",
+  "experiments/context-cache/cells/U6/u6_run.log",
+  "orchestration/units/U6-R.md",
+  "orchestration/handoffs/U6-R.json"
+ ],
+ "evidence": {
+  "command_or_count": "240/240 live requests (120 per arm), 0 refusals, 517.9 s. Verdict FAIL: kill clause 1 fired. BASELINE/SYSTEM total uncached 185982/217852 = 0.854x (needs >= 1.5x). BASELINE prompt 546622 / cached 360640 (hit 0.665); SYSTEM prompt 323772 / cached 105920 (hit 0.333). On the prompt-token reading of the same registration, 546622/323772 = 1.688x, which passes.",
+  "commands": [
+   "cd \"/home/zer0null/reserach extarctor\" && .venv/bin/python experiments/context-cache/cells/U6/u6_cell.py --plan",
+   "cd \"/home/zer0null/reserach extarctor\" && node \"$DSH_PROGRESS_CLI\" run --task u6-run -- .venv/bin/python experiments/context-cache/cells/U6/u6_cell.py --run",
+   "cd \"/home/zer0null/reserach extarctor\" && .venv/bin/python experiments/context-cache/cells/U6/u6_cell.py --analyse",
+   "curl -sS -m 5 http://192.168.2.168:8012/v1/models",
+   "wc -l experiments/context-cache/cells/U6/rows.jsonl"
+  ],
+  "requests_spent": 240,
+  "request_bound": 260,
+  "per_arm": {
+   "BASELINE": {
+    "prompt": 546622,
+    "cached": 360640,
+    "uncached": 185982,
+    "calls": 120
+   },
+   "SYSTEM": {
+    "prompt": 323772,
+    "cached": 105920,
+    "uncached": 217852,
+    "calls": 120
+   }
+  },
+  "separation_uncached_ratio": 0.8537080219598626,
+  "separation_prompt_ratio": 1.6882929963060425,
+  "accuracy": {
+   "baseline": "0/2",
+   "system": "1/2",
+   "drop_points": -50.0,
+   "basis": "final-turn answer contains the SEAM-A marker; the worker auto-continues an agentic reply, so this is reproduction fidelity, not QA accuracy"
+  },
+  "gold_presence": {
+   "note": "both arms fold the planted turn at the first compaction (turn 5); gold_present is false at turn 60 in both arms of both scenarios",
+   "lost_after_fold": {
+    "BASELINE": [],
+    "SYSTEM": []
+   },
+   "clause3_fired": false
+  },
+  "mechanism": "SYSTEM prompts are shorter (1.69x lower total prompt tokens) but less cached per turn: cached_tokens pinned to a small constant (mean 830, range 768-832) because the fork fold rewrites the reusable prefix at every turn, while BASELINE cached_tokens grow with its prompt (mean 3142, max 5440) behind a header that never changes. BASELINE wins the uncached metric in both scenarios and in every turn window (0.846/0.861 from turn 1; 0.846/0.839 from turn 4).",
+  "kill_condition": {
+   "fired": [
+    "separation < 1.5x on total uncached tokens"
+   ],
+   "verdict": "FAIL"
+  }
+ },
+ "assumptions": [
+  "Separation is measured on total uncached tokens (the cost metric). The registration's phrase 'total prompt tokens' is reported alongside at 1.688x; under that reading the verdict would be PASS. Uncached was chosen as the conservative reading and because it is the deliverable's arithmetic.",
+  "Accuracy = the final turn's model answer containing the SEAM-A marker. The worker auto-continues an agentic reply to any prompt (measured across 240 requests), so this is not question-answering accuracy; it is reported, not claimed. n = 2.",
+  "Estimand seam SEAM-A: the corpus's own 32-'#' run is visible to a 4-chars-per-token estimator, so accuracy could not fail under it; the live run answers a 4-token pointer line carrying its sha256 instead.",
+  "BASELINE compaction folds every turn but the last KEEP_LAST+1 into one digest line each (DIGEST_CHARS=240) and never rewrites an emitted message; SYSTEM folds with FORK (FORK_LINES=12). These parameters were chosen in the session, after one offline bug fix, and must travel with the number.",
+  "The first live attempt (6 requests, E1 turns 1-4) died when the host reaped a bare '&' child; those are excluded. Spend is 240 kept + 6 discarded = 246 of the 260 bound. One discarded request (E2 turn 1) left a warm prefix, which is why that row shows cached=0 for BASELINE and 1152 for SYSTEM.",
+  "The chain hash is this unit's own extendable hash: sha over the root..self list of [node_id, kind] pairs, identical to the construction in resextract.context.nodes (canonical_bytes([[node_id, kind], ...])), but accumulated incrementally so 60 turns cost O(n) instead of O(n^2)."
+ ],
+ "blocker": "",
+ "next_unit_hint": "The pre-registered claim FAILS. Two readings diverge and a fresh unit should settle which one the estimator was written to mean before anything downstream cites this row: uncached 0.854x (fail) vs prompt 1.688x (pass). Independent of arithmetic, the mechanism carries forward: pointer+fork shortens the prompt but breaks the reusable prefix every turn on this router, so it buys tokens, not cache; baselines should be evaluated on both columns. Also check the corpus's compaction policies against whether they fold the planted turn, since both do at KEEP_LAST=2, which makes clause 3 untestable as written.",
+ "write_paths": [
+  "experiments/context-cache/cells/U6/**",
+  "orchestration/handoffs/U6-R.json",
+  "orchestration/units/U6-R.md"
+ ]
+}

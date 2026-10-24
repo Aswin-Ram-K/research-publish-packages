@@ -1,0 +1,85 @@
+{
+  "unit": "M4-EVICT",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/M4/rows.jsonl",
+    "experiments/context-cache/cells/M4/analysis.json",
+    "experiments/context-cache/cells/M4/corpus.py",
+    "experiments/context-cache/cells/M4/battery.py",
+    "experiments/context-cache/cells/M4/corpus.jsonl",
+    "experiments/context-cache/cells/M4/corpus_manifest.json",
+    "experiments/context-cache/cells/M4/server_info.json",
+    "experiments/context-cache/cells/M4/calibration_aborted_run.jsonl",
+    "experiments/context-cache/cells/M4/run.log",
+    "experiments/context-cache/cells/M4/boundary_probe.py"
+  ],
+  "evidence": {
+    "command": ".venv/bin/python experiments/context-cache/cells/M4/battery.py ; .venv/bin/python experiments/context-cache/cells/M4/boundary_probe.py ; .venv/bin/python experiments/context-cache/cells/M4/boundary_probe.py --positions 139,137 ; .venv/bin/python experiments/context-cache/cells/M4/boundary_probe.py --finalize",
+    "token_capacity": 1620892,
+    "capacity_source": "/get_server_info 200, internal_states[0].memory_usage.token_capacity",
+    "total_pressure_tokens": 2434133,
+    "pressure_ratio": 1.5017,
+    "docs_pushed": 283,
+    "requests_used": 327,
+    "requests_cap": 600,
+    "rows": 327,
+    "rows_sha256": "08be0204fc2e27d00f6574b597e66f709005e33605497b81d28ded9f64050be5",
+    "replay_hit_profile": {
+      "oldest": 0.0,
+      "middle": 0.0,
+      "newest": 0.997033
+    },
+    "lru_verdict": "consistent_with_lru",
+    "note_verdict": "note_unusable",
+    "failures": 0,
+    "lock_held_s": 516.3,
+    "requests_used_total_including_calibration": 396,
+    "eviction_boundary_probe": "resident capacity W in [30, 31] documents = [258035, 266636] prompt tokens = [0.1592, 0.1645] of token_capacity = [1.969, 2.034] x context_length, versus 188.45 documents implied by token-pool LRU; first eviction at document 31 (266864 cumulative prompt tokens = 0.1646 of capacity)",
+    "eviction_onset_doc_position": 31,
+    "eviction_onset_cum_tokens": 266864,
+    "resident_window_docs": [
+      30,
+      31
+    ],
+    "resident_window_tokens": [
+      258035,
+      266636
+    ],
+    "resident_window_ratio_of_capacity": [
+      0.1592,
+      0.1645
+    ],
+    "token_pool_lru_docs": 188.45,
+    "token_pool_lru_excluded": true,
+    "requests_by_phase": {
+      "P": 283,
+      "R": 30,
+      "D": 6,
+      "B": 8
+    },
+    "boundary_probe_requests": 8,
+    "boundary_probe_inequalities": "rank 27 hit -> W>=27; ranks 39/34/32/32/32 miss -> W<32; rank 30 hit -> W>=30; rank 32 miss -> W<32",
+    "resident_capacity_multiple_of_context_length": [
+      1.969,
+      2.034
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "verifier: rebuild the analysis offline from rows.jsonl with `.venv/bin/python experiments/context-cache/cells/M4/boundary_probe.py --finalize` (sends no requests) and re-derive the recency-rank inequalities that bound the resident capacity to 30-31 documents; the open question is the mechanism (mamba cache slots vs a context-scaled cap), which needs a server-side config probe, not more pressure",
+  "write_paths": [
+    "experiments/context-cache/cells/M4/**",
+    "orchestration/handoffs/M4-EVICT.json",
+    "orchestration/units/M4-EVICT.md"
+  ],
+  "assumptions": [
+    "documents are sized with the repo's offline estimator (ceil(chars/4)); the pressure target is enforced on MEASURED prompt_tokens, not on the estimate",
+    "4-word salts stand in for the card's '4-token salt'",
+    "documents were resized from the card's ~8k to an offline-estimator target of 10400 tokens after an aborted calibration run measured this text at 4.8491 chars/token (8k-est documents came out at 7,126 prompt tokens, so a 300-document pool could only reach 1.31x capacity); the calibration rows are kept in calibration_aborted_run.jsonl and its 69 requests are counted against the cap",
+    "the pressure target is enforced on measured prompt_tokens; if the 300-document pool runs out first, the achieved ratio is reported instead of the target",
+    "Phase D documents are the slice immediately after the middle band, because the middle band itself was replayed in Phase R and would be double-warmed",
+    "band replay order is newest->middle->oldest so the (expected) evicted band's re-insertion cannot perturb the resident bands measured before it",
+    "beyond the card's minimum protocol the unit spent 8 declared boundary-probe requests (6 search + 2 confirmation, cap 16) because the three replay bands bracket the eviction onset only to 128 documents while the card requires the onset point; every probe is a byte-identical re-send of a pooled document (no new content, no reconfiguration)",
+    "the resident capacity W is inferred from hit/miss recency-rank inequalities under the stated model 'one document evicted per inserted document, oldest-touched first'; the model is self-checking (a contradiction would surface as W_lo > W_hi, which did not occur) and an independent submission-position formulation gives the same bracket",
+    "token-pool LRU (188 documents at 1.62M tokens) is excluded by the observation that the middle band at 1.18-1.26M cumulative tokens (0.73-0.78x capacity) is fully evicted; the 30-31 document cap is reported as measured, not as a configuration name"
+  ]
+}

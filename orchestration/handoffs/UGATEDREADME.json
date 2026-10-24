@@ -1,0 +1,40 @@
+{
+ "unit": "UGATEDREADME",
+ "status": "done",
+ "artifacts": [
+  "papers/gated-read-batching/released/README.md",
+  "scratch/ugatedreadme/inarchive/gated-read-batching-released/README.md",
+  "scratch/ugatedreadme/diff-before.txt",
+  "orchestration/units/UGATEDREADME.md",
+  "orchestration/handoffs/UGATEDREADME.json"
+ ],
+ "evidence": {
+  "cmp": "CMP_EXIT_0_OK - cmp between loose and in-archive copy exits 0; pre-copy cmp exits 1: 'differ: byte 27, line 1'",
+  "loose_before": "1787 B sha256 852ded3585efe4c92472beb26a26d5c7d4737c0bcdbdb63b11e4fb3c2e549a88",
+  "inarchive_extracted": "14170 B sha256 a453041e21c7a4cda37e5ce5fbb718ec9ea92c28c94fc762dbddda402663a39d",
+  "loose_after": "14170 B sha256 a453041e21c7a4cda37e5ce5fbb718ec9ea92c28c94fc762dbddda402663a39d",
+  "archive_unchanged": "128902 B md5 a7e81bf7c8ebe49da83e869a002be1b2 (identical before and after)",
+  "superseded_unchanged": "2625 B sha256 c416e56262abcde7f09286a97e3d86841746b5cfd564d48d7814e84fd93bdba3 (identical before and after)",
+  "card_figures_corrected": "task card said in-archive README is 1655 B and loose is that plus a +132-byte tail annotation. Measured: in-archive is 14170 B, loose was 1787 B, and the two diverged at byte 27 line 1, not at the tail. Digest prefixes in the card (852ded3585efe4c9 loose, a453041e21c7a4cd in-archive) both matched exactly, so the digest identity was right and the size/mechanism description was wrong: the loose README was not the package README plus an annotation, it was a different 25-line directory-index document for released/.",
+  "restore_direction": "restoring grew the loose file 1787 -> 14170 B; no data was deleted and no file was removed.",
+  "commands": [
+   "tar -tzf papers/gated-read-batching/released/gated-read-batching-released.tar.gz",
+   "tar -xzf <archive> -C scratch/ugatedreadme/inarchive gated-read-batching-released/README.md",
+   "sha256sum <loose> <in-archive>",
+   "cp scratch/ugatedreadme/inarchive/gated-read-batching-released/README.md papers/gated-read-batching/released/README.md",
+   "cmp <in-archive> <loose>",
+   "md5sum <archive>",
+   "sha256sum <SUPERSEDED-UNPACKED.md>"
+  ],
+  "verification_performed_by": "author, not independent",
+  "old_loose_text_recovery": "workspace repo IS a git repo but papers/gated-read-batching/released/README.md is UNTRACKED (`git ls-files --error-unmatch` -> not tracked; `git show HEAD:<path>` -> empty blob e3b0c442...b855), so the pre-restore directory-index text is NOT recoverable from VCS. Only the truncated diff in scratch/ugatedreadme/diff-before.txt retains any of it."
+ },
+ "blocker": "",
+ "next_unit_hint": "Restore verified by author only - a separate verifier unit should re-run cmp + archive md5 independently. Residual risk: the overwritten file was a distinct 25-line directory-index README describing released/ contents, not an annotated twin. It is untracked in the workspace repo, so its text is NOT recoverable from VCS; only the truncated diff in scratch/ugatedreadme/diff-before.txt keeps part of it. If that directory-index role is still wanted, put it in SUPERSEDED-UNPACKED.md or its own file rather than reintroducing a divergent README.md. Suggested sweep: any other released/ directory whose loose file claims to mirror an in-archive twin.",
+ "write_paths": [
+  "papers/gated-read-batching/released/README.md",
+  "scratch/ugatedreadme/**",
+  "orchestration/units/UGATEDREADME.md",
+  "orchestration/handoffs/UGATEDREADME.json"
+ ]
+}

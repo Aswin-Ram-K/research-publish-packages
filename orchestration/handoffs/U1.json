@@ -1,0 +1,58 @@
+{
+  "unit": "U1",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/context/__init__.py",
+    "src/resextract/context/nodes.py",
+    "src/resextract/context/salt.py",
+    "src/resextract/context/render.py",
+    "src/resextract/context/budget.py",
+    "src/resextract/context/meter.py",
+    "tests/test_context_nodes.py",
+    "tests/test_context_render.py",
+    "tests/test_context_meter.py",
+    "tests/test_context_runner.py",
+    "experiments/context-cache/__init__.py",
+    "experiments/context-cache/client.py",
+    "experiments/context-cache/runner.py",
+    "experiments/context-cache/analyze.py",
+    "experiments/context-cache/README.md",
+    "orchestration/units/U1.md"
+  ],
+  "evidence": {
+    "pytest": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_context_nodes.py tests/test_context_render.py tests/test_context_meter.py tests/test_context_runner.py -q -> 36 passed in 0.06s (tail: '....................................  [100%]\\n36 passed in 0.06s')",
+    "full_suite": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests -q -> 2 failed, 1098 passed, 1 skipped; both failures pre-existing and unrelated to U1 (test_kg_policy.py::test_real_target_config_declares_the_decision; test_orchestration_handoffs.py::test_no_new_contract_key_gaps on pre-existing U-BENCH-PROTOCOL.json missing 'blocker')",
+    "modules": [
+      "resextract.context.nodes: StateNode, canonical_bytes, digest, KINDS",
+      "resextract.context.salt: make_salt, salted",
+      "resextract.context.render: RenderPolicy, render, render_bytes, first_message_bytes",
+      "resextract.context.budget: CompactionPolicy, needs_compaction, compact, default_est_tokens, is_fork_chain",
+      "resextract.context.meter: CacheRow, CacheMeter, normalise_cache, rows_from_jsonl",
+      "experiments/context-cache/client.py: ChatClient, chat",
+      "experiments/context-cache/runner.py: Turn, Case, Cell, CellResult, build_cells, cell_salt, prefix_sha256, run_cell, run_matrix",
+      "experiments/context-cache/analyze.py: tax_error, tax_error_detail, hit_rate, per_turn_series, compaction_effect, summary_table, main"
+    ],
+    "public_api": [
+      "StateNode.create(text, kind, parent=None, **meta) -> StateNode; node.chain() -> list[StateNode]; node.chain_hash -> str; node.node_id",
+      "make_salt(seed: int) -> str  # deterministic 16 hex chars",
+      "render(policy: RenderPolicy | str, chain, *, preamble: str, volatile: Mapping[str,str], salt: str) -> list[dict]",
+      "render_bytes(policy, chain, *, preamble, volatile, salt) -> bytes",
+      "needs_compaction(chain, *, budget_tokens: int, est_tokens: Callable[[str],int]) -> bool",
+      "compact(chain, policy: CompactionPolicy | str, *, keep_last: int, summarizer: Callable[[str],str], est_tokens=default_est_tokens) -> tuple[list[StateNode], dict]  # event keys: policy, at_turn, tokens_before, tokens_after, edited_node_ids, forked",
+      "normalise_cache(usage: Mapping | None) -> tuple[int,int]  # (prompt_tokens, cached_tokens), null->0",
+      "CacheRow(cell,arm,policy,case_id,turn,rep,salt,prompt_tokens,cached_tokens,uncached,ttft_ms,wall_ms,completion_tokens,status,evicted,prefix_sha256); CacheRow.to_dict()/from_dict()/to_json(); CacheMeter.record(row)/rows()/to_jsonl(path)",
+      "client.chat(messages, *, max_tokens, thinking=False, stream=True, timeout=120.0, client=None) -> (prompt_tokens, cached_tokens, completion_tokens, ttft_ms, wall_ms, status, text); ChatClient.chat(same minus client)",
+      "runner.run_cell(cell: Cell, case: Case, send: Callable[[messages],7-tuple], meter: CacheMeter|None=None, *, compaction=CompactionPolicy.SUMMARISE_IN_PLACE, summarizer=..., est_tokens=...) -> CellResult(rows, events, evicted); run_matrix(cells, cases, send, meter=None, **kwargs); build_cells(*, policies, cases, depths, reps, salt_seed=0, budget_tokens=..., keep_last=2, arm='main')",
+      "analyze.tax_error(rows) -> int (sum |uncached - prompt_tokens % 64|); hit_rate(rows, weighted=True) -> float; per_turn_series(rows) -> list[dict]; compaction_effect(rows) -> dict; summary_table(rows) -> list[dict]; main(argv)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Live gate: inject functools.partial(ChatClient().chat, max_tokens=N) as runner.send, run build_cells over the four RenderPolicy values, write meter.to_jsonl, then report analyze.main. Confirm on the real endpoint that usage.prompt_tokens_details is null cold, cached arrives in the final stream chunk, and uncached == prompt % 64. Consider listing src/resextract/context in pyproject packages if wheels are built (pyproject was outside U1 write paths).",
+  "write_paths": [
+    "src/resextract/context/**",
+    "tests/test_context_*.py",
+    "experiments/context-cache/{__init__.py,client.py,runner.py,analyze.py,README.md}",
+    "orchestration/units/U1.md",
+    "orchestration/handoffs/U1.json"
+  ]
+}

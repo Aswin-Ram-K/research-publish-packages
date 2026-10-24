@@ -1,0 +1,50 @@
+{
+ "unit": "UTRIMM1",
+ "status": "done",
+ "artifacts": [
+  "strategy/PUBLIC_SCOPE_REDUCTION.md",
+  "orchestration/units/UTRIMM1.md",
+  "orchestration/handoffs/UTRIMM1.json",
+  "scratch/utrimm1/cut-min (13-file minimal set, 588891 bytes)",
+  "scratch/utrimm1/cut-ii",
+  "scratch/utrimm1/cut-iii",
+  "scratch/utrimm1/cut-iv",
+  "scratch/utrimm1/cut-v",
+  "scratch/utrimm1/census-full-tree.txt",
+  "scratch/utrimm1/census-min-pristine.txt",
+  "scratch/utrimm1/outside-full-tree.txt",
+  "scratch/utrimm1/outside-min-pristine.txt"
+ ],
+ "evidence": {
+  "minimal_set": "13 files, 588891 bytes; recompute EXIT=0 'ALL CLAIM NUMBERS PRESERVED: True'; parse EXIT=0 records_found 190; compare EXIT=0 routeA kappa=0.32520740993294694 agreement=0.34210526315789475 exact=65 ties=120 zero_score_cases=41; routeB kappa=0.9013584840356494 exact=172 n_disagreements=18; AB_mutual=0.3526315789473684",
+  "cut_i_full_tree": "recompute EXIT=0 ALL CLAIM NUMBERS PRESERVED True; parse EXIT=0 records_found 190 parse_failures []; compare EXIT=0 same kappas",
+  "cut_ii_harness_code_removed": "recompute EXIT=0 ALL CLAIM NUMBERS PRESERVED True; parse EXIT=0 records_found 190; compare EXIT=0 routeA kappa=0.32520740993294694 routeB kappa=0.9013584840356494 (nothing breaks)",
+  "cut_iii_plus_harness_data_removed": "recompute EXIT=1 FileNotFoundError: [Errno 2] No such file or directory: '/home/zer0null/reserach extarctor/scratch/utrimm1/cut-iii/harness/data/fixture-190.json'; parse EXIT=0; compare EXIT=0 -- FIRST BREAK",
+  "cut_iv_plus_variants_removed": "recompute EXIT=1 same FileNotFoundError; parse EXIT=0; compare EXIT=0",
+  "cut_v_harness_data_reduced_to_fixture_190": "recompute EXIT=0 ALL CLAIM NUMBERS PRESERVED True; parse EXIT=0; compare EXIT=0",
+  "strace_dependency_closure": "recompute-claims.py opens harness/data/fixture-190.json, results/baselines.json, results/eval-{deberta-v3-base,majority-class,modernbert-base,setfit-mpnet,shuffled-label}.json, second-labeller/metrics.json; parse_fixture.py opens fixture/reflex-decisions.ts; compare.py opens second-labeller/cases.json, second-labeller/labelsB.json",
+  "census_full_45": "files 45, distinct 73 of 184, total 3343, inside 2171 (30 distinct), outside 1094, keys 78",
+  "census_min_13": "files 13, distinct 36 of 184, total 1224, inside 884 (28 distinct), outside 325, keys 15",
+  "tokens_full_vs_min": "fs.read 227->63 (harness alone 162); fs.write 218->54 (162); expiresAtEpoch 9->6 (3); reasonerCalls 6->4 (2); MutationProposal 6->4 (2); policyHash 21->19 (2); ToolCallIR 7->4 (2); role.canRequestEscalation 3->2 (1); canRequestEscalation 6->4 (2); card said ten tokens but listed nine",
+  "manifest_sha256_recomputed": "fecd31574bad62cef328d7d95b851ac338aad552c420d1b08a1126cb48cd97ef"
+ },
+ "commands": [
+  "cp -r scratch/uoutside1/tree-seven scratch/utrimm1/tree-seven",
+  "cd scratch/utrimm1/tree-seven && python3 verify/recompute-claims.py; python3 second-labeller/parse_fixture.py; python3 second-labeller/compare.py",
+  "cd scratch/utrimm1 && for c in ii iii iv; do cp -r tree-seven cut-$c; done  # then prune harness code / harness data / variants per cut",
+  "cd scratch/utrimm1/cut-iii && python3 verify/recompute-claims.py  # EXIT=1 FileNotFoundError harness/data/fixture-190.json",
+  "strace -f -e trace=openat -o /tmp/st.txt python3 verify/recompute-claims.py",
+  "python3 scratch/ubij1/census_one.py scratch/uoutside1/tree-seven ; python3 scratch/ubij1/census_one.py scratch/utrimm1/cut-min-pristine",
+  "python3 scratch/uoutside1/outside_scan.py scratch/uoutside1/tree-seven ; python3 scratch/uoutside1/outside_scan.py scratch/utrimm1/cut-min-pristine",
+  "grep -roF -- 'fs.read' scratch/uoutside1/tree-seven | wc -l  # per-token counts, full vs cut-min-pristine",
+  "python3 -c \"import json;json.load(open('orchestration/handoffs/UTRIMM1.json'))\""
+ ],
+ "blocker": "",
+ "next_unit_hint": "Regenerate repro/encoder-crossover-190/ from the 13-file closure (it still ships harness/analyze.py and harness/data/lint-report.json), move harness/data/fixture-190.json out of harness/ (e.g. to fixture/fixture-190.json) and update the one jload() path in verify/recompute-claims.py so the whole harness/ path can be dropped, then reword MANUSCRIPT.md :738-741, :747, :749, :754, :795-796, :809-817, :819-823, :832-833 \u2014 especially :832 'Reproduction of this paper requires the fixture and the harness'.",
+ "write_paths": [
+  "strategy/PUBLIC_SCOPE_REDUCTION.md",
+  "orchestration/units/UTRIMM1.md",
+  "orchestration/handoffs/UTRIMM1.json",
+  "scratch/utrimm1/"
+ ]
+}

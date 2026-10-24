@@ -1,0 +1,78 @@
+{
+ "unit": "UWIRE2",
+ "status": "done",
+ "artifacts": [
+  "orchestration/units/UBUILD1.build.sh",
+  "strategy/BUILD_WIRING.md",
+  "tests/test_build_wiring.py",
+  "orchestration/units/UWIRE2.md",
+  "scratch/uwire2/UBUILD1.build.sh.orig",
+  "scratch/uwire2/run-promoted.log",
+  "scratch/uwire2/run-frozen.log",
+  "scratch/uwire2/green.log",
+  "scratch/uwire2/red/red0-prewire.sh",
+  "scratch/uwire2/red/red1-frozen-default.sh",
+  "scratch/uwire2/red/red2-ignored-override.sh"
+ ],
+ "edits": [
+  {
+   "file": "orchestration/units/UBUILD1.build.sh",
+   "region": "header INPUTS comment block (:23-:40)",
+   "before": "SAN_SRC_OVERRIDE\\n#                  absolute path of the SANITISED tree to stage from. DEFAULT\\n#                  (unset) = $SRC/repro/encoder-crossover-190-SANITISED, i.e.\\n#                  today's behaviour is unchanged and the frozen input stays\\n#                  reproducible BY DEFAULT. ... (14 lines)",
+   "after": "#   SAN_SRC_OVERRIDE\\n#                  absolute path of ANY sanitised tree to stage from. Highest\\n#                  precedence; honoured only from the environment, never guessed\\n#                  from disk. Unset = the PROMOTED default below.\\n#   SAN_SRC_FROZEN_OVERRIDE\\n#                  set to 1 to select the FROZEN original sanitised tree, ... (26 lines)"
+  },
+  {
+   "file": "orchestration/units/UBUILD1.build.sh",
+   "region": "SAN_SRC assignment (:125 -> :135-:154)",
+   "before": "SAN_SRC=\"${SAN_SRC_OVERRIDE:-$SRC/repro/encoder-crossover-190-SANITISED}\"",
+   "after": "PROMOTED_SAN_SRC=\"$SRC/scratch/ubij3/tree-three-r2\"\nFROZEN_SAN_SRC=\"$SRC/repro/encoder-crossover-190-SANITISED\"\nif   [ -n \"${SAN_SRC_OVERRIDE:-}\" ]; then SAN_SRC=\"$SAN_SRC_OVERRIDE\"\nelif [ \"${SAN_SRC_FROZEN_OVERRIDE:-0}\" = \"1\" ]; then SAN_SRC=\"$FROZEN_SAN_SRC\"\nelse SAN_SRC=\"$PROMOTED_SAN_SRC\"\nfi\nif [ \"$SAN_SRC\" = \"$PROMOTED_SAN_SRC\" ]; then _san_promoted=yes; else _san_promoted=no; fi\necho \"SAN_SRC WIRING: tree=$SAN_SRC promoted_default=$_san_promoted\"\nif [ \"$_san_promoted\" = no ]; then\n  echo \"SAN_SRC WIRING: WARNING - NOT the promoted release artifact; the promoted default is\"\n  echo \"                $PROMOTED_SAN_SRC\"\n  if [ \"$SAN_SRC\" = \"$FROZEN_SAN_SRC\" ]; then\n    echo \"SAN_SRC WIRING: WARNING - this is the FROZEN original sanitised tree (the pre-promotion\"\n    echo \"                input; ~12.4x more residual project identifiers: 44,056 vs 3,317).\"\n  fi\nfi"
+  }
+ ],
+ "evidence": {
+  "script_sha256_before": "df471955985d03a28b073319679b754e83385c6cc7b708bf865e55416f0d0ab5",
+  "script_sha256_after": "45fe28e435f7d1d7ddd11bbf327d741a1bef2028b6edf11b9e27d8d732867ad3",
+  "script_lines": "1066 (was 1036); bash -n: syntax OK",
+  "default_before": "SAN_SRC=\"${SAN_SRC_OVERRIDE:-$SRC/repro/encoder-crossover-190-SANITISED}\"",
+  "default_after": "PROMOTED_SAN_SRC=\"$SRC/scratch/ubij3/tree-three-r2\" (default); FROZEN_SAN_SRC=\"$SRC/repro/encoder-crossover-190-SANITISED\" (via SAN_SRC_FROZEN_OVERRIDE=1)",
+  "override_names": "SAN_SRC_OVERRIDE (generic, highest precedence, unchanged name); SAN_SRC_FROZEN_OVERRIDE=1 (new, selects the frozen original)",
+  "warning_line": "SAN_SRC WIRING: tree=<abs path> promoted_default=<yes|no>  — printed :147, before the first destructive step; plus \"SAN_SRC WIRING: WARNING - NOT the promoted release artifact; ...\" and a FROZEN-specific WARNING. Non-interactive; exit code unchanged.",
+  "run_promoted": "exit=1 | SAN_SRC WIRING: tree=/home/zer0null/reserach extarctor/scratch/ubij3/tree-three-r2 promoted_default=yes | staged 60 file(s): 52 kept, 8 dropped | ship-list enforced: 52 staged file(s) present | never-ship list enforced: 17 names checked absent | GATE RESULT: FAIL -- 29936 out-of-vocabulary token(s). | emitted 64 files",
+  "run_frozen": "exit=1 | SAN_SRC WIRING: tree=/home/zer0null/reserach extarctor/repro/encoder-crossover-190-SANITISED promoted_default=no | SAN_SRC WIRING: WARNING - NOT the promoted release artifact; the promoted default is | staged 66 file(s): 52 kept, 14 dropped | ship-list enforced: 52 staged file(s) present | never-ship list enforced: 17 names checked absent | GATE RESULT: FAIL -- 95606 out-of-vocabulary token(s). | emitted 64 files",
+  "run_file_set": "IDENTICAL file set: 64 paths (diff of sorted find output clean). The promoted run reproduces UWIRE1's opt-in numbers exactly (29,936 and 60->52/8), proving only which tree is read changed.",
+  "test_green": "tests/test_build_wiring.py: 8 passed in 0.04s  (/.venv/bin/python -m pytest tests/test_build_wiring.py -q)",
+  "test_red0_prewire": "UWIRE2_BUILD_SCRIPT=scratch/uwire2/red/red0-prewire.sh (the pre-UWIRE1 script): 6 failed, 2 passed in 0.05s",
+  "test_red1_frozen_default": "red1-frozen-default.sh (PROMOTED_SAN_SRC reverted to the frozen literal): 4 failed, 4 passed in 0.05s; wiring failures = test_default_is_the_chosen_release_artifact, test_frozen_override_still_selects_the_frozen_tree, test_default_is_a_literal_never_guessed_from_disk (the 4th, test_build_wiring_doc_names_both_overrides, was an independent doc guard still red at that moment and is green in the final run)",
+  "test_red2_ignored_override": "red2-ignored-override.sh (SAN_SRC_FROZEN_OVERRIDE branch forced false): 2 failed, 6 passed in 0.05s; wiring failure = test_frozen_override_still_selects_the_frozen_tree",
+  "frozen_input": "repro/encoder-crossover-190-SANITISED = 59 files = 46 staged (fixture/harness/verify/preregistration/results/second-labeller) + 13 non-staged. REDACT3_REPORT.md (mtime 2026-10-15 21:04:58) is top-level -> NOT staged -> cannot change the package. Staged bytes re-hashed vs INTEGRITY.md (mtime 19:02:10): 38 of 46 have a recorded sha256 and all 38 MATCH, 0 mismatch; the 8 verify/* files have NO INTEGRITY.md row; newest staged mtime = verify/scrub-uscrub1.py 2026-10-15 18:30:14, before both INTEGRITY.md and the artifact's derivation (dir 21:21, MANIFEST.json 21:39). Staged-subtree aggregate digest (sha256 of sorted '<sha256>  <path>' lines over the 46 staged files) = 0b79908422a3f79785ee5ec4640498e302a913bfb3bd97007d86b4f6717a25a5.",
+  "frozen_identity_limit": "tree-three-r2/MANIFEST.json records only instrument_sha256 and exp11_corpus_sha256 — NO digest of the input tree it was derived from. The derivation input's identity therefore CANNOT be pinned retroactively. On-disk evidence says no staged byte changed since derivation (38/46 hash-pinned and matching; the rest mtime<=18:30:14), but the tree as a whole is not frozen and must not be called frozen.",
+  "verify_digests": {
+   "verify/RECOMPUTE-CLAIMS.txt": "0640585bb7acfd6682b5d8ff18e0b2d50999b49daa07a48e61535774c6a94b70",
+   "verify/RESIDUAL-SCAN.txt": "ff9d1235109e798a22c8be1e2712e0f834d115ec458927bfbee2836a38b38a48",
+   "verify/VERIFICATION.txt": "ecde49960f8306f067e01763200306c5257dd238edf2ef9bb4bfcd69b5b0310d",
+   "verify/integrity-table.md": "d58241263453ee6ca56a48a11d9c375967b32ff8ede3a444eadd47847bdb72c2",
+   "verify/recompute-claims.py": "3e67a39eadc9a4f65d32462ec7093c167d01089089a7a88b131415ef65275dc5",
+   "verify/redaction-log.json": "4d3327e41a30943e6c48342de727f2e866ef45efe2767de9f12d3b4e21dcd2b0",
+   "verify/run-verification.sh": "92f256e3b303481fa9a465c3c2f6cdb7517d4b0e928166b2d75ae2c4aae625da",
+   "verify/scrub-uscrub1.py": "4325931652ce051df64d5a998ac80cabc1d959bb0e3c7dcd6046a6452f93f897"
+  },
+  "containment": "real DEST /home/zer0null/research-publish-packages: 0 files newer than 2026-10-15 21:45 — untouched. Every build used DEST under scratch/uwire2/**. repro/** read-only (sha256 reads). No git command run against /home/zer0null/Duval.",
+  "commands": [
+   "cp -p orchestration/units/UBUILD1.build.sh scratch/uwire2/UBUILD1.build.sh.orig",
+   "bash -n orchestration/units/UBUILD1.build.sh",
+   "DEST=\"$PWD/scratch/uwire2/run-promoted/research-publish-packages\" bash orchestration/units/UBUILD1.build.sh",
+   "DEST=\"$PWD/scratch/uwire2/run-frozen/research-publish-packages\" SAN_SRC_FROZEN_OVERRIDE=1 bash orchestration/units/UBUILD1.build.sh",
+   ".venv/bin/python -m pytest tests/test_build_wiring.py -q",
+   "UWIRE2_BUILD_SCRIPT=\"$PWD/scratch/uwire2/red/red1-frozen-default.sh\" .venv/bin/python -m pytest tests/test_build_wiring.py -q"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "1) The gate still FAILS on both paths (29,936 promoted / 95,606 frozen) — a publishable release cannot pass its own gate until the positive-vocabulary question is settled; that is now the release blocker, not the wiring. 2) repro/encoder-crossover-190-SANITISED is NOT frozen: 59 files, mutable top level, and its INTEGRITY.md hash table covers only 38 of its 46 staged files (nothing under verify/). If the frozen input must be reproducible, pin it — the 46-file staged aggregate digest is 0b79908422a3f79785ee5ec4640498e302a913bfb3bd97007d86b4f6717a25a5 — or point SAN_SRC_FROZEN_OVERRIDE at an immutable copy. 3) Any future promotion must edit the PROMOTED_SAN_SRC literal deliberately: tests/test_build_wiring.py fails on a silent default change and on a broken override.",
+ "write_paths": [
+  "orchestration/units/UBUILD1.build.sh",
+  "strategy/BUILD_WIRING.md",
+  "tests/test_build_wiring.py",
+  "scratch/uwire2/**",
+  "orchestration/units/UWIRE2.md",
+  "orchestration/handoffs/UWIRE2.json"
+ ]
+}

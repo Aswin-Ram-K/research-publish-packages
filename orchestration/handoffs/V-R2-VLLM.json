@@ -1,0 +1,42 @@
+{
+  "unit": "V-R2-VLLM",
+  "overall": "partial",
+  "checks": [
+    "claim1 rows=284 / 70,271 B / sha256 895cf6d1...3ec: PASS exact",
+    "claim1 null cached=0, non-200=0, truncated=0, cached+uncached==prompt 284/284: PASS",
+    "claim2 point estimates exact: R 0.887475/1384.9577, A 0.405844/1350.0141, C 0.493816/1158.6761, H 0.360813/1528.1972 (max 5e-5 % relative)",
+    "claim2b CI endpoints NOT reproduced: 14/16 endpoints differ >0.01 %, max 0.51 % (H unc lower 1366.5 vs 1359.7)",
+    "claim3 zero-cached rows = 120: A 1-40 (40), C 1-33 (33), H 1-38 + 41/49/57/65 (42), R 2-6 (5)",
+    "claim4 grid as stated FAILS: 163/164 nonzero cached are multiples of 2112 = 2096 + 16; gcd 48 overall but 2112 excluding the single 432 (R t1); 0/164 multiples of 2096",
+    "dilution: all-turn hit 0.8875/0.4058/0.4938/0.3608 -> post-establishment 0.8949/0.6387/0.6720/0.5398; prompt/turn 12,308/2,272/2,289/2,391 (5.4x)",
+    "comparator: use mean uncached tokens/turn (C 1,158.7 < A 1,350.0 < R 1,385.0 < H 1,528.2), not hit fraction",
+    "logs: startup.txt / run.out.log / /tmp/r2oh1.log absent -> ARMS_IDENTICAL, warm-up, restart, startup flags unverified offline",
+    "warm-up: no turn-0 row; A/C/H turn 1 cached=0, R turn 1 cached=432 -> no per-arm warm-up evidenced"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Correct POLL-VLLM.md:14-21 and POLL-VLLM.json evidence: grid is 2112=2096+16 (not 16), publish the zero-turn distribution and post-establishment columns, use mean uncached tokens/turn as the comparator, and ship the bootstrap code/digest. A re-run is needed only if the paper wants all-turn hit with a per-arm warm-up.",
+  "write_paths": [
+    "orchestration/handoffs/V-R2-VLLM.json",
+    "orchestration/units/V-R2-VLLM.md",
+    "state/logs/v-r2-vllm-defects.json"
+  ],
+  "not_reproduced": [
+    "bootstrap CI endpoints (14/16 endpoints >0.01 % apart; max 0.51 %) - point estimates exact",
+    "startup fields (block_size 2096, prefix_match_unit 16) - no startup.txt in the workspace",
+    "POLL status / restore / commands (STARTED / HEALTH / DONE, :8012/:8014 probes, ssh/scp) - offline, zero live requests",
+    "pooled hit CI lower endpoint 0.674601 vs 0.675860"
+  ],
+  "overstated": [
+    "evidence.grid '2096 -> 16-token alignment': the battery grid is 2112 = 2096 + 16 (163/164); the 16-token law is from the R2-VLLM grid probe, not these rows",
+    "per-arm hit table presented without the 120 establishment zeros (A 40 / C 33 / H 42 / R 5) or the 5.4x prompt-length spread",
+    "delta_vs_round1 CI is this run's CI shifted by a fixed Round-1 point (disclosed), not a CI of the difference"
+  ],
+  "unverified": [
+    "ARMS_IDENTICAL = 0 occurrences (run.out.log and /tmp/r2oh1.log absent)",
+    "warm-up before each arm's first measured turn (no turn 0; A/C/H turn 1 cached=0)",
+    "restart or mid-run errors (no logs)",
+    "arm render semantics beyond the author's 'four different policies' label"
+  ],
+  "tool_calls": 17,
+  "bound": 20
+}

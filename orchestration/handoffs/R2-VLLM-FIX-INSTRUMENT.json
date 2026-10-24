@@ -1,0 +1,41 @@
+{
+  "unit": "R2-VLLM-FIX-INSTRUMENT",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/R2-VLLM/pmu16_cell.py",
+    "experiments/context-cache/cells/R2-VLLM/selftest_offline.py",
+    "experiments/context-cache/cells/R2-VLLM/defects_offline.py",
+    "state/logs/R2-VLLM-defects.json"
+  ],
+  "evidence": {
+    "defect_proof": "SUMMARY {\"n_defects\": 4, \"green\": 4, \"literal_red\": 2, \"source_red\": 4, \"ok\": true}",
+    "accelerator_selftest": "SUMMARY pass=16 fail=0 red_green=True (6/6 reverts red=True green=True, all_red_then_green=True)",
+    "D1": "launch carries --enable-prompt-tokens-details in recipe+OH1/OH1L+A1, each cmd count==1 -> R1 green; without the flag a 200's usage has no prompt_tokens_details and the row reads cached=None, usage_has_details=False (unobserved, not 0)",
+    "D2": "repaired: 128 battery rows, all carrying arm_compaction/arm_render/prompt_nodes; reverted: TypeError \"Runner.send() got an unexpected keyword argument 'extra'\", 0 rows -- the live re-run's exact signature",
+    "D3": "missing details -> cached None, n_unobserved=2, total_cached=null; observed miss stays 0",
+    "D4": "pass-1 carried bytes [18,18,18,18,18,18,18,19,18...] vs arm-salt control [4978,6665,8536,10308,...]; 0 pass-1 cache hits",
+    "offline": true,
+    "model_requests": 0,
+    "lock_taken": false,
+    "commands": [
+      ".venv/bin/python defects_offline.py --draw 4",
+      ".venv/bin/python defects_offline.py --draw 0",
+      ".venv/bin/python selftest_offline.py --json /tmp/st.json"
+    ]
+  },
+  "assumptions": [
+    "The four defects were taken from the card's own statement of them; the card's prompt named no file list, so D1/D2/D3/D4 were mapped to R1 (accounting flag), R8 (send/extra path), R2 (absence vs zero) and R5 (true cold pass).",
+    "D1 and D2 have no inline historical literal (the flag was a launch flag, and Runner.send's extra= keyword simply did not exist), so their red is the mechanically reverted repaired source; D3 and D4 also carry the historical literal and are red there too.",
+    "The live D2 probe goes to http://127.0.0.1:1/v1 with a real httpx client whose transport refuses in-process. No socket is opened to a listener and 0 model requests are spent; it deliberately measures the FAILURE shape (row built and appended vs nothing appended), not a served response.",
+    "R5's red asserts the deterministic rendered-byte relation (carried bytes per turn), not a server cache hit: reproducing A1's 1056 cached tokens offline would mean fabricating a number."
+  ],
+  "blocker": "",
+  "next_unit_hint": "The instrument now files what it observes: pass-1 salts are per-turn, absence is None, and every battery row carries its arm's compaction/render plan. The one place a fresh verifier should look first is that rows.jsonl (418 rows) and the live re-run's 128-row battery were written by a process this unit did not start -- re-verify against the file on disk before citing counts.",
+  "write_paths": [
+    "experiments/context-cache/cells/R2-VLLM/pmu16_cell.py",
+    "experiments/context-cache/cells/R2-VLLM/selftest_offline.py",
+    "experiments/context-cache/cells/R2-VLLM/defects_offline.py",
+    "orchestration/handoffs/R2-VLLM-FIX-INSTRUMENT.json",
+    "state/logs/R2-VLLM-defects.json"
+  ]
+}

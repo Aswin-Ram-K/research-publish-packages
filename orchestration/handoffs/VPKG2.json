@@ -1,0 +1,38 @@
+{
+  "unit": "VPKG2",
+  "overall": "partial",
+  "checks": [
+    "RE-DERIVED: size 107474 B; sha256 7703fe83df2f716b2615416d261d66359b954e1aada793f1045864bb3b1e398f; md5 16e2b2bf71450da3caaa060870e67183; tar members 13 (1 top dir + data/ + verify/ + 10 files) -- all match",
+    "RE-DERIVED: manifest files[]=9 entries, counts.files=10, counts.bytes_total=1309672, sum(listed)=1309672; only MANIFEST.json unlisted (self-exemption) -- manifest internal consistency both directions NONE mismatched",
+    "RE-DERIVED: check_manifest.py --package on archive tree, on scratch/upkg2c/package and on released unpacked tree -> missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0, manifest_self_recomputes=True, VERDICT PASS, exit 0",
+    "RE-DERIVED: verify/recompute-claims.py in the extraction -> exit 0, CHECKS 30/30, VERDICT PASS",
+    "RE-DERIVED: red->green on a COPY -- flip byte 98 of data/l1-head-to-head.jsonl ('1'->'0', picked_index) -> exit 1 with [FAIL] digest:data/l1-head-to-head.jsonl sha256=9e3280b902489745, [FAIL] line-1 trap, [FAIL] l1 98/190 measured 97/190; restore -> digest 6af0e0d8294cf4d7a20e2d8cb9bfe0c11ff70cc4c4b2792fcdedaf9246b2a1e7, exit 0, 30/30 PASS",
+    "RE-DERIVED: two in-run builds cmp-identical (script DETERMINISTIC line) and a later run cmp byte-identical to the installed archive",
+    "ARCHIVE vs PAYLOAD: fresh extraction is byte-identical (all 10 files incl. MANIFEST.json, diff rc=0) to the tree shipped beside the tarball; vs the 8-file package payload scratch/upkg2c/package it differs in exactly 3 files -- MANIFEST.json regenerated (10 entries/06:10:44/1b705b66.. vs 8 entries/06:15:00/9a32d73f..), plus the two added deposit extras CITATION.cff and README_DEPOSIT.md (build_archive.sh:57-67)",
+    "NO STALE THIRD VARIANT: released/ unpacked tree, work/extract tree and a fresh extraction are digest-identical (10/10 files)",
+    "LICENCE: COMMERCIAL.md byte-identical to strategy/licence-templates/RELEASED-PIECE/; CONTRIBUTING.md and LICENSE DIFFER (released variants) -- PolyForm 4563 B body ffcca38841adb694b6f380647e15f17c446a4d1656fed51a1e2041d064c94cc8 found verbatim exactly once at offset 115 of LICENSE (unmodified), trailing 1939 B",
+    "LEAKS: 28 hits -- MANIFEST.json lines 3,5,9,23,32,41,50,86 and README.md lines 6,10,39,49,50,54,81,91,93,94,95,96,97,98,102,103,114,117,118,120 (internal unit ids UPKG2B/UPKG2C, scratch/ and tools/package/ paths, absolute target path /home/zer0null/Duval/... at README.md:91); full list scratch/vpkg2/leaks.txt; parent-project name 'reserach extarctor' 0 hits",
+    "REPRODUCIBILITY: build_archive.sh (103 lines) re-run in isolated mirror scratch/vpkg2/repro/ with build/ deleted -> run 1 installs from inputs alone, run 2 asserts cmp, and the rebuilt out1.tgz is byte-identical to the frozen shipped archive (107474 B, sha256 7703fe83..., 13 members); frozen papers/.../released/ tree verified untouched (find -newermt empty)",
+    "PAPER SECTION 7: archive agrees -- two record files present with the sizes/digests section 7 states; the definitional section ships embedded verbatim in verify/recompute-claims.py:14+ (attributed MANUSCRIPT.md:125-131); analysis script = verify/recompute-claims.py; NO stray stimulus fixture (find for *fixture*/*reflex*/*.ts returns nothing), matching MANUSCRIPT.md:305-308",
+    "CITATION.cff carries no doi: key (comment 'DOI: deliberately absent'); README_DEPOSIT.md:103 cites only the companion note's concept DOI 10.5281/zenodo.23463944 by reference"
+  ],
+  "blocker": "No claim failed; the two defects below are things the author unit did not claim but the brief required checking. (1) LEAKS: internal orchestration unit ids (UPKG2B/UPKG2C), workspace build paths (scratch/, tools/package/) and one absolute target path (/home/zer0null/Duval/... at README.md:91) ship inside the public archive in MANIFEST.json and README.md (28 lines). (2) LICENCE DRIFT: CONTRIBUTING.md and LICENSE are not byte-identical to strategy/licence-templates/RELEASED-PIECE/, and the added Scope section at archive LICENSE:152-163 governs harness/, results/, fixture/ and second-labeller/ -- directories that do not exist in paper #2's package (it ships data/ and verify/).",
+  "next_unit_hint": "Gate call: the numbers are trustworthy, the packaging surface is not clean. If depositing as-is is acceptable, record the leaks as accepted; otherwise (a) strip unit ids and scratch//tools-package paths from README.md:6,10,39,49,50,54,81,91,93-98,102,103,114,117,118,120 and MANIFEST.json:3,5,9,23,32,41,50,86 and (b) reconcile the licence files (either restore the template or fix the Scope section at LICENSE:152-163). Any rebuild changes the digests above -- re-run check_manifest + recompute-claims + a fresh red->green and re-verify, do not carry these hashes forward.",
+  "write_paths": [
+    "scratch/vpkg2/**",
+    "orchestration/units/VPKG2.md",
+    "orchestration/handoffs/VPKG2.json",
+    "strategy/VERIFICATION_REPORT_PKG2.md"
+  ],
+  "not_reproduced": [],
+  "overstated": [],
+  "unverified": [
+    "whether the reported bare 'git -C /home/zer0null/Duval status' touched any file other than possibly .git/index, and whether GIT_OPTIONAL_LOCKS=0 was set -- no git command was run by this unit and it did not investigate further, per instruction",
+    "the full 'no invented field' sweep of CITATION.cff beyond the doi: key and its comments (inspected, not exhaustively schema-validated)"
+  ],
+  "containment": "record-only: UPKGINSTALL2 self-reported one bare 'git -C /home/zer0null/Duval status' (forbidden by AGENTS.md). Observed by the orchestrator: /home/zer0null/Duval/.git/index mtime 2026-10-18 10:32:19 -0500, size 89570 B, about 14.7 h before the reported run -- consistent with NO write to the index. Not proven: that the reported command is what ran, that no other file under /home/zer0null/Duval was touched, or that GIT_OPTIONAL_LOCKS was set. This unit ran no git command and attempted no fix.",
+  "red_green": "byte 98 of the extracted data/l1-head-to-head.jsonl flipped 1->0 (picked_index) -> exit 1 naming [FAIL] digest:data/l1-head-to-head.jsonl, [FAIL] line-1 trap, [FAIL] l1 98/190 measured 97/190 (and a 4th FAIL: l1 picks are the V0 picks, laya 189); restore -> sha256 6af0e0d8294cf4d7a20e2d8cb9bfe0c11ff70cc4c4b2792fcdedaf9246b2a1e7, exit 0, 30/30 PASS",
+  "scope": "verifier (independent second party); frozen artifact and payload read-only; all work on copies under scratch/vpkg2/; nothing deposited; no git command run",
+  "tool_calls": 19,
+  "bound": 20
+}

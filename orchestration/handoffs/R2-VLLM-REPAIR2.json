@@ -1,0 +1,57 @@
+{
+  "unit": "R2-VLLM-REPAIR2",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/R2-VLLM/pmu16_cell.py",
+    "experiments/context-cache/cells/R2-VLLM/selftest_offline.py",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair2-offline.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair2-offline.txt",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair2-run1.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair2-run2.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair2-progress.txt",
+    "orchestration/units/R2-VLLM-REPAIR2.md"
+  ],
+  "evidence": {
+    "python3 selftest_offline.py (run 1) and (run 2, --json logs/repair2-run2.json)": "SUMMARY pass=15 fail=1 red_green=True in BOTH runs; identical pass/fail map (determinism confirmed)",
+    "n_checks": "16 = 14 original + 2 new (test_R8_real_battery_send_path, test_R9_battery_budget_preflight)",
+    "original 14 checks unchanged": "all 14 present and 0 assertions edited; 13 measured details byte-identical to the 21:42Z record (the 14th, test_R7_analysis_guard, is environmental -- see r7)",
+    "test_R7_analysis_guard (environmental, NOT weakened)": "FAIL: analysis_guard(...'analysis.json'...) -> 'refused': False, 'action': 'write', 'previous': None. analysis.json does not exist on disk mid-rerun, so its final assertion ('the REAL analysis.json on disk is stale and must be refused') has no file to refuse. Its 7 sandboxed assertions pass first. It was True at 21:42Z when analysis.json existed.",
+    "R8 (drives the REAL phase_battery, no network)": "battery_rows=128 arms=['A','C','R','H'] extra_fields_present=True distinct_prefix_sha256_per_turn=[4] pass1_salts_distinct=16 pass2_equals_pass1=True client_calls=128; asserts every row carries arm_compaction/arm_render/prompt_nodes",
+    "R9 (budget)": "needed=182 (54 pre-battery + battery 128 [2*len(ARMS)*BATTERY_TURNS]) arm_cap=260 headroom=78 measured_worst_config_rows=219 (logs/run.json 'arm cap reached for OH1: 219/200'); deliberately too-small cap -> BatteryBudgetExceeded 'battery budget exceeded for OH1: needed 182 ... vs ARM_REQUEST_CAP 100' raised with rows_written_before_refusal=0 and requests_before_refusal=0",
+    "red->green defect (1) extra_dropped_from_Runner_send": "mutated copy sets `extra = None` inside Runner.send -> test_R8 FAILS red=True with 'extra fields lost on the send path: {arm_compaction:128, arm_render:128, prompt_nodes:128}' ; green=True on unmutated source",
+    "red->green defect (2) arm_cap_restored_to_200": "mutated copy sets ARM_REQUEST_CAP=200 -> test_R9 FAILS red=True with '(219, 200)' (the measured worst-case config no longer fits) ; green=True on unmutated source",
+    "red->green all_red_then_green": "True -- 4/4 (the 2 pre-existing REPAIR guards still red->green too)",
+    "offline containment": "0 model requests, 0 ssh, 0 docker, no lock taken; httpx.Client now RAISES on construction (attempts counter = 0); R8/R9 use a temp ROWS_PATH and an in-memory FakeChatClient",
+    "commands": [
+      "python3 selftest_offline.py",
+      "python3 selftest_offline.py --json logs/repair2-run1.json",
+      "python3 selftest_offline.py --json logs/repair2-run2.json",
+      "python3 -c 'import json,collections; ... rows.jsonl per-config/per-phase census'"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Next run is a FINISH, not a relaunch. A concurrent live rerun (parent-launched ~22:10Z) COMPLETED the OH1 battery under these fixes: rows.jsonl holds OH1=236 rows (gate 4, grid 28, tokens 64, baseline 12, battery 128 = 8/8 arm-pass cells x 16 turns), every battery row carries arm_compaction/arm_render/prompt_nodes, pass2==pass1 bytes True, 4 distinct prefix_sha256 per turn, and 0 'arm cap reached' errors in the new console. So: (a) do NOT archive or replay OH1 -- it is complete; (b) run the remaining two configs OH1L and A1 only. Expected cost per config = pre-battery ~54 + battery 128 = 182 (cap 260, worst measured 219); 2 configs ~364-438 rows, and 236 existing + 438 = 674 < TOTAL_REQUEST_CAP 1000. (c) If a from-scratch run is ever wanted instead, archive rows.jsonl (sha at handoff time below) to discarded-r1/ and expect 3 configs x ~182 = ~546 rows total. (d) analysis.json is currently ABSENT, which is also why test_R7_analysis_guard fails; produce it from the complete rows and R7 returns to green.",
+  "write_paths": [
+    "experiments/context-cache/cells/R2-VLLM/pmu16_cell.py",
+    "experiments/context-cache/cells/R2-VLLM/selftest_offline.py",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair2-offline.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair2-offline.txt",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair2-run1.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair2-run2.json",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair2-progress.txt",
+    "experiments/context-cache/cells/R2-VLLM/logs/repair-offline.json (annotated only, declared)",
+    "experiments/context-cache/cells/R2-VLLM/logs/pmu16_cell.v1-3runs.py",
+    "orchestration/units/R2-VLLM-REPAIR2.md",
+    "orchestration/handoffs/R2-VLLM-REPAIR2.json"
+  ],
+  "tool_calls": 16,
+  "bound": 22,
+  "assumptions": [
+    "The card's line references (:525-527, :146, :987) were stale: an unlogged concurrent editor modified pmu16_cell.py at 22:06:59Z, AFTER logs/rerun-console.log (21:54) and logs/run.json (21:48) were written. I did NOT re-apply the card's edits blindly; I probed, found `extra` present but DROPPED (never forwarded to build_row) and ARM_REQUEST_CAP already 500, and repaired the real state.",
+    "ARM_REQUEST_CAP=260 rather than the card's suggested 260/500: 260 is the smallest value that covers the measured worst case (219) with headroom and still bounds the unit (3 configs x 260 = 780 < 1000).",
+    "The 54-row pre-battery footprint from the card is used as the R9 seed (matches the live OH1 prefix gate 2 + grid 14 + tokens 32 + baseline 6 = 54).",
+    "I did not modify rows.jsonl, discarded-r1/, or any other cell. rows.jsonl was rewritten by the concurrent live rerun, not by this unit.",
+    "test_R7_analysis_guard is reported FAIL rather than repaired: its assertion is accepted proof and the cause is a missing analysis.json on disk, not a code defect.",
+    "logs/repair-offline.json (R2-VLLM-REPAIR's verdict) was ANNOTATED with _edited_by/_edit_note, not re-measured, because its test_plan_is_within_cap 2-config assumption silently claims a fit it does not prove."
+  ]
+}

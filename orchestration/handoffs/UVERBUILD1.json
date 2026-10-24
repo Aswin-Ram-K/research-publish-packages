@@ -1,0 +1,31 @@
+{
+  "unit": "UVERBUILD1",
+  "overall": "pass",
+  "checks": [
+    "byte-identity (fresh dests): pristine scratch/ubuildall1/orig/UBUILD1.build.sh vs driver --package gated-read-batching; diff -r --exclude=.git RC=0 no output; 39 files each; per-file sha256 list identical (list digest 13d3fc2e6f06b65a749909e63edd78516ac2f88caa9d791171c02c578f31fe73); same full commit 41ad35b68bcee486a67c434afbc84b0724d9f5b4",
+    "exit codes: ORIG_EXIT=1 NEW_EXIT=1 DET2_EXIT=1; direct gate rc 1 == build rc 1; both print 'GATE RESULT: FAIL -- 1133 out-of-vocabulary token(s)' and 'the exclusion gate FAILED (exit 1)'; grep for PASS in the log = 0, FAIL = 2",
+    "determinism: driver run twice (bare default and --package) into independent dests; diff -r --exclude=.git RC=0; sha256 lists and commit sha identical; bare invocation still resolves DEFAULT_SLUG=gated-read-batching",
+    "guards all present in driver: licence drift sha256sum $DEST/LICENSE vs expected, exit 1 (:560-562); never-ship absence FATAL + exit 1 (:498-505); fail-closed ship list 'a listed file that is missing is FATAL' exit 1 (:437-446); DEST suffix guard 'refusing to rm -rf' exit 2 (:292-295); SAN_SRC_OVERRIDE/frozen override with 'SAN_SRC WIRING: WARNING' (:332-341) printed at log line 2 before the first destructive step rm -rf at :354 (log line 9); exit \"$GATE_RC\" (:1029). None removed, weakened or made conditional; licence guard is strengthened (literal also tripwired to manifest :555-558)",
+    "no pinned package digest: the only 64-hex in the driver is LIC_SHA_EXPECTED 3d364676a91dc579954b585e9d3a3c9f0dc03b723715805cc9431f757ce6f900 (:554) and the only one in orchestration/packages/ is licence_sha256 with the same value (gated-read-batching.toml:45); fragments contain none",
+    "tripwire on a COPY: second root scratch/uverbuild1/tw2 (driver copy resolves _REPO_ROOT there) with copy of manifest, ship_staged entry results/REPORT.md -> results/STALE-ENTRY.json; driver exit 2, 'FATAL: manifest ship_staged disagrees with the built-in default block'; real manifest sha256 e8e06b71f0fb299af69205ba86dfb616524279407b60012be07449edc081dcff unchanged before/after",
+    "tests: PYTHONPATH=src:. python3 -m pytest tests/test_build_wiring.py tests/test_package_build.py -q -> 26 passed in 0.44s (11 + 15 collected); red on a manifest-copy mirror -> 3 failed/12 passed and driver exit 2 with the same FATAL; green after restoring the copy -> 15 passed; real manifest untouched",
+    "suite derives from the manifest, not re-hard-coded: tests/test_package_build.py:151 compares sorted(man['ship_staged']) to the promoted tree walked from man['promoted_san_src'] (:145-150); :220-221 cross-checks the manifest against the driver's parsed literal blocks; :184-195 scans for HEX64 and computes the expected set; :267-278 takes the pass/fail expectation from the build's own log and asserts the exit code tracks it. The only literal expectations are guard-presence substrings (:168, :174), which is the correct target for a guard-presence test"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Gate call: advance. Byte-identity, determinism, all six guards, the no-pinned-digest property, the manifest tripwire and red->green were independently reproduced from fresh builds in scratch/uverbuild1/**. Only residual item: 'tests/test_build_wiring.py unmodified' has no git baseline (both test files untracked). Optional cosmetic follow-up: the stale 'sha 2b0e...' comment at orchestration/units/UBUILD1.build.sh:21.",
+  "write_paths": [
+    "strategy/VERIFICATION_REPORT_BUILDALL.md",
+    "orchestration/units/UVERBUILD1.md",
+    "orchestration/handoffs/UVERBUILD1.json",
+    "scratch/uverbuild1/**"
+  ],
+  "not_reproduced": [],
+  "overstated": [
+    "orchestration/units/UBUILD1.build.sh:21 — 'A second run produces the same tree and, because the commit date is pinned, the SAME commit SHA. Verified: two consecutive runs both gave sha 2b0e...': the same-sha half is true (41ad35b68bcee486a67c434afbc84b0724d9f5b4 for all three trees built here) but the '2b0e...' literal is stale; the identical stale comment sits in the pristine copy at scratch/ubuildall1/orig/UBUILD1.build.sh:15, so the refactor neither introduced nor relied on it (cosmetic, not a safety claim)."
+  ],
+  "unverified": [
+    "'tests/test_build_wiring.py unmodified' — both tests/test_build_wiring.py and tests/test_package_build.py are untracked in the workspace git repo (git status: ?? for each), so there is no committed baseline to diff against; mtime 15:13 predates the refactor files (17:18-17:20), consistent with unmodified but not proof. Its content is driver-derived only (parses the SHIP_STAGED literal at tests/test_build_wiring.py:60,88, never reads the manifest)."
+  ],
+  "tool_calls": 24,
+  "bound": 25
+}

@@ -1,0 +1,47 @@
+{
+  "unit": "UVER21",
+  "overall": "partial",
+  "scope": "Independent verification of UFIX24's claim that cross-file citation drift is closed over five files; re-derivation of the build-script ground truth; ruling on the redact.py judgement call; red-green checker.",
+  "checks": [
+    "BUILD SCRIPT CONFIRMED IN FULL: re-derived from disk - 1019 lines, sha256 a2a1df178fbc8fca01c573f283327fe6ca96d2d7bdca89ef539b17987e007a69; gate heredoc open ':771' cat > \"$DEST/gate.sh\" <<'GATE_EOF', close ':896', chmod +x ':897', CODE_VOCAB_EOF ':695-743', PUBLIC_VOCAB_EOF ':748-769', invocation ':1005' bash \"$DEST/gate.sh\", exit ':1015' exit \"$GATE_RC\", licence LIC_SRC ':575' / cp ':579' / guard ':584' 3d364676...f900, LICENSE_SCOPE_EOF ':590-602', PAPER_LICENSE_EOF ':607-637'. Trap respected: sys.exit(1) is NOT unique - ':893' AND ':954'.",
+    "CHECK A - PASS: strategy/PUBLISH_PACKAGE_MANIFEST.md authored-by-the-build fence runs ':333'-':340'; the MIT line ':335' is inside it and untouched; all three UFIX24 pointers ':342', ':448', ':472' sit after the closing fence. No quoted listing corrupted.",
+    "CHECK B - CONTRADICTED IN PART: the 5662-byte / 25aa637b figure is now confined to PUBLISH_PACKAGE_MANIFEST.md:441,442,445,451, all covered by the dated pointer at :448. BUT MIT is still asserted as current with NO dated pointer in strategy/VERIFICATION_REPORT_11.md:152 ('The root LICENSE is MIT with <YEAR> <COPYRIGHT HOLDER> placeholders'), :178 ('shipped LICENSE (sha256 f2eb46b6...) | MIT License'), :307 ('9. LICENSE MIT, no PolyForm | reproduced'), and in orchestration/units/UCURATE1.md:128-129 ('The root LICENSE is a root-level MIT file authored by ... build-script lines 524-545'). That report's pointers are at :26,:200,:237,:242,:259,:277,:290 - none covers the MIT block; UCURATE1.md's pointers :73,:112,:149,:161,:170 miss :128. Separately the stale emitted tree .ucurate1/pre/research-publish-packages/ still ships MIT (LICENSE first line 'MIT License', README.md:53 code MIT, packages/.../README.md:97, 0 PolyForm files, mtime 2026-10-15 18:57, pre-ULICENCE3).",
+    "CHECK C - NOT REPRODUCED: the residual grep -n '204-205|204-206' over the five files was executed but its output was destroyed in the same command by unrelated pollution (a recursive grep matched a vendored minified HTML blob in the workspace and consumed the output budget). No clean literal output captured, so no pass is claimed. Corroborating only: REGEN_ASSESSMENT.md:126,263 and CODE_AGNOSTIC_RELEASE_POLICY.md:350,424 now read ':206-207' and ':208'.",
+    "JUDGEMENT CALL - UFIX24 IS RIGHT: repro/encoder-crossover-190-SANITISED/redact.py reads :203 SAFE_KEYS = {\"id\", ... ; :204 '\"recorded_index\", \"goldIndex\", \"predIndex\"}'; :205 CASE_FIELD_RE = re.compile(r'^    [a-z_]+:'); :206-207 the '# options is deliberately NOT here ... routeA.ties 120 -> 119' rationale; :208 CASE_FIELDS = (\"question\",). So :204-205 holds the SAFE_KEYS tail plus CASE_FIELD_RE - a DIFFERENT declaration - and the earlier 'adjacent within the same construct, record it' reading was wrong. UFIX24's fix was correct.",
+    "SENTENCE CHECK - CONTRADICTED AS STATED: 'Zero further stale citations in this file.' occurs 0 times in each of the five files. It occurs 5 times in orchestration/units/UFIX24.md:58,75,90,111,125. Benign reading: UFIX24 recorded the per-file result in its own card, which is the normal convention; the literal claim that it wrote the sentence for each file is false.",
+    "RED-GREEN - PASS: scratch/uver21/check_citations.py, 64 lines, 21 anchored citations. GREEN on the real files = 21/21 anchors found, rc=0. RED on scratch/uver21/staled (UBUILD1.build.sh symlinked to the real file; redact.py a real copy with two blank lines spliced before former :206, shifting the rationale to :208-209 and CASE_FIELDS to :210) = 11/21, drifted=10, rc=1, the ten failures being exactly the citations targeting :206, :207, :208 and :689.",
+    "POINTER HYGIENE: dated pointers present - UCURATE1.md 5 (:73,:112,:149,:161,:170), UVER11.md 6 (:34,:45,:61,:70,:78,:92), PUBLISH_PACKAGE_MANIFEST.md 6 (:8,:260,:342,:415,:448,:472), REGEN_ASSESSMENT.md 0, CODE_AGNOSTIC_RELEASE_POLICY.md 0. Zero in the last two is correct: there UFIX24 FIXED live citations instead of recording stale ones. Four frozen records spot-checked (UCURATE1.md:73, UVER11.md:61, PUBLISH_PACKAGE_MANIFEST.md:342, PUBLISH_PACKAGE_MANIFEST.md:415) - originals intact, corrections additive, none duplicated or orphaned. One pointer says something now false: UCURATE1.md:128-129.",
+    "CENSUS: UFIX24 reported 14/9/9/15/7 citations (and '17 edits'; its action counts 3+4+3+4+2 sum to 16). My mechanical colon-number census is 44/51/86/94/773 tokens per file (ranges 48/51/89/95/774). Not like-for-like: mine includes non-citation colon-numbers, and CODE_AGNOSTIC_RELEASE_POLICY.md's 773 tokens are dominated by its ~172-row identifier census table (:212-:342) which cites harness/analyze.py once per row, so UFIX24's '7' cannot be a citation count for that file. Reconciliation deferred."
+  ],
+  "blocker": "",
+  "next_unit_hint": "UVER22 (or a UFIX25 fix unit) should: (a) add dated MIT-succession pointers to strategy/VERIFICATION_REPORT_11.md:145-153,178,307 and orchestration/units/UCURATE1.md:128-129; (b) decide whether the stale emitted tree .ucurate1/pre/research-publish-packages/ is rebuilt (the build now emits PolyForm/3d364676...f900) or marked superseded; (c) re-run the residual 204-205 grep with --include scoping and no recursive walk, and paste literal output; (d) reconcile UFIX24's per-file counts (14/9/9/15/7) against the :N census (44/51/86/94/773), spot-checking at least 30 of the ~172 harness/analyze.py census rows in CODE_AGNOSTIC_RELEASE_POLICY.md:212-342.",
+  "write_paths": [
+    "strategy/VERIFICATION_REPORT_21.md",
+    "orchestration/units/UVER21.md",
+    "orchestration/handoffs/UVER21.json",
+    "scratch/uver21/check_citations.py",
+    "scratch/uver21/staled/"
+  ],
+  "contradicted": [
+    "UFIX24: 'no other file in the workspace still asserts MIT ... for the root LICENSE' - strategy/VERIFICATION_REPORT_11.md:152,178,307 and orchestration/units/UCURATE1.md:128-129 still assert it as current with no dated pointer; .ucurate1/pre/research-publish-packages/ still ships an MIT LICENSE with 0 PolyForm files.",
+    "UFIX24: the sentence 'Zero further stale citations in this file.' written for each of the five files - 0 occurrences in all five; 5 occurrences in orchestration/units/UFIX24.md:58,75,90,111,125."
+  ],
+  "overstated": [
+    "The per-file citation counts 14/9/9/15/7 are not reproducible as citation counts against a mechanical colon-number census of 44/51/86/94/773; CODE_AGNOSTIC_RELEASE_POLICY.md at '7' is the clearest undercount, its census table alone carrying ~172 line citations.",
+    "UFIX24's '17 edits' is inconsistent with its own action counts (3+4+3+4+2 = 16)."
+  ],
+  "not_reproduced": [
+    "Check C: no clean literal output for a residual grep of '204-205' / '204-206' over the five files; the one run's output was consumed by unrelated pollution from a recursive grep over a vendored minified HTML blob. Corroborating evidence only, not a pass."
+  ],
+  "unverified": [
+    "The ~172 'harness/analyze.py:<line>' rows of the strategy/CODE_AGNOSTIC_RELEASE_POLICY.md identifier census (:212-:342) were not opened line-by-line.",
+    "The full text of the UFIX24 edit diff (scratch/ufix24/diff.json) was not re-walked edit-by-edit; I verified outcomes, not the diff."
+  ],
+  "corrections": [
+    "Ruling on the disputed judgement call: UFIX24's reading of redact.py is correct and the prior 'same construct, record it' description was wrong. :204-205 = SAFE_KEYS tail + CASE_FIELD_RE (a different declaration); CASE_FIELDS = (\"question\",) is at :208 with its rationale at :206-207."
+  ],
+  "red_green": "GREEN: python3 scratch/uver21/check_citations.py -> 21/21 anchors found, rc=0. RED: python3 scratch/uver21/check_citations.py --target-root scratch/uver21/staled -> 11/21, drifted=10, rc=1 (redact.py staled by +2 lines before former :206; failures exactly at :206/:207/:208/:689).",
+  "containment": "Read-only against all targets. No file under verification was edited; the staled copy lives only in scratch/uver21/staled/. No git command was run against /home/zer0null/Duval. Nothing was written outside /home/zer0null/reserach extarctor.",
+  "tool_calls": 25,
+  "bound": 25
+}

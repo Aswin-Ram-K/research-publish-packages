@@ -1,0 +1,66 @@
+{
+  "unit": "FETCH-NVFP4-9B",
+  "status": "done",
+  "purpose": "Acquire a verified NVFP4 copy of the same Qwen3.5-9B we already serve, so the dense arm can run at NVFP4 instead of fp8.",
+  "artifacts": [
+    "/home/zer0null/models/qwen3.5-9b-nvfp4/",
+    "/home/zer0null/models/nvfp4-9b.sha256",
+    "/home/zer0null/models/fetch-nvfp4-9b.log",
+    "state/config/nvfp4-9b.json",
+    "orchestration/handoffs/FETCH-NVFP4-9B.json",
+    "orchestration/units/FETCH-NVFP4-9B.md"
+  ],
+  "evidence": {
+    "df_h_home": "/dev/nvme0n1p2 916G 585G 285G 68% /  => 285 GB free, well over the 30 GB required",
+    "hf_cli": "/home/zer0null/.local/bin/hf and /home/zer0null/.local/bin/huggingface-cli both present",
+    "hf_env_on_host": "env | grep -i HF_ printed nothing => HF_HUB_OFFLINE is NOT set in the host shell; download also launched with env -u HF_HUB_OFFLINE -u TRANSFORMERS_OFFLINE for safety",
+    "download": "Fetching 13 files: 100%|##########| 13/13 [01:17<00:00,  5.93s/it] + 'Downloaded' exit 0; no *.incomplete/*.lock left",
+    "du_sh": "8.8G\t/home/zer0null/models/qwen3.5-9b-nvfp4",
+    "total_apparent_bytes": "9380649471 (sum of all 13 files, no .cache)",
+    "model_safetensors_bytes": "9361048680 == HF LFS manifest size 9361048680",
+    "card_size_discrepancy": "card said 9373856662 for 'single model.safetensors'; that is 9361048680 + 12807982 (tokenizer.json). Card figure was a composite, not the file size.",
+    "sha256_model_safetensors": "a1304acf8325cee90075bf8eb7f5e973ef893c7d497ded92e7d720f0e7178749",
+    "sha256_matches_publisher_lfs_etag": true,
+    "sha256_tokenizer_json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+    "sha256_config_json": "777188d9226a13c2e1db183655c10854be290e95e26619e17095bdaa45a5e99e",
+    "resolved_revision": "97aef92393f126bf649f310cd40861be8dad3279",
+    "quant_class": "quant_method=modelopt, quant_algo=NVFP4, producer modelopt 0.0.1.dev1+g82f1d216d, weights+activations num_bits=4 float group_size=16 (NOT GPTQ, NOT AWQ, NOT compressed-tensors/convrot)",
+    "tensor_inventory": "1519 tensors; dtypes F32=496 BF16=527 F8_E4M3=248 U8=248; 248 packed U8 weight matrices + 248 F8_E4M3 per-block scales + 248 weight_scale_2 + 248 input_scale; all 24 conv1d, visual(333), mtp(15), lm_head, embeddings BF16 as the ignore list requires",
+    "lineage": "SAME — hidden_size 4096, layers 32, layer_types 24 linear/8 full in identical order, head_dim 256, kv 4, vocab 248320, eos 248044, vision_config all fields; tokenizer.json byte-identical sha256 5f9e4d49…cb42, 248044 BPE vocab + 26 added",
+    "lineage_only_mismatch": "text_config.tie_word_embeddings absent(bf16) vs false(nvfp4) — benign: bf16 also carries tie_word_embeddings:false at top level",
+    "loadable_verdict": "go — GB10 compute capability 12.1 (Blackwell FP4), container gx10-occamy-nvfp4 sglang 0.0.0.dev1+g4ccff141d has modelopt_quant.py with 66 NVFP4 refs, flashinfer 0.6.17 mm_fp4 imports OK",
+    "commands": [
+      "ssh -F /dev/null ... 'df -h /home; command -v hf huggingface-cli; env | grep -i HF_'",
+      "ssh -F /dev/null ... 'setsid nohup env -u HF_HUB_OFFLINE -u TRANSFORMERS_OFFLINE hf download AxionML/Qwen3.5-9B-NVFP4 --local-dir /home/zer0null/models/qwen3.5-9b-nvfp4 > fetch-nvfp4-9b.log 2>&1 &'",
+      "ssh -F /dev/null ... 'du -sh /home/zer0null/models/qwen3.5-9b-nvfp4'",
+      "ssh -F /dev/null ... 'python3 -m json.tool /home/zer0null/models/qwen3.5-9b-nvfp4/config.json'",
+      "ssh -F /dev/null ... \"python3 - <<'PY' ... struct/json safetensors header inventory ... PY\"",
+      "ssh -F /dev/null ... 'sha256sum qwen3.5-9b-nvfp4/{model.safetensors,tokenizer.json,config.json} > /home/zer0null/models/nvfp4-9b.sha256'",
+      "ssh -F /dev/null ... \"python3 - <<'PY' ... bf16 vs nvfp4 config+tokenizer lineage diff ... PY\"",
+      "ssh -F /dev/null ... 'nvidia-smi --query-gpu=name,compute_cap --format=csv'",
+      "ssh -F /dev/null ... 'docker exec gx10-occamy-nvfp4 python3 -c \"import flashinfer; from flashinfer import mm_fp4\"'"
+    ]
+  },
+  "lineage_verdict": "same",
+  "go_no_go": "go",
+  "assumptions": [
+    "The card's 9,373,856,662-byte target was treated as approximate: the authoritative figures are the HF tree manifest, which the on-disk files match byte-for-byte and whose LFS sha256 the local sha256sum reproduces. No retry was triggered by the size difference because integrity was proven by digest, not by size.",
+    "Verification of loadability was inferred from checkpoint layout + the container's sglang source + GPU compute capability, not from a live load. No container was started, stopped or restarted and no model requests were made, per unit constraints; demonstrating that the weights actually load is deferred to a separate unit.",
+    "docker exec was used for read-only introspection (python imports, source reads, file lists) of the already-running gx10-occamy-nvfp4 container. No state was modified.",
+    "Host python3 has no sglang, so the target of the go verdict is the container image, not the bare host."
+  ],
+  "blocker": "",
+  "next_unit_hint": "A separate unit can smoke-load /home/zer0null/models/qwen3.5-9b-nvfp4 in a NEW sglang instance on gx10 (same image as gx10-occamy-nvfp4, sglang 0.0.0.dev1+g4ccff141d) — do not restart gx10-qwen9b or gx10-occamy-nvfp4. Expect ~9.4 GB weights with 248 FP4 Linear projections and BF16 visual/mtp/lm_head/conv1d. Note that /home/zer0null/models/ornith-1.5-35b-a3b-nvfp4 is actually FP8 despite its name and must not be used as an NVFP4 comparison baseline.",
+  "write_paths": [
+    "state/config/nvfp4-9b.json",
+    "orchestration/handoffs/FETCH-NVFP4-9B.json",
+    "orchestration/units/FETCH-NVFP4-9B.md"
+  ],
+  "remote_write_paths": [
+    "/home/zer0null/models/qwen3.5-9b-nvfp4/",
+    "/home/zer0null/models/fetch-nvfp4-9b.log",
+    "/home/zer0null/models/nvfp4-9b.sha256"
+  ],
+  "tool_calls": 20,
+  "bound": "45 min wall for transfer (used ~2 min); bounded polling, no more than one retry permitted and none needed"
+}

@@ -1,0 +1,47 @@
+{
+  "unit": "STATE-CLIFF-PLAN",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/STATE-CLIFF/plan.md",
+    "experiments/context-cache/cells/STATE-CLIFF/sweep.py",
+    "orchestration/units/STATE-CLIFF-PLAN.md",
+    "orchestration/handoffs/STATE-CLIFF-PLAN.json"
+  ],
+  "evidence": {
+    "dry_run": {
+      "command": "python3 experiments/context-cache/cells/STATE-CLIFF/sweep.py --dry-run --mamba-cache-size 48 --port 8021",
+      "exit_code": 0,
+      "output_tail": "  8| docker stop -t 60 gx10-occamy-sweep-48 && docker rm gx10-occamy-sweep-48\n  9| docker start gx10-occamy-nvfp4\n 10| [8] health gate: poll http://127.0.0.1:8012/health every 5s until HTTP 200 or 900s\n 11| curl -sf http://127.0.0.1:8012/get_server_info -o /home/zer0null/reserach extarctor/experiments/context-cache/cells/STATE-CLIFF/rung-48/restore_server_info.json && six-key restore proof vs /home/zer0null/reserach extarctor/state/config/occamy-restore-baseline.json\nend| restore proof keys: page_size, mamba_radix_cache_strategy, radix_eviction_policy, mem_fraction_static, kv_cache_dtype, max_mamba_cache_size\nDRY RUN complete — nothing executed."
+    },
+    "baseline_keys": {
+      "command": "python3 -c \"import json;print(json.load(open('state/config/occamy-restore-baseline.json')).keys())\"",
+      "exit_code": 0,
+      "six_keys_present": {
+        "page_size": 1,
+        "mamba_radix_cache_strategy": "extra_buffer",
+        "radix_eviction_policy": "lru",
+        "mem_fraction_static": 0.45,
+        "kv_cache_dtype": "fp8_e4m3",
+        "max_mamba_cache_size": 64
+      },
+      "keys_output_head": "dict_keys(['_speculative_draft_quantization_explicitly_set', 'abort_on_priority_when_disabled', 'admin_api_key', 'allow_"
+    },
+    "live_contact": "NONE. Nothing was restarted and no live request was made: no ssh, no docker stop/run/start, no HTTP call to :8012 or any port, no service action."
+  },
+  "blocker": "",
+  "next_unit_hint": "Operator-gated run phase: execute ladder 64->48->32->16 one rung per restart via sweep.py --execute; before first execute, (1) fix M4_MEASURE_ARGV from `battery.py --help` (A2), (2) re-run WIN-SGL prepare_production stop-safety if docker inspect shows AutoRemove=true.",
+  "write_paths": [
+    "experiments/context-cache/cells/STATE-CLIFF/plan.md",
+    "experiments/context-cache/cells/STATE-CLIFF/sweep.py",
+    "orchestration/units/STATE-CLIFF-PLAN.md",
+    "orchestration/handoffs/STATE-CLIFF-PLAN.json"
+  ],
+  "assumptions": [
+    "A1: --max-mamba-cache-size=<N> flag spelling inferred from the page_size<->--page-size convention; readback gate (server_info) is the authority.",
+    "A2: battery.py CLI unverified offline; execute path gates on `battery.py --help` exposing --base-url, else M4_MEASURE_ARGV must be edited.",
+    "A3: variant binds/shm sourced from docker inspect of the live container at execute; every bind forced absolute and :ro, HF_HUB_OFFLINE=1.",
+    "A4: sweep waits <=300s for experiments/context-cache/.occamy.lock to be free, then releases it; the M4 battery holds it (holding across the battery would deadlock two flocks).",
+    "A5: token_capacity is informational, not a restore key (re-profiled per start: baseline 1644272 vs M4-measured 1620892).",
+    "Bound honoured: 20 tool calls; offline proofs only."
+  ]
+}

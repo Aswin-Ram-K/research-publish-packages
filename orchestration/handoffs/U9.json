@@ -1,0 +1,40 @@
+{
+  "unit": "U9",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/U9/u9_corpus.py",
+    "experiments/context-cache/cells/U9/u9_cell.py",
+    "experiments/context-cache/cells/U9/u9_analyze.py",
+    "experiments/context-cache/cells/U9/u9_trials.jsonl",
+    "experiments/context-cache/cells/U9/u9_raw_usage.jsonl",
+    "experiments/context-cache/cells/U9/u9_report.json",
+    "experiments/context-cache/cells/U9/u9_runlog.json",
+    "orchestration/units/U9.md"
+  ],
+  "evidence": {
+    "run": "python3 u9_cell.py -> status=done requests=139 elapsed_s=145.355 failures=0 stop_reason='' lock_wait_s=0.0 null_coercions=74 explicit_details=65",
+    "per_length_median_ttft_ms": "L=1024 miss 208.7 hit 86.4 ratio 0.414 delta 122.3 | L=2028 349.2/87.2 0.250 262.0 | L=3955 674.6/105.2 0.156 569.3 | L=7863 1431.6/114.3 0.080 1317.3 | L=15701 3039.5/139.2 0.046 2900.3 | L=31415 7541.9/231.6 0.031 7310.4",
+    "wall_ms_miss_to_hit": "1024: 208.8->86.5 | 2028: 349.3->87.3 | 3955: 674.7->105.3 | 7863: 1431.7->114.3 | 15701: 3039.6->139.3 | 31415: 7542.0->231.6",
+    "significance": "all 42 paired deltas positive; exact sign test p=0.0078 at every length (= minimum attainable at n=7); bootstrap CI95 excludes 0 at every length",
+    "noise_floor": "warm CV 0.0762 (1k), 0.0564 (8k); cold CV 0.0795 (1k); 2-sigma margin 9.5 ms (1k), 15.7 ms (8k+); smallest effect 122 ms = 12.8x margin",
+    "relationship": "miss TTFT ~ L^1.052 (r2=0.993), hit ~ L^0.268 (r2=0.863), ratio ~ L^-0.784 (r2=0.996); OLS miss 0.2407 ms/token (4.15k tok/s) vs hit 0.00466 ms/token (215k tok/s), 52x smaller",
+    "order_effect": "1k: A delta 120.2 ms vs B delta 122.1 ms; across lengths A 953.9 vs B 913.9 ms (40 ms gap, ~4% of mean delta, inside spread)",
+    "cache_law_refinement": "cached == 64*((L-1)//64); at L=1024 the server reuses 960, not 1024. U2's 44 lengths all had L mod 64 != 0, where both formulas agree. 42/42 hits and 42/42 misses satisfied the refined law",
+    "boundary_anomaly": "at exactly L=1024 the immediately repeated request reported cached=0 and paid full prefill (207 ms); a second repeat hit 960 (86 ms). 3/3 at L=1024, 0/4 at L=1021-1023. Every reported hit verified cached=expected, so no ratio is contaminated",
+    "verification": "python3 u9_analyze.py -> per_length 1024..31415, lengths_resolvable=6/6, all_lengths_hit_faster=true, speed_claim_supported=true; report is a pure function of u9_trials.jsonl (139 rows)",
+    "constraints": "POST /flush_cache never called; one request in flight always; flock .occamy.lock held for the batch (acquired 0.0 s); 139/200 requests, 145.4/1800 s"
+  },
+  "blocker": "",
+  "next_unit_hint": "Speed claim is SUPPORTED and may be stated with the per-length numbers (122 ms at 1k to 7.31 s at 31.4k, 0.414->0.031 TTFT ratio, ratio ~ L^-0.78 = prefill-skipping signature). Two things a verifier should re-derive from cells/U9/u9_trials.jsonl: (1) the 42 paired deltas are all positive and p=0.0078; (2) the refined law 64*((L-1)//64) at L=1024. Two follow-ups are worth a unit: the L % 64 == 0 first-repeat miss (3/3, mechanism unknown - it would bite a workload whose prompt length is a multiple of 64), and whether the 0.0047 ms/token hit residual is the uncached tail or fixed overhead. Do not claim 'zero prefill cost', and do not reuse U2's 64*floor(L/64) wording without the boundary caveat.",
+  "write_paths": [
+    "experiments/context-cache/cells/U9/u9_corpus.py",
+    "experiments/context-cache/cells/U9/u9_cell.py",
+    "experiments/context-cache/cells/U9/u9_analyze.py",
+    "experiments/context-cache/cells/U9/u9_trials.jsonl",
+    "experiments/context-cache/cells/U9/u9_raw_usage.jsonl",
+    "experiments/context-cache/cells/U9/u9_report.json",
+    "experiments/context-cache/cells/U9/u9_runlog.json",
+    "orchestration/handoffs/U9.json",
+    "orchestration/units/U9.md"
+  ]
+}

@@ -1,0 +1,180 @@
+{
+  "unit": "R2-VLLM-DOCCHECK",
+  "status": "done",
+  "artifacts": [
+    "orchestration/handoffs/R2-VLLM-DOCCHECK.json",
+    "orchestration/units/R2-VLLM-DOCCHECK.md",
+    "state/logs/R2-VLLM-doccheck.json"
+  ],
+  "evidence": {
+    "queries_run": [
+      "curl HEAD probe raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/engine/arg_utils.py -> HTTP 200",
+      "git clone --depth 1 --branch v0.27.1 https://github.com/vllm-project/vllm.git",
+      "grep -rn 'prompt_tokens_details|enable_prompt_tokens_details' --include=*.py vllm/",
+      "grep -rn 'prefix_match_unit' --include=*.py vllm/",
+      "grep -rn 'prefix_cache_hits|prefix_cache_queries|kv_cache_usage_perc|gpu_prefix_cache' --include=*.py vllm/",
+      "grep -rn 'prefix-match-unit|prefix_match_unit' docs/",
+      "sed reads: cli_args.py, protocol.py, chat_completion/serving.py, config/cache.py, arg_utils.py, kv_cache_utils.py, metrics/loggers.py"
+    ],
+    "sources_fetched": [
+      {
+        "url": "https://github.com/vllm-project/vllm",
+        "ref": "v0.27.1 (tag) = commit 6e448d0ea9bf3d88d898b65449ca6dc2aec170ac, tagged 2026-08-11"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/entrypoints/openai/cli_args.py",
+        "lines": "132-133, 217-241"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/entrypoints/openai/chat_completion/serving.py",
+        "lines": "88-109, 496-497, 534-538, 570-575, 761, 763-779"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/entrypoints/openai/engine/protocol.py",
+        "lines": "31-33, 105-119"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/config/cache.py",
+        "lines": "56-69"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/engine/arg_utils.py",
+        "lines": "705, 1236"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/v1/core/kv_cache_utils.py",
+        "lines": "638-690"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/v1/metrics/loggers.py",
+        "lines": "562-601, 1125-1136"
+      }
+    ],
+    "unreached": [],
+    "unreached_note": "Nothing unreached. The v0.27.1 tag cloned successfully, so every quote is verbatim from the source tree at commit 6e448d0ea9bf3d88d898b65449ca6dc2aec170ac \u2014 no fallback to main was needed.",
+    "caveat": "vllm:gpu_prefix_cache_hits_total and vllm:gpu_prefix_cache_queries_total (the names used in the unit card) occur nowhere in the v0.27.1 tree; they are the pre-V1 spelling. Dashboards or asserts keyed on the gpu_ form will read nothing against this build."
+  },
+  "answers": [
+    {
+      "q": 1,
+      "question": "Does --enable-prompt-tokens-details exist, what is its default, and does the usage object include prompt_tokens_details only when it is set?",
+      "answer": "YES to all three. It exists; default is False; prompt_tokens_details is populated ONLY when the flag is truthy.",
+      "spec_definition": {
+        "file": "vllm/entrypoints/openai/cli_args.py:132-133",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/entrypoints/openai/cli_args.py",
+        "quote": "    enable_prompt_tokens_details: bool = False\n    \"\"\"If set to True, enable prompt_tokens_details in usage.\"\"\"",
+        "note": "Field on FrontendArgs (docstring: \"Arguments for the OpenAI-compatible frontend server.\"). The argparse flag is auto-derived in FrontendArgs.add_cli_args (:217-241): frontend_group.add_argument(*extra_flags, f\"--{key.replace('_', '-')}\", **value) => --enable-prompt-tokens-details."
+      },
+      "conditioning_code": {
+        "file": "vllm/entrypoints/openai/chat_completion/serving.py:88-109",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/entrypoints/openai/chat_completion/serving.py",
+        "quote": "def _make_prompt_tokens_details(\n    enable_prompt_tokens_details: bool,\n    num_cached_tokens: int | None,\n    num_cache_creation_tokens: int | None,\n    mm_token_counts: dict[str, int] | None,\n) -> PromptTokenUsageInfo | None:\n    \"\"\"Build ``prompt_tokens_details`` from cached + multimodal token counts.\"\"\"\n    if not enable_prompt_tokens_details:\n        return None\n    if (\n        num_cached_tokens is None\n        and num_cache_creation_tokens is None\n        and not mm_token_counts\n    ):\n        return None\n    return PromptTokenUsageInfo(\n        cached_tokens=num_cached_tokens,\n        created_cache_tokens=num_cache_creation_tokens,\n        multimodal_tokens=mm_token_counts or None,\n    )"
+      },
+      "payload_model": {
+        "file": "vllm/entrypoints/openai/engine/protocol.py:105-119",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/entrypoints/openai/engine/protocol.py",
+        "quote": "class PromptTokenUsageInfo(OpenAIBaseModel):\n    cached_tokens: int | None = None\n    created_cache_tokens: int | None = None\n    multimodal_tokens: dict[str, int] | None = None\n\nclass UsageInfo(OpenAIBaseModel):\n    prompt_tokens: int = 0\n    total_tokens: int = 0\n    completion_tokens: int | None = 0\n    prompt_tokens_details: PromptTokenUsageInfo | None = None"
+      }
+    },
+    {
+      "q": 2,
+      "question": "For a streaming request with stream_options {'include_usage': true}, is prompt_tokens_details populated per chunk and/or only in the final usage chunk?",
+      "answer": "ONLY in the final usage chunk (the trailing chunk sent after the last token, with empty choices). Per-chunk usage objects are built WITHOUT prompt_tokens_details. Even in the final chunk, cached_tokens is null unless the flag is set AND the request saw a cache hit.",
+      "final_chunk_code": {
+        "file": "vllm/entrypoints/openai/chat_completion/serving.py:763-779",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/entrypoints/openai/chat_completion/serving.py",
+        "quote": "            # once the final token is handled, if stream_options.include_usage\n            # is sent, send the usage\n            if include_usage:\n                completion_tokens = sum(previous_num_tokens)\n                final_usage = UsageInfo(\n                    prompt_tokens=num_prompt_tokens,\n                    completion_tokens=completion_tokens,\n                    total_tokens=num_prompt_tokens + completion_tokens,\n                )\n                final_usage.prompt_tokens_details = _make_prompt_tokens_details(\n                    self.enable_prompt_tokens_details,\n                    num_cached_tokens,\n                    num_cache_creation_tokens,\n                    mm_token_counts,\n                )"
+      },
+      "per_chunk_code": {
+        "file": "vllm/entrypoints/openai/chat_completion/serving.py:534-538",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/entrypoints/openai/chat_completion/serving.py",
+        "quote": "                        # if continuous usage stats are requested, add it\n                        if include_continuous_usage:\n                            chunk.usage = UsageInfo(\n                                prompt_tokens=num_prompt_tokens,\n                                completion_tokens=0,\n                                total_tokens=num_prompt_tokens,\n                            )",
+        "note": "Repeated identically at :570-575 for the echo branch. Neither sets prompt_tokens_details."
+      },
+      "cached_source": {
+        "file": "vllm/entrypoints/openai/chat_completion/serving.py:496-497",
+        "quote": "                    num_cached_tokens = res.num_cached_tokens\n                    num_cache_creation_tokens = res.num_cache_creation_tokens",
+        "note": "Captured on first_iteration from the engine RequestOutput."
+      }
+    },
+    {
+      "q": 3,
+      "question": "With --prefix-caching on and the flag ABSENT, is cached_tokens omitted entirely (key absent) or reported as 0?",
+      "answer": "Key ABSENT. Two independent causes, both quoted below: the flag-false guard returns None, and streaming serializes with model_dump_json(exclude_unset=True).",
+      "guard": {
+        "file": "vllm/entrypoints/openai/chat_completion/serving.py:95-96",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/entrypoints/openai/chat_completion/serving.py",
+        "quote": "    if not enable_prompt_tokens_details:\n        return None"
+      },
+      "serializer": {
+        "file": "vllm/entrypoints/openai/chat_completion/serving.py:761",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/entrypoints/openai/chat_completion/serving.py",
+        "quote": "                    data = chunk.model_dump_json(exclude_unset=True)\n                    yield f\"data: {data}\\n\\n\""
+      },
+      "base_model": {
+        "file": "vllm/entrypoints/openai/engine/protocol.py:31-33",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/entrypoints/openai/engine/protocol.py",
+        "quote": "class OpenAIBaseModel(BaseModel):\n    # OpenAI API does allow extra fields\n    model_config = ConfigDict(extra=\"allow\")",
+        "note": "extra='allow' and no exclude_none => an unset field is not emitted at all."
+      },
+      "warning": "No route reports cached_tokens as 0 when the flag is absent. A consumer that maps MISSING to 0 is correct; one that reads usage['prompt_tokens_details']['cached_tokens'] unguarded raises KeyError. Even WITH the flag, cached_tokens is int|None and is null on a cold prompt \u2014 the cell must coalesce null to 0 in both configurations."
+    },
+    {
+      "q": 4,
+      "question": "Does vLLM expose an alternative cache-hit surface independent of that flag (e.g. /metrics counters)?",
+      "answer": "YES. Prometheus /metrics counters exist and are entirely independent of --enable-prompt-tokens-details. In 0.27.1 the names carry NO 'gpu_' prefix and NO '_total' suffix in source: vllm:prefix_cache_hits and vllm:prefix_cache_queries. The gpu_-prefixed spellings named in the unit card do not occur anywhere in the v0.27.1 tree.",
+      "metric_defs": {
+        "file": "vllm/v1/metrics/loggers.py:584-601, 562",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/v1/metrics/loggers.py",
+        "quote": "        counter_prefix_cache_queries = self._counter_cls(\n            name=\"vllm:prefix_cache_queries\",\n            documentation=(\n                \"Prefix cache queries, in terms of number of queried tokens.\"\n            ),\n            labelnames=labelnames,\n        )\n        self.counter_prefix_cache_queries = create_metric_per_engine(\n            counter_prefix_cache_queries, per_engine_labelvalues\n        )\n\n        counter_prefix_cache_hits = self._counter_cls(\n            name=\"vllm:prefix_cache_hits\",\n            documentation=(\"Prefix cache hits, in terms of number of cached tokens.\"),\n            labelnames=labelnames,\n        )\n        self.counter_prefix_cache_hits = create_metric_per_engine(\n            counter_prefix_cache_hits, per_engine_labelvalues\n        )",
+        "gauge_quote": "        gauge_kv_cache_usage = self._gauge_cls(\n            name=\"vllm:kv_cache_usage_perc\",\n            documentation=\"KV-cache usage. 1 means 100 percent usage.\",\n            multiprocess_mode=\"mostrecent\","
+      },
+      "semantics": {
+        "file": "vllm/v1/metrics/loggers.py:1125-1129",
+        "quote": "            self.counter_prefix_cache_queries[engine_idx].inc(\n                scheduler_stats.prefix_cache_stats.queries\n            )\n            self.counter_prefix_cache_hits[engine_idx].inc(\n                scheduler_stats.prefix_cache_stats.hits\n            )",
+        "units": "TOKENS, not requests \u2014 documentation strings say 'number of queried tokens' and 'number of cached tokens'.",
+        "monotonic": "_counter_cls is a Prometheus Counter: monotonic non-decreasing per engine for the process lifetime, reset on restart. create_metric_per_engine(counter, per_engine_labelvalues) gives one labelled series per engine, summed across engines.",
+        "extras": "vllm:external_prefix_cache_queries / vllm:external_prefix_cache_hits are the KV-connector (cross-instance) pair and must not be conflated with the local prefix cache. vllm:kv_cache_usage_perc is a GAUGE of KV occupancy (0..1, multiprocess_mode='mostrecent'), NOT a hit counter."
+      }
+    },
+    {
+      "q": 5,
+      "question": "--prefix-match-unit: what does it do, valid values, and what happens when the resolved attention block size is not divisible by it?",
+      "answer": "It sets the finest token boundary a prefix-cache hit can land on (= hash_block_size). Valid values: any integer > 0, or unset (None). A non-divisible value raises ValueError at cache-config resolution \u2014 it does NOT silently round. And 2096 % 8 == 0, so the OH1L 8 probe is VALID and will not raise.",
+      "config": {
+        "file": "vllm/config/cache.py:56-69",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/config/cache.py",
+        "quote": "    prefix_match_unit: int | None = Field(default=None, gt=0)\n    \"\"\"The finest token boundary (in tokens) a prefix-cache hit can land on.\n\n    Prefix-cache keys are computed every `prefix_match_unit` tokens. It can\n    be set finer than the physical KV cache block sizes (e.g. 32 vs a\n    1024-token hybrid-model block) as long as every KV cache group's\n    `block_size` is divisible by it, enabling cache hits at boundaries\n    inside a physical block. It controls matching granularity only, not how\n    often states are stored.\n\n    This equals to the `hash_block_size` used throughout the KV cache code.\n    \"\"\""
+      },
+      "argparse": {
+        "file": "vllm/engine/arg_utils.py:1236",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/engine/arg_utils.py",
+        "quote": "        cache_group.add_argument(\n            \"--prefix-match-unit\", **cache_kwargs[\"prefix_match_unit\"]\n        )",
+        "note": "Field at arg_utils.py:705 is `prefix_match_unit: int | None = get_field(CacheConfig, \"prefix_match_unit\")`, so gt=0 reaches argparse."
+      },
+      "divisibility_code": {
+        "file": "vllm/v1/core/kv_cache_utils.py:678-690",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm/v0.27.1/vllm/v1/core/kv_cache_utils.py",
+        "quote": "    requested = cache_config.prefix_match_unit\n    hash_block_size = (\n        requested if requested is not None else math.gcd(*group_block_sizes)\n    )\n    if any(bs % hash_block_size != 0 for bs in group_block_sizes):\n        raise ValueError(\n            f\"Invalid prefix_match_unit={hash_block_size}; all KV cache group \"\n            f\"block sizes must be divisible by prefix_match_unit. \"\n            f\"Got group block sizes={group_block_sizes}.\"\n        )\n    return scheduler_block_size, hash_block_size"
+      },
+      "scope_limits": "Only reached for len(groups) > 1 (hybrid / multi-group models). For len(groups) <= 1 the function returns (bs, bs) at :648-650 and prefix_match_unit is IGNORED. It is also ignored when neither prefix caching nor a connector is active (:663-664) and when a mamba group's block_size differs from cache_config.block_size (:671-675).",
+      "oh1l_finding": "2096 / 8 = 262 exactly => divisible => NO ValueError. The cell's premise that 2096 is not divisible by 8 is arithmetically false."
+    }
+  ],
+  "blocker": "None for the five documentation questions: all answered from primary source at pinned tag v0.27.1 (commit 6e448d0ea9bf3d88d898b65449ca6dc2aec170ac). TWO DEFECTS FOUND IN THE CELL ITSELF (reported, not repaired here): (a) the OH1L leniency probe's premise is arithmetically false \u2014 2096 % 8 == 0, so --prefix-match-unit 8 is forced VALID for a 2096 attention block size and raises nothing; (b) the metric names the cell expects, vllm:gpu_prefix_cache_hits_total / vllm:gpu_prefix_cache_queries_total, do not exist in 0.27.1 \u2014 the real names are vllm:prefix_cache_hits / vllm:prefix_cache_queries.",
+  "next_unit_hint": "Three source-backed repairs for the R2-VLLM cell. (1) NULL/MISSING: with --enable-prompt-tokens-details absent the prompt_tokens_details key is ABSENT from the JSON, never 0; and even with the flag cached_tokens is int|None and null on a cold prompt. Parse defensively: usage.get('prompt_tokens_details') or {}, then .get('cached_tokens') or 0 \u2014 and read usage ONLY from the final chunk (empty choices); per-chunk usage never carries details. (2) METRICS fallback, flag-independent: scrape vllm:prefix_cache_hits and vllm:prefix_cache_queries (no gpu_ prefix, token units, monotonic per-engine counters) and vllm:kv_cache_usage_perc (a gauge of occupancy, not hits). Derive hit ratio from a DELTA pair across two scrapes, never from absolute values. (3) OH1L PROBE: 2096 is divisible by 8, so a --prefix-match-unit 8 probe proves nothing. To demonstrate the divisibility rejection use a unit that does not divide 2096 (2096 % 3 == 2, so 3 or 7) and expect the literal ValueError 'Invalid prefix_match_unit=...; all KV cache group block sizes must be divisible by prefix_match_unit.' Note also that prefix_match_unit is IGNORED entirely when the model has a single KV cache group (kv_cache_utils.py:648-650), so any probe is only meaningful on a multi-group hybrid model with --prefix-caching enabled.",
+  "write_paths": [
+    "state/logs/R2-VLLM-doccheck.json",
+    "orchestration/units/R2-VLLM-DOCCHECK.md",
+    "orchestration/handoffs/R2-VLLM-DOCCHECK.json"
+  ],
+  "tool_calls": 14,
+  "bound": 25,
+  "assumptions": [
+    "0.27.1 was obtainable (tag v0.27.1 == commit 6e448d0ea9bf3d88d898b65449ca6dc2aec170ac), so NO fallback to main was used and no main-vs-0.27.1 drift caveat applies to any answer.",
+    "Quotes were read from a shallow clone at state/logs/_r2vllm_src/vllm271 (151M), left in place because a 151M delete fell outside the declared write set; any later unit may `rm -rf 'state/logs/_r2vllm_src'`.",
+    "Only GitHub traffic. Zero requests to 192.168.2.168, zero model requests, no ssh, no docker, no board operations.",
+    "Answer 3 rests on two quoted mechanisms jointly (flag-false guard returning None, and model_dump_json(exclude_unset=True)); either alone would make the key absent.",
+    "Answer 4's names were verified by grep over the whole v0.27.1 tree, so the gpu_-prefixed spelling is absent from source rather than merely missing from docs."
+  ]
+}

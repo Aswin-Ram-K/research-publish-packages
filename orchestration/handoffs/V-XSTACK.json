@@ -1,0 +1,108 @@
+{
+  "unit": "V-XSTACK",
+  "overall": "fail",
+  "status": "done",
+  "checked_cells": ["WIN-SGL", "WIN-VLLM", "TUNED"],
+  "artifacts": [
+    "orchestration/units/V-XSTACK.md",
+    "orchestration/handoffs/V-XSTACK.json",
+    "orchestration/VERDICTS.md"
+  ],
+  "checks": [
+    "1 PASS with residual report — grids re-derived from rows: SGLang gcd 64 (S1), 128 (S2), 64 (S0/G3); vLLM gcd 1088/1056/2096 (=D/8, D/4, D/4 with D=8704); TUNED replay 64. Declared laws hold on the controlled repeat points (SGL 8/8 probe exact at a=1; V1 20/20, V2 11/11, V3 5/5 rep-1; TUNED 10/30). Battery rows are appends, so the repeat law does not apply row-wise: S1/S2 6/888 exact (max|res| 1408; ladder -448 x319, -896 x235, -960 x117); V1 122/284 exact (161 at -1088); V2 140/284 (144 at -1056); V3 8/284. One V1 battery row contradicts the '0 at exact multiples' boundary: 32k arm A turn 8 L=4352 cached=2176 (+2176).",
+    "2 FAIL for TUNED, pass for S1/S2/V1/V2/V3 — TUNED claims page_size 1 / 'no grid'; its delivered replay rows are the G3 64-token law (10/30 exact; all 19 non-exact rows at cached=0; max|res| 8641; identical to G3's 32k rows up to L~30k). page_size 1 predicts cached=0 on every repeat. Launch copy_config says page_size 1 while /get_server_info says page_size 64 and disable_radix_cache false — the delivered rows side with page_size 64.",
+    "3 PASS — every claim line re-derived from delivered rows only; no claim rests on a row outside the delivered population (1800/1800/950 rows, row-count recompute matches n_rows); all rows status 200; the single non-reproducing claim line is TUNED page_size (see not_reproduced).",
+    "4 FAIL — stack+config_id are mandatory in the declared row schema and 289/289 TUNED replay rows have stack=null config_id=null. The shipped analyzer has no guard: red (one row stripped) exits 0, buckets shrink 900->899 while n_rows_total stays 1800; green reproduces the committed analysis exactly. No reader rejects an unattributable row.",
+    "5 PARTIAL — TUNED: parsed both captures, 481 keys, 477 identical; the 4 differing keys are max_total_num_tokens (1620892->1440049, a capacity counter), random_seed, internal_states, startup_time — no config key differs. vLLM: restore records config_ok=true with health 200 and qwen3.5-9b/max_model_len 32768 at 06:18:19 / 06:28:34 / 06:42:07Z; the pre/post /get_server_info key lists are not stored, so only the recorded boolean is re-checkable (unverified).",
+    "6 FAIL — SGL/TUNED cells contain no gate code (grep). vLLM gates every battery (weighted_score 0.975, config_ok true). The only SGLang G0 is U2 (2026-10-20 18:05 UTC, 97 requests, 6/6 PASS) and the box has been restarted repeatedly since (capacity drift; warm_retry_empty_sleep protocol added 2026-10-20), so S1/S2/TUNED were never gated by a G0 that ran on the config they measured."
+  ],
+  "evidence": {
+    "rows_sha256_verified": {
+      "WIN-SGL": "ea5728760540352a752bca501fe77aaae054ec0a88deba4db9bdf8a9f3c5e6c7 (1800 rows)",
+      "WIN-VLLM": "6a7f9f2c00cca34ddd4ff2c3f496fd8f86f3421ea8ae9d2f641d8977baff27c1 (950 rows)",
+      "TUNED": "78515f7c94a2d4fde8238cc4ddf60a13e5a8da2c42e90343661467be25ee3dbd (289 rows)"
+    },
+    "grid": {
+      "SGL-S0": "gcd 64; 351/880 steady rows at odd multiples of 64; 0.6011 fraction multiple of 128",
+      "SGL-S1": "gcd 64; battery exact 6/888 max|res| 1408; warm probe 8/8 at a=1; grid reps L=65570->65536, 131074->131072, 2111->2048",
+      "SGL-S2": "gcd 128; battery exact 6/888 max|res| 1408; warm probe 8/8 at a=1",
+      "V1": "gcd 1088=136x16=D/8; odd64 136/284; law 20/20 rep1 (deduped; 22 raw); boundary multiples_zero 3; +2176 outlier at L=4352",
+      "V2": "gcd 1056=132x8=D/4; odd64 84/284; law 11/11; boundary multiples_zero 3",
+      "V3": "gcd 2096=262x8=D/4; odd16 142/284; law 5/5; boundary multiples_zero 0",
+      "TUNED": "replay 10/30 exact at g=64 a=1; 19 rows cached=0 (residuals -8512..-8641); one at -8576"
+    },
+    "headline_numbers": {
+      "sglang_32k_hit_S1": 0.958423,
+      "sglang_32k_hit_S2": 0.958605,
+      "sglang_32k_uncached_per_turn": 729.196,
+      "sglang_64k_uncached_per_turn": 746.006,
+      "sglang_128k_uncached_per_turn": 725.736,
+      "tuned_43_requests": "36 replay + 6 depth + 1 warmup (warmup cached 0, uncached 330)"
+    },
+    "launch": {
+      "tuned_keys_compared": 481,
+      "tuned_keys_identical": 477,
+      "tuned_keys_differing": ["max_total_num_tokens (1620892->1440049)", "random_seed", "internal_states", "startup_time"],
+      "vLLM_restore_config_ok": {"V1": "2026-10-23T06:18:19Z", "V2": "2026-10-23T06:28:34Z", "V3": "2026-10-23T06:42:07Z"},
+      "live_probe": "GET :8012/health 200 (0 bytes); GET /v1/models 200 -> occamy-1.0 max_model_len 131072"
+    },
+    "schema_red_green": {
+      "red": "strip stack+config_id from one S1 battery row -> exit 0, S1 n 900->899, n_battery 888->887, n_steady 880->879, grid verdict changes, n_rows_total still 1800",
+      "green": "unmodified copy -> exit 0, grid_verdict and S1 battery/grid/probe identical to committed analysis.json"
+    },
+    "g0_source": "U2 handoff mtime 2026-10-20 18:05, evidence 'u2_gate.py 97 live requests, 6/6 PASS'; SGL/TUNED code grep: no gate step; vLLM analysis: gate kind=battery_gate, weighted_score 0.975, config_ok true"
+  },
+  "not_reproduced": [
+    "TUNED 'page_size 1 / no-grid' — the delivered replay rows are the G3 64-token law (10/30 exact, 19 at cached=0); page_size 1 would make every repeat cached=0. Launch artefacts disagree (copy_config page_size 1 vs /get_server_info page_size 64, disable_radix_cache false).",
+    "SGLang mean-uncached 729.22 / 746.02 / 725.75 — raw pooled means are 729.196 / 746.006 / 725.736 (i.e. 729.20 / 746.01 / 725.74). The published figures are the mean of the four per-arm means each rounded to 0.1 (e.g. (735.8+723.4+734.4+723.3)/4 = 729.225 -> 729.22). Difference 0.003%, no verdict change.",
+    "V1 law 20/20 — reproduces only with the author's clamp max(0, g*(floor(L/g)-1)) on rep-1 points; the raw formula mismatches the 3 sub-block lengths (500/1000/1087). The clamp is load-bearing, the 20/20 claim is about the repeat points, not a universal identity.",
+    "S1 32k hit 0.9586 — recomputes 0.95842 from raw rows (S2 0.95861 does round to 0.9586)."
+  ],
+  "overstated": [
+    "TUNED 'page_size 1 / no-grid' is contradicted by the cell's own delivered rows and by its own /get_server_info (page_size 64).",
+    "The SGL/TUNED cells imply a G0 preceded their battery; no in-cell gate exists and the only SGLang G0 (U2, 2026-10-20 18:05) predates the protocol they measured (warm_retry_empty_sleep) and the box restarted for every cell.",
+    "S1/S2 'controlled applies' wording: the applies trace shows the -448/-896 ladder (6/888 exact); the clean a=1 law is exact only on the 8/8 probe."
+  ],
+  "unverified": [
+    "In-cell G0 for S1/S2/TUNED: none ran; whether U2's 6/6 PASS still holds for the post-restart engine and the warm_retry_empty_sleep path is unknown (the box restarted many times and capacity drifted, max_total_num_tokens 1624261 -> 1306681 for the same launched config).",
+    "vLLM pre/post /get_server_info byte equality: only the recorded config_ok=true boolean is stored, not the compared key lists.",
+    "required file state/config/restore-diff.json does not exist (delivered: tuned-config/tuned-restore-diff.json); tuned-restored.json sha 9c6ee8bb... vs the diff's server_info_sha256 5583ab44..., so the diff cannot be re-derived from the stored file (values agree with live bytes)."
+  ],
+  "grid_residuals": {
+    "S0": {"stack": "sglang", "grid": 64, "n_steady": 880, "odd_multiple_of_64": 351, "fraction_multiple_128": 0.6011},
+    "S1": {"stack": "sglang", "grid": 64, "n": 888, "exact": 6, "max_abs_residual": 1408, "probe": "8/8 exact a=1", "distribution": "-448 x319, -896 x235, -960 x117, ..."},
+    "S2": {"stack": "sglang", "grid": 128, "n": 888, "exact": 6, "max_abs_residual": 1408, "probe": "8/8 exact a=1"},
+    "V1": {"stack": "vllm", "grid": 1088, "law": "0 at multiples else 1088*(floor(L/1088)-1)", "rep1_points": 20, "law_exact": 20, "battery_exact": 122, "battery_n": 284, "max_abs_residual": 2176, "note": "161 at -1088 (appends); one +2176 at L=4352"},
+    "V2": {"stack": "vllm", "grid": 1056, "law": "0 at multiples else 1056*(floor(L/1056)-1)", "rep1_points": 11, "law_exact": 11, "battery_exact": 140, "battery_n": 284, "max_abs_residual": 1056},
+    "V3": {"stack": "vllm", "grid": 2096, "law": "2096*floor(L/2096)", "rep1_points": 5, "law_exact": 5, "battery_exact": 8, "battery_n": 284},
+    "TUNED": {"stack": "tuned", "grid": 64, "n_replay": 30, "replay_exact": 10, "evicted": 19, "max_abs_residual": 8641}
+  },
+  "g0": {
+    "S0": "pass — G3 gate PASS recorded at commit 3f2b504",
+    "S1": "fail — no in-cell gate; U2 (2026-10-20 18:05) predates the protocol",
+    "S2": "fail — no in-cell gate; same",
+    "V1": "pass — in-cell battery_gate weighted_score 0.975, config_ok true",
+    "V2": "pass — same",
+    "V3": "pass — same",
+    "TUNED": "fail — no gate exists; M4 same-endpoint capture is ungated; U2 predates"
+  },
+  "launch_configs_match": true,
+  "write_paths": [
+    "orchestration/handoffs/V-XSTACK.json",
+    "orchestration/units/V-XSTACK.md",
+    "orchestration/VERDICTS.md",
+    "scratch/vxstack/"
+  ],
+  "launch_configs_note": "TUNED verified by my own 481-key diff (4 restart artefacts only). vLLM verified via the cells' recorded config_ok=true at restore (key lists not stored). SGL serves the same endpoint, config_ok per-cell restore recorded.",
+  "out_of_bounds": 0,
+  "out_of_bounds_detail": "2 permitted GETs (health, /v1/models) on :8012; 0 model requests; 0 engine restarts; no lock taken",
+  "tool_calls": 19,
+  "bound": 40,
+  "assumptions": [
+    "V1/V2/V3 'pre-window captures' are logs/V*-launch.json (launch spec + cmd) and the per-cell restore record; no separate /get_server_info bytes were stored, so the recorded config_ok boolean is what I could re-check.",
+    "The required state/config/restore-diff.json does not exist; I verified the delivered tuned-config/tuned-restore-diff.json instead and diffed the two capture files myself.",
+    "The two GETs on :8012 are the only live calls; no model request was sent."
+  ],
+  "blocker": "",
+  "next_unit_hint": "TUNED must be re-derived on page_size 1 or its claims corrected to page_size 64; its rows need stack/config_id backfilled. S1/S2/TUNED need an in-cell G0 (U2 predates them). re-run after fixing: V-XSTACK-b."
+}

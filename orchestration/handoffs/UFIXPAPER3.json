@@ -1,0 +1,28 @@
+{
+  "unit": "UFIXPAPER3",
+  "status": "partial",
+  "artifacts": [
+    "papers/encoder-crossover-190/CLAIMS.md (lines 39, 46 relabelled; line 47 added: shipped fixture sha256)",
+    "papers/encoder-crossover-190/GAPS.md (line 20 relabelled)",
+    "orchestration/units/UFIXPAPER3.md"
+  ],
+  "evidence": {
+    "command_or_count": "Defect 1: 3 rows corrected in 2 paper-dir files (CLAIMS.md:39, CLAIMS.md:46+new:47, GAPS.md:20); 0 values changed, 1 value added (a15224ba, read from scratch/uneutral10/package/MANIFEST.json:66). Defect 2: 6 occurrences of 0.3526 found under papers/encoder-crossover-190/ (LIMITATIONS_UPDATE.md:245,247; VERIFIER_CORRECTIONS.md:139,144; DISCLOSURE_CHANGES.md:143,146; EVIDENCE_NOTES.md:286) -- all frozen records, all already carrying dated notes; 0 corrected, 0 changes. `find papers/encoder-crossover-190 -type f -newermt '-25 minutes'` -> exactly CLAIMS.md, GAPS.md.",
+    "commands": [
+      "grep -rn '076164ac\\|a15224ba\\|0\\.3526\\|0\\.368421' papers/encoder-crossover-190/",
+      "sha256sum scratch/uneutral10/package/fixture/fixture-190.json -> a15224bada6950ad27f693acd2287dec564134419061baa475f6716d2db3852e (76897 bytes)",
+      "sha256sum scratch/uneutral10/package/fixture/reflex-decisions.ts -> 369159b03aa67f1571517ea2a9c3c460d218ee832d00e8ddd4928e5e6da0f78d (81284 bytes)",
+      "sha256sum repro/encoder-crossover-190/fixture/reflex-decisions.ts -> 076164ac53c2c1aac130953345c481f88b51f4d6fb93d465c7430308a99b4796 (145031 bytes)",
+      "grep -n 'a15224ba\\|369159b0\\|076164ac' scratch/uneutral10/package/MANIFEST.json -> :66 a15224ba (fixture/fixture-190.json, :67 bytes 76897); :74 076164ac (source_sha256); :75 369159b0 (sha256 of the shipped fixture/reflex-decisions.ts)",
+      "grep -n '0\\.3526\\|0\\.3684' papers/encoder-crossover-190/CLAIMS.md papers/encoder-crossover-190/submission/main.tex papers/encoder-crossover-190/submission/ABSTRACT.txt -> CLAIMS.md:111 0.3684; main.tex:331 0.3684; no 0.3526 in main.tex or ABSTRACT.txt"
+    ]
+  },
+  "blocker": "The live stale value and the package-level digest mislabels are all OUTSIDE this unit's declared write paths. scratch/uneutral10/package/verify/recompute-claims.py:41 and :122 still carry 0.3526 (and the emitted-tree twin scratch/urelease3/dest/research-publish-packages/packages/encoder-crossover-190/verify/recompute-claims.py:41,:122), but both live under scratch/**, which my card forbids editing. Same for the Defect-1 mislabels scratch/uneutral10/package/second-labeller/RUN.json:8-10 and results/REPORT.md:5. Verified only; not edited.",
+  "next_unit_hint": "A unit with scratch/uneutral10/package/** and scratch/urelease3/dest/** write paths should: (1) update verify/recompute-claims.py:41 and :122 to the tree value 0.3684210526315789 (measured today in second-labeller/metrics.json:28,:216) and re-run it red->green; (2) relabel second-labeller/RUN.json:8-10 (fixture_sha256_before/after, sandbox_sha256 = 076164ac, which is the as-audited instrument at repro/encoder-crossover-190/fixture/reflex-decisions.ts, 145,031 bytes) and results/REPORT.md:5 ('Instrument: P05 ... sha256 076164ac') -- both are frozen run records, so prefer a dated note over editing the value, per the unit brief; (3) note that second-labeller/RUN.json:53 still holds the pre-neutralisation AB value 0.3526315789473684 while metrics.json:28/:216 hold 0.3684210526315789 -- package-internal inconsistency.",
+  "write_paths": [
+    "papers/encoder-crossover-190/**",
+    "orchestration/units/UFIXPAPER3.md",
+    "orchestration/handoffs/UFIXPAPER3.json",
+    "scratch/ufixpaper3/**"
+  ]
+}

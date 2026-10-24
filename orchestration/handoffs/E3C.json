@@ -1,0 +1,61 @@
+{
+ "unit": "E3C",
+ "status": "done",
+ "artifacts": [
+  "orchestration/units/E3C.md",
+  "orchestration/handoffs/E3C.json",
+  "orchestration/units/E3.md",
+  "orchestration/handoffs/E3.json"
+ ],
+ "evidence": {
+  "correction_1_headline": {
+   "before": "G7 hypothesis REFUTED (mamba checkpoint eviction)",
+   "after": "G7 hypothesis NOT ESTABLISHED (mamba checkpoint eviction); \"REFUTED\" holds only for the universal attribution of every append deviation to eviction",
+   "where": "E3.md:4 (+ ## Corrections item 1); E3.json.corrected_headline, E3.json.corrected_facts.headline.corrected_to, E3.json.evidence.verdict_corrected; original kept in E3.json.evidence.verdict and in verifier_corrections[0].as_written",
+   "proof": "E3.json.evidence.verdict unchanged: 'G7 hypothesis REFUTED (mamba checkpoint eviction); boundary lag <= 1 appended body survives'"
+  },
+  "correction_2_histogram": {
+   "before": "deficit histogram {0:31, 192:2, 768:1, 832:1}",
+   "after": "recomputed salt-scoped {0:31,192:2,768:1,832:1} (e3_analyze.py:120-136, authoritative) vs stored-row {0:30,192:2,768:1,832:1,-1728:1}; -1728 explained (seq=101 p60 r2: stored prev=269 interleaved probe -> 64*(269//64)-1984=-1728; chain prev 2019 -> 0)",
+   "commands": [
+    "python -c: rows=[json.loads(l) for l in open('experiments/context-cache/cells/E3/e3_rows.jsonl')]; ap=[r for r in rows if r['kind']=='append' and r.get('error')=='']; print(len(ap),sorted(collections.Counter(r['deficit'] for r in ap).items()))",
+    "python -c: verbatim e3_analyze.py:120-136 loop (per-salt prev; deficit=64*(prev//64)-cached) then same counter"
+   ],
+   "output": {
+    "stored_series": "SERIES_A_STORED 35 {-1728: 1, 0: 30, 192: 2, 768: 1, 832: 1}",
+    "recomputed_series": "SERIES_B_RECOMPUTED 35 {0: 31, 192: 2, 768: 1, 832: 1} mismatch 1",
+    "negative_row": "seq=101 salt=f5a38d9edaa8cd0d chain=p60 round=2 L=2806 prev=269 cached=1984 deficit=-1728; chain predecessor L=2019 -> deficit 0",
+    "report_cross_check": "e3_report.json decomposition.deficit_append {n:35,min:0,max:832} = recomputed series (no negative); recomputed_rows.deficit_recomputed_vs_driver_mismatch=1"
+   }
+  },
+  "correction_3_identity": {
+   "before": "residual == L - 64*floor(L_prev/64) - L%64",
+   "after": "tail_term = L - 64*floor(L_prev/64) - L%64; residual = tail_term + deficit; displayed form equals residual only where deficit == 0 (31/35; excess 192,192,768,832)",
+   "where": "E3.md ## Corrections item 3; E3.json.corrected_facts.identity; original sentence left in E3.md ## Result",
+   "proof": "e3_report.json per_chain: residual-tail_term == 0 on the 31 deficit-0 appends and 192/192/768/832 on the other 4"
+  },
+  "correction_4_snapshots": {
+   "before": "43 metrics snapshots",
+   "after": "44 snapshots",
+   "proof": "wc -l experiments/context-cache/cells/E3/e3_metrics.jsonl -> 44; python count -> 44; e3_runlog get_count=44 = 2 info + 42 metrics",
+   "where": "E3.json.corrected_facts.metrics_snapshots; E3.md ## Corrections item 4 (author strings at evidence.gets / mamba_pool.trajectory left as written)"
+  },
+  "E3_json_integrity": "json.load OK; keys = ['unit', 'status', 'artifacts', 'evidence', 'blocker', 'next_unit_hint', 'write_paths', 'assumptions', 'verifier_corrections', 'corrected_headline', 'corrected_facts', 'corrections_meta']; original 7 ['unit', 'status', 'artifacts', 'evidence', 'blocker', 'next_unit_hint', 'write_paths'] all present; per-key equality with pre-edit copy asserted in the writer (only evidence gained verdict_corrected); 4 verifier_corrections entries, all applied:true",
+  "E3_md": "now starts with ## Corrections (VE13, applied by E3C) quoting all 4 originals; headline line replaced; ## Result body untouched",
+  "cells_untouched": "experiments/context-cache/cells/E3/* read-only; 0 live requests, no lock"
+ },
+ "blocker": "",
+ "next_unit_hint": "Cite orchestration/handoffs/E3C.json for E3's corrected headline/identity/histogram; E3.json.evidence.verdict is superseded wording (original retained). Gate may advance: E1 unchanged, E3 record now licensed 'not established' + both series. Decisive open test unchanged: same 6-turn/27-sentence append chain on a pure-attention endpoint; event 7 needs a raised-cap 44-turn E1 rerun.",
+ "write_paths": [
+  "orchestration/units/E3C.md",
+  "orchestration/handoffs/E3C.json",
+  "orchestration/units/E3.md",
+  "orchestration/handoffs/E3.json"
+ ],
+ "assumptions": [
+  "Both histogram series are stated rather than choosing one: the recomputed series is authoritative for chain appends (e3_report.json.recomputed_rows), the stored series is what a naive reader of e3_rows.jsonl gets.",
+  "The -1728 is classified EXPLAINED (driver prev_prompt_tokens picked up the interleaved fresh-salt probe, arithmetic reproduces it to the integer) rather than unexplained; no clamping is claimed anywhere in the rows.",
+  "Author strings ('43 metrics snapshots', the 31-series line in ## Result, evidence.verdict) were left byte-intact per the additive-only rule; the corrections section and corrected_facts are the citable replacements.",
+  "'Refuted' is kept ONLY for the universal-attribution sentence and is scoped to this server/endpoint; the mechanism word is 'not established'."
+ ]
+}

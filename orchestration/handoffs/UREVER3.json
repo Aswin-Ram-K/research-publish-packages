@@ -1,0 +1,33 @@
+{
+ "unit": "UREVER3",
+ "status": "done",
+ "artifacts": [
+  "strategy/PAPER_N3_FEASIBILITY.md",
+  "orchestration/units/UREVER3.md"
+ ],
+ "evidence": {
+  "corpus_counts": "415 unit cards = 1472601 B; 427 handoffs = 3317592 B; 427/427 handoffs parse as JSON (0 unparseable); 97 verdict-shaped vs 330 unit-shaped; 60 V*; VERDICTS.md 349291 B / 3309 lines / 53 V sections; 36 strategy/VERIFICATION_REPORT*.md = 493439 B; date range 2026-10-08 05:52 -> 2026-10-16 17:07",
+  "finding_counts": "contradicted 49 entries/23 files; overstated 178/73; not_reproduced 169/62; unverified 177/73; 573 entries over 97 handoffs; overall = 43 pass / 36 partial / 12 pass-with-corrections / 4 FAIL",
+  "protocol_counterexamples": "workspace git history = 5 commits, all 2026-10-08, 3 touching VERDICTS/handoffs => append-vs-overwrite unverifiable for 2026-10-09..16; AGENTS.md census 136/194/62/0 NOT reproduced (deep extraction gives 134/215/86/17/0); 37 of 97 verifiers are not V*-named",
+  "release_subset": "880 files / 5632923 B (~5.4 MiB); verdict counts alone recompute from the 427 handoffs (3317592 B)",
+  "commands": [
+   "ls -1 orchestration/units/*.md | wc -l ; cat orchestration/units/*.md | wc -c",
+   "ls -1 orchestration/handoffs/*.json | wc -l ; cat orchestration/handoffs/*.json | wc -c ; ls -1 orchestration/handoffs/V*.json | wc -l",
+   "python3 json.load loop over orchestration/handoffs/*.json -> 427 parsed / 0 unparseable; Counter of top-level keys; sum len() of contradicted/overstated/not_reproduced/unverified",
+   "wc -c -l orchestration/VERDICTS.md ; grep -cE '^## V[0-9]' orchestration/VERDICTS.md",
+   "ls -1 strategy/VERIFICATION_REPORT*.md | wc -l ; du -cb strategy/VERIFICATION_REPORT*.md | tail -1",
+   "stat -c '%y' $(ls -1 orchestration/handoffs/*.json | head -1) ; stat -c '%y' orchestration/units/UREVER2.md",
+   "git log --oneline | wc -l ; git log --format='%ad' --date=short | head -3 ; git log --oneline -- orchestration/VERDICTS.md orchestration/handoffs | wc -l",
+   "python3 recursive string walk over all handoffs -> target-git strings 215 in 134 files; 86 plain 'git ... status'; 17 --no-optional-locks; 0 genuinely mutating",
+   "grep -rli 'line_count_neutrality' orchestration/handoffs/*.json -> UFIX15.json; grep '218 untransformed' -> UVER11.json; grep '8,213' -> UNEUTRAL4.json"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Scope-reduce N3: write the protocol section + the four-field verdict taxonomy (contradicted/overstated/not_reproduced/unverified, 573 entries) from the 427 handoffs alone (3.3 MiB, releasable), and carry the counterexamples (uncommitted corpus, 37 non-V verifiers, AGENTS.md census not reproducing). Do NOT claim a mechanism-level taxonomy until a blind relabelling pass over the 97 verdict-shaped handoffs assigns each of the 573 entries a mechanism label against a published rubric. Strongest spine = contradicted (49/23), anchored on UNEUTRAL4.json and UTRACE1.json.",
+ "write_paths": [
+  "strategy/PAPER_N3_FEASIBILITY.md",
+  "orchestration/units/UREVER3.md",
+  "orchestration/handoffs/UREVER3.json",
+  "scratch/urever3/**"
+ ]
+}

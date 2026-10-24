@@ -1,0 +1,53 @@
+{
+  "unit": "UREFRESH1",
+  "status": "done",
+  "artifacts": [
+    "papers/encoder-crossover-190/submission/encoder-crossover-190.tar.gz",
+    "papers/encoder-crossover-190/preprints/encoder-crossover-190-preprints.zip",
+    "papers/gated-read-batching/submission/gated-read-batching.tar.gz",
+    "papers/gated-read-batching/preprints/gated-read-batching-preprints.zip",
+    "papers/replay-record-not-decision/submission/replay-record-not-decision.tar.gz",
+    "papers/replay-record-not-decision/preprints/replay-record-not-decision-preprints.zip",
+    "papers/encoder-crossover-190/submission/BUILD_NOTES.md",
+    "papers/encoder-crossover-190/submission/METADATA.md",
+    "papers/gated-read-batching/submission/BUILD_NOTES.md",
+    "papers/gated-read-batching/submission/METADATA.md",
+    "papers/replay-record-not-decision/submission/BUILD_NOTES.md",
+    "papers/replay-record-not-decision/submission/METADATA.md",
+    "scratch/urefresh1/rebuild.sh",
+    "scratch/urefresh1/verify.sh",
+    "scratch/urefresh1/update_docs.py",
+    "scratch/urefresh1/rebuild/RESULT.txt",
+    "scratch/urefresh1/verify/VERIFY.txt",
+    "scratch/urefresh1/DOC_UPDATES.txt"
+  ],
+  "evidence": {
+    "commands": [
+      "python3 tools/package/md2tex.py --package <slug> --outdir scratch/urefresh1/regen/<slug>/run{1,2} ; cmp",
+      "bash scratch/urefresh1/rebuild.sh",
+      "python3 scratch/urefresh1/update_docs.py",
+      "bash scratch/urefresh1/verify.sh"
+    ],
+    "job1_live_is_current": "all three: regen built twice byte-identical AND == live main.tex; encoder 84967/2b5d049ed7b5368657c227f9efab42a64d1a70304b34813401bf128297ad33cc, gated 39351/9235ec53e581edf0884e7ca9d85e6be696a148d9599f0465af02f7927f635277, replay 32350/ac74384c73d476e89e84e7b5c35a82160a96a6a518adac57bd79929ce339d934",
+    "job1_pre_rebuild_members": "encoder tar 419ac0cc7b1c88493cac6fca0c53a72a7a66fd41eaf7b0bd90f9b746c73af3ec (STALE) / zip 2b5d049e... (already current); gated tar d321f8c3e5500518d8bf75783ce8e3620078d52af51d543a8cbf11748624c0c9 (STALE) / zip 9235ec53... (already current); replay tar 2059e12bda2612a4bcbe3cbb490dc5538a56d6754c71d3f48cab3ce3b74fcf7a (STALE) / zip 3eefe77559b3cf74e3f5cae9e09661701eee8c6cdfdd5aa4a8c911bfe5ca6b54 (STALE)",
+    "job2_recipes_proven": "reproduced each pre-rebuild container byte-for-byte from its own extracted member: encoder 'tar --mtime=@0 --sort=name -cf - main.tex | gzip -n -9'; gated+replay 'tar -czf <out> main.tex'; zips 'zip -X -q <out> main.tex' (encoder and gated zips reproduced exactly => they were already current). Each bundle then built twice: BYTE-IDENTICAL.",
+    "job4_final": "encoder tar 28638/5bc51590bbf9eb4daf0dfc3828eb1bb38f963ca8a06b5cc951e1fa0855982750 md5 3c8d38a38cebd15c04d66e32cfdafe72; encoder zip 28712/705bc498c7c7eb7cf1e53cae8f49fb8656787694c39dbc7c5f4064f9aa7caf7f md5 5c483d8cd71bfbfa12596725a2c58f69; gated tar 14011/cdce3f010e8779a2f291dc4abe654cbc3517c905dc77b2a3a94f60e14e4ed010 md5 30c4c8d331dba03de4a7edd051b4dc11; gated zip 14094/feecb7f7879766bf9ecedaa03bbae3b8817eaab47513d092e42052a4127b74f5 md5 09f535a4d84c439cc801f5097994c9c4; replay tar 11425/e0973596e6237f7c1ea3ab6cedef21c0485800b69488f433ca0b324ea8e90797 md5 720164891c8996a8bf7437ba81588602; replay zip 11379/63044528d554ac5f2a6507e3d06708f3be44aba7e0fba7a3e43be4953260173d md5 b79732d135650ca176f30bb62a64f764",
+    "job4_member_equals_live": "all 6 bundles: exactly one member main.tex; unpacked member sha256 == live submission/main.tex on every one",
+    "job4_leaks": "6 patterns (\\bU[A-Z]{2,}[0-9][A-Z0-9]*\\b, scratch/, tools/package/, papers/, /home/zer0null, Duval) x 6 members => 0 hits each (target zero)",
+    "job3_docs": "7 inline dated SUPERSEDED notes + 6 appended 'Update 2026-10-19 (UREFRESH1)' sections in papers/<slug>/submission/{BUILD_NOTES.md,METADATA.md}; old values retained as dated history; no manifest or generated file touched",
+    "job5_outside_write_paths": "strategy/PREPRINTS_SUBMISSION.md:249-251 (+258,267,306,354-356) quotes old preprint-zip and member digests and tells the reader to submit those zips; strategy/ARXIV_SUBMISSION_PREP.md:5,30 names encoder-crossover-190.tar.gz; strategy/SUBMISSION_READINESS.md:75,85,219; papers/replay-record-not-decision/CLAIMS.md:190-192 and GAPS.md:149; strategy/VERIFICATION_REPORT_PAPERS.md:28,124"
+  },
+  "blocker": "",
+  "next_unit_hint": "A unit owning strategy/** should refresh strategy/PREPRINTS_SUBMISSION.md \u00a75 (digests were already stale before this unit: it quotes 68141633/ba20ccd3/eb344f3e, while the pre-rebuild zips were 705bc498/feecb7f7/251af28e and the replay zip is now 63044528) and the CLAIMS.md/GAPS.md/ARXIV_SUBMISSION_PREP.md/SUBMISSION_READINESS.md tarball quotes. Separately, encoder BUILD_NOTES.md and METADATA.md still present submission/main.tex as 84,747 B / 419ac0cc7b1c8849... while the live file is 84,967 B / 2b5d049ed7b53686...; that row is in-write-path and should be given a dated note. Note the card's deterministic tar recipe does NOT reproduce the shipped containers: use each paper's own recipe (encoder: 'tar --mtime=@0 --sort=name -cf - main.tex | gzip -n -9'; gated/replay: 'tar -czf <out> main.tex').",
+  "write_paths": [
+    "papers/encoder-crossover-190/submission/**",
+    "papers/encoder-crossover-190/preprints/**",
+    "papers/gated-read-batching/submission/**",
+    "papers/gated-read-batching/preprints/**",
+    "papers/replay-record-not-decision/submission/**",
+    "papers/replay-record-not-decision/preprints/**",
+    "scratch/urefresh1/**",
+    "orchestration/units/UREFRESH1.md",
+    "orchestration/handoffs/UREFRESH1.json"
+  ]
+}

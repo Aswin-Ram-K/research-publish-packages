@@ -1,0 +1,118 @@
+{
+  "unit": "U4",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/U4/u4_corpus.py",
+    "experiments/context-cache/cells/U4/u4_sessions.json",
+    "experiments/context-cache/cells/U4/u4_cell.py",
+    "experiments/context-cache/cells/U4/u4_analyze.py",
+    "experiments/context-cache/cells/U4/u4_grid_probe.py",
+    "experiments/context-cache/cells/U4/u4_rows.jsonl",
+    "experiments/context-cache/cells/U4/u4_events.jsonl",
+    "experiments/context-cache/cells/U4/u4_usage_raw.jsonl",
+    "experiments/context-cache/cells/U4/u4_runlog.json",
+    "experiments/context-cache/cells/U4/u4_report.json",
+    "experiments/context-cache/cells/U4/u4_grid_probe_mixed.json",
+    "experiments/context-cache/cells/U4/u4_grid_probe_append.json"
+  ],
+  "evidence": {
+    "verdict": "REFUTED (kill condition triggered): the fork policy does not avoid the compaction break. fork == summarise_in_place in cache behaviour, identical medians, 18/21 paired deltas exactly 0, permutation p=1.0, max |delta| 64 = one 64-grid block. fork breaks on 21/21 events, not once per fork.",
+    "break_cost_median": {
+      "fork": 1792.0,
+      "summarise_in_place": 1792.0,
+      "sliding_window": 1728.0
+    },
+    "break_cost_p25_p75": {
+      "fork": [
+        1728.0,
+        6016.0
+      ],
+      "summarise_in_place": [
+        1728.0,
+        6016.0
+      ],
+      "sliding_window": [
+        1728.0,
+        1744.0
+      ]
+    },
+    "break_cost_total_over_events": {
+      "fork": 63232.0,
+      "summarise_in_place": 63296.0,
+      "sliding_window": 20928.0
+    },
+    "events_per_policy": {
+      "fork": 21,
+      "summarise_in_place": 21,
+      "sliding_window": 12
+    },
+    "paired_deltas": {
+      "fork - summarise_in_place": {
+        "median": 0.0,
+        "max_abs": 64.0,
+        "n_pairs": 21,
+        "n_zero": 18
+      },
+      "fork - sliding_window": {
+        "median": 64.0,
+        "max_abs": 4416.0,
+        "n_pairs": 12,
+        "n_zero": 4
+      }
+    },
+    "permutation_p": {
+      "fork vs summarise_in_place": 1.0,
+      "fork vs sliding_window": 0.453231,
+      "summarise_in_place vs sliding_window": 0.705006
+    },
+    "session_totals_132_rows_per_policy": {
+      "summarise_in_place": {
+        "prompt": 952819,
+        "uncached": 256883,
+        "hit_rate": 0.7304
+      },
+      "fork": {
+        "prompt": 953039,
+        "uncached": 288207,
+        "hit_rate": 0.6976
+      },
+      "sliding_window": {
+        "prompt": 720781,
+        "uncached": 293901,
+        "hit_rate": 0.5922
+      },
+      "none_control_42_rows": {
+        "prompt": 278904,
+        "uncached": 59640,
+        "hit_rate": 0.7862
+      }
+    },
+    "post_event_prompt_tokens_median": {
+      "summarise_in_place": 6165,
+      "fork": 6167,
+      "sliding_window": 1828
+    },
+    "cheapest": "at the event turn sliding_window (median 1728, total 20928) because its post-compaction prompt is 1.8k tokens vs 6.2k and break_cost is ~the whole rewritten prompt; over the full 44-turn session summarise_in_place is cheapest (256,883 uncached vs 293,901 for sliding, hit rate 0.730 vs 0.592) because sliding re-anchors its window near the front of the context every turn and loses the reuse that summarise keeps.",
+    "requests": 438,
+    "requests_total_including_probes": 454,
+    "null_cache_coercions": 23,
+    "elapsed_s": 257.529,
+    "grid_law_violations": "372/372 warm-append rows deviate from cached==64*floor(prompt/64); residual histogram 896:103, 1792:71, 1728:62, 2624:52, 3520:31, 832:18, 2688:17, 3584:7, 6976:3. The 64-grid append baseline in the brief does not hold on this server; break_cost is therefore reported as uncached - (prompt mod 64) as specified, and the fork-vs-edit comparison is a paired comparison on the same turns so it is unaffected.",
+    "commands": [
+      "python3 experiments/context-cache/cells/U4/u4_corpus.py",
+      "python3 experiments/context-cache/cells/U4/u4_cell.py --offline",
+      "python3 experiments/context-cache/cells/U4/u4_cell.py",
+      "python3 experiments/context-cache/cells/U4/u4_analyze.py",
+      "python3 experiments/context-cache/cells/U4/u4_grid_probe.py --mode mixed",
+      "python3 experiments/context-cache/cells/U4/u4_grid_probe.py --mode append"
+    ],
+    "analyze_command": "python3 experiments/context-cache/cells/U4/u4_analyze.py"
+  },
+  "blocker": "",
+  "next_unit_hint": "The measured break is not 'rewriting' but 'new bytes at message 1': fork, summarise_in_place and any reorganisation put a different message at the front of the context, and everything after position 1 is uncached (54 events, cached=0 on the first post-event turn in 11/54, ~29% of the prompt uncached at the median event). A pointer renderer cannot avoid this either: the fork point is at the front, so the suffix is re-prefilled regardless of how short the pointer token is. If the project wants a cache-safe reorganisation it must keep all rewritten bytes at the TAIL (append-only fold at the end), not try to make forking cheap. Also: the shared renderer now emits the fork head verbatim, so fork == summarise by construction - any future fork claim must be tested against a renderer that actually emits a pointer, and this batch's fork arm should not be cited as evidence about pointer rendering.",
+  "write_paths": [
+    "experiments/context-cache/cells/U4/**",
+    "orchestration/handoffs/U4.json",
+    "orchestration/units/U4.md"
+  ]
+}

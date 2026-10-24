@@ -1,0 +1,124 @@
+{
+ "unit": "E2",
+ "status": "done",
+ "artifacts": [
+  "experiments/context-cache/cells/E2/e2_probe.py",
+  "experiments/context-cache/cells/E2/e2_f2.py",
+  "experiments/context-cache/cells/E2/rows.jsonl",
+  "experiments/context-cache/cells/E2/rows_f2.jsonl",
+  "experiments/context-cache/cells/E2/analysis.json",
+  "experiments/context-cache/cells/E2/analysis_f2.json",
+  "experiments/context-cache/cells/E2/events.jsonl",
+  "experiments/context-cache/cells/E2/events_f2.json",
+  "orchestration/units/E2.md",
+  "orchestration/handoffs/E2.json"
+ ],
+ "evidence": {
+  "commands": [
+   ".venv/bin/python experiments/context-cache/cells/E2/e2_probe.py",
+   ".venv/bin/python experiments/context-cache/cells/E2/e2_f2.py",
+   ".venv/bin/python experiments/context-cache/cells/E2/e2_probe.py --analyse-only"
+  ],
+  "requests_live": "89 (51 main: R 40 + F 11; 38 F2); 0 warm retries; hard cap 90",
+  "rows": "51 rows (R 40, F 11) in cells/E2/rows.jsonl + 38 rows (F2) in cells/E2/rows_f2.jsonl",
+  "rows_sha256": "rows.jsonl 47980b49400f49fd932b69ab0926c5a1988e3d68a8a4ec446c8c4cb66d1cf7ca; rows_f2.jsonl 250dcf0490440802929217aa450e23b62b0af7811b49d0f52a4fe5669d8ecf41",
+  "lock_wait_s": "0.0 (flock .occamy.lock, LOCK_EX, held for both batches)",
+  "elapsed_s": "15.7 (main row timestamp span) + 14.7 (F2); 1 lock acquisition each, no timeout",
+  "decomposition_R_t19_34": "mean uncached 1658.9 = 456.7 new_tail + 30.2 boundary(prompt%64) + 1172.0 re_prefill; residual 0.0 on 16/16 turns",
+  "decomposition_R_all_steady": "mean 1268.9 = 456.2 + 34.3 + 778.4; residual 0.0; 37/37 prefixes byte-identical; 0 changed messages",
+  "decomposition_R_t2_17": "mean 779.5 = 454.9 + 36.6 + 288.0 (pre-fold)",
+  "decomposition_R_t36_40": "mean 1586.8 = 458.8 + 40.0 + 1088.0",
+  "attribution": "98.2% window tail (27.5% new node + 70.7% re-prefilled tail), 1.8% 64-boundary, 0% summary node",
+  "boundary_test": "33/37 steady turns end exactly at an earlier turn's prompt end (floor64(prompt_j)==cached); lag histogram 1:7 2:8 3:10 4:8; 4 exceptions are t19,t20,t36,t37 (the 2 post-break recovery turns after each fold); re_prefill == token sum of skipped trailing messages within 128 on 33/33 (0 mismatches); every re_prefill a multiple of 64",
+  "summary_test": "one head_sha over all 40 R turns; summary_shas 11b8e9bcc95f067b for t18-34 and a1273293d4029b67 for t35-40 (changed only at folds); cached >= head+summary on 14/16 post-fold steady turns",
+  "reproducibility": "R reproduces U15 exactly: cached t19-23 768/768/1920/1920/2816, t36-40 896/896/1792/1792/2688. F2 (warm epoch) reproduces U15 F exactly: t35-38 cached 768/2048/2048/2944, uncached 455/919/450 vs U15 458/922/453. F cold-at-t30 (E2F) does NOT: t36-38 cached 768/768/2048.",
+  "F_vs_R_component": "F2 t36-38 mean uncached 608 = 444 new_tail + 14 boundary + 149 re_prefill (lag 1 turn) vs R t36-40 1587 = 459 + 40 + 1088 (lag 3 turns) -> same component (tail re-prefill), shorter lag; depth tracks cache-epoch warmth, not the fork marker",
+  "F_vs_R_component_corrected": "F2 t36-38 mean uncached 608 = 444 new_tail + 14 boundary + 149 re_prefill (lag 1 turn, amount reproduced; the lag-1 reading is non-unique - cached 2048 also equals floor64(prompt_3)/floor64(prompt_18)) vs R t36-40 1587 = 459 + 40 + 1088 (lag 3 turns). Same component (tail re-prefill), shorter lag. Corrected deflation: a WARM EPOCH IS NECESSARY for the comparison; the arm still contributes (an interaction) that this design does not isolate - E2F confounds warmth with missing t1-29 history, has no cold-R control, is one seed; U15 ran both arms warm from t1 and both warm epochs reproduce (F 2048/2048/2944 vs R 896/896/1792).",
+  "residual_is_identity": "residual==0.0 is an ALGEBRAIC IDENTITY given prefix_ok - it cannot go red. Evidence instead: 37/37 prefix-identical steady turns (0 changed message indices); 33/37 cached == 64*floor(prompt_j/64); red->green plain prompt_j -> 0/37.",
+  "attribution_scope": "shares are arithmetic from the component means, not independent evidence; '0% summary node' is STRUCTURAL (no summary term in the decomposition), supported indirectly: summary node est 188 cached behind every cut (min cached 768), summary hash changes only at t18/t35.",
+  "boundary_test_lag_scope": "overall lag histogram 1:7 2:8 3:10 4:8; pre-fold (t2-17) is 1:7 2:8 3:1 - t10 is turn-lag 3 (message-skip 2, cached 3840 = floor64(prompt_7)), so 'lag 1-2 pre-fold' is not exact in turn units; post-fold (t19-40 steady) is 3:9 4:8.",
+  "summary_test_scope": "head+summary test is 17/21 across ALL post-fold steady turns (t19-40 excluding fold t35); the '14/16' figure covers t19-34 only. Short turns: t19, t20, t36, t37. Summary node est 188, min cached 768 -> summary still cached behind every cut.",
+  "re_prefill_values_full": "steady-turn set: 0, 384 (t11), 448, 512, 832, 896, 960, 1024 (t10), 1152 (t19), 1344, 1408, 1600 - all multiples of 64 (81/81 rows across both files); 8448 occurs only on the fold turns t18 and t35."
+ },
+ "blocker": "",
+ "next_unit_hint": "Verifier: run `.venv/bin/python experiments/context-cache/cells/E2/e2_probe.py --analyse-only` (offline, no lock/request), re-check rows sha256, residual==0, the 33/37 boundary hits, and that head_sha is constant while summary_shas changes only at t18/t35. Then rule on G6: the re-prefilled span is the window's tail (reuse lag 1-2 turns pre-fold, 3-4 post-fold, 64-quantized), not the summary node; and U15's F t36-40 advantage is the same component at a shorter lag, reproducible only with a warm pre-fold epoch (a cold-epoch F run reproduces R's depth) -- so it must not be attributed to the fork marker.",
+ "write_paths": [
+  "experiments/context-cache/cells/E2/**",
+  "orchestration/units/E2.md",
+  "orchestration/handoffs/E2.json"
+ ],
+ "assumptions": {
+  "fresh_salts": "make_salt(2501) for R, 2502 for F, 2503 for F2 instead of U15's 1501/1502, so the batch starts cold even if the endpoint still held U15's prefixes; the salt is a constant 16-hex-char token in message 0, so the mechanism is unchanged and prompt counts track U15 within 1-3 tokens",
+  "F_scope": "F was live from turn 30 (offline replay 1-29) in the main probe, then a second full-epoch F (F2, live from turn 1, 38 turns) was added because the first F did not reproduce U15's t36-40 rows; both are reported rather than choosing one",
+  "tolerance": "the closed decomposition has residual 0 because it is an identity on turns whose byte-identical prefix is verified from content hashes; the empirical content is that prefix identity held on all 37 R steady turns and 0 messages changed",
+  "no_tokenize_endpoint": "per-message exact token counts come from measured prompt_tokens deltas and the est_tokens (4 chars/token) node map; no /tokenize probes were spent"
+ },
+ "verifier_corrections": [
+  {
+   "claim": "The deflation sentence: F's t36-40 advantage tracks cache-epoch warmth, not the fork marker",
+   "as_written": "depth tracks cache-epoch warmth, not the fork marker (evidence.F_vs_R_component); E2.md:99-103 'the depth is a cache-epoch property, not a fork-policy property ... should not be read as an effect of the fork marker'",
+   "corrected_to": "A warm epoch is necessary for the comparison; the arm still contributes (an interaction), which this design does not isolate. U15 ran R and F as two warm 40-turn epochs from t1, so warmth was constant there and the F-R gap reproduces under the producing order (F 2048/2048/2944 vs R 896/896/1792 cached at t36-38). E2F confounds warmth with the missing t1-29 history, has no cold-R control, and is one seed.",
+   "ruling": "OVERSTATED",
+   "verifier": "VE24 c4 + VE2 check 5 (independently, same ruling)",
+   "applied": true
+  },
+  {
+   "claim": "E2F cold F 'reproduced R's depth'",
+   "as_written": "orchestration/units/E2.md:100 'cached 0 at t30) reproduced R's depth instead: t36-38 cached 768/768/2048'",
+   "corrected_to": "FALSE. E2F cached 768/768/2048 vs R 896/896/1792 at t36-38 - no post-fold turn matches. E2F reproduces R's MAGNITUDE only (uncached 1735/2199/1346 vs R 1385/1849/1380; re-prefill 1280/1728/896).",
+   "ruling": "NOT REPRODUCED (false as written)",
+   "verifier": "VE24 c4b/not_reproduced + VE2 check 5/corrections",
+   "applied": true
+  },
+  {
+   "claim": "Pre-fold lag is 1-2 turns; F2's t36 re-prefill is at lag 1",
+   "as_written": "E2.md:11 'skipping the newest 0-3 appended messages (lag 1-2 turns before the first fold, 3-4 turns after it)'; E2.md:95-96 'F2 t36-38 ... re-prefill 149 (lag 1 turn)'",
+   "corrected_to": "Pre-fold is NOT 1-2: t10 is turn-lag 3 (message-skip 2; cached 3840 = floor64(prompt_7)); pre-fold histogram 1:7 2:8 3:1 (post-fold 3:9 4:8 as claimed). F2's t36 'lag 1' is non-unique: cached 2048 also equals floor64(prompt_3) and floor64(prompt_18), all three 2048 in F2's epoch; the 149-token amount does reproduce.",
+   "ruling": "CORRECTED (imprecise / non-unique)",
+   "verifier": "VE24 overstated + VE2 not_reproduced",
+   "applied": true
+  },
+  {
+   "claim": "Summary-node count scope: '14/16 post-fold' and '0% summary node'",
+   "as_written": "summary_test 'cached >= head+summary on 14/16 post-fold steady turns'; attribution '0% summary node'",
+   "corrected_to": "'14/16' covers t19-34 only; across all 21 post-fold steady turns the head+summary test is 17/21 (t19,t20,t36,t37 short). The summary node (est 188) is still cached behind every cut (min cached 768), so '0% summary node' is STRUCTURAL - no summary term exists in the decomposition - and must carry that scope, not be read as a measured share.",
+   "ruling": "SCOPED",
+   "verifier": "VE2 corrections (both counts), VE24 c5 (structural)",
+   "applied": true
+  },
+  {
+   "claim": "re_prefill value list is complete",
+   "as_written": "E2.md:78-80 '(0, 448, 512, 832, 896, 960, 1344, 1408, 1600)'",
+   "corrected_to": "List omits 384 (t11), 1024 (t10) and 1152 (t19). Full steady-turn set: 0, 384, 448, 512, 832, 896, 960, 1024, 1152, 1344, 1408, 1600 - all multiples of 64; 8448 occurs only on the fold turns t18 and t35.",
+   "ruling": "INCOMPLETE (values restored)",
+   "verifier": "VE2 corrections",
+   "applied": true
+  },
+  {
+   "claim": "residual == 0.0 cited as evidence",
+   "as_written": "evidence.decomposition_* 'residual 0.0 on 16/16 turns'; E2.md:52 'residual = 0 on every steady turn of both arms'",
+   "corrected_to": "The residual is an ALGEBRAIC IDENTITY: once prefix_ok holds, (p-c)-[(p-pp)+(pp%64)+((pp-pp%64)-c)] == 0 for every row, so it cannot go red and is not evidence. Actual evidence: 37/37 prefix-identical turns (0 changed message indices) and 33/37 cached == 64*floor(prompt_j/64); red->green: substituting plain prompt_j gives 0/37.",
+   "ruling": "OVERSTATED AS EVIDENCE (identity)",
+   "verifier": "VE24 c1 + VE2 checks 1 and 4",
+   "applied": true
+  }
+ ],
+ "corrections_applied_by": "E2C",
+ "superseded_text": {
+  "evidence.F_vs_R_component": "F2 t36-38 mean uncached 608 = 444 new_tail + 14 boundary + 149 re_prefill (lag 1 turn) vs R t36-40 1587 = 459 + 40 + 1088 (lag 3 turns) -> same component (tail re-prefill), shorter lag; depth tracks cache-epoch warmth, not the fork marker",
+  "next_unit_hint": "Verifier: run `.venv/bin/python experiments/context-cache/cells/E2/e2_probe.py --analyse-only` (offline, no lock/request), re-check rows sha256, residual==0, the 33/37 boundary hits, and that head_sha is constant while summary_shas changes only at t18/t35. Then rule on G6: the re-prefilled span is the window's tail (reuse lag 1-2 turns pre-fold, 3-4 post-fold, 64-quantized), not the summary node; and U15's F t36-40 advantage is the same component at a shorter lag, reproducible only with a warm pre-fold epoch (a cold-epoch F run reproduces R's depth) -- so it must not be attributed to the fork marker.",
+  "orchestration/units/E2.md:99-103": "**But the depth is a cache-epoch property, not a fork-policy property.** ... U15's F advantage is therefore reproducible only under U15's run order (a long warm epoch before the fold), and should not be read as an effect of the fork marker.",
+  "orchestration/units/E2.md:100": "t36-38 cached 768/768/2048, uncached 1,735/2,199/1,346. ... reproduced **R's** depth",
+  "orchestration/units/E2.md:11": "skipping the newest 0-3 appended messages (lag 1-2 turns before the first fold, 3-4 turns after it)",
+  "orchestration/units/E2.md:78-80": "All `re_prefill` values are multiples of 64 (0, 448, 512, 832, 896, 960, 1344, 1408, 1600)"
+ },
+ "next_unit_hint_corrected": "Verifiers: E2's measurements reproduce exactly; cite 37/37 prefix-identical and 33/37 floor64 identity as the evidence, NOT residual==0 (algebraic identity). For G6: the re-prefilled span is the window's tail (lag 1-3 turns pre-fold, 3-4 post-fold, 64-quantized), not the summary node; U15's F advantage is the same component at a shorter lag under a warm epoch. A warm epoch is necessary; the arm's contribution is not isolated (cold F lacks t1-29 history, no cold-R control, one seed). If G6 needs the marker isolated: cold-R control from t30 plus a second seed.",
+ "evidence_keys_added": [
+  "F_vs_R_component_corrected",
+  "residual_is_identity",
+  "attribution_scope",
+  "boundary_test_lag_scope",
+  "summary_test_scope",
+  "re_prefill_values_full"
+ ]
+}

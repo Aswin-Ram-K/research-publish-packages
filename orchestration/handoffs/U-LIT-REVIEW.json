@@ -1,0 +1,40 @@
+{
+  "unit": "U-LIT-REVIEW",
+  "status": "done",
+  "artifacts": [
+    "orchestration/handoffs/U-LIT-REVIEW.md",
+    "orchestration/handoffs/U-LIT-REVIEW.json"
+  ],
+  "evidence": {
+    "command_or_count": "25 sources catalogued: 21 VERIFIED (exact quoted numbers read on the fetched source page), 2 PARTIAL (claim verified, number from abstract/metadata snippet - S08 TurboRAG, S24 PCR), 1 UNVERIFIED (S23 JaccardServe SSRN, Cloudflare-blocked on 2 attempts), 1 mechanism-only (S22 interval absent)",
+    "sources_verified": 21,
+    "sources_partial": 2,
+    "sources_unverified": 1,
+    "commands": [
+      "local_web_crawl https://arxiv.org/abs/2411.19379 (Marconi: '34.4x higher token hit rates (71.1% or 617 ms lower TTFT)', MLSys 2025)",
+      "local_web_crawl https://arxiv.org/abs/2608.30310 (Tail-Replay: '5-10% replay budget retains 92.8-99.9%', 9.1-14.3x at 32K)",
+      "local_web_crawl https://arxiv.org/abs/2606.14945 (Remember Don't Re-read: 90% fewer tokens 2492 vs 24465)",
+      "curl https://developers.openai.com/api/docs/guides/prompt-caching.md | sed -n '123p' -> 'Reported cached_tokens ... rounding down to the nearest multiple of 128'",
+      "curl https://developers.openai.com/api/docs/guides/prompt-caching.md | sed -n '308p' -> 'Exact eligible boundary, excluding hidden tokens' (GPT-5.6+ only)",
+      "curl https://platform.claude.com/docs/en/build-with-claude/prompt-caching.md | sed -n '606,617p' -> min cacheable 512/1024/2048/4096 per model",
+      "sed -n '767p' ant.md -> 'Exact matching: Cache hits require 100% identical prompt segments'",
+      "curl raw.githubusercontent.com/sgl-project/sglang/main/python/sglang/srt/mem_cache/radix_cache.py | grep -A12 'def match_prefix' -> 'Find the longest cached prefix' + single device_prefix_len",
+      "local_web_crawl https://www.lmsys.org/blog/2026-08-11-unified-radix-cache/ -> 'A recurrent state is valid only at an exact prefix checkpoint'"
+    ]
+  },
+  "load_bearing_numbers": [
+    {"source": "S06 SAFE-KV arXiv 2610.15186", "number": "47.2% / 37.8% of full-prefill answers preserved by naive non-prefix composition; exact only up to 4 documents, degrades at 16", "use": "fidelity cost of non-prefix reuse"},
+    {"source": "S16 OpenAI prompt-caching docs", "number": "pre-GPT-5.6 cached_tokens rounds DOWN to nearest multiple of 128 (exact only on 5.6+)", "use": "server-reported cached count is NOT exact - blocks using it as ground truth in instrumentation"},
+    {"source": "S09 Marconi arXiv 2411.19379 + S21 LMSYS 2026-08-11", "number": "34.4x higher token hit rates / 71.1% lower TTFT; recurrent state 'valid only at exact prefix checkpoint'", "use": "hybrid linear-attention layers cannot roll back -> reuse is checkpoint-quantised"}
+  ],
+  "biggest_overlap_risk": {
+    "source": "S06 SAFE-KV (arXiv 2610.15186)",
+    "why": "It already formalises non-prefix KV reuse as behavior-preservation vs full prefill, proves uncorrected composition degrades, and concludes faithful repair costs full prefill. Our 'cheap reuse is lossy / exact reuse is expensive' core claim is substantially theirs; we must position as never creating the break (immutable nodes + append-only deltas) rather than repairing it."
+  },
+  "blocker": "64-token mamba checkpoint interval is NOT literature-verified - Marconi/Tail-Replay/LMSYS establish checkpoint-quantised reuse but none states 64; three SGLang source paths returned 404. Cite to internal measurement only.",
+  "next_unit_hint": "Fetch JaccardServe 7162778 via institutional access or author preprint (UNVERIFIED, 44% TTFT / 60% output-divergence is attractive-but-uncitable). Also answer PrefixBench-H100's negative result (cross-runtime differences live 'above the cache, in the scheduling layer').",
+  "write_paths": [
+    "orchestration/handoffs/U-LIT-REVIEW.md",
+    "orchestration/handoffs/U-LIT-REVIEW.json"
+  ]
+}

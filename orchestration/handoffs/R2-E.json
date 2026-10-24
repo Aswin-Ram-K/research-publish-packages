@@ -1,0 +1,194 @@
+{
+  "unit": "R2-E",
+  "status": "done",
+  "topic": "prompt-cache-preserving prompt engineering for a pointer-based, isolated-workspace agent on SGLang and vLLM",
+  "artifacts": ["orchestration/handoffs/R2-E.json"],
+  "write_paths": ["orchestration/handoffs/R2-E.json"],
+  "bound": 40,
+  "tool_calls": 20,
+  "assumptions": [
+    "Automated lane: no ask_user_question was used; no live model requests, no GX10 access, no board operations, no edits to papers/**.",
+    "The engine-specific claims are limited to documentation of current main-branch vLLM and current SGLang docs; where a doc is silent I say so rather than inferring."
+  ],
+  "provider_vs_server_cache": {
+    "provider_api_caching": "Anthropic, OpenAI and Gemini expose request-level cache semantics: explicit cache points (Anthropic cache_control blocks; OpenAI prompt_cache_breakpoint), TTL/minimum-length/pricing rules, and routing keys. The provider decides what to store and bills reads/writes. Anthropic: 'Prompt caching references the entire prompt: tools, system, and messages (in that order), up to and including the block designated with cache_control.' (https://platform.claude.com/docs/en/build-with-claude/prompt-caching). OpenAI: up to four explicit breakpoints per request and 1,024-token minimum on GPT-5.6+ (https://developers.openai.com/api/docs/guides/prompt-caching.md).",
+    "inference_server_prefix_caches": "SGLang RadixAttention and vLLM Automatic Prefix Caching are KV-tensor caches keyed by token prefixes: no per-request breakpoint API, no notion of a billed read, no vendor anchor object. vLLM hashes each block 'by the tokens in the block and the tokens in the prefix before the block' and caches only full blocks (https://raw.githubusercontent.com/vllm-project/vllm/main/docs/design/prefix_caching.md). SGLang keeps prompt+output KV 'in a radix tree' and does prefix matching on the full prompt every request (https://www.lmsys.org/blog/2024-01-17-sglang/). Consequence: on these engines the only lever is byte-identical layout of everything before the first changing token; you cannot mark an interior anchor or ask for suffix reuse.",
+    "why_the_distinction_matters": "A cache_control breakpoint changes what the provider is willing to store and what it charges; it does not create a reusable suffix, and the suffix still has to be a prefix of something previously written. On SGLang/vLLM there is no breakpoint to place, so 'put the volatile part last' is the whole mechanism. Research systems do implement non-prefix reuse (Prompt Cache prompt modules, CacheBlend), but neither SGLang nor vLLM documents support for it."
+  },
+  "techniques": [
+    {
+      "name": "Stable-prefix-first ordering (tools -> system -> scaffold -> volatile tail)",
+      "what_it_does": "Puts every token that is invariant across turns at the front and the per-turn delta last, so each request shares the longest possible prefix.",
+      "engine_or_api": "All prefix caches: Anthropic, OpenAI, Gemini, SGLang radix, vLLM APC",
+      "citable_source": "https://platform.claude.com/docs/en/build-with-claude/prompt-caching",
+      "quote": "Place static content (tool definitions, system instructions, context, examples) at the beginning of your prompt. Mark the end of the reusable content for caching using the `cache_control` parameter.",
+      "expected_effect": "Only the tail is prefilled after turn 1; the stable prefix is served from cache. OpenAI reports a >90% token cache-hit rate for an agent that appends without rewriting earlier context (https://developers.openai.com/api/docs/guides/prompt-caching.md).",
+      "risk": "One changed token inside the stable region invalidates every cached block after it; ordering alone does not protect against mid-context edits."
+    },
+    {
+      "name": "Cache anchor / breakpoint at the end of the static scaffold",
+      "what_it_does": "Marks the last byte-identical block as the reusable boundary, so the engine writes and later matches that prefix even when the suffix differs.",
+      "engine_or_api": "Anthropic cache_control (explicit breakpoints, max 4); OpenAI prompt_cache_breakpoint (max 4 writes); Gemini automatic (no breakpoint control)",
+      "citable_source": "https://platform.claude.com/docs/en/build-with-claude/prompt-caching",
+      "quote": "Cache writes occur only at your breakpoint. Marking a block with `cache_control` writes exactly one cache entry: a hash of the prefix ending at that block. ... Because the hash is cumulative, covering everything up to and including the breakpoint, changing any block at or before the breakpoint produces a different hash on the next request.",
+      "expected_effect": "A varying suffix (timestamp, new user message, new tool result) no longer forces a full re-prefill; the provider matches the anchored prefix. OpenAI: 'Place explicit markers at the end of stable content.'",
+      "risk": "A breakpoint on the varying block writes a cache entry that never hits ('Move `cache_control` to block 5, the last block that stays the same across requests'). Anthropic lookback is 20 blocks; OpenAI explicit-only mode will miss an implicit write made by an earlier request."
+    },
+    {
+      "name": "Append-only conversation (never rewrite or extend an earlier message)",
+      "what_it_does": "Each turn adds a new message/block instead of editing existing ones, so the token sequence of all prior turns is preserved exactly.",
+      "engine_or_api": "OpenAI (documented gotcha), Anthropic, Manus agent runtime; applies to SGLang/vLLM equally",
+      "citable_source": "https://developers.openai.com/api/docs/guides/prompt-caching.md",
+      "quote": "When the conversation structure permits, preserve the original message and append a new message instead.",
+      "expected_effect": "Every turn is a pure append: cache hit covers the whole previous prompt. Manus states 'the KV-cache hit rate is the single most important metric for a production-stage AI agent' and 'Make your context append-only.' (https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus).",
+      "risk": "Context only grows; eventual compaction is a prefix rewrite that costs one full prefill. Extending an existing message in place silently breaks the hit even when the leading tokens are unchanged."
+    },
+    {
+      "name": "Mid-conversation instruction injection as an appended system message",
+      "what_it_does": "Adds new guidance as a new {role: system} message at the tail instead of editing the top-level system prompt.",
+      "engine_or_api": "Anthropic Messages API (Fable/Mythos 5.1, Opus 5.5/4.8/5, Sonnet 5.5, Haiku 5.5; not Sonnet 5)",
+      "citable_source": "https://platform.claude.com/docs/en/build-with-claude/prompt-caching",
+      "quote": "you can add a new system instruction partway through a conversation without invalidating the system or message caches. Append a `{\"role\": \"system\"}` message to `messages` instead of editing the top-level `system` field, so the cached prefix stays unchanged.",
+      "expected_effect": "A mid-run policy change costs only the appended message, not a re-prefill of the whole context.",
+      "risk": "Model coverage is partial; editing top-level `system` invalidates the tool and system caches as well. The equivalent affordance does not exist on SGLang/vLLM, where editing any earlier token is fatal to the suffix."
+    },
+    {
+      "name": "Batch destructive context surgery (clear_at_least threshold)",
+      "what_it_does": "When pruning context, clear one large region at once and require a minimum token count, so cache invalidation is amortized.",
+      "engine_or_api": "Anthropic context editing (clear_tool_uses_20250919, clear_thinking_20251015)",
+      "citable_source": "https://platform.claude.com/docs/en/build-with-claude/context-editing",
+      "quote": "Tool result clearing: Invalidates cached prompt prefixes when content is cleared. To account for this, clear enough tokens to make the cache invalidation worthwhile. Use the `clear_at_least` parameter to ensure a minimum number of tokens is cleared each time.",
+      "expected_effect": "One cold turn followed by many warm turns, instead of a small invalidation every turn. Each clearing event pays a cache write, then the new prefix is reused.",
+      "risk": "Every clearing event pays cache-write cost again; clearing too little is pure loss."
+    },
+    {
+      "name": "Tool-result compaction (tail-side, server-side)",
+      "what_it_does": "Replaces old tool outputs with placeholders once they have been consumed, shrinking the volatile region without touching tool definitions or the system scaffold.",
+      "engine_or_api": "Anthropic server-side context editing; client-side compaction on any engine",
+      "citable_source": "https://platform.claude.com/docs/en/build-with-claude/context-editing",
+      "quote": "This is particularly useful for agentic workflows with heavy tool use. Older tool results (such as file contents or search results) are no longer needed once Claude has processed them.",
+      "expected_effect": "Fewer tokens and a smaller per-turn delta; when the cleared region is at the tail, everything before it still hits. Anthropic's context-engineering guidance calls tool result clearing 'one of the safest lightest touch forms of compaction' (https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents).",
+      "risk": "Clearing mid-history invalidates the prefix from that point; the agent must be able to re-fetch anything it still needs (pointer style makes this safe)."
+    },
+    {
+      "name": "Freeze tool definitions for the whole run (mask, do not add/remove)",
+      "what_it_does": "Keeps the tools array byte-identical and constrains behaviour by masking allowed tools per state instead of mutating the schema.",
+      "engine_or_api": "Agent runtime; Anthropic and OpenAI both render tools into the cached prefix",
+      "citable_source": "https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus",
+      "quote": "avoid dynamically adding or removing tools mid-iteration",
+      "expected_effect": "Tool definitions sit at the front of the prompt on both providers, so freezing them keeps the largest stable block reusable; Manus pairs this with 'mask logits instead of removing tools' in the function-calling layer.",
+      "risk": "Tool sets that genuinely must change mid-run force a full prefix rewrite; Anthropic's inline-tools beta exists precisely to avoid that, and has no SGLang/vLLM analogue."
+    },
+    {
+      "name": "Page/block alignment of the stable prefix (pad to a full page)",
+      "what_it_does": "Ensures the reusable prefix ends on a page boundary so the engine can match whole pages; the sub-page tail is not reusable.",
+      "engine_or_api": "SGLang radix cache (page_size is backend/config dependent; --page-size default 1)",
+      "citable_source": "https://docs.sglang.io/docs/advanced_features/attention_backend.md",
+      "quote": "With 65 tokens and `page_size = 64`, only the first page of 64 tokens will be cached and matched; the remaining 1 token is discarded. Use `page_size = 1` for maximum prefix reuse (token-level matching).",
+      "expected_effect": "Removes a structurally unmatched tail; with page_size 64 up to 63 trailing tokens are never reusable.",
+      "risk": "Some backends force a native page size (FlashMLA 64, Cutlass MLA 128, TRTLLM 32/64), so alignment cannot always be chosen freely."
+    },
+    {
+      "name": "Session pinning (soft reference on the reusable prefix)",
+      "what_it_does": "Registers the reusable KV of a long-lived agent session so it is evicted after unreferenced KV under memory pressure.",
+      "engine_or_api": "SGLang --enable-session-radix-cache + top-level session_id + /close_session",
+      "citable_source": "https://docs.sglang.io/docs/advanced_features/session_radix_cache.md",
+      "quote": "Session-aware radix caching improves cache hits for long-lived, multi-turn workloads under memory pressure. It registers reusable KV to a session and evicts unreferenced KV before KV still referenced by an active session.",
+      "expected_effect": "Keeps the agent's stable prefix resident across turns instead of losing it to one-off traffic.",
+      "risk": "Soft only: 'Session references are soft protection, not memory pins' — the KV can still be evicted. Requires a stable session_id and full prompts on every request; it does not reconstruct context."
+    },
+    {
+      "name": "Deterministic cache routing / stable cache key",
+      "what_it_does": "Pins related requests to the same replica/cache shard with a stable key, so a hit is possible at all.",
+      "engine_or_api": "OpenAI prompt_cache_key (pre-GPT-5.6 routing); stable hash routing for SGLang router / vLLM data-parallel replicas",
+      "citable_source": "https://developers.openai.com/api/docs/guides/prompt-caching.md",
+      "quote": "A request can reuse a cached prefix only if it reaches a machine holding a matching entry that has not expired. Routing requests to the right machine is therefore important for cache reuse.",
+      "expected_effect": "Removes routing-induced misses for a single agent session; OpenAI notes 'Keys influence routing; they do not pin requests to a machine or guarantee a cache hit.'",
+      "risk": "Over-partitioning fragments the cache; separate keys per request guarantee zero sharing."
+    },
+    {
+      "name": "Pointer-style context: references instead of inline bodies",
+      "what_it_does": "Keeps paths/IDs/URLs in the stable region and loads the referenced content just in time at the tail, instead of inlining large bodies that will be rewritten.",
+      "engine_or_api": "Agent-side technique; no engine API (works with SGLang/vLLM and providers)",
+      "citable_source": "https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus",
+      "quote": "the content of a web page can be dropped from the context as long as the URL is preserved, and a document's contents can be omitted if its path remains available in the sandbox.",
+      "expected_effect": "Shrinks the per-turn volatile delta and keeps the large stable scaffold intact; Anthropic describes the same 'just in time' pattern as maintaining 'lightweight identifiers (file paths, stored queries, web links, etc.)' (https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents).",
+      "risk": "Each fetch adds tail tokens and an extra tool round-trip; no authoritative measurement of the cache-hit delta for pointer-style vs inlined context was found."
+    },
+    {
+      "name": "Non-prefix KV reuse (research): prompt modules and CacheBlend",
+      "what_it_does": "Reuses precomputed KV for non-contiguous or interior segments, which is the only way to get an 'interior anchor' hit.",
+      "engine_or_api": "Research prototypes (not SGLang/vLLM production features)",
+      "citable_source": "https://arxiv.org/abs/2405.16444",
+      "quote": "reuses the precomputed KV caches, regardless prefix or not, and selectively recomputes the KV values of a small subset of tokens",
+      "expected_effect": "CacheBlend reports it 'reduces TTFT by 2.2-3.3x and increases the inference throughput by 2.8-5x'; Prompt Cache (https://arxiv.org/abs/2311.04934) reports TTFT 'improvements range from 8x for GPU-based inference to 60x for CPU-based inference' by declaring reusable 'prompt modules'.",
+      "risk": "Requires engine/kernel support we do not have; recomputation changes outputs relative to full prefill and needs quality validation."
+    },
+    {
+      "name": "Respect provider minimum append delta (Gemini 2,050 tokens)",
+      "what_it_does": "Accounts for the fact that a small append does not create a new cached prefix on Gemini 4+; the provider re-processes the last 2,050 tokens.",
+      "engine_or_api": "Gemini API implicit caching",
+      "citable_source": "https://ai.google.dev/gemini-api/docs/caching?hl=en",
+      "quote": "Gemini caches the full previous request only if the new request adds at least 2,050 tokens. ... For smaller additions, Gemini re-processes the last 2,050 tokens of the previous request at the standard input rate.",
+      "expected_effect": "Explains a class of 'why did my hit rate drop' on small tool-result appends; also gives the minimum cacheable prefix per model (4,096 tokens on Gemini 4 Argon/3.x, 2,048 on 2.5 Flash/Pro).",
+      "risk": "Model-specific and changes between generations; do not generalize the number to other providers."
+    },
+    {
+      "name": "Per-request cache salt (isolation, not sharing)",
+      "what_it_does": "Mixes a per-request salt into the first block hash so only requests with the same salt reuse KV.",
+      "engine_or_api": "vLLM cache_salt",
+      "citable_source": "https://raw.githubusercontent.com/vllm-project/vllm/main/docs/design/prefix_caching.md",
+      "quote": "By including a `cache_salt` in the request, this value is injected into the hash of the first block, ensuring that only requests with the same salt can reuse cached KV blocks.",
+      "expected_effect": "Tenant isolation in shared deployments; the doc says it offers 'protection without compromising performance'.",
+      "risk": "Using a fresh salt per request (rather than per tenant) disables reuse entirely; do not use it as a cache key."
+    }
+  ],
+  "rules": [
+    "DO order the prompt stable -> volatile: tool definitions, system prompt, scaffold and reference material first; the only per-turn content (new user message, new tool result, current scratchpad) last.",
+    "DO put a provider cache breakpoint exactly at the end of the static scaffold, never on the varying block; on SGLang/vLLM the equivalent is simply ending the stable region there.",
+    "DON'T rewrite, reorder, re-indent or extend an earlier message. Append a new message/block instead.",
+    "DO inject new instructions mid-run as an appended {role: system} message where the provider supports it, instead of editing the top-level system prompt.",
+    "DO keep the tools array byte-identical for the whole run; mask or gate tools instead of adding/removing definitions.",
+    "DO batch context surgery: one large clear with a minimum token threshold beats many small ones; every clear is a cold prefix.",
+    "DO compact at the tail. A mid-context edit costs a re-prefill of every token after the edit; an append costs only the appended tokens.",
+    "DO align to the engine's page/block size: on SGLang with page_size 64 nothing after the last full 64-token page is reusable; on vLLM hits land on block-size multiples (default 16), so <16 trailing tokens are uncached but do not invalidate anything.",
+    "DON'T change model, tools, thinking/effort settings or system prompt mid-run; all of them are rendered into the prefix and invalidate message blocks (Anthropic documents this per-setting).",
+    "DO keep routing stable: same cache key / session id / hash bucket for one agent session, or the request lands on a replica that never saw the prefix.",
+    "DON'T expect a suffix or interior anchor to be reusable on SGLang/vLLM: both match token prefixes only; a mid-context change destroys everything after it.",
+    "DO treat 'free volatile tokens' as engine-specific: SGLang page_size-1 tokens per turn, vLLM block_size-1 (15 by default), Gemini's 2,050-token append floor — not a universal constant."
+  ],
+  "measurements": [
+    "OpenAI: single-turn LLM-judge deployment with an explicit breakpoint after a fixed rubric 'reported a token cache-hit rate of ~70%'; a multi-turn agent appending messages with explicit breakpoints after tool results 'reported a token cache-hit rate >90%' (https://developers.openai.com/api/docs/guides/prompt-caching.md).",
+    "OpenAI pricing: cache reads 0.1x ordinary input (0.05x on GPT-6.1 Sol), 30-minute writes 1.25x; 'writing a prefix once and fully reusing it once costs 1.35x its ordinary input cost, compared with 2x for processing it twice without caching.'",
+    "Manus: 'average input-to-output token ratio is around 100:1'; cached input $0.30/MTok vs $3/MTok for Claude Sonnet, i.e. a 10x cost difference (https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus).",
+    "SGLang: RadixAttention 'achieving up to 5 times higher throughput' vs Guidance/vLLM in the 2024 blog (Llama-7B A10G; Mixtral-8x7B 8xA10G) (https://www.lmsys.org/blog/2024-01-17-sglang/); the tech report abstract claims 'up to 6.4x higher throughput' (https://arxiv.org/abs/2312.07104).",
+    "Prompt Cache: TTFT 'improvements range from 8x for GPU-based inference to 60x for CPU-based inference' (https://arxiv.org/abs/2311.04934).",
+    "CacheBlend: 'reduces TTFT by 2.2-3.3x and increases the inference throughput by 2.8-5x' (https://arxiv.org/abs/2405.16444).",
+    "No authoritative measurement found for the cache-hit delta of pointer-style vs inlined context, nor for a per-edit cost measured on SGLang/vLLM specifically."
+  ],
+  "contradiction_with_our_64_token_measurement": {
+    "claim_tested": "That SGLang has a fixed 64-token prefix-cache boundary.",
+    "finding": "SGLang documents the boundary as --page-size, not a constant 64: 'Page size controls how many tokens are grouped into a KV cache block' and 'Use `page_size = 1` for maximum prefix reuse (token-level matching)' (https://docs.sglang.io/docs/advanced_features/attention_backend.md). The server-arguments table gives --page-size a default of 1 (https://docs.sglang.io/docs/advanced_features/server_arguments.md, row `--page-size`, defaults column `1`), and the 2024 RadixAttention blog describes pages 'where the size of each page is equivalent to one token' (https://www.lmsys.org/blog/2024-01-17-sglang/).",
+    "implication": "A 64-token boundary is a property of a 64-token-page backend (FlashMLA, TRTLLM MHA/MLA 32/64, HPC-Ops) or of an explicit --page-size 64, not of SGLang as such. Our measurement should be reported with the backend/page_size that produced it.",
+    "vllm_side": "vLLM's defaults are block_size 16 (CacheConfig.DEFAULT_BLOCK_SIZE = 16) with hits landing on block-size multiples, and prefix_match_unit can make hits land finer than a physical block; no vLLM document names 1024/1088/2096 as cache boundaries. Those three numbers are consistent with floor-to-16 arithmetic (1024=64x16, 1088=68x16, 2096=131x16), so they do not contradict the docs, but no doc predicts them."
+  },
+  "unresolved": [
+    "No authoritative source documents a per-request cache breakpoint / anchor API on SGLang or vLLM; no source documents suffix-only or interior-anchor reuse in either engine. Absence of documentation is the finding, not a guess.",
+    "No published measurement of hit-rate or cost delta specifically for pointer-based / isolated-workspace agent layouts; the closest evidence is Manus's qualitative 100:1 ratio and 10x cost figure.",
+    "SGLang's page-size default of 1 is documented, but which backends silently override it (native page sizes) is only stated per-backend; the effective page size of a given deployment must be read from the backend table.",
+    "vLLM's 1024/1088/2096 observations are unexplained by any doc; the mechanism implied by the docs (floor to block_size / prefix_match_unit) is consistent but not confirmed.",
+    "Anthropic mid-conversation system-message caching is model-gated (not available on Claude Sonnet 5) and has no equivalent on the open-source servers we run."
+  ],
+  "evidence": {
+    "commands": [
+      "curl -sL https://docs.sglang.io/docs/advanced_features/server_arguments.md | grep -A3 -- '--page-size'  -> defaults `1`",
+      "curl -sL https://platform.claude.com/docs/en/build-with-claude/prompt-caching.md | grep 'references the entire prompt' -> line 222",
+      "curl -sL https://raw.githubusercontent.com/vllm-project/vllm/main/docs/design/prefix_caching.md | grep 'We only cache full blocks' -> line 22",
+      "curl -sL https://developers.openai.com/api/docs/guides/prompt-caching.md | grep 'Extending a message can prevent' -> line 1001",
+      "curl -sL https://raw.githubusercontent.com/vllm-project/vllm/main/vllm/config/cache.py | grep DEFAULT_BLOCK_SIZE -> 16"
+    ],
+    "counts": "14 techniques, 12 ordered rules, 6 published measurements, 5 unresolved items"
+  },
+  "blocker": "",
+  "next_unit_hint": "A measurement unit can now test the two live levers on our own stack: (a) does our SGLang deployment run page_size>1 (read the backend table / --page-size), and (b) does moving the volatile span to a single trailing block raise vLLM cached_tokens to floor(prompt/16)*16; both are cheap to verify against the documented rules above."
+}

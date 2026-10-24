@@ -1,0 +1,54 @@
+{
+  "unit": "UBYLINE3",
+  "status": "done",
+  "artifacts": [
+    "tools/package/md2tex.py",
+    "tests/test_md2tex.py",
+    "papers/encoder-crossover-190/submission/main.tex",
+    "papers/encoder-crossover-190/submission/encoder-crossover-190.tar.gz",
+    "papers/encoder-crossover-190/submission/METADATA.md",
+    "papers/encoder-crossover-190/submission/BUILD_NOTES.md",
+    "papers/gated-read-batching/submission/main.tex",
+    "papers/gated-read-batching/submission/gated-read-batching.tar.gz",
+    "papers/gated-read-batching/submission/METADATA.md",
+    "papers/gated-read-batching/submission/BUILD_NOTES.md",
+    "papers/replay-record-not-decision/submission/main.tex",
+    "papers/replay-record-not-decision/submission/replay-record-not-decision.tar.gz",
+    "papers/replay-record-not-decision/submission/METADATA.md",
+    "papers/replay-record-not-decision/submission/BUILD_NOTES.md",
+    "orchestration/units/UBYLINE3.md",
+    "scratch/ubyline3/before/"
+  ],
+  "evidence": {
+    "pre_flight_digests": "all three matched the card exactly; no concurrent edit observed, paper #2 NOT deferred",
+    "author_line": "\\author{Aswin Ram Kalugasala Moorthy} -- exactly one per paper, all three identical, name only, no affiliation",
+    "single_source_of_truth": "author_line set in all 3 PACKAGES entries of tools/package/md2tex.py:115,149,232; guard now reads the expected value from cfg['author_line'] (data, not a literal)",
+    "regenerate_x3": "run1==run2 cmp OK, run==shipped cmp OK for all three; converter wrote 84345 / 37278 / 20956 bytes",
+    "tarballs": "cmp <(tar -xzOf <tarball> main.tex) main.tex OK for all three; exit ok=1",
+    "new_digests": "encoder 84345 B sha256 9cab7a4324509423bc9c24ac47e1faa7facff9128659278738ce585a4d35657d; gated 37278 B sha256 165549a22d27b35ad6a4e2efe3f3457f806bb464fa7f16b493f9f79c3a515a67; replay 20956 B sha256 d72db59f4883970bf5221495d67b7907157152c94ce58a9b525cda8df7912898",
+    "tarball_digests": "encoder 28526 B 8f76901a6e33803f165d1917983bbe1986503a4851b9a84640ede6a06125ced6; gated 13252 B cda7357cdcbd2b421c157983c7438c68534ca6dbeea795a5b40d2b7a2595dda9; replay 7311 B c78d4a1f92ceb0e868e4775f542a2ab7c2d8625ad6f4315ba41e611b7a50fa09",
+    "citation_invariants": "encoder 13 bibitems / 13 distinct cited keys / 0 uncited / 0 cite-without-bibitem; gated same 13/13/0/0; replay 0/0/0/0 by design (expect_zero_bib)",
+    "other_invariants": "0 non-ASCII in every payload; \\begin/\\end 32/32, 19/19, 14/14; numeric-literal multiset identical before vs after (encoder 1828 tokens, gated 690, replay 449); each file -13 bytes = 46-char placeholder replaced by 33-char byline",
+    "red_green": "shipped tests/test_md2tex.py::assert_author_slot on copies -- real name PASS; different name FAIL (found 0, other \\author lines present); line deleted FAIL (found 0); second \\author line FAIL (found 2)",
+    "pytest": "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest tests/test_md2tex.py --noconftest -q -p no:cacheprovider -> '......  6 passed in 0.44s', exit 0 (re-run after record edits: 6 passed)",
+    "records": "dated UBYLINE3 reversal note appended to all 6 METADATA.md/BUILD_NOTES.md; old placeholder text retained (grep -c confirms it is still present)",
+    "commands": [
+      "python3 tools/package/md2tex.py --package <slug> --outdir scratch/ubyline3/run{1,2}_<slug>",
+      "cmp run1/main.tex run2/main.tex && cmp run1/main.tex papers/<slug>/submission/main.tex",
+      "tar -czf papers/<slug>/submission/<slug>.tar.gz -C papers/<slug>/submission main.tex && cmp <(tar -xzOf <tarball> main.tex) main.tex",
+      "python3 -m pytest tests/test_md2tex.py --noconftest -q -p no:cacheprovider"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "MANUSCRIPT.md was checked but NOT edited for scope and history reasons: replay MANUSCRIPT.md:8-9 and :290-292 still read 'Author block: a placeholder slot' and that prose ships at main.tex:16 and :193; encoder MANUSCRIPT.md:874 says the manuscript names no author (ships at main.tex:433). None of them carries the 'must not be filled by an agent' policy claim, which lived only in METADATA.md/BUILD_NOTES.md. If the shipped prose must also be updated it needs a MANUSCRIPT.md edit plus regeneration; it is doable with zero digit change but was outside this card's authorized record scope. Also unupdated (outside declared write paths): orchestration/units/UFIXTEST2.md:14 and strategy/VERIFICATION_REPORT_BYLINE2.md:103 still name the old test function -- the function was deliberately NOT renamed so those references stay valid.",
+  "write_paths": [
+    "tools/package/md2tex.py",
+    "tests/test_md2tex.py",
+    "papers/encoder-crossover-190/**",
+    "papers/gated-read-batching/**",
+    "papers/replay-record-not-decision/**",
+    "orchestration/units/UBYLINE3.md",
+    "orchestration/handoffs/UBYLINE3.json",
+    "scratch/ubyline3/**"
+  ]
+}

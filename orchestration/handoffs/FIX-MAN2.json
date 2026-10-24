@@ -1,0 +1,69 @@
+{
+  "unit": "FIX-MAN2",
+  "status": "partial",
+  "artifacts": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/CLAIMS.md",
+    "papers/context-cache/RUN.json",
+    "orchestration/units/FIX-MAN2.md",
+    "orchestration/handoffs/FIX-MAN2.json"
+  ],
+  "evidence": {
+    "abstract_before": "MANUSCRIPT.md:10-11 'First, the renderer is not the lever: two independently implemented prompt renderers emitted byte-identical prompts in all 760 cells of the compaction experiment'",
+    "abstract_after": "'the compaction experiment's tree appender emitted byte-identical prompts under both of its render modes in all 760 cells - the pointer renderer and the naive appender returning the same bytes, 760/760, 0 bytes differing (C01) - so every between-arm difference there belongs to the compaction policy and none to rendering, while the two compacted arms' prompts were themselves identical (190/190 equal digests, C03)'",
+    "why_the_old_sentence_was_wrong": "u5_recon.py calls u5.build_cell(case, i, depth, cond, pinned, policy=u5.RenderPolicy.POINTER) and the same call with NAIVE_APPEND; both policies come from `from resextract.context import (CompactionPolicy, RenderPolicy, ...)` at experiments/context-cache/cells/U5/u5_cells.py:50-57. One library, one appender, one node.kind-ignoring renderer - not two independent implementations.",
+    "section_2_also_corrected": "MANUSCRIPT.md section 2 now states that the 760/760 equality is 'a property of one library, not of two independent implementations', since it previously let the reader infer the same independence. grep -rn 'independently implemented' papers/context-cache/ -> 0 hits after the fix.",
+    "u5_recon": "EXIT 0. 'cases 190; pinned sessions 3'; 'rebuilt cells: 760'; 'POINTER == NAIVE_APPEND byte-identical: 760/760'; 'differing cells: 0 []'; 'rebuilt prompt_sha256 matches the sent row: 570/760'; 'retention flags reproduce: 2280/2280'; 'gold-line retained (rebuilt): {(\"shallow\",\"shared\"): 0, (\"deep\",\"baseline\"): 190, (\"deep\",\"summarise\"): 0, (\"deep\",\"fork\"): 0}'",
+    "u4_recon": "EXIT 0. 'units rebuilt: 12'; per session u4-s1/u4-s2/u4-s3 '44 vs 44 turns captured'; 'reconstruction check (head digest == live row prefix_sha256): summarise 44/44, fork 44/44' in all three; 'full-prompt digest equal 0/44; head equal 0; body digest equal 11; body bytes equal 11' in all three; 'u4_cell.RENDER = naive_append' / 'POINTER_FORK never imported: True'",
+    "run_json_request_totals_before": "live_requests_logged 4573 with note 'card figures summed: 97+454+24+760+139+159+0+0+160+2780' (omits G1 264, G5 192, M4 327); request_rows_in_files 4349 with note '88+438+24+760+139+120+2780'",
+    "run_json_request_totals_after": "live_requests_logged 5343 = 5356 card sum (97+454+24+760+139+159+0+0+160+264+192+327+2780) - 9 (U2 u2_raw_usage rows already inside the 97) - 4 (U15 rows already inside the 160: 160 rows / 40 turns = 4 arms); request_rows_in_files 5489 = 4601 (13 units' row files, wc -l) + 888 (G3 rows.jsonl). Both figures carry the command that reproduces them in the notes.",
+    "run_json_synthesis_before": "claims 52, claims_matching 52, script_sha256 6fd5bec16ed3c7e93ca8fb875aa6aa8ffafdcdb8db30df9437ab4aebfe54c8e9 - but sha256sum papers/context-cache/recompute.py = 4845bd8d0026696c29498b2b9b95056ea2d8487c5f5f03447bd9b017da2197c6 (drift on two later revisions), and the run prints '59 claims checked, all match' against 62 documented ids.",
+    "run_json_synthesis_after": "script_sha256 4845bd8d0026696c29498b2b9b95056ea2d8487c5f5f03447bd9b017da2197c6 (matches disk), claims 62 (parsed from CLAIMS.md rows), claims_matching null with claims_note explaining 59 + 1 (C61 grid guard) + 2 (C01/C16 verifier scripts) = 62; tail records the actual printed lines",
+    "run_json_verifier_prefix": "verifier_handoff_sha256_prefix was 0887c656baaa3748; sha256(V-FINAL.json)[:16] on disk is 2f17f26215d5fa77 -> refreshed",
+    "run_json_valid": "python3 -c 'json.loads' OK; the file is byte-identical to json.dumps(d, indent=2, ensure_ascii=False)+'\\n' (canonical form, no formatting drift from the edit)",
+    "verify_package_was_FAILING": "BEFORE any fix: `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/verify_package.py` -> 'verify_package: FAIL' + 25 lines 'CLAIMS.md:<n>: unrecognised row, invisible to the claim census (first cell 'U2-rows', under ...)' / exit=1. Cause: the bash fence at CLAIMS.md:11-17 held '#'-prefixed comments, and both parsers treat `re.match(r\"#{1,6}\\s\", stripped)` as an ATX heading even inside a fence, so `heading` became the comment text and the source-key table lost its 'Source rows and digests' section.",
+    "verify_package_fixed": "FIX on the document side, not by weakening the parser: the three bash comments became `::  ...` and the source-key table got an explicit `### Source rows and digests` heading. AFTER: 'verify_package: PASS - 62 claims in CLAIMS.md, 62 mapped 1:1, 2 script-backed + 60 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none' / exit=0.",
+    "gates_after": [
+      ".venv/bin/python papers/context-cache/recompute.py all -> exit 0, 'GRID GUARD PASS  7/7 configs', '59 claims checked, all match', 'COVERAGE GUARD PASS  62 claims documented, 60 runnable here + 2 script-backed'",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_attribution_guard.py -q -> '11 passed in 0.03s'",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/verify_package.py -> PASS, exit 0"
+    ],
+    "red_green_on_the_repaired_sentence": "REVERTED MANUSCRIPT.md to 'two independently implemented prompt renderers emitted byte-identical prompts in all 760 cells' -> '11 passed in 0.03s' (the guard does NOT bite). Restored; sha256 342cd4dd3067cd35c36cc1b396bd95b236d387111014b8bb4e92f88393240e34. The attribution guard pins the G5 and M4 sentences only; nothing pins the renderer sentence.",
+    "commands": [
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python experiments/context-cache/cells/CX-V2/u5_recon.py",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python experiments/context-cache/cells/CX-V2/u4_recon.py",
+      ".venv/bin/python papers/context-cache/recompute.py all",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/verify_package.py",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_attribution_guard.py -q",
+      "wc -l experiments/context-cache/cells/*/*.jsonl",
+      "sha256sum papers/context-cache/{recompute.py,MANUSCRIPT.md,CLAIMS.md}"
+    ]
+  },
+  "assumptions": [
+    "The card named only 'the abstract sentence'; I also repaired MANUSCRIPT.md section 2's parallel phrasing, because leaving 'independently implemented' in section 2 while removing it from the abstract would have kept the overclaim the abstract was corrected for. Same defect, same fix, same file.",
+    "request_totals: kept both a card-figure total and a row-file total rather than collapsing them to one, since they measure different things and FIX-PKG.next_unit_hint asked for a decision, not a silent edit. The decision recorded here is: the card sum stands as live_requests_logged with its double-counts subtracted, the row-file count is the reproducible inventory, and the 388-row difference is named.",
+    "C63 was treated as a transient planted row (V-FINAL2 records exactly such a row as its RED D red test, restored afterwards) rather than as a real missing claim: it appeared in one run and did not reproduce in four later runs, and no C63 exists in CLAIMS.md, recompute.py or READER-MAP.md.",
+    "CLAIMS.md was edited although the card did not name it, because verify_package.py FAILED on the tree as found and the abstract repair had to be gated by a passing package verifier. The fix is a document-side formatting/heading change: no claim text, value, id or command changed."
+  ],
+  "not_reproduced": [
+    "V-FINAL's reading that RUN.json's synthesis_recompute block was 'honest (no drift)': it was honest only against the digest recorded in that same block; against the recompute.py then on disk the recorded 52/52 and sha256 6fd5bec1... no longer matched (disk 4845bd8d... reporting 59 checked, 62 documented).",
+    "The 'COVERAGE GUARD FAIL no runner for 1 claim(s): C63' line seen once mid-pass: not reproducible."
+  ],
+  "overstated": [],
+  "unverified": [
+    "No guard pins the repaired renderer sentence: reverting it to the overclaim leaves pytest at 11 passed. A future edit can silently restore the claim.",
+    "verify_package.py's CLAIM_RE still admits a row whose first cell is neither C\\d{2} nor a declared source key only through surface_defects(), which is text-matching on the parser's own heading state; V-FINAL2's RED E (planted unmatchable row) was not re-run this pass and no fix was made for it.",
+    "The 5343 live-request figure is a card-figure arithmetic result; requests still live only in unit cards (U4's 3 smoke sends) cannot be counted from disk."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Card a guard for the renderer sentence, mirroring test_paper_attribution_guard.py's G5/M4 pattern: require that any sentence in MANUSCRIPT.md pairing 'renderer' with 'identical' names the mechanism (same library / both render modes / RenderPolicy) and does not say 'independent'. The revert that leaves pytest green is the exact red test to write. Separately still open from V-FINAL2: CLAIM_RE admits a non-C-row into the ledger; surface_defects() now catches the source-key-table case but nothing tests it end to end.",
+  "write_paths": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/CLAIMS.md",
+    "papers/context-cache/RUN.json",
+    "orchestration/units/FIX-MAN2.md",
+    "orchestration/handoffs/FIX-MAN2.json"
+  ],
+  "tool_calls": 34,
+  "bound": 45
+}

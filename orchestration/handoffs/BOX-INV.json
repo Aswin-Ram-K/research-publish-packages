@@ -1,0 +1,39 @@
+{
+  "unit": "BOX-INV",
+  "status": "done",
+  "artifacts": [
+    "state/config/box-inventory.json",
+    "orchestration/units/BOX-INV.md",
+    "orchestration/handoffs/BOX-INV.json"
+  ],
+  "evidence": {
+    "command_or_count": "HTTP 200 on 8012 /get_server_info (32585 bytes) + /v1/models; 8014 /version,/v1/models,/health; 8000 /v1/models; 8010 /v1/models=401",
+    "commands": [
+      "curl -sS -m 20 -o state/config/.boxinv_8012.json http://192.168.2.168:8012/get_server_info",
+      "curl -sS -m 15 http://192.168.2.168:8012/v1/models",
+      "curl -sS -m 15 http://192.168.2.168:8014/version",
+      "curl -sS -m 15 http://192.168.2.168:8014/v1/models",
+      "curl -sS -m 15 http://192.168.2.168:8014/health",
+      "curl -sS -m 15 http://192.168.2.168:8000/v1/models",
+      "curl -sS -m 15 http://192.168.2.168:8010/v1/models"
+    ],
+    "rollback_sha256": "f28b745e1716f3aa5bc507f1a2cfaeee8e81f881204540c7f2b640a3a3a08509",
+    "observed_model_ids": [
+      "occamy-1.0",
+      "qwen3.5-9b",
+      "ornith-1.5-35b"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Maintenance window: answer qwen3.5-9b dense-vs-hybrid (SSH) first; then disk/RAM/HF-cache/systemd/GPU (SSH); 8010 needs bearer token.",
+  "write_paths": [
+    "state/config/box-inventory.json",
+    "orchestration/units/BOX-INV.md",
+    "orchestration/handoffs/BOX-INV.json"
+  ],
+  "assumptions": [
+    "Rollback sha256 is of the launch-line string without trailing newline.",
+    "8012 configured 0.0.0.0:30000 surface not probed (not in allowed GET list).",
+    "Effective disable_chunked_prefix_cache recorded as true per U-GRID/live internal state despite top-level echo false."
+  ]
+}

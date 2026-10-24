@@ -1,0 +1,40 @@
+{
+  "unit": "DENSE-SGL",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/DENSE-SGL/rows.jsonl",
+    "experiments/context-cache/cells/DENSE-SGL/analysis.md",
+    "experiments/context-cache/cells/DENSE-SGL/dense_sgl_cell.py",
+    "experiments/context-cache/cells/DENSE-SGL/launch_dense_sgl.py",
+    "orchestration/units/DENSE-SGL.md"
+  ],
+  "evidence": {
+    "rows_total_and_status": "894 rows, all HTTP 200 (860 battery + 22 grid + 12 probe)",
+    "battery_uncached_per_turn": "arm R 754.5, A 746.5, C 751.1, H 742.8; overall 748.7",
+    "battery_overall_hit": "0.9732 (860 rows)",
+    "max_depth_tokens": "65176 (64k arm, 144/148 servable)",
+    "grid_law": "cached(L)=L-(L mod 64), gcd of all cached values=64; SGLang page_size=1",
+    "probe_cached_at_1102_1294": "1088 / 1280 (clean multiples of 64; rejects vLLM hybrid 1056/1088-step law on same model weights)",
+    "restore": "restore('P1') ok=True; occamy_8012=200 qwen9b_vllm_8014=200 config_ok=True (id + max_model_len + block_size 1056)",
+    "commands": [
+      ".venv/bin/python experiments/context-cache/cells/DENSE-SGL/dense_sgl_cell.py --config P1 --phase battery",
+      ".venv/bin/python experiments/context-cache/cells/DENSE-SGL/dense_sgl_cell.py --config P1 --phase grid",
+      ".venv/bin/python experiments/context-cache/cells/DENSE-SGL/dense_sgl_cell.py --config P1 --phase probe",
+      "python restore('P1') via launch_dense_sgl (bash job bash-ce96a9c50b5a4d5a)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "The 2x2 matrix is now complete. Follow-up: quantify WHY SGLang pages at 64 for a hybrid-mamba model where vLLM pages at 1056/1088 (radix vs block-sparse KV bookkeeping), and whether the 64-granularity advantage holds at >64k context or on the 163B occamy MoE under the same vLLM-vs-SGLang axis.",
+  "write_paths": [
+    "experiments/context-cache/cells/DENSE-SGL/**",
+    "state/config/ds-*.json",
+    "orchestration/units/DENSE-SGL.md",
+    "orchestration/handoffs/DENSE-SGL.json"
+  ],
+  "assumptions": [
+    "mem-fraction-static 0.22 chosen to coexist with occamy production on the shared GB10 GPU; KV pool 81432 tokens was sufficient for the 64k depth (max 65176).",
+    "grid law asserted as page-64 from gcd=64 over all cached values and page_size=1 in server-info; the 846/852 'cached != L-L%64' rows are warm-prefix grid probes (repeated shorter prefix), not law violations.",
+    "served_model/max_model_len/block_size read back as None from the restore record's top-level; config_ok=True is the restore gate and was True.",
+    "Both vLLM and SGLang were live on the same GB10 GPU (unified memory) throughout; no OOM or slowdown observed."
+  ]
+}

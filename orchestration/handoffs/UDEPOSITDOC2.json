@@ -1,0 +1,40 @@
+{
+  "unit": "UDEPOSITDOC2",
+  "status": "done",
+  "artifacts": [
+    "strategy/DEPOSIT_METADATA.md (28606 B, sha256 d3c33a47e262be9c37bdb30cb96b1f9b5ef0a8ebf4a4dc55de5803fdd839473c)",
+    "strategy/SUBMISSION_RUNBOOK.md (13358 B, sha256 c5543af9fee9e64e694384e0bd4762832850c25bf591405078633eeb675224d3)",
+    "strategy/ZENODO_DEPOSIT.md (23416 B, sha256 4bb8a5fc1f95497991bb1ceb2b85421da3f124eccf2d062235359f82a8237915)",
+    "scratch/urelease9/zenodo/ZENODO_UPLOAD.txt (13603 B, sha256 4029f9da1efd34fda25be94bd0d3825153e639cc0bb215188ef95ba380c55421)",
+    "scratch/udepositdoc2/EVIDENCE.md (4730 B, sha256 d240f35214f4a84f3832ee24534ba7720a9c39e3ec279b999b01244430a00097)"
+  ],
+  "evidence": {
+    "preprints_subject_areas": "VERIFIED https://www.preprints.org/subject - 11 first-level areas verbatim (Arts and Humanities ... Social Sciences); this paper -> Computer Science and Mathematics (slug computer-science-and-mathematics). Second level NOT VERIFIED: 2023 announcement is an image; subject endpoints and /sitemap.xml return HTTP 403.",
+    "zenodo_resource_types": "VERIFIED https://zenodo.org/api/vocabularies/resourcetypes?size=100 -> 43 types, incl. dataset|Dataset, software|Software. Mixed types: NO second type per record - https://help.zenodo.org/docs/deposit/describe-records/resource-type/ says 'Choose one type' or 'Split the upload into multiple records'.",
+    "doi_shapes": "Zenodo 10.5281/zenodo.23442810 / .23442780 / .23442772 from https://zenodo.org/api/records?size=3&sort=mostrecent. Preprints.org 10.20944/preprints202610.1647.v1 observed at https://www.preprints.org/subject/browse/all; Crossref issuance + different DOI per version from https://www.preprints.org/about.",
+    "preprints_requirements": "VERIFIED https://www.preprints.org/instructions-for-authors: 'Files should be submitted in Microsoft Word or LaTeX format ... including the .bib file ... in a zip or similar archive' (a PDF alone is not accepted); first page must carry title, author list, abstract, keywords, corresponding-author contact, affiliations. Licence: https://www.preprints.org/about 'All preprints are posted with a Creative Commons CC BY 4.0 license'. Screening turnaround NOT VERIFIED: about page says only 'post your preprint as soon as possible'.",
+    "divergences_resolved": "6/6 - tarball (157650 B / 7389bd87...), Dataset, version empty, the 8 content keywords, the purpose-written description, live digests; each choice carries a reason in strategy/DEPOSIT_METADATA.md section 5, and superseded wording in strategy/ZENODO_DEPOSIT.md + scratch/urelease9/zenodo/ZENODO_UPLOAD.txt is annotated 'SUPERSEDED 2026-10-17' rather than deleted.",
+    "ordering_hazard": "CONFIRMED CORRECT. Runbook 3.1 now states: paste the DOI into the identified main.tex (1.5), then REBUILD the anonymous TMLR variant from that final identified source, then strip the DOI (and preprint DOI + GitHub URL), then re-run scratch/vtmlr1/rg/anoncheck.py. The variant must NOT contain the DOI. Not rebuilt here.",
+    "commands": [
+      "curl -s 'http://127.0.0.1:8080/search?q=...&format=json'",
+      "curl -s 'https://zenodo.org/api/vocabularies/resourcetypes?size=100'",
+      "curl -s 'https://zenodo.org/api/records?size=3&sort=mostrecent'",
+      "curl -s -A Mozilla/5.0 https://www.preprints.org/subject{,/browse/all,/api/subject*,/sitemap.xml} (HTML 403 for the API/sitemap probes)",
+      "local_web_crawl https://www.preprints.org/subject ; /subject/browse/all ; /instructions-for-authors ; /about ; /news/post/adjustment-of-subject-areas",
+      "local_web_crawl https://help.zenodo.org/docs/deposit/describe-records/resource-type/ ; /reserve-doi/",
+      "python3 patch script over the four docs with per-edit count assertions (25 work tool calls total; the mandated report-back message is a separate messaging action)"
+    ],
+    "notes": "All edits were applied by one verified script; every replacement asserted its match count. No network write, no account, no submission, no ORCID/credential written."
+  },
+  "blocker": "Two sub-questions remain unresolved from primary sources and are marked NOT VERIFIED rather than guessed: (1) Preprints.org's full SECOND-LEVEL subject-area list (announcement is a screenshot image; subject endpoints and /sitemap.xml return HTTP 403) - only the 11 first-level areas and this paper's field 'Computer Science and Mathematics' are verified; (2) Preprints.org's screening turnaround (no page fetched states a number of days). Author-only remain: the creator name split, the second-level subject pick, and the corresponding-author contact.",
+  "next_unit_hint": "A separate verifier (not this unit) should re-measure the five artifact digests above, confirm every ZENODO_UPLOAD.txt and ZENODO_DEPOSIT.md superseded marker reads 'SUPERSEDED 2026-10-17' while the old wording is still present, confirm strategy/DEPOSIT_METADATA.md's top AUTHORITY block and its section 5 resolved table, and re-read runbook 3.1 for the required order (rebuild the anonymous TMLR variant from the final identified source AFTER the DOI paste, and not contain the DOI). The variant rebuild itself needs the minted DOI and belongs to the unit that holds it.",
+  "write_paths": [
+    "strategy/DEPOSIT_METADATA.md",
+    "strategy/SUBMISSION_RUNBOOK.md",
+    "strategy/ZENODO_DEPOSIT.md",
+    "scratch/urelease9/zenodo/ZENODO_UPLOAD.txt",
+    "scratch/udepositdoc2/EVIDENCE.md",
+    "orchestration/units/UDEPOSITDOC2.md",
+    "orchestration/handoffs/UDEPOSITDOC2.json"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "unit": "UPREPRINT1",
+  "status": "done",
+  "artifacts": [
+    "strategy/PREPRINTS_SUBMISSION.md",
+    "papers/encoder-crossover-190/preprints/encoder-crossover-190-preprints.zip",
+    "papers/gated-read-batching/preprints/gated-read-batching-preprints.zip",
+    "papers/replay-record-not-decision/preprints/replay-record-not-decision-preprints.zip",
+    "orchestration/units/UPREPRINT1.md"
+  ],
+  "evidence": {
+    "command_or_count": "tool_calls_used 18 of 25; bundles=3; compile exit codes 0,0,0; Undefined control sequence 0,0,0; '!' lines 0,0,0; zip members 'main.tex' x3",
+    "requirements_source": "https://www.preprints.org/instructions-for-authors (HTTP 200, stealthy scrape; plain web_fetch = HTTP 403 Akamai). Quote: 'Files should be submitted in Microsoft Word or LaTeX format. For LaTeX files, ensure that all files necessary, including the .bib file, if applicable, to recreate the PDF are included in a zip or similar archive.' Quote: 'The first page of your manuscript must contain the title, author list, abstract, keywords, corresponding author contact details, and affiliations for all authors.'",
+    "licence_source": "https://www.preprints.org/about (HTTP 200). Quote: 'All preprints are posted with a Creative Commons CC BY 4.0 license, ensuring that authors retain copyright and receive credit for their work while allowing anyone to read and use their work.' Released tree: papers/encoder-crossover-190/released/encoder-crossover-190-released/LICENSE:5 = '# PolyForm Noncommercial License 1.0.0'.",
+    "bibliography_decision": "grep -c '\\input|\\include{|\\bibliography{|\\includegraphics' -> 0 0 0; thebibliography is inlined (13/13/8 bibitem); papers/gated-read-batching has NO REFERENCES.bib. Bundle = main.tex only; no .bib shipped, no \\bibliography{} variant produced.",
+    "digests": "encoder-crossover-190 zip sha256 68141633d493c35577558b6b2141fd001f9f355429a031d376a8789fc70e8ea9 member main.tex 419ac0cc7b1c88493cac6fca0c53a72a7a66fd41eaf7b0bd90f9b746c73af3ec == submission/main.tex; gated-read-batching zip ba20ccd3009f277a2803e6340e927130a17c79d14eb2b422f7d64e3636063a13 member d321f8c3e5500518d8bf75783ce8e3620078d52af51d543a8cbf11748624c0c9 == submission/main.tex; replay-record-not-decision zip eb344f3e60ebcf331c4b078c5d9b0e6f5619bdc5d6ea61e31364354d414fb698 member 2059e12bda2612a4bcbe3cbb490dc5538a56d6754c71d3f48cab3ce3b74fcf7a == submission/main.tex",
+    "first_page_audit": "encoder-crossover-190 page1 carries title, name, 'Independent researcher', aswinram.k.1603@gmail.com, Abstract -> 5/6, keywords absent. gated-read-batching page1: title, name only -> 3/6 (no keywords, no contact, no affiliation). replay-record-not-decision page1: title, name only, and it states 'name only, with no affiliation, institution or contact stated' -> 3/6. grep -in keyword over all three submission/main.tex: no Keywords line anywhere; grep -in 'conflicts of interest' -> no match in any paper.",
+    "compile_proof": "export TECTONIC_CACHE_DIR=$PWD/scratch/utex1/cache TMPDIR=$PWD/scratch/upreprint1/tmp HOME=$PWD/scratch/upreprint1/home ; unzip -q papers/<slug>/preprints/<slug>-preprints.zip -d scratch/upreprint1/clean-<slug>/src ; scratch/utex1/bin/tectonic -r 1 --keep-logs -o .../out main.tex  (NO -Z continue-on-errors). EXIT=0 x3, 'Undefined control sequence' count 0 x3, '^!' count 0 x3, PDFs 188793/107906/91553 bytes, pages 25/13/10.",
+    "hygiene": "unzip -Z1 <zip> | grep -ci 'license|metadata|build_notes|abstract_metadata|scratch' -> 0 x3; leak scan grep -n 'scratch/|orchestration/|/home/|UPREPRINT|U8\\.' over each shipped main.tex -> no match x3; each zip has exactly one member 'main.tex' so no absolute path or ../ can exist.",
+    "commands": [
+      "local_web_scrape https://www.preprints.org/instructions-for-authors (stealthy) -> HTTP 200",
+      "local_web_scrape https://www.preprints.org/help-center/submission-guidelines (stealthy) -> HTTP 200",
+      "local_web_scrape https://www.preprints.org/about (stealthy) -> HTTP 200",
+      "grep -n 'bibliography|thebibliography' papers/<slug>/submission/main.tex",
+      "pdftotext -f 1 -l 1 -layout papers/<slug>/rendered/<slug>.pdf -",
+      "zip -X -q papers/<slug>/preprints/<slug>-preprints.zip main.tex",
+      "unzip -p <zip> main.tex | sha256sum  vs  sha256sum papers/<slug>/submission/main.tex",
+      "scratch/utex1/bin/tectonic -r 1 --keep-logs -o .../out main.tex   # exit 0, 0 undefined, 0 '!'"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "UPREPRINT2: add the three missing first-page elements to submission/main.tex (a 'Keywords:' line after each abstract; affiliation + contact in \\author{} of papers/gated-read-batching and papers/replay-record-not-decision; a 'Conflicts of Interest' section before the reference list, required by https://www.preprints.org/instructions-for-authors), then rebuild all three, re-bundle into papers/*/preprints/ and re-verify digests. Needs an author decision on the affiliation/contact string for #2 and #7. Also correct strategy/LATEX_TOOLCHAIN.md, which still says -Z continue-on-errors is required; the strict build is clean (exit 0, 0 undefined). No blocker: the current bundles are valid and postable as-is for the file-format requirement.",
+  "write_paths": [
+    "papers/encoder-crossover-190/preprints/",
+    "papers/gated-read-batching/preprints/",
+    "papers/replay-record-not-decision/preprints/",
+    "strategy/PREPRINTS_SUBMISSION.md",
+    "scratch/upreprint1/",
+    "orchestration/units/UPREPRINT1.md",
+    "orchestration/handoffs/UPREPRINT1.json"
+  ]
+}

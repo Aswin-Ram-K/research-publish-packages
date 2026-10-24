@@ -1,0 +1,42 @@
+{
+  "unit": "UFIXPKG3",
+  "status": "done",
+  "artifacts": [
+    "scratch/uneutral10/package/** (29 files, edited in place)",
+    "scratch/ufixpkg3/before/** (pre-edit backup) + scratch/ufixpkg3/before.sha256",
+    "scratch/ufixpkg3/neutralise.py (genericisation map, held outside the payload)",
+    "scratch/ufixpkg3/rebuild_manifest.py (build.py:94-137 replication + independent check)",
+    "scratch/ufixpkg3/m1.json, scratch/ufixpkg3/m2.json (idempotence pair)",
+    "scratch/ufixpkg3/base/**, scratch/uneutral10/after/** (baseline vs post-edit tool output)",
+    "scratch/ufixpkg3/redgreen/** (red-green copy)",
+    "strategy/RELEASE_BUILD_3.md (appended record)",
+    "orchestration/units/UFIXPKG3.md",
+    "orchestration/handoffs/UFIXPKG3.json"
+  ],
+  "evidence": {
+    "command_or_count": "genericised 147 occurrences / 29 distinct bucket-(a) tokens (residual scan 0); tools on edited tree: recompute-claims.py EXIT=0, parse_fixture.py EXIT=0, compare.py EXIT=0 (same as baseline); parse_fixture+compare stdout/stderr byte-IDENTICAL; recompute-claims differs only in reporting lines (A/B row now reproduced=True; ALL PUBLISHED NUMBERS REPRODUCED: True, VERDICT: PASS) — digest c7696edc...9a55 and 39+27+90+34=190 unchanged; red-green on copy: green EXIT=0 / break one published expectation EXIT=1 with reproduced=False + VERDICT: FAIL / restore EXIT=0; pre-fix tree on same mismatch EXIT=0 while printing reproduced=False; manifest rebuilt twice: 29 files, counts.files=29, bytes_total=828303, staged_from_source_tree=20, manifest_self=9799685d0053c9639e84d12d1b60cb12e79e033ee678f7a7879b334d3fce70c3, m1-vs-m2 differ only in generated_utc; independent check PASS (28 entries verified via shell sha256sum+stat, fail-closed path-set equality, manifest_self recomputation); 10 of 29 files changed",
+    "commands": [
+      "cp -a scratch/uneutral10/package/. scratch/ufixpkg3/before/ ; find scratch/ufixpkg3/before -type f | wc -l  # 29",
+      "python3 scratch/ufixpkg3/neutralise.py  # exit 0; 'TOTAL occurrences rewritten: 147 over 29 distinct tokens'; 'residuals: 0'",
+      "cd scratch/ufixpkg3/before && python3 verify/recompute-claims.py; python3 second-labeller/parse_fixture.py; python3 second-labeller/compare.py  # 0/0/0",
+      "cd scratch/uneutral10/package && python3 verify/recompute-claims.py; python3 second-labeller/parse_fixture.py; python3 second-labeller/compare.py  # 0/0/0",
+      "diff scratch/ufixpkg3/base/parse_fixture.out scratch/uneutral10/after/parse_fixture.out  # IDENTICAL; same for compare",
+      "diff scratch/ufixpkg3/base/recompute-claims.out scratch/uneutral10/after/recompute-claims.out  # reporting lines only",
+      "cp -a scratch/uneutral10/package scratch/ufixpkg3/redgreen && cd scratch/ufixpkg3/redgreen && python3 verify/recompute-claims.py  # EXIT=0",
+      "sed -i 's/0\\.3684: (\"A\\/B mutual agreement\"/0.3526: (\"A\\/B mutual agreement\"/' scratch/ufixpkg3/redgreen/verify/recompute-claims.py && cd scratch/ufixpkg3/redgreen && python3 verify/recompute-claims.py  # EXIT=1, reproduced=False, VERDICT: FAIL",
+      "cp scratch/uneutral10/package/verify/recompute-claims.py scratch/ufixpkg3/redgreen/verify/recompute-claims.py && cd scratch/ufixpkg3/redgreen && python3 verify/recompute-claims.py  # EXIT=0",
+      "python3 scratch/ufixpkg3/rebuild_manifest.py; cp scratch/uneutral10/package/MANIFEST.json scratch/ufixpkg3/m1.json; sleep 1; python3 scratch/ufixpkg3/rebuild_manifest.py; cp scratch/uneutral10/package/MANIFEST.json scratch/ufixpkg3/m2.json  # both exit 0, INDEPENDENT CHECK: PASS",
+      "diff scratch/ufixpkg3/m1.json scratch/ufixpkg3/m2.json  # only generated_utc differs",
+      "diff -rq scratch/ufixpkg3/before scratch/uneutral10/package  # 10 changed of 29"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "A verifier should re-run the three tools on scratch/uneutral10/package and scratch/ufixpkg3/before, confirm the 10-file change list, and re-run scratch/ufixpkg3/neutralise.py's residual scan zero. Two deliberate non-rewrites must be audited rather than assumed: 'results/eval-*.json' and 'second-labeller/labelsB.json' are the package's OWN shipped path tokens in MANIFEST.json \"path\" fields (rewriting them would falsify the fail-closed listing), so they remain. Also uncovered by this unit and still true after the fix: the release driver's exclusion gate will still FAIL on ordinary mechanism/third-party vocabulary (RESIDUAL_TRIAGE_3 measured ~1,133 flagged tokens, of which bucket (a) was only 109) — bucket (a) is now zero but the gate is not green. Paper-side, CLAIMS.md:39/:46 still label the instrument digest 076164ac...b4796 as 'fixture sha256' (RESIDUAL_TRIAGE_3 §C.1) — papers/** is outside this unit's write scope, reported not fixed.",
+  "write_paths": [
+    "scratch/uneutral10/package/**",
+    "strategy/RELEASE_BUILD_3.md",
+    "orchestration/units/UFIXPKG3.md",
+    "orchestration/handoffs/UFIXPKG3.json",
+    "scratch/ufixpkg3/**"
+  ]
+}

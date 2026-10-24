@@ -1,0 +1,72 @@
+{
+  "unit": "U14",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/context/budget.py",
+    "src/resextract/context/render.py",
+    "tests/test_context_append_note.py",
+    "experiments/context-cache/cells/U14/u14_append_note_probe.py",
+    "experiments/context-cache/cells/U14/u14_append_note.json",
+    "experiments/context-cache/cells/U14/u14_redgreen.py",
+    "orchestration/units/U14.md",
+    "orchestration/handoffs/U14.json"
+  ],
+  "evidence": {
+    "change": "budget.py: added CompactionPolicy.APPEND_NOTE = 'append_note'; new compact() branch (after FORK) returns [*chain, note] -- every existing node carried through as the SAME object (same text, same node_id, same parent_id) and one summary node appended at the tail whose text is '[note] summarises nodes through <head[-1].node_id>; chain <chain[-1].chain_hash>' + blank line + summary. Event gains appended/appended_node_id/folded_nodes ONLY for this policy, so the three pre-existing event shapes stay exactly as tests/test_context_nodes.py pins them (set(event) == 6 keys for FORK). Helpers is_append_note(node) and note_nodes(chain) added. render.py: module docstring section only -- no functional change was needed (see render_path_verdict).",
+    "render_path_verdict": "No new RenderPolicy and no new render branch. The note is kind='summary', and both selectors already emit it: _body_nodes() emits every non-invariant node for POINTER/NAIVE_APPEND/POINTER_FORK, and _history()'s _HISTORY_KINDS includes 'summary' for NAIVE_MUTABLE. Verified by tests parametrised over all four RenderPolicy values: the pre-compaction message list is a byte-identical prefix of the post-compaction one in all four. Putting the distinction in node.text (U13's lesson) is why no renderer flag is needed.",
+    "kind_decision": "The note is kind='summary', not a new 'note' kind: KINDS is a closed frozenset in nodes.py:21 and nodes.py is outside this unit's write paths. Identity is carried by meta {'appended': True, 'summarises_through': <node_id>, 'chain_hash': <hash>, 'folded': cut} plus the '[note] ...' first line, all of which are inputs to the node's sha256 address.",
+    "corpus_event": "experiments/context-cache/corpora/compaction.json sha256 d702f8f4af2f9d34f68fbca3aa2a096fc8b9cb5f7f7fb32f282c869cbd1f2961 (matches MANIFEST), scenario C1, first compaction point at_turn=17 (0-based), 19 nodes (invariant + 18 deltas), 8343 estimated tokens, keep_last=2 -> 17 folded nodes, summariser = corpus summary_hint canned for BOTH policies, salt make_salt(20261020).",
+    "head_digest_append_note": {
+      "surface": "newline-joined text of the invariant node + every node emitted before the note (the note itself excluded on both sides), sha256 over UTF-8",
+      "before_compaction": "2a38a86fd7b47195c366712869ca652dc8fb7114eef4f56e25bf42d97ae5c555",
+      "after_compaction": "2a38a86fd7b47195c366712869ca652dc8fb7114eef4f56e25bf42d97ae5c555",
+      "identical": true,
+      "node_id_identity": "appended[0:19] node_ids == pre-chain node_ids, all 19; parent_ids equal too; note.parent_id == chain[-1].node_id; nodes_after 20 == nodes_before 19 + 1"
+    },
+    "head_digest_summarise_in_place": {
+      "before_compaction": "2a38a86fd7b47195c366712869ca652dc8fb7114eef4f56e25bf42d97ae5c555",
+      "after_compaction": "b424ae2ecc3e5bbf132363f91eed0b3d130c8232a4df48a6e12e7e949db4785b",
+      "identical": false,
+      "why": "the branch rebuilds from the tail: invariant root dropped, folded head replaced by a bare summary node, 3 nodes remain; 0 of the 17 folded node ids survive. Same measurement, different digest => the head-stability test can fail."
+    },
+    "marker_values": {
+      "note_text_first_line": "[note] summarises nodes through 81d50d467779ba683aab8f753075b06a79949c4c62e7e11018d724c6355229eb; chain eb46803990131cf6ca8c8ba7f6c4fcee5bc452e9561ac2307f33c96a071accf1",
+      "summarises_through": "81d50d467779ba683aab8f753075b06a79949c4c62e7e11018d724c6355229eb",
+      "chain_hash": "eb46803990131cf6ca8c8ba7f6c4fcee5bc452e9561ac2307f33c96a071accf1",
+      "note_node_id": "b6c3c8aa6a199b09065f125980838b3d33b5e4695986fe986a79d7b95827d5c7",
+      "note_kind": "summary",
+      "edited_node_ids": []
+    },
+    "equal_information": {
+      "within_append_arm": true,
+      "within_summarise_arm": true,
+      "definition": "render.equal_information: POINTER vs NAIVE_APPEND over the same chain -- same message count, same concatenated content",
+      "across_arms": false,
+      "verdict": "Equal information holds WITHIN each arm. It cannot hold ACROSS the arms, and the reason is one-directional: the append form is a strict information superset. All 3 bodies of the in-place arm (the summary + the 2 retained turns) appear in the append prompt, while 16 of the 17 folded turn bodies exist only in the append arm -- those are exactly what SUMMARISE_IN_PLACE rewrites away, and dropping them is the definition of an in-place fold, not a defect. What APPEND_NOTE cannot carry is the other half of compaction: a token reduction. APPEND_NOTE tokens 8343 -> 8574 (+231, +2.8%), so a budget that was exceeded stays exceeded and a fixed-budget runner will re-compact on the next turn; SUMMARISE_IN_PLACE 8343 -> 1028. This is asserted, not smoothed over (tests/test_context_append_note.py::test_append_and_summarise_are_not_equal_information_across_arms)."
+    },
+    "red_green": "experiments/context-cache/cells/U14/u14_redgreen.py mutates budget.py in place: 'new_chain = [*chain, note]' -> a rebuild in which chain[1] gains one trailing space (the smallest violation of 'the head is never rewritten'). Red: 7 failed, 4 passed -- FAILED test_head_is_byte_identical_after_append_note, FAILED test_prompt_prefix_survives_the_compaction_under_every_renderer[pointer|naive_append|naive_mutable|pointer_fork], FAILED test_a_head_rewriting_append_note_would_fail_head_stability, FAILED test_subsequent_turns_append_after_the_note. Restored: budget.py sha256 a84efdc1e90ad42f390752d69ee8427a08410f2c722b1734aeeb915549c3624e identical before and after mutation; green again 11 passed. The red state is also permanent, not just a transcript: test_a_head_rewriting_append_note_would_fail_head_stability constructs the head-rewriting variant inside the test and asserts test 1's digest property fails on it.",
+    "test_counts": "PYTHONPATH=src .venv/bin/python -m pytest tests/test_context_*.py -q -> 62 passed in 0.05s (51 pre-existing + 11 new in tests/test_context_append_note.py). New file: 7 test functions, 4 of them parametrised over RenderPolicy => 11 items.",
+    "full_suite_note": "PYTHONPATH=src .venv/bin/python -m pytest tests -q -> 1125 passed, 1 failed, 1 skipped in 60.61s. The single failure is the pre-existing, unrelated tests/test_kg_policy.py::test_real_target_config_declares_the_decision (PolicyWideningError at src/resextract/kg/policy.py:327 over '.lane-j-scratch' in config); no context file is involved. U13 recorded the same failure at 1114 passed.",
+    "file_hashes": {
+      "src/resextract/context/budget.py": "a84efdc1e90ad42f390752d69ee8427a08410f2c722b1734aeeb915549c3624e",
+      "src/resextract/context/render.py": "807e52c641dd2dcb6b11e3e8c0a7fc335fb6f6963e6f50a9749c68819f250a3d"
+    },
+    "commands": [
+      "PYTHONPATH=src .venv/bin/python -m pytest tests/test_context_*.py -q   # baseline 51 passed in 0.04s",
+      "PYTHONPATH=src .venv/bin/python experiments/context-cache/cells/U14/u14_append_note_probe.py",
+      "PYTHONPATH=src .venv/bin/python experiments/context-cache/cells/U14/u14_redgreen.py",
+      "PYTHONPATH=src .venv/bin/python -m pytest tests/test_context_*.py -q   # after 62 passed in 0.05s",
+      "PYTHONPATH=src .venv/bin/python -m pytest tests -q   # 1125 passed, 1 failed (pre-existing kg_policy), 1 skipped"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "A cell can now run a third compaction arm: hold the renderer fixed at NAIVE_APPEND and compare APPEND_NOTE vs SUMMARISE_IN_PLACE vs NAIVE_APPEND(no compaction) on the C1/C2 corpus events. Expected result by construction: APPEND_NOTE should show a cache hit on the turn after compaction where SUMMARISE_IN_PLACE shows a full prefix miss -- that is the measurement no previous cell could make, because every other policy rewrites the head. Budget caveat to encode in the cell: APPEND_NOTE never reduces tokens (+231 on C1@17), so give it a larger budget or count notes per turn rather than expecting needs_compaction to clear. Verifier: re-run u14_redgreen.py and confirm budget.py sha256 a84efdc1... before and after.",
+  "write_paths": [
+    "src/resextract/context/budget.py",
+    "src/resextract/context/render.py",
+    "tests/test_context_append_note.py",
+    "experiments/context-cache/cells/U14/",
+    "orchestration/units/U14.md",
+    "orchestration/handoffs/U14.json"
+  ]
+}

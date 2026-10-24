@@ -1,0 +1,42 @@
+{
+  "unit": "UREDACT3",
+  "status": "done",
+  "artifacts": ["repro/encoder-crossover-190-SANITISED/REDACT3_REPORT.md"],
+  "evidence": {
+    "stages_complete": "yes",
+    "apply_editorial_effect": "not a stage: 3 die-on-no-match literal patches run between stage A and stage B - harness/README.md one sentence swapped (5810->5845 chars), LICENCE_TODO.md replaced wholesale by the sanitised decision text (3229->2639 chars = 2657 bytes), MANIFEST.json private-branch commit-id provenance block rewritten (UFIX10). Idempotent only because stage A re-copies the pristine originals from repro/encoder-crossover-190 on every run; both patched files are among the 35 that match the shipped tree.",
+    "idempotent": "no",
+    "files_matching": "35/58",
+    "files_differing": "9",
+    "differing_files": ["MANIFEST.json", "fixture/DECISION_CASE_SCHEMA.ts", "fixture/reflex-decisions.ts", "harness/data/fixture-190.json", "harness/data/manifest.json", "second-labeller/EVIDENCE.md", "variants/no-union/files/fixture/DECISION_CASE_SCHEMA.ts", "variants/no-union/files/fixture/reflex-decisions.ts", "verify/redaction-log.json"],
+    "numbers_changed": "0",
+    "values_unchanged": "10/10",
+    "projection_digest": "57a29b4e78bff60f84309e2e95b56f49663884a13b801345eecd93813ecbf300",
+    "train_dev_digests_same": "yes",
+    "baseline_0.6789_intact": "yes",
+    "integrity_row_updated": "yes",
+    "grantpolicy_gap_closed": "yes",
+    "manifest_rows_fixed": "4",
+    "gate_hard_fail": "394",
+    "tree_restored_intact": "yes",
+    "commands": [
+      "find repro/encoder-crossover-190-SANITISED -type f -print0 | sort -z | xargs -0 sha256sum > .uredact3/snapshot.sha256   # 58 files, 5565163 bytes, pre-run",
+      "cp -a repro/encoder-crossover-190-SANITISED .uredact3/shipped-backup   # 58-file restore path",
+      "python3 repro/encoder-crossover-190-SANITISED/redact.py --out \"$PWD/.uredact3/regen\"    # exit 0, empty stderr, 44 files",
+      "python3 repro/encoder-crossover-190-SANITISED/redact.py --out \"$PWD/.uredact3/regen2\"   # exit 0, stdout identical byte-for-byte",
+      "diff -r .uredact3/regen .uredact3/regen2   # empty: generator is self-idempotent, 44/44",
+      "bash repro/encoder-crossover-190-SANITISED/verify/run-verification.sh \"$PWD/.uredact3/verify-run\"   # exit 0 on the shipped tree",
+      "python3 repro/encoder-crossover-190-SANITISED/verify/recompute-claims.py   # ALL CLAIM NUMBERS PRESERVED: True; 0.6789473684210526; fixture correctness digest 8dd05ce6fe31f6bef484e97bed9ec8c96fb5f2c0b17ebb20ff57afb8716c106a",
+      "cp -a .uredact3/regen .uredact3/rv2/san && cp -a repro/encoder-crossover-190 .uredact3/rv2/encoder-crossover-190 && cp -a repro/encoder-crossover-190-SANITISED/{README.md,REDACTION_REPORT.md,RESIDUALS.md,SCRUB_REPORT.md,INTEGRITY.md,redact.py,variants/no-union/README.md,verify} .uredact3/rv2/san/ && cd .uredact3/rv2/san && bash verify/run-verification.sh \"$PWD/../w\"   # exit 0 on the regenerated tree",
+      "grep -rn -I -i -F -f .uredact3/hard.pat repro/encoder-crossover-190-SANITISED --exclude-dir=.git | wc -l   # 394",
+      "grep -rn -I -i -F -f .uredact3/hard.pat .uredact3/regen --exclude-dir=.git | wc -l   # 98",
+      "diff <(sort experiments/token-substitution-test/work2-scan/hard.txt) <(sort .uredact3/hard.pat)   # empty: pattern list identical, 24 patterns each",
+      "grep -rn GrantPolicy repro/encoder-crossover-190-SANITISED   # 9 occurrences (fixture/reflex-decisions.ts:288,798; variants twin; harness/data/fixture-190.json:234,851; redact.py:43,186; verify/VERIFICATION.txt:143) -> 0 in the regenerated tree",
+      "diff .uredact3/shipped-backup/verify/VERIFICATION.txt repro/encoder-crossover-190-SANITISED/verify/VERIFICATION.txt   # in-place acceptance run rewrote it; restored from backup",
+      "find repro/encoder-crossover-190-SANITISED -type f -print0 | sort -z | xargs -0 sha256sum > .uredact3/snapshot.final.sha256   # 58/58 identical to the snapshot; only INTEGRITY.md differs (93a0fda8f4dc536583787fc8cfe2420e20fb7e5fba6cb70d7d17beb13d83664e, 10780 B)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "DO NOT RUN redact.py IN PLACE. It is self-idempotent (regen1 == regen2, 44/44) but is NOT the generator of the shipped tree: 35/58 files match, 9 differ, and the 14 unit-owned artefacts (README.md, INTEGRITY.md, REDACTION_REPORT.md, RESIDUALS.md, SCRUB_REPORT.md, redact.py, variants/no-union/README.md, verify/**) are never produced by it. Root cause is mtime-proven: every generated file is stamped 15:39:37 or 18:21:52 and only redact.py carries 18:55:57, so UREDACT2's four-stage pipeline was never executed. Stage C substitutes mechanism tokens inside the instrument's question text, so executing it moves the published scoring-projection digest 57a29b4e78bff60f84309e2e95b56f49663884a13b801345eecd93813ecbf300 -> b85e4585d8c7f0beec02620356b8fcb2b53bb27b0c9e5544bf51e8368bec7a26 and falsifies INTEGRITY.md section 2 - that is a release decision (regenerate + re-declare, or ship the pre-stage-C tree), not a bug, and redact.py was deliberately NOT rewritten. No number moves either way: 10/10 CLAIMS values, 0.6789, train 24c39afa..., dev d311a99f..., fixture-correctness 8dd05ce6... and routeA/routeB/closed-subset/roster kappas are all identical on the shipped AND regenerated trees; numbers_changed = 0. The card's expected projection digest d52893f4... is UTOK2's POST-substitution value (UTOK2's own handoff says projection_digest_moved: yes), not the present-bytes value - present bytes are 57a29b4e..., matching INTEGRITY.md section 2. GrantPolicy gap is CLOSED (9 -> 0, redact.py:195 maps GrantPolicy -> POLICY_A inside question values). Real defect found in stage_d_manifest: for files it does not generate (README.md, INTEGRITY.md) it writes the SOURCE digest into sha256 and leaves identical_to_source: true, so those 2 of the 6 stale identity rows stay false AND their hash gets worse; the fix belongs in stage D (skip, or write the owning unit's recorded digest), not in a hand-edit of MANIFEST.json. Gate on present bytes is 394 distinct lines (was UTOK2's 407; tree changed twice after its run) and 98 on the regenerated tree; per-pattern table in the report. INTEGRITY.md:68 stale redact.py row corrected to db5c82720e4b1bc018acae8747aa41e773b681519a30dd21d52e27428b6aad1e / 50022 B with a do-not-chase-the-cycle note.",
+  "write_paths": ["repro/encoder-crossover-190-SANITISED/", "orchestration/units/UREDACT3.md", "orchestration/handoffs/UREDACT3.json"]
+}

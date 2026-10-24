@@ -1,0 +1,47 @@
+{
+  "unit": "UVER3",
+  "overall": "pass-with-corrections",
+  "checks": [
+    "integrity: sha256sum target found 076164ac53c2c1aac130953345c481f88b51f4d6fb93d465c7430308a99b4796; sandbox copy same hash; cmp -> IDENTICAL; target fixture mtime still 2026-10-01 18:17:50 and clean in git",
+    "reproducibility: re-ran parse_fixture.py + characterise.py + compare.py in a /tmp copy; all 6 regenerated artifacts (cases.json, blinded_cases.json, parse_summary.json, metrics.json, characterisation.json, disagreements.jsonl) byte-identical to UEXP originals",
+    "parse: 190 records, 721 options, options_per_case={2:33,3:27,4:76,5:54}, 74 distinct labels, 51 singletons, parse_failures=[]; parser does not read the header, so the ESCALATE=28 agreement with fixture header line 48 is not a fitted regression",
+    "D-P1: naive non-greedy regex options:\\s*\\[(.*?)\\] over all 190 blocks yields exactly 1 false 'answer not in option set' (context.package-014, whose option string is 'the expanded[] ref list'); my independent JSON-transform parser (no bracket regex) yields 0/190 and agrees with cases.json on all 190 id/kind/correct/options",
+    "defects: independently re-derived from raw text -> answer_outside_option_set=[], duplicate_ids=[], malformed_rows=0, arity_outside_2_8=[], duplicate questions 0, near-duplicate (ratio>=0.90) 0",
+    "kappa: independent recompute gives po=0.905263157894737, pe=0.039584487534626, kappa=0.901358484035649, exact 172/190 - matches RUN.json:30-39 to 1e-15; pe is the standard product-of-marginals term",
+    "stratified kappa: recomputed ALL 7 kinds from scratch; escalation 1.000/1.000, topology 0.954545/0.938375, worker.class 0.933333/0.922581, context.package 0.928571/0.926121, capability.family 0.884615/0.871711, acquisition 0.846154/0.804878, memory.admission 0.785714/0.715254 - all match",
+    "read-only: HEAD 907fa39da7ba8ecfbe6e976b7a4cddadea7ac36b now; .git/logs/HEAD shows no HEAD move since the 12:51:58 checkout; porcelain identical (same 4 untracked); fixture hash unchanged; .git/HEAD and .git/index still stamped 12:51:58",
+    "flagged items: capability.family-010 label/rationale tension confirmed; worker.class-023 impossible premise confirmed; capability.family-004 and topology-018 self-containment gaps confirmed; PUBLICATION_STRATEGY.md:46 container-id attribution is wrong and line 63 is the DecisionCase interface field - correction valid and owed",
+    "adjudication presentation: EVIDENCE.md:199-201 discloses the 18-case adjudication as 'not a blind judge' and 'a reasoned reading, not a measurement'; metrics.json has no adjudication field; disagreements.jsonl rows carry no verdict code",
+    "limitation coverage: present in EVIDENCE.md (:14-23), RUN.json (:124) and PREREGISTRATION.md (:12-16); ABSENT from metrics.json (:22-25) which carries kappa 0.9013584840356494 bare, contrary to PREREGISTRATION.md:12-16"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Accept the experiment: every measurement reproduced. Apply two wording/completeness corrections - (1) restate RUN.json:104 / EVIDENCE.md:258 so the 0/190 is a separate measurement of the same-named defect class, NOT corroboration of FINDINGS_REGISTER.md:47 (the register measured model-emitted answers across 4,090 decider + 3,590 imajev rows during EXP#11, not fixture authoring); (2) add the model-not-human-annotator limitation key to metrics.json. Also fix the '191st id: match' ordinal at EVIDENCE.md:278 (line 63 is the first match by line order). Do NOT let any downstream paper cite kappa=0.9014 as inter-annotator agreement; a second independent human labeller is still owed for PAPER_CANDIDATES.md F.3.",
+  "write_paths": [
+    "strategy/VERIFICATION_REPORT_3.md",
+    "orchestration/units/UVER3.md",
+    "orchestration/handoffs/UVER3.json"
+  ],
+  "contradicted": [],
+  "overstated": [
+    "RUN.json:104 and EVIDENCE.md:258 - 'independently corroborating the corpus's own register' is too strong: UEXP measured whether the fixture's authored 'correct' index is inside its own options array, while FINDINGS_REGISTER.md:47 (F-EXP11-11) measured 'answerInOptionSet' over model-emitted answers in EXP#11 (4,090 decider + 3,590 imajev rows). Same defect-class name, different referents. Replacement wording: 'the same defect class is separately measured absent from the fixture's authored labels (0/190); an additional independent measurement, not corroboration of the model-run register entry.'",
+    "metrics.json:22-25 carries kappa 0.9013584840356494 with no limitation, contrary to the unit's own frozen rule at PREREGISTRATION.md:12-16 ('Every artifact this unit writes must carry this limitation in the UNVERIFIED register'). EVIDENCE.md and RUN.json carry it; metrics.json does not.",
+    "EVIDENCE.md:278 says 'The 191st match is the DecisionCase interface field declaration' and demonstrates it with grep | head -1 -> '63:  id: string;'; line 63 is the FIRST id: match by line order, not the 191st. Correct statement: 'the one id: match that is not a case id, at line 63'. Substance of the owed correction is unaffected."
+  ],
+  "not_reproduced": [
+    "RUN.json:120 and EVIDENCE.md:354 timestamp 'written 14:28:31' for the 8 target writes: the shape reproduces exactly (8 files, all under .git/objects/, 7 loose + 1 existing-name pack, 0 under evals/fixtures, 0 tracked files), but I find them at 14:38:30 - after UEXP's declared 14:20-14:36 window. Misreported time and post-observation rewrite by a concurrent process cannot be separated from disk state alone (the pack's mtime is 14:38:30 while its .idx is from 2026-10-12 20:49).",
+    "The '_before' half of the read-only proof (fixture_sha256_before, target_head_before, git_status_porcelain_before) is not re-observable after the fact; I verified the after side plus independent corroborators (fixture mtime 12 days old, .git/logs/HEAD with no move since 12:51:58, last fixture commit b015b7196053d2add999c35278a2695795411297)."
+  ],
+  "unverified": [
+    "Route B's blindness: labelsB.json is complete (190 ids, all in range, no extras) and blinded_cases.json genuinely strips correct and rationale, but the pass's self-report that it opened no other file comes from a session I did not observe and no transcript is in the artifact set. The result is checkable; the blindness is not.",
+    "The stood-down second distinct-model pass (mimo-v2.6-flash) returned no file (RUN.json:126-128), so there is nothing to check; metrics.json 'passes' contains exactly one pass, which I confirmed."
+  ],
+  "corrections": [
+    "Restate the F-EXP11-11 relation (RUN.json:104, EVIDENCE.md:258) as a separate measurement of the same-named defect class, not corroboration.",
+    "Add the model-not-human-annotator limitation to metrics.json.",
+    "Fix the '191st id: match' ordinal at EVIDENCE.md:278 to 'the one id: match that is not a case id, at line 63'.",
+    "Optional: add a caveat line to RUN.json disagreement_tally (lines 71-75) noting the counts are unblinded judgement tallies, not measured classification."
+  ],
+  "tool_calls": 25,
+  "bound": 55,
+  "scope": "independent re-run of experiments/second-labeller-190 vs read-only target /home/zer0null/Duval; no UEXP artifact rewritten (pipeline re-run in /tmp/uver3b copy)"
+}

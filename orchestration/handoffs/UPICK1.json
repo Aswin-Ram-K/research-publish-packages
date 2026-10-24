@@ -1,0 +1,32 @@
+{
+  "unit": "UPICK1",
+  "status": "done",
+  "artifacts": [
+    "strategy/PAPER_SHORTLIST.md",
+    "orchestration/units/UPICK1.md",
+    "orchestration/handoffs/UPICK1.json"
+  ],
+  "evidence": {
+    "command_or_count": "25 tool calls (bound 25); fixture measured 190 cases / K {2:33,3:27,4:76,5:54} / 721 options / 215 distinct option labels / 7 kinds; 5 encoder+control arms each perCase=190 (0.3473684210526316, 0.3473684210526316, 0.2631578947368421, 0.45263157894736844, 0.23157894736842105); baselines decider perCase=190 with pChosen; per-K gaps -0.181818/-0.370370/-0.355263/-0.296296 at BOUNDARY_ANALYSIS.md:81-84; UBUILD1.build.sh 48575 B / 969 lines; MANIFEST.json source+source_sha256 on all 42 entries; 404 handoffs; VERDICTS.md 3309 lines",
+    "commands": [
+      "python3 -c \"import json,collections; fx=json.load(open('repro/encoder-crossover-190/harness/data/fixture-190.json')); print(len(fx), collections.Counter(len(c['options']) for c in fx), len({o for c in fx for o in c['options']}))\"  -> 190 Counter({2: 33, 3: 27, 4: 76, 5: 54}) 215",
+      "python3 -c \"import json; [print(f, json.load(open('repro/encoder-crossover-190/results/'+f+'.json'))['accuracy'], len(json.load(open('repro/encoder-crossover-190/results/'+f+'.json'))['perCase'])) for f in ['eval-modernbert-base','eval-deberta-v3-base','eval-setfit-mpnet','eval-majority-class','eval-shuffled-label']]\"  -> 0.34737/190, 0.34737/190, 0.26316/190, 0.45263/190, 0.23158/190",
+      "python3 -c \"import json; b=json.load(open('repro/encoder-crossover-190/results/baselines.json')); print(list(b['models']), len(b['models']['decider-4b-exp11-reproduction']['perCase']), b['models']['decider-4b-exp11-reproduction']['perCase'][0])\"  -> 3 models, 190, {'id':'worker.class-001',...,'pChosen':0.7894}",
+      "grep -nE 'K=2|K=3|K=4|K=5|0\\.181818|0\\.370370|0\\.355263|0\\.296296' strategy/BOUNDARY_ANALYSIS.md  -> :81-84 the four per-K gaps; :91 '190 cases / 721 options, identical in all four packages'; :95 Wilson CI +/-0.17 at K=3",
+      "python3 -c \"import json; d=json.load(open('experiments/second-labeller-190/metrics.json')); print(d['cases'], d['options_total'], d['limitation'][:200])\"  -> 190 721 'NOT INTER-ANNOTATOR AGREEMENT. The second labeller (routeB-blind-model) is a model, not an independent human annotator... does not discharge PAPER_CANDIDATES.md F.3'",
+      "ls -l orchestration/units/UBUILD1.build.sh; grep -nE 'DEST=|SHIP|fail-closed|positive' orchestration/units/UBUILD1.build.sh  -> 48575 B 969 lines; DEST=/home/zer0null/research-publish-packages; :51-57 ship-list; :224 fail-closed prune; :398-409 gate.sh positive vocabulary checker",
+      "python3 -c \"import json; d=json.load(open('repro/encoder-crossover-190-SANITISED/MANIFEST.json')); print(len(d['files']), all('source_sha256' in f for f in d['files']))\"  -> 42 True",
+      "find . -name MANIFEST.json -path '*encoder*' -exec python3 -c ... -> every built package under scratch/*/dest/.../exp12-encoder-crossover records 28 files (NOT 29)",
+      "wc -l orchestration/VERDICTS.md strategy/WHOLE_CLASS_NEUTRALISATION.md strategy/STIMULUS_NEUTRALISATION.md strategy/CASE_VARIANT_SETTLEMENT.md strategy/CODE_AGNOSTIC_RELEASE_POLICY.md; ls orchestration/handoffs/ | wc -l  -> 3309 / 190 / 313 / 167 / 713; 404 handoffs",
+      "find . -name 'PAPER_DERIVATION.md' -o -name 'l1-head-to-head.jsonl' -o -name 'LONG_HORIZON_EVALS_2026.md' -o -name 'AGENT_HARNESSES_2026.md'  -> all present under state/refresh-verify/duval/scnB/state/kg-refresh/duval/repo/.worktrees/engine-a/docs/research/ (and engine-gap)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Ship candidate A2 (#2 'Replay reproduces the record, not the decision'): first confirm the 3,040-output corpus and l1-head-to-head.jsonl are readable from state/refresh-verify/duval/scnB/state/kg-refresh/duval/repo/.worktrees/engine-a/docs/research/ and re-derive the four variant divergence percentages from raw records before drafting. Do NOT schedule C9 (#9 self-build loop: run stopped at RUN 36, no positive control, derived EXP#18/BUILD_PLAN.md not found). Three card claims did not reproduce and must not be repeated downstream: the public package measures 28 files (not 29); EXCLUDED.md has 5 top-level sections (not 15 classes); pChosen lives in the result perCase records, not in fixture-190.json.",
+  "write_paths": [
+    "strategy/PAPER_SHORTLIST.md",
+    "orchestration/units/UPICK1.md",
+    "orchestration/handoffs/UPICK1.json",
+    "scratch/upick1/**"
+  ]
+}

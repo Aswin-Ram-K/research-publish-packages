@@ -1,0 +1,44 @@
+{
+  "unit": "VDEPOSIT1",
+  "overall": "partial",
+  "checks": [
+    "ARCHIVE REPRODUCED: my isolated rebuild (script logic copied, W/OUT redirected to scratch/vdeposit1) run twice with pinned GENUTC=2026-10-18T08:05:47Z -> both 158,762 B / sha256 956d6363db4563ddd3d848790a4026590a38c86ced993ccd76aecdad66a7910a, byte-identical to shipped archive; tar tzf = 37 members = 6 dirs (1 top-level + 5 subdirs) + 31 files",
+    "SUPERSEDED: scratch/ufixman1/prev-encoder-crossover-190-released.tar.gz = 157,650 B / 7389bd879e970d840a528a9a19bfb9a6623babf3ec10746b18fc616bf2b4dad3 (matches claim)",
+    "MANIFEST SELF-DESCRIBES ARCHIVE: 30 files[] entries, counts.files 31, counts.bytes_total 844089 (inside counts, not top-level), generated_utc 2026-10-18T08:05:47Z, manifest_self 8daf32ea280059b26b3b43edb0709a3c0c389025fc426e901170925f836a8839; archive MANIFEST.json digest e9e5e5e07fc63c6887c88127bb2a1c03300c8d6dac692b31ba288757d5457a4d != package d41d82cf...",
+    "GREEN: check_manifest.py --package <abs archive root> -> missing=0 hash_mismatch=0 size_mismatch=0 unlisted=0 listed_but_absent=0, manifest_self_recomputes=True, VERDICT PASS, EXIT=0",
+    "GREEN: check_manifest.py --package <abs package> -> all five counts 0, VERDICT PASS, EXIT=0; relative form '--package scratch/uneutral10/package' from /tmp also VERDICT PASS EXIT=0 (resolves against repo root)",
+    "RED: same tool on prev-archive extraction (28-file package manifest in stage) -> missing=0 hash_mismatch=0 size_mismatch=0 unlisted=2 listed_but_absent=0; UNLISTED: CITATION.cff; UNLISTED: README_DEPOSIT.md; VERDICT FAIL; EXIT=1 -- red->green guard is real, not coincidence",
+    "RECOMPUTE: (cd extraction && python3 verify/recompute-claims.py) EXIT=0; 'ALL PUBLISHED NUMBERS REPRODUCED: True'; 'VERDICT: PASS'; fixture digest c7696edc0e71d83faafc2e489925788e0f36c6af94913674f8953718352c9a55",
+    "PACKAGE: scratch/uneutral10/package/MANIFEST.json sha256 d41d82cf8aa838737a55d300bd77b74c787c44d482a5f964c4c446e40c2aac02 (matches claimed d41d82cf...), 28 entries, counts.files 29, counts.bytes_total 831775, manifest_self f8337fc2...; package tree = 29 files, checks clean",
+    "PAYLOAD IDENTITY: full diff -r -q (no exclusions) package vs archive payload shows ONLY CITATION.cff only-in-archive, README_DEPOSIT.md only-in-archive, MANIFEST.json differs; with those 3 excluded diff is empty (DIFF_EXIT=0). Both extras are absent from the package. Archive = 31 files.",
+    "DOCS vs DISK: strategy/DEPOSIT_ARCHIVE.md:78-79 cites 157,650 / 7389bd87...; strategy/DEPOSIT_METADATA.md:43,138-139,342,347 cite 157,650 / 7389bd87...; both files mtime 2026-10-17 17:09/17:16 so no concurrent update landed. DEPOSIT_ARCHIVE.md:45-46,65-71,84-85 additionally declare unlisted=2 / VERDICT FAIL / exit 1 at the archive root 'by design' with correct invocation --package scratch/uneutral10/package -- i.e. the docs state the REVERSED policy. DEPOSIT_ARCHIVE.md:39 cites a now-nonexistent unpacked dir (retired, replaced by papers/encoder-crossover-190/released/SUPERSEDED-UNPACKED-TREE.md). DEPOSIT_METADATA.md:45 package digest d41d82cf... is correct."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Update strategy/DEPOSIT_ARCHIVE.md and strategy/DEPOSIT_METADATA.md to the new archive (158,762 B / 956d6363db4563ddd3d848790a4026590a38c86ced993ccd76aecdad66a7910a, 37 members) AND reverse the stated manifest policy: the archive manifest now describes its own tree (30 listed / counts.files 31 / bytes_total 844089) and check_manifest.py at the extracted archive root PASSes exit 0; unlisted=2/exit 1 is the OLD archive, not 'by design'. Also fix the dead reference to papers/encoder-crossover-190/released/encoder-crossover-190-released/ (does not exist). Optionally flag that scratch/ufixman1/build_archive.sh is not self-contained: it never reads scratch/uneutral10/package (PKG declared at line 22 and unused) and inherits the tree + CITATION.cff from prev-*.tar.gz.",
+  "write_paths": [
+    "scratch/vdeposit1/**",
+    "strategy/VERIFICATION_REPORT_DEPOSIT.md",
+    "orchestration/units/VDEPOSIT1.md",
+    "orchestration/handoffs/VDEPOSIT1.json"
+  ],
+  "not_reproduced": [],
+  "overstated": [
+    "Claim that the assembly stages 'the 29 package files -> add CITATION.cff and README_DEPOSIT.md' misstates the mechanism: build_archive.sh never reads scratch/uneutral10/package (PKG at scratch/ufixman1/build_archive.sh:22 is declared and never used); it copies the superseded archive's extracted tree and inherits CITATION.cff from prev-*.tar.gz. Output is nonetheless byte-correct and payload-equal to package+2 extras.",
+    "UFIXMAN1's characterisation of the docs as 'still citing the old 157,650-byte archive' understates it: the docs also assert the now-reversed manifest policy (unlisted=2 'by design').",
+    "'check_manifest.py at the extracted archive root' implies cwd resolution; --package is a required argument and a bare invocation exits 2 with usage error."
+  ],
+  "unverified": [
+    "Package manifest 'byte-unchanged' and 'no package file was touched': current digest matches the claimed d41d82cf..., but no pre-fix copy of scratch/uneutral10/package/MANIFEST.json exists in my scope to prove no change over time."
+  ],
+  "contradicted": [
+    "strategy/DEPOSIT_ARCHIVE.md:78-79 and strategy/DEPOSIT_METADATA.md:43,138-139,342,347 cite 157,650 B / 7389bd87... while disk is 158,762 B / 956d6363... (documents contradict disk; reported, not edited).",
+    "strategy/DEPOSIT_ARCHIVE.md:45-46,65-71,84-85 assert unlisted=2 / VERDICT FAIL / exit 1 at the extracted archive root is 'by design'; on disk the archive manifest describes its own tree and the check PASSes exit 0 (documents contradict the fixed artifact).",
+    "strategy/DEPOSIT_ARCHIVE.md:39 cites papers/encoder-crossover-190/released/encoder-crossover-190-released/ which does not exist on disk."
+  ],
+  "red_green": {
+    "green": "check_manifest.py --package <extracted archive root> -> all-zero, VERDICT PASS, EXIT=0",
+    "red": "check_manifest.py --package <prev-archive extraction> (28-file package manifest) -> unlisted=2 (CITATION.cff, README_DEPOSIT.md), VERDICT FAIL, EXIT=1"
+  },
+  "tool_calls": 15,
+  "bound": 18
+}

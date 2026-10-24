@@ -1,0 +1,72 @@
+{
+  "unit": "U13",
+  "status": "done",
+  "artifacts": [
+    "src/resextract/context/budget.py",
+    "src/resextract/context/render.py",
+    "tests/test_context_fork_marker.py",
+    "experiments/context-cache/cells/U13/u13_fork_marker_probe.py",
+    "experiments/context-cache/cells/U13/u13_fork_marker.json",
+    "orchestration/units/U13.md",
+    "orchestration/handoffs/U13.json"
+  ],
+  "evidence": {
+    "change": "compact(FORK) now writes a content-addressed provenance marker into the fork root's text: '[fork] replaces head through <last folded head node_id>; forked_from <pre-compaction chain_hash>' + blank line + summary. SUMMARISE_IN_PLACE text unchanged. render.py docstring updated; renderer logic unchanged.",
+    "why_library_not_cell": "compact(FORK) vs compact(SUMMARISE_IN_PLACE) emitted byte-identical node.text, so no renderer could distinguish the arms on content; a cell-only fix (render fork cell with POINTER_FORK) would confound renderer with policy and change only a 93-char header label. The marker lives in node.text, so every renderer (including U4's NAIVE_APPEND) now emits a genuinely different prompt. cells/U4/u4_cell.py NOT edited: its single-renderer design is correct once the chain itself distinguishes the arms, and editing it would mismatch its already-written rows.",
+    "corpus_event": "experiments/context-cache/corpora/compaction.json (sha256 d702f8f4af2f9d34f68fbca3aa2a096fc8b9cb5f7f7fb32f282c869cbd1f2961, matches MANIFEST) scenario C1 at first compaction point (0-based turn 17; 19 nodes, 8343 estimated tokens, preamble included), keep_last=2, summariser = corpus summary_hint for BOTH policies, salt make_salt(20261020).",
+    "digests_before_naive_append": {
+      "sha256_fork": "dc591b7eddbede998a58bbdf412f55fbcd5f4a94d4073920c7936dcabad4877b",
+      "sha256_summarise": "dc591b7eddbede998a58bbdf412f55fbcd5f4a94d4073920c7936dcabad4877b",
+      "identical": true
+    },
+    "digests_after_naive_append": {
+      "sha256_fork": "b812c99dc0e408de7c823583e8c8de8f501101e7d48bac79e80981867f6c34cd",
+      "sha256_summarise": "dc591b7eddbede998a58bbdf412f55fbcd5f4a94d4073920c7936dcabad4877b",
+      "differ": true
+    },
+    "digests_after_pointer": {
+      "sha256_fork": "b812c99dc0e408de7c823583e8c8de8f501101e7d48bac79e80981867f6c34cd",
+      "sha256_summarise": "dc591b7eddbede998a58bbdf412f55fbcd5f4a94d4073920c7936dcabad4877b",
+      "differ": true,
+      "note": "POINTER is byte-identical to NAIVE_APPEND on the same chain (equal_information)."
+    },
+    "digests_after_pointer_fork": {
+      "sha256_fork": "a34fe0a626c2e59249f3715c08a48ddf121dcf46d8f5fc1c1cd7ce0087ffa77a",
+      "sha256_summarise": "dc591b7eddbede998a58bbdf412f55fbcd5f4a94d4073920c7936dcabad4877b",
+      "differ": true,
+      "note": "Additional 93-char header label from the POINTER_FORK policy itself."
+    },
+    "marker_values": {
+      "fork_root_text": "[fork] replaces head through <head[-1].node_id>; forked_from <chain[-1].chain_hash>\n\n<summary>",
+      "forked_from": "eb46803990131cf6ca8c8ba7f6c4fcee5bc452e9561ac2307f33c96a071accf1",
+      "replaced_head_last_node_id": "81d50d467779ba683aab8f753075b06a79949c4c62e7e11018d724c6355229eb",
+      "fork_node_id": "6adc3ed71435125b35892a52887095a68ebcedc91cad326f0df5e1a041dddf01",
+      "summarise_node_id": "4df9f0628cc633f5dac0e1e1e5be0f63da8b42cc049cddbef698d8c82c8f1514",
+      "summarise_root_text_is_bare_summary": true
+    },
+    "prompt_size_delta": "fork prompt 7966 JSON chars vs summarise 7791 = +175 chars (~44 estimated tokens, 0.5% of the 8343-token event); difference is the marker line only, tail bodies byte-identical.",
+    "equal_information": {
+      "fork_arm": true,
+      "summarise_arm": true,
+      "definition": "POINTER vs NAIVE_APPEND over the same chain: same message count, same concatenated content. Verified via resextract.context.render.equal_information for both compacted chains."
+    },
+    "red_green": "Reverted the marker in budget.py in place -> tests/test_context_fork_marker.py: 5 failed, 1 passed (fork/summarise digests both dc591b7e...). Restored -> 51 passed. budget.py sha256 verified identical before/after restore (d3fe4e389789368adc94f9c9cab058f014fd20993960a61c72b670d8ceff51af).",
+    "full_suite_note": "PYTHONPATH=src .venv/bin/python -m pytest tests -q -> 1114 passed, 1 failed, 1 skipped. The failure is pre-existing and unrelated: tests/test_kg_policy.py::test_real_target_config_declares_the_decision (PolicyWideningError over '.lane-j-scratch' in config), no context file involved.",
+    "commands": [
+      "PYTHONPATH=src .venv/bin/python -m pytest tests/test_context_*.py -q   # baseline 45 passed in 0.04s",
+      "PYTHONPATH=src .venv/bin/python experiments/context-cache/cells/U13/u13_fork_marker_probe.py",
+      "PYTHONPATH=src .venv/bin/python -m pytest tests/test_context_*.py -q   # after 51 passed in 0.04s",
+      "PYTHONPATH=src .venv/bin/python -m pytest tests/test_context_fork_marker.py -q   # red: 5 failed, 1 passed"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "surviving/verifier: re-run U4's fork-vs-summarise comparison; its recorded 454 live rows are pre-fix (fork and summarise prompts were identical, so its 'fork == summarise' refutation is a prompt-identity artefact, not a cache result). No new live spend is required for the prompt proof: tests/test_context_fork_marker.py is offline. U5's 190/190 fork==summarise digest claim is invalidated by the same defect and needs a re-run of its cells under the fixed library.",
+  "write_paths": [
+    "src/resextract/context/budget.py",
+    "src/resextract/context/render.py",
+    "tests/test_context_fork_marker.py",
+    "experiments/context-cache/cells/U13/",
+    "orchestration/handoffs/U13.json",
+    "orchestration/units/U13.md"
+  ]
+}

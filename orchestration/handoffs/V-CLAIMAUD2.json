@@ -1,0 +1,53 @@
+{
+  "unit": "V-CLAIMAUD2",
+  "overall": "pass",
+  "scope": "Audit the ten claims above C52 (C53-C62) and the count-consistency claim of the context-cache package. Verifier unit; not an author. Write-capable retry of V-CLAIMAUD (read-only variant produced no artefact).",
+  "checks": [
+    "C53 G5 fan-out: recompute.py C53 -> PASS 6/6, B/A 6.744331504 [4.04542649, 9.44323652], C/A 1.105174403; A 123240/102912/20328, B 123256/0/123256, C 19792 uncached; 8 fan-outs x 8 branches",
+    "C54 M4 resident capacity: recompute.py C54 -> PASS; W in [30,31] docs = [258035,266636] tokens = [0.1592,0.1645] of 1620892; 1.501724x pressure (2434133 tokens, 283 docs); binding constraint state cache, verdict consistent_with_lru",
+    "C55 grid unit per stack: PASS 12/12 values; S0 64@880/880, S1 64@888/888, S2 128@888/888, V1 1088@300/300, V2 1056@268/268, V3 2096@16/16, TUNED 64@10/10",
+    "C56 vLLM unit identified not fitted: PASS; V1 hot vs 1056 = 0/264, vs 1088 = 264/264; V2 vs 1088 = 0/264, vs 1056 = 264/264; V3 2096 16/16, 1088 0/16",
+    "C57 SGLang multiples at any page size: PASS; S0 880/880 gcd 64 odd-unit 351; S1 880/880 gcd 64 odd-unit 351; S2 880/880 gcd 128 odd-unit 478; S1 vs S0 887/888 identical",
+    "C58 grid move = one block, no latency effect: PASS; 900 paired rows 534 identical / 353 lower-by-64 / 13 higher; delta set {-64,0,832,896}; mean uncached S1 740.4 vs S2 752.58; TTFT ratio median 1.005",
+    "C59 TUNED grid 64 under disable-chunked-prefix-cache true, SLRU 1.505083x: PASS 7/7; 289 rows (P259/R30), 10 hot all multiples of 64, gcd 64, odd-unit 3, bands newest 10/10 middle 0/10 oldest 0/10",
+    "C60 cross-engine: PASS 8/8; 5 distinct units across 7 stacks; TUNED 8305.0/turn hit 0.034474, S0 739.25/turn hit 0.974242, TUNED/S0 11.2344, V1/S0 3.0176, V1/TUNED 0.2686",
+    "C61 grid guard: PASS 7/7 configs present (S0 888, S1 900, S2 900, V1 358, V2 312, V3 22, TUNED 289)",
+    "C62 G3-FOLD compaction boundary: PASS 17/17 values incl. per_arm and resting_window tuples; 2780 rows, 18 compactions, 12 arm-instances; post-boundary +134.6..+747.2 with 1/12 intervals crossing zero; pre-boundary -11.8..+51.0 with 0/12 excluding zero",
+    "recompute.py all: '59 claims checked, all match', exit 0",
+    "verify_package.py: 'PASS - 62 claims in CLAIMS.md, 62 mapped 1:1, 2 script-backed + 60 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none', exit 0",
+    "Claim-id census by independent parse (regex ^\\|\\s*(C\\d{2})\\s*\\|): 62 unique ids, 0 duplicates; union C01-C62 complete with no gaps",
+    "Reader-map census: 62 rows, no duplicates, 1:1 with CLAIMS.md in both directions",
+    "Source-cell integrity: sha256 of G5-rows 8fd7f9d2..., M4-rows 08be0204..., G3V2-rows 589662ce..., G3V2-events 76c50cb9..., TUNED-rows be59b3bf... all match CLAIMS.md's digest table"
+  ],
+  "not_reproduced": [
+    "CLAIMS.md:140-141 Coverage assert '58 claims, all re-derived' and '58 claims checked, all match'. The same file carries 62 claim rows and the actual run prints '59 claims checked, all match'. 58 = 59 - 1, i.e. the count was never advanced for C62, and it predates the 58 -> 62 correction already made in PACKAGE.md:173-176. The stated terminal line is also not the string the tool emits.",
+    "CLAIMS.md:141 parenthetical '(C55-C60 are the X-SYNTH second-pass numbers; C61 is the grid guard...)'. It omits C62, which is a stored-value claim counted in the run, and it misclassifies C55-C60: recompute.py:1176 GRID_CLAIMS = {'C55','C56','C57','C58','C59','C60','C61'} sends all of them through grid_guard(), so C55-C60 are guard gated exactly as C61 is."
+  ],
+  "overstated": [
+    "CLAIMS.md Coverage section reads as a verified count ('58 claims, all re-derived'). Nothing checks it: recompute.py main() only compares claim counts to each other via len(claims), and verify_package.py compares CLAIMS.md against READER-MAP.md - neither compares either to the printed run count. A stale prose count therefore passes every guard in the package. This is the same class of defect PACKAGE.md:173-176 records as already having happened twice ('The earlier 58/52 figures in this file were wrong')."
+  ],
+  "unverified": [
+    "C53's conclusion that the 6.744x fan-out ratio is attributable to prefix sharing beyond layout arithmetic: the rows reproduce the stated token counts exactly, but the recompute does not test locality/placement as a cause. Reported as arithmetic, not re-tested causally.",
+    "C62's generality: reproduces exactly for the delivered cell but the claim is explicitly scoped to one cell and one trigger policy, and no second cell exists to test it. The manuscript's 'What is not claimed here' says so; not treated as a defect."
+  ],
+  "red_green": [
+    "Guard tested: verify_package.py claim-coverage check. RED - inserted a synthetic row '| C99 | PLANTED UNVERIFIED claim for red test (SS99) | ...' after C62 -> 'verify_package: FAIL / - missing claim ids in READER-MAP: C99', exit 1. GREEN - restored CLAIMS.md byte-for-byte -> 'verify_package: PASS ... 62 mapped 1:1', exit 0. 1/1 reproduced.",
+    "Negative result worth recording: a first red attempt that appended a row whose first cell was the literal 'UNVERIFIED' rather than a C\\d{2} id did NOT fail - verify_package.py stayed PASS, exit 0, because CLAIM_RE only matches C\\d{2} first cells. Unparseable claim rows are invisible to the guard. This is a real coverage hole in the checker, not a defect in CLAIMS.md as it stands (no such row exists today)."
+  ],
+  "corrections": [
+    "CLAIMS.md:140-141 must be updated: '58 claims' -> '62 claims'; '58 claims checked, all match' -> '59 claims checked, all match'; the parenthetical must cover C62 and must state that C55-C60 also run under grid_guard per recompute.py:1176."
+  ],
+  "containment": "Read-only against all data cells; no live server contacted, no model request, no engine restart, no lock taken. The only write was a guarded, restored edit to papers/context-cache/CLAIMS.md for the red test, verified restored (verify_package PASS, sha unchanged in behaviour, git shows CLAIMS.md unmodified). No target repo (/home/zer0null/Duval or other) touched; no git command run against a target.",
+  "tool_calls": 21,
+  "bound": 40,
+  "assumptions": [
+    "The card prompt was one line ('V-CLAIMAUD2 - audit claims above C52 (write-capable retry)') and carried no explicit bound or write paths. Conservative default taken: bound 40 tool calls, write only under orchestration/ plus the CLAIMS.md restoration described in containment. Recorded here rather than stalling, per AGENTS.md 'Automated sessions never ask the user'.",
+    "Scope read as C53 through C62 inclusive plus the count-consistency question from the predecessor card V-CLAIMAUD ('the eight unrequested claim ids above C52 and the count consistency'). Eight ids above C52 would be C53-C60; the package actually carries ten (C53-C62), so all ten were audited."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Patch the two Coverage lines in papers/context-cache/CLAIMS.md (C62 gap + guard misclassification), then re-run recompute.py all and verify_package.py as the red->green pair. Separately: verify_package.py should reject any table row in CLAIMS.md whose first cell is neither C\\d{2} nor a known source key, so a malformed or UNVERIFIED claim row cannot slip past the census - currently it can.",
+  "write_paths": [
+    "orchestration/handoffs/V-CLAIMAUD2.json",
+    "orchestration/units/V-CLAIMAUD2.md"
+  ]
+}

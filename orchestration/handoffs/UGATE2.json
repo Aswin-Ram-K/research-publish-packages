@@ -1,0 +1,46 @@
+{
+ "unit": "UGATE2",
+ "status": "done",
+ "artifacts": [
+  "orchestration/units/UBUILD1.build.sh",
+  "strategy/GATE_VOCABULARY_ANALYSIS.md",
+  "orchestration/units/UGATE2.md",
+  "orchestration/handoffs/UGATE2.json",
+  "scratch/ugate2/gate_scoped_v2.sh",
+  "scratch/ugate2/datavocab_block.sh",
+  "scratch/ugate2/build.log",
+  "scratch/ugate2/residual_by_class.txt",
+  "scratch/ugate2/red.log",
+  "scratch/ugate2/green.out.log",
+  "scratch/ugate2/fc_missing.log",
+  "scratch/ugate2/fc_empty.log"
+ ],
+ "evidence": {
+  "old_gate_count": "1740 out-of-vocabulary token(s) (old shipped gate, identical 39-file tree)",
+  "new_gate_count": "1398 out-of-vocabulary token(s); offender lines printed 1398 (uncapped)",
+  "staging": "staged 29 file(s): 29 kept, 0 dropped; repo total 39 files",
+  "self_offenders": "0 lines in gate.sh",
+  "classes": "b-thirdparty 1023/260 \u00b7 c-mechanism-stimulus 268/10 \u00b7 a-schema 64/16 \u00b7 c-outside 0 \u00b7 unclassified 42/24",
+  "red_green": "RED 1399 naming packages/exp12-encoder-crossover/README.md:32: tccommon; GREEN 1398; diff -rq identical",
+  "fail_closed": "missing data.txt -> exit 2 (FATAL: cannot read vocabulary file); empty data.txt -> exit 2 (FATAL: vocabulary file has no declared terms); empty derivation input -> exit 1 (FATAL: derived an EMPTY data vocabulary), no file written",
+  "latent_bug_fixed": "scratch/ugate1/gate_scoped.sh:121 compared a relative path to absolute VOCAB_DIR, so the vocabulary self-scan guard never fired (117 phantom lines on UGATE1's tree, 51 on the current tree)",
+  "scope_correction": "UGATE1's 29,936/6,093 were measured on 64/65-file trees (scratch/ugate1/emit, candidate-keys), not the current 29-staged/39-emitted package",
+  "data_vocab": "vocabulary/data.txt derived by the build in keys mode (501 keys from 32 documents); make_data_vocab.py --mode full is not used"
+ },
+ "commands": [
+  "bash orchestration/units/UBUILD1.build.sh  # DEST=scratch/ugate2/dest/research-publish-packages",
+  "bash scratch/ugate2/gate_scoped_v2.sh <tree>",
+  "python3 scratch/ugate2/classify.py scratch/ugate2/build.log scratch/ugate1/oov_tokens_classified.tsv",
+  "bash scratch/ugate2/oldgate-test/gate.sh  # old gate on identical tree",
+  "bash scratch/ugate2/redtest/gate.sh  # after printf 'tccommon\\n' >> packages/exp12-encoder-crossover/README.md"
+ ],
+ "blocker": "",
+ "next_unit_hint": "Gate still FAILS on 1398 (a result, per the card). Residual classes: 1023 third-party/incidental, 268 mechanism-in-stimulus (fs.read 116 / fs.write 104 dominate) = the author's 'numbers or the vocabulary' call, 64 a-schema in prose/source, 42 unclassified (internal unit/document names e.g. URECUT1, and data-key-like path tokens). Genuine mechanism outside data: 0. Do NOT widen vocabulary. Doc-precision left undone: the shipped README.md gate paragraph and the build comment at ~line 491 still say 'it scans itself' \u2014 true of gate.sh, but they do not mention vocabulary/data.txt. A follow-up changing UBUILD1.build.sh:134 PROMOTED_SAN_SRC must re-measure (my edits are independent of that line).",
+ "write_paths": [
+  "orchestration/units/UBUILD1.build.sh",
+  "strategy/GATE_VOCABULARY_ANALYSIS.md",
+  "orchestration/units/UGATE2.md",
+  "orchestration/handoffs/UGATE2.json",
+  "scratch/ugate2/**"
+ ]
+}
