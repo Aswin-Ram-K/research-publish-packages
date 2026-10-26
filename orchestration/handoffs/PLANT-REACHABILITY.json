@@ -1,0 +1,122 @@
+{
+ "unit": "PLANT-REACHABILITY",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/tools/prompt_at_turn.py",
+  "experiments/ptr-engine/measure/REACHABILITY-MATRIX.md",
+  "experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.grade-v3-final.json",
+  "orchestration/units/PLANT-REACHABILITY.md"
+ ],
+ "evidence": {
+  "matrix": [
+   {
+    "arm": "transcript-grow",
+    "turn": 12,
+    "fact_planted_in_prompt": true,
+    "expected_value_in_prompt": false,
+    "answer_observed": "I'll read the specified lines of resolve.py.\n\nANSWER: NOT-AN-ANSWER",
+    "reachable": false,
+    "evidence": "grep '64' count=0; plant text present but carries no value"
+   },
+   {
+    "arm": "transcript-grow",
+    "turn": 24,
+    "fact_planted_in_prompt": true,
+    "expected_value_in_prompt": false,
+    "answer_observed": "I'll read errors.py to count Ptr* error classes.\n\nANSWER: NOT-AN-ANSWER",
+    "reachable": false,
+    "evidence": "grep '31' count=0 (digit-bounded)"
+   },
+   {
+    "arm": "transcript-grow",
+    "turn": 46,
+    "fact_planted_in_prompt": true,
+    "expected_value_in_prompt": true,
+    "answer_observed": "I'll read resolve.py to answer T46.\n\nANSWER: NOT-AN-ANSWER",
+    "reachable": true,
+    "evidence": "289 anchor hits (ledger 41, record 51, scope 75, code 38)"
+   },
+   {
+    "arm": "pointer-stable",
+    "turn": 12,
+    "fact_planted_in_prompt": false,
+    "expected_value_in_prompt": false,
+    "answer_observed": "I need to read the full resolve.py to find the default per-turn resolve budget. Let me look at line 39 and surrounding context.\n\nANSWER: NOT-AN-ANSWER",
+    "reachable": false,
+    "evidence": "grep '64' count=0; plant text absent (tail keeps answers only); 2264 prompt_tokens"
+   },
+   {
+    "arm": "pointer-stable",
+    "turn": 24,
+    "fact_planted_in_prompt": false,
+    "expected_value_in_prompt": false,
+    "answer_observed": "I need to count the Ptr* error classes defined in errors.py. Let me read that file. <tool_call>READ@1@ptr_engine/errors.py@1-331 <tool_call>RUN@1@grep -n \"^class Ptr\"\nANSWER: 7\nANSWER: 7",
+    "reachable": false,
+    "evidence": "grep '31' count=0; errors.py slice has 3 classes and ends mid-declaration"
+   },
+   {
+    "arm": "pointer-stable",
+    "turn": 46,
+    "fact_planted_in_prompt": false,
+    "expected_value_in_prompt": true,
+    "answer_observed": "I cannot answer from the pinned body because `resolve.py` is truncated at the `PtrUnknownIdError(` raise (around L66), so lines 66-71 are not available to read.\n\nANSWER: NOT-AN-ANSWER",
+    "reachable": true,
+    "evidence": "168 anchor hits; pinned body BEGINS at def _refuse with ledger.record_refusal(...)"
+   }
+  ],
+  "method": "imported-runner",
+  "method_detail": "prompt_at_turn.py imports run_longrun, patches send_chat with a recorder raising WouldSend(payload), drives run_longrun.run_cell for turns 1..N with the settled canned replies; direct-builder fallback not needed",
+  "sha_provenance": "materialised prompt sha256 == settled row prompt_sha256 on every replayed turn; 0 mismatches in all six cells",
+  "baseline_probe": "working_set_block (shared 4 pinned bodies, 6339 B): '64'=0, '31'=0 at every turn; resolve.py slice (1680 B) starts at def _refuse and has no L39 budget line; errors.py slice (331 B) has 3 class declarations and ends mid-declaration",
+  "no_http_proof": "5 clients patched (urllib.request.urlopen, urllib.request.build_opener, http.client.HTTPConnection.connect, http.client.HTTPSConnection.connect, socket.create_connection) each raise AssertionError; observed output 'NO-HTTP PROOF ok: 5 clients patched, network_attempts=[], requests_sent=0'",
+  "regrade_snapshot_delta": {
+   "snapshot_generated_at": "2026-10-26T11:02:07+00:00",
+   "final_generated_at": "2026-10-26T11:07:33+00:00",
+   "snapshot_row_count": 96,
+   "final_row_count": 96,
+   "verdict_changes": [],
+   "per_arm": {
+    "transcript-grow": {
+     "verified_success": false,
+     "checkpoint_accuracy": "0/3",
+     "reasons": {
+      "cp.0.t12": "marker_without_value",
+      "cp.1.t24": "marker_without_value",
+      "cp.2.t46": "refused_while_knowable",
+      "repair.t30": "repair_not_acknowledged",
+      "acc.n2b": "ok"
+     }
+    },
+    "pointer-stable": {
+     "verified_success": false,
+     "checkpoint_accuracy": "0/3",
+     "reasons": {
+      "cp.0.t12": "marker_without_value",
+      "cp.1.t24": "number_wrong:7",
+      "cp.2.t46": "refused_while_knowable",
+      "repair.t30": "repair_not_acknowledged",
+      "acc.n2b": "ok"
+     }
+    }
+   },
+   "note": "every check's pass flag and reason string is identical to the 11:02:07Z snapshot; only generated_at differs"
+  },
+  "verdict": "Both arms are unreachable at T12 and T24 (the planted turn carries only a citation to checkpoints[].source and the pinned slices omit resolve.py#L39 and truncate errors.py at 331 B), so the pointer arm's CP1/CP2 failures are arm-independent fixture defects; at T46 both arms ARE reachable and both still answer NOT-AN-ANSWER, so that cell is behaviour, not reachability."
+ },
+ "blocker": "",
+ "assumptions": [
+  "rep=1 is the only rep in the pilot (48 rows/arm), so the matrix is per rep 1",
+  "fact_planted_in_prompt is scored on the turn-2 plant turn text as the runner emits it; transcript-grow True reflects text presence only, since that text states no value",
+  "prose checkpoint cp.t46 counted on the grader's anchor split (tokens >=4 chars, all required)"
+ ],
+ "next_unit_hint": "Fixture-level fix, not a runner fix: either put the L39 budget line into the pinned resolve.py slice and widen the errors.py slice past L142, or make the turn-2 plant turn state the values inline; then re-run both arms to separate plant reachability from pointer compression. T46 separately needs a behaviour unit (the model denies reading the body it was given).",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/tools/prompt_at_turn.py",
+  "experiments/ptr-engine/measure/REACHABILITY-MATRIX.md",
+  "experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.grade-v3-final.json",
+  "orchestration/handoffs/PLANT-REACHABILITY.json",
+  "orchestration/units/PLANT-REACHABILITY.md",
+  "/tmp/**"
+ ],
+ "requests_sent": 0
+}

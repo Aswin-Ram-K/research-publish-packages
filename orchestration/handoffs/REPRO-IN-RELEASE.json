@@ -1,0 +1,34 @@
+{
+ "unit": "REPRO-IN-RELEASE",
+ "status": "done",
+ "artifacts": [
+  "release/REPRO.md",
+  "orchestration/units/REPRO-IN-RELEASE.md",
+  "orchestration/handoffs/REPRO-IN-RELEASE.json"
+ ],
+ "evidence": {
+  "command_or_count": "as-shipped: verify_package exit 0 'PASS - 69 claims, 69 mapped 1:1, UNVERIFIED: none'; recompute.py all exit 1 FileNotFoundError state/config/rows.jsonl at claim 65/69; recompute_r2.py all exit 1 same; ledger guard 8 failed; g5 4 passed; g3 13 passed. With only state/ supplied and shipped bytes untouched: recompute.py all exit 0 'COVERAGE GUARD PASS 69 claims documented, 67 runnable here + 2 script-backed'; recompute_r2.py all exit 0 PASS 61/61,38/38,48/48,75/75,85/85,70/70,50/50; ledger guard 6 failed 2 passed (orchestration/scratch refs). Live tree ledger guard 8 passed.",
+  "commands": [
+   "cd release/v0.1 && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python papers/context-cache/verify_package.py",
+   "cd release/v0.1 && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python papers/context-cache/recompute.py all",
+   "cd release/v0.1 && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python papers/context-cache/recompute_r2.py all",
+   "cd release/v0.1 && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python -m pytest tests/test_gap_closure_ledger.py -q",
+   "cd release/v0.1 && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python -m pytest tests/test_g5_fanout_attribution.py -q",
+   "cd release/v0.1 && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python -m pytest tests/test_paper_g3_bands.py -q",
+   "cp -a release/v0.1 /tmp/release-copy && ln -s \"$PWD/state\" /tmp/release-copy/state && cd /tmp/release-copy && ../../'reserach extarctor'/.venv/bin/python papers/context-cache/recompute.py all"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Ship state/config/rows.jsonl (82565 B) and state/gap-ledger.json (25834 B) inside the release MANIFEST, or add a documented bootstrap path, then re-run this card expecting recompute.py all and recompute_r2.py all at exit 0. Separately decide whether test_gap_closure_ledger.py belongs in a release at all: it resolves orchestration/handoffs and scratch/cache-audit docs that a publication tree cannot contain, so it can never pass in a copy.",
+ "write_paths": [
+  "release/REPRO.md",
+  "orchestration/units/REPRO-IN-RELEASE.md",
+  "orchestration/handoffs/REPRO-IN-RELEASE.json"
+ ],
+ "assumptions": [
+  "Used ../../.venv/bin/python from release/v0.1 because the card's ../.venv/bin/python does not exist; the venv lives two levels above the release tree.",
+  "Re-ran failing scripts in a hard copy at /tmp/release-copy with only state/ supplied rather than failing the unit, to distinguish missing package data from wrong numbers; the release tree itself was not modified.",
+  "Treated the C63->61/61 ... SYSOPT->50/50 mapping as verified by per-claim runs, since recompute_r2.py prints no claim id on its PASS lines.",
+  "Did not repair any failure; all deviations are reported in release/REPRO.md."
+ ]
+}

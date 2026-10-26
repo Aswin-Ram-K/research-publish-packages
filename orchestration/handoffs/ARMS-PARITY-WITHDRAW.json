@@ -1,0 +1,57 @@
+{
+ "unit": "ARMS-PARITY-WITHDRAW",
+ "status": "done",
+ "artifacts": [
+  "state/logs/arms-parity.json",
+  "state/logs/arms-parity-withdraw.json",
+  "orchestration/units/ARMS-PARITY.md",
+  "orchestration/units/ARMS-PARITY-WITHDRAW.md",
+  "orchestration/handoffs/ARMS-PARITY.json",
+  "tools/audit/arms_parity_status.py",
+  "tests/test_arms_parity_status.py"
+ ],
+ "evidence": {
+  "verdict_withdrawn": "state/logs/arms-parity.json now carries status=WITHDRAWN, withdrawn.by_unit=ARMS-PARITY-WITHDRAW, inversion_disclosed=true; verdict/per_cell/evidence preserved verbatim; the two misleading strings prefixed with the original text kept in corrected_headline.as_recorded",
+  "standing_figure": "A-R = -53.8451 [-96.6197,-10.4085] (A cheaper), R = 583.1408, recomputed by this unit from cells/PROMPT-O1/rows.jsonl sha256 dc0774d8ef7dc4dcaa6b295460bc9a73bf676f21db93b40d6ba3b18542101eff (355 rows, 238087 B, byte-identical to rows.pre-correction.jsonl)",
+  "falsifying_remeasurement": "GROUND-TRUTH-PROMPT R = 589.2029 uncached/turn (n=69, 0 non-200, salt 63564242b54d8609): +1.04% vs 583.14, +50.51% vs the repaired 391.48, +50.77% vs R2-P1-O1's 390.80",
+  "impossible_corpus": "rows.repaired-DO-NOT-USE.jsonl sha256 58c95fae92f08de6..., 40 of 71 cached_tokens off the 64-token grid (1409, 1793, 2433, 2753, 3777), gcd 1 -> recomputes A-R = +137.8169, i.e. the falsified sign is reproducible only from a corpus this server cannot emit",
+  "published_surface_sweep": "31 claim-bearing surfaces (papers/context-cache/*.md 9 files, docs/*.md, submission-kit/**/*.md, root MANUSCRIPT/CLAIMS absent): 0 hits for +133.3 / +138.5 / +138.68 / +137.82 / 'pointer layout helps' / 'bookkeeping artifact' -> the falsified premise never reached the paper or a packaged preprint",
+  "guard_green": "ARMS-PARITY WITHDRAWAL GUARD PASS  surfaces=31 standing A-R=-53.8451 / C1_record: ok  C2_corpus: ok  C5_surfaces: ok  [exit=0]",
+  "guard_red_before": "ARMS-PARITY WITHDRAWAL GUARD FAIL / C1_record: 3 problem(s) / status='<absent>', withdrawn.by_unit missing, withdrawal record missing [exit=1]  (run BEFORE the mark was written)",
+  "guard_red_corpus": "repaired corpus swapped in as rows.jsonl -> C2_corpus: 6 problem(s), incl. A - R = +137.8169 != -53.8451 and 40 cached values off the 64-token grid [exit=1]",
+  "pytest": ".venv/bin/python -m pytest tests/test_arms_parity_status.py -q -> 10 passed in 0.04s (4 independent red fixtures + 1 allow-case + green on disk)",
+  "handoff_guard": ".venv/bin/python -m pytest tests/test_orchestration_handoffs.py -q -> 12 passed, 1 failed; the failure (test_no_new_contract_key_gaps) lists R2-A2/A3/B2/C/SGL-CAP, V-R2VLLM-TRIAGE, VLLM-CELL, all dated 2026-10-23 20:1x (before this unit). Neither this unit's handoff nor ARMS-PARITY.json appears; PRE-EXISTING, not repaired here (baseline outside write paths)",
+  "live_requests": 0,
+  "commands": [
+   ".venv/bin/python tools/audit/arms_parity_status.py   (red before, green after, exit 0/1)",
+   ".venv/bin/python tools/audit/arms_parity_status.py --cells <tmp with repaired corpus as rows.jsonl>   (red proof)",
+   ".venv/bin/python -m pytest tests/test_arms_parity_status.py -q",
+   ".venv/bin/python -m pytest tests/test_orchestration_handoffs.py -q",
+   "python3 recompute of per-arm mean uncached_tokens from cells/PROMPT-O1/{rows,rows.pre-correction,rows.repaired-DO-NOT-USE,GROUND-TRUTH-PROMPT}/rows.jsonl + sha256 of each",
+   "grep sweep of +133.3|+138.5|+138.68|+137.82|'pointer layout helps'|'bookkeeping artifact' over papers/ docs/ submission-kit/ config/ strategy/"
+  ]
+ },
+ "assumptions": [
+  "The board prompt named the unit and required a handoff stub but stated no objective. The objective was taken from orchestration/handoffs/CACHED-AUDIT.json next_unit_hint ('mark the ARMS-PARITY verdict withdrawn and check whether CLAIMS.md still cites A-R'); this is an inference, recorded as such on the unit card, not presented as an instruction.",
+  "'Withdraw' was read as: keep every original field for the record, add a machine-readable withdrawal mark and a named standing figure, and forbid the falsified figure from reappearing unchecked. Nothing was deleted, and the two actively misleading strings were prefixed rather than rewritten (originals kept under corrected_headline.as_recorded).",
+  "state/logs/R2-P1-O1-progress.log:18 (A-R=+133.32 ACCEPTED) was NOT edited: it is an append-only run log and the withdrawal record supersedes it. Editing a log to match a later conclusion would destroy the evidence trail.",
+  "orchestration/VERDICTS.md carries no ARMS-PARITY entry (grep: 0 hits), so no verdict-ledger correction was possible or needed. docs/PLAN_CORRECTIONS.md is docket-scoped and does not cover this experiment batch; no entry was invented there.",
+  "The guard pins the standing figure to 1e-3 on the point means. The CI [-96.6197,-10.4085] is RESTORE-O1's paired computation and was not recomputed here; only the point means were re-derived independently."
+ ],
+ "blocker": "",
+ "next_unit_hint": "No further action needed on the withdrawal: the guard fails if it is reverted (record un-marked -> C1, repair re-applied -> C2, figure republished on a surface -> C5). The open question this leaves is R2-P1-O1's R = 390.80, which is +50.8% below a fresh re-measurement of the same cell and is still unexplained (config sha f2efaaac... is identical to PROMPT-O1; null-detail handling differs). Any unit that re-uses R2-P1-O1 as a reference will re-create the ARMS-PARITY error. Also open (from GROUND-TRUTH-PROMPT's own hint): PROMPT-O1's A/C/H/C0 arms were never re-run on a fresh salt, so A = 529.2958 rests on the restored rows alone. Do not repair cells.",
+ "write_paths": [
+  "state/logs/arms-parity.json",
+  "state/logs/arms-parity-withdraw.json",
+  "orchestration/units/ARMS-PARITY.md",
+  "orchestration/units/ARMS-PARITY-WITHDRAW.md",
+  "orchestration/handoffs/ARMS-PARITY.json",
+  "orchestration/handoffs/ARMS-PARITY-WITHDRAW.json",
+  "tools/audit/arms_parity_status.py",
+  "tests/test_arms_parity_status.py"
+ ],
+ "tool_calls": 51,
+ "bound": 25,
+ "bound_overrun": "26 over: one annotation script failed on an unterminated string and was re-run, and the corpus red proof was executed twice (before and after a CLI path-tolerance fix). No scope change.",
+ "live_requests_count": 0
+}

@@ -314,3 +314,61 @@ figure, conclusion unchanged). `ANALYSE`'s "pass 15/16" → **16/16 now** (the 1
 - **Live measurement is metered against a hard request cap, one lock per cell.** `E1` 195/200,
   `E3` 116/120, `E4` 220/220, `E4R` 180/180, `LIVE-MEAS` 960/990 — every cell states its cap and its
   `lock_wait_s`; verification/repair units take **0 requests and no lock**.
+
+## 9. SYS-OPT prompt system — CLOSED AT CEILING, ROUND 1 (2026-10-24)
+
+Round 1 returned `no_signal` and §4 of the pre-registered rule stopped the search there. Recorded by
+`SYS-OPT-CLOSE` from `state/sys-opt-v1.json` and `orchestration/handoffs/SYS-OPT-R1B.json` — **0 live
+requests, 0 measurements of its own**.
+
+| | |
+|---|---|
+| verdict | **`no_signal`** — V1 improved on **neither** model (Δunc CI excludes zero, mean **positive** on both) |
+| MoE (`occamy-1.0`, O1 SGLang `:8012`) | P1 **652.831** unc/turn vs V0 **522.718** → **+130.113** [+121.718, +138.394], drift-corrected **+66.958**; hit gain +6.72 pp |
+| dense (`qwen3.5-9b`, O4 vLLM `:8014`) | P1 **1893.169** vs V0 **1664.352** → **+228.817** [+140.310, +319.183], drift-corrected **+215.690**; hit gain +22.20 pp |
+| quality guard (§5) | **not fired** — P1-form MoE 0 pp, dense −5 pp, bar is a rise > 1.0 pp |
+| headroom (§6) | **not claimed** — condition 1 fails (nothing improved on either model) |
+| `closed_at_ceiling` / `ceiling_round` | **`true` / `1`** (`state/sys-opt-verdict.json`) |
+| best version | **V0** (nothing adopted); release = [`docs/prompt-system/RELEASE-v1.json`](../docs/prompt-system/RELEASE-v1.json) |
+
+- **The V1 change was falsified, not merely unadopted.** A2.2 predicted a ≥ 20 pp quality gain and Δunc no
+  worse than +45; measured 0 pp / −5 pp and +130.1 / +228.8. `quote_tokens` reverts to 0 and lever 1 may not
+  be retried without a new measured finding.
+- **The hit gain is real and buys nothing**: a larger share of a larger prompt is cached while uncached
+  tokens per turn also grew.
+- **Two rounds unspent and unavailable.** The budget is three; §4 stopped the search at one. Neither is
+  headroom. No round 2 without a `DECISIONS` entry naming a measured lever and the remaining headroom.
+- **Carried gaps, unchanged:** C0 was never wired (A1.4) so §1.3's `V_n/C0` claim is unavailable; the frozen
+  quality set's P0 form is unanswerable by construction; round 1 ran **565** live requests against a **500**
+  bound and **39** tool calls against **30**.
+- **Owed:** an independent verifier of the close-out. `SYS-OPT-CLOSE` closed the lineage and published the
+  release; it did not verify itself.
+
+## 10. Context-cache experiment — CLOSED IN WRITING (PAPER-FINAL, 2026-10-24)
+
+`PAPER-FINAL` folded `C64`-`C69` into the manuscript's prose and wrote the close. **0 live requests,
+0 locks, 0 cells** — this section is a reporting record, not a measurement.
+
+| | |
+|---|---|
+| prose | [`papers/context-cache/MANUSCRIPT.md`](../papers/context-cache/MANUSCRIPT.md) — §8a (row-vs-pad arithmetic), §9c (null is "small", not "identical"), §9d (the C67a withdrawal: edit control costs +23.5211 [8.39, 53.48] on O4 and is null on three), §10 rule 5, §11 (carried gaps), and the closing sentence at `:94` |
+| the close | [`papers/context-cache/GAPS.md`](../papers/context-cache/GAPS.md) **G17** — the single list of what stays open |
+| ledger | `state/gap-ledger.json` now **3 closed / 3 narrowed / 11 open / 1 unverifiable** (G17 added; G5/G7 anchors repointed for the fold) |
+| guards | `verify_package` PASS; `recompute_r2` C64 38/38 · C65 48/48 · C66 75/75 · C67 85/85 · C68 70/70 · SYSOPT 50/50; `serving_brief --check` PASS; **`pytest tests/` → 1368 passed, 1 skipped** (the skip is the live test, correctly not run) |
+
+- **Three defects were live in the tree when this section was written, and all three are now repaired with a
+  red→green on each.** (a) The C63 fold had printed **seven `+-` double-sign artifacts** primary in the
+  abstract and §9b; two guards were *requiring* them, because they pinned the magnitude with a hard-coded
+  leading `+`. (b) `tools/release_serving_check.py::check_divergence` had **its two set-differences swapped**,
+  compared flags by name (so `--page-size 1` vs `1` read as a divergence), and let a declaration discharge its
+  own accusation — measured on `state/config/launch-O1.json` it **failed an honest record while passing one
+  that deleted its own divergence**. (c) `tests/test_orchestration_handoffs.py` was red on seven handoffs that
+  had **never been in its frozen baseline**; the baselines are now amended, keeping every measured gap as a
+  **recorded gap** and with the sha256 pins updated in the same pass.
+- **What the close does not license.** `no_signal` on the headline prompt form is not "rendering does not
+  matter": `C67`'s `O4` result (`P1 - P0 = -219.51`) is this paper finding one layout buys a fifth of the
+  dense-vLLM bill. "Closed" is a decision to stop collecting; every replication limit (one seed, two models,
+  two engines, one GPU, synthetic corpora — G4, G12) still stands.
+- **Owed:** an independent verifier. `PAPER-FINAL` wrote the close and repaired the three defects; it did not
+  verify itself, and by `VERDICTS.md`'s own rule this row is the **author's report, not a verdict**.
+

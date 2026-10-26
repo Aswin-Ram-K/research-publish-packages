@@ -1,0 +1,73 @@
+{
+  "unit": "DESIGN-V3",
+  "artifact": "bounded reasoning policy, proposed as data",
+  "status": "proposed",
+  "requests_sent": 0,
+  "measured_basis": {
+    "finding": "per-turn latency is a function of completion length, not turn depth: r(completion_tokens, latency_s) = +0.997 over the 31 rows at max_tokens=16384 (policy n=17 + fix-16k n=13); throughput 27.6-38.0 tokens/s, median 31.5",
+    "runaway_turns": "9 rows >= 12k completion tokens average 450.9 s/turn; 13 rows < 2k average 21.5 s/turn",
+    "truncation_seen": "16384 groups: 3/17 (policy) and 3/13 (fix) rows finish_reason=length, truncated=true, completion_tokens=16384, no answer. 4096 group: 2/9 (fix) truncated at 4096",
+    "consequence": "a cap alone does not bound the tail; the demand that the answer be written to the content channel is what stops a turn from spending its whole budget reasoning",
+    "excluded": "measure/rows-longrun-2026-10-26.jsonl Stage-1 rows are not used: 140/192 sit at completion_tokens=128 and 99/192 have empty content, so their latency prices an empty parse"
+  },
+  "max_tokens": 4096,
+  "max_tokens_rationale": "one block (3.44 h median / 5.84 h p95 for 204 requests, DESIGN-V3.md section 3); 16384 costs 27.18 h median / 136.89 h p95 for the 1,360-request grid",
+  "reasoning_channel": {
+    "policy": "reasoning may use the engine's own thinking channel up to max_tokens, but no turn may exceed max_tokens in total",
+    "note": "the engine returns the reasoning channel only when configured to; the policy must not depend on reading it, which is why only the content channel can be credited"
+  },
+  "answer_demand": {
+    "required": true,
+    "mechanism": "every turn's instruction ends with a fixed demand block, appended by the driver, not by the arm policy (identical across arms so it cannot become a confounder)",
+    "suffix": "Answer in the content channel only. Do not put the answer inside reasoning. Your final line must be exactly: ANSWER: <value> with the value and nothing after it.",
+    "marker": "ANSWER:",
+    "compliance_check": "a turn is compliant only if the last non-empty content line matches ^ANSWER: \\S",
+    "why": "without a machine-checkable marker a truncated turn and a thinking turn are indistinguishable, and the failed-turn rule below cannot be applied"
+  },
+  "failed_turn_rule": {
+    "definition": "a turn is FAILED if any of: (a) answer_source == 'none'; (b) truncated == true; (c) finish_reason == 'length'; (d) no ANSWER: marker and no expected value verbatim in the content channel",
+    "accounting": "a failed turn is never dropped: it stays in the latency distribution, in the mean completion tokens, and is charged in tokens_to_verified_success, exactly as METRICS.md section 3 requires",
+    "repair": "a failed turn opens the arm's repair budget (max 3 attempts per checkpoint, LONGRUN-PREREG section 2); repair turns are ordinary requests and are charged"
+  },
+  "scorer_rule": {
+    "reasoning_only_turn_with_verbatim_value": {
+      "credited": false,
+      "recorded_as": "UNVERIFIED (answer_source = 'reasoning-only')",
+      "diagnostic": "reasoning_verbatim_match = true, plus the matched value, so the near-miss is visible without being scored",
+      "counted_in": ["latency distribution", "tokens_to_verified_success", "repair_turns"],
+      "why": "the checkpoint is credited only from the content channel. Crediting the reasoning channel would make the metric depend on a channel the engine may not return, and would let a turn that never produced an answer outscore one that did. The verbatim match is kept as a diagnostic so a failing policy can be diagnosed as a *compliance* failure rather than a *capability* failure."
+    },
+    "partial_or_conflicting_answers": "the ANSWER: line wins over any value earlier in the content channel; two conflicting ANSWER: lines are UNVERIFIED (no repair credit by guessing)",
+    "scoring_blindness": "exact match, so a right answer reached for the wrong reason still scores - unchanged from LONGRUN-PREREG, this policy does not fix that"
+  },
+  "falsifier": {
+    "primary": "if more than 10% of scored turns end finish_reason=length AND have no ANSWER: value in the content channel, this policy is REJECTED for the batch and is not tuned (no larger cap, no second attempt to make it fit). Rejection voids the batch as an instrument result, not as an arm result.",
+    "secondary": [
+      "compliance falsifier: if more than 20% of turns are reasoning-only-but-verbatim (value present in reasoning, absent from content), the demand is not being followed and the policy is rejected as an instrument failure, not reported as an arm cost",
+      "cost falsifier: if the achieved mean latency at max_tokens=4096 exceeds 114 s/turn (the measured 4k p95 in rows-longrun-2026-10-26-fix.jsonl), the wall-clock saving is not real and DESIGN-V3 configuration C must be re-priced before any further batch",
+      "accuracy falsifier: if checkpoint accuracy under this policy is more than 0.05 below the arm's accuracy at 16384, the cap changed what the arm can do and the comparison must be reported as cap-confounded rather than as an arm difference"
+    ],
+    "already_at_risk": "the measured 4k group ran 2/9 truncated (22.2%) WITHOUT an answer demand, so the 10% primary falsifier is violated if the demand changes nothing. This is stated up front because it is the most likely way this policy dies."
+  },
+  "controls": [
+    "identical repeat must hit: cached >= 0.95x prompt",
+    "never-sent prompt must miss: cached = 0",
+    "mismatched tokenizer must show no reuse: cached <= 64 on :8012",
+    "no-op checkpoint costs ~0: repair_turns 0, uncached <= residue + 700",
+    "NEW answer-marker control: one turn whose body already contains a valid ANSWER: line must be scored from the content channel and finish under 2 s; a red result means the scorer is matching the prompt echo, not the answer"
+  ],
+  "does_not_relax": {
+    "rule": "LONGRUN-PREREG.md section 4: pointer-stable wins only on p95 TTFT >= 2x better than transcript-grow at the final turn, tokens-to-verified-success no worse, checkpoint accuracy no worse",
+    "how": "this policy changes only the completion budget and the answer demand, applied identically to all four arms; the decision rule, the arms, the fixture and the 64k prompt cap are untouched"
+  },
+  "does_not_settle": [
+    "whether 4,096 tokens is enough reasoning for the hardest checkpoint (t30 repair re-derivation) - that is what the falsifier measures",
+    "concurrency: a sequential driver is assumed; batch parallelism on occamy (B=64) is unmeasured and must not be used to discount these hours",
+    "two reps: caps and reps are separate levers, this policy does not fix the sample size for p95"
+  ],
+  "assumptions": [
+    "the answer demand costs a few extra content tokens per turn; the projection uses the measured 4k latency distribution, which was collected without a marker, so the cost is not modelled and may be slightly understated",
+    "the engine's reasoning-token accounting (reasoning_tokens, content_tokens, channel_token_method) is available as in the fix/policy row schema; if it is not, compliance is judged from the content channel alone, which is still sufficient",
+    "max_tokens=4096 is applied to every arm equally, so it cannot be read as an arm-level advantage"
+  ]
+}

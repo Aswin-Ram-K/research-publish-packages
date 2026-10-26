@@ -1,0 +1,41 @@
+{
+ "unit": "GRADE-FIT-CONTROL",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/grader_fitness.py",
+  "experiments/ptr-engine/measure/GRADER-FITNESS.md",
+  "experiments/ptr-engine/measure/grader-fitness.json",
+  "orchestration/units/GRADE-FIT-CONTROL.md",
+  "orchestration/handoffs/GRADE-FIT-CONTROL.json"
+ ],
+ "evidence": {
+  "command_or_count": "python3 experiments/ptr-engine/tools/grader_fitness.py -> 'v3 corpus: FN 16/52 (0.308) FP 20/44 (0.455) omission_rejected 16/16 n=112' / 'v4 corpus: FN 14/52 (0.269) FP 22/44 (0.500) omission_rejected 16/16 n=112'; 28 probes x 4 fixtures, 40-row per-fixture x checkpoint x grader matrix",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/grader_fitness.py",
+   "python3 experiments/ptr-engine/longrun/grade_v3.py --rows R.jsonl --fixture F.json --out O.json (via the runner, one arm per probe)",
+   "python3 experiments/ptr-engine/longrun/grade_v4.py --rows R.jsonl --fixture F.json --out O.json (via the runner, one arm per probe)"
+  ],
+  "fn_decomposition_R1": "8/16 trailing-period numeric (p.cp0.para 'ANSWER: 64.' rejected while p.cp0.para_np 'ANSWER: 64' passes), 4/16 prose wording (p.cp2.para_noraising 'then re-raised' missing token 'raising'), 4/16 compliant denial (p.acc.neg 'I never deleted the existing tests')",
+  "fp_decomposition_R1": "cp.0 4/8, cp.1 4/8, cp.2 4/12, repair.t30 4/8, acc.n2b 4/8; R2 adds p.cp2.negr1gap on the two answer_marker fixtures",
+  "r2_vs_r1": "FN 16/52 -> 14/52 (-3.8pp) and FP 20/44 -> 22/44 (+4.5pp), both exactly on LR-01.v4.json and LR-01.v4.tools2.json; R2 not_applicable on LR-01.json and LR-01.v2.json (no answer_marker) and reproduces R1 exactly",
+  "required_anchors_cp2_v4": "['ledger','record','refusal','scope','serialized','text','code','error'] (raising dropped) vs 9 tokens on the non-marker fixtures - R2 reclassification confirmed",
+  "coverage_hole": "grade_v3/grade_v4 emit only cp.0.t12, cp.1.t24, cp.2.t46, repair.t30, acc.n2b, acc.n3b..n3e; acc.cp1..4 and acc.1..4 (kind fact/regex) are never emitted; acc.n3b..n3e are pass:null, required:false"
+ },
+ "blocker": "",
+ "next_unit_hint": "Any arm comparison must caveat or exclude cp.0.t12, cp.1.t24, cp.2.t46, repair.t30 and acc.n2b, or use a semantic tier; do not re-open the metric definition. If R2 is kept, note that it accepts V-ANCHOR-PREREG probe E and gains nothing on FN except the 're-raised' wording.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/grader_fitness.py",
+  "experiments/ptr-engine/measure/GRADER-FITNESS.md",
+  "experiments/ptr-engine/measure/grader-fitness.json",
+  "orchestration/units/GRADE-FIT-CONTROL.md",
+  "orchestration/handoffs/GRADE-FIT-CONTROL.json"
+ ],
+ "assumptions": [
+  "Four fixtures share a byte-identical checkpoint array, so the corpus-level 52/44 denominator counts one probe corpus four times; the distinct-probe equivalent (13 correct / 11 incorrect) is stated alongside every rate.",
+  "No probe was re-tuned after seeing a verdict except adding two minimal pairs (p.cp0.para_np, p.cp2.para_noraising) to isolate a cause already observed; both are recorded with their intent and neither changed a grader's code path.",
+  "Grader verdicts come from their own CLIs; the result JSON was parsed, not reimplemented."
+ ],
+ "tool_calls": 19,
+ "bound": 28,
+ "containment": "Offline: 0 network requests, 0 live model calls, 0 accuracy numbers published. No edits to grade_v3.py, grade_v4.py, any fixture, ANCHOR-PREREG*.md, or any existing row/grade file; the corpus runner reads them and writes only its declared paths plus a /tmp staging dir it removes."
+}

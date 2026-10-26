@@ -1,0 +1,64 @@
+{
+  "unit": "S3",
+  "status": "done",
+  "artifacts": [
+    "research/tooling/FINDINGS.md",
+    "research/tooling/README.md"
+  ],
+  "verdicts": {
+    "add": [
+      "@local/dsh-plugin-graphify 5-tool plugin (ADD, conditional: workspace repo only, and only once auto-ensure reads state/kg/<slug>/ instead of writing <repo>/graphify-out/)",
+      "ast-grep-py 0.51.0 (MIT, wheels, requires_python>=3.8, no Node) - the only genuine capability absence: AST-shape search",
+      "ripgrep 15.2.0 (Unlicense) - literal file:line evidence for provenance verification"
+    ],
+    "evaluate": [
+      "difftastic 0.71.0 (real structural-diff gate, but ast_hash is whole-file MD5 so formatting-only commits already re-extract, and only 227 files are admitted)",
+      "SCIP indexers (type-resolved references without an LSP; revisit if mis-resolved edges corrupt claims)",
+      "Serena MCP 2.1.0 (only type-resolved source, but GPL-3.0-or-later and no MCP client is mounted)",
+      "tree-sitter CLI v0.27.1 (query authoring only; second toolchain must match the pinned 0.25 ABI)"
+    ],
+    "reject": [
+      "semgrep",
+      "Joern",
+      "CodeQL",
+      "ugrep",
+      "zoekt",
+      "Sourcegraph",
+      "Sourcebot",
+      "repomix",
+      "gitingest",
+      "code2prompt",
+      "aider repo-map as a dependency",
+      "code-graph-rag",
+      "potpie",
+      "blarify",
+      "Understand",
+      "Sourcetrail",
+      "Graphiti",
+      "GraphRAG",
+      "LightRAG",
+      "fast-graphrag",
+      "nano-graphrag",
+      "Graft"
+    ]
+  },
+  "top_recommendation": "Rebuild and re-pin the Duval graph first - the pin at config/graph_pin.toml:52 predates the Rust layer (0 .rs in a 227-entry manifest, at a commit with no Rust, 916 commits / 15 days behind HEAD), so every kernel-half claim is currently unprovable from the KG; then replace MENU_NODE_LIMIT=60/MENU_EDGE_LIMIT=40 insertion-order truncation with PageRank-over-graph.json under a token budget. Both need no new dependency. The only new dependencies worth adding are ast-grep-py and ripgrep; the 5-tool plugin is the highest-leverage agent-side change but is conditional on it reading state/kg/<slug>/ rather than writing <repo>/graphify-out/.",
+  "overrules": [
+    "difftastic: demoted ADD -> EVALUATE because ast_hash is an MD5 of whole-file content (graphify/detect.py:2217,2880), so formatting-only commits already re-extract, and at 227 admitted files the saving is small - it ranks below ast-grep/ripgrep where S2 had all three on one line",
+    "aider repo-map: algorithm not dependency - S2 correctly refused the agent but also dropped the idea; PageRank-over-graph.json seeded by files in play is P0-c and costs dozens of lines since networkx is already a dependency",
+    "S2's framing 'repo traversal: nothing missing' corrected: true of the installed dependency, false of the pipeline, which invokes 2 of graphify's 28 subcommands (src/resextract/run.py:1357, src/resextract/mine/candidates.py:920)",
+    "docs/PLAN.md:212 plan correction: 'on repo change: graphify update' would write inside the read-only target (no --graph/--out, src/resextract/kg/graphify.py:1252-1276); the compliant path is graphify extract <target> --out state/kg/<slug>, verified by running it"
+  ],
+  "unverified": [
+    "plugin registration on this harness build (0.2.1-rc.2) in either direction: it imports defineTool from @deepseek-ai/dsh-tools with a passthrough fallback (lib/index.js:25-36), while the working @local/dsh-plugin-openui registers a plain object and is harness-import-free - validate in a throwaway profile",
+    "the ~71.5x token-reduction figure (recorded in scratch-graphify/FINDINGS.md on a 26,555-node repo) has not been reproduced on Duval's 2,685 nodes",
+    "S2's '436-file target' is not reproducible from the graph manifest, which admits 227 entries (measured 2026-10-23); this report uses 227",
+    "whether resextract serve exposes any graph/search endpoint (cli.py:134-180 not inspected)",
+    "whether a second (docs) graph or one combined graph is the right shape - not measured"
+  ],
+  "write_paths": [
+    "research/tooling/FINDINGS.md",
+    "research/tooling/README.md",
+    "research/tooling/handoffs/S3.json"
+  ]
+}

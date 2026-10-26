@@ -1,0 +1,33 @@
+{
+  "unit": "QUALITY-ARM",
+  "pre_registered_at": "2026-10-25T00:35:00-0500",
+  "registered_before_any_request": true,
+  "question_fixed": "Each knowledge item records one calibration constant's audit code. Naming one constant is meaningful only if its own audit code is known. Which audit code belongs to the constant named 'lumen'?",
+  "expected_fact_item": "knowledge:k01",
+  "expected_fact_string": "AUD-4417",
+  "answer_format": "Reply with the audit code only.",
+  "distractor_codes": ["AUD-1029", "AUD-2031", "AUD-3089", "AUD-3311", "AUD-5129", "AUD-6013", "AUD-7027", "AUD-8143", "AUD-9001", "AUD-1187", "AUD-6455"],
+  "judgement_rule": "task_success = exact case-sensitive match of 'AUD-4417' in the final answer text; raw text retained per row",
+  "corpus": {
+    "items": 12,
+    "kinds": ["knowledge"],
+    "ids": "k01..k12",
+    "body_bytes_each": 9000,
+    "only_k01_contains": ["AUD-4417", "lumen"],
+    "fact_tokens_in_k01_only": true,
+    "index_carries": "index line only: - @knowledge:kNN@1 <hash8> <len>",
+    "index_must_not_contain": ["AUD-", "lumen", "audit code"]
+  },
+  "arms": {
+    "A": {"policy": "warmpool", "retain": "all bodies for the whole run", "resolvable": true},
+    "B": {"policy": "cap-3", "retain": "last 3 bodies only; older resolves raise PTR_STORE_MISS", "resolvable": "partial"},
+    "C": {"policy": "destructive-compaction", "retain": "old bodies replaced by digest = first 200 bytes of body + marker", "resolvable": true, "lossy": true},
+    "D": {"policy": "no-body", "retain": "no body ever resolved; index only", "resolvable": false, "role": "discrimination control"}
+  },
+  "reps_per_arm": 3,
+  "turns_per_rep": 4,
+  "turn_plan": "T1 resolves k12, T2 resolves k10, T3 resolves k08 (all correct under every policy: cap-3 keeps the 3 newest), T4 asks the pre-registered question with no further resolves allowed in D and B-withold; A, B, C attempt k01",
+  "billing_law": "uncached = (P1 mod 64) + L ; avalanche if residue in {0,1}; L = prompt_tokens + 12",
+  "discrimination_gate": "arm D answers correctly -> index leaks -> REBUILD corpus, report so",
+  "negative_result_policy": "cap-3 failing to answer is a finding, not a failure; no fallback added"
+}

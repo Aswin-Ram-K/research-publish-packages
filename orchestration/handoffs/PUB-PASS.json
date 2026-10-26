@@ -1,0 +1,94 @@
+{
+  "unit": "PUB-PASS",
+  "status": "partial",
+  "artifacts": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "orchestration/units/PUB-PASS.md",
+    "orchestration/handoffs/PUB-PASS.json"
+  ],
+  "evidence": {
+    "command_or_count": {
+      "manuscript_lines_before": 987,
+      "manuscript_lines_after": 1212,
+      "lines_added": 225,
+      "verify_package": "PASS — 69 claims in CLAIMS.md, 69 mapped 1:1, 8 script-backed + 61 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none (exit 0)",
+      "pytest_attribution_guard": "18 passed (exit 0)",
+      "pytest_full_batch": "3 failed, 37 passed (exit 1) — all 3 failures are tests/test_claims_value_guard.py C66/C67 value-cell guards on CLAIMS.md, a file this unit is forbidden to touch",
+      "pytest_claims_decompose": "19 passed, 0 failed (never failed at any point)",
+      "related_work_occurrences_before": 0,
+      "related_work_occurrences_after": 1,
+      "threat_occurrences_before": 0,
+      "threat_occurrences_after": 7,
+      "G12_citations_before": 0,
+      "G12_citations_after": 2,
+      "numbers_changed": 0,
+      "bash_calls": 10
+    },
+    "commands": [
+      "python3 papers/context-cache/verify_package.py",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_attribution_guard.py tests/test_claims_decompose.py tests/test_claims_value_guard.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_attribution_guard.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_claims_decompose.py tests/test_claims_value_guard.py -q"
+    ]
+  },
+  "sections_added": [
+    "**What this paper is, and what it is not.** — one paragraph immediately after the Abstract, before ## 1 (untitled bold lead-in, so every existing heading anchor is untouched)",
+    "## 10a. Related work — inserted immediately before ## 11. Limitations (named 10a precisely to avoid renumbering 11, 12 and their cross-references)",
+    "### 10a.1 Prefix caching in the serving engines this paper ran",
+    "### 10a.2 LLM-agent context management, compaction and summarisation",
+    "### 10a.3 Retrieval-structured or pointer-based context versus a plain transcript",
+    "### 10a.4 KV eviction and memory-bound serving for long context",
+    "### 10a.5 Prior work on prompt layout and renderer effects on cache hit rate",
+    "### 11.1 Threats to validity — appended to the end of ## 11. Limitations (T1-T9 plus an explicit law-vs-magnitude split)"
+  ],
+  "citations": {
+    "verified": 11,
+    "citation_needed": 3,
+    "detail": [
+      "VERIFIED 1 — Prompt Cache, arXiv:2311.04934, MLSys 2024 (docs/serving-options/R-CROSS.md row 2)",
+      "VERIFIED 2 — EPIC / LegoLink, arXiv:2410.15332 (R-CROSS.md row 3)",
+      "VERIFIED 3 — CacheBlend, arXiv:2405.16444, EuroSys 2025 (R-CROSS.md row 1)",
+      "VERIFIED 4 — H2O, arXiv:2306.14048, NeurIPS 2023 (R-CROSS.md row 5)",
+      "VERIFIED 5 — SnapKV, arXiv:2404.14469, NeurIPS 2024 (R-CROSS.md row 5b)",
+      "VERIFIED 6 — PyramidKV, arXiv:2406.02069 (R-CROSS.md row 5c)",
+      "VERIFIED 7 — AttentionStore / CachedAttention, arXiv:2403.19708, USENIX ATC 2024 (R-CROSS.md row 6)",
+      "VERIFIED 8 — LMCache, arXiv:2510.09665 (R-CROSS.md row 6b)",
+      "VERIFIED 9 — Mooncake, arXiv:2407.00079, FAST 2025 (R-CROSS.md row 4b)",
+      "VERIFIED 10 — KVCache in the Wild, arXiv:2506.02634, USENIX ATC'25 (docs/serving-options/R-PROD.md section J)",
+      "VERIFIED 11 — Irminsul, arXiv:2605.05696 (R-PROD.md item 5); RR-Evict arXiv:2609.32278 (R-PROD.md item 4); SGLang tlru upstream parameter reference arXiv:2510.15152 (papers/context-cache/GAPS.md:498). All three are 'reported-only' in the workspace's own classification and are labelled as such in the prose.",
+      "CITATION NEEDED 1 — vLLM / PagedAttention paper and SGLang / RadixAttention paper (10a.1 last sentence). This workspace pins the engines' DOCUMENTATION (docs.vllm.ai/en/v0.27.1, docs.sglang.io/...) and source, never their papers; no arXiv id was available offline. SGLang and vLLM are still cited to findable primary documentation in the body of 10a.1.",
+      "CITATION NEEDED 2 — the whole agent-context-management / compaction family (10a.2). No citable agent-memory or compaction reference exists anywhere in docs/serving-options/ or docs/prompt-system/; grep for MemGPT/LLMLingua/compaction-with-arXiv-id returned nothing relevant. Section 10a.2 says so in one line instead of carrying a plausible-looking pointer.",
+      "CITATION NEEDED 3 — 10a.5 closing line: no prior work isolating renderer choice as a cache-hit variable was found, so none is asserted.",
+      "NONE INVENTED — every arXiv id above was read out of a workspace file (R-CROSS.md, R-PROD.md, GAPS.md:498). No year, venue or page was reconstructed from memory. Every arXiv id cited also carries its primary URL in the prose so a reader can find it."
+    ]
+  },
+  "threats_listed": [
+    "T1 single seed (GAPS.md G4)",
+    "T2 two models, both Qwen-family, differing in size and architecture as well as MoE-vs-dense (G4)",
+    "T3 two engines, SGLang and vLLM 0.27.1, with no 64-token grid visible on vLLM (G4)",
+    "T4 one GPU, GB10, and the unified-memory mem-fraction-static 0.50 crash-loop boundary (G4)",
+    "T5 synthetic corpora, seed 1729, serial requests, append corpus never at eviction pressure against 1,620,892 declared capacity (G12)",
+    "T6 block size and --prefix-match-unit resolution are launch-specific (G4)",
+    "T7 state cache max_mamba_cache_size 64 untied beyond a derived bound (M4-EVICT at 1.5017x)",
+    "T8 mechanism thinner than measurement; offline stub summariser, untested mamba hypothesis (G6, G7)",
+    "T9 optimisation round is a null read from an overrun budget, 565 requests against a 500 bound and 39 tool calls against 30 (G4)"
+  ],
+  "gaps_now_cited": ["G4", "G12"],
+  "numbers_changed": 0,
+  "assumptions": [
+    "PLACEMENT — Related work named '## 10a.' per the operator's stated preference, so ## 11 and ## 12 keep their numbers and no cross-reference anchor moves. Threats placed as '### 11.1' inside ## 11 rather than as a new ## section, for the same reason and because the operator allowed either.",
+    "NO RENUMBERING PERFORMED — no existing heading, anchor, or section reference was edited. Only three insertions and zero deletions were made.",
+    "NUMBERS — every measured figure in the new prose was copied verbatim from existing manuscript text or from GAPS.md/CLAIMS.md; none was recomputed, rounded differently, or introduced. Details deliberately cited by NAME rather than by cell id in 10a.2/10a.3 (e.g. 'a planted fact deleted in every compacted cell') to avoid restating a magnitude without its attribution.",
+    "ATTRIBUTION GUARD — the new prose initially tripped the guard twice at MANUSCRIPT.md:1110 and :1178/:1179, because it restated '1.700x' outside the guard's 6,000-character attribution window. I FIXED THE PROSE, not the guard: both statements now carry the G1 window-truncation / not-a-fork-append-cost attribution inline, and the guard is 18 passed.",
+    "WHY status=partial — the operator's second acceptance tail is 'must still pass' and it does not: 3 of 40 tests fail. The three failures are tests/test_claims_value_guard.py::test_pinned_values_are_legible_in_their_value_cell, ::test_c66_paired_reading_is_directional, and ::test_c67_intervals_and_c67a. They are CLAIMS.md-side value-cell drift (C66 needs 'C0 709.90/709.90/709.90', 'off-grid hot rows at T256/T128/T64', 'T128 A interval bound -5.41', 'T64 H interval bound 0'; C67 needs 'O3_P1_minus_P0_ci95=-136.493' and '246.014' in its Value cell, plus the O4 P3-P1 / O3 P3-P1 / O4 P1-P0 verdict spellings; C67 additionally carries a stale waiver key 'UNUSED'). CLAIMS.md is on this unit's do-not-touch list and its mtime (13:04) predates this session, so these are PRE-EXISTING failures caused by recompute_r2.py pinning values CLAIMS.md has not been updated to spell. Fixing them requires editing CLAIMS.md, which this unit is forbidden to do.",
+    "Everything the unit was chartered to add IS done and green: verify_package.py PASS (exit 0) and tests/test_paper_attribution_guard.py 18 passed (exit 0). Only the unrelated CLAIMS.md guard is red."
+  ],
+  "blocker": "tests/test_claims_value_guard.py fails 3 tests on CLAIMS.md C66/C67 value-cell drift (and a stale 'UNUSED' waiver key in C67). CLAIMS.md is on this unit's forbidden-write list, so it could not be repaired here. This is pre-existing and independent of the manuscript: the file's mtime predates the session and no PUB-PASS edit touched it. A dedicated CLAIMS-repair unit is needed.",
+  "next_unit_hint": "Card a small CLAIMS-REPAIR unit (workspace-write on papers/context-cache/CLAIMS.md ONLY) to spell C66's pinned keys ('C0 709.90/709.90/709.90', the three 'off-grid hot rows at T256/T128/T64', 'T128 A interval bound -5.41'/'1.8', 'T64 A interval bound -12.62'/'2.7', 'T64 H interval bound -4.51'/'0'), C67's O3_P1_minus_P0_ci95=-136.493 and +246.014 plus its three interval verdicts, and to drop the stale 'UNUSED' waiver key, then re-run tests/test_claims_value_guard.py. Separately, a citation-resolution unit WITH network is still required before submission: 3 items are marked [CITATION NEEDED — verify] (the vLLM and SGLang papers by name; and the whole agent-context-management family, for which this workspace holds no citable reference at all — section 10a.2 says so in one line). Do not submit until that unit lands. Numbers: 0 changed.",
+  "write_paths": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "orchestration/handoffs/PUB-PASS.json",
+    "orchestration/units/PUB-PASS.md"
+  ],
+  "tool_calls_used": 20
+}

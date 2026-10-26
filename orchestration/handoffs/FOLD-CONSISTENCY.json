@@ -1,0 +1,43 @@
+{
+ "unit": "FOLD-CONSISTENCY",
+ "status": "done",
+ "artifacts": [
+  "papers/context-cache/FOLD-PROPOSAL.md",
+  "orchestration/handoffs/FOLD-CONSISTENCY.json",
+  "orchestration/units/FOLD-CONSISTENCY.md"
+ ],
+ "evidence": {
+  "engine_size": "ls experiments/ptr-engine/ptr_engine/*.py -> 10 files; wc -l -> 3653 total; ls experiments/ptr-engine/tests/*.py -> 13 files; wc -l -> 2248 total; SPEC.md 499 lines (measured 2026-10-26)",
+  "suite": "cd experiments/ptr-engine && python3 -m pytest -q -> '190 passed in 0.24s' (exit 0)",
+  "index_hash": "quality/rows.jsonl 115 rows, 4 carry index_text, 1 distinct value: 458 bytes, index_lines field 12 (13 newline-terminated lines incl. final newline), sha256 e81ba025cfb484a8460022dedffa8cb8e7ffe09a53b365f9b84227eb105531d5, no 'AUD-' and no 'lumen' anywhere",
+  "diff": "before sha256 c41644be470de166fd5662d4fb90e0dbc08a4b6463f61c886b4cbe002a684231 / 97 lines / 15369 bytes; after sha256 90dbef0da41ffd5e45c2fe1ee700274c75df9e9b5464b3ede5b239821825bd5a / 100 lines / 19070 bytes; diff -u -> 5 hunks, 11 added, 8 removed",
+  "commands": [
+   "cp papers/context-cache/FOLD-PROPOSAL.md /tmp/FOLD-CONSISTENCY.before; sha256sum; wc -l; wc -c",
+   "wc -l experiments/ptr-engine/ptr_engine/*.py experiments/ptr-engine/tests/*.py",
+   "cd experiments/ptr-engine && python3 -m pytest -q",
+   "python3 -c \"import json,hashlib;R=[json.loads(l) for l in open('experiments/ptr-engine/quality/rows.jsonl')];...hashlib.sha256(r['index_text'].encode()).hexdigest()\"",
+   "grep -rnoE 'C7[5-9]|C8[01]' papers/*/CLAIMS.md | wc -l  -> 0",
+   "diff -u /tmp/FOLD-CONSISTENCY.before papers/context-cache/FOLD-PROPOSAL.md"
+  ],
+  "gap_rows": {
+   "1": "RECORD.md:142 figure confirmed by independent wc: 10 modules/3653 + 13 files/2248, SPEC 499; dated 2026-10-26",
+   "2": "one tree, 190 passed; five branch counts 95/100/153/171/108 retired",
+   "7": "458 B / 12 index lines; never persisted outside /tmp (gap #46 UNCLOSABLE); hash over index_text",
+   "9": "option (b) chosen: 67.1x marked one-corpus-scope, 78.3x marked single-unit; no sweep run",
+   "11": "C80 (seven negative controls), C81 (PTR_WARMPOOL_INSIDE_REPO), both drafted-not-ratified"
+  }
+ },
+ "assumptions": [
+  "Gap #9: chose option (b) over (a) — a body-count/index-format sweep through tools/rebuild_corpus.py would need more than 6 calls and a corpus rebuild outside the declared write paths; the file now states 67.1x is one corpus scope and that no sweep was run, and marks 78.3x single-unit.",
+  "The brief's '48 rows' for quality/rows.jsonl does not reproduce: the file has 115 rows, 4 of which carry index_text (one distinct value). Measured figures written; discrepancy recorded in the file's corrections line and here.",
+  "The /tmp backup written at step 4 disappeared between bash calls (ephemeral /tmp). The pre-image was reconstructed by reverse-applying the ten edit pairs and verified by sha256 equality with the originally recorded digest c41644be..., lines 97, bytes 15369 — so the diff is against the true before-state.",
+  "Pytest wall time on this run was 0.24 s vs the 0.22 s recorded in the file; the count (190) is unchanged and the wall-time delta is stated inline rather than rewriting rows 20/60, which are outside this unit's five-row scope."
+ ],
+ "blocker": "",
+ "next_unit_hint": "GAPS-INVENTORY #7's companion #46 stays UNCLOSABLE; next offline rows still open are #3/#4 (RESULTS.md/LAW.md text) and #5/#6 (C8 partition, u4_recon). Operator ratification of fold-with-limits and C75-C81 remains gap #40.",
+ "write_paths": [
+  "papers/context-cache/FOLD-PROPOSAL.md",
+  "orchestration/handoffs/FOLD-CONSISTENCY.json",
+  "orchestration/units/FOLD-CONSISTENCY.md"
+ ]
+}

@@ -1,0 +1,106 @@
+{
+ "unit": "CLAIM-HEALTH",
+ "status": "done",
+ "artifacts": [
+  "papers/context-cache/CLAIM-HEALTH.md",
+  "orchestration/handoffs/CLAIM-HEALTH.json",
+  "orchestration/units/CLAIM-HEALTH.md"
+ ],
+ "evidence": {
+  "counts": {
+   "reviewed": 20,
+   "SAFE": 7,
+   "REMEASURED": 0,
+   "BLOCKED": 13
+  },
+  "verdict": "SAFE 7 / REMEASURED 0 / BLOCKED 13",
+  "safe_ids": [
+   "C06",
+   "C25",
+   "C26",
+   "C45",
+   "C48",
+   "C49",
+   "C53"
+  ],
+  "blocked_ids": [
+   "C17",
+   "C18",
+   "C19",
+   "C20",
+   "C21",
+   "C22",
+   "C23",
+   "C24",
+   "C44",
+   "C46",
+   "C47",
+   "C50",
+   "C51"
+  ],
+  "remeasured_pairs": [],
+  "suspect_reason": "all 20 = (a) flagged cached_tokens pattern; none (b)",
+  "fire_counts": {
+   "U15": {
+    "R": "7/40",
+    "F": "2/40",
+    "C": "2/40",
+    "A": "1/40"
+   },
+   "G1": {
+    "F": "13/132",
+    "E": "1/132"
+   },
+   "G3": {
+    "A": "8/222",
+    "C": "7/222",
+    "H": "7/222",
+    "R": "7/222"
+   },
+   "WIN-SGL": {
+    "A": "6/444",
+    "R": "5/444",
+    "C": "4/444",
+    "H": "4/444"
+   },
+   "WIN-VLLM": {
+    "A": "14/142",
+    "C": "14/142",
+    "H": "14/142",
+    "R": "14/142"
+   },
+   "G5": {
+    "C": "2/64",
+    "A": "0/64",
+    "B": "0/64"
+   },
+   "U4b": {
+    "A": "0/8",
+    "B": "0/8",
+    "C": "0/8"
+   }
+  },
+  "near_miss_pairs": [
+   "U15 R 1,279.3 unc/turn / hit .7373 (suspect) vs E2 R 1,278.3 / .737445 (suspect): 0.08% apart, neither clean",
+   "PROMPT-O2-EXTRA 600.17 R / 528.89 A vs repaired R2-P1-O2 599.12 R / 529.48 A (355 rows, 0 fires): agree 0.18%/0.11%, but no claim cites PROMPT-O2-EXTRA"
+  ],
+  "live_requests": 0,
+  "commands": [
+   "python3 read of orchestration/handoffs/CACHED-AUDIT2.json + state/logs/cached-dedupe-audit.json (read-only)",
+   "python3 read of experiments/context-cache/cells/*/rows.jsonl profiles (read-only)"
+  ],
+  "forbidden_writes": []
+ },
+ "blocker": "",
+ "next_unit_hint": "Six live cards clear the 13 BLOCKED ids: REMEASURE-U15 (C17-C24), REMEASURE-G1-BREAK (C44), REMEASURE-WIN-SGL (C46), REMEASURE-G3-S0 (C47), REMEASURE-WIN-VLLM-V1 (C50), and C51 needs the last two. U15's fires are the first to fix: 7/40 on arm R is the core of the 1.700x.",
+ "write_paths": [
+  "papers/context-cache/CLAIM-HEALTH.md",
+  "orchestration/handoffs/CLAIM-HEALTH.json",
+  "orchestration/units/CLAIM-HEALTH.md"
+ ],
+ "assumptions": [
+  "Classes taken as given from CACHED-AUDIT2.json per the brief; not re-derived.",
+  "state/logs/cached-dedupe-audit.json predates the R2-P1-O2C repair: it still lists R2-P1-O2 as corrupt/69 rows, while the cell on disk now holds 355 repaired rows (R 599.12 / A 529.48 / C 547.86 / H 967.43 / C0 713.77). Class judgements therefore follow the handoff, not the stale log.",
+  "SAFE means the claim's quantity cannot be a cached_tokens function: row counts, digests, status codes, prompt_tokens aggregates, break-turn indices, and prompt-length gcd/exact-match counts."
+ ]
+}

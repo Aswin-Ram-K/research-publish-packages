@@ -1,0 +1,51 @@
+{
+  "argv": [
+    "vllm",
+    "serve",
+    "--model",
+    "/model",
+    "--served-model-name",
+    "qwen3.5-9b",
+    "--quantization",
+    "modelopt_fp4",
+    "--dtype",
+    "bfloat16",
+    "--kv-cache-dtype",
+    "fp8",
+    "--max-model-len",
+    "32768",
+    "--block-size",
+    "64",
+    "--prefix-match-unit",
+    "16",
+    "--mamba-cache-mode",
+    "align",
+    "--enable-prefix-caching",
+    "--enable-prompt-tokens-details",
+    "--gpu-memory-utilization",
+    "0.22",
+    "--port",
+    "30000"
+  ],
+  "config_sha256": "163a5db6b4c432e2a2ea17ffd6c44e336ed12af6eff39dce96be854032d77cb4",
+  "container": "gx10-p-o4",
+  "image": "2c211a1273b4",
+  "endpoint": "http://serving-host/v1",
+  "resolve_block": {
+    "container": "gx10-p-o4",
+    "source": "docker logs gx10-p-o4",
+    "raw_lines": [
+      "(APIServer pid=1) INFO 10-24 06:37:07 [api_utils.py:273] non-default args: {'model_tag': '/model-nvfp4', 'enable_prompt_tokens_details': True, 'host': '0.0.0.0', 'port': 30000, 'model': '/model-nvfp4', 'dtype': 'bfloat16', 'max_model_len': 32768, 'quantization': 'modelopt_fp4', 'served_model_name': ['qwen3.5-9b'], 'block_size': 64, 'gpu_memory_utilization': 0.22, 'kv_cache_dtype': 'fp8', 'enable_prefix_caching': True, 'prefix_match_unit': 16, 'mamba_cache_mode': 'align', 'enable_log_requests': True}",
+      "(EngineCore pid=231) INFO 10-24 06:38:17 [interface.py:911] Setting attention block size to 1088 tokens to ensure that attention page size is >= mamba page size."
+    ],
+    "resolved": {
+      "attention_block_size": 1088
+    },
+    "cli_block_size": null,
+    "prefix_match_unit": null,
+    "hash_block_size": null,
+    "mamba_block_size": null,
+    "attention_block_size_line": "Setting attention block size to 1088 tokens to ensure that attention page size is >= mamba page size.",
+    "interpretation": "CLI asked for --block-size 64 and --prefix-match-unit 16. EngineCore RESOLVED the attention block size to 1088 tokens so the attention page size is >= the mamba page size under --mamba-cache-mode align. 1088 is a 16-multiple, so the prefix-match-unit 16 grid is preserved but quantised up to 1088. Observed cached_tokens gcd = 1088 = the resolved attention block size, not 16. The literal hash/mamba block sizes are not printed by vLLM 0.27.1; --block-size 64 and --prefix-match-unit 16 appear only in the non-default args line, and the resolved value is the 1088 line."
+  }
+}

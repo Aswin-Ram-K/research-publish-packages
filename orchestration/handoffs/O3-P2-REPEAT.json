@@ -1,0 +1,55 @@
+{
+  "unit": "O3-P2-REPEAT",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/rows.jsonl",
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/analysis.json",
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/replication.json",
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/verdict.json",
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/quality.json",
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/g0.json",
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/p2_calibration.json",
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/probe_midchange.json",
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/probe_self_hit.json",
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/probe_p2_cost.json",
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/prompt_o3_repeat.py",
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/analyse_repeat.py",
+    "state/logs/O3-P2-REPEAT-progress.log",
+    "orchestration/units/O3-P2-REPEAT.md"
+  ],
+  "evidence": {
+    "rows": "213 rows (P0 71 + P1 71 + P2 71); 291 live requests; salt o3-repeat-20261024T11:05Z-a1; grid_used 16 (observed gcd), declared 48; 0 non-200, 0 null cached_tokens",
+    "arms": "P0 1293.521127 t-CI [1141.40,1445.64] hit 0.895143 | P1 1371.253521 [1234.44,1508.07] hit 0.403843 | P2 389.408451 [244.07,534.75] hit 0.832461 pad 1713 total (24.1/turn)",
+    "deltas": "P2/P0 -904.112676 t-CI [-1101.70,-706.53] boot [-1087.86,-708.45] = -69.9% ratio 0.301045 (excludes 0); P1/P0 +77.732394 [-113.72,269.18] = null; original O3 was P2/P0 -664.478873 [-885.34,-443.62] = -51.5%",
+    "verdict_number": "the -51.5% number REPLICATES and grows (-69.9%) on a fresh salt at the observed 16-unit",
+    "verdict_interpretation": "but it is NOT a padding effect. 68/71 P2 rows here and 70/71 in the original are the SECOND send of a same-turn alignment correction (the original handoff's '0 corrections' is false). The row records only the corrected send, whose cached_tokens is the FIRST send's prompt: probe A1 prompt 4153 cached 4096 -> A2 prompt 4157 cached 4144 (== A1.prompt rounded to 16). Cached is a contiguous-prefix count, not a padded one: prompt 4264 -> 4128 cached, but the same-length prompt with one mid-prompt sha8 changed -> 2112 cached. True P2 cost/turn ~= prompt_P2 - cached_P1 ~= 1395.38 vs recorded 389.41 and P1's 1371.25 => padding to the grid saves nothing.",
+    "clean_first_attempt_rows": "only 3 rows are first-attempt: t25 1760/0 vs P1 1733/0, t30 2016/1984 vs P1 1994/0, t67 3920/3888 vs P1 3902/2112 -> an alignment gain is possible but n=3, not established",
+    "quality": "20/20 first-32 mismatch reproduced; cause is answer-FORM divergence, not degradation: P0 form (24k whole history) quotes the span text, P1 form (pointer index) states the span length and sha8; P1's hashes are the correct ones (t003 471d8e55, t006 35ea24b7 = sha256(delta_block)[:8]). O1 also measured 1.0, so 1.0 is not O3-specific",
+    "launch": "same OH1 argv on :8018 (r2o3, sha256:2c211a1273b4); startup: 'Setting attention block size to 2112 tokens to ensure that attention page size is >= mamba page size', mamba page padded 0.76%, prefix_match_unit 16, mamba_cache_mode align, enable_prompt_tokens_details true, speculative_config None, GPU KV 1,648,826 tokens",
+    "restore": "docker rm -f r2o3 at 2026-10-24T11:19Z; :8012 200 occamy-1.0 max_model_len 131072 (sglang); :8014 200 qwen3.5-9b 32768; gx10-occamy-nvfp4 Up About an hour, never stopped/restarted; available 59,687 MB",
+    "commands": [
+      "ssh -F /dev/null ... zer0null@192.168.2.168 'bash /home/zer0null/r2/launch-o3.sh'",
+      ".venv/bin/python experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/prompt_o3_repeat.py --setup O3 --quality",
+      ".venv/bin/python experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/analyse_repeat.py",
+      ".venv/bin/python experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/probe_midchange.py",
+      ".venv/bin/python experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/probe_self_hit.py",
+      "ssh -F /dev/null ... 'docker rm -f r2o3; curl -s .../8012/v1/models; curl -s .../8014/v1/models'"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "(1) WITHDRAW the 'grid-aligned padding halves cost' sentence for O3 (and check O2's -74.28 and O4's P2 numbers, not tested here): the P2 arm as implemented measures a same-turn self-hit. (2) Re-measure P2 with the pad precomputed so each turn is sent ONCE (or record both attempts and sum them); until then no P2/P0 number is a cost measurement. (3) Fix the harness's pad_corrections claim in R2-PROMPT-O23's handoff ('0 corrections' is false: 70/71). (4) O3's P3 sign inversion stays unexplained (P3 not re-run here by contract).",
+  "assumptions": [
+    "Fresh salt = a RUN-SALT line appended to the renderer's scaffold, so every rendered byte differs from R2-PROMPT/O3 while task content and arm structure are unchanged.",
+    "grid_used = 16 is the matrix's observed_cached_gcd, as the card directs; the declared 48 is recorded, not used.",
+    "The true-cost estimate assumes the first attempt's cache hit is P1's own (same prefix structure); the prefix-semantics probe supports that reading.",
+    "Cost figures reuse the declared USD 0.20/1M uncached constant; nothing was priced here."
+  ],
+  "tool_calls": 38,
+  "bound": 40,
+  "write_paths": [
+    "experiments/context-cache/cells/R2-PROMPT/O3-REPEAT/",
+    "state/logs/O3-P2-REPEAT-progress.log",
+    "orchestration/handoffs/O3-P2-REPEAT.json",
+    "orchestration/units/O3-P2-REPEAT.md"
+  ]
+}

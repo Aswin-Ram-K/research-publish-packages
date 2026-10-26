@@ -32,6 +32,7 @@ Offline: reads three Markdown files, `recompute.py` and the four row files off d
 network, no lock.
 """
 
+
 from __future__ import annotations
 
 import importlib.util
@@ -112,11 +113,11 @@ def test_every_effect_sentence_in_the_manuscript_equals_the_recompute(rec) -> No
         f"+{got['engine_effect']:,.2f}",
         ci(got["engine_ci"]),
         f"{got['engine_positive_turns']} of {got['paired_turns']}",
-        f"+{got['model_effect']:,.2f}",
+        f"{got['model_effect']:,.2f}",
         ci(got["model_ci"]),
-        f"+{got['interaction']:,.2f}",
+        f"{got['interaction']:,.2f}",
         ci(got["interaction_ci"]),
-        f"+{got['model_vllm']:,.2f}",
+        f"{got['model_vllm']:,.2f}",
         ci(got["model_vllm_ci"]),
         f"+{got['model_sglang']:,.2f}",
         ci(got["model_sglang_ci"]),
@@ -141,6 +142,24 @@ def test_every_effect_sentence_in_the_manuscript_equals_the_recompute(rec) -> No
         "MANUSCRIPT.md Section 9b no longer states these recomputed values: "
         + repr(missing)
     )
+
+
+def test_effects_are_quoted_with_their_measured_sign(rec) -> None:
+    """A negative effect must be quoted negative.
+
+    The C63 fold (MTP correction) turned both the model main effect and the interaction
+    negative.  A guard that pins the magnitude with a hard-coded leading '+' forces the
+    manuscript to print ``+-400.02`` -- the rendering the source fold produced, and a sign
+    artifact rather than a value.  What must hold is that the recomputed *signed* magnitude
+    appears in the section, whichever way it points.
+    """
+    got = rec.c63()
+    body = " ".join(section(read(MANUSCRIPT), "## 9b.").split())
+    assert "+-" not in body, "Section 9b carries a double-signed figure ('+-...'): a sign artifact"
+    assert got["model_effect"] < 0 and got["model_vllm"] < 0, "C63's model effects are negative after MTP"
+    for key in ("model_effect", "model_vllm", "engine_effect"):
+        want = f"{got[key]:,.2f}" if abs(got[key]) >= 1000 else f"{got[key]:.2f}"
+        assert want in body, f"Section 9b no longer states {key} as {want!r}"
 
 
 def test_abstract_carries_the_sixth_result(rec) -> None:
@@ -184,7 +203,7 @@ def test_c63_fails_when_one_pinned_value_is_mutated(rec) -> None:
 def test_c63_fails_when_one_cell_is_missing(rec) -> None:
     """RED-2: the claim is a four-cell contrast; three cells must not recompute."""
     saved = rec.C63_CELLS
-    rec.C63_CELLS = tuple(c for c in saved if c[2] != "WIN-VLLM")
+    rec.C63_CELLS = tuple(c for c in saved if c[2] != "R2-VLLM-CELL")
     try:
         with pytest.raises(Exception):
             rec.c63()

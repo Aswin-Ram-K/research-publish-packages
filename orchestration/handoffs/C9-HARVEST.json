@@ -1,0 +1,110 @@
+{
+ "unit": "C9-HARVEST",
+ "status": "done",
+ "artifacts": [
+  "experiments/miss-law/avalanche/HARVEST.md",
+  "experiments/ptr-engine/RECORD.md",
+  "orchestration/units/C9-HARVEST.md"
+ ],
+ "evidence": {
+  "inventory": {
+   "experiments/miss-law/avalanche/rows.jsonl": {
+    "rows": 378,
+    "columns": [
+     "C_minus_Hstar",
+     "Hstar_full_B",
+     "Hstar_prime",
+     "L",
+     "P1",
+     "P1_measured",
+     "arm",
+     "cached",
+     "cached_minus_P1_over_B",
+     "ceil_P1_over_B",
+     "error",
+     "idx",
+     "kvcomp_count_delta",
+     "last_block_full",
+     "n_payload",
+     "pair_id",
+     "rep",
+     "residue",
+     "role",
+     "ts",
+     "ttft_count_delta",
+     "ttft_ms",
+     "ttft_server_ms",
+     "uncached",
+     "uncached_kvcomp"
+    ],
+    "writer": "AVALANCHE-INSERT probe.py (all 3)"
+   },
+   "experiments/miss-law/vllm2/rows.jsonl": {
+    "rows": 133,
+    "columns": [
+     "L_app",
+     "P1",
+     "P1_target",
+     "by_source_external",
+     "by_source_local_cache_hit",
+     "by_source_local_compute",
+     "cached_tokens",
+     "cell",
+     "client_elapsed_s",
+     "error"
+    ],
+    "writer": "MISS-LAW-2 probe2.py/probe3.py",
+    "note": "separate unit, already consumed by vllm2/REPORT.md; not part of the 378"
+   },
+   "experiments/miss-law/avalanche/log.txt": {
+    "lines": 378,
+    "match": "1:1 with rows.jsonl, 0 LENGTH-MISMATCH"
+   },
+   "experiments/miss-law/avalanche/run.out": "done stage=all reps=3"
+  },
+  "row_count": 378,
+  "duplicates": 0,
+  "missing_fields": [
+   "model/engine profile: 0/378 rows carry any model or engine key (file-scope only: probe.py:1,17,24-25 'vLLM :8014, qwen3.5-9b, label engine=\"0\",model_name=\"qwen3.5-9b\"'; LAW.md:28)",
+   "block size B=1056: 0/378 rows (implied by residue = P1 % 1056 and by every cached value being a multiple of 1056)",
+   "server endpoint: 0/378 rows (file-scope only, probe.py:15-16)"
+  ],
+  "why_units_failed": [
+   "AVALANCHE-INSERT: status partial, evidence.command_or_count 'measurement in progress' (handoff written 00:31; its run finished 00:37 per run.out 'done stage=all reps=3' and last ts 00:37:24) — the report was never written, the run did finish",
+   "AVALANCHE-2: status partial, evidence.command_or_count 'not yet measured', Q1-Q5 all 'unknown', artifacts [], blocker 'in progress'; its declared experiments/miss-law/avalanche2/ does not exist — it inherited the 378 rows and measured nothing"
+  ],
+  "ruling": "harvest",
+  "harvestable_rows": 378,
+  "c9_status_after": "HARVESTED",
+  "integrity_checks": {
+   "rows_sha256": "8147d195e2de495e1b8cbf59231e00f58c5cd8cec0b587923f5723c6ba7b8ba2",
+   "prime_rows_cached0": "108/108",
+   "cells_agree_across_3_reps": "90/90",
+   "pairs_complete": "123/123",
+   "uncached_identity": "uncached-(P1-cached)==L in 378/378",
+   "cached_le_P1": "378/378",
+   "kvcomp_delta_1": "378/378",
+   "avalanche_vs_none": "141 avalanche (cached>0) / 129 none (cached==0) of 270 cache-probe rows",
+   "confound": "residue and P1 not separable: WINDOW P1=6336+r cached=5280 (3/3), P1=1056+r cached=0 (3/3)"
+  },
+  "commands": [
+   "python3 inventory: 378 parsed rows, 26 keys, 0 exact duplicates (avalanche/rows.jsonl)",
+   "python3: log.txt 378 lines vs 378 rows match:True, LENGTH-MISMATCH 0; error non-null 0",
+   "python3: uncached-(P1-cached)==L 378/378; cached>P1 0; kvcomp!=1 0",
+   "python3: per-(arm,residue) counts -> 270 probes, 141 avalanche, 129 none; per-cell rep agreement 90/90",
+   "sha256sum experiments/miss-law/avalanche/rows.jsonl -> 8147d195e2de495e1b8cbf59231e00f58c5cd8cec0b587923f5723c6ba7b8ba2"
+  ]
+ },
+ "assumptions": [
+  "the harvest rule 'a row with no profile is not harvestable' was applied per row *family*: all 378 rows are one family from one run of one instrument, profile pinned at file scope; no row carries a profile field, so the harvest is explicitly single-profile and cannot be split or re-attributed",
+  "rows were not re-generated; nothing was re-measured (offline unit)"
+ ],
+ "blocker": "",
+ "next_unit_hint": "Cite experiments/miss-law/avalanche/HARVEST.md for the measured cell table (141/270 cached>0; r=0 -> cached=0 in every arm). Do not claim a residue->avalanche law: P1 and residue are confounded in this grid (WINDOW 6336+r cached 5280 vs 1056+r cached 0). A unit wanting the residue law must re-measure with P1 held fixed and a per-row model/engine field written.",
+ "write_paths": [
+  "experiments/miss-law/avalanche/HARVEST.md",
+  "experiments/ptr-engine/RECORD.md",
+  "orchestration/units/C9-HARVEST.md",
+  "orchestration/handoffs/C9-HARVEST.json"
+ ]
+}

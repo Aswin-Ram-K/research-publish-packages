@@ -1,0 +1,44 @@
+{
+  "unit": "S2",
+  "status": "done",
+  "artifacts": ["research/tooling/02-candidates.md"],
+  "evidence": {
+    "sources": 36,
+    "fetches": 23
+  },
+  "adds": [
+    "ast-grep: MIT/Rust single-binary AST pattern search returning exact file:line+byte spans by syntactic shape; graphifyy 0.9.80 queries node identity (path/explain/query/affected) but never shape, and the pipeline has no structural search at all; search mode writes nothing, so a read-only target stays read-only (avoid -U/--update-all)",
+    "difftastic: MIT/Rust structural (tree-sitter) diff that separates formatting-only churn from real syntactic change; `update` is hash-cached but re-extracts any touched file, and `affected` needs a node set it cannot derive from a commit — this is the missing gate on the incremental-refresh path",
+    "ripgrep: Unlicense/Rust; the pipeline currently has zero literal text search, so claim verification has to re-read whole files; `rg -n --json` yields byte/line offsets at ~ms on 436 files and stays the right tool at 100k lines"
+  ],
+  "rejects": [
+    "Graft (@nanonets/graft 0.24.1 -> trailhq/Trail-Code 'Code map'): the one true 'repo traversal' match, but `graft init` writes a graft/ dir plus an AGENTS.md block and editor hooks INTO the target repo — fatal under the read-only-target constraint; only the markdown-view output idea is borrowable",
+    "Graphiti: temporal KG for conversational agent memory (Neo4j/FalkorDB + LLM extraction); wrong domain, and the SQLite memory store already holds this project's facts",
+    "GraphRAG: same technique graphifyy already applies to code (Leiden communities over an extracted graph) plus per-chunk LLM cost; upstream README states it is largely in maintenance mode",
+    "LightRAG/fast-graphrag/nano-graphrag: document RAG variants of the same idea; two of the three dormant (last push 2025-11-01 / 2026-01-27)",
+    "Graphite (graphite.dev): PR stacking/review workflow, not a repo index — rejected as the reading of 'graphit'",
+    "code-graph-rag: near-total duplicate (tree-sitter -> graph -> cluster -> LLM query) plus a Memgraph/Docker service",
+    "potpie: near-total duplicate graph + Neo4j + LLM keys, and its SDLC-memory half duplicates the existing SQLite store",
+    "blarify: 234 stars, no releases, same repo-as-graph idea; abandoned in practice",
+    "Semgrep: buys taint/dataflow this pipeline does not need; LGPL-2.1 engine is fine but the valuable rule sets are commercially licensed",
+    "CodeQL: CLI is under proprietary 'GitHub CodeQL Terms and Conditions' (only the query repo is MIT) and needs a DB build phase per commit",
+    "Joern: Apache-2.0 and genuinely deep (CPG/taint) but a JVM service plus a second graph schema to keep in sync with graph.json",
+    "Sourcegraph: main repo not publicly retrievable (API 404, 2026-10-23) and self-hosting requires a licence key",
+    "Sourcebot/zoekt: index-server stacks (Docker/Node 24; Go daemon + shards) that only repay at many repos/users — ripgrep wins for one 436-file repo",
+    "repomix/gitingest/code2prompt: near-total overlap with the project's own budgeting + graphifyy file_slice; they move token cost rather than reduce reading, and flattening loses node identity needed for file:line provenance",
+    "aider repo-map: `query --budget` + `god-nodes` already provide budgeted traversal and centrality; only the PageRank seeding rule is novel, which is one networkx call, not an editing-agent dependency",
+    "Serena MCP: the one route to type-resolved references, but GPL-3.0-or-later app + per-language servers + no MCP client mounted in this agent profile — deferred, not adopted",
+    "Understand/Sourcetrail: commercial proprietary; Sourcetrail archived 2021-12-13",
+    "ugrep/tree-sitter CLI: supersets of capability already present (ripgrep; in-process tree-sitter 0.25)",
+    "Graft alternate readings (Grafana product, Rust crate): unconfirmed, no evidence found"
+  ],
+  "blocker": "",
+  "assumptions": [
+    "web_search is broken in this environment (no DEEPSEEK_API_KEY) so it was called once and abandoned; local_web_search (SearXNG) returned zero results; research used batched curl against api.github.com, registry.npmjs.org, raw.githubusercontent.com and project docs pages, plus Bing/Marginalia for the naming resolution",
+    "GitHub REST metadata (stars, licence, latest release + date) covers 28 repos from two batched shell calls and is a 2026-10-23 snapshot; 23 substantive pages/READMEs were retrieved and are counted as 'fetches', the API metadata objects are not",
+    "naming adopted: 'graphit' = Graphiti (Zep) because spelling/pronunciation match is exact and it is the highest-profile project with that name, with the note that its function (agent memory) does not match the stated need (repo traversal) — GraphRAG/Graphite recorded as the rejected readings; 'gradft' = Graft, resolved concretely to @nanonets/graft, now the Code map component of trailhq/Trail-Code",
+    "GitHub API rate limit (60/hr unauthenticated) was exhausted; counts for sourcegraph/sourcegraph and sourcegraph/sourcegraph-public are therefore recorded as 404/no-public-repo rather than as a star count",
+    "star counts are reported as retrieved and labelled as a snapshot, never as live figures"
+  ],
+  "write_paths": ["research/tooling/02-candidates.md", "research/tooling/handoffs/S2.json"]
+}

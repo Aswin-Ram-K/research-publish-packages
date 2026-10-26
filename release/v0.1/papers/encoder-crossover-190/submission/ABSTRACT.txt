@@ -1,0 +1,37 @@
+Every public "a small encoder wins" result we were able to locate inside the target corpus compares that
+encoder against a **prompted** (zero- or few-shot) LLM, never against a **fine-tuned generative decider**
+(the claim and its audit trail are internal to the corpus, not an external survey — §2). That a fine-tuned
+generative decider can beat a fine-tuned encoder at comparable effort is **already public** — a 2025
+practitioner blog post reports exactly that on a binary ADE task (§2.1) — so we claim **no priority for the
+direction**; what we claim is this fixture, its controls and its diagnosis. We measure the fine-tuned
+comparison on a sealed typed-single-label decision fixture.
+
+**Headline.** The best fine-tuned encoder head scores **0.3474** and loses to the fine-tuned 4B decider at
+**0.6789** — the **declared primary baseline** (author decision 2026-10-15), the auditable same-run arm —
+with paired McNemar **b = 27, c = 90, ψ = 0.616, Δ = −0.3316, exact
+p = 4.167e−09**. The control that could have contradicted this is the mandatory **majority-class control**,
+and it did contradict the candidate's framing of itself: majority-class returns **0.4526**, beating *every*
+fine-tuned encoder head by **+0.1053**. The second control that could have contradicted the measurement is
+the **shuffled-label arm**, and it moved the other way from a spurious win: it returns **0.2316**, below the
+fixture's **0.2911** chance floor. A third control guards instrument integrity: our n-gram leak criterion
+(≥ 2 distinct shared 8-grams within one row pair, both directions) flagged **0 of 152,000** training↔fixture
+pairs — and, to show the criterion can fire, it flagged three deliberately seeded copies at **13 / 44 / 57**
+shared 8-grams (pair maxima). Against the *published, pre-registered* baseline **0.6684** — which
+`REPORT.md:189` states **cannot be re-scored** from the tree — the same head loses by **0.3210** ("0.32") against the **secondary** baseline **0.6684**.
+**The two figures use two baselines and must not be read as one:** the headline **0.3316** ("0.33") is
+computed against the **declared primary 0.6789**, while **0.3210** ("0.32") is computed against the
+**secondary/published 0.6684**, which is the pre-registered F1 threshold and which `REPORT.md:189` states
+cannot be re-scored from the tree.
+
+**Correction carried.** Fixing three defects lowered the **SetFit-MPNet** arm monotonically
+(**0.3158 → 0.2947 → 0.2632**), but the same order-probe fix *raised* the **ModernBERT-base** arm
+(**0.342105 → 0.347368**). The universal claim "every correction moved the affected arm down" is false; the
+SetFit arm returned the opposite direction from the ModernBERT arm, which is the control on that claim.
+
+**Not in this paper.** We make **no latency claim**: the encoder heads were timed locally in one forward
+batch while the 4B figures come from a served stack's stored rows, so the tree cannot support a fair
+latency comparison (see §6.1). We also do **not** report κ = 0.9014 (first blind reader) or κ = 0.8577
+(second, independent blind reader) — nor their mutual κ = 0.9125 — as inter-annotator agreement: both
+labellers were **models**, so this is machine reproducibility of the fixture, not human agreement. The
+second reader **partially** replicates the first: the κ magnitude holds (both ≥ 0.85) but the exact 0.90
+headline does not. An independent human labeller is still owed (§6.2).

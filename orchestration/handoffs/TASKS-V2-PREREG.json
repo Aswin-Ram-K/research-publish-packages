@@ -1,0 +1,69 @@
+{
+ "unit": "TASKS-V2-PREREG",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/TASKS-V2-PREREG.md",
+  "experiments/ptr-engine/longrun/tasks-v2/LR-01.v2.json",
+  "experiments/ptr-engine/longrun/tasks-v2/LR-02.v2.json",
+  "experiments/ptr-engine/longrun/tasks-v2/LR-03.v2.json",
+  "experiments/ptr-engine/longrun/tasks-v2/LR-04.v2.json",
+  "experiments/ptr-engine/longrun/tasks-v2/LR-05.v2.json",
+  "experiments/ptr-engine/longrun/tasks-v2/LR-06.v2.json",
+  "orchestration/units/TASKS-V2-PREREG.md",
+  "orchestration/handoffs/TASKS-V2-PREREG.json"
+ ],
+ "evidence": {
+  "budget_arithmetic": "150w x 1.35 tok/w = 202.5 tok / 24.5 tok/s = 8.27 s decode (+15 s pilot-derived overhead = 23.3 s/turn); 400w x 1.35 = 540 tok / 24.5 = 22.04 s (+15 = 37.0 s/turn); all-150 N=48: 48x23.3=1116.7 s/arm -> 4 arms = 4467 s = 1.24 h; mixed N=48 (44@150 + 4@400): 44x23.3+4x37.0=1171.8 s/arm -> 4687 s = 1.30 h; all-400 N=48: 48x37.0=1778.0 -> 7112 s = 1.98 h; all-150 N=24: 24x23.3=558.4 -> 2233 s = 0.62 h; mixed N=24: 20x23.3+4x37.0=613.5 -> 2454 s = 0.68 h; all-400 N=24: 24x37.0=889.0 -> 3556 s = 0.99 h; pilot baseline 192 arm-turns x ~130 s = 24960 s = 6.93 h",
+  "check_census": "before (fixtures/LR-01..06): checks_structured 12+8+8+9+9+9 = 55, unverifiable 3 (LR-02/03/06 acc.4); after (tasks-v2/*.v2.json): checks_structured 55 byte-identical, unverifiable 3 unchanged, moved to unverifiable = 0. Verified by python deep-equality of acceptance.checks_structured, acceptance.checks, acceptance.unverifiable and every other source key (schema/task_id/class/objective/long_run/sources/turns/checkpoints/repair/expected) against fixtures/; only new keys are fixture_version and answer_budget (plus acceptance.answer_budget_notes).",
+  "answer_derived_checks": "42 of 55 checks carry a turn (checkpoint or verify only); 13 are constraint/artifact checks read from write set or run log; no check reads a work-turn answer (turn sets: LR-01 12/24/46/48, LR-02 16/32/62/64, LR-03 14/28/54/56, LR-04 10/20/38/40, LR-05 18/36/70/72, LR-06 15/30/58/60)",
+  "commands": [
+   "python3 -c 'json.load(fixtures/LR-0*.json); census checks_structured/decides/match/turn'",
+   "python3 -c 'policy rows: content_tokens/latency_s distribution; median 388.5 content tok, 5/19 truncated at max_tokens=16384'",
+   "grep -n 'def match_answer' -A14 score_longrun.py  # exact == full-string equality, score_longrun.py#L168-L181",
+   "python3 - <<generator>>  # writes six tasks-v2/*.v2.json, asserts per-check byte equality vs fixtures/",
+   "python3 - <<verifier>>  # re-asserts equality, prints TOTAL checks_structured 55 / unverifiable 3 / one distinct system_prompt_addition (188 words)"
+  ],
+  "health_check": "none run; zero requests (no curl, no model call)"
+ },
+ "blocker": "",
+ "assumptions": [
+  "tokens_per_word 1.35 and 15 s/turn fixed overhead (midpoint of the pilot's own +20.6 s / +11.1 s gaps) are the projection's only invented constants; both are stated in TASKS-V2-PREREG.md §7 and the 15 s choice favors rejection",
+  "mixed projection assumes 4 checkpoint-or-verify turns per arm (3 checkpoints + the verify turn); the fixture turn kinds are work 304 / plant 6 / repair 6 / checkpoint 18 / verify 6 of 340",
+  "the v2 copies keep schema consonance.fixture/1 unchanged and add fixture_version 'v2-bounded' as a new top-level field (no fixture_version existed to bump)",
+  "run_longrun.py does not yet honour answer_budget; the pre-registration is inert until a separate card adds word counting and the over_budget row field"
+ ],
+ "next_unit_hint": "New card: implement answer_budget in run_longrun.py (word count of completion content, over_budget:true row field, no truncation, no re-prompt) and adapt_fixture.py pass-through; then run 1 rep x 4 arms on tasks-v2 at N=48 (projected 1.30 h mixed). Separate card: LR-01/02/03/04/06 nine full-string-equality checks are unreachable at any answer length (exact -> contains repair), which is pre-existing and budget-independent.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/TASKS-V2-PREREG.md",
+  "experiments/ptr-engine/longrun/tasks-v2/LR-01.v2.json",
+  "experiments/ptr-engine/longrun/tasks-v2/LR-02.v2.json",
+  "experiments/ptr-engine/longrun/tasks-v2/LR-03.v2.json",
+  "experiments/ptr-engine/longrun/tasks-v2/LR-04.v2.json",
+  "experiments/ptr-engine/longrun/tasks-v2/LR-05.v2.json",
+  "experiments/ptr-engine/longrun/tasks-v2/LR-06.v2.json",
+  "orchestration/handoffs/TASKS-V2-PREREG.json",
+  "orchestration/units/TASKS-V2-PREREG.md"
+ ],
+ "answer_budget_turns": {
+  "work": 150,
+  "plant": 150,
+  "repair": 150,
+  "checkpoint": 400,
+  "verify": 400,
+  "unit": "words of answer text (whitespace tokens of answer.strip())",
+  "over_budget": "recorded over_budget:true on the row, never truncated, never re-prompted, never dropped from scoring"
+ },
+ "projected_hours": {
+  "N24_all150": 0.62,
+  "N24_mixed": 0.68,
+  "N24_all400": 0.99,
+  "N48_all150": 1.24,
+  "N48_mixed": 1.3,
+  "N48_all400": 1.98,
+  "baseline_pilot_N48": 6.93,
+  "grid": "4 arms x 1 rep, per-turn seconds = words*1.35/24.5 + 15"
+ },
+ "checks_preserved": 55,
+ "checks_moved_unverifiable": 0,
+ "falsifier_text": "REJECTED if F1 a checkpoint or verify turn whose answer is within its <=400-word ceiling fails a check because the required fact is absent (one such failure in 6 tasks x 4 arms x 1 rep = 1,360 turn-rows), or F2 over_budget fires on more than 10% of turns (>=5 of 48 per arm at N=48; >=20 of 192 arm-turns; at N=24 >=3 of 24 per arm, >=10 of 96 overall); F3 if over_budget fires on 0 of 1,360 turns the ceiling never bound and the tier is INCONCLUSIVE rather than rejected."
+}

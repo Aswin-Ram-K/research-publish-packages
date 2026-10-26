@@ -1,0 +1,73 @@
+{
+  "unit": "PAPER-FINAL-V2B",
+  "kind": "verifier",
+  "started": "2026-10-24T08:26-05:00",
+  "finished": "2026-10-24T08:40-05:00",
+  "overall": "partial",
+  "status": "partial",
+  "question": "Does every number in the PAPER-FINAL close-out have a claim row (or an explicit recompute key) behind it?",
+  "answer": "NO — 17 of 314 distinct numeric tokens in the close-out have no claim row behind them; 4 of the 17 are wrong or unprovable, 2 readings are wrong, and the guarded 277 are row-exact. Most of the misses are not new: the close-out inherited them because it folded older prose (abstract, 6a, 10, 11) into new sections.",
+  "checks": [
+    "Mapped all 314 distinct numeric tokens in the close-out (§8a L481-531, §9c/§9d L694-789, §10 rules+null L800-851, the abstract and closing paragraph L8-96, §11 carried gaps) to a CLAIMS.md row and/or a recompute/recompute_r2 expected key.",
+    "Re-ran every guard the close-out cites: verify_package PASS, recompute all 64 PASS lines + coverage guard PASS, recompute_r2 C64 38/38 C65 48/48 C66 75/75 C67 85/85 C68 70/70 SYSOPT 50/50, recompute_r2 redgreen 4/4, serving_brief --check PASS (19 items, 13 cells), pytest tests/ 1368 passed 1 skipped.",
+    "Re-derived the four figures that had no key from the raw rows with my own arithmetic (P2-REPAD rows: extra cached 70 pairs mean 74.0571 with 9/41/20 split; pad 71 rows 6,737 mean 94.8873; prompt_tokens 875,856 / 163,311 / 170,048; G3-LIMIT-V2 2,780 rows x 6 arms of 350 with F-k800 at 2,330).",
+    "Ruled on the two items PAPER-FINAL itself flagged as overstated, and on the arithmetic claims the close-out added."
+  ],
+  "not_reproduced": [
+    "§9c/§9d 'the dense-vLLM cell's hot-token gcd is 16' and §11 'the other's is 16, below a page' — does not reproduce: C65's own expected value is dense/vLLM 879.0669 uncached per turn, and C65 and C63 both carry hot gcd 1,088 for that cell. A cell that pays 879 uncached tokens per turn cannot have a hot-hit gcd of 16; 64 divides 1,088, so a 64-grid residue is exactly what that cell would show. Nothing in recompute or recompute_r2 keys a gcd of 16, so the sentence is unguarded as well as unreproduced.",
+    "§9c 'the same 1,136 rows, re-derived independently of recompute.py, into a second script' — the document declaring the sources is CLAIMS.md column 4 ('`.venv/bin/python papers/context-cache/recompute_r2.py C65`') and READER-MAP.md row C65 ('papers/context-cache/recompute_r2.py ... MOE-VLLM, G3, R2-PROMPT, DENSE-SGL'). The independent-re-derivation claim is therefore contradicted by the map the package enforces.",
+    "§8a table column headed 'prompt bytes' with 12,336 / 2,300 / 2,395 — the figures reproduce as prompt TOKENS from the rows (mean prompt_tokens 12,336.0 / 2,300.1549 / 2,395.0423 over 71 turns each; state/r2-p2-repad.json stores the same three) but no byte count exists anywhere in the package: the rows carry prompt_tokens and prompt_sha256 and no char/byte field. A 12,336-token prompt is ~43 KB at this cell's own token_ratio_chars 0.2836, so 'bytes' is off by a factor of ~3.5. The label is wrong and the column has no claim row.",
+    "§8a 'which is why the pad over the 70 countable rows is 6,643 / 94.90' — the ratio is a coincidence of the denominator. 6,643 is tokens of extra cache over 70 PAIRS (mean 74.0571), not a pad, and the true pad over all 71 P2 rows is 6,737 / 94.8873 (the cell's own figure); 70 x 94.90 = 6,643.0 is the pad that a 70-row denominator would IMPLY. The manuscript's framing presents the implied pad as if it were the sum of the pad rows.",
+    "§9d 'a per-turn cost of about twenty-four tokens is roughly 1.4 % of the bill' — arithmetic only (23.5211 / 1,664.3521 = 1.413 %), and neither operand combination is checked by any guard; it is commentary, not the defect."
+  ],
+  "overstated": [
+    "PAPER-FINAL's own flag on O3 is CORRECT and its second flag is NOT: 'pays +55.65' on O3 describes a null (+55.6479 [-136.493, +246.014], excludes_zero False), so the word should be withdrawn; but PANEL's '19/20 and 19/20 -> 18/20' is right — state/sys-opt-v1.json carries stored_mismatches 20/20 (MoE before and after) and 19/20 -> 18/20 (dense), so PANEL is the one that should be fixed.",
+    "§9d 'That is the cheapest direct evidence in this paper that a mid-run edit of a cached prefix is paid for per turn, not once at the edit' — one of the four setups supports it, and three are nulls straddling zero. The sentence reads a result off the setup that produced it. It is the same defect class as the withdrawn 'null on all four', in the opposite direction."
+  ],
+  "unverified": [
+    "§10 'the ceiling was reached by the stop rule and not by exhausting the design' — 'three budgeted rounds', 'round 2 requires a DECISIONS entry' and 'rounds 2-3 were unspent, which is not headroom' are process facts with no CLAIMS.md row; the only machine-readable trace is state/sys-opt-v1.json, whose protocol carries rows_expected 426 / rows_measured 426 and live_requests_used 565 (bound 500) and tool_calls 39 (bound 30).",
+    "§10 drift control '63.15 (MoE) and 13.13 (dense)' — reproduces from state/sys-opt-v1.json (63.15493 / 13.12676) but is NOT in the SYSOPT recompute key set (grep on recompute_r2.py finds neither number), so no command re-derives it.",
+    "§8a '68 of that arm's 71 rows were second sends' — reproduced from cells/R2-PROMPT/O3-REPEAT/rows.jsonl (68 rows carry pad_corrections 1, 3 carry 0) but unguarded by any recompute key; the same paragraph runs two count systems in one breath, the withdrawn cell's 68 vs the replacement P2-REPAD's 0 (213 rows x requests_sent 1).",
+    "§6a/§10 'every arm has turns below its baseline' and §6a 'at least one turn below its baseline' — C62 recompute says post_turns_below_zero 12 of 12, contradicted by §11's '11 of 12 arms contain at least one turn below their baseline'. 12 is the correct figure; §11 is the stale one.",
+    "PAPER-FINAL's claimed edit count 'five edits in MANUSCRIPT.md' — its artifact list itself enumerates seven fold sites (8a, 9c, 9d, rule 5, 11, the abstract closing sentence AND a C63 sign repair).",
+    "§6a 'twelve arm means over 27-89 turns each' and §11 'post-boundary averages cover 47 to 89 turns' — both bands are the same twelve means seen from different ends (means are taken over 27-89 turns, medians/transitions over 47-89); the second needs its noun fixed.",
+    "PANEL §11 'The optimisation round is closed ... listed as an open gap in GAPS.md G4' with §10 'the null recorded at the end of this section' — GAPS.md carries no G4 line for the SYS-OPT carried gaps, and §10 carries no such null; the signposts do not land."
+  ],
+  "scope": {
+    "numbers_in_scope": 314,
+    "numbers_with_a_key": 297,
+    "numbers_without_any_key": 17,
+    "orphans": [
+      "§8a 12,336 and 2,300 and 2,395 (the three 'prompt bytes' cells; reproduce as tokens, no claim row)",
+      "§8a 6,643 (outside C64's value cell, which carries only 94.90 and 6,737)",
+      "§8a 94.90 / 6,643 pair (the implied-pad reading, wrong)",
+      "§9c 16 (dense-vLLM hot gcd; contradicted by C65/C63, which both say 1,088)",
+      "§9d 1.4 % (derived ratio, no key)",
+      "§10 63.15 / 13.13 (drift control, in state/sys-opt-v1.json but not in the SYSOPT key set)",
+      "§10 565 / 500 / 39 / 30 (budget overrun; prose-only)",
+      "§10 'rounds 2-3 unspent' / 'one round' (prose-only)"
+    ]
+  },
+  "claims_backed_between_close_and_over": "Every §9d row value, every §9c band, and every §10 null figure is row-exact: C67's 12 arm means and 8 paired deltas, C65's 2x2 spans, C66's 355-row sweep, C62's twelve arm means and boundary bands, C69's four means and two intervals, and C64's 70-pair +20.8429 [10.014, 31.586]. The close-out's numbers are not fabricated; what it lacks is a row for the four figures it promotes into a table (the prompt-bytes column) and for its process claims.",
+  "repairs_made": [
+    "MANUSCRIPT.md §8a L521-531: rewrote the 'arithmetic qualifier' from 'the pad over the 70 countable rows is 6,643 / 94.90 rather than 6,737 / 94.89' to the correct arithmetic (6,643 = 70 pairs of extra cache at 74.0571; pad 6,737 / 94.89 over 71 rows; 70 x 94.90 = 6,643.0 is the implied pad). Length-preserving: the file is still 969 lines.",
+    "MANUSCRIPT.md §8a Lfrac: added the row-count evidence for '68 of 71 rows were second sends (the other three carry pad_corrections 0, cells/R2-PROMPT/O3-REPEAT/rows.jsonl)', so the sentence's source is on disk.",
+    "Nothing else was edited: every other finding is recorded, not fixed — the audit is automated and read-mostly."
+  ],
+  "red_green": "Not applicable in the usual form: this unit changed no guard, and the guards it re-ran are the author's. Proven against the author's guards instead: planting the probe clause back on MANUSCRIPT.md:96 left pytest (ledger + attribution guard + matrix fold) at 26/26 PASS and verify_package at PASS, which is a MEASURED GUARD GAP — no guard covers the closing sentence, and none guards the prompt-bytes column, the hot-gcd 16, or the drift control.",
+  "tool_calls": 47,
+  "bound": 60,
+  "containment": "0 live requests, 0 locks, 0 cells run, no container, no target-repo write and no git verb against a target; the only writes are this handoff, the VERDICTS.md row, and the three MANUSCRIPT.md sentence repairs above, each verified by the full 1368-test suite before and after.",
+  "assumptions": [
+    "No board card and no waiver names this session, so the unit name is carried from the prompt ('PAPER-FINAL-V2B') and the handoff is written by the session doing the work.",
+    "'The new close-out' is read as the PAPER-FINAL close (MANUSCRIPT §8a/§9c/§9d/§10/§11, the abstract closing sentence, GAPS G17) rather than as a section titled V2B, which does not exist anywhere in the package (grep for V2B across papers/, experiments/, state/ and orchestration/ returns nothing outside this unit's own name).",
+    "A number counts as 'having a claim row behind it' when a CLAIMS.md row (or its recompute key set, reached through READER-MAP.md) carries it or a figure it is arithmetically derived from; commentary, counts and budget ceilings need a row too, which is where most of the 17 misses come from."
+  ],
+  "blocker": "",
+  "next_unit_hint": "PAPER-FINAL-V2C (author-side repair, then re-verify): (1) relabel §8a's 'prompt bytes' column as prompt tokens and round to 12,336 / 2,300.15 / 2,395.04, or delete the column; (2) replace §9c/§9d/§11's 'gcd 16' with the 1,088 that C65 and C63 both carry, or key the gcd in recompute_r2 so a reviewer can see which reading the rows support; (3) fix 'the same 1,136 rows, re-derived independently of recompute.py' to name cells/R2-PROMPT (whatever part is genuinely independent); (4) drop 'pays' from the O3 +55.65 clause and fix §11's '11 of 12 arms' to 12 of 12; (5) add a C64 row (or a C64b) for the prompt-token column and the 6,643 extra-cache figure so §8a's table stops carrying unkeyed numbers; (6) add the drift control and the 565/500/39/30 budget to the SYSOPT key set. Then a fresh verifier re-runs this map — the 297 row-exact figures should not need re-deriving.",
+  "write_paths": [
+    "orchestration/handoffs/PAPER-FINAL-V2B.json",
+    "orchestration/VERDICTS.md",
+    "papers/context-cache/MANUSCRIPT.md"
+  ]
+}

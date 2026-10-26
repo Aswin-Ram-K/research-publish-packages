@@ -1,0 +1,31 @@
+MEMORY M-3 -- Credential rotation notes
+
+Scope. Notes from the last two rotation exercises, kept because the same three
+surprises recur every time.
+
+What happened, in order of cost:
+
+  * Rotation and deployment are not independent. Rotating a key while an old
+    deployment is still serving produces a window where the old pod reads with the
+    retired credential. The correct order is: deploy the reader that accepts both,
+    rotate, then deploy the reader that accepts only the new one.
+
+  * Long-lived connections do not re-authenticate. A pooled database connection
+    opened before the rotation keeps working until it is recycled, so a rotation that
+    "went fine" can fail ninety minutes later when the pool turns over. Force a pool
+    recycle after every rotation rather than waiting to observe it.
+
+  * The emergency path must be tested on a normal day. Both rotations lost time to
+    the break-glass credential being stored in a place the responder did not expect.
+    That is a documentation defect, not a security defect, but it cost the most
+    wall-clock time of anything in the exercise.
+
+Conventions adopted afterwards:
+
+  * Rotate on a schedule, never in response to an incident. An incident rotation is
+    two changes at once.
+  * Record the rotation in the same place the reader is documented. A rotation
+    recorded only in a ticket is lost at the next rotation.
+
+Non-goals. This note deliberately contains no key material, no paths to key
+material, and no intervals; those live with the owning system.

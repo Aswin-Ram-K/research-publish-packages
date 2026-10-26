@@ -1,0 +1,30 @@
+{
+  "unit": "C5-ADJUDICATE",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/C5-ADJUDICATE.md"
+  ],
+  "evidence": {
+    "verdict": "OPEN",
+    "anchors": [
+      "experiments/ptr-engine/measure/rows.jsonl \u2014 9 of 12 measure request rows are padded (pads 60/58/50, 3 reps each), token_source=http://192.168.2.168:8012/v1, error null; C5's 'no measured padded cycle exists in any unit' is refuted by the file",
+      "experiments/ptr-engine/measure/rows.jsonl cells B/D \u2014 pad 60 P1 386 cached 384 uncached 15; pad 50 P1 322 cached 320 uncached 15 (3/3 reps each), measured padded cells satisfying uncached=residue+L",
+      "experiments/ptr-engine/measure/SHAPE-SEARCH.md:80 \u2014 ENGINE-R1 live anchor 'compact index + 50 filler tokens P1 322 residue 16', the byte-identical control cell D re-measures",
+      "experiments/ptr-engine/measure/shape-search.json:2 \u2014 \"predicted\": true; all three tokenizer tables are stubs (calibrated-anchor base 550/588 vs measured 325; words-only base 66 vs 325)",
+      "orchestration/handoffs/ENGINE-R2.json:evidence.command_or_count \u2014 'OFFLINE ONLY \u2014 not one request was sent'; its calibrated-anchor stub is 550/588 vs the measured 325 (~1.7x), so C5's '~4x' quotes the words-only stub"
+    ],
+    "missing": "MISSING: SGLang the compact index UNPADDED on :8012 (cell E, P1_E and residue R_E=P1_E mod 64) \u2014 it would live in experiments/ptr-engine/measure/rows.jsonl as a cell E row.",
+    "sentence": "C5 \u2014 OPEN, on the stub and not on the cells. Nine measured padded requests exist \u2014 3 reps each at pads 60/58/50 (measure/rows.jsonl, cells B/C/D) \u2014 so \"no measured padded cycle exists\" is false; but no artefact pins a compact-UNPADDED cell, and the tables predicting it rest on stubs ~1.7-4x off (SHAPE-SEARCH.md:241)."
+  },
+  "assumptions": [
+    "Read-only on all pre-existing files; wrote only orchestration/units/C5-ADJUDICATE.md and orchestration/handoffs/C5-ADJUDICATE.json, per the card.",
+    "C5's phrase 'no measured padded cycle exists in any unit' read literally (a padded request on disk) rather than as 'no padded cycle was measured against its unpadded twin'; the second reading is the part that survives and drives the OPEN.",
+    "ENGINE-R2's base P1 588/550 figure recomputed by ratio against the measured 325 (~1.8x), since the handoff states it as a whole-table number; C5's '~4x' is attributed to the words-only stub (66 vs 325), the only ~4x pair in ENGINE-R2."
+  ],
+  "blocker": "",
+  "next_unit_hint": "The whole remainder is one live cell: tokenize the compact envelope unpadded on :8012, record P1_E and R_E=P1_E mod 64, then bill(E)-bill(F) with F=compact+minimal filler to residue 2; the same call settles SHAPE-SEARCH.md section 2's anchor contradiction. Until then no padded-vs-unpadded comparison on disk is trustworthy, because every such comparison is off a stub whose base is 1.7-4x the measured prompt.",
+  "write_paths": [
+    "orchestration/handoffs/C5-ADJUDICATE.json",
+    "orchestration/units/C5-ADJUDICATE.md"
+  ]
+}

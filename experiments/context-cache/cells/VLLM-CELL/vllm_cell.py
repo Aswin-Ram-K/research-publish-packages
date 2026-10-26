@@ -130,7 +130,7 @@ def fit_budget(messages, budget):
 # HTTP + row parsing. The parsing is the part that matters.
 # --------------------------------------------------------------------------
 
-def parse_row(payload, arm, turn, prompt_sha256, truncated):
+def parse_row(payload, arm, turn, prompt_sha256, truncated, stack=None, config_id=None):
     """Build one measured row from a chat-completion payload. Never invents 0."""
     usage = payload.get("usage") or {}
     details = usage.get("prompt_tokens_details")
@@ -149,6 +149,8 @@ def parse_row(payload, arm, turn, prompt_sha256, truncated):
         uncached = None
 
     return {
+        "stack": stack,
+        "config_id": config_id,
         "arm": arm,
         "turn": turn,
         "prompt_tokens": prompt_tokens,
@@ -190,7 +192,7 @@ def assert_arms_distinct(probe_turns=(1, 20)):
             seen[text] = arm
 
 
-def run(base_url, model, arms, turns, budget, out, warmup):
+def run(base_url, model, arms, turns, budget, out, warmup, stack=None, config_id=None):
     assert_arms_distinct()
     os.makedirs(out, exist_ok=True)
     rows_path = os.path.join(out, "rows.jsonl")
@@ -206,7 +208,7 @@ def run(base_url, model, arms, turns, budget, out, warmup):
                 text = messages[0]["content"]
                 payload = post_chat(base_url, model, messages)
                 row = parse_row(payload, arm, turn, hashlib.sha256(text.encode()).hexdigest(),
-                                truncated)
+                                truncated, stack, config_id)
                 fh.write(json.dumps(row) + "\n")
                 fh.flush()
                 written += 1
@@ -222,6 +224,8 @@ def main(argv=None):
     p.add_argument("--budget", type=int, default=32768)
     p.add_argument("--out", required=True)
     p.add_argument("--warmup", action="store_true")
+    p.add_argument("--stack", default="vllm-0.27.1")
+    p.add_argument("--config-id", default="VLLM-CELL")
     p.add_argument("--dry-run", action="store_true",
                    help="render + guard only; no HTTP")
     args = p.parse_args(argv)
@@ -236,7 +240,7 @@ def main(argv=None):
         return 0
 
     written, path = run(args.base_url, args.model, arms, args.turns, args.budget,
-                        args.out, args.warmup)
+                        args.out, args.warmup, args.stack, args.config_id)
     print("wrote %d rows -> %s" % (written, path))
     return 0
 

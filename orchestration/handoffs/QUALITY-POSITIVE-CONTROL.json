@@ -1,0 +1,134 @@
+{
+  "unit": "QUALITY-POSITIVE-CONTROL",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/QUALITY-POSITIVE-CONTROL.md",
+    "/tmp/qpc/pos-full.jsonl",
+    "/tmp/qpc/neg-one.jsonl",
+    "/tmp/qpc/neg-marker.jsonl",
+    "/tmp/qpc/neg-truncated.jsonl",
+    "/tmp/qpc/pos-exact-only.jsonl",
+    "/tmp/qpc/build.py"
+  ],
+  "evidence": {
+    "fixture": "experiments/ptr-engine/longrun/tasks-v3/runtime-v3/LR-01.v3.json sha256 07abab0bd902bd88c86b8d2544f012caf63a9a4280b68b223bd605d399bd3e0b",
+    "source_rows": "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl arm pointer-stable (48 turns, read-only, copy-only transform)",
+    "truth_table": [
+      {
+        "log": "pos-full",
+        "verified_success": false,
+        "checkpoint_accuracy": "0/3",
+        "tokens_to_verified_success": null,
+        "false_claims": 0,
+        "exit_code": 1,
+        "flipped": [
+          "cp.t12",
+          "cp.t24",
+          "cp.t46",
+          "acc.cp1",
+          "acc.cp2",
+          "acc.cp3",
+          "acc.1"
+        ]
+      },
+      {
+        "log": "neg-one",
+        "verified_success": false,
+        "checkpoint_accuracy": "0/3",
+        "tokens_to_verified_success": null,
+        "false_claims": 0,
+        "exit_code": 1,
+        "flipped": [
+          "cp.t12",
+          "cp.t24",
+          "cp.t46",
+          "acc.cp1",
+          "acc.cp2",
+          "acc.cp3",
+          "acc.1"
+        ]
+      },
+      {
+        "log": "neg-marker",
+        "verified_success": false,
+        "checkpoint_accuracy": "0/3",
+        "tokens_to_verified_success": null,
+        "false_claims": 0,
+        "exit_code": 1,
+        "flipped": [
+          "cp.t12",
+          "cp.t24",
+          "cp.t46",
+          "acc.cp1",
+          "acc.cp2",
+          "acc.cp3",
+          "acc.1"
+        ]
+      },
+      {
+        "log": "neg-truncated",
+        "verified_success": false,
+        "checkpoint_accuracy": "0/3",
+        "tokens_to_verified_success": null,
+        "false_claims": 0,
+        "exit_code": 1,
+        "flipped": [
+          "cp.t12",
+          "cp.t24",
+          "cp.t46",
+          "acc.cp1",
+          "acc.cp2",
+          "acc.cp3",
+          "acc.1"
+        ]
+      },
+      {
+        "log": "pos-exact-only(diagnostic)",
+        "verified_success": true,
+        "checkpoint_accuracy": "3/3",
+        "tokens_to_verified_success": 22396,
+        "false_claims": 0,
+        "exit_code": 0,
+        "flipped": []
+      }
+    ],
+    "graders": {
+      "score_longrun": "exit 1 on pos-full/neg-one/neg-marker/neg-truncated; exit 0 on pos-exact-only",
+      "grade_v2": "exit 0 always (no binary verdict); new_accuracy pos-full 10/10, neg-one 7/10, neg-marker 10/10, neg-truncated 10/10, pos-exact-only 3/10",
+      "schema_note": "no grader reads answer_marker (grep 0 hits in both files); no scorecard field named false_claims (reported 0 from constraint_violations)",
+      "usage": "score_longrun.py FIXTURE RUN  |  grade_v2.py --rows RUN --fixture FIXTURE --out /tmp/qpc/*.json"
+    },
+    "pos_full_failure": {
+      "check_id": "cp.t12",
+      "kind": "fact",
+      "turn": 12,
+      "expected": "64",
+      "found": "the real turn-12 prose followed by 'The default per-turn resolve budget in refs is 64. ... ANSWER: 64' (full content compared, not the marker line)",
+      "code": "score_longrun.py:814 defaults mode to 'exact' because checkpoints[] carry no match key; score_longrun.py:174-176 returns text == want over the whole turn content"
+    },
+    "why_no_log_can_pass_both": "LR-01.v3.json answer_marker required:true demands an 'ANSWER: <value>' line, and 3 checkpoints + 4 mirror acceptance facts use exact whole-content match against bare values ('64','31',prose cp3); the only shape score_longrun accepts (bare '64') fails grade_v2 R1b (no concluding sentence), demonstrated by pos-exact-only 3/10 vs 10/10.",
+    "commands": [
+      "python3 /tmp/qpc/build.py",
+      "python3 experiments/ptr-engine/longrun/score_longrun.py experiments/ptr-engine/longrun/tasks-v3/runtime-v3/LR-01.v3.json /tmp/qpc/pos-full.jsonl",
+      "python3 experiments/ptr-engine/longrun/grade_v2.py --rows /tmp/qpc/pos-full.jsonl --fixture experiments/ptr-engine/longrun/tasks-v3/runtime-v3/LR-01.v3.json --out /tmp/qpc/pos-full.jsonl.grade-v2.json"
+    ]
+  },
+  "verdict": "PATH-CANNOT-SAY-YES",
+  "blocker": "Checkpoint fact checks cp.t12/cp.t24/cp.t46 and mirrors acc.cp1/acc.cp2/acc.cp3/acc.1 compare the entire turn content to the expected value (exact mode by default, score_longrun.py:814 + :174-176), while the v3 fixture's required answer_marker demands an 'ANSWER:' line in that same content. No log can satisfy both, so verified_success can never be true on a real-shaped log.",
+  "assumptions": [
+    "One arm (pointer-stable) and its 48 real rows are representative of the four arms; all four share the same fixture and the same exact-match path.",
+    "Synthetic logs keep every real row field verbatim except: fixture_sha256 set to the v3 fixture's on-disk digest (so fixture_file digest match is honest), and the content of turns 12/24/30/46/48 minimally extended to carry the expected values, the repair literal, and the turn-48 log facts.",
+    "tokens_to_verified_success is null on all false rows because the metric is only computed when verified is true (score_longrun.py:917-924); null means undefined, not zero.",
+    "The card's 'false_claims' has no scorecard counterpart; constraint_violations was 0 on every synthetic log and is reported as false_claims 0.",
+    "pos-exact-only is an extra diagnostic (bare literal checkpoint answers), not one of the four contracted logs; it exists to show which single shape the scorer does accept and that grade_v2 rejects it.",
+    "This sandbox gives each shell invocation a private /tmp, so the /tmp/qpc/*.jsonl logs are ephemeral; the full builder that regenerates all five logs and runs both graders in one call is embedded in QUALITY-POSITIVE-CONTROL.md (appendix), and the truth table is that call's output."
+  ],
+  "next_unit_hint": "Do not spend live quality requests. Owner decision needed: either set match: \"contains\" on the checkpoint/mirror fact checks (marker line is a substring) or make run_longrun emit structured answers so exact match sees only the value. Then re-run this same positive-control set; expect pos-full true, neg-one/neg-marker/neg-truncated false for three distinct reasons. Separately, grade_v2 is too lenient on neg-marker and neg-truncated (10/10) and needs the marker/truncation checks before its accuracy numbers are quoted.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/QUALITY-POSITIVE-CONTROL.md",
+    "orchestration/handoffs/QUALITY-POSITIVE-CONTROL.json",
+    "orchestration/units/QUALITY-POSITIVE-CONTROL.md",
+    "/tmp/qpc/**"
+  ],
+  "requests_sent": 0
+}

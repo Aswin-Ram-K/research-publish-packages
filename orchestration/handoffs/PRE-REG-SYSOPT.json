@@ -1,0 +1,59 @@
+{
+  "unit": "PRE-REG-SYSOPT",
+  "status": "done",
+  "artifacts": [
+    "docs/prompt-system/VERSIONS.md",
+    "orchestration/units/PRE-REG-SYSOPT.md"
+  ],
+  "evidence": {
+    "preregistration_timestamp_utc": "2026-10-24T08:40:15Z",
+    "empty_state": "date -u 2026-10-24T08:40:15Z; ls: cannot access 'docs/prompt-system': No such file or directory; ls: cannot access 'orchestration/handoffs/PRE-REG-SYSOPT.json': No such file or directory; ls: cannot access 'experiments/context-cache/cells/SYS-OPT': No such file or directory; ls: cannot access 'state/sys-opt-*.json': No such file or directory; mkdir-ok",
+    "proof": {
+      "command": "python3 -c \"import pathlib;t=pathlib.Path('docs/prompt-system/VERSIONS.md').read_text();assert 'PRE-REGISTRATION' in t and 'CEILING' in t and 'ONE_SIDED' in t;print('OK',len(t),'chars')\"",
+      "actual_output": "OK 16755 chars"
+    },
+    "sections_in_order": [
+      "0. PRE-REGISTRATION (written before any SYS-OPT measurement)",
+      "1. Scoring",
+      "2. IMPROVEMENT(v, v-1)",
+      "3. ONE_SIDED",
+      "4. CEILING",
+      "5. REGRESSION",
+      "6. HEADROOM",
+      "7. ROUND PROTOCOL",
+      "8. CHANGE MENU",
+      "9. V0 definition",
+      "10. What would make us withdraw this rule",
+      "11. Freeze record"
+    ],
+    "sha256": {
+      "docs/prompt-system/VERSIONS.md": "8e6e629331d2bcdcd6b52f190367f9a3e99f2fe1be219999f9f525c0786e0532",
+      "orchestration/units/PRE-REG-SYSOPT.md": "2e9a50251f007a5bf96449a6a9a0b9b32b944b2e7eb058277a74bf202a3928b9"
+    },
+    "anchors_quoted_from_card_only": {
+      "PROMPT-O1": {"A": 529.2958, "C": 547.0845, "R": 583.1408, "H": 961.9718, "C0": 709.8592},
+      "PROMPT-O2-EXTRA": {"R": 600.169, "A-R": -71.3},
+      "note": "quoted, not re-derived; recorded as context anchors with their handoff paths and the ARMS-PARITY-WITHDRAW caveat (PROMPT-O1 A/C/H/C0 not re-run on a fresh salt; one sibling R reading withdrawn as unexplained and unusable)"
+    },
+    "live_requests": 0,
+    "restarts_survived": 2,
+    "verify_after_restart": "sha256 and proof re-run after the second restart: same hashes, proof-ok True, 16755 chars"
+  },
+  "blocker": "",
+  "next_unit_hint": "SYS-OPT (733058c8) fills V0 from R2-PROMPT per model BEFORE round 1, then appends V1-V3 below the section 11 line and does not edit sections 0-10. Aggregate a version as the unweighted mean of the four arm means (keep the per-arm table); count C0 as 142 reference rows additional to the 568; treat an absent cached_tokens as instrument failure, never as 0; an invalid_round is not a version and does not consume a version number. The ceiling may fire at round 1 and that is a valid close. The only amendment route is a verifier-proven measurement error (section 10); the empty-state evidence for precedence is this handoff.",
+  "write_paths": [
+    "docs/prompt-system/VERSIONS.md",
+    "orchestration/handoffs/PRE-REG-SYSOPT.json",
+    "orchestration/units/PRE-REG-SYSOPT.md"
+  ],
+  "assumptions": [
+    "P0-P3 are the four fixed prompt tests inherited from R2-PROMPT applied to every version; the version headline is the unweighted mean of the four arm means, because card SYS-OPT fixes '568 rows' and 'the same 4 tests' but not the aggregation. Recorded, not hidden.",
+    "C0 is carried as 142 additional reference rows (71 per model) rather than inside the 568, since 2 models x 4 arms x 71 turns = 568 exactly and C0 is a fifth renderer.",
+    "Quality mismatch rate = mismatches / 40 probes (20 fixed questions x P0 and P1 forms per model), with the question set and grader frozen in state/sys-opt-quality.json before round 1.",
+    "Bootstrap procedure (10,000 resamples, seed 20261024, percentile interval) is a procedural choice made at freeze time; it is not a measured number and it does not alter the card's thresholds.",
+    "V0 values are deliberately left blank: filling them requires reading R2-PROMPT, which belongs to SYS-OPT and would place a post-measurement number inside the pre-registration."
+  ],
+  "tool_calls": 27,
+  "bound": 12,
+  "bound_note": "Overrun reported, not hidden: 27 tool calls against a 12 bound. ~14 were read-only discovery (board card lookup cost 5 calls because the card id in the brief was truncated to 733058c8); the writing itself was 4 calls (stub, VERSIONS.md, unit card, handoff), plus 3 verification calls after the harness restarted twice mid-unit."
+}

@@ -1,0 +1,104 @@
+{
+  "unit": "QUALITY-SCORER",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/score_longrun.py",
+    "experiments/ptr-engine/longrun/QUALITY-RUBRIC.md",
+    "orchestration/handoffs/QUALITY-SCORER.json",
+    "orchestration/units/QUALITY-SCORER.md"
+  ],
+  "evidence": {
+    "command_or_count": "6 cases scored for real from /tmp: GREEN exit 0, verified true, checkpoint 3/3, tokens 6000, repair_turns 0, tampered false; RED-1 exit 1, violation con.no_decoy at turn 50 excerpt 'filed AUD-0000 as the audit code'; RED-2 exit 2, tampered true; RED-3 exit 1, checkpoint 2/3, cp.t60 failed; RED-U exit 1, unverifiable check.1; RED-S exit 3 stub. ALL ASSERTIONS PASS. Green weak flags: con.no_decoy false, con.no_fixture_edit true.",
+    "commands": [
+      "python3 -m py_compile experiments/ptr-engine/longrun/score_longrun.py",
+      "python3 - <<'PY' (generated /tmp/qs fixtures+runs, invoked score_longrun.py 6 times, asserted verdicts and exit codes) PY",
+      "wc -l experiments/ptr-engine/longrun/QUALITY-RUBRIC.md (60)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Score the real suite fixtures once LONGRUN-TASK-SUITE lands. Its acceptance.checks are prose by design; this scorer compiles only literal/backticked absence, file-contains and file-exists forms and emits everything else unverifiable. Do NOT loosen the scorer to make a fixture pass: add a structured dict check or a literal in the fixture instead.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/score_longrun.py",
+    "experiments/ptr-engine/longrun/QUALITY-RUBRIC.md",
+    "orchestration/handoffs/QUALITY-SCORER.json",
+    "orchestration/units/QUALITY-SCORER.md"
+  ],
+  "checks_implemented": {
+    "artifact": {
+      "forms": ["log-carried existence", "non-empty", "must_contain", "must_not_contain", "sha256 of logged content", "log completeness", "fixture digest"],
+      "green_case_count": 4
+    },
+    "fact": {
+      "forms": ["exact (default)", "contains", "regex", "any-of list", "semantic -> unverifiable", "no record/empty -> fail"],
+      "green_case_count": 3
+    },
+    "constraint": {
+      "forms": ["regex", "literal", "no-write-to-path", "no-delete-tests", "prose -> unverifiable", "weak_constraint via shortcut_probes"],
+      "green_case_count": 2
+    },
+    "repair": {
+      "forms": ["literal corrected value inside at_turn..at_turn+window", "prose target -> unverifiable", "no record -> fail"],
+      "green_case_count": 1
+    }
+  },
+  "red_cases": [
+    {
+      "case": "negative constraint violated",
+      "exit_code": 1,
+      "verified_success": false,
+      "detail": "con.no_decoy matched 'AUD-0000' at turn 50, excerpt 'work note 50 - filed AUD-0000 as the audit code'"
+    },
+    {
+      "case": "fixture digest mismatch (checks edited after run)",
+      "exit_code": 2,
+      "verified_success": false,
+      "detail": "fixture sha256 at score time != header fixture_sha256; tampered true"
+    },
+    {
+      "case": "checkpoint answered wrongly at depth",
+      "exit_code": 1,
+      "verified_success": false,
+      "detail": "turn 60 answered k07, expected k01; checkpoint_accuracy 2/3; cp.t60 failed"
+    },
+    {
+      "case": "semantic prose check (refused)",
+      "exit_code": 1,
+      "verified_success": false,
+      "detail": "check.1 'function parse_lease returns None for an expired lease' -> unverifiable, blocks success"
+    },
+    {
+      "case": "stub fixture",
+      "exit_code": 3,
+      "verified_success": false,
+      "detail": "fixture declares stub true; no scoreable checks"
+    }
+  ],
+  "green_cases": [
+    {
+      "case": "correct 60-turn run with artefact writes, 3 checkpoints and a repair",
+      "exit_code": 0,
+      "verified_success": true,
+      "detail": "checkpoint_accuracy 3/3; tokens_to_verified_success 6000; repair_turns 0; failures none"
+    }
+  ],
+  "tamper_detected": true,
+  "unverifiable_kinds": [
+    "semantic or paraphrase equivalence of a checkpoint answer",
+    "behavioural claims requiring code execution ('function returns None', 'tests pass')",
+    "prose repair targets with no literal corrected value",
+    "prose negative constraints with no literal and no pinned path",
+    "constraint regex that does not compile"
+  ],
+  "exit_codes": {
+    "0": "verified success: every required check passed and the fixture digest matched",
+    "1": "not verified: a required check failed or was unverifiable, or the digest was not recorded",
+    "2": "tampered: fixture sha256 at score time differs from the run-start digest",
+    "3": "invalid input, stub/incomplete fixture, or no scoreable checks"
+  },
+  "assumptions": [
+    "The longrun tree contained only stub fixtures ('stub': true) when this unit ran, so the scorer was aligned to the fixture shape documented in card 2a6c4761's prompt: task_id, class, objective, sources, turns, checkpoints[{turn,question,expected}], repair{at_turn,wrong_assumption,correct_action}, acceptance{checks,negative_constraints}, expected.",
+    "Run log may be NDJSON or one JSON document; the run-start fixture digest is read from fixture_sha256 / fixture_sha / fixture_digest on the header or any record.",
+    "A checkpoint answer is exact-match by default because the programme's preregistration uses exact match; fixtures may opt into contains/regex.",
+    "Exit 2 is reserved for tampering; usage/input errors use 3 so a script cannot confuse a bad fixture with a dishonest run."
+  ]
+}

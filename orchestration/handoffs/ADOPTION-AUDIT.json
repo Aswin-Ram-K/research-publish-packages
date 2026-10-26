@@ -1,0 +1,77 @@
+{
+ "unit": "ADOPTION-AUDIT",
+ "status": "done",
+ "overall": "partial",
+ "scope": "Independent audit of all 27 distinct claims/recommendations in experiments/ptr-engine/ADOPTION.md against RECORD.md, CLAIMS.md, miss-law/{LAW.md,rows.jsonl}, measure/rows.jsonl, quality/{RESULTS.md,PREREG.json,rows.jsonl}, audit/rows.jsonl and the PTR/V-QUALITY/BILL-AUDIT handoffs. Read-only on every artefact; nothing repaired.",
+ "checks": [
+  "CONFIRMED \u2014 item 1 'the turn carries a 12-line index (447 B for 12 bodies of ~2500 B) ... r = 67.1x': recomputed 30000/447 = 67.1141 and 30000/12 = 2500 B; V-ENGINE-P0.json:checks[4] reproduces body 30000 / index 447 / lines 12 / r 67.1x; index_bytes 447 in two processes (checks[3]).",
+  "CONFIRMED \u2014 item 2 '78.3x with the compact index ... an index-encoding choice, not a constant': measure/RESULTS.md:98-101 carries index bytes 447 -> 383 and r 67.1x -> 78.3x; 30000/383 = 78.329 re-derived.",
+  "CONFIRMED \u2014 item 3 'keep everything (task 3/3), keep the last 3 (0/3 ... 33/33 honest PTR_STORE_MISS refusals, zero silent wrong answers), destroy-by-compaction to 200 B (3/3)': re-derived from quality/rows.jsonl \u2014 A 3/3, B 0/3, C 3/3, D 0/3; exactly 33 resolution entries with code PTR_STORE_MISS, all arm B, all outcome 'refused_by_model'; A/C 10 resolved_by_model each. Caveat carried below (not 11/rep).",
+  "CONFIRMED \u2014 item 4 'Retention is a capability decision, not a cost one: cost could not rank \"keep\" against \"compact\" at 3 reps': quality/RESULTS.md medians 34,372 (A) vs 34,374 (C), sign flipping between adjacent reps; A spread 3,738, C spread 17,044.",
+  "CONFIRMED \u2014 item 5 'A law-computed bill was 57.6x low against the server's own cache counters, because the append length was fed the whole prefix': BILL-AUDIT.json:evidence.replay \u2014 law with measured L totals 123 vs server 7087 = 57.6x; root cause runner.py:467 L = prompt_tokens + FRAMING.",
+  "OVERSTATED \u2014 item 6 'Read meta_info.cached_tokens per turn': meta_info is a POST /generate field (BILL-AUDIT.json:evidence.instrument_found), absent from the /v1/chat/completions path the engine's own runners used (measure/run_cells.py:109 per RECORD C1; BILL-AUDIT instrument_second_endpoint). Following it verbatim on the engine's API returns nothing; it requires an endpoint change the page never names.",
+  "OVERSTATED \u2014 item 7 'expect usage.prompt_tokens_details to be null where something was cached': true only in the residue-{0,1} regime (measure cell C residue 0, cached_reported false; LAW.md:26-30 null-on-cold). BILL-AUDIT.json:evidence.instrument_second_endpoint measured the chat endpoint returning {cached_tokens: 384} on a warm request. The page states it as a general warm-request rule.",
+  "CONFIRMED \u2014 item 8 preconditions ':8012, occamy-1.0, SGLang, page_size=1, enable_cache_report=True, max_model_len=131072': LAW.md \u00a71 server table row `sglang` carries exactly page_size=1, enable_cache_report=True, chunked_prefill_size=8192, max_total_num_tokens=1,514,599, max_model_len 131,072.",
+  "CONFIRMED \u2014 item 9 'block size B 64 (SGLang); 1056 on the vLLM half': LAW.md \u00a71 measured B=64 and B=1056 (advertised by vLLM 0.27.1 cache_config_info and measured); RECORD \u00a72 carries both with the plateau/step evidence.",
+  "OVERSTATED \u2014 item 10 'mamba cache / hybrid-state settings: not measured on either endpoint and reported by no input handoff (the measured server table carries no such field)': the server table in LAW.md \u00a71 indeed has no such field and no handoff reports one, but a captured config for the same :8012 endpoint DOES carry them \u2014 papers/context-cache/EVIDENCE.md:16 records `max_mamba_cache_size: 64`, `linear_attn_backend: triton` (cited to cells/U2/server_config.json). 'Reported by no handoff' is true; 'no artefact states it' is false. The conservative instruction ('do not tune it') survives.",
+  "CONFIRMED \u2014 item 11 'index: 12 lines, 447 B, 37.25 B/line, deterministic sha256 across processes and warmpool roots': 447/12 = 37.25; V-ENGINE-P0.json:checks[3] sha256 e08700c9... identical in two subprocesses and two warmpool roots. (Standalone index file is gone; the digest is over the in-row index_text \u2014 V-QUALITY-ARM.json:not_reproduced. The engine-side determinism claim itself is unaffected.)",
+  "CONFIRMED \u2014 item 12 'Python 3.11+ (executed on CPython 3.14.4), no third-party dependency': RECORD \u00a71 and PTR-ENGINE-P0.1 execution; the suite runs on pytest with no third-party runtime import declared in the package.",
+  "CONFIRMED \u2014 item 13 'warmpool location: outside the repository; inside is refused with PTR_WARMPOOL_INSIDE_REPO': V-ENGINE-P0.json:checks[6] \u2014 repo root, experiments/ptr-engine and a repo-relative root all REFUSED with the directory not created; /tmp root accepted.",
+  "CONFIRMED \u2014 item 14 'append framing L = n_payload + 12': HIT-LEDGER 387/387 `L_app == n_payload + 12`; the 12 measure rows in ENGINE-R1 also carry L=13 at n=1.",
+  "OVERSTATED \u2014 item 15 'On SGLang one block re-bills (64 + L at residue 0, 1 + L at residue 1)': this is BILL-AUDIT's /generate reading, but RECORD C1 (RECON-C1 verdict) leaves the magnitude UNDECIDABLE from rows \u2014 measure/rows.jsonl cell C (P1 384, residue 0) reports cached_tokens null with uncached 397 = P1+13 across 3 reps, and both 397->77 (5.16x) and 397->13 (30.5x) fit all nine warm rows. No row holds a residue-0 warm reading on :8012. The page states as measured what the record calls open.",
+  "CONFIRMED \u2014 item 16 'on vLLM the whole prefix re-bills with an 8.5x TTFT jump': RECORD 'C2 corrected 2026-10-26' \u2014 controlled cell G6, P1 7392 -> cached [0,0], ttft [1.789975,1.791956] vs neighbour P1 7394 -> ttft [0.210802,0.211353] = 8.49x/8.48x warm-vs-warm. Narrower than the page implies: residue 1 was not swept inside G6 (only G1 carries it).",
+  "STALE \u2014 item 17 'a client reading only that field records a total miss where one block was billed. One client did, and overstated an append 5.2x': the 5.2x clause is WITHDRAWN in RECORD \u00a75 C1 ('The \"5.2x overstatement\" clause above is therefore WITHDRAWN') and the overstatement is re-classified UNDECIDABLE, not established. The engineering advice (do not read the field alone) stands.",
+  "CONFIRMED \u2014 item 18 'Superseded revision -> a reference pinned to an old revision is refused PTR_REVISION_MISMATCH while its bytes survive; that is deliberate': V-ENGINE-P0.json:overstated[2] records SPEC.md:86-87 contradicted by PTR_REVISION_MISMATCH; the code and tests exist (ptr_engine/errors.py, tests/test_scope.py, tests/test_roundtrip.py).",
+  "CONFIRMED \u2014 item 19 'Index-only prompt -> the model does not refuse; it echoes a digest (0/3 task success, 0 bodies resolved)': V-QUALITY-ARM.json:checks[2] \u2014 D 0/3, resolved_total [0,0,0], withheld [5,5,5], final_answer 756741be x3 (re-derived here from quality/rows.jsonl).",
+  "WRONG \u2014 item 20 'no measured padded cycle exists at all': nine measured padded requests exist. RECORD 'C5-ADJUDICATE' (2026-10-25) records 3 reps each at pads 60/58/50 in cells B/C/D of experiments/ptr-engine/measure/rows.jsonl; measure/RESULTS.md:32 cell D (compact padded to 2) reads P1 322, cached 320, uncached 15, 3/3, and cell B (P1 386, cached 384, uncached 15) satisfies the law outright. The 'padding study is an uncalibrated offline model' half is CONFIRMED (C5 open on stub predictions, measure/shape-search.json predicted:true).",
+  "CONFIRMED \u2014 item 21 'Do not quote a per-turn cost from sum prompt_tokens plus a law term; that is the exact method that was 57.6x low': C3 CLOSED and worse per RECORD \u00a75 C3 adjudication; BILL-AUDIT replay 7087 vs 123.",
+  "CONFIRMED \u2014 item 22 'Do not treat cached=null as zero, and do not treat a self-consistent replay (387/387) as wire confirmation': RECORD \u00a73 \u2014 the ledger's 387/387 uses the same file's uncached_tokens and for the 379 null rows that field equals P1 (sampled Bprobe-400: prompt 453, cached null, uncached 453); C8 re-derivations keep the 387-row fit set.",
+  "CONFIRMED \u2014 item 23 'Do not cap retained bodies and call the token saving a win: the cheap arm was cheap because it failed': quality/RESULTS.md \u00a75.1 (B 27,622 vs A 34,372 because B fetched less and read less and never answered); rows give B 0/3.",
+  "CONFIRMED \u2014 item 24 'Do not cite the quality arm's 34.4 k billed-token figures, or any A-vs-C cost gap ... C rep2 carries a +17,193 residual, and usage.prompt_tokens_details.cached_tokens never reaches rows.jsonl': re-derived \u2014 C rep2 rep row billed_tokens 49,594 with 3 per_turn entries, and no cached_tokens key exists in any of the 115 quality rows; RECORD C10 CLOSED upholds V-QUALITY-ARM.",
+  "OVERSTATED \u2014 item 25 'Do not use the harvested 378 avalanche rows as evidence; they were never consumed by a unit': RECORD C9 rules the 378 rows at experiments/miss-law/avalanche/rows.jsonl are MEASUREMENTS (run.out done stage=all reps=3, 1:1 log, 0 errors, 108/108 prime cached=0) and experiments/miss-law/avalanche/HARVEST.md already consumed 270 cache-probe rows (141 avalanche / 129 not). What fails is a residue->avalanche law and a reported unit, not the rows; the blanket 'do not use as evidence' overstates.",
+  "CONFIRMED \u2014 item 26 'Do not carry a test count without naming the branch: 95 / 100 / 108 / 153 / 171': C6 \u2014 P0 95, P0.1 100 (same tree), then concurrent branches 153 (ENGINE-R1), 171 (ENGINE-R2), 108 (HIT-LEDGER) with diverging test_quantise/test_law sets.",
+  "OVERSTATED \u2014 item 27 opening claim 'Everything here is derivable from RECORD.md; nothing was measured for this page': false for items 15 and 17, which adopt one layer of C1 (BILL-AUDIT's 64+L and the withdrawn 5.2x) while RECORD's own C1 verdict calls both undecidable/withdrawn; and the citation `experiments/miss-law/LAW.md:\u00a71` is not a resolvable line citation under the standing rule in RECORD ('cite a quoted sentence plus a file digest, never a bare line number')."
+ ],
+ "not_reproduced": [
+  "RECORD \u00a74 / QUALITY-ARM 'refusal 33 (11/rep)': the 33 is right but the per-rep split is wrong \u2014 quality/rows.jsonl arms B rep0/rep1/rep2 carry 9/14/13 PTR_STORE_MISS resolution entries, not 11/11/11.",
+  "The engine's own refusal counter does not carry this number: every rep row records refused_total 0 (RECORD C10 adjudication), so '33 refusals' is a count of resolution.outcome=='refused_by_model', not of a ledger refusal field.",
+  "'no measured padded cycle exists at all': contradicted by nine measured padded requests (see item 20)."
+ ],
+ "overstated": [
+  "item 6 (meta_info on the chat path)",
+  "item 7 (null-on-warm as a general rule)",
+  "item 10 (mamba absent from all artefacts \u2014 EVIDENCE.md:16 has it)",
+  "item 15 (SGLang residue-0 magnitude: C1 undecidable, cell C says 397)",
+  "item 25 (378 avalanche rows unusable \u2014 C9 says measured, HARVEST.md consumed them)",
+  "item 27 (derivable-from-RECORD framing and the non-resolving LAW.md:\u00a71 citation)"
+ ],
+ "unverified": [
+  "no residue-0 WARM reading on :8012 with cached_reported true exists in any row \u2014 so 397->77 (5.16x) vs 397->13 (30.5x) vs factor 1 cannot be settled offline (C1).",
+  "no row pins a compact-UNPADDED cell (measure/RESULTS.md:75-76 PREDICTS P1 272 / residue 16; rows hold P1 322/323) \u2014 C5 'MISSING' cell E stands.",
+  "self-consistent replay 387/387 is not wire confirmation; the wire has never been reconciled per turn for SGLang residue {0,1}."
+ ],
+ "blocker": "",
+ "next_unit_hint": "To close C1, record one residue-0 warm request on :8012 (P1 = 384, L = 13) with cached_reported true and meta_info.cached_tokens from POST /generate, in experiments/ptr-engine/measure/rows.jsonl as a new cell; then re-issue ADOPTION.md item 15 against it. Separately, cell E (compact index, unpadded, :8012) would close C5. Do not repair RESULTS.md/LAW.md from this unit's evidence \u2014 C4 is still open (BILL-REPAIR ran and aborted on its own alignment guard, 0 of 4 arms completed).",
+ "unsafe_to_follow": [
+  "item 15 (one-block residue-0 exposure) \u2014 an adopter budgeting 64+L for a residue-0 turn may be billed the whole prefix; C1 is undecidable and measure cell C reports 397. Sentence to add: 'The residue-0 exposure is UNDECIDABLE in the rows we hold: cell C of measure/rows.jsonl reports cached_tokens null and uncached 397 = P1+13, BILL-AUDIT's /generate reading reports 64+L, and no residue-0 warm row on :8012 exists. Budget the prefix, not one block, until that row is recorded.'",
+  "item 20 ('no measured padded cycle exists at all') \u2014 it removes the only measured non-avalanche shape, and it is contradicted by nine measured padded requests (cells B/C/D). Sentence to add: 'This sentence is withdrawn: nine measured padded requests exist (pads 60/58/50, cells B/C/D of measure/rows.jsonl) and cells B and D satisfy the law outright; what is unmeasured is the compact index UNPADDED.'",
+  "items 6+7+17 read together \u2014 following them bills against a field that is null on /generate-free paths and generalises an undecidable 5.2x. Sentence to add: 'The 5.2x append overstatement is WITHDRAWN (RECORD C1 adjudication) and is now undecidable; read POST /generate meta_info.cached_tokens, never usage.prompt_tokens_details, on the residue-{0,1} path.'"
+ ],
+ "write_paths": [
+  "orchestration/handoffs/ADOPTION-AUDIT.json",
+  "orchestration/units/ADOPTION-AUDIT.md"
+ ],
+ "tool_calls": 15,
+ "bound": 16,
+ "items_total": 27,
+ "confirmed": 19,
+ "overstated_count": 6,
+ "unsupported": 0,
+ "stale": 1,
+ "wrong": 1,
+ "assumptions": [
+  "ADOPTION.md was audited as written at 39 lines; no edit was made to it or to any evidence artefact.",
+  "'Recommendation' was read to include the negative recommendations ('Do not ...') and the precondition table, since an adopter acts on all three.",
+  "Where RECORD.md contradicts itself across layers (C1, C2, C5, C8, C10), the latest dated layer was treated as the record's position, as RECORD's own instructions require."
+ ]
+}

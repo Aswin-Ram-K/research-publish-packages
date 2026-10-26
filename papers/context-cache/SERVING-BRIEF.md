@@ -34,12 +34,18 @@ and the one command that re-derives it. The table is generated from the cells; `
 |---|---|---|---:|---:|---:|---:|
 | S02 | occamy-1.0 (MoE) | vLLM 0.27.1 | 2096 | 0.901212 | 1682.7218 | 284 |
 | S03 | occamy-1.0 (MoE) | SGLang | 64 | 0.957153 | 729.7641 | 284 |
-| S04 | qwen3.5-9b (dense) | vLLM 0.27.1 | 1088 | 0.869037 | 2230.7782 | 284 |
+| S04 | qwen3.5-9b (dense) | vLLM 0.27.1 | 1088 | 0.817432 | 879.0669 | 284 |
 | S05 | qwen3.5-9b (dense) | SGLang | 64 | 0.956941 | 733.3697 | 284 |
 <!-- END SERVING-BRIEF MATRIX -->
 
 - **The engine is the whole effect.** Same weights, same GPU, same schedule: the SGLang rows sit
-  together and the vLLM rows sit together, and the engine term is many times the model term. [S06]
+  together (both on the 64 grid) and the vLLM rows do not — on vLLM the MoE checkpoint costs
+  far more per turn than the dense one — and the engine term is still the larger of the two,
+  with the model term negative and engine-conditional: 0.5224x under vLLM against 1.0049x
+  under SGLang. [S06]
+- **MTP is part of this finding.** The Round-1 vLLM cell ran with `--speculative-config mtp`
+  enabled, Round 2 with it disabled; removing it moved that cell by 2.54x. Decoder-speed
+  features can change prompt-cache behaviour — that is a finding, not an apology.
 - **Model choice is nearly free on SGLang and expensive on vLLM.** If the workload is dense and
   the engine is SGLang, the two checkpoints cost almost the same per turn; on vLLM the model
   term is far larger. [S07]
@@ -125,10 +131,10 @@ stays resident is small, and the binding constraint is the state cache. [S14]
 | S01 | Production SGLang battery, both depth bands | 888 rows, all 888 OK, 880 steady · hit 0.974242 · 739.2 uncached/turn (32k 725.74; 64k 746.01) | G3 | recompute.py C47 |
 | S02 | occamy-1.0 (MoE) on vLLM 0.27.1, 32k band | hit 0.901212 · 1682.7218 uncached/turn · block 2096 · 284 rows | MOE-VLLM | recompute.py C63 |
 | S03 | occamy-1.0 (MoE) on SGLang, 32k band | hit 0.957153 · 729.7641 uncached/turn · block 64 · 284 rows | G3 | recompute.py C63 |
-| S04 | qwen3.5-9b (dense) on vLLM 0.27.1, 32k band | hit 0.869037 · 2230.7782 uncached/turn · block 1088 · 284 rows | WIN-VLLM | recompute.py C63 |
+| S04 | qwen3.5-9b (dense) on vLLM 0.27.1, 32k band | hit 0.817432 · 879.0669 uncached/turn · block 1088 · 284 rows | WIN-VLLM | recompute.py C63 |
 | S05 | qwen3.5-9b (dense) on SGLang, 32k band | hit 0.956941 · 733.3697 uncached/turn · block 64 · 284 rows | DENSE-SGL | recompute.py C63 |
-| S06 | Engine main effect vs model main effect | engine costs 2.3058x (MoE) / 3.0418x (dense) · engine effect 1,225.18 vs model 275.83 uncached tokens/turn · engine share 0.9115 | four cells | recompute.py C63 |
-| S07 | Does the model choice matter on each engine? | model ratio 1.0049 under SGLang vs 1.3257 under vLLM · vLLM/SGLang model effect 152.0000 | four cells | recompute.py C63 |
+| S06 | Engine main effect vs model main effect | engine costs 2.3058x (MoE) / 1.1987x (dense) · engine effect 549.33 vs model -400.02 uncached tokens/turn · engine share 0.5459 | four cells | recompute.py C63 |
+| S07 | Does the model choice matter on each engine? | model ratio 1.0049 under SGLang vs 0.5224 under vLLM · vLLM/SGLang model effect -222.8887 | four cells | recompute.py C63 |
 | S08 | Fan-out: branch late, keep shared bytes identical | late branch B/A = 6.7443 [4.0454, 9.4432] · A 20,328 vs B 123,256 uncached tokens · 8 fan-outs, 64 branches | G5 | recompute.py C53 |
 | S09 | Boundary lengths pay a full re-prefill on a warm repeat | 1,024 and 1,088 (exact unit multiples): 5/5 and 5/5 miss on the immediate repeat; 1,008 / 1,023 / 1,025: 0 misses each; pooled 35/35 vs 0/15, p 4.44e-13 · missed prefill 268.4 ms TTFT | U10 | recompute.py C40, C41 |
 | S10 | Page size: 64 and 128 against the production default | S1 (page 64) 740.4 vs S2 (page 128) 752.6 vs S0 (production) 739.2 uncached/turn · S1 vs S0 identical on 887/888 paired rows · grid 64/64/128 | WIN-SGL, G3 | recompute.py C46, C47, C57 |

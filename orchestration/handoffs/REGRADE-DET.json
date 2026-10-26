@@ -1,0 +1,61 @@
+{
+ "unit": "REGRADE-DET",
+ "status": "done",
+ "provisional": "PROVISIONAL — subject to V-DET-2",
+ "artifacts": [
+  "experiments/ptr-engine/measure/regrade-det.json",
+  "experiments/ptr-engine/measure/REGRADE-DET.md",
+  "orchestration/units/REGRADE-DET.md",
+  "orchestration/handoffs/REGRADE-DET.json"
+ ],
+ "evidence": {
+  "command_or_count": "92 cells over 23 run/arm pairs; 56 triples with a recorded answer; 36 missing; 13 undecidable; 38 fail; 5 pass; flips_vs_v3=2, flips_vs_v4=1 (all fail->pass, old judge wrong)",
+  "commands": [
+   "python3 - <<'PY'  # import det_verify; D.Truth(); D.verify_probe({'checkpoint': id}, answer_text, truth) over every checkpoint turn of 9 rows files; write measure/regrade-det.json",
+   "python3 - <<'PY'  # render measure/REGRADE-DET.md from regrade-det.json",
+   "python3 experiments/ptr-engine/tools/det_verify.py  # instrument self-gate; NOT run here, it rewrites measure/det-verify-matrix.json"
+  ],
+  "instrument": {
+   "path": "experiments/ptr-engine/tools/det_verify.py",
+   "sha256": "12ccc74ea31c3843021f1ae6fa771b458082f78393e2117cd86960fd221b6439",
+   "api_used": "det_verify.Truth() + det_verify.verify_probe(probe, answer_text, truth)",
+   "coverage": "8/13 machine-decidable"
+  },
+  "key_numbers": {
+   "config_c": {
+    "lease-reopen": "det 0/3 | v3 0/3 | v4 0/3",
+    "pointer-stable": "det 1/3 | v3 0/3 | v4 0/3",
+    "transcript-compact": "det 0/3 | v3 0/3 | v4 0/3",
+    "transcript-grow": "det 0/3 | v3 0/3 | v4 0/3"
+   },
+   "v6_tools_pointer_stable": "det 2/3 | v3 1/3 | v4 2/3",
+   "flips_vs_v3": 2,
+   "flips_vs_v4": 1,
+   "flip_cells": [
+    "rows-longrun-c-2026-10-26.jsonl pointer-stable cp.2.t46: v3 fail (missing_anchor:raising) / v4 fail (missing_anchor:raising) -> pass (call_shape_matches)",
+    "rows-longrun-v6-tools.jsonl pointer-stable cp.2.t46: v3 fail (refused_while_knowable) -> pass (call_shape_matches); v4 already pass"
+   ],
+   "triples": 56,
+   "missing_cells": 36,
+   "undecidable_cells": 13
+  },
+  "live_requests": 0
+ },
+ "blocker": "",
+ "next_unit_hint": "V-DET-2 verifies det_verify.py concurrently; if its verdict changes any rule, re-run this regrade (one offline command) before quoting any arm comparison. No arm decision was made or may be made from this file alone.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/regrade-det.json",
+  "experiments/ptr-engine/measure/REGRADE-DET.md",
+  "orchestration/units/REGRADE-DET.md",
+  "orchestration/handoffs/REGRADE-DET.json"
+ ],
+ "assumptions": [
+  "Config-C rows carry no checkpoint object (expected=null), so answers were located by the checkpoint turns the old graders used (12/24/46) plus repair turn 30, with expected values taken from fixture LR-01.json.",
+  "v6-tools holds 5 checkpoint rows for 3 checkpoints (turn 12 and 46 appear twice, kind=turn and kind=tool-followup); the texts are byte-identical, so they were deduped by text rather than counted twice.",
+  "The instrument was called through its public API (Truth + verify_probe) rather than its CLI, because its CLI grades its own probe corpus, not arbitrary row answers; no matching logic was re-implemented.",
+  "repair.t30 is answered but has no source-AST truth, so it is undecidable and excluded from every accuracy denominator (accuracies are over /3 decidable cells)."
+ ],
+ "tool_calls": 19,
+ "bound": 24,
+ "requests": 0
+}

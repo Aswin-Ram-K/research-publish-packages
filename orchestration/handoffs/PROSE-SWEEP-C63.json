@@ -1,0 +1,59 @@
+{
+ "unit": "PROSE-SWEEP-C63",
+ "status": "done",
+ "artifacts": [
+  "papers/context-cache/RUN.json",
+  "papers/context-cache/CLAIM-HEALTH.md",
+  "orchestration/units/PROSE-SWEEP-C63.md",
+  "orchestration/handoffs/PROSE-SWEEP-C63.json",
+  "/tmp/psw63/prose_guard.py (red->green scratch, no repo writes)"
+ ],
+ "evidence": {
+  "command_or_count": "7/7 sites read in full: 2 live-stale FIXED (RUN.json:141, CLAIM-HEALTH.md:13), 4 disclosed, 1 (SERVING-BRIEF.md:146) disclosed and render-pinned so unmarkable; verify_package PASS/0; recompute all EXIT=0; pytest attribution+serving_brief 21 passed; serving_brief --check PASS; prose guard RED 0/2 -> GREEN 2/2",
+  "commands": [
+   "sed -n '125,154p;508,531p;568,593p' papers/context-cache/RUN.json (site text read in full)",
+   "sed -n '258,283p' papers/context-cache/GAPS.md; sed -n '1,25p;68,81p' papers/context-cache/CLAIM-HEALTH.md; sed -n '130,159p' papers/context-cache/MANUSCRIPT.md; sed -n '136,157p' papers/context-cache/SERVING-BRIEF.md",
+   "grep -n '3\\.3133|1\\.700|6\\.744' papers/context-cache/*.md  (cross-check against CLAIMS.md:77-78,107,110,140,175,239-240)",
+   "python3 papers/context-cache/verify_package.py  -> PASS, EXIT=0",
+   ".venv/bin/python papers/context-cache/recompute.py all  -> COVERAGE GUARD PASS 63, EXIT=0",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_attribution_guard.py tests/test_serving_brief.py -q  -> 21 passed",
+   ".venv/bin/python papers/context-cache/serving_brief.py --check  -> PASS 19 items, 13 cells",
+   "python3 /tmp/psw63/prose_guard.py /tmp/psw63  -> FAIL 0/2, EXIT=1; python3 /tmp/psw63/prose_guard.py . -> PASS 2/2, EXIT=0",
+   "git status --porcelain -- papers/context-cache; stat -c '%y' recompute.py (2026-10-24 03:03:16, pre-session)"
+  ],
+  "live_requests": 0
+ },
+ "quotes": {
+  "run_json_141_before": "\"purpose\": \"decompose U15's 1.700x into break cost vs post-compaction window truncation (fork marker in place)\",",
+  "run_json_141_after": "... (fork marker in place); the break-cost reading this tested is refuted: the 1.700x is a window-truncation effect (C44)\",",
+  "run_json_522_disclosed": "\"evidence\": \"A/R = 1.7002359 (C21); caveat: 92.2 % of R's excess is steady-state window cost, and a break-only counterfactual would be 1.068x (C22, C24)\"",
+  "run_json_583_disclosed": "\"guards\": \"C44's prose half: MANUSCRIPT.md and CLAIMS.md may not re-attribute the 1.700x to break cost.\"",
+  "gaps_270_disclosed": "both arms against the superseded 3.3133) and in the §11 single-seed limitation (MANUSCRIPT:439-444,",
+  "claim_health_13_before": "| C06 | B/A_cf 5.3922 (A 2,856 unc); measured 3.3133; G5 ref 6.744 | U4b-rows, G5-rows |",
+  "claim_health_13_after": "| C06 | B/A_cf 5.3922 (A 2,856 unc); measured 3.3133 (superseded as an effect size); G5 ref 6.744 | U4b-rows, G5-rows |",
+  "manuscript_139_146_disclosed": "the 3.3133 in row B below is the **superseded** pre-G5 value, kept here only because the mechanism paragraph is read from these 24 rows. [...] | B | `[BRANCH-k]` + `P` + delta | 15,400 | all 0 | 3.3133 (superseded) | **6.744 [4.045, 9.443]** |",
+  "serving_brief_146_disclosed": "| S16 | Append-a-note: cheap per turn, unbounded window | append window 1,186 -> 19,583 tokens (16.5118x) · total prompt 412,177 vs control 403,259 · A beats summarise-in-place by 1.7002x | U15 | recompute.py C25, C21 |",
+  "claims_truth": "CLAIMS.md:77 C05 'B/A = 3.3133 (**superseded** as an effect size by G5's race-free 6.744, C53; kept as this cell's measured value)'; CLAIMS.md:239-240 C21 'the observed A/R = 1.7002359 stands, but its causal reading ... is superseded by G1'; CLAIMS.md:140 C44 u15_1_700x_survives_decomposition=False"
+ },
+ "blocker": "",
+ "next_unit_hint": "Two residuals, both outside this card's write scope. (1) tests/test_round1_record_pins.py::test_verifier_handoff_and_recompute_scripts_are_pinned_to_disk FAILS pre-existing: RUN.json pins recompute.py at c34742ab179a937fb5470503a89e7d682be52d70d49e78a7f511a056b8e18704 but the script on disk is f8cb87ca52dd93be19413179644c6b08dbab0dd7132598286b1e84b20313f072 (mtime 2026-10-24 03:03:16, pre-session) — the grid-guard edit was never re-pinned; needs a recompute.py-owner card, not a prose unit. (2) SERVING-BRIEF.md:146's S16 row cannot carry an inline supersession marker because serving_brief.py renders the NUMBERS block and --check compares byte-wise; if the gate wants the marker there, it must go in the renderer's row template (papers/context-cache/serving_brief.py, currently not writable by prose cards).",
+ "write_paths": [
+  "papers/context-cache/RUN.json",
+  "papers/context-cache/CLAIM-HEALTH.md",
+  "papers/context-cache/SERVING-BRIEF.md (attempted, reverted to byte-identical pre-edit state)",
+  "orchestration/handoffs/PROSE-SWEEP-C63.json",
+  "orchestration/units/PROSE-SWEEP-C63.md"
+ ],
+ "red_green": "/tmp/psw63/prose_guard.py requires the retraction marker at each fixed site. Restoring the stale sentence on a /tmp copy of RUN.json (and the old C06 cell in CLAIM-HEALTH.md) -> 'PROSE GUARD FAIL (0/2 superseded numbers marked)' EXIT=1, quoting `\"purpose\": \"decompose U15's 1.700x into break cost vs post-compaction window truncation (fork marker in place)\",` and `| C06 | B/A_cf 5.3922 (A 2,856 unc); measured 3.3133; G5 ref 6.744 |`. Repo -> 'PROSE GUARD PASS (2/2)' EXIT=0. The SERVING-BRIEF attempt had its own red: appending a marker gave 'SERVING-BRIEF CHECK FAIL 1 problem(s): numbers table block does not match the ledger rendering' plus test_serving_brief FAILED; revert restored PASS.",
+ "containment": "Writes confined to RUN.json (one purpose string) and CLAIM-HEALTH.md (one table cell); SERVING-BRIEF.md byte-identical to its pre-unit state (reverted). GAPS.md and MANUSCRIPT.md not modified. git status shows the pre-existing uncommitted set (CLAIMS.md, EVIDENCE.md, MANUSCRIPT.md, PACKAGE.md, RUN.json, SERVING-BRIEF.md, recompute.py, all mtime 02:2x-03:2x) plus this unit's two edits; no CLAIMS.md, recompute.py, tests or cells touched; zero live requests, no lock, no docker.",
+ "assumptions": [
+  "The board sends only the card prompt; the authoritative seven-site list, write paths, bound and proof steps were taken from the card description (task f70a1e3e-a454-4ccc-b1a4-591e5434935c) read via task_board_list, following the precedent recorded in V-PKG-CORR.json.",
+  "RUN.json:522 mentions the replacement explicitly ('a break-only counterfactual would be 1.068x') and RUN.json:583 forbids the break-cost reading, so both count as disclosed even though neither uses the word 'superseded'.",
+  "MANUSCRIPT.md:139-146 and GAPS.md:270 are disclosed on the marker rule's own terms, so no edit was made (the card forbids manufacturing edits).",
+  "SERVING-BRIEF.md:146 was classified disclosed rather than live-stale: its headline already states the window mechanism, and the number it carries (1.7002x, C21) is the live observed ratio in CLAIMS.md, not a superseded one."
+ ],
+ "tool_calls": 25,
+ "bound": 18,
+ "bound_overrun": "7 over: 9 for orientation (handoff stub, workspace/board discovery, card description, prior C63 handoffs), 7 to read the seven sites in full, 6 for verification incl. one revert cycle forced by the render-pinned NUMBERS block, 3 for the red->green and writing.",
+ "date_utc": "2026-10-24"
+}

@@ -1,0 +1,57 @@
+{
+  "unit": "LAZY-LOAD-CROSSOVER-2",
+  "status": "done",
+  "artifacts": [
+    "experiments/agentic-lazy/crossover/RESULTS.md",
+    "experiments/agentic-lazy/crossover/cells.json",
+    "experiments/agentic-lazy/crossover/run2/run_cx2.py",
+    "experiments/agentic-lazy/crossover/run2/analyze2.py",
+    "experiments/agentic-lazy/crossover/run2/rows.jsonl",
+    "experiments/agentic-lazy/crossover/run2/runs.json",
+    "experiments/agentic-lazy/crossover/run2/run2.log",
+    "orchestration/units/LAZY-LOAD-CROSSOVER-2.md"
+  ],
+  "evidence": {
+    "command_or_count": "24 runs complete, 65 request rows, 12 of 12 cells measured; rows.jsonl is append-mode with flush+fsync per request",
+    "commands": [
+      "python3 cx_corpus.py   # seed 20261024, exact 3000/30000 char corpora",
+      "python3 cx_harness.py  # SELFCHECK PASS (sizes exact, facts in C0, no fact in L1 index, no id in task)",
+      "python3 run2/run_cx2.py --dry-run  # plan: 24 runs",
+      "python3 run2/run_cx2.py",
+      "python3 run2/analyze2.py"
+    ],
+    "verdict": "NEGATIVE",
+    "crossover_point": "none in 3k-30k",
+    "warm_saving_billed": {
+      "occamy-1.0|12|3000": 0.808,
+      "occamy-1.0|12|30000": -71.571,
+      "occamy-1.0|30|30000": -234.333,
+      "qwen3.5-9b|12|3000": -1.053,
+      "qwen3.5-9b|12|30000": 0.457,
+      "qwen3.5-9b|30|30000": -0.93
+    },
+    "cold_saving_billed": {
+      "occamy-1.0|12|3000": -1.068,
+      "occamy-1.0|12|30000": 0.449,
+      "occamy-1.0|30|30000": -0.956,
+      "qwen3.5-9b|12|3000": -1.074,
+      "qwen3.5-9b|12|30000": 0.449,
+      "qwen3.5-9b|30|30000": -0.942
+    },
+    "correctness": "11 of 12 cells correct on both arms; qwen 12/30k/L1/cold 0/2 (max_rounds_exceeded); qwen 30/30k/C0 cold and warm 0/6 (model capability, L1 got 6/6)"
+  },
+  "blocker": "",
+  "next_unit_hint": "The crossover is governed by needed fraction and warm-prefix capability, not corpus size. Next test: hold warm prefix and sweep needed fraction 1/30 -> 30/30 at fixed 30k to find the fraction at which L1's fetch turns stop paying. Also worth measuring a real cache-capable vLLM config for qwen (its prompt_tokens_details is null, so its billed column is an upper bound).",
+  "write_paths": [
+    "experiments/agentic-lazy/crossover/**",
+    "orchestration/units/LAZY-LOAD-CROSSOVER-2.md",
+    "orchestration/handoffs/LAZY-LOAD-CROSSOVER.json"
+  ],
+  "assumptions": [
+    "qwen3.5-9b returns prompt_tokens_details: null on every request: cached_tokens recorded as null (blind instrument), never coerced to 0; its uncached column is an upper bound.",
+    "WARM = steady system prefix with no nonce (round 1 primes, later rounds measured), which is what a stable production system prompt is; COLD = fresh per-request nonce.",
+    "saving_prompt converts fetched body chars at a fixed 4 chars/token and is the contrast number only; saving_billed (server-reported tokens) is the decision number.",
+    "6-of-30 was measured at 30k only, per the card; the 3k/30-item cell is outside the grid and was not extrapolated."
+  ],
+  "concurrency_note": "Another DSH session ran its own sweep (experiments/agentic-lazy/crossover/run_cx.py, 3k/10k/30k, reps 3) on the same two endpoints and repeatedly kill -9'd run_cx.py processes, including this unit's first two sweep launches. Mitigation: this unit's runner moved to run2/run_cx2.py with its own rows.jsonl; rows were partitioned into discrete runs by round structure and only rows belonging to a recorded completed run were kept (65 rows / 24 runs, collision-free)."
+}

@@ -1,0 +1,136 @@
+{
+  "unit": "PROMPT-O2D",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/PROMPT-O2/rows.jsonl",
+    "experiments/context-cache/cells/PROMPT-O2/analysis.json",
+    "state/config/best-config.json"
+  ],
+  "evidence": {
+    "rows_inherited_at_session_start": 199,
+    "rows_final": 355,
+    "note_inherited": "the card said 152 rows with R,A,C complete at 71 each; disk held 199 with R=71,A=71,C=57 and the interrupted turn's runner resumed C to 71 and ran H before this unit started",
+    "arms_triple": {
+      "arms": [
+        "A",
+        "C",
+        "C0",
+        "H",
+        "R"
+      ],
+      "cached_tokens_null": 0,
+      "non_200": 0
+    },
+    "per_arm_unc_per_turn": {
+      "R": [
+        71,
+        4370.8,
+        3816.4,
+        4925.1,
+        0.646
+      ],
+      "A": [
+        71,
+        2300.2,
+        2047.3,
+        2553.0,
+        0.0
+      ],
+      "C": [
+        71,
+        2312.0,
+        2059.2,
+        2564.9,
+        0.0
+      ],
+      "H": [
+        71,
+        2416.8,
+        2147.5,
+        2686.2,
+        0.0
+      ],
+      "C0": [
+        71,
+        4437.4,
+        3877.2,
+        4997.6,
+        0.645
+      ]
+    },
+    "deltas_vs_R": {
+      "A-R": [
+        -2070.6,
+        -2601.8,
+        -1539.4,
+        true
+      ],
+      "C-R": [
+        -2058.7,
+        -2589.9,
+        -1527.5,
+        true
+      ],
+      "H-R": [
+        -1953.9,
+        -2488.2,
+        -1419.6,
+        true
+      ],
+      "C0-R": [
+        66.6,
+        -162.9,
+        296.2,
+        false
+      ]
+    },
+    "arms_identical_collisions": "none",
+    "warmup_note": "chat endpoint returns usage.prompt_tokens_details=null on BOTH identical calls (blind chat instrument); rows carry cached_tokens from the client's /generate meta_info path, where 94 rows show cached_tokens>0 and grid_unit=8192",
+    "check": "CHECK setups identical to disk: True",
+    "restore": {
+      "8014": "200 qwen3.5-9b max_model_len 32768",
+      "8012": "200 occamy-1.0",
+      "containers": "gx10-qwen9b Up, gx10-occamy-nvfp4 Up, gx10-p-o2 absent (0 containers)",
+      "note": "gx10-qwen9b had to be started twice: the concurrent PROMPT-O2-EXTRA unit stopped it for its :8017 variant and its OOM-failed start (ValueError: No available memory for the cache blocks) left it Exited(1); final state is Up and serving 200"
+    },
+    "commands": [
+      "wc -l experiments/context-cache/cells/PROMPT-O2/rows.jsonl",
+      ".venv/bin/python tools/best_config_build.py --check",
+      "curl -s http://192.168.2.168:8014/v1/models",
+      "curl -s http://192.168.2.168:8012/v1/models",
+      "ssh zer0null@192.168.2.168 docker ps"
+    ],
+    "o2_config_final": {
+      "argv": "--page-size 64 --mamba-radix-cache-strategy extra_buffer --enable-cache-report --mem-fraction-static 0.22",
+      "config_sha256": "652ff99db16fb7fc90e2649955bf74dbcda4586ee1e13704290cf2b0bc9ab510",
+      "hit": 0.894903,
+      "unc_per_turn": 669.9944,
+      "n_rows": 355,
+      "grid_unit": 64,
+      "resolved_page_size": 64,
+      "why_not_the_cards_page1_argv": "this unit measured page-size 1 + no_buffer (launched, 355 rows, hit 0.503, unc 3167.4) but the concurrent PROMPT-O2-EXTRA unit then launched page-size 64 + extra_buffer which caches (hit 0.895, unc 670.0) from the same model; that later, better-evidenced block is what best-config.json carries and both measurements are recorded in setups.O2.evidence (this unit's numbers under evidence.prompt_o2d). Overwriting it back would have destroyed a better measurement and broken --check."
+    },
+    "concurrency": "another live unit (PROMPT-O2-EXTRA, cells/PROMPT-O2-EXTRA) was measuring on :8017 and rewriting setups.O2 between 01:14 and 01:27 CDT; this unit never killed it, waited for it to finish, then restored production"
+  },
+  "blocker": "",
+  "next_unit_hint": "verifier re-derives t-intervals from rows.jsonl and confirms the chat-endpoint warm-up blindness is an instrument fact, not a missing cache",
+  "write_paths": [
+    "experiments/context-cache/cells/PROMPT-O2/**",
+    "state/config/best-config.json (setups.O2 only)",
+    "orchestration/handoffs/PROMPT-O2D.json",
+    "orchestration/units/PROMPT-O2D.md"
+  ],
+  "detail": {
+    "rows_sha256": "b576dc8e1e5c7e1689f1462db6fbdf0418e07c7befc8e47a5b0bbeb6135704d3",
+    "stack": "sglang",
+    "config_id": "O2",
+    "requests_this_unit": 54,
+    "config_sha256": "652ff99db16fb7fc90e2649955bf74dbcda4586ee1e13704290cf2b0bc9ab510",
+    "tool_note": "tools/best_config_build.py already pointed O2 at PROMPT-O2 rows (mem 0.22, PROMPT-O2C artefact) when this unit started; this unit did not edit it"
+  },
+  "assumptions": [
+    "the card's inherited-row count (152) was stale: disk showed 199 (R=71,A=71,C=57). Completed the missing pairs rather than re-running any measured row.",
+    "O2's hit/unc_per_turn/unc_ci/n_rows/grid_unit are pooled over all 355 rows under this argv (same convention as O1's four-arm pool); unc_naive_history and rows_sha256 are the builder's DERIVED constants and were left at the builder's values so --check stays True.",
+    "mem-fraction-static 0.22 is the value that worked for the :8017 variant; 0.08/0.174 both failed the KV floor."
+  ]
+}

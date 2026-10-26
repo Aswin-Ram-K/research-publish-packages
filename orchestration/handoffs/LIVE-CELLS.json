@@ -1,0 +1,38 @@
+{
+  "unit": "LIVE-CELLS",
+  "status": "blocked",
+  "artifacts": [
+    "orchestration/handoffs/LIVE-CELLS.json",
+    "orchestration/units/LIVE-CELLS.md",
+    "experiments/ptr-engine/measure/rows-live-2026-10-26.jsonl"
+  ],
+  "evidence": {
+    "probe_8012": "curl -sS -m 5 http://127.0.0.1:8012/get_server_info -> exit 7; stderr: 'curl: (7) Failed to connect to 127.0.0.1 port 8012 after 0 ms: Could not connect to server'; no response body (0 bytes)",
+    "probe_8014": "curl -sS -m 5 http://127.0.0.1:8014/v1/models -> exit 7; stderr: 'curl: (7) Failed to connect to 127.0.0.1 port 8014 after 0 ms: Could not connect to server'; no response body (0 bytes)",
+    "commands": [
+      "curl -s -m 5 http://127.0.0.1:8012/get_server_info; echo \"[exit=$?]\"  -> [exit=7]",
+      "curl -s -m 5 http://127.0.0.1:8014/v1/models; echo \"[exit=$?]\"  -> [exit=7]",
+      "curl -sS -m 5 http://127.0.0.1:8012/get_server_info 2>&1  -> curl: (7) Failed to connect to 127.0.0.1 port 8012 after 0 ms: Could not connect to server",
+      "curl -sS -m 5 http://127.0.0.1:8014/v1/models 2>&1  -> curl: (7) Failed to connect to 127.0.0.1 port 8014 after 0 ms: Could not connect to server"
+    ]
+  },
+  "cells_attempted": [],
+  "rows_written": 0,
+  "cached_nulls": 0,
+  "engine_reachable": false,
+  "engine_reachable_8012": false,
+  "engine_reachable_8014": false,
+  "blocker": "Neither engine is listening on loopback: 127.0.0.1:8012 and 127.0.0.1:8014 both refuse the TCP connection (curl exit 7, connect refused in 0 ms, not a timeout). STEP 0 of this card says an unreachable engine is itself a finding and that fabricating rows is fraud, so cells A, B and C were not attempted and no row was invented. Note for the operator: experiments/miss-law/LAW.md \u00a71 documents these same two servers at http://192.168.2.168:8012/v1 and http://192.168.2.168:8014/v1, whereas this card names 127.0.0.1 and forbids sending requests to any other host, so the LAN address was deliberately not probed. Either the engine binds only the LAN interface (and the card's host should be corrected) or it is not running at all \u2014 only the operator can say which.",
+  "next_unit_hint": "Re-issue unchanged once an engine answers on 127.0.0.1:8012 and :8014; if the engines actually bind 192.168.2.168 only, the operator must authorise that host explicitly and the card's endpoint field changed \u2014 the three cells (A residue-0 warm, B compact UNPADDED, C G6 residue-1) then need no rework beyond the host string.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/rows-live-2026-10-26.jsonl",
+    "orchestration/handoffs/LIVE-CELLS.json",
+    "orchestration/units/LIVE-CELLS.md"
+  ],
+  "assumptions": [
+    "The loopback probe is the authority for reachability because STEP 0 names exactly these two URLs; no substitute host was invented to obtain a row.",
+    "The row file was created empty (0 bytes) rather than omitted, so that rows_written=0 has a concrete artefact and no reader can mistake an absent file for unrecorded results.",
+    "Absence of a row is recorded as absence: no synthetic placeholder row, no partial row with nulled measurements, was written to the row file."
+  ],
+  "tool_calls": 6
+}

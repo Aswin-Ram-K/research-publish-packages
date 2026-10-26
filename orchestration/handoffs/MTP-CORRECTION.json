@@ -1,0 +1,58 @@
+{
+ "unit": "MTP-CORRECTION",
+ "status": "done",
+ "artifacts": [
+  "papers/context-cache/recompute.py",
+  "papers/context-cache/CLAIMS.md",
+  "papers/context-cache/MANUSCRIPT.md",
+  "papers/context-cache/EVIDENCE.md",
+  "papers/context-cache/SERVING-BRIEF.md",
+  "papers/context-cache/RUN.json",
+  "docs/serving-options/MATRIX-2x2.md",
+  "state/serving-brief.json",
+  "tests/test_paper_matrix_fold.py",
+  "tests/test_c63_ratio_raw_operands.py",
+  "orchestration/handoffs/MTP-CORRECTION.json",
+  "orchestration/units/MTP-CORRECTION.md"
+ ],
+ "evidence": {
+  "old_vs_new": {
+   "engine_effect": "1225.18 [1132.2, 1313.3] 70/71 -> 549.33 [462.4, 631.9] 66/71",
+   "model_effect": "+275.83 [194.3, 357.6] 53/71 -> -400.02 [-474.2, -326.5] 8/71 (SIGN FLIP)",
+   "interaction": "+272.23 [190.1, 354.6] 52/71 -> -403.63 [-479.7, -328.5] 8/71",
+   "engine_within_model": "MoE 952.96 [805.7, 1099.8] unchanged; dense 1497.41 [1404.4, 1585.0] -> 145.70 [81.2, 210.5]",
+   "model_within_engine": "vLLM 548.06 [384.7, 711.9] -> -803.65 [-953.6, -655.2]; SGLang 3.61 [0.0, 10.8] unchanged",
+   "ratios_engine": "2.3058x/3.0418x (mean 2.6738x) -> 2.3058x/1.1987x (mean 1.7523x)",
+   "ratios_model": "1.3257x/1.0049x (mean 1.1653x) -> 0.5224x/1.0049x (mean 0.7636x)",
+   "engine_over_model": "4.4418 -> -1.3733",
+   "grand_and_shares": "1344.1585 / 0.9115 / 0.2052 -> 1006.2306 / 0.5459 / -0.3975",
+   "cell_dense_vllm": "0.869037 hit, 2230.7782 unc -> 0.817432 hit, 879.0669 [824.7806, 933.3532]; 2230.7782/879.0669 = 2.5375x"
+  },
+  "c63_call": "43/43 values match (was 13/43 when the loader was first rebound)",
+  "recompute_all": "60 claims checked, all match; COVERAGE GUARD PASS  63 claims documented, 61 runnable here + 2 script-backed; exit 0",
+  "pytest": "tests/test_paper_attribution_guard.py + tests/test_claims_decompose.py: 31 passed; expanded set incl. matrix_fold, c63_ratio, round1_pins, claim_census: 58 passed",
+  "serving_brief_check": "SERVING-BRIEF CHECK PASS  19 items, 13 cells, all figures re-derived",
+  "red_green": "RED: engine_effect pin reverted to 1225.18 in /tmp copy -> 'FAIL engine_effect recomputed=549.33 paper=1225.18', '42/43 values match', exit 1. GREEN: restored -> 'OK engine_effect recomputed=549.33 paper=549.33', 'PASS 43/43 values match', exit 0",
+  "mtp_grep": "grep -c mtp papers/context-cache/CLAIMS.md papers/context-cache/MANUSCRIPT.md -> 1 and 1 (was 0 and 0)"
+ },
+ "assumptions": [
+  "c63() could not express the corrected cell as written: the R2 battery has no per-cell directory, uses the VLLM-CELL schema (http_status, uncached_tokens, prompt_sha256, no chars), and its hot-gcd is not the launch block. Rather than hand-compute, I extended c63() with C63_R2_CELLS / C63_R2_STACK (path+stack selection), field normalisation in _c63_cell_rows, C63_GCD_OVERRIDE for the 1088 launch block (read from startup.txt), and restricted the prompt-identity contrast to the three Round-1 cells (chars_equal_pairs 6 -> 3, prefix_equal_pairs 6 -> 3) because the R2 cell records the request digest, not the rendered prompt.",
+  "The model main effect changed SIGN, so the abstract/discussion story (not just the numbers) had to be rewritten: the claim now says the model effect is negative under vLLM and engine-conditional, not 'small and positive'.",
+  "MANUSCRIPT 9b renders signed values as '+-400.02' because tests/test_paper_matrix_fold.py formats with f\"+{v:,.2f}\"; the guard is left as the contract rather than being rewritten to flatter the prose.",
+  "tests/test_c63_ratio_raw_operands.py hard-coded 152.0 / 548.06 as independent constants; they were re-derived to -222.8887 / -803.65 (still independently hard-coded, not imported).",
+  "tests/test_paper_matrix_fold.py::test_c63_fails_when_one_cell_is_missing dropped 'WIN-VLLM'; updated to 'R2-VLLM-CELL'.",
+  "RUN.json verification.synthesis_recompute.script_sha256 re-pinned to c34742ab179a937f... after the edit; the previous digest is kept in script_sha256_check_note.",
+  "No cell rows, best-config.json or verify_package.py were touched."
+ ],
+ "blocker": "",
+ "next_unit_hint": "C63's engine-vs-model narrative is now inverted in sign; any downstream text (slides, dockets, other dockets referencing 2.6738x / 4.4418x) outside papers/context-cache and docs/serving-options still carries the superseded numbers and is a new unit.",
+ "write_paths": [
+  "papers/context-cache/{recompute.py,CLAIMS.md,MANUSCRIPT.md,EVIDENCE.md,SERVING-BRIEF.md,RUN.json}",
+  "docs/serving-options/MATRIX-2x2.md",
+  "state/serving-brief.json",
+  "tests/test_paper_matrix_fold.py",
+  "tests/test_c63_ratio_raw_operands.py",
+  "orchestration/handoffs/MTP-CORRECTION.json",
+  "orchestration/units/MTP-CORRECTION.md"
+ ]
+}

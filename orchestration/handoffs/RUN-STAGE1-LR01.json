@@ -1,0 +1,129 @@
+{
+ "unit": "RUN-STAGE1-LR01",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/rows-longrun-2026-10-26.jsonl",
+  "orchestration/handoffs/RUN-STAGE1-LR01.json",
+  "orchestration/units/RUN-STAGE1-LR01.md",
+  "experiments/ptr-engine/longrun/manifests/stage1-lr01-transcript-grow-r1.json",
+  "experiments/ptr-engine/longrun/manifests/stage1-lr01-transcript-compact-r1.json",
+  "experiments/ptr-engine/longrun/manifests/stage1-lr01-pointer-stable-r1.json",
+  "experiments/ptr-engine/longrun/manifests/stage1-lr01-lease-reopen-r1.json"
+ ],
+ "evidence": {
+  "command_or_count": "192 rows / 192 recorded turn requests; 48 per arm; exit 0",
+  "commands": [
+   ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/runtime/LR-01.json --reps 1 --stream --arms transcript-grow,transcript-compact,pointer-stable,lease-reopen --run-id stage1-lr01 --rows experiments/ptr-engine/measure/rows-longrun-2026-10-26.jsonl",
+   "wc -l experiments/ptr-engine/measure/rows-longrun-2026-10-26.jsonl -> 192"
+  ]
+ },
+ "requests_sent": 192,
+ "requests_note": "192 recorded turn requests (48/arm, 0 digest). The harness restarted mid-cell at pointer-stable T36 (rows 1..35 on disk); the run was resumed with --resume, which re-issued T36. At most ONE request may have been in flight and lost at the restart boundary, so true HTTP requests are bounded by 193 while 192 are recorded. No request was retried or regenerated otherwise.",
+ "rows": 192,
+ "rows_path": "experiments/ptr-engine/measure/rows-longrun-2026-10-26.jsonl",
+ "per_arm": {
+  "transcript-grow": {
+   "rows": 48,
+   "ttft_n": 1,
+   "p50_ttft_ms": 3560.9,
+   "p95_ttft_ms": 3560.9,
+   "mean_uncached": 116.79,
+   "cached_share": 0.9502,
+   "completion_tokens": 6144
+  },
+  "transcript-compact": {
+   "rows": 48,
+   "ttft_n": 41,
+   "p50_ttft_ms": 630.1,
+   "p95_ttft_ms": 1610.7,
+   "mean_uncached": 147.94,
+   "cached_share": 0.9635,
+   "completion_tokens": 5504
+  },
+  "pointer-stable": {
+   "rows": 48,
+   "ttft_n": 12,
+   "p50_ttft_ms": 525.9,
+   "p95_ttft_ms": 2374.9,
+   "mean_uncached": 186.42,
+   "cached_share": 0.884,
+   "completion_tokens": 5929
+  },
+  "lease-reopen": {
+   "rows": 48,
+   "ttft_n": 39,
+   "p50_ttft_ms": 1567.9,
+   "p95_ttft_ms": 2448.4,
+   "mean_uncached": 60.42,
+   "cached_share": 0.6765,
+   "completion_tokens": 5463
+  }
+ },
+ "checkpoints": [
+  {
+   "turn": 12,
+   "question": "What is the default per-turn resolve budget in refs?",
+   "expected": "64",
+   "observed": {
+    "transcript-grow": "",
+    "transcript-compact": "<tool_call> read_file resolve.py/errors.py (truncated)",
+    "pointer-stable": "<tool_call> x8 (truncated)",
+    "lease-reopen": "Looking at the pinned knowledge entry for resolve.py: ... The default per-turn resolve budget is **1 ref** ... (truncated)"
+   },
+   "verdict": "fail"
+  },
+  {
+   "turn": 24,
+   "question": "How many Ptr* error classes does errors.py define?",
+   "expected": "31",
+   "observed": {
+    "transcript-grow": "",
+    "transcript-compact": "<tool_call> read_file resolve.py/errors.py (truncated)",
+    "pointer-stable": "",
+    "lease-reopen": "I'll check the errors.py knowledge entry for the answer. ```@knowledge:errors.py@1``` (truncated) - no number stated"
+   },
+   "verdict": "fail"
+  },
+  {
+   "turn": 46,
+   "question": "What does _refuse call, and what does it pass?",
+   "expected": "ledger.record_refusal(scope=..., serialized_ref=text, code=error.code), before re-raising",
+   "observed": {
+    "transcript-grow": "",
+    "transcript-compact": "<tool_call> read_file resolve.py/errors.py (truncated)",
+    "pointer-stable": "",
+    "lease-reopen": "I'll check the knowledge base for the resolve (truncated)"
+   },
+   "verdict": "fail"
+  }
+ ],
+ "repair_turns": {
+  "transcript-grow": 0,
+  "transcript-compact": 0,
+  "pointer-stable": 0,
+  "lease-reopen": 0
+ },
+ "repair_detail": "Fixture repair.at_turn=30. All four T30 rows are truncated at the 128-token cap and contain no reference to isinstance/guards/record_refusal; no arm recorded the guard refusals, moved guards inside the recorded block, or restored the typed guard deleted at turn 8. Judged 0 for all four.",
+ "failures": [],
+ "failure_note": "No HTTP failure: 0 error rows, 0 non-200 statuses, 0 usage_missing. Truncation is not an HTTP failure but dominates the run.",
+ "validity": {
+  "cached_tokens_present_sglang_absent_as_0": "yes - all 192 rows carry cached_tokens, 0 nulls; 188 rows report it, 4 first-turn rows have it absent and normalize to 0 on the SGLang path",
+  "every_row_carries_manifest_sha256": "yes - 4 distinct sha256, one per cell, 0 nulls",
+  "manifest_exists_with_its_sha256": "yes - all four manifest files exist and their bytes hash to the sha256 recorded in the rows",
+  "content_present_nonempty_where_answered": "NO - 99/192 rows (52%) have empty content while completion_tokens=128; per arm grow 47/48, pointer-stable 36/48, lease-reopen 9/48, compact 7/48",
+  "truncation_events_recorded_with_turn": "NO - rows carry no finish_reason field; truncation is only inferable from completion_tokens==128, which 140/192 rows hit (grow 48/48, pointer-stable 44/48, lease-reopen 28/48, compact 20/48)",
+  "checkpoint_rows_flagged": "NO - is_checkpoint is false on all 192 rows: the fixture marks checkpoints with turns[].kind=='checkpoint' but the runner sets is_checkpoint from turns[].checkpoint, which is absent. Checkpoints were identified by turn number instead."
+ },
+ "blocker": "Instrument invalid as configured: max_tokens=128 truncates nearly every turn (140/192 rows exactly at the cap) and the stream parser reads only delta.content, never delta.reasoning_content, so 99/192 turns record empty content despite 128 completion tokens. TTFT is therefore null on 99/192 rows and is measured on a biased subset (n=1 for transcript-grow). Checkpoint answers and the repair turn are unjudgeable as captured.",
+ "next_unit_hint": "Stage 2 must NOT proceed on these settings. Requires a runner/fixture fix (raise --max-tokens, capture delta.reasoning_content and finish_reason, flag is_checkpoint from turns[].kind), then a fresh Stage 1 rerun at 192 requests. The four arms' cache behaviour is already visible and separable (cached_share grow .95 / compact .96 / pointer .88 / lease .68).",
+ "assumptions": [
+  "Budget accounting: the harness restarted mid-cell and the resumed run re-issued pointer-stable T36, so recorded requests are 192 and the true count is bounded by 193. No further requests were sent after that.",
+  "Checkpoints judged by exact match on the turns 12/24/46 row content, since is_checkpoint is false on every row.",
+  "p50/p95 TTFT are reported over rows that carry a TTFT value (ttft_n) because 99 rows have null TTFT."
+ ],
+ "write_paths": [
+  "experiments/ptr-engine/measure/rows-longrun-2026-10-26.jsonl",
+  "orchestration/handoffs/RUN-STAGE1-LR01.json",
+  "orchestration/units/RUN-STAGE1-LR01.md"
+ ]
+}

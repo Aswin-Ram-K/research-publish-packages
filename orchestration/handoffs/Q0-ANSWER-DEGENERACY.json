@@ -1,0 +1,196 @@
+{
+ "unit": "Q0-ANSWER-DEGENERACY",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/ANSWER-DEGENERACY.md",
+  "experiments/ptr-engine/tools/answer_degeneracy_check.py",
+  "orchestration/units/Q0-ANSWER-DEGENERACY.md",
+  "orchestration/units/Q0-COMPLETE.md",
+  "orchestration/handoffs/Q0-ANSWER-DEGENERACY.json"
+ ],
+ "evidence": {
+  "verdict": "FIXTURE/INSTRUCTION ARTEFACT, not an arm effect. All 12 arm x checkpoint cells in the config-C grid are NO_MARKER: the v2 fixture declares no answer_marker, so grade_v3.py computed marker_required=False (grade_v3.py:404-406) and every row carries marker_lines=0 -- the ^ANSWER: rule was INERT for config-C and is not the cause of 0/3. The cause is a starved pinned working set: LR-01.v2.json pins resolve.py #L66-L110 (line 39 DEFAULT_MAX_REFS=64 is OUTSIDE the pinned range) and errors.py #L114-L126 (3 Ptr* classes, against expected 31), so cp.t12 and cp.t24 had no derivable answer from what the model saw. Cause 2 reinforces: cp.t24's own source pointer errors.py#L15-L142 contains 20 class definitions, never the expected 31 (= whole file, L15-L250). Cause 3: cp.t46's expected string mixes code with English 'before re-raising' and section 4 requires the anchor 'raising', so pointer-stable's substantively correct answer at rows-longrun-c-2026-10-26.jsonl:142 was graded missing_anchor:raising. The v2->v4 item diff proves the fixture authors repaired exactly the two starved pointers after config-C was recorded (resolve.py 1680->2785 B pointer #L66-L110 -> #L36-L110; errors.py 331->6353 B / 3 -> 31 classes pointer #L114-L126 -> #L15-L250; cp.t24 source L15-L142 -> L15-L250) and added the marker rule in the same revision, which is why v4 is the only grid where a checkpoint ever passed (pointer-stable cp.t12 'ANSWER: 64'). 0/3 licenses only: the four arms ran to N=48 and no arm scored a correct cp.t12/cp.t24/cp.t46 under LR-01.v2.json. It forbids any arm-quality comparison, any 'tie on quality' reading of clause (iii), any claim a checkpoint is unanswerable in principle, and any attribution of the zero to the marker. This does not contradict RUN-C-V2 frozen_rule_outcome verdict 'undecidable'; clause (iii) 'holds: true' remains vacuous, and this unit supplies the mechanism (the tie is at a broken instrument's floor, not a measured capability floor).",
+  "table": {
+   "transcript-grow": {"12": "NO_MARKER", "24": "NO_MARKER", "46": "NO_MARKER"},
+   "transcript-compact": {"12": "NO_MARKER", "24": "NO_MARKER", "46": "NO_MARKER"},
+   "pointer-stable": {"12": "NO_MARKER", "24": "NO_MARKER", "46": "NO_MARKER"},
+   "lease-reopen": {"12": "NO_MARKER", "24": "NO_MARKER", "46": "NO_MARKER"}
+  },
+  "doc_matches_checker": true,
+  "doc_comparison": "The doc's 4x3 table at experiments/ptr-engine/measure/ANSWER-DEGENERACY.md:43-L48 (transcript-grow / transcript-compact / pointer-stable / lease-reopen x t12 / t24 / t46, all 12 cells NO_MARKER) equals the checker's independently recomputed table cell for cell. Verified by Q0-COMPLETE on 2026-10-26: `--table-json` produced the identical 12 cells, and the green acceptance run against this handoff's evidence.table returned exit 0. Because the doc agrees with the checker, NO `## Corrections` block was appended to the doc and none of its numbers were touched.",
+  "completion": {
+   "written_by": "Q0-COMPLETE - a second, fresh session completing this interrupted unit",
+   "card": "17a76d24",
+   "failed_execution": "da4ba836-93ac-4ec4-a77f-6ac5bfca9444",
+   "failure": "agent turn ended without completing: interrupted (harness restart at the handoff step) - the driver snapshot at 2026-10-26T13:08Z (08:08 local) recorded ANSWER-DEGENERACY.md and answer_degeneracy_check.py on disk and this handoff plus the unit card missing.",
+   "snapshot_staleness_note": "When Q0-COMPLETE started, this handoff and orchestration/units/Q0-ANSWER-DEGENERACY.md were ALREADY present, both mtime 2026-10-26 08:09 local - i.e. written about one minute AFTER the driver's snapshot. Their content is substantive (verdict, 12-cell table, quoted rows, ranked causes, per-arm failing reasons). Q0-COMPLETE therefore verified and augmented them instead of rewriting them; nothing in the pre-existing text was deleted or reworded.",
+   "what_q0_complete_added": [
+    "evidence.doc_matches_checker (the card's required key, which was absent)",
+    "evidence.completion (this block: provenance, staleness note, verbatim acceptance commands)",
+    "top-level provenance (second-session authorship + failed execution id)",
+    "the acceptance command re-run WITH the explicit --handoff argument, and the red bite test"
+   ],
+   "checker_handoff_argument": "No edit was needed: answer_degeneracy_check.py already declares --handoff (argparse at line 145, resolved at line 152) with default orchestration/handoffs/Q0-ANSWER-DEGENERACY.json. The file was left byte-identical, so every classification rule is untouched. The card's requirement (1) is satisfied by the on-disk file rather than by a new edit.",
+   "live_requests_spent": 0,
+   "offline": true,
+   "tool_calls": 21,
+   "bound": 20,
+   "bound_note": "Q0-COMPLETE consumed 10 of its 20 declared tool calls; the 21 above is the running total across both sessions, which exceeded the first card's 20-call bound before the restart."
+  },
+  "completion_commands": [
+   {
+    "id": "green",
+    "cmd": "python3 experiments/ptr-engine/tools/answer_degeneracy_check.py --handoff orchestration/handoffs/Q0-ANSWER-DEGENERACY.json",
+    "exit": 0,
+    "output": "=== Q0-ANSWER-DEGENERACY: per arm x per checkpoint-turn class ===\nrows: experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl (192 rows)\narm                 t12                 t24                 t46                 \n--------------------------------------------------------------------------------\ntranscript-grow     NO_MARKER           NO_MARKER           NO_MARKER           \ntranscript-compact  NO_MARKER           NO_MARKER           NO_MARKER           \npointer-stable      NO_MARKER           NO_MARKER           NO_MARKER           \nlease-reopen        NO_MARKER           NO_MARKER           NO_MARKER           \n\nclass legend:\n  NO_ANSWER_TEXT   no non-empty line\n  NO_MARKER        answered, no ^ANSWER: line anywhere\n  MALFORMED_MARKER marker-shaped line exists but is not concluding, or payload == NOT-AN-ANSWER\n  MARKER_ACCEPTED  last non-empty line is ^ANSWER: <payload>, payload not a refusal\n\n=== supplementary: does the expected value appear in the answer at all? ===\n  lease-reopen:t12             line 156  words=1    trunc=False expected_lead='64'         present=False\n  lease-reopen:t24             line 168  words=36   trunc=False expected_lead='31'         present=False\n  lease-reopen:t46             line 190  words=14   trunc=False expected_lead='ledger.record_refusal(scope=...,' present=False\n  pointer-stable:t12           line 108  words=89   trunc=False expected_lead='64'         present=False\n  pointer-stable:t24           line 120  words=20   trunc=False expected_lead='31'         present=False\n  pointer-stable:t46           line 142  words=3    trunc=False expected_lead='ledger.record_refusal(scope=...,' present=False\n  transcript-compact:t12       line 60   words=13   trunc=False expected_lead='64'         present=False\n  transcript-compact:t24       line 72   words=14   trunc=False expected_lead='31'         present=False\n  transcript-compact:t46       line 94   words=13   trunc=False expected_lead='ledger.record_refusal(scope=...,' present=False\n  transcript-grow:t12          line 12   words=140  trunc=False expected_lead='64'         present=False\n  transcript-grow:t24          line 24   words=285  trunc=False expected_lead='31'         present=False\n  transcript-grow:t46          line 46   words=41   trunc=False expected_lead='ledger.record_refusal(scope=...,' present=False\n\nPASS: recomputed table equals recorded evidence.table (12/12 cells)"
+   },
+   {
+    "id": "red",
+    "cmd": "cp orchestration/handoffs/Q0-ANSWER-DEGENERACY.json /tmp/q0-red.json && python3 -c \"import json;p='/tmp/q0-red.json';d=json.load(open(p));d['evidence']['table']['lease-reopen']['24']='MARKER_ACCEPTED';json.dump(d,open(p,'w'),indent=1)\" && python3 experiments/ptr-engine/tools/answer_degeneracy_check.py --handoff /tmp/q0-red.json",
+    "exit": 1,
+    "mutation": "exactly one cell, in the /tmp copy only: lease-reopen.t24 NO_MARKER -> MARKER_ACCEPTED. The real handoff and every row file were left untouched.",
+    "output_tail": "FAIL: 1 cell(s) differ from evidence.table\n  lease-reopen       t24  handoff=MARKER_ACCEPTED  recomputed=NO_MARKER       ",
+    "note": "stdout above the tail is byte-identical to the green run (same table, same census), i.e. the checker bites only on the recorded table, and it names the differing cell and arm."
+   },
+   {
+    "id": "json_load",
+    "cmd": "python3 -c \"import json;json.load(open('orchestration/handoffs/Q0-ANSWER-DEGENERACY.json'))\"",
+    "exit": 0,
+    "output": ""
+   },
+   {
+    "id": "table_json",
+    "cmd": "python3 experiments/ptr-engine/tools/answer_degeneracy_check.py --table-json",
+    "exit": 0,
+    "output": "{\n \"lease-reopen\": {\n  \"12\": \"NO_MARKER\",\n  \"24\": \"NO_MARKER\",\n  \"46\": \"NO_MARKER\"\n },\n \"pointer-stable\": {\n  \"12\": \"NO_MARKER\",\n  \"24\": \"NO_MARKER\",\n  \"46\": \"NO_MARKER\"\n },\n \"transcript-compact\": {\n  \"12\": \"NO_MARKER\",\n  \"24\": \"NO_MARKER\",\n  \"46\": \"NO_MARKER\"\n },\n \"transcript-grow\": {\n  \"12\": \"NO_MARKER\",\n  \"24\": \"NO_MARKER\",\n  \"46\": \"NO_MARKER\"\n }\n}"
+   },
+   {
+    "id": "grade_v3_reasons",
+    "cmd": "python3 -c \"import json;d=json.load(open('experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.grade-v3.json'));[print(a,v['checkpoint_accuracy'],v['marker_census'],[c['reason'] for c in v['checks'] if c['id'].startswith('cp.')]) for a,v in d['arms'].items()]\"",
+    "exit": 0,
+    "output": "lease-reopen 0/3 {'marker_lines': 0, 'turns': 48} ['number_wrong:2000', 'number_wrong:15', 'missing_anchor:ledger']\npointer-stable 0/3 {'marker_lines': 0, 'turns': 48} ['number_wrong:39', 'number_wrong:7', 'missing_anchor:raising']\ntranscript-compact 0/3 {'marker_lines': 0, 'turns': 48} ['preamble_only', 'preamble_only', 'missing_anchor:ledger']\ntranscript-grow 0/3 {'marker_lines': 0, 'turns': 48} ['value_not_in_concluding_position', 'number_wrong:12', 'missing_anchor:raising']"
+   }
+  ],
+  "completion_corrections_to_this_handoff": [
+   "commands[3].output (the per-arm checkpoint reasons) is value-identical to the re-run but lists the arms in a different order (transcript-compact, lease-reopen, pointer-stable, transcript-grow) than the dict order the command actually prints (lease-reopen, pointer-stable, transcript-compact, transcript-grow). No number, arm, or reason string differs; the verbatim output is reproduced in evidence.completion_commands[id=grade_v3_reasons].",
+   "commands[1].cmd is a paraphrase ('same command against ...LR-01.v4.json') rather than an exact command string, and commands[2].output ('31 (total class defs in errors.py; 250 lines)') is a summarised meaning rather than raw stdout. Both were left as the interrupted session wrote them; they are not acceptance-bearing, and the verbatim v2 item census this session did not re-run is quoted in the doc §4/§6.",
+   "grids_classified entries for the v4, v4-tools and v5 grids, and the v4 row quotes, were NOT re-checked by Q0-COMPLETE: they are outside the config-C table this card's acceptance compares, and re-reading other grids' rows was explicitly out of scope. They remain the interrupted session's claims, unrefuted and unconfirmed here.",
+   "The checker's supplementary census reports present=False for all 12 cells including pointer-stable:t46, because it tests the expected string's FIRST TOKEN, which for t46 is the long literal 'ledger.record_refusal(scope=...,' containing an ellipsis; that is a substring artefact, not a refutation of the doc's reading of rows-longrun-c-2026-10-26.jsonl:142 as the substantively correct call with the right three arguments."
+  ],
+  "class_legend": {
+   "NO_ANSWER_TEXT": "no non-empty line in content",
+   "NO_MARKER": "non-empty answer, no line matching ^ANSWER:\\s*\\S.*$ anywhere",
+   "MALFORMED_MARKER": "marker-shaped line exists but is not the last non-empty line, or its payload is NOT-AN-ANSWER",
+   "MARKER_ACCEPTED": "last non-empty line is ^ANSWER: <payload>, payload not a refusal"
+  },
+  "grids_classified": {
+   "config-C (LR-01.v2)": "12/12 cells NO_MARKER; classes MALFORMED_MARKER and MARKER_ACCEPTED are EMPTY in this grid",
+   "v4 tools-off (LR-01.v4)": "transcript-grow t12/t24/t46 MALFORMED_MARKER (ANSWER: NOT-AN-ANSWER); pointer-stable t12 MARKER_ACCEPTED (line 60), t24 MALFORMED_MARKER (line 72), t46 NO_MARKER (line 94)",
+   "v4 tools-on": "pointer-stable t12 MARKER_ACCEPTED (line 22), t24 NO_MARKER (line 36), t46 NO_MARKER (line 66)",
+   "v5 tools-on": "pointer-stable t12/t24/t46 all NO_MARKER (lines 36/48/70)"
+  },
+  "commands": [
+   {
+    "cmd": "python3 -c \"import json;d=json.load(open('experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-01.v2.json'));[print(i['id'],i['source']['pointer'],i['body_bytes'],'DEFAULT_MAX_REFS' in i['body'],len(__import__('re').findall(r'^class ',i['body'],__import__('re').M))) for i in d['items']]\"",
+    "output": "resolve.py #L66-L110 1680 False 0\nerrors.py #L114-L126 331 False 3\ntest_scope.py #L16-L80 2598 False 0\ntest_negative_controls.py #L80-L117 1412 False 0",
+    "meaning": "cp.t12's expected 64 is NOT in the pinned resolve.py body (pointer stops at L66; line 39 excluded). cp.t24's expected 31 is NOT derivable: the pinned errors.py body holds 3 class definitions."
+   },
+   {
+    "cmd": "same command against experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.json",
+    "output": "resolve.py #L36-L110 2785 True 1\nerrors.py #L15-L250 6353 False 31\ntest_scope.py #L16-L80 2598 False 0\ntest_negative_controls.py #L80-L117 1412 False 0",
+    "meaning": "v4 repaired both pointers: L39's DEFAULT_MAX_REFS is now inside the pinned body, and all 31 classes are pinned. This is the v2->v4 diff that proves the artefact."
+   },
+   {
+    "cmd": "grep -n '^class ' experiments/ptr-engine/ptr_engine/errors.py | wc -l ; grep -n 'DEFAULT_MAX_REFS' experiments/ptr-engine/ptr_engine/resolve.py",
+    "output": "31 (total class defs in errors.py; 250 lines)\n39:DEFAULT_MAX_REFS = 64 ; 55: max_refs: int = DEFAULT_MAX_REFS ; 169: __all__",
+    "meaning": "Ground truth: 31 = the whole file (matches v4's L15-L250), while cp.t24's v2 source pointer L15-L142 contains only the 20 definitions at lines 15..142. 64 is at resolve.py:39, outside v2's #L66-L110."
+   },
+   {
+    "cmd": "python3 -c \"import json;d=json.load(open('experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.grade-v3.json'));[print(a,v['checkpoint_accuracy'],v['marker_census'],[c['reason'] for c in v['checks'] if c['id'].startswith('cp.')]) for a,v in d['arms'].items()]\"",
+    "output": "transcript-compact 0/3 {'marker_lines': 0, 'turns': 48} ['preamble_only', 'preamble_only', 'missing_anchor:ledger']\nlease-reopen 0/3 {'marker_lines': 0, 'turns': 48} ['number_wrong:2000', 'number_wrong:15', 'missing_anchor:ledger']\npointer-stable 0/3 {'marker_lines': 0, 'turns': 48} ['number_wrong:39', 'number_wrong:7', 'missing_anchor:raising']\ntranscript-grow 0/3 {'marker_lines': 0, 'turns': 48} ['value_not_in_concluding_position', 'number_wrong:12', 'missing_anchor:raising']",
+    "meaning": "No failing reason anywhere is marker_missing: the marker rule was never applied. pointer-stable's cp.t46 failed on missing_anchor:raising despite answering ledger.record_refusal(scope=scope_name, serialized_ref=text, code=error.code) correctly."
+   },
+   {
+    "cmd": "python3 experiments/ptr-engine/tools/answer_degeneracy_check.py",
+    "output": "PASS: recomputed table equals recorded evidence.table (12/12 cells)",
+    "meaning": "Acceptance gate."
+   }
+  ],
+  "quoted_rows": {
+   "rows-longrun-c-2026-10-26.jsonl:108": "pointer-stable t12 — 'The default per-turn resolve budget is not set by a `max_refs` default in the provided `resolve.py` excerpt; ... the excerpt ends before line 39's implementation. From the visible code, no numeric default budget appears' + tail 'the pinned `resolve.py` body (1680 B) ends at the `PtrUnknownIdError`' — the model correctly reports the working set is starved.",
+   "rows-longrun-c-2026-10-26.jsonl:142": "pointer-stable t46 — 'ledger.record_refusal(scope=scope_name, serialized_ref=text, code=error.code)' — substantively correct, failed on the English anchor 'raising'.",
+   "rows-longrun-c-2026-10-26.jsonl:120": "pointer-stable t24 — '7' (expected 31; the pinned excerpt shows 3 classes, so no count from the excerpt can reach 31).",
+   "rows-longrun-c-2026-10-26.jsonl:156": "lease-reopen t12 — '2000' (expected 64; prompt_tokens=446, the smallest context in the grid).",
+   "rows-longrun-v4-2026-10-26.jsonl:12": "transcript-grow t12 — 'I need to read the specified lines of resolve.py. ANSWER: NOT-AN-ANSWER' (MALFORMED_MARKER class example).",
+   "rows-longrun-v4-2026-10-26.jsonl:60": "pointer-stable t12 — '64' then 'ANSWER: 64' (MARKER_ACCEPTED, the only checkpoint pass in the tools-off v4 grid).",
+   "rows-longrun-v4-tools-2026-10-26.jsonl:22": "pointer-stable t12 — 62 words of <tool_call>find ... then '<tool_call>pwd ANSWER: 64' (MARKER_ACCEPTED with tools on).",
+   "rows-longrun-v4-2026-10-26.jsonl:94": "pointer-stable t46 — 'I need to read lines 66-71 of resolve.py ...' + two <tool_call> blocks, no marker (the failing control row; marker_missing)."
+  },
+  "control_diff": {
+   "arm": "pointer-stable",
+   "passing": "rows-longrun-v4-2026-10-26.jsonl:60 (t12, prompt_tokens=4124, 3 words, last line 'ANSWER: 64')",
+   "failing": "rows-longrun-v4-2026-10-26.jsonl:94 (t46, prompt_tokens=4151, 25 words, last line a <tool_call> block, no marker, reason marker_missing)",
+   "differences": [
+    "marker emitted and concluding vs absent",
+    "the model concluded vs deferred to a tool that tools-off could not serve (the RUN-V4-GRID checkpoint-3 signature named in run_longrun.py:191-194)",
+    "turn position 12 vs 46 (prompt 4124 vs 4151 tokens, both far under window_tokens=65536, so context size is not the discriminator)",
+    "value derivability does NOT separate them: both values are inside v4's pinned resolve.py #L36-L110 (2785 B)"
+   ],
+   "what_the_marker_success_had": "a single numeric token genuinely in the pinned item plus a model that chose to conclude in the last line — not a better arm. On the config-C fixture the same arm at the same turn (rows-longrun-c-2026-10-26.jsonl:142) failed for a different reason (missing_anchor:raising), which shows the checkpoint score measures the instrument."
+  },
+  "ranked_causes": [
+   {"rank": 1, "cause": "Starved pinned working set in LR-01.v2.json (resolve.py #L66-L110 excludes L39; errors.py #L114-L126 holds 3 of 31 classes)", "falsifier": "grep DEFAULT_MAX_REFS in items[resolve.py].body; count ^class in items[errors.py].body", "offline": true, "cost_live_requests": 0, "artefact_making": true},
+   {"rank": 2, "cause": "cp.t24's own source pointer (errors.py#L15-L142 = 20 classes) contradicts expected 31 (= whole file L15-L250)", "falsifier": "count ^class lines in errors.py between L15-L142 (20) and L15-L250 (31)", "offline": true, "cost_live_requests": 0, "artefact_making": true},
+   {"rank": 3, "cause": "cp.t46 expected mixes code with English 'before re-raising'; section 4 requires anchor 'raising', sinking a correct answer", "falsifier": "recorded reason missing_anchor:raising on rows-longrun-c-2026-10-26.jsonl:142", "offline": true, "cost_live_requests": 0},
+   {"rank": 4, "cause": "grade_v3.value_in_prior_context scans prior ANSWER ROWS only, never the pinned items/system prompt, so ANSWER: NOT-AN-ANSWER is graded marker_without_value instead of the documented refused_while_knowable", "falsifier": "read grade_v3.py value_in_prior_context + v4 transcript-grow reasons", "offline": true, "cost_live_requests": 0},
+   {"rank": 5, "cause": "Late-turn tool-deferral: checkpoint answers end in <tool_call> with no marker (v4 :94, v4-tools :36/:66, v5 :36/:48/:70; config-C lease-reopen t24 at :168)", "falsifier": "count checkpoint rows containing <tool_call> per grid", "offline": true, "cost_live_requests": 0},
+   {"rank": 6, "cause": "Real arm effect (pointer arms genuinely worse at checkpoints)", "falsifier": "none offline; needs a re-run on a fixture whose pinned items contain the values", "offline": false, "cost_live_requests": 192},
+   {"rank": null, "cause": "'marker requirement in grader but never in prompt'", "finding": "NOT a cause of config-C 0/3: with no answer_marker in LR-01.v2.json, marker_required is False and marker_lines=0 in all 192 rows. The requirement was added to grader AND prompt together in v4.", "offline": true, "cost_live_requests": 0}
+  ],
+  "marker_provenance": {
+   "v2_system_prompt": "no ANSWER: instruction; only 'At a checkpoint turn the grader compares your ENTIRE answer with the value it expects, so answer with the value alone'",
+   "v2_answer_marker_key": "ABSENT (fixture keys do not include answer_marker)",
+   "v4_answer_marker_key": "{\"line_regex\": \"^ANSWER:[ ]*\\\\S.*$\", \"required\": true}",
+   "v4_system_prompt_addition": "End every answer with a final line: ANSWER: <the value, or NOT-AN-ANSWER>. The value must appear in that line, never only inside a pasted code block.",
+   "harness": "run_longrun.py:539 sends fixture['system_prompt'] as the only system message; run_longrun.py:175-180 renders 'QUESTION (T12): ...' and run_longrun.py:184 appends 'ANSWER (T12): <text>', which is not ^ANSWER: and never teaches the marker"
+  },
+  "acceptance_run": {
+   "cmd": "python3 experiments/ptr-engine/tools/answer_degeneracy_check.py",
+   "exit": 0,
+   "output": "PASS: recomputed table equals recorded evidence.table (12/12 cells)"
+  }
+ },
+ "provenance": {
+  "authored_by": "two sessions. The analysis, doc and checker by the original Q0-ANSWER-DEGENERACY run; this handoff's completion, verification and acceptance by Q0-COMPLETE, a second and fresh session.",
+  "card": "17a76d24",
+  "failed_execution": "da4ba836-93ac-4ec4-a77f-6ac5bfca9444",
+  "failure": "agent turn ended without completing: interrupted (harness restart at the handoff step)",
+  "declared_write_paths": [
+   "orchestration/handoffs/Q0-ANSWER-DEGENERACY.json",
+   "orchestration/units/Q0-COMPLETE.md",
+   "experiments/ptr-engine/tools/answer_degeneracy_check.py",
+   "experiments/ptr-engine/measure/ANSWER-DEGENERACY.md"
+  ],
+  "paths_not_needing_edit": [
+   "experiments/ptr-engine/tools/answer_degeneracy_check.py - already carried --handoff; left byte-identical",
+   "experiments/ptr-engine/measure/ANSWER-DEGENERACY.md - table matched the checker, so no corrections block was appended"
+  ],
+  "live_requests": 0,
+  "network": "none - no socket opened, no model endpoint contacted"
+ },
+ "blocker": "",
+ "assumptions": [
+  "Class (iv) MARKER_ACCEPTED is defined as marker in the concluding position with a non-refusal payload (the ^ANSWER: line rule), with grade_v3's separate section-4 value test cited from the recorded .grade-v3.json rather than re-scored here, per the card's ban on re-scoring an already-scored grid as new evidence.",
+  "The classification table is per checkpoint TURN row (the row answering t12/t24/t46), matching the card's 'per arm x per checkpoint turn' and the evidence.table[<arm>][<t>] key shape."
+ ],
+ "next_unit_hint": "Two follow-on cards are now specified by ANSWER-DEGENERACY.md: (a) a fixture-repair card for tasks-v2/runtime-v2/LR-01.v2.json (repoint items[resolve.py] to #L36-L110 and items[errors.py] to #L15-L250, and align cp.t24's source pointer) followed by a re-run of the four config-C arms (192 live requests) so 0/3 can be re-measured on a fixture whose values are actually pinned; (b) a grader-prose card for cp.t46's expected string, whose ', before re-raising' clause forces the anchor 'raising' and sank a correct answer in pointer-stable, plus extending value_in_prior_context to read the pinned items so ANSWER: NOT-AN-ANSWER grades as refused_while_knowable. Neither may be done under Q0: the card forbids editing fixtures, graders, or the marker rule.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/ANSWER-DEGENERACY.md",
+  "experiments/ptr-engine/tools/answer_degeneracy_check.py",
+  "orchestration/units/Q0-ANSWER-DEGENERACY.md",
+  "orchestration/handoffs/Q0-ANSWER-DEGENERACY.json"
+ ],
+ "tool_calls": 21,
+ "bound": 40,
+ "live_requests": 0
+}

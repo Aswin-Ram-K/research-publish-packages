@@ -1,0 +1,56 @@
+{
+  "unit": "W3-COLLECT",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/W3-COLLECT/rows.jsonl",
+    "experiments/context-cache/cells/W3-COLLECT/analysis.json",
+    "experiments/context-cache/cells/W3-COLLECT/run_w3collect.py",
+    "experiments/context-cache/cells/W3-COLLECT/w3collect_cell.py",
+    "experiments/context-cache/cells/W3-COLLECT/analyze_w3collect.py",
+    "experiments/context-cache/cells/W3-COLLECT/logs/gate.json",
+    "experiments/context-cache/cells/W3-COLLECT/logs/grid-summary.json",
+    "experiments/context-cache/cells/W3-COLLECT/logs/probe-summary.json",
+    "experiments/context-cache/cells/W3-COLLECT/logs/battery-summary.json",
+    "experiments/context-cache/cells/W3-COLLECT-ABORT-bootstrap/rows.jsonl",
+    "state/config/W3-COLLECT-pre.json",
+    "state/config/W3-COLLECT-post.json",
+    "orchestration/units/W3-COLLECT.md"
+  ],
+  "evidence": {
+    "g0_gate": "PASS - rep0 usage.prompt_tokens_details=null (cold), rep1 usage.prompt_tokens_details={cached_tokens:3072} on prompt_tokens=3131; key PRESENT in the server's own usage object. Gate did not read a zero as a hit: 0/328 rows have usage_raw missing.",
+    "rows": "328 rows total, sha256 ca288efeea07cb7cbb54832a8a53d47acea037b262a7c0b52bfd3b2fffd9f93d; 0 non-200; 0 duplicate (arm,turn)",
+    "battery_284": "4 arms x 71 servable turns at budget 32768: R hit 0.958773 unc/turn 702.27 | A 0.958038 / 714.69 | C 0.957410 / 725.31 | H 0.958095 / 713.69 | ALL 284 rows hit 0.958079 unc/turn 713.99; mean_L 17031.74; max depth 32470; 1 cold turn per arm; 70/71 turns hit",
+    "grid": "15 targets x cold+repeat: cached(L)=L-(L mod 64) holds on 15/15 hot targets (L 72,76,71,129,130,131,193,194,195,257,258,259,513,514,515); every cold rep 0",
+    "probe": "L 1102/1166/1230/1294 -> cached 1088/1152/1216/1280; 8/8 hot probe rows match the 64-law; 4/4 discriminating targets match 64, 0 match 128",
+    "hot_gcd": "64; 0/280 hot values not a multiple of 64; 92/280 odd multiples of 64; 67.14% multiples of 128 (frozen DENSE-SGL 32k band: 0.321 / 67.86%)",
+    "crosscheck_frozen": "vs DENSE-SGL 32k band (same schedule/seeds, different launch): mean_L identical 17031.74 vs 17031.74, hit 0.958079 vs 0.956941, unc/turn 713.99 vs 733.37 - NOT quoted as a launch effect, see open item 1",
+    "requests_used": "328 of 400 cap (gate 2 + grid 30 + probe 12 + battery 284); lock_wait_s 0.0 on every phase",
+    "teardown": "docker rm -f gx10-w3-dense9b exit 0; port 8017 no listener; health 8017 -> 000",
+    "restore": "PRODUCTION UNTOUCHED - gx10-occamy-nvfp4 running, StartedAt 2026-10-24T04:07:15Z, user unit active, /health 8012 = 200; gx10-qwen9b running, StartedAt 2026-10-24T03:44:19Z (predates this unit), /health 8014 = 200; neither stopped nor restarted",
+    "commands": [
+      ".venv/bin/python run_w3collect.py --phase gate",
+      ".venv/bin/python run_w3collect.py --phase grid",
+      ".venv/bin/python run_w3collect.py --phase probe",
+      ".venv/bin/python run_w3collect.py --phase battery   # 284 rows, 97.7 s",
+      ".venv/bin/python analyze_w3collect.py   # offline, 0 requests",
+      "ssh zer0null@192.168.2.168 'sudo -n docker rm -f gx10-w3-dense9b'"
+    ]
+  },
+  "assumptions": {
+    "band": "32k only: the live instance serves max_model_len 32768 (measured on /v1/models); the 64k arm of the frozen DENSE-SGL cell cannot be reproduced at mem-fraction 0.08 and was not attempted - restoring it needs a larger fraction, which displaces the production occamy container (an operator decision, not taken).",
+    "endpoint": "192.168.2.168:8017 only, enforced in code (assert_port refuses anything but :8017 and refuses 127.0.0.1).",
+    "leak_probe": "the grid length leaked into the user turn ('Target prompt length N tokens'), so a strict leak probe deliberately ran random index probes 95-105; all 11 refuted (no pre-existing cache entry at 1,000-1,105).",
+    "config_id": "recorded as P2 with a descriptive config_sha256 so these rows are never pooled with P1 (the frozen context-65536 launch).",
+    "bootstrap_deviation": "a first bootstrap run wrote 284 rows (6 gate/grid, an unfinished grid phase, 278 battery rows) and ended with exit code 2 and no exception text; all of it was discarded and every phase re-run from scratch. The aborted rows are archived at experiments/context-cache/cells/W3-COLLECT-ABORT-bootstrap/rows.jsonl. No row in W3-COLLECT/rows.jsonl comes from that attempt."
+  },
+  "blocker": "",
+  "next_unit_hint": "1) The per-turn uncached delta alternates ~450/~950 (median 861) in all four arms and in the frozen cell - no row here explains it; a mechanism unit (chunked-prefill boundary vs eviction) is the next measurement. 2) The 64k arm is still uncollected for this launch and needs an operator-approved memory window. 3) Any 2x2 fold must use the 32k band and must NOT quote the 19.4-token unc/turn difference against DENSE-SGL as a launch effect.",
+  "write_paths": [
+    "experiments/context-cache/cells/W3-COLLECT/",
+    "experiments/context-cache/cells/W3-COLLECT-ABORT-bootstrap/",
+    "state/config/W3-COLLECT-pre.json",
+    "state/config/W3-COLLECT-post.json",
+    "orchestration/units/W3-COLLECT.md",
+    "orchestration/handoffs/W3-COLLECT.json"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+ "unit": "ANCHOR-PREREG",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/ANCHOR-PREREG.md",
+  "experiments/ptr-engine/tools/anchor_prereg_check.py",
+  "orchestration/units/ANCHOR-PREREG.md",
+  "orchestration/handoffs/ANCHOR-PREREG.json"
+ ],
+ "evidence": {
+  "command_or_count": "python3 experiments/ptr-engine/tools/anchor_prereg_check.py -> RESULT: PASS, exit 0. Census 11 cells (8 CODE-SYMBOL, 2 NUMBER, 1 PROSE-CONNECTOR) matched the table recorded in ANCHOR-PREREG.md 11/11. Probe A (real V6 cp.2.t46 answer, content sha256 short ecdb3fc9d9f0): R1 REJECT missing_anchor:raising / R2 ACCEPT ok (required = ledger,record,refusal,scope,serialized,text,code,error). Probe B (record_refusal -> write_audit): R2 REJECT missing_anchor:record (missing record,refusal). Probe C (scope= -> grant=): R2 REJECT missing_anchor:scope. Task 4: would flip <=3 of 39 checkpoint arm-checks (c-grid <=2 of 12: pointer-stable, transcript-grow, cp.2.t46 missing_anchor:raising 'missing 1/9'; v6-tools <=1 of 3: pointer-stable cp.2.t46 refused_while_knowable 'missing raising'; v3/v3-final/v4/v4-tools/v5-tools <=0).",
+  "commands": [
+   "python3 -c 'json.load(fixture)' on LR-01.v4.json + LR-01.v4.tools2.json -> checkpoints expected: '64' / '31' / 'ledger.record_refusal(scope=..., serialized_ref=text, code=error.code), before re-raising'; answer_marker required=true; both files byte-identical checkpoint arrays",
+   "grep -n 'STOPWORDS|def anchors|def has_anchor|missing = ' experiments/ptr-engine/longrun/grade_v3.py -> 15,55,66,178,184-191 (every derived anchor required; 'raising' survives len>=4 + stopword filter)",
+   "grep -Fn <token> experiments/ptr-engine/ptr_engine/resolve.py -> ledger:33 record:69 refusal:69 scope:43 serialized:70 text:66 code:70 error:66 raising:67 (docstring only)",
+   "grep -c '^class Ptr' experiments/ptr-engine/ptr_engine/errors.py -> 31, last at :247 (establishes cp.1 expected 31)",
+   "python3 experiments/ptr-engine/tools/anchor_prereg_check.py -> exit 0 (PASS)",
+   "sha256sum on all 15 inspected files recorded in ANCHOR-PREREG.md section 7"
+  ],
+  "bound": "20 tool calls, 0 network requests, 0 re-grades, no fixture/grader/row edits",
+  "no_write_proof": "only the four declared write paths were created; fixtures, grade_v3.py and every row/grade json were opened read-only"
+ },
+ "finding_that_amends_the_card": "the card's definition of PROSE-CONNECTOR ('does not appear in the cited source') is false for 'raising': grep -Fn raising ptr_engine/resolve.py -> :67, inside the docstring 'Record the refusal before re-raising.' R2 therefore classifies by OCCURRENCE CONTEXT (no code occurrence: only inside string/comment, or absent), which is strictly narrower than absence and is recomputed by tokenize in the checker.",
+ "blocker": "",
+ "next_unit_hint": "implement R2 in a NEW grader version (grade_v4.py) under its own pre-registration and re-grade the 39 arm-checks; report the delta against ANCHOR-PREREG.md section 6. Do not edit grade_v3.py in place.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/ANCHOR-PREREG.md",
+  "experiments/ptr-engine/tools/anchor_prereg_check.py",
+  "orchestration/units/ANCHOR-PREREG.md",
+  "orchestration/handoffs/ANCHOR-PREREG.json"
+ ],
+ "assumptions": [
+  "PROSE-CONNECTOR = anchor token with no code occurrence in the cited file (docstring/comment-only or absent), because the literal 'absent from file' test is contradicted by resolve.py:67",
+  "LR-01.v4.json and LR-01.v4.tools2.json are one census because their checkpoints arrays are identical",
+  "Task 4 counts are per arm-check across the seven grade-v3 files on disk (39 checkpoint arm-checks), not per distinct checkpoint; they are labelled 'would flip <=N of M', never as an accuracy figure"
+ ]
+}

@@ -1,0 +1,72 @@
+{
+ "unit": "PROBE-CP3-V6",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl",
+  "experiments/ptr-engine/measure/rows-longrun-v6-tools.grade-v3.json",
+  "experiments/ptr-engine/measure/V6-RESULT.md",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_tool_channel3.py",
+  "experiments/ptr-engine/longrun/manifests/v6-pointer-stable-pointer-stable-r1.json",
+  "experiments/ptr-engine/longrun/manifests/v6-dry-pointer-stable.json",
+  "experiments/ptr-engine/longrun/manifests/v6-proof-off-before.json",
+  "experiments/ptr-engine/longrun/manifests/v6-proof-off-after.json",
+  "experiments/ptr-engine/longrun/manifests/v6-proof-off-before.txt",
+  "experiments/ptr-engine/longrun/manifests/v6-proof-off-after.txt",
+  "experiments/ptr-engine/longrun/manifests/v6-run-longrun-pre-edit.py",
+  "orchestration/units/PROBE-CP3-V6.md",
+  "orchestration/units/V6-COMPLETE.md",
+  "orchestration/handoffs/PROBE-CP3-V6.json"
+ ],
+ "evidence": {
+  "pre_run": {
+   "test_tool_channel2_pre_run": "python3 experiments/ptr-engine/longrun/tests/test_tool_channel2.py -> exit 0 (5/5)",
+   "test_tool_channel3_pre_run": "python3 experiments/ptr-engine/longrun/tests/test_tool_channel3.py -> exit 0 (2 green held, 2 red failed as required, tools-off inert)",
+   "dry_run_would_send_total_pre_run": 48,
+   "tools_off_inertness": "manifests/v6-proof-off-{before,after}.txt: stdout byte-identical after filtering the one 'manifest[' line (sha256 8a8ffa2e6894fda3...); v6-proof-off-{before,after}.json identical minus created_utc; no 'tools' key"
+  },
+  "live": {
+   "rows": 72,
+   "rows_split": "48 turn rows + 24 tool-followup rows",
+   "requests_spent": 72,
+   "requests_breakdown": "48 turn requests + 24 follow-up requests = 72 (<= 80); the cell ran 1-6 before a mid-run code correction (12 requests) then resumed 7-48 with --resume",
+   "fetch_rounds_used_at_t46": 20,
+   "fetch_budget": 24,
+   "rounds_left_at_t46": 4,
+   "t46_pinned_read": "tool_calls entry: path=ptr_engine/resolve.py start_line=66 end_line=71 served_from=prompt base=prompt pinned_item=resolve.py pinned_lines=36-110 lines_returned=6 billed=false executed=false [key: experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl turn=46 tool_calls[0]]",
+   "turn_tool_calls_census": "served_from=prompt 37; executed engine reads 79; turn_call_cap 236; per_turn_round_cap 7; range_out_of_bounds 2; path_not_found 10; followup_suppressed(request_allowance) 31; total tool_call entries 371",
+   "census_correction": "the driver's pre-card census (prompt 32 / executed 50 / turn_call_cap 220 / range_out_of_bounds 1 / path_not_found 6) does NOT reproduce from the rows; the rows win and give 37 / 79 / 236 / 2 / 10. Only per_turn_round_cap 7 agrees.",
+   "truncated_turns": 0,
+   "marker_lines": "13 of 72",
+   "tokens_prompt": 356740,
+   "tokens_completion": 12615,
+   "grade": "checkpoint_accuracy 1/3; cp.0.t12 PASS; cp.1.t24 FAIL marker_missing; cp.2.t46 FAIL refused_while_knowable ('marker dropped anchors; missing raising'); repair.t30 FAIL repair_not_acknowledged; acc.n2b PASS; acc.n3b-n3e unverifiable",
+   "vs_PROBE-CP3-V5": "V5 = fetch_budget_exhausted at T46 with 0 rounds left, no tool_result injected, no follow-up row, 1/3, 72 requests, 1 truncated turn. V6 = no refusal at T46 with 4 rounds left, 1/3, 72 requests, 0 truncated turns. The channel was un-starved; quality did not move.",
+   "vs_v4_tools_OFF_control": "v4 tools-OFF rows-longrun-v4-2026-10-26.grade-v3.json arms.pointer-stable.checkpoint_accuracy = 1/3; V6 tools-ON = 1/3. Un-starving the fetch channel did not move quality."
+  },
+  "acceptance_rerun": "all four exit 0: test_tool_channel2 (5/5), test_tool_channel3 (5 checks, 2 green + 2 red), dry run would_send_total=48, grade_v3 -> /tmp/v6-regrade.json",
+  "regrade_reproducible": true,
+  "regrade_detail": "/tmp/v6-regrade.json is identical to experiments/ptr-engine/measure/rows-longrun-v6-tools.grade-v3.json with generated_at stripped (python dict equality) -> grade reproducible",
+  "test2_edit_classification": "NEUTRAL-BUT-UNAUTHORISED. experiments/ptr-engine/longrun/tests/test_tool_channel2.py mtime 2026-10-26 08:18:22 sha256 021a7be46fc5a7a8cd6328a948679780125f4d792204674aa78953a7e8b644ef; UNTRACKED (git ls-files --error-unmatch -> exit 1, no log/diff), so classified by inspection. Only change: :54-55 UNPINNED_TURN drives resolve.py L1-30 (outside the pinned L36-110), rationale in-file at :49-53. Guards intact: :261 assert sent_box[n]==1; :264 exactly one T2 turn row; :265 assert t2[0]['fetch_rounds_used']==24; :267 assert errs==['fetch_budget_exhausted']; :268 assert no fetch_followup row at turn 2. Not weakening: under V6 a pinned range is served at zero rounds (tests/test_tool_channel3.py case (a) GREEN), so a pinned range would no longer be refused and would assert obsolete behaviour. Not authorised: not in V6's declared write paths.",
+  "verdict": "CP46-ANSWERED-BUT-MARKER-ANCHOR-DROPPED (prediction half-true, half-falsified)",
+  "prediction_stated_before_run": "rounds_left_at_t46 > 0 AND cp.t46 pass",
+  "prediction_outcome": "rounds_left_at_t46 = 4 > 0 HOLDS; cp.t46 does not pass (reason=refused_while_knowable) -> second half FALSIFIED; the failure moved from channel starvation to a dropped anchor on the ^ANSWER: line",
+  "record_repair_note": "card described orchestration/handoffs/PROBE-CP3-V6.json as a 1,175 B pre-run stub; on disk it was 6,400 B and already in the seven-key unit shape with status done, though with unsplit pre_run/live evidence and the unreproduced census. Its unit card was 6,379 B not 4,599 B. Both were rewritten/corrected, not replaced with invented values.",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/tests/test_tool_channel2.py -> exit 0 (PASS: 5/5 assertions; send_chat calls = 0)",
+   "python3 experiments/ptr-engine/longrun/tests/test_tool_channel3.py -> exit 0 (PASS: 5 checks; 2 green held, 2 red failed as required)",
+   "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.tools2.json --arms pointer-stable --reps 1 --tools read_file --dry-run --manifest-path /tmp/v6-dry-recheck.json -> exit 0, would_send_total=48",
+   "python3 experiments/ptr-engine/longrun/grade_v3.py --rows experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl --fixture experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.tools2.json --out /tmp/v6-regrade.json -> exit 0, acc=1/3",
+   "python3 - <<'PY' (dict compare of the recorded grade and /tmp/v6-regrade.json with generated_at stripped) -> IDENTICAL",
+   "git -C '/home/zer0null/reserach extarctor' log --oneline -3 -- experiments/ptr-engine/longrun/tests/test_tool_channel2.py -> exit 0, no output (file untracked)",
+   "git -C '/home/zer0null/reserach extarctor' ls-files --error-unmatch experiments/ptr-engine/longrun/tests/test_tool_channel2.py -> exit 1 (untracked)"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "The binding constraint has moved from the fetch channel to the grader's anchor set: T46 shows the arm restating the fact correctly while the ^ANSWER: line drops the 'before re-raising' anchor, so whether a checkpoint passes now depends on answer discipline and the grader's required anchors, not on rounds or requests remaining.",
+ "write_paths": [
+  "orchestration/handoffs/PROBE-CP3-V6.json",
+  "orchestration/units/V6-COMPLETE.md",
+  "experiments/ptr-engine/measure/V6-RESULT.md"
+ ]
+}

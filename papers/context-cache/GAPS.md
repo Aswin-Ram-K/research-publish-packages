@@ -570,3 +570,43 @@ chunked-prefix configuration, since S3 restated the default.
 `page-size` 64 vs production 1) and "slru is indistinguishable from lru" (C59) are statements
 about **one flag at a time**, and neither licenses "cache knobs do not matter". The brief's
 "No measured reason to change any of it" (S19) is true only of the knobs that were turned.
+
+## G17. The experiment is closed; what is open is listed here and nowhere else — STATUS: CLOSED, as a record
+
+`PAPER-FINAL` (2026-10-24) closes the context-cache experiment in writing. This section is the
+**single place** a reader should look for "what is still unmeasured". It adds no measurement and
+removes no claim; it exists because a finished paper with a dangling to-do is read as a
+paper still in progress.
+
+**What closed.** The Round-2 batteries (`C64`-`C68`) and the version round (`C69`, the
+`SYS-OPT` lineage) are folded into `MANUSCRIPT.md` §8a, §9c, §9d and §10. The optimisation
+search stopped at its own ceiling after round 1 with `no_signal` and best version **V0**
+(`state/sys-opt-verdict.json`, [`docs/prompt-system/RELEASE-v1.json`](../../../docs/prompt-system/RELEASE-v1.json)).
+**No arm is planned. No cell will be added to this package without a new, dated entry that
+reopens it here first** — that is the whole meaning of "closed" in this file, and it is a
+statement about intent, not about the measurements.
+
+**What stays open, unchanged.** G2, G6, G7, G8, G9, G10, G12, G13, G14, G15 and G16 are
+unchanged: **eleven open, all stated limitations**, none of which any claim in `CLAIMS.md`
+rests on. G3 and G4 are narrowed, not closed. G1 and G5 are closed. The tally at the top of
+this file (2 / 3 / 11 / 1) is current and was not edited by this unit.
+
+**What this close does NOT license.** Three specific misreadings, each already reachable from
+the text above and each made more likely by the word "closed":
+
+1. **"No open gaps" is not implied by `verify_package: PASS` / `UNVERIFIED: none`.** That gate
+   checks that every claim value maps to a runner and a cell with rows. It says nothing about
+   G1-G17. The two sentences live next to each other on purpose.
+2. **"The null is a floor, not a ceiling."** `C69`'s null says the *headline prompt form tested*
+   was not cheaper on either production checkpoint. It does not say prompt rendering is an
+   exhausted avenue: `C67`'s `O4` result (`P1 - P0 = -219.51`) is the same paper finding that
+   one layout buys a fifth of the dense-vLLM bill. A reader who takes "no_signal" to mean
+   "rendering does not matter" has the sign of the Round-2 evidence backwards.
+3. **"Closed" is not "replicated".** Every remaining limitation about replication is still
+   true: one seed, two models, two engines, one GPU, synthetic corpora (G4, G12). The close
+   is a decision to stop collecting, not evidence that collection was complete.
+
+**Carried, and owed by someone else.** The independent verifier of this close is still owed.
+`PAPER-FINAL` wrote the close; it did not adjudicate its own work. Until that verifier rules,
+every statement in this section and in `MANUSCRIPT.md`'s closing paragraph is the **author's**
+report, exactly as `orchestration/VERDICTS.md` records for `SYS-OPT-CLOSE`.

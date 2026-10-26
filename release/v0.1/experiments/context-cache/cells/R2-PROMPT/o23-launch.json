@@ -1,0 +1,118 @@
+{
+  "unit": "R2-PROMPT-O23",
+  "purpose": "fill the 8 cells (O2 x 4 arms, O3 x 4 arms) that R2-PROMPT had to record as unavailable, by launching both variant containers on the GX10 over ssh and running the SAME frozen harness against them",
+  "host": {
+    "access": "ssh -F /dev/null -o BatchMode=yes zer0null@serving-host",
+    "docker": "GX10 host docker; production container gx10-occamy-nvfp4 (:8012) was never stopped, restarted or reconfigured",
+    "pre_state_utc": "2026-10-24T10:27:38Z",
+    "pre_state": {
+      "containers": ["gx10-occamy-nvfp4 Up (72457f09d20e, :8012)", "gx10-qwen9b Up (2c211a1273b4, :8014)"],
+      "health": {"8012/health": 200, "8014/v1/models": 200},
+      "mem_used_mb": 79024, "mem_available_mb": 45522
+    },
+    "post_state_utc": "2026-10-24T10:52:06Z",
+    "post_state": {
+      "containers": ["gx10-occamy-nvfp4 Up 57 minutes", "gx10-qwen9b Up 7 minutes"],
+      "health": {"8012/health": 200, "8014/v1/models": 200},
+      "mem_used_mb": 76421, "mem_available_mb": 48124,
+      "probe_note": "the restore script's own 127.0.0.1 poll read 000 for both production containers because gx10-occamy-nvfp4 and gx10-qwen9b bind HostIp serving-host (not 0.0.0.0); the re-probe over serving-host returned 200/200 and is the reading recorded here"
+    }
+  },
+  "O2": {
+    "endpoint": "http://serving-host/v1",
+    "container": "gx10-p-o2",
+    "image": "sha256:72457f09d20efcd34cdf005f71811a25efe771ccc5dd0c93f8ac112569e00ad7 (ornith-sglang:dflash2-upstream-710267, the same SGLang image production occamy runs)",
+    "create_argv": [
+      "docker", "run", "-d", "--name", "gx10-p-o2", "--entrypoint", "sglang",
+      "--gpus", "all", "--ipc", "host", "--shm-size", "34359738368",
+      "--ulimit", "memlock=-1:-1", "--restart", "no", "-p", "8017:30000",
+      "-v", "<workspace>:/model:ro",
+      "-v", "<workspace>/.local/share/gx10-p-o2/sglang-cache:/sglang-cache",
+      "-e", "SGLANG_CACHE_DIR=/sglang-cache", "-e", "HF_HUB_OFFLINE=1",
+      "-e", "TRANSFORMERS_OFFLINE=1", "-e", "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True",
+      "72457f09d20e", "serve", "--model-path", "/model", "--served-model-name", "qwen3.5-9b",
+      "--host", "0.0.0.0", "--port", "30000", "--tp-size", "1", "--trust-remote-code",
+      "--quantization", "modelopt_fp4", "--dtype", "bfloat16", "--context-length", "32768",
+      "--mem-fraction-static", "0.22", "--page-size", "64",
+      "--mamba-radix-cache-strategy", "extra_buffer", "--max-mamba-cache-size", "40",
+      "--enable-cache-report"
+    ],
+    "argv_equals_best_config": true,
+    "best_config_config_sha256": "652ff99db16fb7fc90e2649955bf74dbcda4586ee1e13704290cf2b0bc9ab510",
+    "startup_fields_from_get_server_info": {
+      "page_size": 64, "c128_page_size": 16, "mamba_radix_cache_strategy": "extra_buffer",
+      "max_mamba_cache_size": 40, "mamba_track_interval": 256, "enable_cache_report": true,
+      "mem_fraction_static": 0.22, "context_length": 32768, "max_total_num_tokens": 71424
+    },
+    "startup_log": [
+      "max_running_requests is capped to 8 by the mamba state cache (max_mamba_cache_size=40, 5 state slots per request)",
+      "max_total_num_tokens=71424, chunked_prefill_size=8192, max_prefill_tokens=16384, max_running_requests=8, context_len=32768, available_gpu_mem=45.50 GB"
+    ],
+    "boot": {"launched_utc": "2026-10-24T10:28:07Z", "ready_utc": "2026-10-24T10:29:5xZ", "ready_after_s": 120},
+    "why_gx10_qwen9b_was_stopped": "the O2 argv asks for --mem-fraction-static 0.22 on a unified-memory GB10 while production occamy holds 0.45; the proven recipe (PROMPT-O2E) stops the 9B vLLM container for the duration. gx10-qwen9b was stopped at 10:28Z and started again at 10:44Z; nothing else was touched."
+  },
+  "O3": {
+    "endpoint": "http://serving-host/v1",
+    "container": "r2o3",
+    "image": "sha256:2c211a1273b48e8929f893b267aeb1509e6b84654cdbde1bad56d79e3964224d (vllm/vllm-openai:v0.27.1, the image gx10-qwen9b runs)",
+    "create_argv": [
+      "docker", "run", "-d", "--name", "r2o3", "--entrypoint", "vllm", "-p", "8018:30000",
+      "-v", "<workspace>/.cache/huggingface:/hf-cache:ro",
+      "-v", "<workspace>/.local/share/r2o3/vllm-cache:/root/.cache/vllm",
+      "--ipc", "host", "--shm-size", "34359738368", "--ulimit", "memlock=-1:-1",
+      "--gpus", "all", "--restart", "no", "-e", "HF_HUB_OFFLINE=1", "-e", "TRANSFORMERS_OFFLINE=1",
+      "sha256:2c211a1273b48e8929f893b267aeb1509e6b84654cdbde1bad56d79e3964224d",
+      "serve",
+      "--model", "/hf-cache/hub/models--Accio-Lab--occamy-1.0-NVFP4/snapshots/fa865dc5e80a13b9a2d8ae8d65ed2ee332f33652",
+      "--served-model-name", "occamy-1.0", "--host", "0.0.0.0", "--port", "30000",
+      "--tensor-parallel-size", "1", "--dtype", "bfloat16", "--quantization", "modelopt_fp4",
+      "--kv-cache-dtype", "fp8", "--max-model-len", "32768", "--block-size", "64",
+      "--prefix-match-unit", "16", "--mamba-cache-mode", "align",
+      "--enable-prefix-caching", "--enable-prompt-tokens-details", "--trust-remote-code",
+      "--gpu-memory-utilization", "0.34"
+    ],
+    "launch_script": "GX10:<workspace> (a copy of launch-oh2.sh, the script that produced the R2-VLLM-FIX/OH1 cell this setup's published numbers come from)",
+    "argv_equals_best_config": false,
+    "argv_divergence_from_best_config": [
+      {
+        "flag": "--model",
+        "best_config_argv": "occamy-1.0",
+        "launched": "the NVFP4 checkpoint path under /hf-cache",
+        "why": "best-config's O3 argv carries the SERVED NAME where vLLM needs a model path; launching it verbatim cannot load. Recorded, not silently rewritten: the cell's analysis carries best-config's config_sha256, so this file is the place the argv actually used is pinned."
+      },
+      {
+        "flag": "--trust-remote-code",
+        "best_config_argv": "absent",
+        "launched": "present",
+        "why": "occamy-1.0 needs its custom model code; OH1 -- the launch every published O3 number comes from -- carries it, and the model loaded with it here"
+      }
+    ],
+    "best_config_config_sha256": "f8ab1dce36c695ce6ad7be4c74d6e656b016b89548e93cf0b2040aa28b9c3360",
+    "startup_fields_from_docker_logs": {
+      "enable_prompt_tokens_details": true, "block_size": 64, "prefix_match_unit": 16,
+      "mamba_cache_mode": "align", "kv_cache_dtype": "fp8", "gpu_memory_utilization": 0.34,
+      "max_model_len": 32768,
+      "resolved_attention_block_size": 2112,
+      "resolved_attention_block_size_line": "Setting attention block size to 2112 tokens to ensure that attention page size is >= mamba page size.",
+      "available_kv_cache_gib": 12.12, "gpu_kv_cache_tokens": 895162,
+      "max_concurrency_32k": "27.32x"
+    },
+    "note_resolved_block": "2112 is a property of THIS launch (occamy on vLLM 0.27.1 with block 64 / prefix-match-unit 16 / mamba-cache-mode align). It differs from O4's 1088 for the same flags, so the resolved block is a model x launch property and is read from the startup log, never derived.",
+    "boot": {"launched_utc": "2026-10-24T10:33:58Z", "ready_utc": "2026-10-24T10:39:5xZ", "ready_after_s": 350}
+  },
+  "runs": {
+    "O2": {"command": ".venv/bin/python experiments/context-cache/cells/R2-PROMPT/prompt_r2prompt_cell.py --setup O2 --quality",
+           "started": "2026-10-24T10:30:10Z", "ended": "2026-10-24T10:33:40Z", "requests": 368, "rows": 284,
+           "g0": {"call1_cached": null, "call2_cached": 6848, "prompt_tokens": 6886, "verdict": "GATE OK"},
+           "p2_calibration_tokens_per_char": 0.25},
+    "O3": {"command": ".venv/bin/python experiments/context-cache/cells/R2-PROMPT/prompt_r2prompt_cell.py --setup O3 --quality",
+           "started": "2026-10-24T10:39:52Z", "ended": "2026-10-24T10:44:22Z", "requests": 366, "rows": 284,
+           "g0": {"call1_cached": 0, "call2_cached": 6880, "prompt_tokens": 6886, "verdict": "GATE OK"},
+           "p2_calibration_tokens_per_char": 0.25}
+  },
+  "teardown": {
+    "O2": "docker rm -f gx10-p-o2 at 2026-10-24T10:33:58Z",
+    "O3": "docker rm -f r2o3 at 2026-10-24T10:44:26Z",
+    "qwen9b": "docker start gx10-qwen9b at 2026-10-24T10:44:26Z (same container, same stored production argv, no reconfiguration)"
+  }
+}

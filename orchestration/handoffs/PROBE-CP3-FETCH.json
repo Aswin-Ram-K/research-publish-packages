@@ -1,0 +1,69 @@
+{
+ "unit": "PROBE-CP3-FETCH",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/rows-longrun-v4-tools-2026-10-26.jsonl",
+  "experiments/ptr-engine/measure/rows-longrun-v4-tools-2026-10-26.grade-v3.json",
+  "experiments/ptr-engine/measure/V4-TOOLS-PROBE.md",
+  "experiments/ptr-engine/longrun/manifests/v4tools-pointer-stable-r1-pointer-stable-r1.json"
+ ],
+ "evidence": {
+  "t46_exchange": {
+   "turn_text": "<tool_call>read_file {\"path\": \"ptr_engine/resolve.py\", \"start_line\": 66, \"end_line\": 71}\n</tool_call>",
+   "tool_calls": [
+    {
+     "path": "ptr_engine/resolve.py",
+     "start_line": 66,
+     "end_line": 71,
+     "executed": false,
+     "truncated": false,
+     "error": "fetch_budget_exhausted"
+    }
+   ],
+   "tool_result_head": "NONE \u2014 no <tool_result> injected; call refused with error=fetch_budget_exhausted",
+   "tool_followup_row": "absent: zero kind='tool-followup' rows for turn 46"
+  },
+  "fetch_census": {
+   "rounds_used": "8/8 reported (cap exhausted before t46)",
+   "rounds_max": 8,
+   "calls_executed": 20,
+   "calls_refused": 194,
+   "refusal_reasons": {
+    "path_not_found": 54,
+    "fetch_budget_exhausted": 136,
+    "turn_call_cap": 4
+   },
+   "requests_spent": "48+20 = 68",
+   "anomaly": "fetch_rounds counter resets on --resume: 20 fetches executed while counter reported 8"
+  },
+  "grade": {
+   "verified_success": null,
+   "checkpoint_accuracy": "1/3",
+   "cp2_t46_pass": false,
+   "cp2_t46_reason": "marker_missing",
+   "tokens_to_verified_success": null
+  },
+  "tools_off_control": {
+   "cp2_t46_pass": false,
+   "cp2_t46_reason": "marker_missing",
+   "checkpoint_accuracy": "1/3",
+   "verified_success": null,
+   "requests_spent": 48,
+   "delta": "+20 requests, CP3 outcome unchanged (fail)"
+  }
+ },
+ "verdict": "FETCH-BROKEN",
+ "blocker": "",
+ "assumptions": [
+  "Run launched 3x in one job slot: two harness kills (turn 4, turn 23) forced --resume; each relaunch reset the in-memory fetch-round counter, so 20 fetches ran under an 8-round cap. Rows are contiguous turns 1-48 with a single run_id; no duplicate turn rows.",
+  "Verdict mapped to FETCH-BROKEN rather than FETCH-USED-BUT-STILL-REFUSED because no <tool_result> was ever injected at t46; the call was asked for and not executed."
+ ],
+ "next_unit_hint": "Make fetch_rounds durable across --resume (persist in the manifest or derive from existing tool-followup rows), then re-run this one arm: with 8 real rounds the arm must not spend them on turns 1-30 so CP3 at t46 can actually fetch.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/rows-longrun-v4-tools-2026-10-26.jsonl",
+  "experiments/ptr-engine/measure/rows-longrun-v4-tools-2026-10-26.grade-v3.json",
+  "experiments/ptr-engine/measure/V4-TOOLS-PROBE.md",
+  "experiments/ptr-engine/longrun/manifests/v4tools-*",
+  "orchestration/handoffs/PROBE-CP3-FETCH.json"
+ ]
+}

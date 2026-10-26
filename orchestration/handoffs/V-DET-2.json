@@ -1,0 +1,39 @@
+{
+ "unit": "V-DET-2",
+ "overall": "partial",
+ "checks": [
+  "CLAIM 1 REPRODUCED: test_det_verify.py exit 0, 'Ran 31 tests ... OK'; DET_VERIFY_DEGRADE=naive exit 1 (17 FAIL lines); =mention exit 1 (15 FAIL lines).",
+  "CLAIM 2 REPRODUCED: det_verify.py exit 0 with POOLED FN 0/23, FP 0/22, omission_rejected 3/3 over 48 implemented probes of 58; 10 excluded = repair.t30 x5 + acc.n2b x5. My own probe-by-probe loop over load_probes() agrees exactly (FN ids [], FP ids []).",
+  "CLAIM 3 REPRODUCED: the 8 p.num.cite.* cases all pass now and all are red under the pre-fix last-survivor rule recomputed as 'last integer in the answer segment' -> old values 39,3,12,39,39,39,30,142 vs truth 64,64,64,64,64,64,31,31. 'ANSWER: 64 (resolve.py:39)' -> asserted 64, reason asserted_value_matches.",
+  "CLAIM 4 PARTLY REPRODUCED: all ten p.neg.* variants return call_negated (checked per probe) and both asymmetry probes pass (p.neg.asym_clause, p.neg.asym_tail -> call_shape_matches). The asymmetry is fragile: it survives because clause_before cuts at the dot inside 'ledger.flush' (det_verify.py:246-250); the same sentence with an undotted callee ('it does not call flush but it does call ledger.record_refusal(...)') is rejected call_negated (FN).",
+  "CLAIM 5 REPRODUCED: COVERAGE built from CHECK_HANDLERS (det_verify.py:606-624), 13 entries, decidable_count 8, ratio computed in code; measured 8/13. acc.cp1/acc.cp2/acc.cp3/acc.4 each go through their own handler against Truth() AST values (64 from resolve.py:39; 31 ^Ptr\\w*$ ClassDefs; the _refuse call unparse at line 69; 9 def test_* in tests/test_scope.py sha 00f54ed8) - derived from source, not copied from cp.*. verify_probe returns (None,'undecidable') for acc.2/acc.n2b/repair.t30/acc.n3b and evaluate() skips before any slot (det_verify.py:830-831).",
+  "CLAIM 6 REPRODUCED: 0/23 and 0/22 reproduced by counting the corpus myself, not by reading the summary; the gate line is computed in build() from the same tally (det_verify.py:877-887).",
+  "ATTACK 1 (decisive) PASSED AS SPECIFIED: wrong callee with the right anchors and kwargs -> pass=False, call_not_named; right callee with text= in place of serialized_ref= -> pass=False, keyword_mismatch (claimed code,scope,text); exact truth call control -> pass=True. Not a bag-of-tokens grader.",
+  "ATTACK 1 RESIDUAL FP (reason for partial): 'the signature is ledger.record_refusal(scope=scope_name, serialized_ref=serialized_ref, code=code), but the code path actually calls ledger.add' -> pass=True, call_shape_matches. call_claim (det_verify.py:440-475) keys on the first mention of the truth callee and never tests which callee the governing predicate attaches to.",
+  "ATTACK 2 (my own 8 numeral probes): FN 2/5 correct-intent - 'ANSWER: 64 of 100 refs' -> no_asserted_value (the \\d+ of \\d+ citation span at :117 swallows both numerals) and 'ANSWER: sixty-four' -> no_asserted_value (by design). FP 1/1 - 'ANSWER: not 64' -> asserted 64, pass=True. Passed correctly: '64 refs', colon-heavy 'the cap is as follows: 64', 'per resolve.py:39, ANSWER: 64', '`64`'; rejected: '1,064' (asserted 1), '100 refs of 64' (asserted 100).",
+  "ATTACK 3 (my own negation forms): FP 3/3 - 'there is no ledger.record_refusal call in this path...' pass=True; 'the path declines to call ledger.record_refusal...' pass=True; 'the handler refuses to invoke ledger.record_refusal...' pass=True. Outcome-correct but by keyword_mismatch, not negation: 'avoid a second ledger.record_refusal'. Opposite asymmetry: 'avoid calling ledger.flush; it calls ledger.record_refusal(...)' pass=True (as required).",
+  "ATTACK 4: no expectation flipped. Shared ids 28 of 28 with identical intent and byte-identical probe text; 30 new ids, 0 dropped, 0 duplicate ids; every EXTRA_PROBES id is new relative to grader_fitness.PROBES.",
+  "ATTACK 5: coverage 8/13 measured myself; undecidable rows carry pass=None and write no slot.",
+  "ATTACK 6: denominators reproduced by independent count."
+ ],
+ "not_reproduced": [],
+ "overstated": [
+  "The claim that the negation asymmetry ('avoid' in an unrelated clause still passes) is established by clause-local attachment is overstated: it holds only because the other callee is dotted, so clause_before cuts at the dot inside 'ledger.flush' (det_verify.py:246-250). Undotted, the same correct answer is rejected (call_negated).",
+  "The negation lexicon is presented as covering the demonstrated FP class; three equally natural denials ('no X call', 'declines to call', 'refuses to invoke') are still accepted, so the FP class is narrowed, not closed."
+ ],
+ "unverified": [
+  "Whether the pre-fix det_verify.py literally used 'last survivor' - no git history exists for the file (git ls-files lists it as untracked); the old rule was reconstructed from V-DET's finding and re-implemented as 'last integer in the answer segment'.",
+  "The fix's claim that the naive/mention degrade runs fail 5 tests each (V-DET's figure): I measured 17 and 15 FAIL lines respectively, exit 1 in both - the counts differ, the red result is confirmed."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Two guards before this can carry a quality number: (1) in call_claim (det_verify.py:440-475) require the callee to be the OBJECT of the governing predicate (reject 'the signature is X(..), but the code calls Y' and 'X appears only in the docstring'), with my 1d/1e strings as permanent tests; (2) extend negation_in (:218-243) for 'no <callee> call' (object after the mention), 'declines to call', 'refuses to invoke', and make clause_before not treat the dot inside 'ledger.flush' as a clause break. Numeral: '64 of 100 refs' must yield 64 (do not let the ratio citation span swallow the leading value) and 'not 64' must not be read as an assertion of 64. Until then, report the instrument as a gate over implemented probes only, not as solved paraphrase robustness.",
+ "write_paths": [
+  "orchestration/units/V-DET-2.md",
+  "orchestration/handoffs/V-DET-2.json",
+  "experiments/ptr-engine/measure/DET-VERIFY-ATTACKS.md"
+ ],
+ "containment": "No fixture, grader, prereg or test file edited. Hostile probes were constructed in memory; /tmp in this sandbox is per-command ephemeral, so no hostile copies remain. DISCLOSURE: running the canonical command 'python3 experiments/ptr-engine/tools/det_verify.py' writes its default output experiments/ptr-engine/measure/det-verify-matrix.json (det_verify.py:63,869); that file is untracked (git status '??'), now sha256 97034b2c81124575bdfad6562825bc1e4a2068bf8874a7ea453c37cfdb2dfcb7, mtime 2026-10-26 09:18:35. Its content is a deterministic function of source+corpus (no timestamp key) and matches my independent tally; I did not hand-edit it.",
+ "tool_calls": 28,
+ "bound": 32,
+ "requests": 0
+}

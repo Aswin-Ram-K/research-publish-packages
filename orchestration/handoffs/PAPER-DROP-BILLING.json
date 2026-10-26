@@ -1,0 +1,48 @@
+{
+  "unit": "PAPER-DROP-BILLING",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/PAPER-DROP-BILLING.md",
+    "orchestration/handoffs/PAPER-DROP-BILLING.json"
+  ],
+  "evidence": {
+    "greps_run": [
+      "grep -n -i -E 'billed|billing|bill |49594|49,594|prompt_tokens|cached_tokens|cache hit|server-reported|identity|12·|12 \\*|12 ×|reconcile' MANUSCRIPT.md CLAIMS.md",
+      "grep -c -i 'billed' MANUSCRIPT.md CLAIMS.md  -> 0 and 0",
+      "grep -n -E '49594|49 594|34[ ,]37[24]|17,193|32,401|34,390|34,275' MANUSCRIPT.md CLAIMS.md  -> no hits",
+      "grep -n -i -E '49.?594|34,372|34,374|quality arm|QUALITY-ARM|756741be|k01|lumen|AUD-4417|telescop|12·|recoverab' MANUSCRIPT.md CLAIMS.md  -> no hits",
+      "grep -n -i -E 'old body|no-body|reference resolv|resolve a body|index line|index-only|k12|9,000-byte|9000' MANUSCRIPT.md CLAIMS.md  -> only MANUSCRIPT.md:769 (P3 index line, unrelated)",
+      "grep -n -i -E 'dollar|\\$[0-9]|price|cost of|econom|reconcil|agrees with|matches the server|server-reported|server bill|charge|invoice' MANUSCRIPT.md CLAIMS.md",
+      "grep -n -i -E 'PTR_STORE_MISS|3/3|0/3|withheld|no-body|destructive|planted fact|190/190' MANUSCRIPT.md CLAIMS.md",
+      "grep -o -E '^\\| C[0-9]+' CLAIMS.md | sort -u | tail -6  -> C64..C69, no quality-arm row",
+      "stat -c '%n mtime=%y size=%s' papers/context-cache/MANUSCRIPT.md papers/context-cache/CLAIMS.md"
+    ],
+    "sites": [],
+    "sites_count": 0,
+    "surviving_verified": [
+      "115 rows",
+      "A3/3 B0/3 C3/3 D0/3",
+      "756741be",
+      "index 458 B e81ba025…",
+      "k01 only"
+    ],
+    "no_site_reason": "Neither papers/context-cache/MANUSCRIPT.md nor papers/context-cache/CLAIMS.md reports the quality arm at all: zero occurrences of 'billed'/'billing', of the telescoping identity sum(prompt_tokens)+12·(R-1), of 49,594, and of the identity's own residuals/figures (34,372 / 34,374 / 17,193 / 34,390 / 34,275). CLAIMS.md runs C01..C69 with no quality-arm row. The 16 uses of the word 'bill' in MANUSCRIPT.md are metonyms for measured uncached tokens per turn from the main runner's persisted prompt_tokens/cached_tokens, fixed by MANUSCRIPT.md:107 ('Every figure in this paper is an uncached-token count or a time-to-first-token taken from a request log'), and are not billing claims.",
+    "untouched_proof": [
+      "papers/context-cache/MANUSCRIPT.md mtime=2026-10-24 21:39:10 -0500 size=93021",
+      "papers/context-cache/CLAIMS.md mtime=2026-10-24 13:48:51 -0500 size=45465",
+      "no write performed to either paper file this unit"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Nothing to remove: the billing result already lives only in experiments/ptr-engine/quality/RESULTS.md section 4.1 (34,372 vs 34,374 billed tokens, residuals A +151/+110/+106, B +117/+150/+127, C +159/+111/+17,193, D +100x3), which that file's own 'Corrections (2026-10-25)' note already annotates and which must never be lifted into MANUSCRIPT.md/CLAIMS.md; C4 stays OPEN. A future unit that rewrites the paper's cost framing should know the 16 surviving 'bill' uses are all measured uncached-token metonyms, so any rename is style, not correction.",
+  "write_paths": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/CLAIMS.md",
+    "orchestration/units/PAPER-DROP-BILLING.md",
+    "orchestration/handoffs/PAPER-DROP-BILLING.json"
+  ],
+  "assumptions": [
+    "DECISION 0b9eb7f7 Q5 default taken as given (no live re-run); no request was issued.",
+    "Rule 2's 'never present arithmetic as a server bill' read as the measured-token vs server-bill distinction, not as a mandate to delete the paper's measured uncached-token results, which rule 3 protects as verified."
+  ]
+}

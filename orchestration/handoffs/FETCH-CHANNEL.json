@@ -1,0 +1,102 @@
+{
+  "unit": "FETCH-CHANNEL",
+  "status": "done",
+  "verdict": "TOOL-CHANNEL-READY",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_tool_channel.py",
+    "experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.tools.json",
+    "experiments/ptr-engine/longrun/manifests/tools-LR-01-pointer-stable-r1.json",
+    "orchestration/units/FETCH-CHANNEL.md",
+    "orchestration/handoffs/FETCH-CHANNEL.json"
+  ],
+  "evidence": {
+    "default_off_identical": {
+      "identical": true,
+      "method": "the pre-edit runner was reconstructed offline by reversing the six additive hunks in run_longrun.py (reconstruction = 1212 lines, the exact pre-edit size); both files were then run on the SAME fixture (tasks-v4/runtime-v4/LR-01.v4.json) with the SAME flags (--dry-run --show-prompts, all 4 arms, manifests redirected to /tmp so no repo manifest was involved)",
+      "stdout_diff_exit": 0,
+      "stdout_sha256_before_edit": "487e4fdb7eb35dacf0a75925a3e61db2894f3b37bae8f2af7947e9c8ba70e606",
+      "stdout_sha256_after_edit": "487e4fdb7eb35dacf0a75925a3e61db2894f3b37bae8f2af7947e9c8ba70e606",
+      "preview_request_bodies_diff_exit": 0,
+      "preview_request_bodies_compared": 12,
+      "excluded_line": "the single 'manifest[...]' line: its sha256 embeds build_manifest.created_utc, so it differs between ANY two runs of identical code (verified: two runs of the same file differ on that line only)",
+      "before_edit_exit_code": 0,
+      "after_edit_exit_code": 0
+    },
+    "test_exit_code": 0,
+    "test_command": "python3 experiments/ptr-engine/longrun/tests/test_tool_channel.py",
+    "assertions": [
+      {
+        "id": "a",
+        "requirement": "the path resolves",
+        "output": "(a) path resolves: experiments/ptr-engine/ptr_engine/resolve.py -> /home/zer0null/reserach extarctor/experiments/ptr-engine/ptr_engine/resolve.py (refusal=None)"
+      },
+      {
+        "id": "b",
+        "requirement": "lines 66-71 of experiments/ptr-engine/ptr_engine/resolve.py are returned",
+        "output": "(b) lines 66-71 returned, executed=True truncated=False first_line='def _refuse(ledger: Optional[Ledger], scope_name: str, text:'"
+      },
+      {
+        "id": "c",
+        "requirement": "an unsafe path ../../etc/passwd yields path_refused and performs no read",
+        "output": "(c) unsafe path refused: block=<tool_result error=\"path_refused\"/> read_attempts=0 absolute_path_refused=path_refused"
+      },
+      {
+        "id": "d",
+        "requirement": "the 2-calls-per-turn cap holds",
+        "output": "(d) 2-per-turn cap: batch=2 overflow=2 executed_this_turn=2 cap=2"
+      },
+      {
+        "id": "e",
+        "requirement": "--tools off produces no tool execution at all",
+        "output": "(e) --tools off: tools_enabled=False read_attempts=0 followups=0 sent_delta=0"
+      },
+      {
+        "id": "f",
+        "requirement": "extra: follow-up accounting and the 8-round per-arm cap are exact",
+        "output": "(f) follow-up accounting: rounds=8/8 requests_sent=8 followup_rows=8 fetch_followup_flags=8 turn_calls=9"
+      },
+      {
+        "id": "g",
+        "requirement": "extra: row schema does not drift for historical rows",
+        "output": "(g) row keys: tools-on row carries fetch_followup+tool_calls, tools-off row has neither"
+      }
+    ],
+    "no_network": "the test asserts send_chat is called 0 times across the offline proof, replaces socket.socket with a raiser, and asserts no HTTP client (requests/httpx/urllib3) is in sys.modules; it never constructs a client",
+    "dry_run": {
+      "command": "python3 experiments/ptr-engine/longrun/run_longrun.py --dry-run --show-prompts --tools read_file --arms pointer-stable --manifest-path experiments/ptr-engine/longrun/manifests/tools-LR-01-pointer-stable-r1.json --fixture experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.tools.json",
+      "exit_code": 0,
+      "would_send_total": 48,
+      "turn_requests_line": "pointer-stable      turn_requests=48 (N=48 x reps=1)  digest_requests=0  cell_total=48",
+      "tool_channel_line": "tool_channel=read_file fetch_rounds_cap=8 (per arm) max_calls_per_turn=2 fetch_requests_in_this_preview=0 (no model turn offline)",
+      "system_prompt_sentence": "TOOL CHANNEL (opt-in, this fixture only): you may request exact lines from a file in the workspace by emitting <tool_call>read_file {\"path\": \"<relative path>\", \"start_line\": <n>, \"end_line\": <n>}</tool_call>; at most two such calls per turn, the runner returns the lines in a <tool_result> block, and no more than eight fetch rounds are granted per arm.",
+      "sentence_verified_in_payload": "/tmp/longrun-previews/LR-01/pointer-stable/turn-01.json -> messages[role=system] contains the sentence (the body actually sent, not just stdout)",
+      "fixture_integrity": "LR-01.v4.tools.json is a copy: acceptance, checkpoints, turns, items, expected, repair, long_run, objective are all sha256-IDENTICAL to LR-01.v4.json; only system_prompt differs (source unchanged, mtime 06:13 predates this unit's writes)"
+    },
+    "lines_66_71_excerpt": "def _refuse(ledger: Optional[Ledger], scope_name: str, text: str, error: PtrError) -> None: ... ledger.record_refusal(scope=scope_name, serialized_ref=text, code=error.code)",
+    "refusal_proof": "resolve_read_path('../../etc/passwd', ws) -> (None, 'path_refused'); resolve_read_path('/etc/passwd', ws) -> (None, 'path_refused'); execute_tool_call on the relative traversal injects exactly '<tool_result error=\"path_refused\"/>' with text=='' and executed=False while builtins.open is a tripwire — 0 read attempts observed. Refusal rules: absolute, '~', any '..' component, realpath escaping the workspace root, and secret-shaped basenames (.env*, id_rsa*, *.pem/*.key/*.p12/*.pfx, credentials|secrets|secret|keys|clients[.ext]) are refused before any open; a safe-but-missing path returns path_not_found.",
+    "budget_accounting_note": "A fetch is never free. Each model turn may emit <=2 calls; each executed batch buys exactly ONE follow-up model request (a real POST /chat/completions), which is recorded as its own row with kind='tool-followup' and fetch_followup=true, appended BEFORE that turn's own row so grade_v3's by_turn[t] still resolves to the real answer. Per arm the fetch rounds are capped at 8, so a fetches-every-turn run sends at most N + 8 requests instead of N; run_cell's request budget becomes N + digests + 8 only when --tools is on (with --tools off the expression and its value are unchanged). When the 8th round is spent the injected payload ends with <tool_result error=\"fetch_budget_exhausted\"/> and any further call is refused with executed=false, error='fetch_budget_exhausted', spending no request. Overflow calls beyond 2 in one turn are refused with error='turn_call_cap'. summarise_rows' requests_spent counts rows with error==null, so the extra requests are visible there. A CP3 probe must therefore expect 48 turn rows + up to 8 tool-followup rows per arm (56 requests worst case), never exactly 48, and must never treat a fetch row as a turn answer."
+  },
+  "blocker": "",
+  "assumptions": [
+    "The pre-edit baseline capture could not be kept in /tmp (this sandbox resets /tmp between bash calls), so the baseline was reconstructed by exactly reversing the six additive hunks; the reconstruction is 1212 lines, compiles, exits 0, and its stdout matches the current runner's byte-for-byte except the timestamp-bearing manifest line - the same file-level evidence either way.",
+    "The 'advance one model request per fetch' rule was implemented as: the model gets the tool result and is asked to answer in that same follow-up request, so one fetch round costs exactly one request. No second request is ever sent to re-ask the question.",
+    "workspace root for path resolution is os.getcwd() at run time (the runner is always invoked from the repo root); the offline test passes the root explicitly so it proves the same rule without depending on cwd.",
+    "The dry-run manifest is named dryrun-<task>-<arm>-r<rep>.json regardless of --run-id; the tools dry-run therefore used --manifest-path manifests/tools-LR-01-pointer-stable-r1.json so it would NOT overwrite the historical dryrun-LR-01-pointer-stable-r1.json. Earlier offline dry-runs in this session did rewrite that untracked historical file's created_utc (size unchanged, 1728 B); no row file, fixture, grader or score script was touched.",
+    "Only read_file is implemented; TOOL_NAMES documents that a second channel would need its own executor and its own row key.",
+    "tests_score_adapter.py exits 1 at assert \"check.1\" in card[\"unverifiable_required\"]; it only subprocesses score_longrun.py (mtime predates this unit) and never imports run_longrun.py, so the failure is pre-existing and out of scope for this unit."
+  ],
+  "next_unit_hint": "Re-run RUN-V4-GRID checkpoint 3 with --tools read_file against LR-01.v4.tools.json for the pointer arms and confirm the CP3 turn now contains a real <tool_result lines=\"66-71\"> exchange plus one fetch_followup row; then re-measure quality on the tools fixture only, keeping the tools-off rows as the historical control. Expect 48 + (fetches) requests, not 48.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_tool_channel.py",
+    "experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.tools.json",
+    "experiments/ptr-engine/longrun/manifests/tools-LR-01-pointer-stable-r1.json",
+    "orchestration/handoffs/FETCH-CHANNEL.json",
+    "orchestration/units/FETCH-CHANNEL.md",
+    "/tmp/**"
+  ],
+  "requests_sent": 0,
+  "tool_calls": 16,
+  "bound": 26
+}

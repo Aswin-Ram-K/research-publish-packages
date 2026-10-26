@@ -1,0 +1,109 @@
+{
+  "schema": "consonance.handoff/1",
+  "from": {
+    "project": "Duval/Consonance",
+    "workspace": "30b03b80-2e27-4870-b831-d5a70488dbf1",
+    "repo": "/home/zer0null/Duval",
+    "strand": "land/rsi-round-1",
+    "head": "4a731e4",
+    "date_utc": "2026-10-25"
+  },
+  "to": {
+    "project": "research-extractor",
+    "workspace": "78cead56",
+    "repo": "/home/zer0null/reserach extarctor",
+    "intended_location": "handoff from consonance/"
+  },
+  "division_of_labour": {
+    "inference_and_eval_side": "research-extractor (all model hosting, serving flags, cache metrics, GPUs)",
+    "harness_side": "Consonance (context compiler, manifest, authority, audit, fixtures, offline economics)",
+    "consonance_runs_no_hosting": true
+  },
+  "read_order": [
+    "INTERFACE_CONTRACT.md",
+    "MEASURED_FACTS.md",
+    "EXPERIMENTS.md",
+    "DO_NOT_REDO.md"
+  ],
+  "units": [
+    {
+      "id": "E1",
+      "title": "CACHE-BOUNDARY-SWEEP",
+      "status": "ready",
+      "priority": 1,
+      "question": "How does cache reuse depend on where a rewrite lands?",
+      "falsifier": "reuse is not monotone in rewrite offset, so rewrite depth is not a predictor",
+      "unblocks": "Consonance tools/context/economics.ts rewrite_depth term",
+      "budget_calls_max": 60
+    },
+    {
+      "id": "E2",
+      "title": "CHECKPOINT-COST",
+      "status": "ready",
+      "priority": 2,
+      "question": "What does one compaction checkpoint cost and over how many steps does it repay?",
+      "falsifier": "not repaid within 20 steps when measured as uncached work",
+      "unblocks": "whether immutable branches + checkpoint/fork are worth building at all",
+      "budget_calls_max": 120
+    },
+    {
+      "id": "E3",
+      "title": "ORDERING",
+      "status": "ready",
+      "priority": 3,
+      "question": "Same modules, different order: does the cached/uncached split change?",
+      "falsifier": "no measurable difference at equal token count",
+      "unblocks": "whether the admission objective gains a positional term",
+      "budget_calls_max": 40
+    },
+    {
+      "id": "E4",
+      "title": "32K-DENSE-TIER",
+      "status": "ready",
+      "priority": 4,
+      "question": "Is a 32768-token dense route a usable cheap tier for long tasks?",
+      "falsifier": "verified success collapses on the subset that needs paging",
+      "unblocks": "whether the harness has a tier-selection policy and what its floor is",
+      "budget_calls_max": 80
+    },
+    {
+      "id": "E5",
+      "title": "HYBRID-REUSE-ELIGIBILITY",
+      "status": "ready",
+      "priority": 5,
+      "question": "On a hybrid attention/SSM model, what is the deepest safe prefix boundary?",
+      "falsifier": "boundary is all-or-nothing, or reported reuse exceeds a provably shorter shared prefix",
+      "unblocks": "whether branch reuse can be modelled in tokens at all",
+      "budget_calls_max": 60
+    },
+    {
+      "id": "E6",
+      "title": "EXP48-CONTROL-REPAIR",
+      "status": "ready",
+      "priority": 6,
+      "question": "Does demand paging help once the controls can report the opposite?",
+      "falsifier": "a control cannot be made to report the opposite, making the arm void",
+      "unblocks": "whether EXPAND(ref) is a real mechanism or a plausible story",
+      "budget_calls_max": 80
+    }
+  ],
+  "deliverables_expected_back": [
+    "run.json per arm, frozen before the first call",
+    "NDJSON call rows per INTERFACE_CONTRACT.md section 2",
+    "control table stated separately from the primary result",
+    "one-page verdict naming what fired, what did not, and the falsifier verdict",
+    "itemised costs paid (rebuild, warm, staging, eviction)"
+  ],
+  "deliverables_owed_by_consonance": [
+    "schema/context-manifest.v0.json",
+    "schema/fixture.v0.json",
+    "two golden replay fixtures reproduced byte-identically offline"
+  ],
+  "rules": [
+    "absent provider counters are unknown, never zero",
+    "no arm comparable across differing model/tokenizer/renderer/engine fingerprints",
+    "no promotion of unregistered reconnaissance into a quoted finding",
+    "no touching the production container; restore verified via /v1/models",
+    "controls must be shown able to report the opposite before a primary run"
+  ]
+}

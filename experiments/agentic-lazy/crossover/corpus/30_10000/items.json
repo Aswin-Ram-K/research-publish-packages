@@ -1,0 +1,184 @@
+{
+  "items": [
+    {
+      "body": "TOOL T-1 -- coalesce_records\n\nMixed formats in one bucket make the conflict policy arbitrary; normalise timestamps before coalescing. Quoting the standard tier limit for a backfill log is a common and expensive mistake: 30 days is not the limit for backfill, and a backfill log older than 30 days is still present and readable.\n",
+      "id": "T-1",
+      "kind": "tool",
+      "title": "coalesce_records"
+    },
+    {
+      "body": "TOOL T-2 -- split_fields\n\ncron/policy.yaml, owned by the data platform group. The fan-out exists because a single upstream write can be observed by several collectors at once; without coalescing, the warehouse accumulates N rows per logical write, and every downstream join silently multiplies its result set.\n",
+      "id": "T-2",
+      "kind": "tool",
+      "title": "split_fields"
+    },
+    {
+      "body": "TOOL T-3 -- write_note_json\n\nWriting the changelog afterwards reliably produces a release described by whatever was remembered at the end rather than by what shipped. The dead marking is what stops a morning page storm from becoming an all-day one. No nesting, no escaping, no multi-character quote handling.\n",
+      "id": "T-3",
+      "kind": "tool",
+      "title": "write_note_json"
+    },
+    {
+      "body": "SKILL S-1 -- Pre-release checklist\n\n* Rotate on a schedule, never in response to an incident. The lag is bounded by the rebuild interval, so the index is at most one day stale for rows written after the last rebuild began. split_fields(text, sep=\",\", max_parts=0, quote=None) * Rotation and deployment are not independent.\n",
+      "id": "S-1",
+      "kind": "skill",
+      "title": "Pre-release checklist"
+    },
+    {
+      "body": "SKILL S-2 -- Triage a failing test\n\nPin the dependency set and commit the lockfile. * Returns an object with .rows (list of dicts), .dropped (int), .groups (int). The most common outage cause is a full mirror disk, which surfaces to builders as timeouts rather than as registry errors. Meant for debugging in-flight incidents only.\n",
+      "id": "S-2",
+      "kind": "skill",
+      "title": "Triage a failing test"
+    },
+    {
+      "body": "SKILL S-3 -- Prepare a change for review\n\n* Retention is 90 days for unused artifacts, measured from last pull, not from last push. Force a pool recycle after every rotation rather than waiting to observe it. Restarting the scheduler does not clear it; a restart is not an attempt at the work.\n",
+      "id": "S-3",
+      "kind": "skill",
+      "title": "Prepare a change for review"
+    },
+    {
+      "body": "MEMORY M-1 -- Retry policy for scheduled jobs\n\nA nightly scheduled job that exits non-zero is retried a maximum of 5 attempts, then marked dead.\n\nThat threshold exists because a handful of junk rows is dirt while a majority is almost always the wrong argument. * Timestamps are compared as strings, not parsed.\n",
+      "id": "M-1",
+      "kind": "memory",
+      "title": "Retry policy for scheduled jobs"
+    },
+    {
+      "body": "MEMORY M-2 -- Internal registry mirror notes\n\nPolicy for jobs scheduled by cron, on a non-zero exit: It is not a log writer: do not call it once per request, the fsync dominates. * Do NOT retry a non-zero exit that is a policy refusal (exit code 42). A rotation recorded only in a ticket is lost at the next rotation.\n",
+      "id": "M-2",
+      "kind": "memory",
+      "title": "Internal registry mirror notes"
+    },
+    {
+      "body": "MEMORY M-3 -- Credential rotation notes\n\nThe practical consequence is that a wedged consumer always shows up first as rising producer latency rather than as an error anywhere, so the first place to look for a consumer problem is the producer's dashboard. Rebuilding a segment copies it into a staging path and then swaps it in.\n",
+      "id": "M-3",
+      "kind": "memory",
+      "title": "Credential rotation notes"
+    },
+    {
+      "body": "KNOWLEDGE K-1 -- Queue abstraction notes\n\nDo not use this for a test that has never passed; that is authoring, not triage. Changing a producer's classification label does not retroactively change retention of logs already written; the log store keeps what was written under the old label until it ages out.\n",
+      "id": "K-1",
+      "kind": "knowledge",
+      "title": "Queue abstraction notes"
+    },
+    {
+      "body": "KNOWLEDGE K-2 -- Log retention across storage tiers\n\nRetention for the billing service's logs is 400 days; the annual reconciliation window runs against this tier.\n\nThe release is complete only when step 3 has a recorded rehearsal naming the version pair (previous, candidate). Pin the dependency set and commit the lockfile.\n",
+      "id": "K-2",
+      "kind": "knowledge",
+      "title": "Log retention across storage tiers"
+    },
+    {
+      "body": "KNOWLEDGE K-3 -- Search index rebuild notes\n\nRotating a key while an old deployment is still serving produces a window where the old pod reads with the retired credential. Each segment is sealed when it reaches a size target and a new segment is opened. Pin the dependency set and commit the lockfile.\n",
+      "id": "K-3",
+      "kind": "knowledge",
+      "title": "Search index rebuild notes"
+    },
+    {
+      "body": "KNOWLEDGE K-4 -- Compliance audit trail retention\n\nThe compliance audit trail is retained for 2555 days before it is purged by the retention worker.\n\n* Record the rotation in the same place the reader is documented. A test that passed before now fails and the cause is not obvious from the output.\n",
+      "id": "K-4",
+      "kind": "knowledge",
+      "title": "Compliance audit trail retention"
+    },
+    {
+      "body": "MEMORY M-4 -- Dispatch retry limits\n\nA dispatch job that exits non-zero is given a maximum of 3 attempts before it is abandoned.\n\n* Writes to <path>.tmp in the same directory as path, flushes, fsyncs the file, then renames it over <path>. * Long-lived connections do not re-authenticate.\n",
+      "id": "M-4",
+      "kind": "memory",
+      "title": "Dispatch retry limits"
+    },
+    {
+      "body": "SKILL S-4 -- Response cache warming\n\nA cached response expires after 900 seconds, after which the next request rebuilds it.\n\nIts page still fires on the fifth failure; it simply keeps retrying behind the page. Sized for small payloads, on the order of a few megabytes. This is not an exception: partially-keyed batches are normal.\n",
+      "id": "S-4",
+      "kind": "skill",
+      "title": "Response cache warming"
+    },
+    {
+      "body": "TOOL T-4 -- Batch reindexer\n\nThe batch reindexer processes documents in chunks of 512.\n\nTests sharing a module-level cache, a fixed port, or a fixed clock fail depending on order and timing rather than on code. Policy for jobs scheduled by cron, on a non-zero exit: * Long-lived connections do not re-authenticate.\n",
+      "id": "T-4",
+      "kind": "tool",
+      "title": "Batch reindexer"
+    },
+    {
+      "body": "TOOL T-5 -- write_note_json\n\n* Passing a compiled regex as sep raises a TypeError rather than falling back to re.split, because the two disagree on empty-match handling and a silent fallback would change results for existing callers. Reproduce locally from a clean checkout at the failing commit.\n",
+      "id": "T-5",
+      "kind": "tool",
+      "title": "write_note_json"
+    },
+    {
+      "body": "TOOL T-6 -- coalesce_records\n\nThe third section is the one reviewers value most because it tells them where not to look. Must be non-empty; an empty list returns an object with .rows == [] and is not an error. Policy for jobs scheduled by cron, on a non-zero exit: Pin the dependency set and commit the lockfile.\n",
+      "id": "T-6",
+      "kind": "tool",
+      "title": "coalesce_records"
+    },
+    {
+      "body": "TOOL T-7 -- split_fields\n\nThis is why a reader's memory footprint is roughly twice the segment size regardless of how much data the reader has actually consumed. * The 30-minute cap is the interval makeover target, not an error threshold. Pin the dependency set and commit the lockfile. * The mirror does not cache negative results.\n",
+      "id": "T-7",
+      "kind": "tool",
+      "title": "split_fields"
+    },
+    {
+      "body": "TOOL T-8 -- write_note_json\n\nExport runs nightly to cheap storage; the export path depends on shard count and is written into a manifest beside the export, so the path is discovered, never guessed. Teams that optimise query latency by shortening chunks make rebuilds slower, not faster. Meant for debugging in-flight incidents only.\n",
+      "id": "T-8",
+      "kind": "tool",
+      "title": "write_note_json"
+    },
+    {
+      "body": "SKILL S-5 -- Prepare a change for review\n\n* Rotation and deployment are not independent. The cap was raised from 3 to 5 after the ingest outage, where the third attempt landed during a network window and the job died one attempt short. Ask whether the mechanical half could ship first. * Rotation and deployment are not independent.\n",
+      "id": "S-5",
+      "kind": "skill",
+      "title": "Prepare a change for review"
+    },
+    {
+      "body": "SKILL S-6 -- Pre-release checklist\n\nThe backfill tier is deliberately not in the table above. Producers are never dropped, only slowed, because dropping at the queue boundary loses the ordering guarantee that the rest of the system depends on. split_fields(text, sep=\",\", max_parts=0, quote=None)\n",
+      "id": "S-6",
+      "kind": "skill",
+      "title": "Pre-release checklist"
+    },
+    {
+      "body": "SKILL S-7 -- Triage a failing test\n\nDo not trigger a rebuild to fix a single wrong document. The tool is deliberately narrow: it does not deduplicate across time windows and it does not resolve keys, it only merges rows that already agree on a key. It is not a log writer: do not call it once per request, the fsync dominates.\n",
+      "id": "S-7",
+      "kind": "skill",
+      "title": "Triage a failing test"
+    },
+    {
+      "body": "SKILL S-8 -- Prepare a change for review\n\nThe search index is rebuilt nightly from the source of truth. The weekly warehouse compactor opts out of the 5-attempt cap and retries until its window closes, because a compactor that gives up mid-window leaves an inconsistent table. Ask whether the mechanical half could ship first.\n",
+      "id": "S-8",
+      "kind": "skill",
+      "title": "Prepare a change for review"
+    },
+    {
+      "body": "MEMORY M-5 -- Credential rotation notes\n\nSegments are sized for read amplification, not for throughput, and shrinking them multiplies the number of sealed segments a reader must hold. Each segment is sealed when it reaches a size target and a new segment is opened. A rotation recorded only in a ticket is lost at the next rotation.\n",
+      "id": "M-5",
+      "kind": "memory",
+      "title": "Credential rotation notes"
+    },
+    {
+      "body": "MEMORY M-6 -- Retry policy for scheduled jobs\n\nIf the lockfile diff is large and surprising, that is itself the finding, not churn to ignore. * Do NOT retry a non-zero exit that is a policy refusal (exit code 42). Bisection is a search over a space that only makes sense when the failure is a function of the commit.\n",
+      "id": "M-6",
+      "kind": "memory",
+      "title": "Retry policy for scheduled jobs"
+    },
+    {
+      "body": "MEMORY M-7 -- Internal registry mirror notes\n\nKeep the tmp file beside the destination, which this tool does by construction. Export runs nightly to cheap storage; the export path depends on shard count and is written into a manifest beside the export, so the path is discovered, never guessed.\n",
+      "id": "M-7",
+      "kind": "memory",
+      "title": "Internal registry mirror notes"
+    },
+    {
+      "body": "MEMORY M-8 -- Credential rotation notes\n\nA change that genuinely cannot be split is usually two changes. Run the full test suite on the release commit, not on a branch tip and not on a merge-queue head. A high-volume log from a tier:standard service costs more but is still retained for the standard period.\n",
+      "id": "M-8",
+      "kind": "memory",
+      "title": "Credential rotation notes"
+    },
+    {
+      "body": "KNOWLEDGE K-5 -- Search index rebuild notes\n\nThe third section is the one reviewers value most because it tells them where not to look. Callers that want stripping must strip the parts themselves; doing it inside would make positional alignment depend on content. * The backoff counter is reset only by a manual clear.\n",
+      "id": "K-5",
+      "kind": "knowledge",
+      "title": "Search index rebuild notes"
+    },
+    {
+      "body": "KNOWLEDGE K-6 -- Queue abstraction notes\n\nRebuilding a segment copies it into a staging path and then swaps it in. A quote that appears mid-part is treated as a literal character. For a suspected flake, check ordering assumptions first. Before tagging a release of a service that has downstream consumers. coalesce_records(rows, key, conflict=\"earliest\") * Rows whose key value is missing or null are dropped, and the count is reported in .dropped. That threshold exists because a handful of junk rows is dirt while a majority is almost always the wrong argument. This is the tool people reach for when they need to split a CSV-ish field that is not quite CSV, and the reason it exists separately from the language's builtin split is the max_parts behaviour below. Emitting trailing empties is deliberate: positional alignment beats tidiness, and \n",
+      "id": "K-6",
+      "kind": "knowledge",
+      "title": "Queue abstraction notes"
+    }
+  ]
+}

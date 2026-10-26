@@ -1,0 +1,63 @@
+{
+ "unit": "CI-BACKFILL",
+ "status": "done",
+ "artifacts": [
+  "tools/ci_backfill.py",
+  "state/config/best-config.json",
+  "docs/serving-options/BEST-CONFIG.md",
+  "orchestration/handoffs/CI-BACKFILL.json",
+  "orchestration/units/CI-BACKFILL.md"
+ ],
+ "evidence": {
+  "script_stdout": [
+   "O1\tunc/turn=723.3919\tunc_ci=[659.1645, 787.6193]\tn=74\tarms=4\texcludes-0\trows=296\tea5728760540",
+   "O2\tunc/turn=714.6901\tunc_ci=[651.3088, 778.0715]\tn=71\tarms=4\texcludes-0\trows=328\tca288efeea07",
+   "O4\tunc/turn=2231.0282\tunc_ci=[2131.7896, 2330.2668]\tn=71\tarms=4\texcludes-0\trows=284\ta606ca06a231",
+   "SELFTEST O3  n=71 mean=1384.9577464789",
+   "  ours      [1235.4610660355, 1534.4544269223]  t=1.994437",
+   "  on disk   [1235.2535211268, 1532.1690140845]",
+   "  residual  dl=+0.2075 tokens  dh=+2.2854 tokens (half-width 149.4967)",
+   "  z-convention would give [1238.0423627149, 1531.8731302429]  (residual dl=+2.7888 dh=-0.2959) -> t, not z"
+  ],
+  "acceptance": [
+   "O1 [659.1644720840022, 787.6193116997815] tools/ci_backfill.py@2026-10-23T23:56:48.105964833-05:00 sha256:b88d1782fefb223d (t-interval, ddof=1, alpha=0.05, df=n-1)",
+   "O2 [651.3087589317298, 778.0715227584111] tools/ci_backfill.py@2026-10-23T23:56:48.105964833-05:00 sha256:b88d1782fefb223d (t-interval, ddof=1, alpha=0.05, df=n-1)",
+   "O3 [1235.2535211267605, 1532.1690140845071] state/config/r2-vllm-fix-oh1.json counts.per_arm.R.unc_ci",
+   "O4 [2131.7895685278395, 2330.2667695003297] tools/ci_backfill.py@2026-10-23T23:56:48.105964833-05:00 sha256:b88d1782fefb223d (t-interval, ddof=1, alpha=0.05, df=n-1)"
+  ],
+  "check_tail": "CHECK setups identical to disk: False",
+  "live_requests": 0,
+  "intervals": {
+   "O1": [
+    659.1644720840022,
+    787.6193116997815
+   ],
+   "O2": [
+    651.3087589317298,
+    778.0715227584111
+   ],
+   "O4": [
+    2131.7895685278395,
+    2330.2667695003297
+   ]
+  },
+  "o3_byte_identical": true,
+  "excludes_zero": "all three (and O3) lie strictly above zero; none separates from its own A-arm baseline (delta CIs straddle 0)",
+  "degenerate": null
+ },
+ "blocker": "",
+ "next_unit_hint": "O3's interval is reproduced to +0.21/+2.29 tokens by the t-rule but its producing script is not in this tree; if O3's interval must become byte-reproducible, re-derive it with tools/ci_backfill.py and retire the one-off. best_config_build.py --check prints False by construction because it still emits unc_ci:null / ci_source:'absent' for O1/O2/O4 in build() (lines ~127, ~168, ~250) -- it now diffs against backfilled values. Fixing it needs edits to that builder, which this card's write paths exclude.",
+ "write_paths": [
+  "tools/ci_backfill.py",
+  "state/config/best-config.json",
+  "docs/serving-options/BEST-CONFIG.md",
+  "orchestration/handoffs/CI-BACKFILL.json",
+  "orchestration/units/CI-BACKFILL.md"
+ ],
+ "assumptions": [
+  "Arm choice: O1/O2/O4 intervals are the A arm, so each interval brackets the unc_per_turn actually printed for the setup (O1 729.20 vs A 723.39 mean over 74 rows; O4 2230.78 vs A 2231.03). Flagged for the reviewer: if the intended statistic is the 'modified' arm (R), the intervals are computable from the same rows via `tools/ci_backfill.py --json` (per_arm block) without a new measurement.",
+  "CI convention identified, not copied: O3's script is absent from the tree, so the t-rule was chosen because it reproduces O3's interval at ~1.5% of its half-width where z misses by a comparable amount in the opposite direction."
+ ],
+ "tool_calls": 12,
+ "bound": 15
+}

@@ -1,0 +1,49 @@
+{
+  "unit": "REFRESH-RELEASE-PAPER",
+  "status": "done",
+  "artifacts": [
+    "release/v0.1/papers/context-cache/MANUSCRIPT.md",
+    "release/v0.1/papers/context-cache/CITATIONS.md",
+    "release/v0.1/MANIFEST.json",
+    "release/REPORT.md",
+    "orchestration/units/REFRESH-RELEASE-PAPER.md",
+    "orchestration/handoffs/REFRESH-RELEASE-PAPER.json"
+  ],
+  "evidence": {
+    "command_or_count": "all 10 gates pass; manifest entries=943 on_disk=944 shipped_minus_manifest=943 equal=True, mismatched=0 unlisted=0; release MANUSCRIPT 92,454->93,015 bytes sha256 deeb0b13...->9490bba6...; CITATIONS absent->present sha256 82beb59b...; sanitisation MANUSCRIPT host=1 path=0, CITATIONS 0/0; diff live vs release = exactly line 993",
+    "commands": [
+      "grep -rE '192\\.168\\.' release/v0.1 | wc -l  ->  0",
+      "grep -rE '/home/zer0null' release/v0.1 | wc -l  ->  0",
+      "grep -c 'CITATION NEEDED' release/v0.1/papers/context-cache/MANUSCRIPT.md  ->  0",
+      "grep -c 'SGLang review of attention backends' release/v0.1/papers/context-cache/MANUSCRIPT.md  ->  0",
+      "grep -c 'arXiv:2309.06180' release/v0.1/papers/context-cache/MANUSCRIPT.md  ->  1",
+      "grep -c 'arXiv:2312.07104' release/v0.1/papers/context-cache/MANUSCRIPT.md  ->  1",
+      "grep -c 'arXiv:2605.23296' release/v0.1/papers/context-cache/MANUSCRIPT.md  ->  1",
+      "wc -l release/v0.1/papers/context-cache/MANUSCRIPT.md  ->  1214 release/v0.1/papers/context-cache/MANUSCRIPT.md",
+      "find release/v0.1 -size +25M  ->  (empty)",
+      "grep -c 'Required Notice: Copyright Aswin-Ram-K (https://github.com/Aswin-Ram-K/Consonance)' release/v0.1/LICENSE  ->  1",
+      "diff <(sed -n '5p' /home/zer0null/Duval/LICENSE) <(grep -F 'Required Notice: Copyright Aswin-Ram-K (https://github.com/Aswin-Ram-K/Consonance)' release/v0.1/LICENSE)  ->  IDENTICAL",
+      "entries=943 on_disk=944 shipped_minus_manifest=943 equal=True mismatched=0 unlisted=[] dupe_paths=False",
+      "du -sh release/v0.1  ->  62M release/v0.1",
+      "find release/v0.1 -type f | wc -l  ->  944",
+      "diff papers/context-cache/MANUSCRIPT.md release/v0.1/papers/context-cache/MANUSCRIPT.md  ->  only 993c993 (host sanitisation)",
+      "cmp papers/context-cache/CITATIONS.md release/v0.1/papers/context-cache/CITATIONS.md  ->  byte-identical",
+      "sha256sum release/v0.1/MANUSCRIPT_release_copy  ->  before deeb0b1300dc79b8d0840181a44a0cb9c6770f8361bf8776ca0b06722c84c72b, after 9490bba6f3555bbae6ff32ac3df783d92503131c0c1e8254ed7dbe7559d6d700",
+      "sha256sum release/v0.1/papers/context-cache/CITATIONS.md  ->  82beb59baffef09f35bc87193e15e30fd15f27640586740fe90e5ef4e16a4090 (before: file absent)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Release paper files are now current. Remaining open items are the pre-existing ones from REPORT.md §9: (1) the Required Notice / licence-of-record discrepancy still needs a human ruling; (2) tests/fixtures/copy-src/.env and config/targets.toml remain withheld (behavioural differences for readers); (3) an independent verifier should re-run these 10 gates plus a red->green check (revert line 993 in the release copy, confirm gate 1 goes 0->1) before the tree is called publication-ready. No further manuscript edits are pending.",
+  "write_paths": [
+    "release/**",
+    "orchestration/units/REFRESH-RELEASE-PAPER.md",
+    "orchestration/handoffs/REFRESH-RELEASE-PAPER.json"
+  ],
+  "assumptions": [
+    "A9: per-refresh replacement counts recorded as an ADDED key sanitisation.refresh_2026_10_24 inside the existing sanitisation object; the required top-level shape (release, generated, licence, licence_source, sanitisation, excluded) and pre-existing keys file_count/total_bytes/files/control_files/licence_template_note are all preserved; tree-wide tallies (files_redacted 167, host 850, path 161) carried over unchanged from the original SANITISE-RELEASE pass rather than recomputed.",
+    "A10: manifest 'generated' left at 2026-10-24 because the refresh occurred the same calendar day; the dated refresh record lives in release/REPORT.md section 10 instead.",
+    "A11: release/v0.1/papers/context-cache/CITATIONS.md did not exist before this refresh, so its before-sha256 is recorded as absent/null rather than fabricated; only MANUSCRIPT.md has a real before/after pair.",
+    "A12: the one MANUSCRIPT.md replacement consumed the :8012 port suffix (http://192.168.2.168:8012 -> http://serving-host), consistent with the existing A2 rule that a host with port suffix is replaced whole. CITATIONS.md required no substitution and is byte-identical to its live source.",
+    "A13: the manifest was regenerated a second time after appending to release/REPORT.md, because REPORT.md is a shipped file now covered by the manifest. The second run produced identical counts (943 entries, 61,035,244 bytes) and 0 mismatches."
+  ]
+}

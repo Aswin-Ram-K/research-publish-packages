@@ -1,0 +1,54 @@
+# Expected sha256 of the authoritative code-only knowledge graph(s).
+#
+# WHY THIS FILE EXISTS (unit U8.8)
+# --------------------------------
+# ``graph.json`` records *where* it was built (``built_at_commit``) but nothing
+# about *what it is*: it has no ``sha256`` field, and even if it did, a digest
+# written inside the artifact is written by the same writer that wrote the
+# bytes — whoever can alter the bytes can rewrite the recorded digest, so an
+# internal digest can never vouch for the artifact it lives in.  The digest
+# must therefore be pinned OUTSIDE the artifact, and durably: a pin only under
+# ``state/`` (gitignored) would vanish with the state it is meant to audit.
+#
+# This is why the pin lives in the committed ``config/`` directory: it is
+# outside the artifact and outside ``state/``, it survives a state wipe, and a
+# change to it is reviewable in a git diff like any other config change.
+#
+# POLICY (see ``_reuse_candidate`` in ``src/resextract/run.py``)
+# -------------------------------------------------------------
+#   * digest matches the pin  -> ``digest_state = "match"``    -> reused;
+#   * no pin for this path    -> ``digest_state = "unpinned"`` -> reused and
+#     reported ``unverified`` (a missing pin must not hard-fail existing
+#     setups that predate pinning);
+#   * digest differs from pin -> ``digest_state = "mismatch"`` -> the graph is
+#     treated as UNUSABLE by default: not reused, reported loudly as corruption
+#     or tampering, and **kept on disk** (never deleted).  An operator can
+#     override for one run with ``allow_graph_digest_mismatch=True``.
+#
+# Keys are workspace-relative paths exactly as ``_graph_candidates`` builds
+# them.  Values are the full 64-hex sha256 digest; the ENFORCED policy
+# (``_same_digest`` / ``_pin_is_abbreviated`` / ``_pin_is_overlong`` in
+# ``src/resextract/run.py``) has five states:
+#   * 0 hex (entry present, no value) -> REFUSED as the DISTINCT EMPTY state,
+#     reported ``pin empty``; never compared (no ``digest mismatch``) and no
+#     ``PIN ABBREVIATED`` note — present-and-broken, not a fresh setup;
+#   * 1-11 hex -> REFUSED as a mismatch: ``_same_digest`` needs ``width >= 12``,
+#     so it cannot be compared at all (fail-closed), and there is no
+#     ``PIN ABBREVIATED`` note;
+#   * 12-63 hex that matches -> accepted and reported loudly
+#     (``PIN ABBREVIATED`` note + ``REDUCED STRENGTH`` clause);
+#   * 64 hex -> matches silently;
+#   * more than 64 hex -> REFUSED (``PIN OVERLONG``); the overlong check runs
+#     BEFORE the comparison, so even a true 64-hex prefix is refused.
+# A re-pin must therefore write the FULL 64-hex sha256 (the ``_graph_digest``
+# value, not the display-only 12-hex form) — see the command below.
+#
+# To re-pin after an intentional, verified rebuild:
+#   .venv/bin/python -c "import hashlib,pathlib;p=pathlib.Path('state/kg/duval/graphify-out/graph.json');print(hashlib.sha256(p.read_bytes()).hexdigest())"
+
+version = 1
+
+[graphs."state/kg/duval/graphify-out/graph.json"]
+sha256 = "4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b"
+# measured 2026-xx (U8.8): 3,188,231 bytes, 2685 nodes, 7102 edges,
+# built_at_commit=6deaed07af0d998d1672fe3f1ab1579e6ba0cdc4, graphify 0.9.80

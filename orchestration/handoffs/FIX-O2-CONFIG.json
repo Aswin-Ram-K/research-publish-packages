@@ -1,0 +1,43 @@
+{
+ "unit": "FIX-O2-CONFIG",
+ "status": "partial",
+ "artifacts": [
+  "state/config/best-config.json",
+  "orchestration/units/FIX-O2-CONFIG.md"
+ ],
+ "evidence": {
+  "rows_and_unc": "experiments/context-cache/cells/PROMPT-O2-EXTRA/rows.jsonl 600.169014084507",
+  "rows_sha256": "f24ca4570965c614ddf0746deecc26a0149c47ca6c7c1ad291559396d4fb9635 (matches the handoff)",
+  "check_tail": "CHECK setups identical to disk: False \u2014 FAIL O2.rows_sha256: built='b576dc8e1e5c7e1689f1462db6fbdf0418e07c7befc8e47a5b0bbeb6135704d3' disk='f24ca4570965c614ddf0746deecc26a0149c47ca6c7c1ad291559396d4fb9635'",
+  "commands": [
+   "python3 tools/best_config_build.py --check",
+   "python3 -c \"import json;d=json.load(open('state/config/best-config.json'));print(d['setups']['O2']['evidence']['rows'], d['setups']['O2']['unc_per_turn'])\"",
+   "sha256sum experiments/context-cache/cells/PROMPT-O2-EXTRA/rows.jsonl"
+  ]
+ },
+ "blocker": "tools/best_config_build.py still derives O2 from cells/PROMPT-O2/ (page 1 + no_buffer); until it is repointed, --check reports O2.rows_sha256/argv/config_sha256/engine_version/unc_naive_history as FAIL. The builder is outside this unit's write paths.",
+ "next_unit_hint": "Repoint tools/best_config_build.py's O2 block to cells/PROMPT-O2-EXTRA/rows.jsonl with the extra_buffer argv, then re-run --check.",
+ "write_paths": [
+  "state/config/best-config.json",
+  "orchestration/handoffs/FIX-O2-CONFIG.json",
+  "orchestration/units/FIX-O2-CONFIG.md"
+ ],
+ "assumptions": [
+  {
+   "field": "grid_unit=64",
+   "reason": "the EXTRA cell's startup log is not in this workspace; 64 is the launched page size (state chunk), marked inferred in grid_unit_source"
+  }
+ ],
+ "o2_written": {
+  "hit": 0.9513323861430014,
+  "unc_per_turn": 600.169014084507,
+  "unc_ci": [
+   558.8505379259276,
+   641.4874902430864
+  ],
+  "n_rows": 355,
+  "config_sha256": "652ff99db16fb7fc90e2649955bf74dbcda4586ee1e13704290cf2b0bc9ab510"
+ },
+ "tool_calls": 7,
+ "bound": 10
+}

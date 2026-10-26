@@ -1,0 +1,25 @@
+{
+ "unit": "C8-REDERIVE",
+ "status": "done",
+ "artifacts": [
+  "experiments/miss-law/FIT-GAP-V2.md",
+  "orchestration/units/C8-REDERIVE.md"
+ ],
+ "evidence": {
+  "command_or_count": "rows 774 | fit 387 (role measure 387/387) | cached 304 / null 83 | resid {-2112:16,-1056:69,-192:2,-128:6,-64:51,0:160} | nonzero 144 = vllm/residue 78 + sglang/residue 59 + vllm/B 7 | all nonzero residuals are whole grid multiples ({res%grid}=={0}) | null-83: uncached==prompt 83/83 | law resid+L_app holds 0 / violations 387 | dup3 381 keys (381 extra rows; 3 with role in key) | errors 0 | prompt<grid 2 | outlier(residual>0) 0 | meas() complement over 774 = 387, over fit = 0 | defect 321: NOT REPRODUCIBLE (no single or 2-way predicate out of 24 conditions yields 321)",
+  "commands": [
+   "import json,collections\nR=[json.loads(l) for l in open('experiments/miss-law/rows.jsonl') if l.strip()]\nF=[r for r in R if r.get('L_app') is not None]; g=lambda s:1056 if s.startswith('vllm') else 64\nfl=lambda r:r['prompt_tokens']//g(r['server'])*g(r['server']); res=lambda r:r['cached_tokens']-fl(r)\nC=[r for r in F if r['cached_tokens'] is not None]; N=[r for r in F if r['cached_tokens'] is None]\nprint(\"rows\",len(R),\"fit\",len(F),dict(collections.Counter(r['role'] for r in F)),\"cached\",len(C),\"null\",len(N))\nprint(\"resid\",dict(sorted(collections.Counter(res(r) for r in C).items())))\nfor s in ('sglang','vllm'): print(\" \",s,dict(sorted(collections.Counter(res(r) for r in C if r['server']==s).items())))\nprint(\"nonzero groups\",dict(collections.Counter((r['server'],r['phase']) for r in C if res(r))))\nprint(\"nonzero mod grid\",{v%g(s) for r in C for v,s in [(res(r),r['server'])] if v})\nprint(\"null phases\",dict(collections.Counter(r['phase'] for r in N)),\"uncached==prompt\",sum(1 for r in N if r['uncached_tokens']==r['prompt_tokens']))\nlaw=lambda r:r['prompt_tokens']%g(r['server'])+r['L_app']\nprint(\"law holds\",sum(1 for r in F if r['uncached_tokens']==law(r)),\"violations\",sum(1 for r in F if r['uncached_tokens']!=law(r)))\nk=collections.Counter((r['server'],r['cell'],r['rep']) for r in R); k2=collections.Counter((r['server'],r['cell'],r['rep'],r['role']) for r in R)\nprint(\"dup3\",sum(1 for v in k.values() if v>1),\"extra\",sum(v-1 for v in k.values()),\"dup4\",sum(1 for v in k2.values() if v>1))\nprint(\"errors\",sum(1 for r in R if r['error']),\"prompt<grid\",sum(1 for r in R if r['prompt_tokens']<g(r['server'])))\nprint(\"outlier resid>0\",sum(1 for r in C if res(r)>0),\"meas complement\",sum(1 for r in R if not(r['role']=='measure' and not r['error'])))\nprint(\"fit excluded by meas\",sum(1 for r in F if not(r['role']=='measure' and not r['error'])))"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Apply only the reproducible parts to experiments/ptr-engine/RECORD.md: fit set 387 (single role), residual table, outlier 0, and the 144-row negative-whole-block deviation population; withdraw 'defect 321' entirely and re-label 'law_gap 387' as the non-measure population (0 within the fit set). Do not edit RECORD.md in this unit.",
+ "write_paths": [
+  "experiments/miss-law/FIT-GAP-V2.md",
+  "orchestration/handoffs/C8-REDERIVE.json",
+  "orchestration/units/C8-REDERIVE.md"
+ ],
+ "assumptions": [
+  "'law_gap' interpreted as the complement of meas() over the whole row file, the reading the card names; inside the fit set that complement is 0.",
+  "Old classification numbers taken only from the card's statement of them; neither C8-FIT-GAP.md nor RECORD.md was opened before deriving."
+ ]
+}

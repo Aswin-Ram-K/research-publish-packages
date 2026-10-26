@@ -1,0 +1,100 @@
+{
+  "unit": "WIN-VLLM",
+  "phase": "launch",
+  "config_id": "V3",
+  "started_utc": "2026-10-23T06:30:55.712075+00:00",
+  "spec": {
+    "config_id": "V3",
+    "stack": "vllm",
+    "label": "occamy-nvfp4-moe on vllm (bounded probe)",
+    "model_host": "<workspace>/.cache/huggingface",
+    "model_ctr": "/hf-cache",
+    "model_arg": "/hf-cache/hub/models--Accio-Lab--occamy-1.0-NVFP4/snapshots/fa865dc5e80a13b9a2d8ae8d65ed2ee332f33652",
+    "quantization": "modelopt_fp4",
+    "block_size": null,
+    "served_model": "occamy-1.0",
+    "max_model_len": 32768,
+    "host_port": 8020,
+    "container": "wv-v3",
+    "gpu_mem": "0.32",
+    "cmd": [
+      "--model",
+      "/hf-cache/hub/models--Accio-Lab--occamy-1.0-NVFP4/snapshots/fa865dc5e80a13b9a2d8ae8d65ed2ee332f33652",
+      "--served-model-name",
+      "occamy-1.0",
+      "--host",
+      "0.0.0.0",
+      "--port",
+      "30000",
+      "--tensor-parallel-size",
+      "1",
+      "--dtype",
+      "bfloat16",
+      "--kv-cache-dtype",
+      "fp8",
+      "--max-model-len",
+      "32768",
+      "--gpu-memory-utilization",
+      "0.32",
+      "--max-num-seqs",
+      "6",
+      "--max-num-batched-tokens",
+      "8192",
+      "--enable-chunked-prefill",
+      "--enable-prefix-caching",
+      "--speculative-config",
+      "{\"method\":\"mtp\",\"num_speculative_tokens\":1}",
+      "--reasoning-parser",
+      "qwen3",
+      "--trust-remote-code",
+      "--quantization",
+      "modelopt_fp4",
+      "--enable-prompt-tokens-details"
+    ],
+    "binds": [
+      "<workspace>/.cache/huggingface:/hf-cache:ro",
+      "<workspace>/.local/share/gx10-qwen9b/vllm-cache:/root/.cache/vllm"
+    ],
+    "env": [
+      "VLLM_CACHE_ROOT=/root/.cache/vllm",
+      "HF_HUB_OFFLINE=1",
+      "TRANSFORMERS_OFFLINE=1",
+      "VLLM_ENABLE_CUDA_COMPATIBILITY=0"
+    ],
+    "image": "sha256:2c211a1273b48e8929f893b267aeb1509e6b84654cdbde1bad56d79e3964224d",
+    "config_sha256": "9af5a2e26b2e01da6ae75725fb218e4e6a5d3524504830c193e2dc2aff02d57c"
+  },
+  "steps": [
+    {
+      "step": "stop-production",
+      "rc": 0,
+      "stdout": "gx10-qwen9b\n",
+      "stderr": ""
+    },
+    {
+      "step": "rm-stale-variant",
+      "rc": 0,
+      "stdout": "",
+      "stderr": "Error response from daemon: No such container: wv-v3\n"
+    },
+    {
+      "step": "docker-run",
+      "rc": 0,
+      "stdout": "706615f8216dcc66d9747a37f9787b1595dc9b8396b23e65983ac1594f823b9a\n",
+      "stderr": ""
+    }
+  ],
+  "container_id": "706615f8216dcc66d9747a37f9787b1595dc9b8396b23e65983ac1594f823b9a",
+  "health_wait_s": 202.8,
+  "health_status": 0,
+  "log_tail": "(EngineCore pid=350) INFO 10-23 06:31:43 [qwen_gdn_linear_attn.py:150] Using Triton/FLA GDN prefill kernel (requested=auto, head_k_dim=128).\n(EngineCore pid=350) INFO 10-23 06:31:43 [nvfp4.py:285] Using 'FLASHINFER_CUTLASS' NvFp4 MoE backend out of potential backends: ['FLASHINFER_TRTLLM', 'FLASHINFER_CUTEDSL', 'FLASHINFER_CUTEDSL_BATCHED', 'FLASHINFER_CUTLASS', 'VLLM_CUTLASS', 'MARLIN', 'HUMMING', 'EMULATION'].\n(EngineCore pid=350) INFO 10-23 06:31:43 [cuda.py:482] Using FLASHINFER attention backend out of potential backends: ['FLASHINFER', 'TRITON_ATTN'].\n(EngineCore pid=350) INFO 10-23 06:31:44 [weight_utils.py:867] Filesystem type for checkpoints: EXT4. Checkpoint size: 22.28 GiB. Available RAM: 39.94 GiB.\n(EngineCore pid=350) INFO 10-23 06:31:44 [weight_utils.py:890] Auto-prefetch is disabled because the filesystem (EXT4) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.\n(EngineCore pid=350) INFO 10-23 06:34:11 [default_loader.py:430] Loading weights took 146.43 seconds\n(EngineCore pid=350) INFO 10-23 06:34:11 [nvfp4.py:544] Using MoEPrepareAndFinalizeNoDPEPModular\n(EngineCore pid=350) WARNING 10-23 06:34:11 [kv_cache.py:134] Checkpoint does not provide a q scaling factor. Setting it to k_scale. This only matters for FP8 Attention backends (flash-attn or flashinfer).\n(EngineCore pid=350) WARNING 10-23 06:34:11 [kv_cache.py:151] Using KV cache scaling factor 1.0 for fp8_e4m3. If this is unintended, verify that k/v_scale scaling factors are properly set in the checkpoint.\n(EngineCore pid=350) WARNING 10-23 06:34:11 [kv_cache.py:190] Using uncalibrated q_scale 1.0 and/or prob_scale 1.0 with fp8 attention. This may cause accuracy issues. Please make sure q/prob scaling factors are available in the fp8 checkpoint.\n(EngineCore pid=350) INFO 10-23 06:34:11 [gpu_model_runner.py:5332] Loading drafter model...\n(EngineCore pid=350) INFO 10-23 06:34:11 [kernel.py:306] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])\n(EngineCore pid=350) INFO 10-23 06:34:11 [compilation.py:329] Enabled custom fusions: act_quant\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349] EngineCore failed to start.\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349] Traceback (most recent call last):\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py\", line 1318, in run_engine_core\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     return func(*args, **kwargs)\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]            ^^^^^^^^^^^^^^^^^^^^^\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py\", line 1074, in __init__\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     super().__init__(\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/v1/engine/core.py\", line 132, in __init__\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     self.model_executor = executor_class(vllm_config)\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     return func(*args, **kwargs)\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]            ^^^^^^^^^^^^^^^^^^^^^\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/v1/executor/abstract.py\", line 109, in __init__\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     self._init_executor()\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/v1/executor/uniproc_executor.py\", line 68, in _init_executor\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     self.driver_worker.load_model()\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu_worker.py\", line 442, in load_model\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     self.model_runner.load_model(load_dummy_weights=load_dummy_weights)\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     return func(*args, **kwargs)\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]            ^^^^^^^^^^^^^^^^^^^^^\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/v1/worker/gpu_model_runner.py\", line 5334, in load_model\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     self.drafter.load_model(self.model)\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/v1/spec_decode/llm_base_proposer.py\", line 1338, in load_model\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     self.model = self._get_model()\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]                  ^^^^^^^^^^^^^^^^^\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/v1/spec_decode/llm_base_proposer.py\", line 1323, in _get_model\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     model = get_model(\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]             ^^^^^^^^^^\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/model_executor/model_loader/__init__.py\", line 140, in get_model\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     return loader.load_model(\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]            ^^^^^^^^^^^^^^^^^^\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     return func(*args, **kwargs)\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]            ^^^^^^^^^^^^^^^^^^^^^\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/model_executor/model_loader/base_loader.py\", line 55, in load_model\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     model = initialize_model(\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]             ^^^^^^^^^^^^^^^^^\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/tracing/otel.py\", line 178, in sync_wrapper\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     return func(*args, **kwargs)\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]            ^^^^^^^^^^^^^^^^^^^^^\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/model_executor/model_loader/utils.py\", line 62, in initialize_model\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     model = model_class(vllm_config=vllm_config, prefix=prefix)\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_5_mtp.py\", line 321, in __init__\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     self.set_moe_parameters()\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]   File \"/usr/local/lib/python3.12/dist-packages/vllm/model_executor/models/qwen3_next.py\", line 754, in set_moe_parameters\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349]     raise RuntimeError(\"No Qwen3Next layer found in the model.layers.\")\n(EngineCore pid=350) ERROR 10-23 06:34:12 [core.py:1349] RuntimeError: No Qwen3Next layer found in the model.layers.\n(APIServer pid=1) INFO 10-23 06:34:13 [utils.py:612] [shutdown] Process manager: send sigterm to process EngineCore\n",
+  "models": null,
+  "metrics": null,
+  "occamy": {
+    "port": 8012,
+    "status": 200,
+    "checked_utc": "2026-10-23T06:34:20.135467+00:00"
+  },
+  "launched": false,
+  "reason": "health never returned 200"
+}

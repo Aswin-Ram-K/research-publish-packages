@@ -67,13 +67,19 @@ All rows under `experiments/context-cache/cells/**`; digests in `CLAIMS.md` "Sou
 6. **The engine sets the bill; the model sets it only under vLLM.** With the full 2x2 measured —
    two checkpoints (occamy-1.0 MoE, qwen3.5-9b dense) on two engines (SGLang, vLLM 0.27.1), one
    shared 32k/71-turn schedule (prompt prefix digests and lengths equal on every cell pair) —
-   the engine main effect is **+1,225.18** uncached tokens
-   per turn, 95 % CI [1,132.2, 1,313.3], **2.6738x** the mean and **91.2 %** of the grand mean,
-   while the model main effect is **+275.83** [194.3, 357.6]. The model effect is
-   engine-conditional: **+548.06** under vLLM (1.3257x) against **+3.61** under SGLang (1.0049x,
-   1 of 71 paired turns positive), an interaction of **+272.23** — under SGLang both checkpoints
-   are paged on the same 64-token grid, while under vLLM each checkpoint's resolved block
-   (1,088 / 2,096) sets its own bill (C63, §9b).
+   the engine main effect is **+549.33** uncached tokens per turn, 95 % CI [462.4, 631.9],
+   **1.7523x** the mean (2.3058x on the MoE, 1.1987x on the dense) and **54.6 %** of the
+   1,006.2306 grand mean, while the model main effect is **-400.02** [-474.2, -326.5] (8 of 71
+   turns positive). The model effect is engine-conditional: **-803.65** under vLLM (0.5224x)
+   against **+3.61** under SGLang (1.0049x, 1 of 71 paired turns positive), an interaction of
+   **-403.63** — under SGLang both checkpoints are paged on the same 64-token grid, while under
+   vLLM each checkpoint's resolved block (1,088 / 2,096) sets its own bill (C63, §9b).
+   **Supersession:** the pre-MTP figures that used to stand here — engine **+1,225.18**
+   [1,132.2, 1,313.3], model **+275.83**, model-within-vLLM **+548.06**, interaction **+272.23**,
+   **2.6738x** / **91.2 %** — are superseded, not live: the Round-1 vLLM dense cell ran with
+   `--speculative-config mtp`, and removing it re-measured that cell 2,230.7782 -> 879.0669
+   uncached tokens/turn (a 2.54x drop). The model effect is therefore no longer a small positive
+   quantity; it is negative under vLLM and near zero under SGLang.
 
 ## 4. What did not work — negative results, stated as results
 

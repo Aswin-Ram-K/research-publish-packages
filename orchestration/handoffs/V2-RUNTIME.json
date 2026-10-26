@@ -1,0 +1,78 @@
+{
+  "unit": "V2-RUNTIME",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/adapt_v2.py",
+    "experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-01.v2.json",
+    "experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-02.v2.json",
+    "experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-03.v2.json",
+    "experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-04.v2.json",
+    "experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-05.v2.json",
+    "experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-06.v2.json"
+  ],
+  "evidence": {
+    "digest_pairs": [
+      {"fixture": "LR-01", "authored_sha256": "14d325259c7207519aa062de02891b60c937d945ac48ea82f741939f9df383e3", "runtime_sha256": "0a07db1b14f30034902c23fe208e5717ad64856f31fe9dcfc1ab873bc2b90848", "N": 48, "answer_budget_present": true, "checks_structured": 12},
+      {"fixture": "LR-02", "authored_sha256": "bd34befff539c32aa394d344a4d870f7d97cb98486d508491ba5c62cfb834473", "runtime_sha256": "fb6d90e036dbddc42b306000ac8d0f5b5745faa9dc23f00ba85ec0dcb497f5f6", "N": 64, "answer_budget_present": true, "checks_structured": 8},
+      {"fixture": "LR-03", "authored_sha256": "0774e717f99fe1d7a23350863952b8fc731c319fb202601d3a687d33b85f6b70", "runtime_sha256": "63685de9b7a1d742d70d55833539286281272effcedaa251e9729a2d651691c9", "N": 56, "answer_budget_present": true, "checks_structured": 8},
+      {"fixture": "LR-04", "authored_sha256": "559845c0f85c2850bcdebafd8926b3f7f6dabe7fd4803a219914e455b8df83e9", "runtime_sha256": "bbdd5df4b0d0ddad5cf2a7e4712dcc0f611a22206a097ae89e2efc7e80a8cf08", "N": 40, "answer_budget_present": true, "checks_structured": 9},
+      {"fixture": "LR-05", "authored_sha256": "df2fad4b3b09fe015dbf473af0c467bbb76a99b40eb4477919298f6c3af5d655", "runtime_sha256": "dbfb21e0cbbb7792c7772edf66cd2a980e74c27863f375d7647de448e35fc4d9", "N": 72, "answer_budget_present": true, "checks_structured": 9},
+      {"fixture": "LR-06", "authored_sha256": "2975ac9536ded5a16d4af066c8fdf2b7845f9083b7dbb1bc89dbcd1c8c3d501e", "runtime_sha256": "21f512068045b72370eefb7a38491fa308ce9e6e7c13cb7dc384f634e7c3f73d", "N": 60, "answer_budget_present": true, "checks_structured": 9}
+    ],
+    "dry_run": {
+      "command": ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --dry-run --fixture experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-01.v2.json --thinking off --show-prompts",
+      "exit_code": 0,
+      "would_send_total": 192,
+      "per_arm": "transcript-grow 48, transcript-compact 48, pointer-stable 48, lease-reopen 48 (N=48 x reps=1, digest_requests=0)"
+    },
+    "budget_sentence_in_payload": "ANSWER BUDGET (bounded tier, fixture_version v2-bounded). Every answer is measured in words and the count is recorded, not truncated and not re-prompted. Budgets are per turn: at most 150 words on a work, plant, or repair turn; at most 400 words on a checkpoint or verify turn.",
+    "budget_sentence_location": "payload messages[0] (role=system, 1283 chars = adapt_fixture.SYSTEM_PROMPT + '\\n\\n' + answer_budget.system_prompt_addition) attached by run_longrun.py:210 `[{\"role\": \"system\", \"content\": self.fixture[\"system_prompt\"]}, ...]`; printed in 12/12 preview bodies (4 arms x first 3 turns)",
+    "scorer_empty_log": {
+      "command": ".venv/bin/python experiments/ptr-engine/longrun/score_longrun.py --fixture .../runtime-v2/LR-01.v2.json --run <zero-byte ndjson>",
+      "exit_code": 3,
+      "stdout": "{\"error\": \"run log is empty\", \"exit_code\": 3}",
+      "note": "score_longrun.py:259 load_run raises ValueError('run log is empty') -> EXIT_INPUT(3); an empty log yields the error payload, so it carries no verified_success key at all"
+    },
+    "scorer_stub_rows": {
+      "command": ".venv/bin/python experiments/ptr-engine/longrun/score_longrun.py --fixture .../runtime-v2/LR-01.v2.json --run <2 rows, answer:''>",
+      "exit_code": 1,
+      "verified_success": false,
+      "unverifiable_required": ["fixture.digest"],
+      "note": "the one unverifiable is the run-start fixture digest, absent from a hand-written stub log — not a task check"
+    },
+    "scorer_with_digest_header": {
+      "command": "same, run log header {\"fixture_sha256\": <runtime-v2 sha256>}",
+      "exit_code": 1,
+      "verified_success": false,
+      "unverifiable_required": [],
+      "verdict_tally": {"pass": 11, "fail": 12},
+      "note": "0 unverifiable required checks: the tier is decidable; the 12 fails are the answer-dependent fact checks reading empty answers"
+    },
+    "idempotency": "adapt_v2.py --all run twice; the six runtime sha256 values were identical (diff of extracted digest lists: empty, IDEMPOTENT_OK)",
+    "required_key_refusal": "adapt_v2.py requires schema, task_id, sources, turns, checkpoints, acceptance, answer_budget (+ acceptance.checks_structured, acceptance.negative_constraints, answer_budget.system_prompt_addition) and exits 1 naming the fixture and missing key"
+  },
+  "blocker": "",
+  "assumptions": [
+    "adapt_fixture.py is importable as a plain module (sys.path.insert of the longrun dir); it has stdlib-only top-level imports — tiktoken is imported lazily inside measure_bytes_per_token, so no reimplementation was needed for the pinned-source loading, pointer slicing, digest verification, bytes-per-token measurement or the instruction->question mapping",
+    "N is carried as len(turns), with long_run.turns asserted equal; a mismatch refuses rather than picking one",
+    "wall_tokens is not stated by the v2 fixtures, so adapt_fixture.DEFAULT_WALL_TOKENS (65536) is used, same default and same recorded flag as the v1 tier",
+    "derived_from.path is recorded relative to the longrun dir (not os.path.abspath) so the runtime bytes do not depend on the caller's cwd — this is the one deliberate divergence from adapt_fixture.py",
+    "score_longrun.py cannot emit a scorecard for a zero-byte log (it is an input error, exit 3), so the card's 'verified_success: false + unverifiable count' was measured on a log of two answer-less rows, both with and without a run-start fixture_sha256 header"
+  ],
+  "next_unit_hint": "The bounded tier is runnable and scorable. A real cell (RUN-C) can point run_longrun.py at tasks-v2/runtime-v2/LR-0N.v2.json; note run_longrun.py does not itself measure answer words against answer_budget — that measurement has to live in the scorer or a post-run pass, since the runner only records completions.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/adapt_v2.py",
+    "experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-01.v2.json",
+    "experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-02.v2.json",
+    "experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-03.v2.json",
+    "experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-04.v2.json",
+    "experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-05.v2.json",
+    "experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-06.v2.json",
+    "orchestration/handoffs/V2-RUNTIME.json",
+    "orchestration/units/V2-RUNTIME.md"
+  ],
+  "runtime_v2_written": true,
+  "budget_in_payload": true,
+  "checks_structured_per_fixture": {"LR-01": 12, "LR-02": 8, "LR-03": 8, "LR-04": 9, "LR-05": 9, "LR-06": 9},
+  "idempotent": true
+}

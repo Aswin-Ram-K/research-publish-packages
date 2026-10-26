@@ -1,0 +1,78 @@
+{
+ "unit": "TRACE-ANATOMY",
+ "status": "partial",
+ "artifacts": [
+  "orchestration/units/TRACE-ANATOMY.md",
+  "scratch/trace-anatomy/ledger_analysis.py",
+  "scratch/trace-anatomy/ledger_analysis.json",
+  "scratch/trace-anatomy/counterfactual_analogues.json",
+  "orchestration/handoffs/TRACE-ANATOMY.json"
+ ],
+ "evidence": {
+  "sha256": "431605e624ca90596ec8c5890fc40da08715ae1ffa6759b689255f1670af4ecb  dockets/duval/duval-u55-pinned/material/data/2026-09-28-duval-m0.jsonl (MATCHES card)",
+  "size_bytes": "866816",
+  "line_count": "573",
+  "record_keys": "['seq','ts','session','kind','subject','detail','hash','refs'] (+ optional 'evidence','discoveredBy'); NO messages/role/tool_calls/tool_result/prefix/token fields",
+  "kind_counts": "commit 527, measurement 14, mistake 10, fix 8, decision 7, eval.run 4, discovery 3",
+  "sessions": "2026-09-28-duval-m0 x573 (single session id, no turns)",
+  "detail_chars_total": "606833 (max 4000, 2 records exactly 4000 = source truncation)",
+  "evidence_field": "520 records, 29286 chars total, mean 56.3 chars (one-line proof strings only)",
+  "prefix_chars_summed_analogue": "180551180 -> 45,137,795 tok @4.0 ; 85,569,280 tok @2.11",
+  "no_transcript_on_disk": "grep -rl --include=*.jsonl -E '\"role\"|\"tool_result\"|\"tool_calls\"' . -> only synthetic context-cache cell prompt payloads and prose mentions inside this ledger; no agent session transcript",
+  "tool_calls_used": 13,
+  "bound": 30,
+  "schema_probes": 5
+ },
+ "tables": {
+  "by_class": [
+   {"class": "user", "blocks": 0, "chars": 0, "share_pct": 0.0, "note": "no user messages in file"},
+   {"class": "assistant_text", "blocks": 0, "chars": 0, "share_pct": 0.0, "note": "no messages"},
+   {"class": "assistant_toolcall", "blocks": 0, "chars": 0, "share_pct": 0.0, "note": "no tool calls"},
+   {"class": "tool_result", "blocks": 0, "chars": 0, "share_pct": 0.0, "note": "no tool results; sub-classification (file_read/test_or_log/search/diff_or_patch/other) NOT APPLICABLE"},
+   {"class": "system", "blocks": 0, "chars": 0, "share_pct": 0.0, "note": "no system prompt"},
+   {"class": "other", "blocks": 573, "chars": 680402, "share_pct": 100.0, "note": "all 573 records are docket ledger events (commit/measurement/mistake/fix/decision/eval.run/discovery)"}
+  ],
+  "by_record_kind": [
+   {"kind": "commit", "records": 527, "chars": 667682, "share_pct": 98.13, "mean_chars": 1266.9},
+   {"kind": "mistake", "records": 10, "chars": 3666, "share_pct": 0.54, "mean_chars": 366.6},
+   {"kind": "decision", "records": 7, "chars": 2951, "share_pct": 0.43, "mean_chars": 421.6},
+   {"kind": "fix", "records": 8, "chars": 2293, "share_pct": 0.34, "mean_chars": 286.6},
+   {"kind": "measurement", "records": 14, "chars": 1610, "share_pct": 0.24, "mean_chars": 115.0},
+   {"kind": "discovery", "records": 3, "chars": 1182, "share_pct": 0.17, "mean_chars": 394.0},
+   {"kind": "eval.run", "records": 4, "chars": 1018, "share_pct": 0.15, "mean_chars": 254.5}
+  ],
+  "top_tool_results": [],
+  "top_tool_results_note": "NONE EXIST. The file contains no tool results. The 10 largest records are all commit-message prose at the 4000-char detail cap: seq 535 (4153), 257 (4150), 261 (4143), 417 (4142), 535/5a05be1 (4141), 195 (4140), 524 (4137), 222 (4134), 205 (4133), 211 (4133) chars. They are pointer candidates only in the trivial sense that any prose body is.",
+  "growth": {
+   "unit": "chars of a growing ledger replayed as context (ANALOGUE, not an agent prefix)",
+   "record_1": 704, "p25": 137407, "p50": 311517, "p75": 489307, "p100": 680402,
+   "mean_chars_per_record": 1187.44, "median_chars_per_record": 683, "stdev": 1177.96,
+   "largest_single_jump_chars": 4153, "largest_single_jump_seq": 535
+  },
+  "counterfactuals": {
+   "status": "ANALOGUES ONLY - applied to ledger records, NOT tool results; not valid as measurements of tool-result waste",
+   "base_token_turns_chars": 180551180,
+   "base_tokens": {"at_4.0_cpt": 45137795, "at_2.11_cpt": 85569280},
+   "CF1_dedupe_exact": {"assumption": "16 exact-duplicate detail groups, 2nd..nth (34 records) replaced by pointer", "token_turns_chars": 176956040, "saving_pct_of_total": 1.99, "information_risk": "loses nothing material; duplicates are already near-identical summaries"},
+   "CF2_body_out": {"assumption": "any record older than 2 becomes a 120-char pointer (id+kind+size+first line), body retrievable", "token_turns_chars": 19492695, "saving_pct_of_total": 89.2, "pointer_floor_chars_per_turn": 68400, "information_risk": "every historical body must be re-fetched when cited; one extra round-trip per resurrected pointer, and a retrieval miss is silent"},
+   "CF3_cap": {"assumption": "keep only newest 3 record bodies, drop older entirely", "token_turns_chars": 2096, "saving_pct_of_total": 100.0, "information_risk": "history is deleted, not pointerised; CF3's apparent 100% is the absence of a context"},
+   "CF2_keeps_CF3_loses": {"token_turns_chars": 19490599, "pct_of_base": 10.8, "what_it_is": "the retrievable history itself: the 68400-char/turn pointer floor plus the newest 3 bodies"},
+   "CF3_over_CF2_ratio": "CF3 looks ~9300x cheaper than CF2 only because it deletes the history"
+  },
+  "duplicates": {"exact_duplicate_detail_groups": 16, "records_in_groups": 50, "chars_removable_2nd_to_nth": 23776, "repeated_subject_lines": 9, "extra_subject_occurrences": 9}
+ },
+ "blocker": "The pinned file is a docket/commit event ledger (573 records of kind commit/measurement/mistake/fix/decision/eval.run/discovery), NOT an agent run transcript: no messages, no role/tool_calls/tool_result, no prefix, no token or cache metadata, no turn boundaries. Steps 2-6 of the card are undefined on it, and no agent transcript with real tool results exists elsewhere on disk (verified by grep over all *.jsonl).",
+ "next_unit_hint": "Acquire a genuine transcript (message arrays with role/tool_calls/tool_result, ideally with cached_tokens per request) and re-run the card unchanged: per-turn prefix chars, block classification, tool_result sub-classification (file_read/test_or_log/search/diff_or_patch/other), token-turn ledger, stale-corpse heuristic, top-10 pointer candidates, CF1-CF3. Candidates: Duval harness run logs, an opencode/dsh session JSONL, or a fresh instrumented run. Do not reuse this ledger as a substitute.",
+ "write_paths": [
+  "orchestration/units/TRACE-ANATOMY.md",
+  "scratch/trace-anatomy/",
+  "orchestration/handoffs/TRACE-ANATOMY.json"
+ ],
+ "assumptions": [
+  "Chars are primary and tokens are estimates at 4.0 and 2.11 chars/token, per the card; no tokenizer was run (no model, no network).",
+  "Because the card's object (turns/tool results) does not exist in the file, I computed the nearest defensible analogue (ledger replayed as a growing context) and labelled every such number ANALOGUE; none of it is reported as a token-turn measurement of tool results.",
+  "Pointer width assumed at 120 chars (id + class + size + first line) for CF2/CF3 analogues; the card did not specify a width.",
+  "'Older than 2 turns' interpreted as: the 3 newest records keep bodies.",
+  "No ask_user_question used (automated session); read-only respected - all writes confined to the three declared paths."
+ ]
+}

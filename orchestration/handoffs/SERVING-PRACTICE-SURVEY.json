@@ -1,0 +1,38 @@
+{
+  "unit": "SERVING-PRACTICE-SURVEY",
+  "status": "done",
+  "artifacts": [
+    "docs/EXTERNAL-SERVING-PRACTICE.md",
+    "orchestration/units/SERVING-PRACTICE-SURVEY.md",
+    "orchestration/handoffs/SERVING-PRACTICE-SURVEY.json"
+  ],
+  "evidence": {
+    "command_or_count": "offline survey; 0 inference requests to 192.168.2.168:8012 or :8014; 33 tool calls of a 45 bound",
+    "commands": [
+      "curl -sL https://raw.githubusercontent.com/vllm-project/vllm/main/vllm/benchmarks/serve.py | grep -n 'num_warmups|--ignore-eos|np.percentile'  -> warmup loop at L926, --ignore-eos at L1832, percentiles_ttft_ms at L786",
+      "curl -sL https://raw.githubusercontent.com/vllm-project/vllm/main/vllm/benchmarks/lib/endpoint_request_func.py -> TTFT latched on first chunk with choices (L254-L290); reasoning deltas counted (L547 comment)",
+      "curl -sL https://raw.githubusercontent.com/sgl-project/sglang/main/python/sglang/benchmark/serving.py -> TTFT gated on non-empty choices[0]['text']; p90/p95/p99 via np.percentile; _extract_cache_from_sglext reads sglext.cached_tokens_details",
+      "curl -sL https://raw.githubusercontent.com/vllm-project/vllm/main/docs/design/metrics.md -> vllm:prefix_cache_queries / vllm:prefix_cache_hits counters; TTFT as histogram with explicit bucket caveat",
+      "curl -sL https://raw.githubusercontent.com/triton-inference-server/perf_analyzer/main/genai-perf/README.md -> metric table L489-497 (TTFT/ITL/request latency, p75/p90/p99 only); --warmup-request-count default 0",
+      "python3 order-statistic CI: n=48 -> Bin(48,0.95) 95% CI ranks [43,48] (p89.6-p100); n=384 -> [357,373]; n=1000 -> [937,963]; exponential relSE(p95)=0.63/sqrt(n/48) -> 0.21 at n=48; gap 482.73 ms, SE_gap 191.4 ms, z=2.52"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Implement the protocol from docs/EXTERNAL-SERVING-PRACTICE.md §6 as one card: (a) client.py TTFT on first choices delta + remove wall_ms fallback + per-cell keep-alive session, (b) CacheRow schema fields (ts_utc, attempts, first_token_kind, details_state, cached_source, warmup, concurrency, engine, model, config_sha256), (c) /metrics scrape of prefix_cache_hits/queries around each cell, (d) analyze.py quantile_ci (bootstrap 10000, percentile, seed 20261020) and a report that refuses a p95 without n and CI. Then re-run the four arms at 32-84 reps (n=384-1000 per arm, 1536-4000 requests).",
+  "write_paths": [
+    "docs/EXTERNAL-SERVING-PRACTICE.md",
+    "orchestration/units/SERVING-PRACTICE-SURVEY.md",
+    "orchestration/handoffs/SERVING-PRACTICE-SURVEY.json"
+  ],
+  "assumptions": [
+    "The four p95 figures and the n=48 design were taken from the card and the handoff/measure record; they were not recomputed from the row files in this unit (both endpoints were off-limits).",
+    "vLLM prompt_tokens_details:null on every row is a card-supplied local fact; it was not re-probed (offline unit).",
+    "The exponential tail used for the relative-SE arithmetic is a modelling assumption; the order-statistic CI table does not depend on it.",
+    "The SGLang server build's --enable-cache-report state and version were not checked, so sglext.cached_tokens_details availability is marked unverified."
+  ],
+  "unverified": [
+    "Whether SGLang at 192.168.2.168:8012 emits sglext.cached_tokens_details under this deployment (feature exists in main's source).",
+    "The engine versions behind :8012 and :8014; /health returns 000, so version-sensitive claims are marked contested rather than asserted.",
+    "The actual latency distribution of the four arms (exponential assumed only for relative SE)."
+  ]
+}

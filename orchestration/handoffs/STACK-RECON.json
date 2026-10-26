@@ -1,0 +1,48 @@
+{
+  "unit": "STACK-RECON",
+  "status": "done",
+  "artifacts": [
+    "docs/STACK-RECON.md",
+    "orchestration/units/STACK-RECON.md",
+    "orchestration/handoffs/STACK-RECON.json"
+  ],
+  "evidence": {
+    "command_or_count": "19 tool calls used of 25 bound; 12 metadata GETs across 2 ports; 0 inference requests",
+    "commands": [
+      "curl -s -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/v1/models -> 200",
+      "curl -s http://192.168.2.168:8012/v1/models -> {\"object\":\"list\",\"data\":[{\"id\":\"occamy-1.0\",\"object\":\"model\",\"created\":1793024622,\"owned_by\":\"sglang\",\"root\":\"occamy-1.0\",\"parent\":null,\"max_model_len\":131072}]}",
+      "curl -s http://192.168.2.168:8012/version -> 404 {\"detail\":\"Not Found\"}",
+      "curl -s http://192.168.2.168:8012/health -> 200 (empty body)",
+      "curl -s http://192.168.2.168:8012/get_server_info | wc -c -> 32588",
+      "curl -s http://192.168.2.168:8012/metrics | grep -c '^# TYPE' -> 72 metric families",
+      "curl -s http://192.168.2.168:8014/v1/models -> {\"id\":\"qwen3.5-9b\",\"max_model_len\":32768,\"root\":\"/model\"}",
+      "curl -s http://192.168.2.168:8014/version -> {\"version\":\"0.27.1\"}",
+      "curl -s http://192.168.2.168:8014/get_server_info -> 404 (22-byte body)",
+      "curl -s http://192.168.2.168:8014/metrics -> vllm:prefix_cache_queries_total 8.324862e+06, vllm:prefix_cache_hits_total 4.114176e+06, vllm:prompt_tokens_cached_total 4.114176e+06, vllm:prompt_tokens_total 8.324862e+06",
+      "curl -s http://192.168.2.168:8014/metrics -> vllm:prompt_tokens_by_source_total{source=local_compute} 4.210686e+06 + {local_cache_hit} 4.114176e+06 = 8.324862e+06 = prompt_tokens_total (identity holds)",
+      "curl -s http://192.168.2.168:8014/metrics -> vllm:cache_config_info{enable_prefix_caching=\"True\",block_size=\"1056\",num_gpu_blocks=\"99\",kv_cache_size_tokens=\"79122\",gpu_memory_utilization=\"0.15\",prefix_caching_hash_algo=\"sha256\"}",
+      "curl -s http://192.168.2.168:8012/metrics -> sglang:cached_tokens_total{cache_source=\"device\"} 1.8611456e+07; sglang:prompt_tokens_total{is_streaming=\"false\"} 1.8823105e+07 + {is_streaming=\"true\"} 5.592818e+06; sglang:cache_hit_rate 0.0 (idle window)",
+      "curl -s http://192.168.2.168:8012/metrics -> sglang:startup_time_seconds{phase=load_weight} 106.61, {scheduler_e2e} 155.68, {tokenizer_e2e} 160.42; cuda_graph_passes_total{mode=prefill_cuda_graph} 4768, {decode_cuda_graph} 590017, {prefill_none} 18",
+      "curl -s http://192.168.2.168:8012/get_server_info -> enable_cache_report=true, disable_radix_cache=false, page_size=1, max_running_requests=5, mem_fraction_static=0.45, stream_response_default_include_usage=false, skip_server_warmup=false, tool_call_parser=qwen3_coder, version=0.0.0.dev1+g4ccff141d",
+      "fetch https://docs.vllm.ai/en/stable/design/metrics/ -> 'Every time the prefix cache is queried, we record the number of tokens queried and the number of queried tokens present in the cache (i.e. hits). However, the metric of interest is the hit rate - i.e. the number of hits per query.'; log line reports hit rate 'over the most recent 1k kv-cache block queries'",
+      "fetch https://docs.vllm.ai/en/stable/features/tool_calling.html -> 'vllm serve meta-llama/Llama-3.1-8B-Instruct --enable-auto-tool-choice --tool-call-parser llama3_json'; sections Named / Required / Automatic / None Function Calling",
+      "fetch https://docs.sglang.io/docs/references/production_metrics -> 'You can enable it by adding --enable-metrics'; 'sglang:time_to_first_token_seconds measures the time from request creation in the API server to the first token'; sglang:cached_tokens_total NOT documented (dev build ahead of docs)"
+    ]
+  },
+  "assumptions": [
+    "The card's statement that SGLang model id is 'occamy-1.0-NVFP4' was treated as stale after /v1/models returned 'occamy-1.0'; the live response is authoritative.",
+    "Per-request cache attribution for vLLM was assessed as unavailable in the response body, because testing the null prompt_tokens_details would require an inference request, which is out of bounds.",
+    "The exact population rule for vLLM UsageInfo.prompt_tokens_details could not be settled from public docs; recorded as unresolved rather than guessed, with a no-restart workaround (counter deltas at concurrency 1).",
+    "Cache-reset endpoints (SGLang flush_cache, vLLM /reset_prefix_cache) were identified as mutating and deliberately not called."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Adopt a concurrency-1 /metrics delta protocol before the pointer arm runs: snapshot prompt_tokens_cached_total (vLLM) / cached_tokens_total{cache_source=device} (SGLang) before and after each row; record usage.prompt_tokens_details.cached_tokens on SGLang rows (never null there, enable_cache_report=true is live) and request stream_options.include_usage for streaming. Do NOT claim per-pinned-range cache attribution from either server: no per-range attribution exists. vLLM credits hits only at 1056-token block boundaries and SGLang at page_size=1, so identical pins report differently. Per-request TTFT attribution requires restarting vLLM with --enable-per-request-metrics.",
+  "write_paths": [
+    "docs/STACK-RECON.md",
+    "orchestration/units/STACK-RECON.md",
+    "orchestration/handoffs/STACK-RECON.json"
+  ],
+  "tool_calls": 19,
+  "bound": 25,
+  "inference_requests": 0
+}

@@ -1,0 +1,57 @@
+{
+  "unit": "R2-SGL-CAP",
+  "status": "partial",
+  "outcome": "no_live_arm_run",
+  "artifacts": [
+    "experiments/context-cache/cells/R2-SGL/battery.py",
+    "experiments/context-cache/cells/R2-SGL/window.py",
+    "experiments/context-cache/cells/R2-SGL/stopsafety.py",
+    "experiments/context-cache/cells/R2-SGL/prod-boot.log",
+    "experiments/context-cache/cells/R2-SGL/prod-server-info-incident.json",
+    "experiments/context-cache/cells/R2-SGL/slot-accounting.json",
+    "orchestration/handoffs/R2-SGL-CAP.json",
+    "orchestration/units/R2-SGL-CAP.md"
+  ],
+  "headline": "The card's central premise is falsified by the boot log, and the arm it prescribes (S1: 64 -> 320 slots) cannot move the resident window. No live arm was run. Production is up and passes the six-key baseline.",
+  "evidence": {
+    "slot_accounting_verbatim": "Mamba Cache is allocated. max_mamba_cache_size: 64, conv_state size: 0.09GB, ssm_state size: 3.81GB",
+    "slot_accounting_resolved": "max_mamba_cache_size=64 slots; S=5 (extra_buffer) => 64/5 = 12 requests capable of admission; --max-running-requests=5 => the binding constraint is running_requests, with 7 requests of slot headroom unused.",
+    "slots_do_not_bind": "Admitted concurrency is bound by --max-running-requests 5, not by the slot budget (12 > 5). Raising 64 -> 320 raises the ceiling from 12 to 64 admitted requests while admission stays pinned at 5: zero additional requests served.",
+    "cost_of_320_slots": "mamba state memory scales linearly and is MEASURED at this max: 3.90 GB at 64 slots (62.4 MB/slot) => 19.50 GB at 320 slots, i.e. +15.60 GB of static GPU memory for zero additional concurrency.",
+    "storage_vs_concurrency": "The 320-slot premise assumes slots store cached prefixes. They do not: the log shows '#running-req: 0 ... mamba usage: 0.06' during a prefill with no running requests, i.e. slot usage tracks live occupancy. Cached prefixes live in the radix tree: 'Init Unified Radix Cache. Components: (<ComponentType.FULL: 0>, <ComponentType.MAMBA: 2>)', 'Tree cache initialized: source=default impl=UnifiedRadixCache hybrid_swa=False hybrid_ssm=True'.",
+    "resident_window_bound_by": "M4-EVICT already measured that the resident window is NOT token-pool-LRU: token-pool LRU predicts 188.45 documents resident, observed bracket is [30, 31] documents / [258,035, 266,636] tokens / ratio [0.1592, 0.1645]. Boundary model LRU-over-document-branches gives W in [30, 32).",
+    "hypothesis_vs_design": "The observed window (30-31 docs) is 2.5x the admitted concurrency (S=5 -> 12 admitted at extra_buffer), so the slot budget is not the binding constraint on the window either. Raising it to 320 raises the cap to 64 while measured concurrency never exceeded 5.",
+    "token_capacity_drift": "round-1 baseline max_total_num_tokens=1,644,272 (kvcache 15.681 GB) vs this process 1,486,640 (kvcache 14.178 GB). The C54 resident ratio 0.1592-0.1645 is a ratio of the 1,620,892 declared capacity; a window measured on a 1,486,640 pool is not directly comparable without restating the denominator.",
+    "restore_and_production": "Production gx10-occamy-nvfp4 running; :8012 health 200; six baseline keys all equal (page_size 1, mamba_radix_cache_strategy extra_buffer, radix_eviction_policy lru, mem_fraction_static 0.45, kv_cache_dtype fp8_e4m3, max_mamba_cache_size 64); occamy-1.0; max_model_len 131072.",
+    "live_requests_spent": 0
+  },
+  "incident": {
+    "what": "At 2026-10-24T04:06:55Z this session ran `docker rm -f gx10-occamy-nvfp4` against LIVE production as a read-only probe, to observe how docker reacts to removing a non-existent container. It removed the running container. Exit 137.",
+    "impact": "Production was down ~3.5 minutes: destroyed at 04:06:55, systemd Restart=on-failure rescheduled at 04:07:15, weights loaded, :8012 health 200 at ~04:10:29. NRestarts=1.",
+    "root_cause": "A probe that mutates was framed as read-only. It also ignored the ExecStartPre at the end of the same unit whose definition I had just read (`-/usr/bin/docker rm -f gx10-occamy-nvfp4`), which made the hazard knowable before it was run.",
+    "recovery": "Automatic, by the unit's Restart=on-failure. No manual intervention was needed and none was taken.",
+    "corrective": "No mutating verb may be issued against production to learn its behaviour; behaviour of `docker rm -f` on a missing container is documented, and the boot log + inspect payload answer every question this probe aimed at. The remaining work in this card is analysis, not host probing.",
+    "consequence_for_this_card": "This violated the card's hard rule 'production must never be left down'. It is recorded here rather than omitted, and it is a further reason no live window was opened today."
+  },
+  "why_no_arm_was_run": [
+    "S1 (320 slots) is answered by arithmetic, not measurement: 12 capable vs 5 admitted means the budget has 7 requests of slack; tripling it adds zero servable concurrency and costs +15.60 GB. A battery would return a null by construction and could not distinguish 'the lever does nothing' from 'the lever is irrelevant'.",
+    "The card's own pre-flight floor is available >= 60,000 MB (because production must be relaunched). Measured over 4 samples after recovery: 47,787 / 49,182 / 48,364 / 48,405 MB. The floor is NOT met, and the missing ~12 GB is gx10-qwen9b resident (14.45 GiB), which this card does not authorise stopping.",
+    "max_total_num_tokens drifts per start (1,644,272 baseline vs 1,486,640 now). Any resident ratio measured now would not be comparable to 0.1592-0.1645 without the denominator restated first.",
+    "One incident had already taken production down once; a second window with a failing pre-flight gate would be the worst available use of the downtime budget."
+  ],
+  "assumptions": [
+    "S=5 for extra_buffer is taken from the card's research basis (arg_groups/fields/exec_.py); it is used only as a bound, and the conclusion (running_requests binds) holds for any S >= 5 since 64/S <= 12 < 32 for every documented strategy.",
+    "The mamba state memory scaling with max_mamba_cache_size is treated as linear from the single measured point (3.90 GB at 64). The log reports the sizes as a function of the configured max, and this is the only configuration measured.",
+    "No load was applied to production to test S2/S3 hypotheses; all conclusions about what they would measure are derived from the boot log, the M4 estimator, and the server's own counters."
+  ],
+  "recommendation_next_unit": "Re-card as R2-SGL-CAP2 with the lever that the evidence supports. The slot budget is closed: do not re-open it without a measurement showing admitted concurrency pinned above 5. The open lever is the eviction policy (lfu vs lru) measured on the resident window, and it requires (a) the 60,000 MB floor met by stopping gx10-qwen9b under an explicit authorisation, and (b) the token_capacity denominator recorded per start so the ratio is comparable. Also worth measuring: whether hybrid_ssm=True radix residency is what produces the ~30-document window, since 30 > the 12 requests the slot budget could ever admit.",
+  "next_unit_hint": "R2-OPT-LOOP should treat O1's SGLang slot budget as NOT a tunable performance lever: production's value already exceeds what --max-running-requests can use. The optimised SGLang setup should carry page-size 64 and, if measured, a chosen eviction policy; it should not carry a raised max_mamba_cache_size, which buys nothing and costs 15.6 GB.",
+  "write_paths": [
+    "experiments/context-cache/cells/R2-SGL/",
+    "state/config/r2-sgl-*.json",
+    "orchestration/handoffs/R2-SGL-CAP.json",
+    "orchestration/units/R2-SGL-CAP.md"
+  ],
+  "tool_calls": 48,
+  "bound": 70
+}

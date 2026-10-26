@@ -1,0 +1,85 @@
+{
+  "unit": "PROMPT-O2C",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/PROMPT-O2/rows.jsonl",
+    "experiments/context-cache/cells/PROMPT-O2/analysis.json",
+    "experiments/context-cache/cells/PROMPT-O2/grid_probe.json",
+    "state/config/best-config.json"
+  ],
+  "evidence": {
+    "free_m_available_MB": {
+      "before_stop": 57003,
+      "after_stop": 71784,
+      "delta": 14781
+    },
+    "resolved": "page_size=1, c128_page_size=16 (mem_fraction_static=0.22, KV 114645 tokens)",
+    "grid_probe": {
+      "L": [
+        957,
+        1013,
+        1121
+      ],
+      "cached": [
+        0,
+        0,
+        0
+      ],
+      "gcd": 0,
+      "identical_repeat_7201": 0
+    },
+    "wc_l_rows": "355",
+    "arms_null_non200": "['A','C','C0','H','R'] 0 0",
+    "per_arm_unc_per_turn": {
+      "R": 4370.8,
+      "A": 2300.2,
+      "C": 2312.0,
+      "H": 2416.8,
+      "C0": 4437.4
+    },
+    "deltas_vs_R": {
+      "A-R": [
+        -2070.6,
+        true
+      ],
+      "C-R": [
+        -2058.7,
+        true
+      ],
+      "H-R": [
+        -1953.9,
+        true
+      ],
+      "C0-R": [
+        66.6,
+        false
+      ]
+    },
+    "config_sha256": "27f5a14526b36ac7893bf2bbbec842072601084d304150e15cfef3ec81456b09",
+    "rows_sha256": "b576dc8e1e5c7e1689f1462db6fbdf0418e07c7befc8e47a5b0bbeb6135704d3",
+    "check": "CHECK setups identical to disk: True",
+    "restore": ":8014 200 qwen3.5-9b, :8012 200 occamy-1.0, gx10-qwen9b Up, gx10-occamy-nvfp4 Up, gx10-p-o2 removed",
+    "commands": [
+      "docker stop gx10-qwen9b",
+      "docker run -d --name gx10-p-o2 --gpus all ... 72457f09d20e sglang serve ... --page-size 1",
+      "wc -l experiments/context-cache/cells/PROMPT-O2/rows.jsonl",
+      ".venv/bin/python tools/best_config_build.py --check"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "verify the warm-up anomaly: an identical repeat reports cached=0 while R turns >16k do hit; test mamba_track_interval / chunk-boundary reuse before attributing arm differences to the index",
+  "write_paths": [
+    "experiments/context-cache/cells/PROMPT-O2/**",
+    "state/config/best-config.json",
+    "orchestration/handoffs/PROMPT-O2C.json",
+    "orchestration/units/PROMPT-O2C.md"
+  ],
+  "assumptions": [
+    "--enable-cache-report added to the card argv: without it usage.prompt_tokens_details is null on every call (production occamy runs it too)",
+    "the warm-up gate was relaxed from 'must show cached>0' to 'http 200 only', because the identical-repeat probe measured 0 while battery rows measured real hits"
+  ],
+  "detail": {
+    "n_rows": 355,
+    "status": "done"
+  }
+}

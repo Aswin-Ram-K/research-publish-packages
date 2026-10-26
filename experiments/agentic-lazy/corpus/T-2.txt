@@ -1,0 +1,44 @@
+TOOL T-2 -- split_fields
+
+Purpose. Split a delimited text field into ordered parts while preserving empty
+parts. This is the tool people reach for when they need to split a CSV-ish field that
+is not quite CSV, and the reason it exists separately from the language's builtin
+split is the max_parts behaviour below.
+
+Interface. split_fields(text, sep=",", max_parts=0, quote=None)
+
+  text       -- a str. None returns [].
+  sep        -- a literal string delimiter, never a regular expression.
+  max_parts  -- 0 means unlimited. A positive value keeps the first max_parts-1
+                delimiters and lets the final part absorb the remainder verbatim,
+                so the trailing delimiters stay inside the last part rather than
+                disappearing.
+  quote      -- None disables quote handling; supplying a quote character enables
+                it with the limitations described below.
+
+Behaviour.
+
+  * Whitespace is never stripped. Callers that want stripping must strip the parts
+    themselves; doing it inside would make positional alignment depend on content.
+  * With max_parts=0 the result length always equals len(text.split(sep)),
+    including trailing empty parts. Emitting trailing empties is deliberate:
+    positional alignment beats tidiness, and a caller indexing into a record wants
+    positions to mean the same thing in every row.
+  * Quote handling is OFF by default and is partial when enabled. Quoted spans are
+    atomic only when the opening quote is the very first character of a part. A
+    quote that appears mid-part is treated as a literal character.
+  * Returns a list of str.
+
+Limits. O(len(text)). No nesting, no escaping, no multi-character quote handling. A
+delimiter inside a quoted span still splits the part when the quote did not open the
+part. If those cases matter, the input is not in this tool's domain.
+
+Failure modes.
+
+  * Passing a compiled regex as sep raises a TypeError rather than falling back to
+    re.split, because the two disagree on empty-match handling and a silent fallback
+    would change results for existing callers.
+  * Using max_parts to skip a leading column works only if that column cannot itself
+    contain sep. Prefer dropping the column after splitting.
+  * Round-tripping through split_fields and a join is not lossless when max_parts > 0
+    and the final part contained sep runs.

@@ -1,0 +1,47 @@
+{
+ "unit": "C8-PARTITION-FIX",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/RECORD.md"
+ ],
+ "evidence": {
+  "c8_line": 130,
+  "len_before": 1780,
+  "len_after": 2916,
+  "sentinel_hash_before": "9dcf367b64d39248c666644fe6373b52154bcbd3c67390b32ff95b7dd0054967",
+  "sentinel_hash_after": "9dcf367b64d39248c666644fe6373b52154bcbd3c67390b32ff95b7dd0054967",
+  "lines_before": 140,
+  "lines_after": 140,
+  "adjudicated_count": 5,
+  "c5_len": 1802,
+  "wc_l": 140,
+  "grep_partition_withdrawn": 1,
+  "grep_c8_prefix": 1,
+  "grep_bprobe400_rep0": 1,
+  "bprobe_occurrences_before": 1,
+  "bprobe_occurrences_after": 2,
+  "commands": [
+   "cp experiments/ptr-engine/RECORD.md /tmp/RECORD.md.bak5",
+   "wc -l experiments/ptr-engine/RECORD.md",
+   "grep -c 'Partition withdrawn 2026-10-25' experiments/ptr-engine/RECORD.md",
+   "grep -c 'C8 \u2014 residual detail' experiments/ptr-engine/RECORD.md",
+   "grep -c 'Bprobe-400 rep 0' experiments/ptr-engine/RECORD.md",
+   "grep -c 'Adjudicated 2026-10-25' experiments/ptr-engine/RECORD.md"
+  ],
+  "pre_append_reconstruct_len": 1780,
+  "target_line_is_line_130": true
+ },
+ "assumptions": [
+  "Stated expectation len_before=1326 did not match disk: the single target line (line 130, '**C8 \u2014 residual detail') measured 1780 characters before the append. The C5 expectation of 1802 DID match disk exactly, confirming a character-count basis, so 1326 is stale for this file version; the operative invariants (exactly one target line, sentinel hash stable under <TARGET>, 140 lines, 5 'Adjudicated 2026-10-25', C5 unchanged) were therefore asserted against disk, and len_before is reported as measured rather than as quoted.",
+  "'Bprobe-400 rep 0' occurs more than once as a substring but only on the single C8 line; the contracted check is grep -c (line count) == 1, which holds. Occurrence totals are recorded separately in evidence so the distinction is not lost.",
+  "Sentinel hash = sha256 of the whole file with the target line's content replaced by the literal <TARGET>, computed before and after the one append.",
+  "No live requests; local file I/O and greps only.",
+  "The /tmp/RECORD.md.bak5 backup vanished between tool calls (the harness appears to give each bash call a fresh /tmp); it was genuinely present at cp time, and the pre-write restore path was exercised on the first (aborted) attempt, which rewrote the original bytes from memory and verified open(p,'rb').read()==orig. The final verified state was therefore proven from in-process state plus the head/tail reconstruction of the pre-append line, not from the backup file."
+ ],
+ "blocker": "",
+ "next_unit_hint": "C8 stays OPEN for the 321 rows of concern; a fresh unit should find a predicate on disk that genuinely yields 321 rows and express the denominator partition as a disjoint sum, instead of reusing the withdrawn 387/321 pair.",
+ "write_paths": [
+  "experiments/ptr-engine/RECORD.md",
+  "orchestration/handoffs/C8-PARTITION-FIX.json"
+ ]
+}

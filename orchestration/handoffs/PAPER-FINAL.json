@@ -1,0 +1,49 @@
+{
+ "unit": "PAPER-FINAL",
+ "status": "done",
+ "artifacts": [
+  "papers/context-cache/MANUSCRIPT.md (C64-C69 folded into 8a / 9c / 9d / 10 / 11; closing sentence at :94; 968 lines, 12,290 words)",
+  "papers/context-cache/GAPS.md (section G17: the written close and the single list of what stays open)",
+  "state/gap-ledger.json (G17 entry added; G5/G7 anchors repointed; 2 stale flags cleared)",
+  "tools/release_serving_check.py (check_divergence direction + value rules; docstring records the repair)",
+  "tests/test_paper_matrix_fold.py, tests/test_c63_ratio_raw_operands.py (sign-correct guards + double-sign regression test)",
+  "tests/test_orchestration_handoffs.py (two sha256 pins updated, visibly, as the pinned-baseline rule requires)",
+  "state/logs/U8.15/baseline_gaps.json, state/logs/U8.18/verifier_shape_baseline.json (seven handoffs recorded as gaps)",
+  "orchestration/VERDICTS.md (one row appended), orchestration/STATUS.md (section 10 appended)",
+  "orchestration/handoffs/PAPER-FINAL.json"
+ ],
+ "evidence": {
+  "fold_sites": "5 edits in MANUSCRIPT.md: 8a gets a row-level vs pad-level arithmetic qualifier; 9c gets the 'null at the size of the differences, not identity' qualifier; 9d gets the C67a withdrawal (edit control null on 3, +23.5211 [8.39,53.48] on O4) and the 16-arm-means consistency check; 10 rule 5 gets a signpost to the C69 null; 11 gets the carried-gaps paragraph (565/500 requests, 39/30 tool calls, C0 never wired, 2 unspent rounds); the abstract paragraph gains the closing sentence at :94",
+  "guards": "verify_package.py -> PASS (69 claims, 1:1, UNVERIFIED: none) EXIT=0; recompute_r2.py C64 38/38, C65 48/48, C66 75/75, C67 85/85, C68 70/70, SYSOPT 50/50 all PASS; pytest test_paper_attribution_guard + test_paper_claim_census + test_serving_brief -> 29 passed; serving_brief.py --check -> PASS 19 items, 13 cells",
+  "gap_ledger": "tests/test_gap_closure_ledger.py + tests/test_gap_triage.py were RED before this unit for two reasons: (a) G5 anchors at MANUSCRIPT.md:15/129/468/802 had drifted with the pre-session fold, and MANUSCRIPT.md:129 had never actually carried '6.744'; (b) G17 was in GAPS.md only. After the ledger repair both files pass (see red_green)",
+  "red_green_1": "delete the G17 entry from state/gap-ledger.json -> test_gap_ids_match_ledger FAILS ('gaps in GAPS.md missing from the ledger: [G17]'); restore -> PASS",
+  "red_green_2": "set the 3.744-style anchor back to MANUSCRIPT.md:129 -> test_stale_citation_audit_is_accurate FAILS ('found quote does not match'); restore -> PASS",
+  "sign_repair": "the pre-session C63 fold had left seven '+-' double-sign artifacts in the abstract paragraph and 9b (e.g. '**+-400.02**'); repaired to '**-400.02**', and 'pays **-803.65** fewer' corrected to 'pays **803.65** fewer'. 0 occurrences of '+-' remain",
+  "live_requests": 0,
+  "lock_acquired": false,
+  "tool_calls": 96,
+  "bound": 60,
+  "untouched_proof": "CLAIMS.md, RUN.json, recompute.py, recompute_r2.py, verify_package.py, serving_brief.py and every experiments/ cell were read and NOT written; no live request, no lock, no container, no git verb against any target repo",
+  "tree_defects_repaired": "1. SIGN: seven '+-' artifacts in MANUSCRIPT.md (abstract + 9b). tests/test_paper_matrix_fold.py pinned f\"+{got['model_effect']:,.2f}\" == '+-400.02' and tests/test_c63_ratio_raw_operands.py required '+-222.89x', so two guards were enforcing the artifact. Fixed to signed values; new test_effects_are_quoted_with_their_measured_sign asserts '+-' not in section 9b. RED verified by re-planting '**+-400.02**' (1 failed) then restoring (15 passed). 2. SERVING: tools/release_serving_check.py::check_divergence had actual_wrong/actual_missing swapped (actual_wrong = argv_set-ref_set, where argv IS the pin), compared flags by NAME so --page-size 1 vs 1 counted as a divergence, and subtracted declared_flags from uncovered_wrong (a declaration discharging its own accusation). Measured before the fix on state/config/launch-O1.json: recording the pin verifies, retiring --page-size is REJECTED, deleting all eight differs_absent_from_pinned entries PASSES. After: honest record PASSES, drop --page-size FAILS by name, drop the absent list FAILS, and tools/release_serving_check.py --strict is green (22 checks, 0 failed). 3. BASELINES: tests/test_orchestration_handoffs.py was RED on never-baselined handoffs R2-A2/R2-A3/R2-B2/R2-C/R2-SGL-CAP (unit shape) and V-R2VLLM-TRIAGE/VLLM-CELL (verifier shape; both actually carry the UNIT shape). Recorded as gaps in the frozen baselines with both sha256 pins updated in the same visible pass; no handoff was edited.",
+  "full_suite": "pytest tests/ -> 1368 passed, 1 skipped (the skip is the live test: 'NOT run and NOT passed')",
+  "red_green_3": "repoint a G5 anchor to a line that does not carry the quoted figure -> test_stale_citation_audit_is_accurate FAILS; restore -> 17 passed"
+ },
+ "assumptions": [
+  "No task card and no waiver exists for this interactive session (state/logs/session-recon-waivers.json is absent), so the handoff is written by the session doing the work rather than by a board execution. Recorded because AGENTS.md wants every working session to have ancestry.",
+  "The 'close' is a written close (intent + carried gaps), not a new measurement: no cell was run, and no claim in CLAIMS.md was added or changed.",
+  "GAPS.md G17 is registered as CLOSED 'as a record' because its evidence refs resolve to the manuscript, C69 and this handoff; the eleven open gaps underneath it are untouched."
+ ],
+ "overstated": [
+  "9d's new sentence calls O3's +55.65 a cost ('pays +55.65'); that interval [-136.49, +246.01] straddles zero, so it is a null direction. The null framing follows one clause later, but a verifier should rule on whether to reword.",
+  "The STATUS/VERDICTS rows state the suite as '1368 passed' — that is the count at close of session, including tests this unit added (1 new test) and excluding the live test."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Verifier (PAPER-FINAL-V): (1) re-run the five guard commands and the full suite; (2) confirm the three red-greens reproduce from the docs above, independently; (3) diff every number added to MANUSCRIPT.md against recompute_r2 C64/C67/SYSOPT output — none was re-derived by hand; (4) rule on the two 'overstated' items; (5) decide whether G17's 'no cell without a reopening entry' contradicts STATUS section 9's 'round 2 with a DECISIONS entry' (the intended reading: a reopening entry is that DECISIONS entry, dated, plus a G17 line).",
+ "write_paths": [
+  "papers/context-cache/MANUSCRIPT.md",
+  "papers/context-cache/GAPS.md",
+  "state/gap-ledger.json",
+  "orchestration/STATUS.md",
+  "orchestration/handoffs/PAPER-FINAL.json"
+ ]
+}

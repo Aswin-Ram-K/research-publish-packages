@@ -34,7 +34,13 @@ RECOMPUTE_PATH = PKG / "recompute.py"
 PACKAGE_PATH = PKG / "PACKAGE.md"
 DEFAULT_READER_MAP = PKG / "READER-MAP.md"
 
-CLAIM_RE = re.compile(r"^\|\s*(C\d{2})\s*\|", re.MULTILINE)
+# The ledger's claim rows are bare ("| C64 | title | value | source | command |"): the
+# first cell IS the id, optionally followed by the claim's title.
+#: The one claim-id pattern this source declares, in the canonical form every census source
+#: agrees on (`tests/test_paper_claim_census.py` parses this exact literal).
+CENSUS_RE = re.compile(r"^\|\s*(C\d{2})\s*\|")
+CLAIM_RE = re.compile(r"^\|\s*(?:<a\s+id=\"(C\d{2})\"\s*></a>\s*)?(C\d{2})(?![0-9a-z])",
+                      re.MULTILINE)
 CELL_RE = re.compile(r"experiments/context-cache/cells/[A-Za-z0-9._/-]+")
 ROW_SUFFIXES = (".jsonl", ".json")
 UNVERIFIED_RE = re.compile(r"UNVERIFIED", re.IGNORECASE)
@@ -86,7 +92,26 @@ def surface_errors(rows: list[tuple[int, list[str], str]]) -> list[str]:
     errors: list[str] = []
     for lineno, cells, heading in rows:
         first = cells[0] if cells else ""
-        if re.fullmatch(r"C\d{2}", first):
+        # Rebuild the row line from its first cell and test with the ONE declared pattern, so
+        # admission is decided by the same regex `parse_claim_ids` counts with.  Testing the
+        # cell alone (`CENSUS_RE.match(first)`) can never succeed: the pattern is anchored on
+        # the leading pipe, so every claim row read as invisible -- how this gate reported all
+        # 69 claim rows at once -- and the sub-claim branch below then re-admitted just the
+        # `C64a`/`C67a` correction rows, i.e. the exact opposite of what is admitted.
+        if CENSUS_RE.match(f"| {first}|"):
+            continue  # a claim row: the first cell is the claim id
+        if re.match(r"C\d{2}[ab](?![0-9a-z])", first):
+            # A sub-claim (`C64a`) is not a row of its own: it is a correction to C64's
+            # reading, ruled by C64's runner, and the ledger carries it inside C64's claim
+            # cell so RECOMPUTE-MAP and the census stay 1:1.  As its own row it is counted by
+            # nothing -- `CENSUS_RE` stops at two digits -- while `parse_claim_ids`' looser
+            # lookahead still picks it up, and it would inherit C64's runner silently.  So it
+            # is refused here rather than skipped, until it is folded into its parent's row.
+            errors.append(
+                f"CLAIMS.md:{lineno}: sub-claim {first!r} stands as a row of its own; no census "
+                f"counts it and it would ride its parent's runner -- fold it into the "
+                f"{first[:3]} row's claim cell"
+            )
             continue
         if first in HEADER_CELLS or set(first) <= set("-: "):
             continue
@@ -102,8 +127,14 @@ def surface_errors(rows: list[tuple[int, list[str], str]]) -> list[str]:
 
 
 def parse_claim_ids(path: Path) -> list[str]:
-    """Claim ids as they appear as the first cell of a CLAIMS.md table row."""
-    return CLAIM_RE.findall(path.read_text(encoding="utf-8"))
+    """Claim ids as they appear as the first cell of a CLAIMS.md table row.
+
+    The id is whichever group matched -- the anchor's or the bare label's -- and a sub-claim
+    (``C64a``) is its parent's id, so one claim never appears twice.  ``dict.fromkeys`` keeps
+    the file order the downstream 1:1 checks report in.
+    """
+    text = path.read_text(encoding="utf-8")
+    return list(dict.fromkeys(m.group(1) or m.group(2) for m in CLAIM_RE.finditer(text)))
 
 
 def parse_reader_map(path: Path) -> list[dict[str, str]]:

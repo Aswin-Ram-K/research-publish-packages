@@ -1,0 +1,72 @@
+{
+ "unit": "FIX-CLAIMSTABLE",
+ "status": "done",
+ "artifacts": [
+  "papers/context-cache/CLAIMS.md",
+  "papers/context-cache/MANUSCRIPT.md",
+  "tests/test_claims_value_guard.py",
+  "orchestration/units/FIX-CLAIMSTABLE.md"
+ ],
+ "evidence": {
+  "command_or_count": {
+   "verify_package": "PASS - 69 claims in CLAIMS.md, 69 mapped 1:1, 8 script-backed + 61 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none",
+   "recompute_all": "COVERAGE GUARD PASS  69 claims documented, 67 runnable here + 2 script-backed",
+   "pytest_trio": "39 passed in 0.17s",
+   "pytest_value_guard": "5 passed in 0.02s",
+   "table_before": {
+    "rows": 45,
+    "unique_paths": 37,
+    "duplicated_paths": 8,
+    "dangling": [
+     "P2-REPAD-rows",
+     "R2-VLLM-CELL-rows"
+    ]
+   },
+   "table_after": {
+    "rows": 37,
+    "unique_paths": 37,
+    "duplicated_paths": 0,
+    "dangling": [
+     "rebuilt"
+    ]
+   },
+   "pins_suite": "tests/test_round1_record_pins.py 5 passed",
+   "recompute_r2_all_exit": 0
+  },
+  "red_green": {
+   "i_plant": "CLAIMS.md C69 'dense 19/20 -> 18/20' -> 'dense 20/20 -> 20/20': FAILED tests/test_claims_value_guard.py::test_quality_pairs_are_written_as_pairs - AssertionError: C69 must state the dense quality pair '19/20 -> 18/20'; cell holds: **MoE (O1, SGLang)**: V0 522.7183; V1 P1 **652.8310**, ... (1 failed, 4 passed)",
+   "i_restore": "5 passed in 0.01s",
+   "ii_plant": "MANUSCRIPT.md:901 'all 12 arms' -> '11 of 12 arms': FAILED tests/test_claims_value_guard.py::test_census_line_does_not_overstate_the_arms_c62_measured - AssertionError: MANUSCRIPT.md:901 must read 'all 12 arms contain'; it reads: a median of +7, and 11 of 12 arms contain at least one turn below their baseline. A reader (1 failed, 4 passed)",
+   "ii_restore": "5 passed in 0.01s",
+   "byte_exact": "MANUSCRIPT.md sha256 3e254a1daad2cb2a6c0567b151bb13257e694894c09aabf8f6dfe7ea36936362 before and after both probes"
+  },
+  "commands": [
+   "PYTHONDONTWRITEBYTECODE=1 python3 papers/context-cache/verify_package.py",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/recompute.py all",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_paper_attribution_guard.py tests/test_claims_decompose.py tests/test_gap_closure_ledger.py -q",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_claims_value_guard.py -q",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_round1_record_pins.py -q",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q"
+  ]
+ },
+ "blocker": "",
+ "residual": [
+  "C63 has no Value cell (CLAIMS.md:230 is a 2-cell row; V2C moved its numbers into the claim text plus a MTP CORRECTION note). recompute.py C63 still PASSes; the claim is not cell-guarded and my guard does not cover it.",
+  "The five pre-V2C dangling source refs (G3, TUNED, WIN-SGL, WIN-VLLM, 'rebuilt') are untouched: V2D recorded them as pre-existing, and the pre-V2C table never defined them.",
+  "The guard pins C62/C64/C65/C69 only. C66/C67/C68 remain unguarded at cell level because their EXPECTED dicts pin per-cell internals the cells do not restate; they are covered by recompute_r2.py C66/C67/C68 PASS (75/85/70 values)."
+ ],
+ "assumptions": [
+  "V2C had deleted 15 legitimately defined source paths; restoring the pre-V2C table and re-adding only genuinely new keys means those come back, or verify_package/recompute pass while citing undefined paths.",
+  "R2-VLLM-CELL-rows retired rather than defined: the only candidate file (SYS-OPT/round-result.json) is a JSON artefact whose row count is payload not lines, and defining it broke test_round1_record_pins (assert 72 == 71). C65 now cites R2P-O4."
+ ],
+ "next_unit_hint": "Give C63 a real Value cell and a recompute pin, or drop it to a prose-only claim; until then it is the one claim whose numbers exist only as text.",
+ "write_paths": [
+  "papers/context-cache/CLAIMS.md",
+  "papers/context-cache/MANUSCRIPT.md",
+  "papers/context-cache/recompute_r2.py",
+  "tests/test_claims_value_guard.py",
+  "orchestration/handoffs/FIX-CLAIMSTABLE.json",
+  "orchestration/units/FIX-CLAIMSTABLE.md"
+ ],
+ "tool_calls_used": 19
+}

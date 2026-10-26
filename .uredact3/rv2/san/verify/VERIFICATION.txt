@@ -1,0 +1,158 @@
+==============================================================
+UREDACT1 acceptance test   2026-10-16T00:00:54Z
+as-audited : repro/encoder-crossover-190
+sanitised  : repro/encoder-crossover-190-SANITISED
+scratch    : /home/zer0null/reserach extarctor/.uredact3/rv2/w
+==============================================================
+
+### 1. T1 instrument digest (EXPECTED TO CHANGE — declared, not silent)
+076164ac53c2c1aac130953345c481f88b51f4d6fb93d465c7430308a99b4796  /home/zer0null/reserach extarctor/.uredact3/rv2/w/orig/fixture/reflex-decisions.ts
+23515654ea48873e88572b1a63916fbaa44d65b4f81c1970e38086b3fdff030c  /home/zer0null/reserach extarctor/.uredact3/rv2/w/san/fixture/reflex-decisions.ts
+-- target HEAD (read-only) --
+  not supplied - export TARGET_REPO to the path of the read-only target repository to re-run this check
+
+### 2. T5 chance floor (mean 1/k over the 190) recomputed from the fixture, both trees
+orig  cases 190  chanceFloorMean1overK 0.29105263157894734  options_total 721
+san  cases 190  chanceFloorMean1overK 0.29105263157894734  options_total 721
+
+### 3. T4 second-labeller re-run (shipped readers, unmodified) + scoring-projection digest
+  parse_fixture.py [orig] exit=0 stderr=[]
+  compare.py       [orig] exit=0 stderr=[]
+  scoring-projection (id,kind,question,options,correct) sha256 [orig] 57a29b4e78bff60f84309e2e95b56f49663884a13b801345eecd93813ecbf300
+  cases [orig] 190  empty_rationales 0  empty_namespaces 0
+  _line values preserved [orig] [86, 97, 108] ... [2197, 2208]
+  parse_fixture.py [san] exit=0 stderr=[]
+  compare.py       [san] exit=0 stderr=[]
+  scoring-projection (id,kind,question,options,correct) sha256 [san] b85e4585d8c7f0beec02620356b8fcb2b53bb27b0c9e5544bf51e8368bec7a26
+  cases [san] 190  empty_rationales 190  empty_namespaces 190
+  _line values preserved [san] [86, 97, 108] ... [2197, 2208]
+
+### 4. T3 prepare.py re-run (steps 3-4; no torch, no network)
+  prepare.py [orig] exit=0
+  prepare.py [san] exit=0
+-- diff of the two stdout logs (paths normalised) --
+  PREPARE STDOUT IDENTICAL
+-- rendered split digests --
+24c39afa8606942ac2f4fb3e6f1ce5c2b0c9ee581b67d1aed38260d4aa020c09  /home/zer0null/reserach extarctor/.uredact3/rv2/w/orig/harness/data/train.jsonl
+24c39afa8606942ac2f4fb3e6f1ce5c2b0c9ee581b67d1aed38260d4aa020c09  /home/zer0null/reserach extarctor/.uredact3/rv2/w/san/harness/data/train.jsonl
+d311a99f0d5b2bd8bcff03e9913b3857ec4c98ffd3714ce9a7afa42514eaa976  /home/zer0null/reserach extarctor/.uredact3/rv2/w/orig/harness/data/dev.jsonl
+d311a99f0d5b2bd8bcff03e9913b3857ec4c98ffd3714ce9a7afa42514eaa976  /home/zer0null/reserach extarctor/.uredact3/rv2/w/san/harness/data/dev.jsonl
+
+### 5. T2 metrics.json: sanitised regeneration vs as-audited regeneration
+  orig-regenerated == san-regenerated : True
+  san-regenerated  == shipped (hand-added keys stripped) : True
+  HEADLINE NUMBERS from the sanitised regeneration:
+    comparison cases                                     190
+    options_total                                        721
+    routeA kappa (CLAIMS 0.3252)                         0.32520740993294694
+    routeB agreement (0.9052631578947369)                0.9052631578947369
+    routeB kappa (0.9013584840356494)                    0.9013584840356494
+    n_disagreements (18)                                 18
+    AB mutual agreement (CLAIMS 0.3526)                  0.3526315789473684
+    closed-subset kappa (CLAIMS 0.8837)                  0.8837023738280471
+    roster/bespoke kappa (CLAIMS 0.9140)                 0.9139973672663448
+    disagreements_count_routeB                           18
+
+### 6. disagreements.jsonl: only recorded_rationale may differ
+  rows 18 18
+  keys that differ: ['question', 'recorded_rationale']
+  every other key identical: False
+  sanitised recorded_rationale values all empty: True
+
+### 7. RESIDUAL STRICT-MECHANISM SCAN (sanitised vs as-audited), per file
+-- orig --
+   80  ./second-labeller/reflex-decisions.sandbox.ts
+   80  ./fixture/reflex-decisions.ts
+   68  ./second-labeller/cases.json
+   68  ./harness/data/fixture-190.json
+   50  ./second-labeller/blinded_cases.json
+    8  ./results/eval-shuffled-label.json
+    7  ./results/eval-majority-class.json
+    7  ./results/eval-deberta-v3-base.json
+    6  ./results/eval-setfit-mpnet.json
+    6  ./results/eval-modernbert-base.json
+    6  ./results/baselines.json
+    5  ./second-labeller/EVIDENCE.md
+    5  ./fixture/DECISION_CASE_SCHEMA.ts
+    4  ./second-labeller/parse_summary.json
+    4  ./second-labeller/parse-orig.stdout
+    3  ./second-labeller/disagreements.jsonl
+    2  ./second-labeller/RUN.json
+    2  ./second-labeller/OWED_CORRECTIONS.md
+    1  ./second-labeller/parse_fixture.py
+    1  ./second-labeller/PREREGISTRATION.md
+    1  ./README.md
+    1  ./MANIFEST.json
+    1  ./INTEGRITY.md
+TOTAL LINES: 416
+-- san --
+    8  ./results/eval-shuffled-label.json
+    7  ./results/eval-majority-class.json
+    7  ./results/eval-deberta-v3-base.json
+    6  ./second-labeller/reflex-decisions.sandbox.ts
+    6  ./results/eval-setfit-mpnet.json
+    6  ./results/eval-modernbert-base.json
+    6  ./results/baselines.json
+    6  ./fixture/reflex-decisions.ts
+    6  ./SCRUB_REPORT.md
+    5  ./RESIDUALS.md
+    4  ./second-labeller/parse_summary.json
+    4  ./second-labeller/parse-san.stdout
+    4  ./second-labeller/cases.json
+    4  ./second-labeller/blinded_cases.json
+    4  ./harness/data/fixture-190.json
+    3  ./fixture/DECISION_CASE_SCHEMA.ts
+    1  ./second-labeller/parse_fixture.py
+    1  ./second-labeller/RUN.json
+    1  ./second-labeller/PREREGISTRATION.md
+    1  ./MANIFEST.json
+TOTAL LINES: 90
+
+### 8. RESIDUAL HITS IN THE SANITISED TREE, with the matching text (for classification)
+./SCRUB_REPORT.md:34:The **mechanism vocabulary** patterns (`src/broker`, `StateClass`, `grantPolicy`, `admit(`, `expanded[`)
+./SCRUB_REPORT.md:84:| `StateClass` | 108 | 108 | untouched — instrument vocabulary (UTOK1) |
+./SCRUB_REPORT.md:85:| `grantPolicy` | 79 | 79 | untouched — instrument vocabulary (UTOK1) |
+./SCRUB_REPORT.md:86:| `admit(` | 43 | 43 | untouched — instrument vocabulary (UTOK1) |
+./SCRUB_REPORT.md:143:* The **fixture/dataset instrument vocabulary** — `src/broker` 6, `StateClass` 108, `grantPolicy` 79,
+./SCRUB_REPORT.md:144:  `admit(` 43, `expanded[` 53 in the subset, plus 3/97/88/11/17 in the experiment tree. These **cannot**
+./MANIFEST.json:86:      "source": "the read-only target repository/evals/fixtures/reflex-decisions.ts (lines 53-75, the DecisionKind union + DecisionCase interface)
+./fixture/DECISION_CASE_SCHEMA.ts:3://   lines 53-75 (the DecisionKind union and the DecisionCase interface).
+./fixture/DECISION_CASE_SCHEMA.ts:8:export type DecisionKind =
+./fixture/DECISION_CASE_SCHEMA.ts:19:  kind: DecisionKind;
+./harness/data/fixture-190.json:72:   "none -- admit() mints the state"
+./harness/data/fixture-190.json:573:   "the expanded[] ref list",
+./harness/data/fixture-190.json:1019:  "question": "The compiled prompt contract is content-addressed per (class, provider family, schema version). Which family does
+./harness/data/fixture-190.json:1033:  "question": "The tool plane is implemented by Needle 3, a grammar-constrained generator that compiles ActionIR into a schema-v
+./second-labeller/parse-san.stdout:37:  "none -- admit() mints the state": 1,
+./second-labeller/parse-san.stdout:62:  "the expanded[] ref list": 1,
+./second-labeller/parse-san.stdout:128:   "the expanded[] ref list": 1,
+./second-labeller/parse-san.stdout:166:   "none -- admit() mints the state": 1,
+./second-labeller/reflex-decisions.sandbox.ts:53:export type DecisionKind =
+./second-labeller/reflex-decisions.sandbox.ts:64:  kind: DecisionKind;
+./second-labeller/reflex-decisions.sandbox.ts:146:    options: ["reasoner (propose only)", "editor (attached, writes)", "none -- admit() mints the state"],
+./second-labeller/reflex-decisions.sandbox.ts:572:    options: ["the expanded[] ref list", "the token count alone", "the model's own account", "the manifest's mtime"
+./second-labeller/reflex-decisions.sandbox.ts:930:      "The compiled prompt contract is content-addressed per (class, provider family, schema version). Which family
+./second-labeller/reflex-decisions.sandbox.ts:941:      "The tool plane is implemented by Needle 3, a grammar-constrained generator that compiles ActionIR into a sch
+./second-labeller/parse_fixture.py:50:    has the option string "the expanded[] ref list", whose `]` truncates the match.
+./second-labeller/blinded_cases.json:57:   "none -- admit() mints the state"
+./second-labeller/blinded_cases.json:444:   "the expanded[] ref list",
+./second-labeller/blinded_cases.json:794:  "question": "The compiled prompt contract is content-addressed per (class, provider family, schema version). Which family 
+./second-labeller/blinded_cases.json:805:  "question": "The tool plane is implemented by Needle 3, a grammar-constrained generator that compiles ActionIR into a sche
+./second-labeller/cases.json:77:   "none -- admit() mints the state"
+./second-labeller/cases.json:616:   "the expanded[] ref list",
+./second-labeller/cases.json:1094:  "question": "The compiled prompt contract is content-addressed per (class, provider family, schema version). Which family does th
+./second-labeller/cases.json:1109:  "question": "The tool plane is implemented by Needle 3, a grammar-constrained generator that compiles ActionIR into a schema-vali
+./second-labeller/parse_summary.json:37:  "none -- admit() mints the state": 1,
+./second-labeller/parse_summary.json:62:  "the expanded[] ref list": 1,
+./second-labeller/parse_summary.json:128:   "the expanded[] ref list": 1,
+./second-labeller/parse_summary.json:166:   "none -- admit() mints the state": 1,
+./second-labeller/PREREGISTRATION.md:29:  comment, the `DecisionKind` / `DecisionCase` type declarations, the array opening, and one
+./second-labeller/RUN.json:112:    "description": "First parser used non-greedy 'options: \\[(.*?)\\]'; the option string 'the expanded[] ref list' in context.packag
+./RESIDUALS.md:18:StateClass|grantPolicy|materialiseGrants|grantKey|admit\(|src/(broker|scope|layer|loop|policy|state)\.ts|content-addressed|DecisionKind|expanded\[\
+-- fixture residue, by field class --
+  question     cases_with_hit=  2 occurrences=2
+  options      cases_with_hit=  2 occurrences=2
+  rationale    cases_with_hit=  0 occurrences=0
+  namespaces   cases_with_hit=  0 occurrences=0
+
+VERIFICATION COMPLETE. Log: verify/VERIFICATION.txt

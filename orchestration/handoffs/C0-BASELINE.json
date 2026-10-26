@@ -1,0 +1,109 @@
+{
+ "unit": "C0-BASELINE",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/measure/rows-baseline-2026-10-26.jsonl",
+  "orchestration/handoffs/C0-BASELINE.json",
+  "orchestration/units/C0-BASELINE.md"
+ ],
+ "arms_completed": [
+  "C0",
+  "R",
+  "C"
+ ],
+ "requests_sent": 105,
+ "rows_written": 105,
+ "rows_by_arm_model": {
+  "occamy-1.0-NVFP4": {
+   "C0": 12,
+   "R": 24,
+   "C": 12
+  },
+  "qwen3.5-9b": {
+   "C0": 12,
+   "R": 33,
+   "C": 12
+  }
+ },
+ "c0_accuracy": {
+  "sglang": {
+   "model": "occamy-1.0-NVFP4",
+   "correct": 0,
+   "of": 3
+  },
+  "vllm": {
+   "model": "qwen3.5-9b",
+   "correct": 0,
+   "of": 3
+  }
+ },
+ "pointer_accuracy": {
+  "sglang": {
+   "model": "occamy-1.0-NVFP4",
+   "correct": 3,
+   "of": 3,
+   "protocol": "tool-call fetch"
+  },
+  "vllm": {
+   "model": "qwen3.5-9b",
+   "correct": 0,
+   "of": 3,
+   "protocol": "text FETCH protocol (tool-call refused by server)"
+  }
+ },
+ "compaction_accuracy": {
+  "sglang": {
+   "model": "occamy-1.0-NVFP4",
+   "correct": 0,
+   "of": 3
+  },
+  "vllm": {
+   "model": "qwen3.5-9b",
+   "correct": 0,
+   "of": 3
+  }
+ },
+ "c0_uncached_per_turn": {
+  "sglang": 1546.1,
+  "vllm": 4676.8
+ },
+ "pointer_uncached_per_turn": {
+  "sglang": 2318.8,
+  "vllm": 6362.5
+ },
+ "pointer_over_c0_uncached_ratio": {
+  "sglang": 1.5,
+  "vllm": 1.36
+ },
+ "ratio_row_set": "rows-baseline-2026-10-26.jsonl, arm C0 vs arm R, error-free rows only, 3 reps x 4 turns per model (occamy 12 C0 / 24 R rows; qwen 12 C0 / 21 R rows)",
+ "compaction_uncached_per_turn": {
+  "sglang": 1407.7,
+  "vllm": 1991.2
+ },
+ "cached_accounting": "SGLang reports prompt_tokens_details; vLLM (qwen3.5-9b) returns prompt_tokens_details=null on every row, so vLLM uncached = gross prompt tokens (upper bound, cached_reported false 12/12 C0 and 21/21 R text rows)",
+ "evidence": {
+  "commands": [
+   "curl -m5 -s -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/get_server_info -> 200, exit 0",
+   "curl -m5 -s http://192.168.2.168:8014/v1/models -> 200, exit 0, id qwen3.5-9b max_model_len 32768",
+   "curl -X POST .../8012/v1/chat/completions model occamy-1.0-NVFP4 -> 200, content 'OK' with chat_template_kwargs.enable_thinking=false",
+   "curl -X POST .../8014/v1/chat/completions model qwen3.5-9b tools=[fetch] -> HTTP 400 '\\\"auto\\\" tool choice requires --enable-auto-tool-choice and --tool-call-parser to be set'",
+   "python3 aggregate over rows-baseline-2026-10-26.jsonl -> 105 rows, 12 errored (all 12 = vLLM tool-call HTTP 400)"
+  ],
+  "counts": "105 rows written; 93 with a completed response; 12 HTTP 400 (vLLM tool calling); first-run 8 rows (max_tokens 800 truncation) discarded before reset, documented in unit card"
+ },
+ "assumptions": [
+  "turn plan, corpus (corpus.body_for), question and exact-match rule taken verbatim from experiments/ptr-engine/quality/{corpus.py,runner_v2.py,PREREG.json}; temperature 0.0, max_tokens 300, enable_thinking=false (thinking-on burned all 800 tokens as reasoning and produced empty content in the discarded first run)",
+  "C0 and C carry no system message at all (plain transcript); R carries the index + framing note",
+  "R on SGLang used tools=[fetch] (tool_choice auto) as runner_v2.py does; R on vLLM used a text 'FETCH @knowledge:kNN@1' protocol because the server has no tool-call parser - the two pointer arms are therefore not protocol-identical across models",
+  "index line hash8 = sha256(body)[:8] (engine digest algorithm not reproduced; 458-byte index, no 'AUD-', no 'lumen')",
+  "C arm keeps the newest body verbatim and renders older turns as digest = first 200 bytes + compaction marker (shape from quality/RESULTS.md)"
+ ],
+ "finding": "C0 never has k01 in context (turns carry k12, k10, k08 only), so plain transcript cannot answer: occamy emits 'k08', qwen says 'Cannot be determined'. Pointer answers only on SGLang, and costs 1.50x (SGLang) / 1.36x (vLLM) the uncached tokens per turn of the plain transcript, because each resolve adds a whole extra request over the same growing prefix.",
+ "blocker": "vLLM server refuses tool calling (HTTP 400: needs --enable-auto-tool-choice and --tool-call-parser), so the pointer arm there ran under a text protocol and scored 0/3 - the model never emitted a FETCH at turn 4.",
+ "next_unit_hint": "Re-run R on a vLLM started with --enable-auto-tool-choice --tool-call-parser hermes to get a protocol-identical pointer row; also worth one arm where C0 receives all 12 bodies (plain chat with the whole corpus in context) to price the 'just send everything' baseline at ctx 131072/32768.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/rows-baseline-2026-10-26.jsonl",
+  "orchestration/handoffs/C0-BASELINE.json",
+  "orchestration/units/C0-BASELINE.md"
+ ]
+}

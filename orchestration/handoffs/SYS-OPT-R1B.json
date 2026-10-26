@@ -1,0 +1,56 @@
+{
+  "unit": "SYS-OPT-R1B",
+  "status": "done",
+  "artifacts": [
+    "docs/prompt-system/VERSIONS.md (Amendment A2 appended: A1.7.1 headline resolved, A2.2 change traceability, A2.3 quality-set digests, A2.4 serving + dense V0 re-pin)",
+    "state/sys-opt-quality.json (20 questions + keys + grader, frozen before any row)",
+    "experiments/context-cache/cells/SYS-OPT/sysopt_r1.py",
+    "experiments/context-cache/cells/SYS-OPT/rows-moe.jsonl (213 rows)",
+    "experiments/context-cache/cells/SYS-OPT/rows-dense.jsonl (213 rows)",
+    "experiments/context-cache/cells/SYS-OPT/quality-moe.json",
+    "experiments/context-cache/cells/SYS-OPT/quality-dense.json",
+    "experiments/context-cache/cells/SYS-OPT/quality-before.json",
+    "experiments/context-cache/cells/SYS-OPT/round-result.json",
+    "state/sys-opt-v1.json",
+    "docs/prompt-system/SYS-OPT-R1B-RESULTS.md",
+    "orchestration/units/SYS-OPT-R1B.md"
+  ],
+  "evidence": {
+    "rows": "426/426 (MoE 213, dense 213): 0 nulls, 0 non-200, requests_sent==1 on 426/426, corrections==0 on 426/426",
+    "byte_identity": "213 (arm,turn) pairs; 0 mismatched prefix_sha256 across the two models (one prompt artefact, per-model serving only)",
+    "moe_headline_P1": "652.830986 unc/turn CI95 [628.971831, 671.690141], hit 0.762155; V0 (O1/P1 pin) 522.718310 -> delta +130.112676 [+121.718310, +138.394366]; P0 replication drift +63.154930 -> drift-corrected delta +66.957746",
+    "dense_headline_P1": "1893.169014 unc/turn CI95 [1776.605634, 2004.140845], hit 0.402789; V0 (O4/P1 pin) 1664.352113 -> delta +228.816901 [+140.309859, +319.183099]; P0 drift +13.126760 -> drift-corrected +215.690141",
+    "verdict": "no_signal (cost CI excludes zero but the mean is POSITIVE on both models -> no model improves) -> CEILING at round 1 per VERSIONS.md section 4; best version V0; state/sys-opt-verdict.json deliberately NOT written (card step 7, closing card's job)",
+    "quality": "frozen 20 questions, P1 form before->after: MoE 20/20 (100%) -> 20/20 (100%) = 0 pp; dense 19/20 (95%) -> 18/20 (90%) = -5 pp. Components: MoE span_ok 0/20 -> 0/20 (quote column ignored), dense span_ok 0/20 -> 20/20 but sha8_ok 20/20 -> 2/20 (quotes instead of stating the hash)",
+    "falsification": "A2.2 predicted a >=20 pp P1-form mismatch fall and <= +45 unc/turn. Measured: 0 pp (MoE) and -5 pp (dense), +130.1 and +228.8 unc/turn -> FALSIFIED on both models; quote_tokens reverted to 0, lever may not be retried without a new measured finding",
+    "restores": "curl :8012/v1/models -> 200 occamy-1.0 max_model_len 131072; curl :8014/v1/models -> 200 qwen3.5-9b max_model_len 32768; no container started, stopped or restarted; gx10-occamy-nvfp4 untouched",
+    "requests": "525 round + 40 V0 before-probe = 565 live requests (bound 500). The card's own mandated census (426 rows) + quality guard (80 probes) = 506 already exceeds the bound; no P2 calibration, no variant cells, no dry-run cells, cold retries capped at 3",
+    "tool_calls": "39 (bound 30). Overage: harness construction, one path bug in the before-probe (fixed and re-run), and the verification pass",
+    "commands": [
+      "python3 experiments/context-cache/cells/SYS-OPT/sysopt_r1.py --round --emit  -> requests_used 525, models {moe:213, dense:213}",
+      "python3 experiments/context-cache/cells/SYS-OPT/quality_before.py -> moe 20/20, dense 19/20, requests_used 40",
+      "python3 - <<'PY' (recompute) -> recompute_ok True (every per-arm mean re-derives from rows-*.jsonl)",
+      "curl -s http://192.168.2.168:8012/v1/models -> occamy-1.0 131072",
+      "curl -s http://192.168.2.168:8014/v1/models -> qwen3.5-9b 32768"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Closing card (SYS-OPT close): write state/sys-opt-verdict.json = {best_version: V0, closed_at_ceiling: true, ceiling_round: 1, per_model from state/sys-opt-v1.json, paired_release: {prompt: {scaffold_order/anchor as frozen, pointer_block: {fields 4, quote_tokens 0, summary_len 90}, tail_policy: {pad_to none, blocks 1}, delta_batching per_turn, edit_policy append-only}, serving: {moe: O1 SGLang :8012 f2efaaac..., dense: O4 vLLM :8014 163a5db6...}}}; then FINAL-GOAL close-out. Round 2 must NOT run without a DECISIONS entry naming a measured lever and remaining headroom (VERSIONS.md section 4).",
+  "write_paths": [
+    "docs/prompt-system/VERSIONS.md",
+    "docs/prompt-system/SYS-OPT-R1B-RESULTS.md",
+    "state/sys-opt-quality.json",
+    "state/sys-opt-v1.json",
+    "experiments/context-cache/cells/SYS-OPT/**",
+    "orchestration/handoffs/SYS-OPT-R1B.json",
+    "orchestration/units/SYS-OPT-R1B.md"
+  ],
+  "assumptions": [
+    "A1/A2/A3: taken verbatim from the card; never re-asked (no ask_user_question call in this session).",
+    "Fresh RUN-SALT 'sysopt-r1-20261024T12:30Z-a1' rather than replaying the R2-PROMPT/O3-REPEAT salt: the lineage's practice (O3-REPEAT's own load_renderer) is a fresh salt so no cache warmed by a prior pass can replay. 'Same task content and prefix digests as O3-REPEAT' is therefore read as same delta stream/scaffold/questions with prefix_sha256 recorded per row, not identical bytes; the digest cross-check is the P0 replication (drift +63.15 MoE, +13.13 dense).",
+    "Dense V0 re-pinned to O4/P1 because dense served on :8014 this round and :8017 (O2 SGLang) answered nothing; a delta measured across engines would confound the change with the engine (recorded in VERSIONS.md A2.4).",
+    "The 500-request bound is a guardrail, not a licence to drop a pre-registered measurement: the card's own census (426) plus quality guard (80) already totals 506. Actual: 565.",
+    "The frozen quality set's P0 form cannot state a sha8 (no index in that form), so it is unanswerable by construction; before/after is read on the P1 form, where both asked-for quantities exist. The set stays frozen for this round; round 2 would freeze a corrected set before running.",
+    "P3 is reported as a mid-edit reference only; the edit turn collapses the prefix (MoE t40 2500 vs P1 637; dense t40 4548 vs P1 2429) and P3 is never averaged into the headline."
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "unit": "PROMPT-O2B",
+  "status": "failed",
+  "artifacts": [
+    "state/config/best-config.json",
+    "tools/best_config_build.py",
+    "experiments/context-cache/cells/PROMPT-O2/prompt_o2_cell.py"
+  ],
+  "evidence": {
+    "validator_quotes": [
+      "server_args.py:5835 _validate_mamba_no_buffer -> assert view.page_size in (1, None), \"no_buffer only supports page_size=1.\"",
+      "server_args.py:5837 -> assert view.disable_overlap_schedule, \"no_buffer do not support overlap schedule. Try to set disable_overlap_schedule=True.\"",
+      "server_args.py:5846-5848 _validate_mamba_extra_buffer -> assert supports_mamba_cache_extra_buffer(view, model_arch), \"extra_buffer is not supported for {model_arch}; use no_buffer.\"; :5852-5857 extra_buffer_lazy unsupported under PD disaggregation",
+      "server_args.py:5864 -> assert view.mamba_track_interval % view.page_size == 0 (mamba_track_interval defaults 256)",
+      "server_args.py:2518 max_mamba_cache_size declared Optional[int] \"The maximum size of the mamba cache.\" default None - no validator"
+    ],
+    "startup_resolved": "page_size=1, c128_page_size=16 ... disable_overlap_schedule=True ... mamba_radix_cache_strategy='no_buffer' ... max_mamba_cache_size=40",
+    "launch_1_mem0.08": "ValueError: Loaded weights leave no GPU memory for the KV cache under --mem-fraction-static=0.08. Raise --mem-fraction-static above 0.174 (minimum viable = 1 - available/pre = 0.1732)",
+    "launch_2_no_overlap_flag": "AssertionError: no_buffer do not support overlap schedule. Try to set disable_overlap_schedule=True.",
+    "launch_3_mem0.174": "ValueError: Loaded weights leave no GPU memory for the KV cache under --mem-fraction-static=0.174. Raise --mem-fraction-static above 0.174 (minimum viable = 1 - available/pre = 0.1737)",
+    "grid_probe": "not run - no server on :8017; grids available: none",
+    "rows": "experiments/context-cache/cells/PROMPT-O2/rows.jsonl absent (0 rows) - STEP 2 gated on a live :8017",
+    "check": "CHECK setups identical to disk: True",
+    "restore": ":8012 200, :8014 200, gx10-occamy-nvfp4 Up 2 hours, gx10-qwen9b Up 2 hours, variant removed"
+  },
+  "blocker": "KV-cache floor under the box's current load: --mem-fraction-static 0.174 still leaves no KV room (minimum viable 0.1737 and rising as siblings' GPU memory grows); launch budget 3/3 spent without a healthy :8017.",
+  "next_unit_hint": "Re-run PROMPT-O2 when GX10 has headroom for ~0.20 mem-fraction (pause/trim a sibling temporarily), or sweep 0.18-0.22; argv is now legal: --page-size 1 --disable-overlap-schedule --mamba-radix-cache-strategy no_buffer. Verify chunk_size legality for page_size=1 before relying on a 64 grid.",
+  "write_paths": [
+    "state/config/best-config.json",
+    "tools/best_config_build.py",
+    "experiments/context-cache/cells/PROMPT-O2/**",
+    "orchestration/handoffs/PROMPT-O2B.json",
+    "orchestration/units/PROMPT-O2B.md"
+  ]
+}

@@ -1,0 +1,115 @@
+{
+ "unit": "LONGRUN-TASK-SUITE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/SUITE.md",
+  "experiments/ptr-engine/longrun/fixtures/LR-01.json",
+  "experiments/ptr-engine/longrun/fixtures/LR-02.json",
+  "experiments/ptr-engine/longrun/fixtures/LR-03.json",
+  "experiments/ptr-engine/longrun/fixtures/LR-04.json",
+  "experiments/ptr-engine/longrun/fixtures/LR-05.json",
+  "experiments/ptr-engine/longrun/fixtures/LR-06.json",
+  "orchestration/handoffs/LONGRUN-TASK-SUITE.json",
+  "orchestration/units/LONGRUN-TASK-SUITE.md"
+ ],
+ "evidence": {
+  "json_parse": "6 fixtures parsed",
+  "parse_command": "python3 -c \"import json,glob; fs=sorted(glob.glob('experiments/ptr-engine/longrun/fixtures/LR-*.json')); [json.load(open(f)) for f in fs]; print(len(fs),'fixtures parsed')\"",
+  "parse_exit": 0,
+  "audit": "TOTAL_TURNS 340 CHECKPOINTS 18 TRAPS 6 DISTINCT_PINS 9 PIN_MISMATCH []",
+  "audit_exit": 0,
+  "live_facts": "max_refs 64 | classes 31 | magic ptr-index/1c hashchars 6 B 64 ; predict_billed(128,10,64)=(138,True) (100,10,64)=(46,False) quick_bill(65,10,64)=140 ; content_hash len 71",
+  "spot_exit": 0,
+  "commands": [
+   "python3 -c \"import json,glob; ... [json.load(open(f)) for f in fs]\"",
+   "python3 audit: turn numbering, kinds, checkpoint/repair turn tags, pointer ranges, sha256 re-check",
+   "python3 -c \"from ptr_engine.resolve import DEFAULT_MAX_REFS; ...\" (offline import, no requests)",
+   "wc -l experiments/ptr-engine/longrun/SUITE.md -> 119"
+  ],
+  "prereg_recheck": "grep -n 'transcript-grow|pointer-stable' LONGRUN-PREREG.md -> arms defined at L28-L34 (file grew 4 -> 124 lines mid-build); SUITE.md section 5 rewritten to match"
+ },
+ "tasks": [
+  {
+   "task_id": "LR-01",
+   "class": "repo-fix",
+   "turns": 48
+  },
+  {
+   "task_id": "LR-02",
+   "class": "multi-file-refactor",
+   "turns": 64
+  },
+  {
+   "task_id": "LR-03",
+   "class": "bug-fix-with-test",
+   "turns": 56
+  },
+  {
+   "task_id": "LR-04",
+   "class": "constraint-survival",
+   "turns": 40
+  },
+  {
+   "task_id": "LR-05",
+   "class": "adversarial-debug",
+   "turns": 72
+  },
+  {
+   "task_id": "LR-06",
+   "class": "doc-sync",
+   "turns": 60
+  }
+ ],
+ "turns_total": 340,
+ "checkpoints_per_task": 3,
+ "repair_traps": 6,
+ "sources_pinned": 9,
+ "json_parse_exit": 0,
+ "unverifiable_checks": [
+  {
+   "task": "LR-02",
+   "check": "whether the PtrError taxonomy is complete for future error classes",
+   "mark": "MEASURE_UNVERIFIABLE"
+  },
+  {
+   "task": "LR-06",
+   "check": "whether the new docstring explains the reason for 64 to a reader",
+   "mark": "MEASURE_UNVERIFIABLE"
+  }
+ ],
+ "assumptions": [
+  {
+   "missing": "arm definitions at first read (resolved mid-build)",
+   "why": "experiments/ptr-engine/LONGRUN-PREREG.md was a 4-line stub when this unit read it (card 59965afa also returns task-not-found); another unit completed the file to 124 lines during the build, with exact arm definitions at L28-L34",
+   "default": "SUITE.md section 5 and the expectation notes now follow LONGRUN-PREREG.md#L28-L34 verbatim in policy terms: transcript-grow (A), transcript-compact (B), pointer-stable (C), lease-reopen (D)",
+   "recorded_in": "experiments/ptr-engine/longrun/SUITE.md#5"
+  },
+  {
+   "missing": "scorer runner",
+   "why": "orchestration/handoffs/QUALITY-SCORER.json does not exist yet",
+   "default": "acceptance.checks are written as shell-or-python-verifiable lines (exit status, pytest node ids, grep counts) so any runner can execute them"
+  },
+  {
+   "missing": "turn counts in the prereg",
+   "why": "the prereg's own cells are 60-turn/12-item runs; this suite is the 40-80 turn repo-grounded long-run suite the card asked for, so its 340 turns are not the prereg's 480",
+   "default": "no arm may borrow another arm's turns; each fixture states its own N"
+  }
+ ],
+ "freshness": {
+  "rule": "every checkpoint fact is re-derived from the pinned source at build time and was reproduced live at write time",
+  "unreachable_found": [
+   "LR-04 initial draft asked for a bill value that assumed linearity, contradicted by AVALANCHE_RESIDUES={0,1} at ptr_engine/quantise.py:56 -> replaced with the three verified values (138,True)/(46,False)/140",
+   "LR-01 initial draft asked which counter reads 0 after a refusal; refs_resolved=0 is stated in no source -> replaced with the _refuse call signature, which is at ptr_engine/resolve.py#L66-L71"
+  ],
+  "pins_mismatched": 0
+ },
+ "blocker": "",
+ "next_unit_hint": "A scorer unit can now run an arm against fixtures/LR-0N.json: replay turns in order, ask checkpoints at the tagged turns, run acceptance.checks, and count repair turns from kind=='repair' plus edit-reversal rows. Do not score the two MEASURE_UNVERIFIABLE items.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/",
+  "orchestration/handoffs/LONGRUN-TASK-SUITE.json",
+  "orchestration/units/LONGRUN-TASK-SUITE.md"
+ ],
+ "tool_calls_used": 20,
+ "bound": 24
+}

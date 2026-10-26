@@ -1,0 +1,86 @@
+{
+ "unit": "R2-PROMPT-SUSPECT",
+ "status": "done",
+ "artifacts": [
+  "state/logs/r2-prompt-suspect.json",
+  "orchestration/handoffs/R2-PROMPT-SUSPECT.json",
+  "orchestration/units/R2-PROMPT-SUSPECT.md"
+ ],
+ "evidence": {
+  "rows": "O1 284 / O4 284 rows, 71 per arm, all http_status 200; arm tables recomputed from rows.jsonl (not copied)",
+  "arm_tables": {
+   "O1": {
+    "P0": {
+     "unc": 530.3944,
+     "hit": 0.956914
+    },
+    "P1": {
+     "unc": 522.7183,
+     "hit": 0.770148
+    },
+    "P2": {
+     "unc": 541.7465,
+     "hit": 0.771309
+    },
+    "P3": {
+     "unc": 520.5493,
+     "hit": 0.771969
+    }
+   },
+   "O4": {
+    "P0": {
+     "unc": 1883.8592,
+     "hit": 0.846965
+    },
+    "P1": {
+     "unc": 1664.3521,
+     "hit": 0.268145
+    },
+    "P2": {
+     "unc": 2271.0986,
+     "hit": 0.211671
+    },
+    "P3": {
+     "unc": 1687.8732,
+     "hit": 0.260614
+    }
+   }
+  },
+  "arm_identity": "4 distinct first-prompt sha256 per setup (P0 4a8e1712, P1 ec7c22ef, P2 256c49e6, P3 aab17702), identical across O1/O4, 71 distinct prompt_sha per arm, 0 collisions -> ARMS DISTINCT",
+  "which_moved": "prompt tokens per turn P0 12310.0 vs P1 2274.155 (ratio 5.413) on BOTH setups; mean uncached also falls O4 1883.86 -> 1664.35. The hit fraction falls only because its denominator falls 5.41x.",
+  "gcd_off_grid": "O1 gcd 64, off-grid 0/71 all arms. O4 gcd 1056, off-grid vs declared 1088: P0 65/71, P1 31/31, P2 31/31, P3 31/71",
+  "p3_survival": "O1 cached(t40) 1024 vs P1 1984 (0.483871 lost, control fires). O4 cached(t40)=0 both arms -> ratio undefined; but cached(t41) P3 0 vs P1 1056 = 100% of the cacheable prefix lost, P3 first hit t42 vs P1 t41. The edit WAS paid for.",
+  "p2_pad": "O1 pad_total 6727, prompt%64=0 on 71/71. O4 pad_total 43079, prompt%1088=0 on 71/71 but pad%1056 != 0 on 71/71; P2 cached == P1 cached on 71/71 O4 rows and P2 unc = P1 unc + pad exactly -> tail pad cannot buy a hit.",
+  "mechanism": "pointer_index (cells/VLLM-CELL/vllm_cell.py:79-88) appends index lines at the tail; the growing index crosses the 1056-token block boundary at turn 41, freezing block 0 (first hit 1056) and block 1 at turn 62 (2112). P3's edit of line t020 lies inside block 0, so its block stops matching at turn 41. O4 cached is the vllm:prefix_cache_hits_total delta (prompt_r2prompt_cell.py:292-299), synchronous (loss at 41, not lagged to 42).",
+  "commands": [
+   "python3 (heredoc) recompute per-arm n/mean_unc/hit/prompt_total/cached_total/gcd/off-grid from cells/R2-PROMPT/{O1,O4}/rows.jsonl",
+   "python3 (heredoc) arm identity: first-prompt + first-prefix sha256 per arm, per-turn prefix equality",
+   "python3 (heredoc) P3 survival cached(41..71)/cached(40) per setup + turn-41 comparison",
+   "python3 (heredoc) pad residues mod 1056/1088 per row + P2-vs-P1 cached equality",
+   "cat/grep experiments/context-cache/cells/R2-PROMPT/prompt_r2prompt_cell.py and cells/VLLM-CELL/vllm_cell.py (line numbers cited)"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Keep the O4 rows. Fix the derived summary, not the cell: (1) report unc/turn as the only cross-arm comparable and stop ranking arms by hit fraction; (2) re-run p3_survival with cached(41) as the denominator or state the 0/0 explicitly -- the control fires at 41; (3) if a re-run is ever licensed, start O4 with --enable-prompt-tokens-details to replace the 1056-quantised counter with per-request accounting, and pad P2 to the OBSERVED 1056 unit at the HEAD (not the tail) if the aligned-pad hypothesis is to be tested at all.",
+ "write_paths": [
+  "state/logs/r2-prompt-suspect.json",
+  "orchestration/handoffs/R2-PROMPT-SUSPECT.json",
+  "orchestration/units/R2-PROMPT-SUSPECT.md"
+ ],
+ "assumptions": [
+  "The O4 cached values are taken as the server's own counter deltas (the rows' cached_source field); no live cross-check was possible offline, and the row-level series (step function at 1056 with onsets 41/62) is internally consistent, which is the strongest available evidence for them.",
+  "1056 is treated as the operative O4 cache unit because it is the gcd of all 126 positive cached values and the onsets match the index geometry; 1088 is the declared/resolved attention block and is NOT the reuse unit here.",
+  "Offline only: no request, docker, ssh or lock was issued; the cell files were read, never modified."
+ ],
+ "tool_calls": 21,
+ "bound": 22,
+ "verdicts": {
+  "O1": "VALID",
+  "O4": "VALID (cached 1056-quantised; P3 collapse at t41 not t40)"
+ },
+ "not_reproduced": [],
+ "understated": [],
+ "overstated": [
+  "R2-PROMPT's own p3_survival verdict 'did NOT collapse -- measurement suspect' (analysis.json) and R2-PROMPT-RESULTS.md \u00a74 'O4 unmeasurable' overstate a zero-denominator artifact"
+ ]
+}

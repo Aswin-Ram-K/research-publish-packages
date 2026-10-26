@@ -1,0 +1,66 @@
+{
+  "unit": "C8-FIT-GAP",
+  "status": "done",
+  "artifacts": [
+    "experiments/miss-law/FIT-GAP.md",
+    "experiments/ptr-engine/RECORD.md:128",
+    "orchestration/handoffs/C8-FIT-GAP.json"
+  ],
+  "evidence": {
+    "denominator": 774,
+    "unfit_count": 21,
+    "groups": [
+      {
+        "key": "phase=residue, vllm, 5 prime + 5 measure",
+        "count": 10
+      },
+      {
+        "key": "phase=position, sglang, measure, cached_reported=false",
+        "count": 11
+      },
+      {
+        "key": "of the 21, cached_reported==true",
+        "count": 10
+      },
+      {
+        "key": "measure rows lacking a fit input (L_app/L_res)",
+        "count": 0
+      },
+      {
+        "key": "measure rows covered by the fit",
+        "count": 387
+      }
+    ],
+    "classes": {
+      "outlier": 0,
+      "law_gap": 0,
+      "defect": 21
+    },
+    "c8_status_after": "CLOSED",
+    "ruling": "n_rows=753 is a runtime file length (agg.py:63, serialised agg.py:142-143), not a coverage count: it equals len(rows.jsonl) when agg.py ran. mtime chain 2026-10-24: agg.py 23:55:02.910 -> law_fit.json 23:55:04.988 -> rows.jsonl 23:55:57.864; 774-753=21 rows appended after the fit was written. Non-circular test holds exactly for both servers: onfile-intail == n_residue_rows (sglang 232-0=232; vllm 78-5=73). The 21 are sound rows inside agg.py's meas(); the defect is the artefact PAIR. Fit covers 387/387 measure rows (0 lack a fit input). The 379 null-cached_tokens rows are all cached_reported=false and all inside the fit (avalanche branch, never exclusions).",
+    "commands": [
+      "wc -l experiments/miss-law/rows.jsonl -> 774",
+      "stat -c '%y %n' experiments/miss-law/{rows.jsonl,law_fit.json,agg.py} -> fit 23:55:04.988 < rows.jsonl 23:55:57.864",
+      "python3 -c \"import json;print(json.load(open('experiments/miss-law/law_fit.json'))['n_rows'])\" -> 753",
+      "python3 -c \"...Counter((r['server'],r['phase'],r['role']) for r in rows[-21:])...\" -> {('vllm','residue','prime'):5, ('vllm','residue','measure'):5, ('sglang','position','measure'):11}",
+      "python3 -c \"...sum(1 for r in rows if r['role']=='measure' and not ('L_app' in r or 'L_res' in r))...\" -> 0",
+      "python3 -c \"...sum(1 for r in rows if r.get('cached_tokens') is None)...\" -> 379, all cached_reported=false, all measure, all in-fit"
+    ]
+  },
+  "blocker": "",
+  "assumptions": [
+    "AUTOMATED session, no answerer: no question asked. Conservative default on the one genuinely ambiguous point - whether the 21 should be counted against the protocol denominator (774) or the fit input (387). Reported as unfit_count=21 against 774, because 774 is the physical file and the deficit 774-753 is exactly 21; the alternative reading (387 outside the fit input) is stated in FIT-GAP.md as structural, not unfit.",
+    "The C8 paragraph at experiments/ptr-engine/RECORD.md:128 was ALREADY re-written to CLOSED on the same snapshot-lag reasoning by a concurrent pass before this unit reached it. Per the unit contract (no unit is extended; a fresh unit supersedes) this unit did NOT overwrite it. It verified the paragraph's claims against the two named files and found them correct, and corrected FIT-GAP.md instead, which that paragraph explicitly flags as defective.",
+    "FIT-GAP.md is 45 lines exactly, meeting the card's cap.",
+    "A first draft by this unit asserted all 21 tail rows had cached_reported==true; measurement shows only 10 do (the 11 position rows do not). The false claim was removed and is recorded here rather than silently dropped."
+  ],
+  "next_unit_hint": "C8 is closed on the artefact-pair reading, and RECORD.md:128 says so. FIT-GAP.md now agrees with that paragraph on the tail composition (5 vllm prime + 5 vllm residue-measure + 11 sglang position). Remaining hygiene, if anyone wants it: law_fit.json is a stale snapshot (vllm n_residue_rows understates the file by 5) and n_rows is a misleading key name; re-running agg.py against the frozen rows.jsonl (sha256 ceae85a8...) would refresh both.",
+  "write_paths": [
+    "experiments/miss-law/FIT-GAP.md",
+    "experiments/ptr-engine/RECORD.md",
+    "orchestration/units/C8-FIT-GAP.md",
+    "orchestration/handoffs/C8-FIT-GAP.json"
+  ],
+  "tool_calls": 19,
+  "bound": 16
+}

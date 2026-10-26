@@ -1,0 +1,81 @@
+{
+  "unit": "HARNESS-MAP",
+  "status": "partial",
+  "artifacts": [
+    "docs/HARNESS-MAP.md",
+    "orchestration/units/HARNESS-MAP.md",
+    "orchestration/handoffs/HARNESS-MAP.json"
+  ],
+  "evidence": {
+    "command_or_count": "931 handoffs, 855 unit cards, 13 ptr-engine row files, 1095 rows total (863 in the longrun chain); baseline question->trustworthy graded cell = 40 card rounds / 863 live requests; marker census v3 79/96, v4 78/96, v4-tools 14/68, v5 6/72, v6 13/72",
+    "stage_table": "docs/HARNESS-MAP.md section 1: 18 stages, each with owner path:line, driving command, inputs, outputs, measured wall-clock, request cost, failure modes, establishing handoff",
+    "baseline_rounds": {
+      "card_rounds": 40,
+      "live_requests": 863,
+      "rounds_with_zero_requests": 31,
+      "measurement_rounds": 9,
+      "chain": "LONGRUN-PREREG (2026-10-26 01:29) .. REGRADE-DET (09:21), 7h52m wall-clock",
+      "verified_end_state": "the last verifier V-DET-2 is partial, so no round produced a cell that is both graded and independently verified"
+    },
+    "request_counts_read_from_handoffs": {
+      "RUN-STAGE1-LR01": 192,
+      "RUN-INSTRUMENT-FIX": 42,
+      "RUN-REASONING-POLICY": 26,
+      "RUN-C-V2": 192,
+      "V3-PILOT": 96,
+      "RUN-V4-GRID": 96,
+      "PROBE-CP3-FETCH": 68,
+      "PROBE-CP3-V5": 72,
+      "PROBE-CP3-V6": 72,
+      "LONGRUN-HARNESS_would_send_total": 242,
+      "LONGRUN-PREREG_total_requests": 500
+    },
+    "measured_wallclock": {
+      "run_longrun --dry-run (offline, 0 requests)": "0.06 s",
+      "grade_v3 --rows rows-longrun-c --fixtures tasks-v4/runtime-v4": "0.05 s",
+      "grade_v4 same inputs": "0.07 s",
+      "det_verify --out /tmp/hm-det.json": "0.05 s",
+      "pytest tests/test_orchestration_handoffs.py (PYTHONPATH=src)": "3.08 s, 12 passed 1 failed",
+      "row latency_s sums": "v6 367.3 s / 72 rows (mean 5.1 s, p95 11.4 s, mean TTFT 213 ms); v4-tools 316.1 s / 68; policy 13309.3 s / 40; rows-longrun-c 3836.6 s / 192"
+    },
+    "inefficiencies": 14,
+    "top3": [
+      "answer shape never constrained: 13 rounds / 386 requests unreadable; LR-01.json has no system_prompt key (KeyError); marker compliance 82% tools-off -> 18% tools-on",
+      "fixture re-authoring: 10 rounds / 96 wasted requests / 16 runtime files across 4 generations",
+      "answerless acceptance: 36 of 92 checkpoint cells missing; grade_v3 emits 9 of 13 declared checks, 5 with a boolean decision, 4 pass:null"
+    ],
+    "first_change": "machine-checkable one-line answer contract (ANSWER: NUM <int> | ANSWER: CALL callee(k=v, ...) | ANSWER: NONE) in the fixture + prompt, parsed instead of prose; specified in docs/HARNESS-MAP.md section 4, not implemented",
+    "negative_results": {
+      "grader_lineage": "grep fixture_sha256 over grade_v3.py, grade_v4.py, det_verify.py -> no hit; demonstrated by grading rows-longrun-c-2026-10-26.jsonl under tasks-v4/runtime-v4, which returned a clean 0/3 marker_missing for all four arms instead of a lineage error",
+      "handoff_guard": "python3 -m pytest tests/test_orchestration_handoffs.py -> ModuleNotFoundError: No module named 'resextract' (needs PYTHONPATH=src); with it, test_no_new_contract_key_gaps FAILS on V2-RUNTIME.json, V3-FIXTURE.json, V3-PILOT.json missing overall+checks"
+    },
+    "zero_live_requests": "every command was local; the runner was invoked with --dry-run only (its own output: 'offline: zero requests'), and no command references any HTTP endpoint",
+    "commands": [
+      "ls orchestration/handoffs/*.json | wc -l  -> 931",
+      "ls orchestration/units/*.md | wc -l  -> 855",
+      "python3 -c 'count rows/kinds per experiments/ptr-engine/measure/rows-*.jsonl'  -> 13 files, 1095 rows",
+      "/usr/bin/time -f 'WALL %e s' python3 experiments/ptr-engine/longrun/run_longrun.py --dry-run --fixture experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.json --tools read_file --manifest-dir /tmp/hm-manifests  -> WALL 0.06 s",
+      "/usr/bin/time -f 'WALL %e s' python3 experiments/ptr-engine/longrun/grade_v3.py --rows experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl --fixtures experiments/ptr-engine/longrun/tasks-v4/runtime-v4 --out /tmp/hm-g3.json  -> WALL 0.05 s",
+      "/usr/bin/time -f 'WALL %e s' python3 experiments/ptr-engine/longrun/grade_v4.py --rows experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl --fixtures experiments/ptr-engine/longrun/tasks-v4/runtime-v4 --out /tmp/hm-g4.json  -> WALL 0.07 s",
+      "/usr/bin/time -f 'WALL %e s' python3 experiments/ptr-engine/tools/det_verify.py --out /tmp/hm-det.json  -> WALL 0.05 s",
+      "/usr/bin/time -f 'WALL %e s' env PYTHONPATH=src python3 -m pytest tests/test_orchestration_handoffs.py -q  -> WALL 3.08 s, 1 failed 12 passed",
+      "python3 -m pytest tests/test_orchestration_handoffs.py -q  -> ModuleNotFoundError: No module named 'resextract'",
+      "python3 -c 'sum(latency_s) and ANSWER: census per row file'  -> v6 367.3 s/72 rows, 13 marker lines; v4-tools 14/68; v3 79/96",
+      "python3 -c 'count checks in rows-longrun-v6-tools.grade-v3.json'  -> 9 emitted of 13 declared, 5 boolean, 4 null",
+      "grep -n 'fixture_sha256|run_manifest_sha256|lineage' experiments/ptr-engine/longrun/grade_v3.py experiments/ptr-engine/longrun/grade_v4.py experiments/ptr-engine/tools/det_verify.py  -> no output (no lineage check exists)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Status is partial only because section 6 lists nine undetermined items, not because a section is unwritten (all six are in docs/HARNESS-MAP.md). A restart should resume at: (1) read the body of orchestration/handoffs/V-DET-2.json to name exactly which checks keep the cell unverified; (2) time one live 48-turn cell against the endpoint to replace the row-derived wall-clock with a current one; (3) time adapt_v4.py and grader_fitness.py properly, both of which this card could not run without writing into the repo. The next constructive card should implement section 4.5 (the answer-contract diff) behind a card that owns the runner and the fixture schema, and re-run the v6 probe under it to see whether cp.2.t46 becomes decidable.",
+  "write_paths": [
+    "docs/HARNESS-MAP.md",
+    "orchestration/units/HARNESS-MAP.md",
+    "orchestration/handoffs/HARNESS-MAP.json"
+  ],
+  "assumptions": [
+    "The card-round count is a LOWER BOUND: it is derived from orchestration/handoffs/*.json mtimes plus unit-name matching, so a card that produced no persisted handoff is invisible to it (AGENTS.md records that exact failure).",
+    "The chain boundary was chosen as LONGRUN-PREREG (2026-10-26 01:29) because that card first fixed the predictions and budget for the LR-01 cells; the three pre-chain quality cards (QUALITY-ARM, V-QUALITY-ARM, QUALITY-INSTRUMENT-V2, RECORD-V3-APPEND, QUALITY-TEXT) are listed as rows 1-5 of the lifecycle table and counted in the 40.",
+    "Wall-clock for stages marked ESTIMATE (prereg check, fixture adaptation full write, grader_fitness, cross-run regrade, --smoke) was not measured because each would write into a repository path this card may not touch, or would send live requests.",
+    "No claim is made about the current state of the Occamy endpoint (192.168.2.168:8012): zero requests were sent."
+  ]
+}

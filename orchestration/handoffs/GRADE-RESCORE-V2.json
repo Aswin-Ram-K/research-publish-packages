@@ -1,0 +1,110 @@
+{
+ "unit": "GRADE-RESCORE-V2",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/GRADE-V2.md",
+  "experiments/ptr-engine/longrun/grade_v2.py",
+  "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.grade-v2.json"
+ ],
+ "evidence": {
+  "red_green": "GREEN 10/10  RED 10/10 (rg exit 0); module on synthetic rows: synthetic-correct old 3/10 new 10/10, synthetic-wrong old 0/10 new 0/10 (exit 0)",
+  "actual_t12_t24_still_fail": "all 4 arms: cp.t12 'R1a: expected number 64 absent as standalone token'; cp.t24 'R1a: expected number 31 absent'",
+  "per_arm_table_printed": [
+   "arm | old acc | new acc | n | old failed | new failed | preamble(no conclusion) | budget-cut | t48 trunc",
+   "lease-reopen     |  0/10 |  0/10 | 10 | 10 | 10 | 22 (7) | 21 | False",
+   "pointer-stable   |  0/10 |  2/10 | 10 | 10 |  8 | 2 (1) | 6 | False",
+   "transcript-compact | 0/10 |  0/10 | 10 | 10 | 10 | 30 (30) | 0 | False",
+   "transcript-grow  |  0/10 |  2/10 | 10 | 10 |  8 | 28 (1) | 1 | False"
+  ],
+  "required_old": "12/23 per arm (matches the driver's required_passed 12 / required_failed 11); failed ids: cp.t12 cp.t24 cp.t46 acc.cp1 acc.cp2 acc.cp3 acc.1 acc.2 acc.3 acc.4 repair.main",
+  "new_passes": "pointer-stable and transcript-grow pass cp.t46 + acc.cp3 (R2: all 3 code anchors + conclusion); lease-reopen/transcript-compact still fail them",
+  "graded_vs_skipped": "10 graded / 0 skipped per arm (no checkpoint was unverifiable under R1-R3)"
+ },
+ "blocker": "",
+ "assumptions": [
+  "acc.2/acc.3/acc.4 (turn 48) are graded under R3 as conjunctions of the fixture's own lookahead terms; a paraphrase inside a term ('exits 0' for 'exit 0') is not accepted.",
+  "repair.main is carried unchanged from the original grader (not a fact checkpoint, out of v2 scope).",
+  "The original verdicts were reproduced by importing score_longrun.py read-only and feeding it a run header carrying the fixture digest; without that header fixture.digest fails and required reads 11/23.",
+  "Three implementation amendments (A1-A3) were logged in GRADE-V2.md; all narrow the rule."
+ ],
+ "next_unit_hint": "D1 is real: run v3 with the 'ANSWER: <value>' prompt line and falsifiers from GRADE-V2.md; also fix why no arm ever runs the acceptance suite at turn 48 (turn 48 is not truncated, so it is a task framing failure, not a budget cut).",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/GRADE-V2.md",
+  "experiments/ptr-engine/longrun/grade_v2.py",
+  "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.grade-v2.json",
+  "/tmp/**"
+ ],
+ "rule_registered_before_scoring": true,
+ "per_arm": {
+  "lease-reopen": {
+   "old_accuracy": [
+    0,
+    10
+   ],
+   "new_accuracy": [
+    0,
+    10
+   ],
+   "n_graded": 10
+  },
+  "pointer-stable": {
+   "old_accuracy": [
+    0,
+    10
+   ],
+   "new_accuracy": [
+    2,
+    10
+   ],
+   "n_graded": 10
+  },
+  "transcript-compact": {
+   "old_accuracy": [
+    0,
+    10
+   ],
+   "new_accuracy": [
+    0,
+    10
+   ],
+   "n_graded": 10
+  },
+  "transcript-grow": {
+   "old_accuracy": [
+    0,
+    10
+   ],
+   "new_accuracy": [
+    2,
+    10
+   ],
+   "n_graded": 10
+  }
+ },
+ "preamble_turn_counts": {
+  "lease-reopen": 22,
+  "pointer-stable": 2,
+  "transcript-compact": 30,
+  "transcript-grow": 28
+ },
+ "read_and_never_answer": {
+  "lease-reopen": 7,
+  "pointer-stable": 1,
+  "transcript-compact": 30,
+  "transcript-grow": 1
+ },
+ "budget_cut_turns": {
+  "lease-reopen": 21,
+  "pointer-stable": 6,
+  "transcript-compact": 0,
+  "transcript-grow": 1
+ },
+ "turn48_truncated": {
+  "lease-reopen": false,
+  "pointer-stable": false,
+  "transcript-compact": false,
+  "transcript-grow": false
+ },
+ "v3_recommendation": "Append one system-prompt line: 'End every answer with a final line: ANSWER: <the value, or NOT-AN-ANSWER>' and forbid leaving the value only inside a pasted code block; fixtures/arms/max_tokens unchanged.",
+ "falsifier_text": "v3 rejected if (1) ANSWER: is present but the value after it is wrong on >20% of checkpoint turns, or (2) the marker pushes over_budget above 10% of turns; if ANSWER: is absent on >50% of checkpoint turns v3 is unverified, not passed."
+}

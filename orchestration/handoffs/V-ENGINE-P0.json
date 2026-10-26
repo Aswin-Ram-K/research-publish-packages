@@ -1,0 +1,55 @@
+{
+  "unit": "V-ENGINE-P0",
+  "overall": "pass",
+  "checks": [
+    "1 suite: `PYTHONDONTWRITEBYTECODE=1 python3 -m pytest tests -q` -> `95 passed in 0.17s`, exit 0; `--collect-only` -> `95 tests collected`; 95 is the real count, no skips (claim said 95 passed in 0.12s: count exact, wall time +0.05s).",
+    "2 red->green, 5 required + 1 extra, each patch alone on .verify-scratch/engine and restored: (a) public `recover(ResourceRef)->Reference` -> FAILS `test_oneway.py::test_no_public_callable_turns_a_resourceref_into_a_reference` `assert ['ptr_engine.reference.recover -> Reference'] == []` (1F/94P); (b) build_prompt ledger gate disabled -> FAILS `test_noprefetch.py::test_build_prompt_raises_for_a_ref_with_no_resolve_row` (PTR_BODY_MISMATCH fired instead of PTR_UNRESOLVED_REF; the hash gate at adapter.py:117 backstops it) (1F/94P); (c) scope compare disabled -> 3F: `test_scope.py::test_the_wrong_scope_is_ungranted` 'DID NOT RAISE PtrScopeUngrantedError', `test_negative_controls.py::test_four_ungranted_scope`, `::test_all_seven_codes_are_distinct` (3F/92P); (d) timestamp in index header -> 3F: `test_determinism.py::test_two_processes_two_roots_agree` 'index bytes differ between two processes', `::test_material_order_does_not_matter`, `::test_recompiling_into_the_same_store_is_idempotent` (3F/92P); (e) append_cost returns constant 16 -> 2F: `test_annotate.py::test_append_cost_is_length_modulo_block_size` 'assert 16 == (16 % 7)', `::test_off_grid_is_detectable_and_on_grid_is_not` 'an on-grid append must read as 0' (2F/93P); extra (f) body-hash gate disabled -> FAILS `test_noprefetch.py::test_build_prompt_refuses_bytes_that_are_not_the_resolved_body`; after restore `95 passed` exit 0.",
+    "2b FINDING (one-way guard is narrower than the invariant): a registry-backed public `recover(rref)` that succeeds only for a ResourceRef resolve() really handed out leaves the suite GREEN (`95 passed`, exit 0) while working end-to-end (`recover(resolve(@knowledge:k01@1))` == `@knowledge:k01@1`). tests/test_oneway.py:78 only calls public callables with a synthetic ResourceRef no resolve() ever produced, so the sweep sees a KeyError and calls it compliant.",
+    "3 determinism across two separate python3 processes and two different warmpool roots: index sha256 `e08700c9876162544ba0f6c73c47868f605d1ebfea2302d2b66eee866a099bd2` in BOTH, index_bytes 447 in both (independent of their test/subprocess script).",
+    "4 r recomputed from the examples/ corpus: total body bytes 30000, index bytes 447, index lines 12, r = 30000/447 = 67.1141 -> 67.1x, zero-resolution prompt 472 bytes. 30000/447/67.1x/472 ALL reproduce exactly.",
+    "5 SPEC vs code: SPEC DOES state all four asked-about rules - six host requirements (SPEC.md:210-217, numbered 1-6 + per-item table), one-way rule (SPEC.md:34-49), warmpool isolation (SPEC.md:105-110), token_source null (SPEC.md:140-144). NOT implemented: SPEC.md:86-87 'a reference from an older turn still resolves to those bytes' -> measured REFUSED PTR_REVISION_MISMATCH against a rev-2 index (only the body survives in the store; resolve.py:117-123 is deliberate); SPEC.md:166 'Every failure is a PtrError subclass with a stable code' -> 6 bare ValueError sites at ptr_engine/ledger.py:51,60,136,138,141,213 and tests/test_ledger.py:97 asserts ValueError. Code behaviour SPEC does not state: DEFAULT_PROJECTIONS {full,brief,raw,summary} + the projections= override, DEFAULT_MAX_REFS=64, Scope.block() falling back to index.block_size, find_repo_root() returning None outside any repo (isolation then unenforced), path_of's locator-escape PTR_STORE_MISS, put's same-address/different-size PTR_HASH_MISMATCH, and the annotation exported as entry_scope where SPEC.md:120 names it scope.",
+    "6 seven negative controls are seven distinct named codes, fixed in order by tests/test_negative_controls.py:104-114: PTR_SYNTAX, PTR_UNKNOWN_KIND, PTR_UNKNOWN_ID, PTR_SCOPE_UNGRANTED, PTR_PROJECTION_UNENUMERATED, PTR_POINTER_INVALID, PTR_BUDGET_EXCEEDED - 7/7 distinct; each control's _code() asserts isinstance PtrError and str startswith code, so none is a bare Exception; package-wide 20 error classes carry 20 distinct codes.",
+    "7 warmpool isolation run both ways: BodyStore(<repo>/scratch/verify-warmpool-must-not-exist) -> REFUSED PTR_WARMPOOL_INSIDE_REPO with the directory NOT created (exists: False); repo root itself and experiments/ptr-engine also REFUSED; PTR_WARMPOOL_ROOT=<repo>/cache-warmpool REFUSED; BodyStore(/tmp/ptr-isolation-*/warmpool) ACCEPTED and created; default_root() -> /home/zer0null/.cache/ptr-engine/warmpool."
+  ],
+  "not_reproduced": [
+    "handoff `wc -l` split `engine 1641, tests 1094` does not reproduce: measured engine 1828 lines (adapter 153 + annotate 117 + compile 388 + errors 169 + __init__ 136 + ledger 248 + reference 236 + resolve 169 + store 212) and tests 1062 (conftest 101 + 11 test files). The claimed total 3281 IS correct (1828+1062+247 SPEC+144 example), so only the sub-split is wrong.",
+    "claimed wall time `0.12s` -> measured `0.17s` (immaterial, machine-dependent; the count and outcome are exact)."
+  ],
+  "overstated": [
+    "SPEC.md:44-45 'This is a type-level rule the package enforces structurally' - the enforcement is narrower: the sweep only proves that no public callable turns a *synthetic* ResourceRef into a Reference; a registry-backed bridge passes all 95 (check 2b).",
+    "SPEC.md:166 'Every failure is a PtrError subclass with a stable code' - 6 bare ValueError sites in ptr_engine/ledger.py (51, 60, 136, 138, 141, 213); the seven-controls claim (7 distinct PtrError codes) does hold.",
+    "SPEC.md:86-87 'a reference from an older turn still resolves to those bytes' - contradicted by PTR_REVISION_MISMATCH; the store keeps the body, the resolver refuses the pinned ref.",
+    "SPEC.md:72-73 the index line carries 'the body's byte length' - for a pointer item it carries the selected region's canonicalised length (`- @artifact:plan#/goal@1 ac8ce218 25` for a 45-byte body)."
+  ],
+  "unverified": [
+    "the author's own red check ('patched store.get ... -> 4 failed, 6 passed') was not re-run verbatim; it is superseded by my six independent sabotages in check 2.",
+    "TurnIndex.body_bytes (compile.py:128-135) has no caller and no test; for a pointer item it reports 102 where the body is 112 bytes (the region size is booked against the whole-body hash). Nothing the handoff claims depends on it.",
+    "the ledger is single-process, append-only; there is no test and no claim about concurrent writers.",
+    "projection views are validated and carried but never derived (SPEC.md:187-191 states this as a limit, so it is honest, but 'projection' remains unmeasured)."
+  ],
+  "blocker": "",
+  "next_unit_hint": "PTR-ENGINE-P0.1 (author, small): close the one-way guard behaviourally - resolve a real ref, then call every public callable with the ResourceRef resolve() actually returned and assert none yields a Reference (the synthetic DUMMY at tests/test_oneway.py:78 is why a registry-backed bridge survives). Either fix SPEC.md:86-87 and :166 or make the code match them. Then PTR-ENGINE-P1 can measure a real turn: push a host log's turn material through compile_turn and count refs the model would have had to resolve.",
+  "write_paths": [
+    "orchestration/units/V-ENGINE-P0.md",
+    "orchestration/handoffs/V-ENGINE-P0.json",
+    ".verify-scratch/**"
+  ],
+  "assumptions": [
+    "Warmpool roots for the runs were tempfile.mkdtemp() under /tmp, removed in a finally block: the engine's own contract forbids a store root inside the repository, and .verify-scratch/ is inside it, so an in-workspace store root is impossible by design. Persistent artefacts all stay in the workspace.",
+    "Interpreted 'a test must fail' as: at least one named test in the existing suite goes red. A sabotage that leaves the suite green is reported as an unguarded-invariant finding (check 2b) rather than as a pass.",
+    "Red->green used the copy at .verify-scratch/engine with .verify-scratch/pristine as the restore source; the pristine tree was exercised for the SPEC/index probes so the sabotage copy stayed clean.",
+    "Running the suite reads experiments/ptr-engine but writes nothing there (PYTHONDONTWRITEBYTECODE=1, no cache writes outside /tmp); no file under experiments/, release/, papers/ or src/ was modified.",
+    "Did not run any git command against /home/zer0null/Duval; it was not read either."
+  ],
+  "red_green": [
+    "a one-way -> test_oneway.py::test_no_public_callable_turns_a_resourceref_into_a_reference (offenders != [])",
+    "b no-prefetch -> test_noprefetch.py::test_build_prompt_raises_for_a_ref_with_no_resolve_row (PTR_BODY_MISMATCH instead of PTR_UNRESOLVED_REF)",
+    "c scope -> test_scope.py::test_the_wrong_scope_is_ungranted + test_negative_controls.py::test_four_ungranted_scope + ::test_all_seven_codes_are_distinct",
+    "d determinism -> test_determinism.py::test_two_processes_two_roots_agree + ::test_material_order_does_not_matter + ::test_recompiling_into_the_same_store_is_idempotent",
+    "e append_cost -> test_annotate.py::test_append_cost_is_length_modulo_block_size + ::test_off_grid_is_detectable_and_on_grid_is_not",
+    "f body-hash (extra) -> test_noprefetch.py::test_build_prompt_refuses_bytes_that_are_not_the_resolved_body"
+  ],
+  "containment": "no writes to experiments/, release/, papers/, src/; sabotage copy .verify-scratch/engine restored from .verify-scratch/pristine after each patch; /home/zer0null/Duval not touched (no git run at all); temp warmpool roots under /tmp deleted in finally.",
+  "tool_calls": 32,
+  "bound": 40
+}

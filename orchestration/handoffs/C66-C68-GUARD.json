@@ -1,0 +1,106 @@
+{
+  "unit": "C66-C68-GUARD",
+  "status": "partial",
+  "artifacts": [
+    "tests/test_claims_value_guard.py",
+    "orchestration/handoffs/C66-C68-GUARD.json",
+    "orchestration/units/C66-C68-GUARD.md"
+  ],
+  "evidence": {
+    "command_or_count": {
+      "verify_package": "verify_package: PASS - 69 claims in CLAIMS.md, 69 mapped 1:1, 8 script-backed + 61 recompute.py-backed functions all present, UNVERIFIED: none (exit 0)",
+      "recompute_all": "COVERAGE GUARD PASS 69 claims documented, 67 runnable here + 2 script-backed (exit 0)",
+      "recompute_r2_all": "7 PASS lines: C63 61/61, C64 38/38, C65 48/48, C66 75/75, C67 85/85, C68 70/70, SYSOPT 50/50 (exit 0)",
+      "pytest_guard": "7 passed in 2.28s (exit 0) when run alone",
+      "pytest_full": "4 failed, 1371 passed, 1 skipped in 96.77s (exit 1). Failures: test_claims_value_guard.py::test_the_guard_bites_when_the_recomputation_moves (THIS UNIT, context-polluted probe - see blocker), plus three that predate this unit.",
+      "predating_failures": [
+        "tests/test_g5_fanout_attribution.py::test_every_6744_site_names_cell_g5 - 'MANUSCRIPT.md:1110: 6.744 stated with no G5 provenance in the same site'",
+        "tests/test_gap_closure_ledger.py::test_stale_citation_audit_is_accurate - 'G5: MANUSCRIPT.md:195 stale=False but expect 6.744 is not on the line' (and two more 865/1.5017 rows)",
+        "tests/test_paper_g3_bands.py::test_the_mean_band_is_never_presented_as_a_per_turn_bound[MANUSCRIPT.md] - 'MANUSCRIPT.md:1112 the mean band is stated without saying it is a range of averages'"
+      ],
+      "predating_evidence": "All three name MANUSCRIPT.md lines 1100-1112, and MANUSCRIPT.md is outside this unit's write paths and was already at those lines (the C62 census had moved 901 -> 914) when this unit started. This unit never opened MANUSCRIPT.md for writing.",
+      "keys_guarded": {"C66": 56, "C67": 53, "C68": 40},
+      "keys_waived": {"C66": 19, "C67": 32, "C68": 30},
+      "keys_total": {"C66": 75, "C67": 85, "C68": 70},
+      "waiver_bookkeeping": "0 keys are neither guarded nor waived for C66/C67/C68: test_contract_covers_every_pinned_key is green and fails on any unwaived-and-unwritten key, and the generic legible leg fails on any waived-but-unguarded key drift.",
+      "claims_md_sha_unchanged": "3fbf199f85b103d2e954eee225084da04c81776f1c1692ad726544798d68178e before and after every probe and after the restore"
+    },
+    "commands": [
+      "python3 papers/context-cache/verify_package.py",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/recompute.py all",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/recompute_r2.py all",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_claims_value_guard.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q",
+      "sha256sum papers/context-cache/CLAIMS.md"
+    ]
+  },
+  "claims_admitted": ["C66", "C67", "C68"],
+  "keys_guarded": {"C66": 56, "C67": 53, "C68": 40},
+  "waived_by_design": [
+    {"claim": "C66", "key": "hot_rows_T256/T128/T64", "reason": "345 held-out hot rows per interval; the cell asserts the NEGATIVE it argues (0 off-grid hot rows) and never restates the in-grid count the gcd is taken over. Guarded instead: 'gcd 64 at all three' + '0 off-grid hot rows' + '355 rows per interval' (test_c66_paired_reading_is_directional)."},
+    {"claim": "C66", "key": "*_n and *_n_pairs (15 keys = 71 paired turns)", "reason": "the cell states 355 rows per interval, not the 71 paired turns; n is a denominator, not a result."},
+    {"claim": "C66", "key": "T256/T128/T64_{R,A,C,H,C0}_mean (15 keys)", "reason": "the pins carry 1-dp roundings (527.5, 962.0) of figures the cell writes at 2 dp (527.49, 961.97); a 1-dp token is not the cell's figure, so the guard compares 2 dp instead (test_c66_paired_reading_is_directional), same decision C64 made for 'cell writes 94.90'."},
+    {"claim": "C66", "key": "T64_minus_T256_H_ci95", "reason": "the cell gives H's point delta (-1.803 at 64) without that arm's interval; the interval covers zero, and the cell's claim is 'no interval's CI excludes zero'. Waived by name, never to be silently tightened."},
+    {"claim": "C66", "key": "files_T256/files_T128/files_T64", "reason": "cell names the source cells (TRACK-t256/128/64), not the file rows.jsonl."},
+    {"claim": "C67", "key": "O1/O2_{P1_minus_P0,P3_minus_P1}_ci95 (4 tuples)", "reason": "the cell writes these four null results as bare points ('O1 -7.6761 (null)') and states 'No interval excludes zero' once. The four intervals the cell DOES write (O3 P1-P0, O4 P1-P0, O3 P3-P1, O4 P3-P1) are guarded by test_c67_intervals_and_c67a - this is the C63 1,088 precedent applied: the pin is not waived because it is inconvenient, only because the cell does not carry it."},
+    {"claim": "C67", "key": "O1..O4 *_n, *_n_pairs (24 keys = 71)", "reason": "the cell states '284 rows and 4 arms per setup'; the per-arm n is not restated."},
+    {"claim": "C67", "key": "O1_engine..O4_engine", "reason": "the cell names the setups O1-O4 and their model/engine only in prose; the tuples are not restated as figures."},
+    {"claim": "C68", "key": "*_ts_first / *_ts_last (8 keys)", "reason": "the cell gives no wall-clock times; it asserts that wall_ms DIFFERS row for row, which is a different statement."},
+    {"claim": "C68", "key": "*_distinct_cached_values / *_distinct_uncached_values (8 keys)", "reason": "the cell counts distinct PROMPT digests (284) and cache-counter DIFFERENCES; it never counts distinct metric values."},
+    {"claim": "C68", "key": "*_vs_*_rows_same_prompt (6 keys)", "reason": "the cell states the complementary figure (the rows whose cache counters DIFFER), not the overlap count."},
+    {"claim": "C68", "key": "O1..O4_config_sha256 (4 keys)", "reason": "the cell writes the 8-character prefix (f2efaaac...), not the 64-char digest; the prefix is guarded verbatim by test_c68_pairs_are_counted_once."},
+    {"claim": "C68", "key": "cell_salts", "reason": "the cell asserts no two cells share a salt, not that every per-cell salt set is empty."},
+    {"claim": "C68", "key": "cell_pairs_with_distinct_configuration", "reason": "the cell states '6 of 6 cell pairs', not the pair list; the six differing-cache-counter counts ARE guarded with their pair labels."}
+  ],
+  "red_green": {
+    "C66": {
+      "planted": "CLAIMS.md C66 Value cell: 'A -1.803 [-5.41, 1.80] at 128 and -4.507 [-12.62, 2.70] at 64' -> the 64 interval's -4.507 replaced by -1.840",
+      "red_test": "tests/test_claims_value_guard.py::test_pinned_values_are_legible_in_their_value_cell",
+      "red_message": "C66:T64_minus_T256_A=-4.507 is pinned by recompute_r2 but does not appear in C66's Value cell",
+      "red_exit": 1,
+      "red_result": "1 failed, 6 passed",
+      "restore_method": "in-place revert of the single literal; sha256 proves byte identity",
+      "green_result": "7 passed in 2.26s (exit 0)",
+      "sha_after_restore": "3fbf199f85b103d2e954eee225084da04c81776f1c1692ad726544798d68178e"
+    },
+    "C67": {
+      "planted": "CLAIMS.md C67 Value cell: 'O4 +23.5211 [8.39, 53.48]' -> '[8.39, 58.48]'",
+      "red_result": "exit 0, NO RED BITE. The generic 5e-5 tolerance plus the 2-dp '10/20 in the cell matches 53.479 pinned' rule both fail to distinguish 8.39 from 53.48 at 2 dp; the C67 leg compares only the rendered bound '53.48' against the 60 characters after the delta, so a digit in a different figure satisfies it. A 1-digit change in a C67 interval is NOT caught.",
+      "red_exit": 0,
+      "green_result": "7 passed in 2.20s (exit 0) - but green here proves only that this plant was not caught, not that the guard bites",
+      "sha_after_restore": "3fbf199f85b103d2e954eee225084da04c81776f1c1692ad726544798d68178e",
+      "followup_needed": "C67's planted change must actually move a figure the guard compares: sabotage the point delta or an arm mean (e.g. O4_P1_mean 1664.3521 -> 1600.3521), or a 3-dp interval whose change crosses a 2-dp boundary in a way '10/20' folds in (O4 53.479 -> 53.379)."
+    },
+    "C68": {
+      "planted": "CLAIMS.md C68 Value cell: '277 (O1 vs O3)' -> '271 (O1 vs O3)'",
+      "red_result": "exit 0, NO RED BITE. numbers() collects ALL figures in the cell into ONE set, so 271 is trivially 'legible' because 271 occurs elsewhere in the cell (it is also in the pair (O1 x O4) count and in other figures). The C68 leg requires the literal '277 (O1 vs O3)' in the cell, so the guard should have bitten through that leg - it did not, which means the planted string did not reach the leg or the leg's pair labels do not match ('O1 vs O3' with spaces vs the EXPECTED tuple order).",
+      "red_exit": 0,
+      "green_result": "7 passed in 2.20s (exit 0)",
+      "sha_after_restore": "3fbf199f85b103d2e954eee225084da04c81776f1c1692ad726544798d68178e",
+      "followup_needed": "Confirm whether test_c68_pairs_are_counted_once is even reaching the six pair labels (the probe report shows the C68 leg list, but not this leg's result); then re-plant a figure that cannot collide with any other number in the cell."
+    },
+    "in_test_probe": {
+      "name": "tests/test_claims_value_guard.py::test_the_guard_bites_when_the_recomputation_moves",
+      "design": "clone the repo into a tmp dir (papers copied, every other top-level entry symlinked, one cell tree copied so its rows can be sabotaged), run recompute_r2.py <claim> inside the clone, and require the SAME cell comparator to stop accepting the sabotaged recomputation. CLAIMS.md is never touched.",
+      "result": "C66: 2 guarded keys moved (A at t64). C67: 3 guarded keys moved (O4 P1-P0 and P3-P1 deltas and intervals). C68: 0 guarded keys moved (see waived_by_design / blocker).",
+      "status": "green when tests/test_claims_value_guard.py runs alone; RED inside the full `pytest tests/` run because another test leaves `recompute_r2` in sys.modules with patched row roots (the probe pops it, but the module-level `recompute_r2` the legs use is the one the other tests decided to leave in place) - not diagnosed within this unit's bound."
+    }
+  },
+  "claims_md_sha_before": "3fbf199f85b103d2e954eee225084da04c81776f1c1692ad726544798d68178e",
+  "claims_md_sha_after": "3fbf199f85b103d2e954eee225084da04c81776f1c1692ad726544798d68178e",
+  "cell_errors_found": [],
+  "assumptions": [
+    "A waiver is a documented non-guard, not a pass: each waived key above names WHY the cell cannot carry it, following C63's 1,088 launch-reading precedent.",
+    "C66 pins fewer legible figures than its cell states (56 of 75 guarded): the 15 arm means are pinned at 1 dp while the cell writes 2 dp, so the guard compares the cell's own 2-dp rendering through a claim-specific leg instead of weakening the pin.",
+    "tests/test_claims_value_guard.py already hardcoded MANUSCRIPT.md:901 for the C62 census and was RED before any edit here (census moved to 914 under a concurrent unit). Changed that assertion to 'exactly one census line' - it keeps the census count authority and stops the guard going red because another unit inserted 13 lines. This is a narrowing of a line-number assertion, not of a value assertion; no number guard was weakened.",
+    "The C68 sabotage (O3's rows relabelled as a copy of O1's) leaves every GUARDED C68 key at its pinned value: the claim's guarded figures are counts of distinctness, and a relabelled copy changes the batteries, not the counts. Asserting a bite on C68 would be a guard that cannot pass on a correct paper, so the probe reports it instead."
+  ],
+  "blocker": "C67 and C68 red->green probes did NOT bite (both exit 0). C66's did (exit 1, exact test name and message recorded). Additionally, test_the_guard_bites_when_the_recomputation_moves passes standalone but fails inside the full pytest run because of row-root patching left by other tests. The value-cell admission itself is complete and green: verify_package, recompute.py all, recompute_r2.py all (C66 75/75, C67 85/85, C68 70/70) and the guard's 7 legs all pass; CLAIMS.md is byte-identical.",
+  "next_unit_hint": "C67-C68-GUARD-PROBE: re-plant C67 at a figure the guard actually compares (point delta or arm mean, not an interval digit) and C68 at a figure that collides with no other number in the cell; find why test_c68_pairs_are_counted_once did not bite; and isolate the probe from the sys.modules row-root patching so it survives `pytest tests/`. C66 is done and needs no re-work.",
+  "write_paths": [
+    "tests/test_claims_value_guard.py",
+    "orchestration/handoffs/C66-C68-GUARD.json",
+    "orchestration/units/C66-C68-GUARD.md"
+  ],
+  "tool_calls_used": 96
+}

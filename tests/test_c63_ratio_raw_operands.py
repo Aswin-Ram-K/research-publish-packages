@@ -2,12 +2,13 @@
 
 Why this file exists
 --------------------
-The manuscript states the model effect is **151.82x** larger under vLLM (``MANUSCRIPT.md``
+The manuscript states the model effect is **-222.89x** the SGLang figure under vLLM (``MANUSCRIPT.md``
 abstract and Section 9b), and ``CLAIMS.md``/``SERVING-BRIEF.md`` state the same figure.
 That figure has to be a *quotable* number: the printed operands are ``+548.06`` and
 ``+3.61``, and 548.06/3.61 = 151.8172, but those operands are themselves rounded.  The
 ratio the claim actually asserts is the ratio of the two per-level model-effect MEANS,
-which is 548.056338028169 / 3.6056338028169015 = 152.0.  Dividing the rounded operands
+which is -803.646 / 3.605634 = -222.8887 (MTP-corrected; the pre-correction
+548.06 / 3.61 = 152.0 case is the same guard applied to superseded numbers).  Dividing the rounded operands
 produces 151.8172, a figure no 4-dp derivation of the raw means can yield.
 
 The failure mode is silent: a package that pins 151.8172 keeps passing ``recompute.py C63``
@@ -54,7 +55,7 @@ MATRIX = ROOT / "docs" / "serving-options" / "MATRIX-2x2.md"
 #: The ratio of the two RAW per-level model-effect means, to 4 dp.  Hard-coded here on
 #: purpose: this file is the independent statement of what the pin must be, so it must not
 #: import the number it is checking.
-RAW_RATIO_4DP = 152.0
+RAW_RATIO_4DP = -222.8887
 
 
 @pytest.fixture(scope="module")
@@ -93,7 +94,7 @@ def raw_level_means(rec) -> tuple[float, float]:
 def test_operands_are_the_printed_ones(rec) -> None:
     """The two raw means round to the numbers the prose actually prints."""
     under_vllm, under_sglang = raw_level_means(rec)
-    assert round(under_vllm, 2) == 548.06, f"model|vLLM raw mean moved: {under_vllm!r}"
+    assert round(under_vllm, 2) == -803.65, f"model|vLLM raw mean moved: {under_vllm!r}"
     assert round(under_sglang, 2) == 3.61, f"model|SGLang raw mean moved: {under_sglang!r}"
 
 
@@ -132,6 +133,13 @@ def test_prose_quotes_the_raw_ratio_and_not_the_rounded_operand_ratio(path: Path
         )
     # The prose quotes the ratio at 2 dp ("152.00x"); SERVING-BRIEF renders the same
     # figure at 4 dp from the ledger ("152.0000").  Either form is the raw-mean ratio.
-    assert "152.00x" in text or "152.0000" in text, (
-        f"{path.relative_to(ROOT)} no longer states the ratio as 152.00x / 152.0000"
+    assert "-222.89x" in text or "-222.8887" in text, (
+        f"{path.relative_to(ROOT)} no longer states the ratio as -222.89x / -222.8887"
+    )
+    # The ratio is negative, so its prose rendering must be too.  A hard-coded leading '+'
+    # in the guard let the manuscript print '+-222.89x' and still pass; a double sign is a
+    # sign artifact, not a quotable figure.
+    assert "+-" not in text, (
+        f"{path.relative_to(ROOT)} carries a double-signed figure ('+-...'): render the sign "
+        f"of the measured value, not a template's"
     )

@@ -1,0 +1,36 @@
+{
+  "unit": "PTR-CORPUS-REPRO",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/tools/rebuild_corpus.py",
+    "orchestration/handoffs/PTR-CORPUS-REPRO.json",
+    "orchestration/units/PTR-CORPUS-REPRO.md"
+  ],
+  "evidence": {
+    "command_or_count": "ONE COMMAND now reproduces the headline ratio from the corpus that already existed on disk. `cd experiments/ptr-engine && python3 tools/rebuild_corpus.py` -> exit 0, exactly 8 lines: `BODIES 12` / `BODY_BYTES 30000` / `INDEX_BYTES 447` / `INDEX_LINES 12` / `BYTES_PER_LINE 37.25` / `ZERO_RESOLUTION_PROMPT 472` / `INDEX_SHA256 e08700c9876162544ba0f6c73c47868f605d1ebfea2302d2b66eee866a099bd2` / `RATIO 67.1141`. ALL SEVEN CLAIMED VALUES REPRODUCE EXACTLY, delta 0, no tuning: body_bytes 30000 (claimed 30000, V-ENGINE-P0.json:checks[3]), index_bytes 447 (447), index_lines 12 (12), bytes_per_line 447/12 = 37.25 (37.25, ENGINE-R1.json:evidence.command_or_count), zero-resolution prompt 472 (472), index sha256 e08700c9…9bd2 (e08700c9…9bd2, V-ENGINE-P0.json:checks[2]), ratio 30000/447 = 67.1141 (67.1141). DETERMINISM (2 runs, 2 cwds, 2 warmpool roots): run A from the workspace root, run B from /tmp with `PYTHONPATH=<repo>/experiments/ptr-engine` and a different explicit root `/tmp/ptr-repro-root2`; both captured 8 lines, `diff` empty, both capture files sha256 `ddd2d143335049470b0f9133912371249e6902281490f799b353d6a8df5a488d`, and each prints the same INDEX_SHA256 e08700c9…9bd2. A third run from /tmp WITHOUT PYTHONPATH also printed e08700c9…9bd2 (the script resolves the package from its own __file__, so the single command needs no environment). CORPUS PROVENANCE: the 12 bodies have one definition on disk — `experiments/ptr-engine/examples/worked_example.py:45 corpus()`, with `TARGET_CHARS = 30_000` at :39 and self-assertions `len(items) == 12` (:82) and `sum(len(body)) == TARGET_CHARS` (:83); the index is built by `ptr_engine/compile.py:222 compile_turn(...)` and the prompt by `ptr_engine/adapter.py:74 build_prompt(...)`. Nothing had to be invented or recovered from /tmp: the worked example's warmpool is a throwaway tempfile.mkdtemp per run, so the bodies are code (regenerable), not a stored artefact — the kill condition does not apply.",
+    "commands": [
+      "cd experiments/ptr-engine && PYTHONDONTWRITEBYTECODE=1 python3 tools/rebuild_corpus.py",
+      "cd experiments/ptr-engine && PYTHONDONTWRITEBYTECODE=1 python3 examples/worked_example.py   # pre-existing run used to see the live values before writing anything",
+      "cd '/home/zer0null/reserach extarctor' && PYTHONDONTWRITEBYTECODE=1 python3 experiments/ptr-engine/tools/rebuild_corpus.py > /tmp/ptr-repro-run1.txt 2>&1",
+      "cd /tmp && PYTHONPATH='/home/zer0null/reserach extarctor/experiments/ptr-engine' PYTHONDONTWRITEBYTECODE=1 python3 '/home/zer0null/reserach extarctor/experiments/ptr-engine/tools/rebuild_corpus.py' --warmpool-root /tmp/ptr-repro-root2 > /tmp/ptr-repro-run2.txt 2>&1",
+      "diff /tmp/ptr-repro-run1.txt /tmp/ptr-repro-run2.txt   # empty, exit 0: all 8 lines identical",
+      "sha256sum /tmp/ptr-repro-run1.txt /tmp/ptr-repro-run2.txt   # ddd2d143…488d for both",
+      "cd /tmp && PYTHONDONTWRITEBYTECODE=1 python3 '/home/zer0null/reserach extarctor/experiments/ptr-engine/tools/rebuild_corpus.py'   # no PYTHONPATH, same sha",
+      "find experiments/ptr-engine -name '*.pyc' -newermt '-40 minutes'   # empty: no bytecode written into the tree"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Verifier: re-run the single command in a clean shell and diff its 8 lines against this handoff — no environment variable is needed, and `--warmpool-root` is only to prove root-independence. Two things worth a later unit: (1) the numbers are scope-sensitive — `compile_turn` with scope `worked-example`, revision 1, block 64 gives 447 B; a different scope name gives 442 B (ENGINE-R1 assumption), so any document quoting r should name the corpus artefact, not just the value; (2) the same script could grow a `--index-variant compact` flag to reproduce the 383 B / 31.92 B-per-line / r=78.3x figure from ENGINE-R1 cell D, which RECORD.md §1 flags as an index-encoding choice — but that variant's own numbers were withdrawn in FOLD-PROPOSAL (iii), so it should print with the limitation attached, not as a second headline.",
+  "write_paths": [
+    "experiments/ptr-engine/tools/rebuild_corpus.py",
+    "orchestration/handoffs/PTR-CORPUS-REPRO.json",
+    "orchestration/units/PTR-CORPUS-REPRO.md"
+  ],
+  "assumptions": [
+    "The corpus is imported from `examples/worked_example.py:corpus()` with importlib rather than restated in the new script: the task forbids inventing a corpus that exists on disk, and a second copy would be a drift bug. Revision (1), scope (`worked-example`) and block size (64) are likewise read from that module, not re-typed — an earlier pass with scope `engine-r1` produced 442 index bytes, so these constants determine the claim.",
+    "The script PRINTS measured values and asserts none of them. It does not compare against 30000/447/e08700c9…: a script that failed on drift would be a guard (and would quote no number), and a script that forced a match would be a fraud. A drift therefore shows up as a diff line, which is what the verifier needs.",
+    "Warmpool roots are throwaway tempfile.mkdtemp directories (run B under /tmp with an explicit --warmpool-root) and are removed afterwards; the engine refuses a store root inside the repository (PTR_WARPOOL_INSIDE_REPO), so an in-workspace root is impossible by design. This matches V-ENGINE-P0's recorded assumption; no persistent artefact is created outside the workspace.",
+    "`sys.dont_write_bytecode = True` plus PYTHONDONTWRITEBYTECODE=1 on every run: importing the engine writes no .pyc into `experiments/ptr-engine/ptr_engine/`, verified by an mtime sweep for *.pyc in the last 40 minutes (empty).",
+    "Python 3.11+ is stated, executed on CPython 3.14.4 (same interpreter recorded in RECORD.md §1); stdlib only, no network, no container, no endpoint touched, and no git command was run anywhere."
+  ]
+}

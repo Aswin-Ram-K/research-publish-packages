@@ -1,0 +1,69 @@
+{
+ "unit": "V-R2.1",
+ "overall": "partial",
+ "checks": [
+  "CHECK 1a tests: PASS — `python3 experiments/ptr-engine/tools/tests/test_anchor_classify.py` exit=0, 'Ran 15 tests in 0.014s' / 'OK' (15/15).",
+  "CHECK 1b red case: PASS — copy at /tmp/vr21/anchor_classify.py (+ /tmp/vr21/ANCHOR-PREREG-V2.md); sole degradation: anchor_classify.py:312 `if key not in [p.lower() for p in tok.string.split(\"_\"))]:` -> `if key not in tok.string.lower():` (substring containment), verified by diff; the real suite run against the copy exited 1, 'Ran 15 tests / FAILED (failures=2)': RedTest.test_record_is_not_satisfied_by_recording ('CODE-SYMBOL' != 'PROSE-CONNECTOR', `record` matched `recording`/`prerecord`) and DivergenceTest.test_budget_is_prose_in_both_divergence_families (`budget` flipped to CODE-SYMBOL via PtrBudgetExceededError at :23/:142). The guard can go red. ROOT was pinned to the workspace in the copy only because the copy lives in /tmp.",
+  "CHECK 2 probes: PASS — `python3 experiments/ptr-engine/tools/anchor_probes.py` exit=0, 'RESULT: PASS'; A=ACCEPT, B=REJECT, C-minimal=ACCEPT, C-global=REJECT, E=ACCEPT, F=ACCEPT. C-minimal is labelled ACCEPT (the R2 overstatement is corrected in this round, not carried forward). E: metric=mention-only, semantic=False, and its note says 'this is the mention-only limitation, NOT a semantic pass on the arm and NOT a failure of the answer rule as specified'; rule body (g) forbids describing any R2.1 result as a semantic pass. E is reported NOWHERE as a semantic failure.",
+  "CHECK 3 digest: PASS on text, CAVEAT on instant — `anchor_classify.rule_digest('experiments/ptr-engine/longrun/ANCHOR-PREREG-V2.md')` = b16548301589593b8d1041325fce833ef60d3b39b8e8c0a205084ee35eb9ad57, byte-equal to the recorded value. Hashed text = the 60 lines strictly between `<!-- r21-rule:begin -->` (doc :45) and `<!-- r21-rule:end -->` (doc :106), markers excluded, and that delimited block is the entire normative rule (a)-(g) a third party must read. ANCHOR-PREREG.md carries NO rule-body digest at all (its §4/§7 list file hashes only), so R2's freeze was genuinely unverifiable and R2.1's IS attested by a reproducible, out-of-body digest asserted by a test. Instant: doc mtime 2026-10-26 08:47:27.78 -0500 = 13:47:27Z, i.e. 34 s AFTER the stated 13:46:53Z; anchor_classify.py mtime 08:45:01 -0500 = 13:45:01Z (before). A post-freeze edit inside the body would break the digest, so the body now on disk IS the hashed text; the instant itself is author-claimed with no external timestamp.",
+  "CHECK 4 divergence, my own tokenizer: PASS — independent `tokenize` run (Python 3.14.4, not the author's module): resolve.py:143 `spent` lies inside token FSTRING_MIDDLE (143,143) 'resolve budget spent: '; resolve.py:47 `budget` lies inside token STRING (44,50). Both are prose under (d); my classification is PROSE-CONNECTOR for both, and R2.1 agrees. `budget`'s in-file occurrences are COMMENT :36, STRING(:44-:50) :47, FSTRING_MIDDLE :143; `PtrBudgetExceededError` at :142 is not an occurrence of `budget`.",
+  "CHECK 5a census: PASS — my own census (my own tokenizer, my own parse of the fixture citations cp.0 `resolve.py#L39`, cp.1 `errors.py#L15-L250`, cp.2 `resolve.py#L66-L71`) reproduces the frozen 11 cells exactly: 8 CODE-SYMBOL, 2 NUMBER, 1 PROSE-CONNECTOR, 11/11 on class.",
+  "CHECK 5b demotion (the question the author did not ask): PASS, none — R2 whole-file vs R2.1 range-scoped compared cell by cell: 0 of 11 cells moved CODE-SYMBOL -> PROSE-CONNECTOR. All 8 keep an in-range NAME part (ledger :66/:68/:69; scope :66/:70; text :66/:70; error :66/:70; record :69; refusal :69; serialized :70; code :70). Only evidence lines move (ledger :33->:66, scope :43->:66), exactly as §1.1 states. Camel-splitting sensitivity: 0 cells change either."
+ ],
+ "blocker": "",
+ "next_unit_hint": "R2.1 is usable by a grader only after correcting the one false sentence inside the frozen body (overstated[0]); until then an implementer working from the normative text rather than from anchor_classify.py gets a different matcher than the one measured here. A re-grade must also not narrow any citation range: range scoping is the single place where R2.1 can demand FEWER tokens than R2, and it is presently unexercised (0/11 cells). Do not exceed the mention metric: probes E and F pass by design.",
+ "write_paths": [
+  "orchestration/handoffs/V-R2.1.json",
+  "orchestration/units/V-R2.1.md"
+ ],
+ "not_reproduced": [],
+ "overstated": [
+  "FROZEN BODY, ANCHOR-PREREG-V2.md:59-60: '`name`; `PtrBudgetExceededError` carries `ptr` and `exceeded` and `error` but **not** `budget`.' This is false under every reading of its own rule: the classifier splits NAME tokens on '_' only, so PtrBudgetExceededError -> ['ptrbudgetexceedederror'] and carries NONE of ptr/exceeded/error/budget; and any camel-splitting reading that yields ptr/exceeded/error also yields budget. The same document contradicts it at :117 ('`:142` PtrBudgetExceededError does not carry `budget`, because it has no underscore'). No census cell depends on it (camel splitting moves 0/11), so it is a text defect, not a metric defect. NAMED FIX: replace that clause with '`PtrBudgetExceededError` is a single part, `ptrbudgetexceedederror`, because the token has no underscore: it carries neither `ptr`, `exceeded`, `error` nor `budget`.'",
+  "SECONDARY, body (a): 'the anchor equals one of the underscore-separated parts of that token's text' is stated for every token, but the prose path splits on ANY non-alphanumeric (anchor_classify.py:85 `_PART_SPLIT = re.compile(r\"[^A-Za-z0-9]+\")` via `_parts` at :303) — that is how `raising` inside 're-raising' on :67 is found as a prose occurrence at all. Class is unaffected (an absent anchor is PROSE-CONNECTOR too), only the evidence line is. NAMED FIX: append to (a) 'for a non-NAME (prose) token the parts are split on any non-alphanumeric character, so `re-raising` carries `raising`.'"
+ ],
+ "corrections": [
+  "C-minimal: the R2 §5 claim that the minimal `scope=`->`grant=` edit was REJECTED does not reproduce; it is ACCEPT (scope survives in scope_name), and R2.1 reports it as ACCEPT. Confirmed independently of the probe: the token `scope_name` at :66 splits to ['scope','name'].",
+  "Census evidence lines: `ledger` is recorded in the frozen R2 table at :33 and `scope` at :43; under R2.1's range scope the first counting occurrences are :66 for both. Classes unchanged; the divergence is disclosed in ANCHOR-PREREG-V2.md §1.1 and reproduced by me."
+ ],
+ "unverified": [
+  "The freeze instant 2026-10-26T13:46:53Z has no external time authority; only the body<->digest equality is independently checkable (the written file's mtime is 34 s later).",
+  "Whether any grader has already consumed R2.1 — out of scope, no re-grade run."
+ ],
+ "digest": {
+  "recomputed": "b16548301589593b8d1041325fce833ef60d3b39b8e8c0a205084ee35eb9ad57",
+  "recorded": "b16548301589593b8d1041325fce833ef60d3b39b8e8c0a205084ee35eb9ad57",
+  "match": true,
+  "body_lines": "46-105 (60 lines), markers at :45 and :106 excluded"
+ },
+ "red_green": {
+  "red_exit": 1,
+  "red_failed": 2,
+  "red_names": [
+   "RedTest.test_record_is_not_satisfied_by_recording",
+   "DivergenceTest.test_budget_is_prose_in_both_divergence_families"
+  ],
+  "green_exit": 0,
+  "green_tests": 15
+ },
+ "census": {
+  "cells": 11,
+  "agree": 11,
+  "code_symbol": 8,
+  "number": 2,
+  "prose": 1,
+  "demoted_to_prose": []
+ },
+ "tool_calls": 18,
+ "bound": 22,
+ "assumptions": [
+  "The prereg is at experiments/ptr-engine/longrun/ANCHOR-PREREG-V2.md; the card's path experiments/ptr-engine/ANCHOR-PREREG-V2.md does not exist (verified with ls).",
+  "Red-case copies live only in /tmp/vr21; no artifact was edited.",
+  "The /tmp red-case copy was wiped between tool calls by the sandbox (measured: `ls -d /tmp/vr21` -> 'No such file or directory' after the run), so the handoff carries the full recipe in red_case_recipe instead of a /tmp path. The measured red run itself is recorded: exit 1, FAILED (failures=2), names of both failing tests."
+ ],
+ "reproduce": [
+  "python3 experiments/ptr-engine/tools/tests/test_anchor_classify.py",
+  "python3 experiments/ptr-engine/tools/anchor_probes.py",
+  "python3 -c \"import sys; sys.path.insert(0,'experiments/ptr-engine/tools'); import anchor_classify as c; print(c.rule_digest('experiments/ptr-engine/longrun/ANCHOR-PREREG-V2.md'))\""
+ ],
+ "red_case_recipe": "mkdir -p /tmp/vr21 && cp experiments/ptr-engine/tools/anchor_classify.py /tmp/vr21/anchor_classify.py && python3 - <<'E'\np='/tmp/vr21/anchor_classify.py'; s=open(p).read()\ns=s.replace('if key not in [p.lower() for p in tok.string.split(\"_\")]:','if key not in tok.string.lower():')\nopen(p,'w').write(s+'\\nROOT = \"/home/zer0null/reserach extarctor\"\\n')\nE\npython3 - <<'E'\nimport importlib.util, runpy, sys\nWS='/home/zer0null/reserach extarctor'\nsp=importlib.util.spec_from_file_location('anchor_classify','/tmp/vr21/anchor_classify.py')\nm=importlib.util.module_from_spec(sp); sp.loader.exec_module(m); sys.modules['anchor_classify']=m\nsys.path.insert(0,WS+'/experiments/ptr-engine/tools')\nrunpy.run_path(WS+'/experiments/ptr-engine/tools/tests/test_anchor_classify.py', run_name='__main__')\nE\n# expected: exit 1, FAILED (failures=2)"
+}

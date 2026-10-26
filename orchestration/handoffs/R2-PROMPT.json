@@ -1,0 +1,57 @@
+{
+  "unit": "R2-PROMPT",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/R2-PROMPT/prompt_r2prompt_cell.py",
+    "experiments/context-cache/cells/R2-PROMPT/build_matrix.py",
+    "experiments/context-cache/cells/R2-PROMPT/O1/rows.jsonl",
+    "experiments/context-cache/cells/R2-PROMPT/O1/analysis.json",
+    "experiments/context-cache/cells/R2-PROMPT/O1/quality.json",
+    "experiments/context-cache/cells/R2-PROMPT/O4/rows.jsonl",
+    "experiments/context-cache/cells/R2-PROMPT/O4/analysis.json",
+    "experiments/context-cache/cells/R2-PROMPT/O4/quality.json",
+    "state/r2-prompt-matrix.json",
+    "state/config/r2-prompt-cost.json",
+    "docs/prompt-system/R2-PROMPT-RESULTS.md",
+    "orchestration/units/R2-PROMPT.md",
+    "state/logs/R2-PROMPT-progress.log"
+  ],
+  "evidence": {
+    "census": "state/r2-prompt-matrix.json census: measured_cells 8, unavailable_cells 8, measured_setups [O1,O4], unavailable_setups [O2,O3]",
+    "rows": "O1 284 rows / O4 284 rows = 568 row-bearing requests, 71 turns x 4 arms per setup",
+    "O1_arms": "P0 530.394366 [485.055338,575.733395] hit 0.956914; P1 522.71831 [506.071453,539.365167] hit 0.770148; P2 541.746479 [526.206737,557.286221] hit 0.771309 pad 6727/71 rows aligned 71/71; P3 520.549296 [477.489148,563.609443] hit 0.771969",
+    "O4_arms": "P0 1883.859155 [1791.176635,1976.541675] hit 0.846965; P1 1664.352113 [1536.250609,1792.453617] hit 0.268145; P2 2271.098592 [2111.216645,2430.980538] hit 0.211671 pad 43079/71 aligned 71/71; P3 1687.873239 [1557.745929,1818.00055] hit 0.260614",
+    "deltas": "P1/P0 O1 -7.676056 [-51.841656,36.489543] null; P1/P0 O4 -219.507042 [-355.363126,-83.650959] non-null (-11.7%); P2/P0 O1 +11.352113 [-32.103079,54.807304] null; P2/P0 O4 +387.239437 [223.062403,551.41647] non-null (+20.6% worse); P3/P1 O1 -2.169014 [-43.158315,38.820286] null; P3/P1 O4 +23.521127 [-6.097763,53.140016] null",
+    "p3_survival": "O1 collapsed: cached t39 1984 -> t40 1024 while P1 stays 1984, collapse_fraction 0.483871, rebuilt mean 2741.677 vs P1 2776.774; O4 unmeasurable (cached 0 at the edit turn in both arms)",
+    "quality": "O1 20/20 questions with a first-32-token mismatch (rate 1.0); O4 19/20 (rate 0.95)",
+    "grids": "O1 observed_cached_gcd 64 == declared 64; O4 observed_cached_gcd 1056 != declared 1088 (pad misalignment is a second reason O4 P2 loses)",
+    "unavailable_evidence": "curl :8015-:8019 -> 000 at 10:03Z/10:07Z/10:11Z; docker ps shows no gx10-* container; ssh refused: 'BLOCKED by CC Safety Net / Rule: secret.home.ssh'",
+    "instrument": "O4 responses carry prompt_tokens_details: null; cache proven live by vllm:prefix_cache_hits_total +4224 of +5416 queries on an identical repeat; O4 cached_tokens derived per request from that counter and recorded in cached_source",
+    "commands": [
+      ".venv/bin/python experiments/context-cache/cells/R2-PROMPT/prompt_r2prompt_cell.py --setup O1 --quality",
+      ".venv/bin/python experiments/context-cache/cells/R2-PROMPT/prompt_r2prompt_cell.py --setup O4 --cached-from-metrics --quality",
+      ".venv/bin/python experiments/context-cache/cells/R2-PROMPT/build_matrix.py"
+    ]
+  },
+  "blocker": "O2 (9B SGLang) and O3 (occamy vLLM) could not be launched: no listener on 8015-8019, no gx10-* container on this host, and ssh to the GX10 is refused by the CC Safety Net (secret.home.ssh). 8 of 16 cells are therefore `unavailable` and no Round-1 config was substituted.",
+  "assumptions": [
+    "Cost price is a DECLARED constant (USD 0.20/1M uncached input tokens), not a measured price: the box is on-prem. All cost figures scale linearly with it.",
+    "O4 cached_tokens are counter-derived (vllm:prefix_cache_hits_total delta) because the endpoint reports prompt_tokens_details: null; the caveat is that a concurrent client would land in the same delta, and this session was the only client under the cell lock.",
+    "The card's 'same task content and prefix digests as cells/G3' is unsatisfiable literally: G3 uses a different renderer. Per-row prefix_sha256/prompt_sha256 are recorded instead of asserting equality.",
+    "grid_unit for O2/O3 cells is a declared constant, not measured (cells absent)."
+  ],
+  "next_unit_hint": "Restart the 9B container with --enable-prompt-tokens-details and cross-check the counter-derived O4 numbers; launch O3 (vLLM x occamy) to fill the most interesting missing cell; re-test P2 with the pad grid set to the OBSERVED unit (1056 on O4) rather than the declared 1088.",
+  "write_paths": [
+    "experiments/context-cache/cells/R2-PROMPT/",
+    "state/config/r2-prompt-cost.json",
+    "state/r2-prompt-matrix.json",
+    "state/logs/R2-PROMPT-progress.log",
+    "docs/prompt-system/R2-PROMPT-RESULTS.md",
+    "orchestration/handoffs/R2-PROMPT.json",
+    "orchestration/units/R2-PROMPT.md"
+  ],
+  "tool_calls": 62,
+  "bound": 75,
+  "live_requests_approx": 900,
+  "request_bound": 1600
+}

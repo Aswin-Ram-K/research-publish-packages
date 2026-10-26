@@ -1,0 +1,36 @@
+{
+ "unit": "V-FOLD-RESIDUAL",
+ "overall": "partial",
+ "checks": [
+  "Q1 TRUE, at the location the proposal names. papers/context-cache/MANUSCRIPT.md:926 is `### 10a.3 Retrieval-structured or pointer-based context versus a plain transcript`; its first sentence (MANUSCRIPT.md:928-929) reads: 'Reusing KV that is *not* a prefix is the class the pointer layout of Sections 3 and 9d starts from, and several surveyed methods go further than this paper's scope.' The section then names Prompt Cache (arXiv:2311.04934, 8x-60x TTFT), EPIC/LegoLink (arXiv:2410.15332, up to 8x TTFT / 7x throughput) and CacheBlend (arXiv:2405.16444), all cited to docs/serving-options/R-CROSS.md rows 1-3, and MANUSCRIPT.md:938-941 states 'Against that class, this paper's pointer result is deliberately weaker in mechanism and stronger in attribution'. Proposal line 9's claim is therefore TRUE; only the label '-structured' vs the heading's 'Retrieval-structured or pointer-based' differs, not the substance.",
+  "Q1 caveat (not a refutation): 10a.3 is a bounded, no-bibliography section - MANUSCRIPT.md:882-887 and :921-923 say the related-work subsection 'cannot be completed from this workspace' (GAPS.md G16). So the section does cite the class, but the paper is not presented as fully positioned against it.",
+  "Q2 NOT FOUND as claimed - a nine-arm vLLM TTFT comparison does not exist. The artefact is experiments/miss-law/vllm2/rows.jsonl: 133 rows (wc -l 133), 59 with role=prime and 74 with role=measure, over 9 named cells (CAL, CAL-T, G1..G7) - nine CELLS, not nine arms, and no row or summary table compares TTFT across nine arms.",
+  "Q2 the 1.585 s figure is NOT an avalanche/residue row: it is a PRIME (cold first send) row - pair_id G1-P6336-r0, role prime, P1_target 6336, prompt_tokens 6336, cached_tokens 0, ttft_server_s 1.585238 (file line 26; rep1 twin 1.585509 at line 32). There was no cache to re-bill, so cached_tokens=0 there by construction.",
+  "Q2 the 0.216 s figure IS a warm measure: experiments/miss-law/vllm2/rows.jsonl, cell G1, round 1, P1=7450, cached_tokens 6336, ttft_server_s 0.216020 / 0.215932 (reps 0/1), also 0.216728/0.215639 at P1=8450. The proposal's '0.217' occurs 0 times in the file - 0.216020 is the only value it can mean.",
+  "Q2 the ratio is DERIVED, not measured: 1.585238/0.216020 = 7.338 (the record's 7.4 is 1.59/0.216 = 7.36). No single row carries both values; the pair spans different roles (prime vs measure) and different prompt lengths (6336 vs 7450 tokens), so it is a cold-vs-warm prefill contrast, not a residue-0-vs-residue-2 contrast.",
+  "Q2 the real residue-0/1 avalanche rows in that file are 1.234518/1.241775 (P1 6336/6337), 1.791722/1.787840/1.788242/1.791721 (P1 7392/7393) and 2.217788/2.225686/2.224709/2.220708 (P1 8448/8449) - none of them is 1.585, and their residue-2 neighbours are 0.205865/0.216728 etc. So the pair the proposal quotes is the cold-prime curve, not the avalanche curve.",
+  "Q2 candidate paths searched and rejected: experiments/miss-law/vllm2/rows.jsonl (found, 133 rows - the only home of 1.585238/0.216020); the literal values '1.585 s' and '0.216 s' occur nowhere else except papers/context-cache/FOLD-PROPOSAL.md:31, experiments/ptr-engine/RECORD.md:116, orchestration/units/C-ADJUDICATE.md:23/:28, orchestration/units/V-RECORD.md:32 and orchestration/handoffs/V-RECORD-2.json:38/:76 (all prose restatements). experiments/context-cache/cells/**, experiments/ptr-engine/measure/ and experiments/miss-law/rows.jsonl were not searched exhaustively for the pair; the proposal's own line 31 cites '2 rows', which points at vllm2, and those two rows are the two identified above.",
+  "No file other than orchestration/handoffs/V-FOLD-RESIDUAL.json and orchestration/units/V-FOLD-RESIDUAL.md was written; no network, no container, no git against a read-only target.",
+  "Deviation recorded: 15 tool calls against a bound of 14 - the 15th was a single formatting rewrite of orchestration/units/V-FOLD-RESIDUAL.md to fit the <=35-line cap; no additional fact-finding was done in it."
+ ],
+ "not_reproduced": [
+  "Q2 'nine arms' / 'nine-cell run' of vLLM TTFT: nine cells exist (CAL, CAL-T, G1..G7) but no nine-arm TTFT comparison exists anywhere in experiments/miss-law/vllm2/rows.jsonl",
+  "Q2 0.217 s: absent from the artefact (0.216020 is the measured value); 1.585 s and 0.216 s are not a matched pair from one comparison",
+  "Q2 'residue-{0,1} cold cache' framing of 1.585 s: that row is role=prime at a 6336-token first send, cold by construction"
+ ],
+ "overstated": [
+  "Q2 the ~7.4x is arithmetic on two rows of different role and length, so it overstates a controlled contrast; the measured avalanche-vs-neighbour ratio in the same file is 1.79/0.21 = 8.5x at P1 7392 (which C2 withdrew) and 2.22/0.216 = 10.3x at P1 8448"
+ ],
+ "unverified": [
+  "Q2 whether a separate nine-arm TTFT table exists outside experiments/miss-law/vllm2/rows.jsonl (e.g. an aggregate derived from it) - experiments/ptr-engine/measure/rows.jsonl and experiments/context-cache/cells/** were not opened in this unit; the proposal itself cites no such file",
+  "Q1 whether 10a.3's R-CROSS.md rows were themselves verified against primary sources - out of scope here, already flagged by MANUSCRIPT.md:882-887 and GAPS.md G16"
+ ],
+ "blocker": "",
+ "next_unit_hint": "FOLD-ENGINE: line 9 survives unchanged apart from naming the real heading ('Retrieval-structured or pointer-based context', MANUSCRIPT.md:926) - no repair needed. Line 31 must be rewritten: drop 'nine arms' and the residue-{0,1} framing, state that 1.585 s is a cold 6336-token PRIME (pair_id G1-P6336-r0) and 0.216 s a warm 6336-cached MEASURE at P1=7450, that 0.217 does not occur in the file, and that 7.3x is a derived cross-role ratio. If a controlled avalanche figure is wanted, quote the measured same-length pair at P1 7392/7394 (1.788 vs 0.211) and say it is residue-0 vs residue-2, not cold-vs-warm.",
+ "write_paths": [
+  "orchestration/handoffs/V-FOLD-RESIDUAL.json",
+  "orchestration/units/V-FOLD-RESIDUAL.md"
+ ],
+ "tool_calls": 15,
+ "bound": 14
+}

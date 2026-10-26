@@ -77,3 +77,11 @@ Enforced by `papers/context-cache/verify_package.py`; re-run it after any edit h
 | C61 | grid_guard | experiments/context-cache/cells/G3, experiments/context-cache/cells/WIN-SGL, experiments/context-cache/cells/WIN-VLLM, experiments/context-cache/cells/TUNED | S0, S1, S2, V1, V2, V3, TUNED |
 | C62 | c62 | experiments/context-cache/cells/G3-LIMIT-V2 | n/a |
 | C63 | c63 | experiments/context-cache/cells/MOE-VLLM, experiments/context-cache/cells/G3, experiments/context-cache/cells/WIN-VLLM, experiments/context-cache/cells/DENSE-SGL | V3, S0, V1, P1 |
+| C64 | papers/context-cache/recompute_r2.py | experiments/context-cache/cells/P2-REPAD | O1 |
+| C64a | papers/context-cache/recompute_r2.py | experiments/context-cache/cells/P2-REPAD | O1 |
+| C65 | papers/context-cache/recompute_r2.py | experiments/context-cache/cells/MOE-VLLM, experiments/context-cache/cells/G3, experiments/context-cache/cells/R2-PROMPT, experiments/context-cache/cells/DENSE-SGL | V3, S0, O4, P1 |
+| C66 | papers/context-cache/recompute_r2.py | experiments/context-cache/cells/TRACK-INTERVAL | T256, T128, T64 |
+| C67 | papers/context-cache/recompute_r2.py | experiments/context-cache/cells/R2-PROMPT | O1, O2, O3, O4 |
+| C67a | papers/context-cache/recompute_r2.py | experiments/context-cache/cells/R2-PROMPT | O3, O4 |
+| C68 | papers/context-cache/recompute_r2.py | experiments/context-cache/cells/R2-PROMPT | O1, O2, O3, O4 |
+| C69 | papers/context-cache/recompute_r2.py | experiments/context-cache/cells/SYS-OPT, experiments/context-cache/cells/R2-PROMPT | O1, O4 |

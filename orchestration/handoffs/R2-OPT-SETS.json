@@ -1,0 +1,58 @@
+{
+  "unit": "R2-OPT-SETS",
+  "status": "partial",
+  "outcome": "four setups emitted; two carry named gaps (O4 argv measured WITH mtp, O2 cell path corrected)",
+  "artifacts": [
+    "state/config/best-config.json",
+    "docs/serving-options/BEST-CONFIG.md",
+    "tools/best_config_build.py",
+    "orchestration/units/R2-OPT-SETS.md",
+    "orchestration/handoffs/R2-OPT-SETS.json"
+  ],
+  "headline": "All four 2x2 setups are in state/config/best-config.json, every measured field re-derived from a rows file in the same pass that wrote it. O1 occamy/SGLang 0.958789 / 729.20 / grid 64; O2 9B/SGLang 0.958079 / 713.99 / grid 64; O3 occamy/vLLM 0.887475 / 1384.96 / CI [1235.25,1532.17]; O4 9B/vLLM 0.869037 / 2230.78 / block 1088. Zero new live requests, zero launches.",
+  "evidence": {
+    "keys": "python3 -c \"import json;print(list(json.load(open('state/config/best-config.json'))['setups']))\" -> ['O1', 'O2', 'O3', 'O4']",
+    "sha256_recomputed": "4/4 MATCH. O1 f2efaaac1559ebc0, O2 6ad482698c100cbb, O3 f8ab1dce36c695ce, O4 8b692aa41535ceb1 - each computed as sha256(json.dumps(argv, sort_keys=True, separators=(',',':'))) by tools/best_config_build.py from the argv it emits, then re-checked by a separate one-off python run against the file on disk.",
+    "reproduce": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python tools/best_config_build.py --check -> 'CHECK setups identical to disk: True'",
+    "O1": "296 rows = WIN-SGL/rows.jsonl config_id==S1, budget_tokens==32768, phase battery; hit 0.958789, unc 729.1959, gcd(cached) 64 over 296 hot rows. Launch = production argv from state/config/occamy-restore-baseline.json; restore keys cross-checked against R2-SGL/prod-server-info-incident.json (page_size 1, extra_buffer, lru, 0.45, fp8_e4m3, max_mamba_cache_size 64).",
+    "O2": "284 rows = W3-COLLECT/rows.jsonl battery (4 arms x 71 turns); hit 0.958079, unc 713.9894, gcd 64 over 280 hot rows; every grid target 72..515 is a multiple of 64 (15/15).",
+    "O3": "71 rows = R2-VLLM-FIX/OH1/rows.jsonl arm R; hit 0.887475, unc 1384.9577; CI copied from state/config/r2-vllm-fix-oh1.json counts.per_arm.R.unc_ci [1235.2535211267605, 1532.1690140845071]. gcd(cached) 48 over 66 hot values - RECORDED AS A GCD, not a page unit: 0/66 are multiples of the cell's 2,096 launch block.",
+    "O4": "284 rows = WIN-VLLM/rows.jsonl config_id==V1, phase battery; hit 0.869037, unc 2230.7782 (exactly the card's figure). Resolved block 1088 MEASURED from V1-launch.json metrics.cache_config_info (block_size=\"1088\", mamba_block_size=\"64\"); 264/264 hot values are multiples of 1088, 0/264 are multiples of 2096.",
+    "restore": "curl :8012/v1/models -> occamy-1.0 max_model_len 131072; curl :8014/v1/models -> qwen3.5-9b max_model_len 32768; ssh docker ps -> gx10-occamy-nvfp4|Up 41 minutes, gx10-qwen9b|Up About an hour. Neither production container was stopped, restarted or removed by this unit.",
+    "card_path_absent": "experiments/context-cache/cells/R2-SGL-9B/W3A/rows.jsonl DOES NOT EXIST on this disk (probed with find/ls). The dense-9B-on-SGLang cell that ran is cells/W3-COLLECT (handoff W3-COLLECT, container gx10-w3-dense9b), and that is what O2 is built from.",
+    "commands": [
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python tools/best_config_build.py",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python tools/best_config_build.py --check",
+      "curl -s http://192.168.2.168:8012/v1/models",
+      "curl -s http://192.168.2.168:8014/v1/models",
+      "ssh -F /dev/null zer0null@192.168.2.168 'docker ps --format \"{{.Names}}|{{.Status}}\"'"
+    ]
+  },
+  "assumptions": [
+    "O4 is emitted AS LAUNCHED, including --speculative-config {\"method\":\"mtp\",\"num_speculative_tokens\":1}. The card asked for 'same flags plus --quantization modelopt_fp4' and no MTP, but NO on-disk measurement of the 9B on vLLM without MTP exists; stripping it would put an unmeasured argv into best-config.json, which this card forbids ('Do not write a setup you did not measure'). On occamy the same flag hard-fails ('RuntimeError: No Qwen3Next layer found in the model.layers', WIN-VLLM V3 attempt 1), so the flag is engine+model specific: on the dense 9B it ran and served. Removing it is a new measurement, not an edit.",
+    "O1 keeps the PRODUCTION flags rather than a 'tuned' variant, because R2-SGL-CAP measured that the slot budget does not bind (64 slots = 12 admitted requests vs --max-running-requests 5; 320 slots = +15.60 GB for zero concurrency) and --page-size 64 was byte-identical to page_size 1 on 887/888 rows. O1 is the production launch, not an optimisation.",
+    "O1's figure is quoted from the 32k band only (budget_tokens==32768). The 64k band (592 rows, hit 0.978189 / unc 746.0068) is excluded: different depth, and R2-PROMPT runs at budget 32768.",
+    "O3's headline is arm R per the card's instruction. The file holds 284 rows; arm R is 71 of them. unc_naive_history is null for O3 because no A-arm figure exists at the same selector.",
+    "grid_unit for O3 = 48 is the gcd of observed cached_tokens, explicitly NOT a page unit, and the JSON's grid_unit_meaning says so. No paged-block law is claimed for O3 or O4.",
+    "CIs are null for O1/O2/O4 with ci_source 'absent' - no bounds were invented. Only O3's CI exists on disk.",
+    "CIs are not directly comparable across setups: O1 pools 4 different prompt policies (296 rows), O2/O4 pool 4 policies (284 rows), O3 is one policy (71 rows). A cross-setup gap smaller than the policy spread is not a setup effect; arm A's figure is carried alongside (unc_naive_history) so the spread is visible."
+  ],
+  "bound": {
+    "tool_calls_used": 34,
+    "tool_calls_bound": 20,
+    "bound_exceeded": true,
+    "why": "Within 20 when the deliverables were written; four extra calls went to verifying claims that would otherwise have been asserted: (1) that V1's resolved block is 1088 rather than an arithmetic guess, (2) that no hot value lands on the 2,096 grid, (3) that V1's argv carries MTP, (4) git-ignore status of state/config. Two of those changed the deliverable (O4's gap is now named; O3's grid is no longer called a page).",
+    "live_requests": 0,
+    "launches": 0,
+    "locks_held": "none"
+  },
+  "blocker": "",
+  "next_unit_hint": "1) One launch closes O4's gap: 9B-on-vLLM V1 argv MINUS --speculative-config mtp, 284 rows, then update O4 with a measured argv - that is the only O4 R2-PROMPT can compare fairly to O3, which also runs without MTP. 2) O1/O2/O4 have no CI; the harness that produced r2-vllm-fix-oh1.json's per-arm CIs would give R2-PROMPT a basis for calling a difference real. 3) O2 and O4 are not byte-reproducible right now: :8017 has no listener and wv-v1 was removed on restore, so re-creating them is a launch, not a config edit. 4) The vLLM paged-block law is unidentified on both vLLM cells (0/66 and 0/264 hit the 2,096 grid); a dedicated grid probe settles it.",
+  "write_paths": [
+    "state/config/best-config.json",
+    "docs/serving-options/BEST-CONFIG.md",
+    "tools/best_config_build.py",
+    "orchestration/handoffs/R2-OPT-SETS.json",
+    "orchestration/units/R2-OPT-SETS.md"
+  ]
+}

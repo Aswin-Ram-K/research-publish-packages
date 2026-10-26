@@ -1,0 +1,120 @@
+{
+  "unit": "S6",
+  "status": "done",
+  "artifacts": [
+    "research/tooling/03-lsp-code-error-rate.md",
+    "research/tooling/README.md",
+    "research/tooling/FINDINGS.md (targeted: §3 plugin row + §4c marked WITHDRAWN by user 2026-10-23 — judged redundant with the installed graphify CLI)",
+    "research/tooling/handoffs/S6.json"
+  ],
+  "adopt": [
+    {
+      "tool": "target's own compilers — /home/zer0null/Duval/node_modules/.bin/tsc 5.9.3, cargo 1.98.1",
+      "p0_p1_p2": "P0",
+      "why": "Zero installs, zero daemon. Answers whether the mined revision type-checks at all; a failure turns capability claims into caveats. Read-only discipline: CARGO_TARGET_DIR outside the target + --offline; tsc --noEmit --incremental false."
+    },
+    {
+      "tool": "SCIP — @sourcegraph/scip-typescript 0.5.2 (Apache-2.0), @sourcegraph/scip-python 0.6.8 (MIT), scip-code/scip 835* active",
+      "p0_p1_p2": "P0",
+      "why": "Offline, per-commit, exact definition/reference occurrences; the batch-shaped alternative to a live LSP server. Adoptability gated on proving --no-global-caches plus an output path keep every write out of the read-only target."
+    },
+    {
+      "tool": "provenance v2: symbol identity check (using the SCIP index)",
+      "p0_p1_p2": "P0",
+      "why": "Today provenance proves a node id exists and a span fits the file (mine/provenance.py:154,168), not that the cited symbol is the intended definition. Measurement: 20 deliberately wrong symbol citations, today 0/20 rejected, target >=18/20."
+    },
+    {
+      "tool": "basedpyright 1.40.2 (NOASSERTION on PyPI; MIT-style fork of pyright)",
+      "p0_p1_p2": "P0",
+      "why": "Default gate for our own Python: mature, strict-by-config, JSON diagnostics, baseline ratchet. ty 0.0.91 is alpha (0.0.x) and makes no 3.14 language-support claim; mypy is the plugin fallback; pyrefly is EVALUATE."
+    },
+    {
+      "tool": "ruff 0.17.2 (MIT)",
+      "p0_p1_p2": "P1",
+      "why": "F/E9/B/I check-only; cheapest class of real defects (undefined names, unused imports, bugbear) with no Node and no daemon."
+    },
+    {
+      "tool": "hypothesis 6.170.8 (MPL-2.0)",
+      "p0_p1_p2": "P1",
+      "why": "Property tests for parse_ref/span regex, manifest and graph JSON shapes, dedup keys — the invariant-bearing parsers the miner depends on."
+    },
+    {
+      "tool": "mutmut 3.8.0 (BSD-3-Clause)",
+      "p0_p1_p2": "P1",
+      "why": "The honest way to claim fewer errors: mutation score on kg/ then mine/ shows whether tests assert or merely execute."
+    },
+    {
+      "tool": "rust-analyzer 1.98.1 (installed)",
+      "p0_p1_p2": "P1",
+      "why": "diagnostics / unresolved-references / scip subcommands cover the target's rust/crates half immediately, no Python client needed; cargo load must be proven non-writing."
+    },
+    {
+      "tool": "multilspy 0.1.1 (MIT, microsoft/multilspy)",
+      "p0_p1_p2": "P2",
+      "why": "Live definition/references/hover/diagnostics for interactive 'explain this symbol'; server lifecycle per session makes it wrong for batch sweeps. Backed by the MGD paper (arXiv:2306.10763)."
+    },
+    {
+      "tool": "import-linter 2.15, vulture 2.16, bandit 1.9.4",
+      "p0_p1_p2": "P2",
+      "why": "Layering contracts, dead code (whitelisted), and subprocess/injection hygiene for a tool that shells out; each S effort, each independently revertable."
+    },
+    {
+      "tool": "ty 0.0.91 (MIT, astral-sh/ty 19,913*)",
+      "p0_p1_p2": "P2",
+      "why": "Fast Rust checker; alpha 0.0.x and no 3.14 language claim — trial in watch mode, not a CI gate until >=0.1."
+    }
+  ],
+  "rejected": [
+    "github/stack-graphs / tree-sitter-stack-graphs — ARCHIVED 2025-09-09; popular in older posts, dead for adoption",
+    "agentic-labs/lsproxy — 108*, last push 2025-08-08 (stale); also needs an MCP client",
+    "pygls 2.1.1 / lsprotocol 2025.0.0 — a framework and types for writing a server; we consume indexes, not serve them",
+    "mcp-language-server 1,611* and serena 30,637* — no MCP client mounted; serena also GPL-3.0-or-later app",
+    "radon 6.0.1 — unmaintained since 2023-03-26",
+    "pylint 4.1.3 — GPL-2.0-or-later; local dev tool at most, never a runtime dependency",
+    "LSP-as-a-service / per-query daemon — wrong shape for a 227-file read-only batch"
+  ],
+  "withdrawn": [
+    "@local/dsh-plugin-graphify — user, 2026-10-23, redundant with the graphify CLI",
+    "LSPRAG 'Python +213.31%' attribution carried in the unit brief — wrong: 213.31% is Java, Python is +31.57% (arXiv:2510.22210 abstract, fetched 2026-10-23)"
+  ],
+  "unverified": [
+    "scip-typescript against a read-only target: does --no-global-caches + --output keep every write out (tsconfig.tsbuildinfo, node_modules/.cache)? Not run — installing it would have broken the no-install rule",
+    "scip-python 0.6.8 on Python 3.14 syntax / .pyi — not run",
+    "fraction of references resolvable over the 227-file admitted subset (imports point outside)",
+    "rust-analyzer loading rust/crates without writing (Cargo.lock, proc-macro builds)",
+    "ty 0.0.91 Python 3.14 language support — README names 3.10 only",
+    "basedpyright Python 3.14 syntax support and whether its wheel vendors Node (nodejs-wheel-binaries)",
+    "whether the target's cargo check / tsc --noEmit pass at commit 96c7687 (only --version was run)",
+    "whether symbol-identity checking catches the main/main_main class of error in existing docket claims",
+    "LSPRAG and MGD results transferred to this pipeline — external generation-task claims, not measurements here"
+  ],
+  "write_paths": [
+    "research/tooling/03-lsp-code-error-rate.md",
+    "research/tooling/README.md",
+    "research/tooling/handoffs/S6.json",
+    "research/tooling/FINDINGS.md"
+  ],
+  "evidence": {
+    "date": "2026-10-23",
+    "local": "Python 3.14.4; node v22.22.1; npm 9.2.0; rust-analyzer 1.98.1 (48a229c 2026-09-01); cargo 1.98.1 (797e8a9bc 2026-08-05); Duval tsc 5.9.3; src 52 files / 32,810 lines",
+    "commands": [
+      "pypi.org/pypi/<pkg>/json (version, license, requires_python, upload times)",
+      "api.github.com/repos/<owner>/<repo> (stars, archived, pushed_at)",
+      "registry.npmjs.org/<pkg> (dist-tags, publish times)",
+      "rust-analyzer --version; rust-analyzer --help | grep '^rust-analyzer '",
+      "/home/zer0null/Duval/node_modules/.bin/tsc --version",
+      "sed -n '1,10p' /home/zer0null/Duval/rust/Cargo.toml",
+      "curl/fetch arxiv.org/abs/2306.10763 and arxiv.org/abs/2510.22210"
+    ],
+    "not_run": "no install, no build, no test, no pipeline, no git; nothing executed inside /home/zer0null/Duval except --version reads"
+  },
+  "notes": [
+    "README.md line 9 still describes the plugin as 'ADD: plugin (conditional...)' — left untouched under the add-one-row constraint; flag for the next correction unit.",
+    "FINDINGS §3 'ADD ranking' paragraph (line 79) and §4 order note still read as if the plugin were live; only the two required cells were marked, per the hard constraint."
+  ],
+  "tool_calls": 28,
+  "assumptions": [
+    "The 2026-10-23 version/licence/star block supplied in the unit brief was treated as verified and not re-fetched; it is labelled a dated snapshot in §8.",
+    "LSPRAG/MGD are cited as external literature, never as evidence for this pipeline."
+  ]
+}

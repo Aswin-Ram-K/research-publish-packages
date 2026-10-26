@@ -1,0 +1,50 @@
+{
+  "unit": "QUALITY-INSTRUMENT-V2",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/quality/runner_v2.py",
+    "experiments/ptr-engine/quality/tests/test_billing_alignment.py",
+    "orchestration/units/QUALITY-INSTRUMENT-V2.md"
+  ],
+  "evidence": {
+    "command_or_count": "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest experiments/ptr-engine/quality/tests/test_billing_alignment.py -q\n...                                                                      [100%]\n3 passed in 0.02s\n\nRED  (audited L = prompt_tokens + FRAMING): row 0 (turn 2): billed=10262 but prompt_tokens - cached_tokens + L_source_consistent = 10245 - 0 + 0 = 10245 [L=10257, L_source='delta', P1_previous=10000, cached_reported=False]\nRED2 (audited L against a corrected bill): row 0 (turn 2): L=10257 but L_source='delta' implies L=245 (prompt_tokens=10245, P1_previous=10000, n_payload=None)\nGREEN(delta L = P2 - P1): {\"L\": 245, \"L_source\": \"delta\", \"P1_previous\": 10000, \"billed\": 245, \"billed_source\": \"server\", \"cached_tokens\": 10000, \"prompt_tokens\": 10245, \"turn\": 2}\nNULL (details null -> cached_tokens: null, cached_reported: false): {\"cached_tokens\": null, \"cached_reported\": false}",
+    "commands": [
+      "sed -n '488,516p;461,853p' experiments/ptr-engine/quality/runner.py  # read the audited instrument",
+      "python3 - <<'PYEOF' ...  # copy runner.py -> runner_v2.py, 20 asserted substitutions, all applied",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m py_compile experiments/ptr-engine/quality/runner_v2.py  # COMPILE_OK",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -c \"import sys; sys.path[:0]=['experiments/ptr-engine','experiments/ptr-engine/quality']; import runner_v2 as r; print('IMPORT_OK', r.BLOCK_SIZE, r.FRAMING, r.billing_row(2,10245,10000,{'prompt_tokens':10245,'prompt_tokens_details':{'cached_tokens':10000}})['L'])\"  # IMPORT_OK 64 12 245 (offline: no HTTP)",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest experiments/ptr-engine/quality/tests/test_billing_alignment.py -q",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest experiments/ptr-engine/quality/tests/test_billing_alignment.py -q -s  # prints the RED/GREEN/NULL lines quoted above",
+      "stat -c '%y %n' experiments/ptr-engine/quality/{runner.py,rows.jsonl,rows-corrected.jsonl,rerun_corrected.py,RESULTS.md,PREREG.json} experiments/miss-law/LAW.md experiments/ptr-engine/RECORD.md  # all mtimes 00:24-18:02, before this session's 18:56 start; nothing touched"
+    ]
+  },
+  "defects": {
+    "defect_1_append_is_the_prefix": "experiments/ptr-engine/quality/runner.py:495 -- `L = prompt_tokens + FRAMING`. The comment at :488-490 already claims L is the measured append P2-P1 and :494 computes previous_prompt_tokens, but L is assigned the whole prefix and the previous count is only written to the row. That telescopes (P1 mod 64) + L into billed = sum(P1).",
+    "defect_2_usage_never_persisted": "experiments/ptr-engine/quality/runner.py:594 (block :591-599) reads usage.prompt_tokens_details.cached_tokens; the shipped request row carries no cached_tokens key -- 0 of 48 request rows in quality/rows.jsonl -- so billed_tokens_measured at runner.py:688 is `sum(t['prompt_tokens'])`, a recomputation, not a reading.",
+    "defect_3_refusals_not_persisted": "experiments/ptr-engine/quality/runner.py:677 -- `refused_total: sum(t['refused'] ...)`, and t['refused'] (:656) counts only outcome == 'refused'. Model-initiated refusals are written as 'refused_by_model' at runner.py:575-579 and are dropped here; no refusal count reaches any request row either, so the 33 PTR_STORE_MISS refusals are countable only from RECORD.md §4 prose.",
+    "defect_4_guard_unreachable": "experiments/ptr-engine/quality/runner.py:782-818 `_assert_aligned` (called at :762) is guard-shaped but lives in a module that imports the server-bound runner, so it can only be exercised by a live run. The aborted in-place repair died on it: runner.py:815-818 raised `AssertionError: per_turn['%d'] bills P1=18794 but the row's own tokenizer count was 10902` (experiments/ptr-engine/quality/rerun-corrected.log:16). V2 exposes `assert_billing_alignment()` and `billing_row()` at module level so the same class of guard is reachable offline."
+  },
+  "changes": {
+    "a_L_delta": "runner_v2.py `billing_row()`: L = P2 - P1 whenever a previous turn exists (L_source='delta'); the PRIME only falls back to n_payload + 12 with n_payload = P1 - 12 (L_source='framing'). L_source and n_payload are written to prediction, request and turns rows.",
+    "b_cached_tokens_persisted": "`_server_accounting()` reads usage.prompt_tokens_details.cached_tokens; a null/absent object yields cached_tokens: null with cached_reported: false and server_uncached: null (never 0); a REPORTED 0 stays 0/true. The request row persists all four fields.",
+    "c_refusals_by_code": "a per-rep Counter keyed by the PtrError code, fed from every resolution whose outcome starts with 'refused' (model-initiated refusals included); persisted per turn (refused_total, refused_by_code) and per rep (refused_total, refused_by_code, refusal_codes).",
+    "d_alignment_guard": "`assert_billing_alignment(rows)` runs at runner_v2.py :~(after the turn loop, before `final`/`_billed`/summary): billed == prompt_tokens - cached_tokens + L_source_consistent, plus L == the value its own L_source implies, raising with the row index and both counts. Three offline tests drive it.",
+    "measured_column": "rep row: billed_tokens_measured is now the SUM OF READINGS (prompt_tokens - cached_tokens per reported turn, whole prompt for a silent turn) with billed_tokens_measured_{source,reported_turns,null_turns}; billed_tokens stays the law model, labelled billed_tokens_source='law_model'."
+  },
+  "assumptions": [
+    "Prime fallback: with no previous turn there is no delta, so the prime uses n_payload + 12 with n_payload = P1 - FRAMING, i.e. the prime's whole cold prompt. Reason: the mandate names `n_payload + 12`, and the framing model in experiments/ptr-engine/RECORD.md:38 is prompt = payload + 12.",
+    "Guard identity: `prompt_tokens - cached_tokens` already prices the append, so `L_source_consistent` is 0 on every row v2 writes; a second L term is exactly the double count that collapsed the audited law to billed = sum(P1). A row may declare a non-zero term only via `append_extra`, which the guard then holds it to.",
+    "Silent server: when usage reports no cached_tokens the per-turn bill is prompt_tokens (whole prompt, an upper bound) and is counted in billed_tokens_measured_null_turns; the law estimate stays in predicted_uncached and never enters `billed`.",
+    "No live request was made (offline mandate). The v2 path past token_count() is therefore unexecuted; HOST/PORT are unchanged from the audited runner, so a future live run is a config change, not a rewrite.",
+    "The audited `_assert_aligned` is retained unchanged; because v2 now keeps the full request row, it compares the server's prompt count with the row's P1_tokenizer, both counted with chat_template_kwargs (BILL-AUDIT: they agree).",
+    "PREREG.json:30 still embeds the old law string ('L = prompt_tokens + 12'). It was NOT edited: re-registering the law is a promotion decision, not this unit's."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Promotion of v2 is a separate decision. If promoted: (1) re-register the billing_law line (PREREG.json:30) as L = P2 - P1 with the framing fallback on the prime only, or fork the prereg, since the law column now carries the delta; (2) run ONE arm-A rep against :8012 and check that the first request row's (cached_tokens, cached_reported, L_source, billed) triple is a reading; (3) the guard fires before the rep row, so a failing rep leaves its prediction/request rows on disk and no aggregate -- that is intended, not a crash to work around.",
+  "write_paths": [
+    "experiments/ptr-engine/quality/runner_v2.py",
+    "experiments/ptr-engine/quality/tests/",
+    "orchestration/handoffs/QUALITY-INSTRUMENT-V2.json",
+    "orchestration/units/QUALITY-INSTRUMENT-V2.md"
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "unit": "POINTER-BOUNDARY-PREREG",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/BOUNDARY-PREREG.md",
+    "orchestration/handoffs/POINTER-BOUNDARY-PREREG.json",
+    "orchestration/units/POINTER-BOUNDARY-PREREG.md"
+  ],
+  "evidence": {
+    "requests_sent": 0,
+    "row_files_written": 0,
+    "statement": "DESIGN ONLY. No curl, no HTTP, no server contact, no row file. Every command below reads files only.",
+    "prereg_lines": 120,
+    "prereg_line_check": "wc -l experiments/ptr-engine/BOUNDARY-PREREG.md -> 120 (cap 120)",
+    "prediction_count_check": "grep -c '^\\*\\*P[1-7] —' experiments/ptr-engine/BOUNDARY-PREREG.md -> 7",
+    "commands": [
+      "ls -la orchestration/handoffs/C0-EQUALINFO.json experiments/ptr-engine/RECORD.md experiments/ptr-engine/quality/PREREG.json papers/context-cache/CLAIMS.md -> all present",
+      "wc -l experiments/ptr-engine/BOUNDARY-PREREG.md -> 120",
+      "grep -c '^\\*\\*P[1-7] —' experiments/ptr-engine/BOUNDARY-PREREG.md -> 7"
+    ],
+    "citations_drawn": {
+      "C0-EQUALINFO.json": ["uncached_per_turn_by_arm", "truncation", "headline_ratio", "vllm_cache_limit"],
+      "experiments/ptr-engine/RECORD.md": ["§2 append-cost law", "C2 layer (append re-bills regardless of warmth, 8.40x/8.41x)", "§3 hit-ledger reconciliation", "tail: null cached_tokens = 0, settled 2026-10-26"],
+      "papers/context-cache/CLAIMS.md": ["C53 branching arm B 123,256 prompt / 0 cached, B/A 6.744", "C55 SGLang grid 64", "C63 engine +549.33 vs model -400.02, interaction -403.63"]
+    }
+  },
+  "question": "Does the pointer protocol beat a pasted working set at the two places the equal-information baseline left open: (i) when the working set exceeds the window, and (ii) when the history is cache-hostile?",
+  "item_basis": {
+    "tokens_per_item": 1883,
+    "derivation": "22,594 served prompt tokens / 12 items (C0-EQUALINFO truncation.per_model qwen measured_prompt_tokens 22594; occamy est 22,524)",
+    "bytes_per_item": 9000
+  },
+  "rungs": [
+    {"items": 12, "bytes": 108000, "tokens_est": 22596, "occamy": {"C0-static": "possible (measured 22,575)", "C0-trunc": "possible"}, "qwen": {"C0-static": "possible (22,594 served of 32,768)", "C0-trunc": "possible"}},
+    {"items": 40, "bytes": 360000, "tokens_est": 75320, "occamy": {"C0-static": "possible (75,320 <= 131,072)", "C0-trunc": "possible"}, "qwen": {"C0-static": "IMPOSSIBLE (75,320 > 32,768) - first crossing on qwen", "C0-trunc": "possible"}},
+    {"items": 120, "bytes": 1080000, "tokens_est": 225960, "occamy": {"C0-static": "IMPOSSIBLE (225,960 > 131,072) - first crossing on occamy", "C0-trunc": "possible"}, "qwen": {"C0-static": "IMPOSSIBLE", "C0-trunc": "possible"}},
+    {"items": 400, "bytes": 3600000, "tokens_est": 753200, "occamy": {"C0-static": "IMPOSSIBLE", "C0-trunc": "possible"}, "qwen": {"C0-static": "IMPOSSIBLE", "C0-trunc": "possible"}}
+  ],
+  "arms": [
+    {"arm": "C0-static", "definition": "whole set pasted each turn, byte-identical prefix on turns 2-4", "requests_per_rep": 4, "endpoints": ["http://192.168.2.168:8012 occamy-1.0-NVFP4 SGLang", "http://192.168.2.168:8014 qwen3.5-9b vLLM"]},
+    {"arm": "C0-trunc", "definition": "whole set pasted with fact-pinned FIFO eviction: k01 never evicted, newest non-fact items fill window-1024 tokens, oldest non-fact out first", "requests_per_rep": 4, "items_in_context": {"occamy": 69, "qwen": 16}, "endpoints": ["same two"]},
+    {"arm": "R-pointer", "definition": "458-B index only, fetch per turn, 2 requests/turn; SGLang native tool-call fetch, vLLM text FETCH", "requests_per_rep": 8, "endpoints": ["same two"]},
+    {"arm": "R-pointer-prefetch", "definition": "as R-pointer but the next scheduled item's body is appended one turn early to the resolve request", "requests_per_rep": 8, "endpoints": ["same two"]}
+  ],
+  "cache_hostile_ladder": {
+    "runs_on": "occamy-1.0-NVFP4 SGLang :8012 only (vLLM reports no cache counters)",
+    "rung_items": 12,
+    "branches": [1, 4, 16],
+    "requests_per_rep_per_arm": [4, 7, 19],
+    "rule": "b divergent histories, each turn rewriting the last min(N,b) turns, interleaved so b-1 other prefixes are served between two requests of the observed branch; pollution sends carry cached_tokens and are measured"
+  },
+  "predictions": [
+    {"id": "P1", "claim": "replication gate: occamy rung 12 C0-static mean 1,911 (1,624-2,198), R 3,524 (+-20%), ratio 1.84 in [1.4,2.4], all arms 3/3", "mechanism": "turns 2-4 byte-identical prefix (22,528 cached); each resolve appends and an append re-bills regardless of warmth", "refuted_if": "any figure outside the band; run is invalidated, not reinterpreted"},
+    {"id": "P2", "claim": "at occamy rung 40 R/C0-static rep-mean falls below 1.0, expected 0.50-0.65 (C0-static 6,292/turn, R 3,524-3,850)", "mechanism": "the transcript's advantage is one cold prime amortised over four turns, and the prime scales with the set while the fetched set does not", "refuted_if": "ratio >= 1.0"},
+    {"id": "P3", "claim": "C0-trunc mean uncached/turn identical within +-5% at occamy rungs 120 and 400 (10,846), R/C0-trunc 0.30-0.45 and 0.35-0.50", "mechanism": "both rungs are window-bound to 69 items", "refuted_if": "rungs differ >5% or C0-trunc exceeds 11,500"},
+    {"id": "P4", "claim": "qwen C0-static IMPOSSIBLE at rung 40 while occamy serves it; C0-trunc flat 30,128 gross tokens/turn; gross R/C0-trunc ~0.22 and an overstatement", "mechanism": "32,768 window crossed at 17 items; vLLM gross count hides every hit", "refuted_if": "qwen serves C0-static at rung 40 (basis wrong by ~2.3x)"},
+    {"id": "P5", "claim": "occamy rung 12 C0-static hit rate ~0.97 at b=1, <0.25 at b=4, <0.10 at b=16; R/C0-static >= 0.8 at b=16", "mechanism": "interleaved rewrites leave no byte-identical prefix; C53 arm B shows the shape (123,256 prompt, 0 cached)", "refuted_if": "b=16 hit rate > 0.50"},
+    {"id": "P6", "claim": "R-pointer-prefetch per-rep uncached total within +-20% of R-pointer; its answering turn <=5% of R's T4 and its resolve turns >=1.8x R's", "mechanism": "same bytes, arrival moved; the break rides a request that was already going to break", "refuted_if": "per-rep total drops >20%"},
+    {"id": "P7", "claim": "every served arm 3/3 on occamy at every rung; qwen R-pointer must fetch k01 at T4", "mechanism": "accuracy is held constant so cost is the only variable", "refuted_if": "any occamy arm scores <3/3 at rung 12; the cost comparison stops"}
+  ],
+  "prediction_count": 7,
+  "decision_rule": {
+    "question_fixed_verbatim_from": "experiments/ptr-engine/quality/PREREG.json",
+    "question": "Each knowledge item records one calibration constant's audit code. Naming one constant is meaningful only if its own audit code is known. Which audit code belongs to the constant named 'lumen'?",
+    "expected_answer": "AUD-4417",
+    "scoring": "exact case-sensitive match, 'Reply with the audit code only.'",
+    "min_reps": 3,
+    "claim_i_supported_iff": "at occamy rung 120 AND qwen rung 40: C0-static recorded IMPOSSIBLE with the exact error AND C0-trunc mean uncached/turn >= 2x R-pointer's, over 3/3 reps",
+    "claim_i_fails_if": "C0-trunc/R < 1.5 -> above-window pasting is expensive, not impossible; recommendation becomes truncate-and-paste",
+    "claim_ii_supported_iff": "at b=16 hit rate < 0.10 AND R/C0-static >= 0.8",
+    "claim_ii_refuted_if": "b=16 hit rate > 0.50",
+    "both_refuted": "record that the pointer is never cheaper here, transcript wins below the window and loses above it"
+  },
+  "unavailable_rule": "A rung or arm that cannot be served (context overflow, OOM, timeout, 5xx, empty content) is recorded UNAVAILABLE with the exact error string and null (never 0) in every cost field; the ladder continues to the next rung. Two or more UNAVAILABLE arms in a cell make the cell UNAVAILABLE. At most 2 retries per request, same unit with attempt+1; a repaired request (thinking off) carries instrument:'repair: ...' so it stays separable. An impossible arm is never rendered as a cost number.",
+  "total_requests": 696,
+  "request_budget": {
+    "per_rep_per_arm": {"C0-static": 4, "C0-trunc": 4, "R-pointer": 8, "R-pointer-prefetch": 8},
+    "per_rung_model_rep": 24,
+    "ladder_a_gross": 576,
+    "ladder_a_minus_impossible_c0static": 516,
+    "ladder_a_deduction": "60 = 5 impossible C0-static cells x 4 turns x 3 reps (occamy rungs 120/400 = 24; qwen rungs 40/120/400 = 36)",
+    "ladder_b": 180,
+    "total_scheduled": 696,
+    "ceiling_with_reserve": 810,
+    "stages": {"stage_1_under_window": 216, "stage_2_above_window": 300, "stage_3_hostile": 180}
+  },
+  "row_schema": ["unit", "ts_utc", "endpoint", "model", "arm", "rung_items", "branches", "turn", "rep", "items_in_context", "evicted", "prompt_tokens", "cached_tokens", "cached_reported", "completion_tokens", "ttft_server_s", "answer_correct", "error"],
+  "not_settled_by_this": [
+    "one GPU, one host, sequential single client: no concurrency and no radix-tree eviction under memory pressure",
+    "two models on two engines (occamy-1.0 MoE SGLang, qwen3.5-9b dense vLLM); C63 shows the engine sets the bill (engine +549.33/turn vs model -400.02), so model claims are confounded with launch flags",
+    "synthetic i.i.d. corpus: 9,000-B items, one fact item, no semantic redundancy, no distractor pressure in T1-T3",
+    "exact-match scoring on one string: 3/3 is a floor, not a quality curve; no long-form, multi-fact or partial credit",
+    "vLLM reports no cache counters (0/45 rows), so the pointer looks cheaper on :8014 than can be shown; qwen uncached is a gross upper bound",
+    "R-pointer on vLLM is text FETCH, not tool_choice, so the two R arms are not protocol-identical (carried from C0-BASELINE)",
+    "no cost in dollars, power, or wall-clock SLA beyond ttft_server_s"
+  ],
+  "assumptions": [
+    "reps are sequential on a warm server (rep 1 cold prime, reps 2-3 steady state), matching C0-EQUALINFO where C0F read 5,676/28/28; the prime is reported separately rather than hidden in a mean",
+    "item basis 1,883 tokens/item is taken from the served prompt_tokens, not the /tokenize estimate (30,159 for 12 items), which over-reads by ~7.5k",
+    "C0-trunc pins the fact item k01 so that arm cannot fail for corpus-construction reasons; the unpinned variant is expected 0/3 and is deliberately not run",
+    "the cache-hostile ladder runs at rung 12 only so claim (ii) is not confounded with claim (i)"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Run stage 1 only (216 requests) if a human wants the cheapest decisive slice: it carries P1 (the replication gate) and P2 (the inversion below the window, the strongest falsifiable claim). Nothing runs until a card is created for it; this unit is pre-registration only.",
+  "write_paths": [
+    "experiments/ptr-engine/BOUNDARY-PREREG.md",
+    "orchestration/handoffs/POINTER-BOUNDARY-PREREG.json",
+    "orchestration/units/POINTER-BOUNDARY-PREREG.md"
+  ]
+}

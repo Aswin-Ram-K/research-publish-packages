@@ -1,0 +1,33 @@
+TOOL T-3 -- write_note_json
+
+Purpose. Write one JSON object to a file atomically. Intended for handoff notes,
+small state snapshots, and per-run metadata where a half-written file would mislead
+a reader.
+
+Interface. write_note_json(path, obj, indent=2)
+
+Behaviour.
+
+  * Writes to <path>.tmp in the same directory as path, flushes, fsyncs the file, then
+    renames it over <path>. A reader therefore sees either the old file or the new
+    file and never a partial one.
+  * Refuses to serialise anything that is not a dict at the top level. A list or a
+    scalar raises rather than being wrapped, because wrapping invents a schema.
+  * Non-serialisable values raise. Nothing is coerced to str implicitly, so a
+    datetime in the payload is an error rather than an ISO string that happens to
+    parse on this machine.
+  * The tmp file is not removed on failure; it is overwritten on the next call. A
+    leftover .tmp is therefore evidence of a crash, not evidence of corruption.
+
+Limits. Sized for small payloads, on the order of a few megabytes. It is not a log
+writer: do not call it once per request, the fsync dominates. Concurrent writers to
+the same path are last-rename-wins with no locking; if two processes must append to
+one logical note, they need a queue in front of this tool.
+
+Failure modes.
+
+  * A path whose parent directory does not exist raises. The tool does not create
+    directories, so a mistyped export path fails loudly instead of scattering files.
+  * A rename across filesystems falls back to a copy plus replace, which is not
+    atomic. Keep the tmp file beside the destination, which this tool does by
+    construction.

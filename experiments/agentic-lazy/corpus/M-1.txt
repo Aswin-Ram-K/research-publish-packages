@@ -1,0 +1,31 @@
+MEMORY M-1 -- Retry policy for scheduled jobs
+
+Where this comes from. cron/policy.yaml, owned by the data platform group. This note
+records the convention as it is applied, not the file's literal contents; when the
+two disagree the file wins and this note is stale.
+
+Policy for jobs scheduled by cron, on a non-zero exit:
+
+  * Retry on an exponential schedule starting at 60 seconds and doubling each
+    attempt, capped at 30 minutes between attempts.
+  * Maximum of 5 attempts. After the fifth failure the job is marked dead and pages
+    the owning group. The dead marking is what stops a morning page storm from
+    becoming an all-day one.
+  * Do NOT retry a non-zero exit that is a policy refusal (exit code 42). Those are
+    deterministic refusals -- the input is ineligible, not the machine unlucky --
+    and paging on the first occurrence is the correct action.
+  * The backoff counter is reset only by a manual clear. Restarting the scheduler
+    does not clear it; a restart is not an attempt at the work.
+  * The 30-minute cap is the interval makeover target, not an error threshold.
+
+Scope. This applies to cron-scheduled jobs only. Request-driven services use a
+request budget rather than a retry schedule and are covered by a different document;
+applying this table to an HTTP handler produces retries that nobody budgeted for.
+
+Known exception. The weekly warehouse compactor opts out of the 5-attempt cap and
+retries until its window closes, because a compactor that gives up mid-window leaves
+an inconsistent table. Its page still fires on the fifth failure; it simply keeps
+retrying behind the page.
+
+History. The cap was raised from 3 to 5 after the ingest outage, where the third
+attempt landed during a network window and the job died one attempt short.

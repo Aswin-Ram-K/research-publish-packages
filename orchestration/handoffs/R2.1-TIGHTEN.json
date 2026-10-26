@@ -1,0 +1,80 @@
+{
+  "unit": "R2.1-TIGHTEN",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/ANCHOR-PREREG-V2.md",
+    "experiments/ptr-engine/tools/anchor_classify.py",
+    "experiments/ptr-engine/tools/tests/test_anchor_classify.py",
+    "experiments/ptr-engine/tools/anchor_probes.py",
+    "orchestration/units/R2.1-TIGHTEN.md",
+    "orchestration/handoffs/R2.1-TIGHTEN.json"
+  ],
+  "evidence": {
+    "command_or_count": "tests: 'Ran 15 tests ... OK' | probes: exit=0, RESULT: PASS with A=ACCEPT B=REJECT C-minimal=ACCEPT C-global=REJECT E=ACCEPT F=ACCEPT | frozen checker: anchor_prereg_check.py exit=0 | rule-body sha256 b16548301589593b8d1041325fce833ef60d3b39b8e8c0a205084ee35eb9ad57 at 2026-10-26T13:46:53Z",
+    "commands": [
+      "python3 experiments/ptr-engine/tools/tests/test_anchor_classify.py",
+      "python3 experiments/ptr-engine/tools/anchor_probes.py",
+      "python3 experiments/ptr-engine/tools/anchor_prereg_check.py",
+      "python3 -c \"import sys; sys.path.insert(0,'experiments/ptr-engine/tools'); import anchor_classify as c; print(c.rule_digest('experiments/ptr-engine/longrun/ANCHOR-PREREG-V2.md'))\"",
+      "sha256sum experiments/ptr-engine/longrun/ANCHOR-PREREG.md experiments/ptr-engine/tools/anchor_prereg_check.py"
+    ]
+  },
+  "attestation": {
+    "rule": "R2.1",
+    "rule_body_sha256": "b16548301589593b8d1041325fce833ef60d3b39b8e8c0a205084ee35eb9ad57",
+    "written_utc": "2026-10-26T13:46:53Z",
+    "digest_covers": "the lines strictly between <!-- r21-rule:begin --> and <!-- r21-rule:end --> in ANCHOR-PREREG-V2.md, joined with \\n, one trailing \\n, UTF-8, nothing stripped; recorded OUTSIDE the delimited body so it is stable and checkable",
+    "reproduce": "python3 -c \"import sys; sys.path.insert(0,'experiments/ptr-engine/tools'); import anchor_classify as c; print(c.rule_digest('experiments/ptr-engine/longrun/ANCHOR-PREREG-V2.md'))\"",
+    "asserted_by_test": "test_rule_digest_is_recorded_in_the_doc (breaks on any later edit to the rule body)",
+    "superseded_prereg_sha256": "77ff76b0d167f8b36c7208b554bdbfb5e771b44ee5b52aa91acd6140b13b7584"
+  },
+  "probes": {
+    "corpus": "experiments/ptr-engine/tools/anchor_probes.py",
+    "exit_code": 0,
+    "result": "PASS",
+    "metric": "mention-only",
+    "semantic": false,
+    "verdicts": {
+      "A": {"expect": "ACCEPT", "observed": "ACCEPT", "note": "real V6 cp.2.t46 row text, located by sha256 prefix ecdb3fc9d9f0; R1 would reject it on the single prose anchor `raising`"},
+      "B": {"expect": "REJECT", "observed": "REJECT", "missing": ["record", "refusal"]},
+      "C-minimal": {"expect": "ACCEPT", "observed": "ACCEPT", "label": "ACCEPT", "note": "CORRECTION to ANCHOR-PREREG.md section 5: the minimal `scope=`->`grant=` edit is ACCEPTED because `scope` survives inside `scope_name`; the rejection the author reported came from a GLOBAL `scope`->`grant` substitution, which is C-global"},
+      "C-global": {"expect": "REJECT", "observed": "REJECT", "missing": ["scope"]},
+      "E": {"expect": "ACCEPT", "observed": "ACCEPT", "metric": "mention-only", "semantic": false, "note": "verifier negation probe: 8/8 tokens present, meaning inverted. Mention-only acceptance, never quotable as a semantic verdict on the arm"},
+      "F": {"expect": "ACCEPT", "observed": "ACCEPT", "note": "added by this card: keeps all 8 anchors, swaps scope/serialized_ref arguments and inverts the guard (`if ledger is not None` -> `when ledger is None`). R2.1 must accept it: a mention-based metric cannot see this, which is exactly the declared limitation"}
+    }
+  },
+  "divergence_families_resolved": {
+    "fstring_middle": "resolve.py:143 `spent` -> PROSE-CONNECTOR on FSTRING_MIDDLE (R2's checker, keying on STRING/COMMENT start lines only, called :143 code). Test: test_fstring_middle_is_prose_not_code",
+    "multiline_docstring_continuation": "resolve.py:47 `budget` -> PROSE-CONNECTOR on a continuation line of the STRING token opened at :44 and closed at :50 (R2 keyed on the token's start line :44, leaving :47 unmarked). Test: test_multiline_docstring_continuation_is_prose_not_code",
+    "extra": "`budget` in one call proves all three prose kinds at once [COMMENT :36, STRING :47, FSTRING_MIDDLE :143]; :142 PtrBudgetExceededError does NOT carry `budget` (no underscore)"
+  },
+  "census": {
+    "cells": 11,
+    "agreement": "11/11 identical to the frozen table in ANCHOR-PREREG.md section 3 on (checkpoint, anchor, class) = 2 NUMBER + 8 CODE-SYMBOL + 1 PROSE-CONNECTOR",
+    "evidence_line_moves": "range scoping (new in R2.1) moves two evidence lines inside the cited range: ledger :33 -> :66, scope :43 -> :66. Classes unchanged. Documented in ANCHOR-PREREG-V2.md section 1.1 rather than papered over"
+  },
+  "red_green": {
+    "red": "matcher degraded to substring containment (copy of anchor_classify.py with `key not in [p for p in tok.string.split('_')]` -> `key not in tok.string.lower()`): classify('record', a sample defining `recording`) flips PROSE-CONNECTOR -> CODE-SYMBOL, so test_record_is_not_satisfied_by_recording goes RED",
+    "why_this_is_the_only_guard": "measured per anchor over resolve.py's NAME tokens: substring containment changes NO census cell (all 8 cp.2 code anchors keep a substring hit, `raising` has neither as part nor as substring), so the census cannot catch a substring regression - the dedicated red case can, and it exists",
+    "green": "unit OFFLINE: 0 network requests, 0 live model calls, 0 re-grades, 0 accuracy numbers, 0 arm comparisons"
+  },
+  "assumptions": [
+    "status was written `partial` at tool call 5 per the card's bound, then completed to `done`; no other assumption was needed",
+    "probe A's raw text is taken from measure/rows-longrun-v6-tools.jsonl identified by sha256 prefix ecdb3fc9d9f0 (the digest the verifier pinned), not from the grade file's truncated found_excerpt; the corpus asserts the row text starts with that excerpt and that the grade file's detail names `raising`",
+    "the <=3.11 behaviour in ANCHOR-PREREG-V2.md section 1.3 is reasoned from tokenize's documented change, NOT measured: no <=3.11 interpreter exists on this host. It is labelled as such in the doc",
+    "NUMBER is decided by the anchor's own form (a decimal integer from `expected`), with source evidence as corroboration - which is why `31` (a count of class definitions, not a literal token) is still NUMBER"
+  ],
+  "no_re_grade": "No row, grade, fixture, or grader was re-scored or edited: grade_v3.py 7bfc11f4..., grade_v4.py, all *.grade-v*.json and both v4 fixtures are untouched; anchor_prereg_check.py still exits 0; ANCHOR-PREREG.md is byte-identical (77ff76b0...). No accuracy number and no arm comparison appear in any artifact.",
+  "blocker": "",
+  "next_unit_hint": "A verifier unit should re-run: (1) the classifier tests, (2) the probe corpus, (3) rule_digest and compare it with the recorded b1654830..., (4) its own independent tokenize classification of `spent` @resolve.py:143 and `budget` @:47, and (5) the red case by degrading a copy. The grader card that implements R2.1 comes only AFTER that verification; it must import anchor_classify rather than re-implement, and must keep the mention-only label on every result.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/ANCHOR-PREREG-V2.md",
+    "experiments/ptr-engine/tools/anchor_classify.py",
+    "experiments/ptr-engine/tools/tests/test_anchor_classify.py",
+    "experiments/ptr-engine/tools/anchor_probes.py",
+    "orchestration/units/R2.1-TIGHTEN.md",
+    "orchestration/handoffs/R2.1-TIGHTEN.json"
+  ],
+  "tool_calls": 24,
+  "bound": 26
+}

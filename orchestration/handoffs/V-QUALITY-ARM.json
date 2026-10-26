@@ -1,0 +1,44 @@
+{
+  "unit": "V-QUALITY-ARM",
+  "overall": "partial",
+  "checks": [
+    "1 rows: 115 json.loads lines; request 48 + prediction 48 + rep 12 + corpus 4 + compaction 3 = 115 -> reconciles exactly; 4 corpus rows carry one identical index_text; fsync-per-row NOT observable from the file (runner.py:151 has os.fsync, the row file shows nothing)",
+    "2 discrimination from rows alone: A 3/3, B 0/3, C 3/3, D 0/3; D resolved_total [0,0,0], withheld_total [5,5,5], final_answer '756741be' x3; D request rows answer_has_fact 0/12, resolved 0, withheld 15 -> 'arm D: 0/3, 0 bodies resolved' CONFIRMED",
+    "3 index: len(index_text.encode())=458 and sha256=e81ba025cfb484a8460022dedffa8cb8e7ffe09a53b365f9b84227eb105531d5 both match; no 'AUD-', no 'AUD-4417', no 'lumen'; leak_check in all 4 corpus rows: items_naming_the_vendor ['k01'], items_carrying_the_fact_code ['k01'], fact_unique_to_k01 true; those tokens occur in k01's body ONLY -> leak property CONFIRMED; caveat: the index artefact file is gone (run_root /tmp/ptr-quality-*-r0-* all isdir False), hash is over the in-row text",
+    "4 PREREG vs rows: 4 arms, reps_per_arm 3 -> 3 rep rows/arm, turns_per_rep 4 -> 4 request rows/arm/rep, judgement_rule exact 'AUD-4417' true only in each A/C T4 row, discrimination_gate never fires -> preregistration matches the run; UNSUPPORTED in RESULTS.md: ':174' 'sum(prompt_tokens)+12*(R-1) holds exactly ... C rep2: raw 34,201' (measured 32,401, residual +17,193); ':175' 'difference is the completion of T1+T2+T3' (completions 2+2+2=6 vs a 17,193 gap); ':150' 'avalanche column is empty ... 0 avalanches' (rep.per_turn C rep2 T4 has residue 1, avalanche True, uncached 34,190 and billed 49,594 equals that modelled bill); rows defect: request-row residue == templated_prompt_tokens%64 and differs from measured prompt_tokens%64 in 48/48 rows",
+    "5 billed tokens: billed-sum(prompt_tokens) = A +151/+110/+106, B +117/+150/+127, C +159/+111/+17,193, D +100/+100/+100 -> 'sum(prompt_tokens)+12*(R-1) (=+36)' REFUTED; '17,552 raw prefix' NOT reproduced by any field (prediction.prompt_bytes present, not null: 458/9570/18630; max prompt_tokens 18951 x4 x2.6 = 197,090; file-supported sums are 34,275 for A rep0 and 32,437 for C rep2); MISSING FIELD: server-reported usage.prompt_tokens_details.cached_tokens per turn - runner.py:585-596 reads it but no cached_tokens key reaches rows.jsonl; billed_tokens_measured==billed_tokens 12/12 because runner.py:688 defines it as sum(prompt_tokens), i.e. a recomputation",
+    "6 containment: no QUALITY-ARM-attributable write outside experiments/ptr-engine/quality/** + orchestration/{handoffs,units}/QUALITY-ARM.*; 25 outside files in the 00:20-00:45 window belong to concurrent units (ENGINE-R1/R2, MISS-LAW-2, AVALANCHE-INSERT, measure/, experiments/miss-law) and attribution is by unit name only; UNDISCLOSED in-path writes after the 00:39 handoff: runner.py 01:10 (37,533 B), probe_instrument.py 01:07, rerun_corrected.py 01:10, rows-corrected.jsonl 01:10 (9 rows), rerun-corrected.log 01:10 - so no sha256 ties rows.jsonl to the runner that produced it"
+  ],
+  "not_reproduced": [
+    "17,552 raw prefix (no field yields it; prompt_bytes is present with values 458/9570/18630, so the figure is unsourced, not merely unfielded)",
+    "telescoping identity billed = sum(prompt_tokens)+12*(R-1) 'holds exactly' (residuals +100..+159, +17,193 for C rep2)",
+    "fsync-per-row (not verifiable from rows.jsonl alone)",
+    "the standalone index artefact (run roots under /tmp deleted; 458 B / e81ba025... re-derived from the in-row index_text)"
+  ],
+  "overstated": [
+    "handoff evidence/next_unit_hint: 'Billed tokens now telescope exactly to sum(prompt_tokens)+12*(R-1) (max x 4 x 2.6 = 17,552 raw prefix vs 49,594 billed in C rep2)' - refuted by the rows' own fields",
+    "RESULTS.md:175 'the difference is the completion of T1 + T2 + T3 carrying into the prefix' - T1+T2+T3 completion_tokens = 6, gap = 17,193",
+    "RESULTS.md:150 'The avalanche column is empty ... 0 avalanches' - rep.per_turn records residue 1 / avalanche True / uncached 34,190 for C rep2 T4, and billed 49,594 is that bill",
+    "rows.jsonl request-row residue/avalanche columns implement templated_prompt_tokens%64, not the measured prefix (48/48 mismatch), so no per-row avalanche statement is checkable as claimed",
+    "handoff artifacts list omits runner.py, probe_instrument.py, rerun_corrected.py, rows-corrected.jsonl, rerun-corrected.log, all written 01:07-01:10 after the 00:39 handoff"
+  ],
+  "unverified": [
+    "server-side re-billing: rows carry no cached_tokens, so the bill cannot be checked against the endpoint",
+    "which unit touched the outside paths (concurrent units share the window; attribution is circumstantial)",
+    "the arm's live-run path end to end (a verifier must not consume the endpoint; runner.py was never executed)"
+  ],
+  "discrimination": {"confirmed": true, "arm_D_success": "0/3", "arm_D_bodies": "0"},
+  "guard": "bites",
+  "red_green": {
+    "guard": "quality/corpus.py __main__ exit gate: 0 if fact_unique_to_k01 and not index_has_AUD and not index_has_vendor else 1",
+    "green": "unmodified /tmp/vq/quality/corpus.py -> GREEN_EXIT=0, items_naming_the_vendor ['k01'], fact_unique_to_k01 True, index_bytes 458, index_has_AUD False",
+    "red": "same copy, planted 'if position == 1:' -> 'if position >= 1:' -> RED_EXIT=1, items_naming_the_vendor ['k01'..'k12'], items_carrying_the_fact_code ['k01'..'k12'], fact_unique_to_k01 False",
+    "restore": "cp from live tree; RESTORED_SHA == ORIG_SHA == 9bc91d68b4dac170088045e38ae35d539178dc2af0b8c8ff4ee91b4e97fdea64; POST_RESTORE_EXIT=0",
+    "live_tree_untouched": true
+  },
+  "blocker": "",
+  "next_unit_hint": "Capture /generate meta_info usage.prompt_tokens_details.cached_tokens per turn and write it into each request row - that is the only way the bill becomes a measurement instead of sum(prompt_tokens). Also recompute the request-row residue from measured prompt_tokens (48/48 rows use templated%64) and restart the corrected rerun: its own _assert_aligned already fired (P1=18794 vs tokenizer 10902). Finally pin the producing runner.py sha256 into rows.jsonl so the tree cannot drift after handoff.",
+  "write_paths": ["orchestration/handoffs/V-QUALITY-ARM.json", "orchestration/units/V-QUALITY-ARM.md"],
+  "tool_calls": 16,
+  "bound": 18
+}

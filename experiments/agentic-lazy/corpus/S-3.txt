@@ -1,0 +1,32 @@
+SKILL S-3 -- Prepare a change for review
+
+When to use. A change is functionally complete and you want it reviewed efficiently.
+Apply it before requesting review, not after the reviewer has started.
+
+Steps.
+
+  1. Split mechanical churn into its own commit: formatting, renames, import
+     reordering, generated code. The reviewer then reads only semantic hunks in the
+     main commit, and a large but safe diff stops masking a small risky one.
+
+  2. Write the description as three explicit sections: what changes, why now, and
+     what you deliberately did not change. The third section is the one reviewers
+     value most because it tells them where not to look.
+
+  3. State the blast radius plainly: how many users or callers this touches, which
+     downstream systems read the data, and whether a rollback is available.
+
+  4. Pre-empt the two questions a reviewer is most likely to ask. If you can predict
+     them, answer them in the description; if you cannot predict them, that is a sign
+     the change's intent is not yet clear even to you.
+
+Verification. The reviewer asks no question that the description already answers,
+and the review has fewer rounds than the same author's previous change.
+
+Failure modes. A mixed commit forces the reviewer to diff noise and they stop
+reading carefully, which is worse than not reviewing at all. Descriptions that
+narrate the implementation ("refactored X, renamed Y") without stating the why get
+reviewed as if the why were obvious, and it rarely is.
+
+Note on size. A change that genuinely cannot be split is usually two changes. Ask
+whether the mechanical half could ship first.

@@ -1,0 +1,51 @@
+{
+  "unit": "P2-REPAD",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/P2-REPAD/p2_repad.py",
+    "experiments/context-cache/cells/P2-REPAD/rows.jsonl",
+    "experiments/context-cache/cells/P2-REPAD/run_meta.json",
+    "experiments/context-cache/cells/P2-REPAD/g0.json",
+    "experiments/context-cache/cells/P2-REPAD/RESULTS.md",
+    "state/r2-p2-repad.json",
+    "state/logs/P2-REPAD-progress.log",
+    "orchestration/units/P2-REPAD.md"
+  ],
+  "evidence": {
+    "rows": "wc -l cells/P2-REPAD/rows.jsonl = 213 (P0 71 + P1 71 + P2 71); 224 live requests (213 rows + 8 /tokenize spot checks + 3 G0), bound 300; salt o3-repeat-20261024T11:05Z-a1; 0 non-200; 2 cold rows with cached_tokens \"unavailable\" (P1 t1, P2 t1), no retries spent",
+    "single_send_assertion": "rows_multi_send = 0, corrections_total = 0, rows_with_correction = 0 -- every row requests_sent=1; the script has no correction/resend path at all",
+    "pad_precompute": "pad_target = (-base_tokens) % 64 raised to >=64, base_tokens from the SAME-RUN P1 row for that turn; filler ' PAD' x pad_target (server tokenizer: 1 token per repetition, token 59671); /tokenize spot checks on turns 1,11,21,31,41,51,61,71 all returned exactly base+pad_target (delta 0 on 8/8); P2 aligned 71/71 (prompt_tokens % 64 == 0); pad total 6737, mean 94.89, range 64..127",
+    "arms": "P0 541.0704 unc/turn boot [500.718,581.704] hit 0.956139 | P1 528.6429 [521.143,536.271] hit 0.770456 | P2 549.4857 [542.171,556.800] hit 0.770418 -- n=71 each, sequential, one request per turn",
+    "deltas": "P2/P0 +6.5000 boot [-35.457,45.971] = NULL; P1/P0 -14.3429 [-57.429,26.957] = NULL; P2/P1 +20.8429 [+9.857,+31.486] = COSTS (+3.94%)",
+    "alignment_gain": "mean prompt_P2_aligned_len - cached_P2 = 549.4857 (77.04% of the aligned length cached); extra cached vs P1 on the same turn mean 74.0571, distribution 0x9 / +64x41 / +128x20; pad paid mean 94.8873 => net +20.84, i.e. ~22% of the pad recovered, ~78% paid",
+    "self_hit_guard": "PASS on the decisive test (cached == immediately preceding send's whole prompt length: 0 violations; rows_multi_send 0). The card's LITERAL wording fires 63 times and is degenerate on an aligned arm: P2 prompt lengths are a contiguous 64-step ladder (576..4224) and every cached count is a multiple of 64, so equality with some earlier P2 prompt length is pigeonhole, not a self-hit -- reported with proof, not used as the verdict",
+    "substrate": "PRODUCTION only: :8012 occamy-1.0 throughout; /get_server_info page_size 1, radix_eviction_policy lru, mamba_radix_cache_strategy extra_buffer, max_mamba_cache_size 64, mem_fraction_static 0.45, max_running_requests 5, context_length 131072, kv fp8_e4m3, modelopt_fp4 = best-config O1 argv (config_sha256 f2efaaac1559ebc0a706c5012715dacff6948058ee8e5c946d5d45c622880c67); zero containers started/stopped/restarted, zero variant ports",
+    "digest_identity": "renderer cells/VLLM-CELL/vllm_cell.py with the O3-REPEAT salt; P0/P1 prefix_sha256 match cells/R2-PROMPT/O3-REPEAT at turns 1 and 71 (4/4, 0 mismatched) => same task content and prefix digests; arms distinct at turn 20 (3 distinct sha256)",
+    "restore": "curl -s http://192.168.2.168:8012/v1/models -> {\"id\":\"occamy-1.0\",\"max_model_len\":131072} after the run; :8014 untouched and answering qwen3.5-9b / 32768; lock released (experiments/context-cache/.occamy.lock shows released_utc)",
+    "commands": [
+      ".venv/bin/python experiments/context-cache/cells/P2-REPAD/p2_repad.py --turns 71",
+      ".venv/bin/python experiments/context-cache/cells/P2-REPAD/p2_repad.py --analyse-only",
+      "curl -s http://192.168.2.168:8012/v1/models",
+      "curl -s http://192.168.2.168:8012/get_server_info"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Withdraw the 'grid-aligned padding halves cost' sentence for O3/O2/O4 in state/r2-prompt-matrix.json + docs/prompt-system/R2-PROMPT-RESULTS.md (the merge card owns those files; do NOT edit them here). Replacement sentence: alignment recovers at most one 64-token page per turn (0/+64/+128 measured) while the pad costs 64-127 tokens, so the net is a small cost vs P1 and null vs P0. The honest P2 number for O1 is 549.49 unc/turn, not 541.75, and the O3 -51.5% must be withdrawn, not requoted.",
+  "assumptions": [
+    "/tokenize wrapper offset is constant; measured once at G0 as template_offset=2, and the per-row pad_aligned flag is the absolute check that does not depend on it (71/71 aligned).",
+    "No per-arm warm-up repeats are spent (the card does not ask for them); all three arms start equally cold, and each arm's turn 1 is reported as measured.",
+    "Production is shared, but every prompt carries a salt no other workload uses, so no recorded hit can come from foreign traffic.",
+    "GRID=64 is best-config O1's grid_unit and the observed cached gcd over 213 rows (observed_cached_gcd=64).",
+    "The literal self-hit wording is reported alongside a decisive equivalent because it is mathematically degenerate on an aligned arm; verdict rests on the decisive test."
+  ],
+  "tool_calls": 24,
+  "bound": 30,
+  "requests": 224,
+  "write_paths": [
+    "experiments/context-cache/cells/P2-REPAD/",
+    "state/r2-p2-repad.json",
+    "state/logs/P2-REPAD-progress.log",
+    "orchestration/handoffs/P2-REPAD.json",
+    "orchestration/units/P2-REPAD.md"
+  ]
+}

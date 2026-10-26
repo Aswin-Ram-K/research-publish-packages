@@ -1,0 +1,35 @@
+{
+  "unit": "RECON-C1",
+  "status": "done",
+  "artifacts": ["orchestration/units/RECON-C1.md"],
+  "evidence": {
+    "warm_cells": 3,
+    "offset_constant": 13,
+    "law_constant": 13,
+    "law_form": "L_app = n_payload + 12 (387/387 rows, 0 violations); n_payload(=payload_tokens)=1 => L_app = 13 = measured warm offset",
+    "claim_verdict": "undecidable",
+    "factor": null,
+    "claimed_factor": "5.2",
+    "commands": [
+      "sed -n '114p' experiments/ptr-engine/RECORD.md",
+      "python3 - <<'EOF' (loaded measure/rows.jsonl: 49 rows, 12 phase=measure request rows; printed cell/rep/P1/residue/cached/uncached/prompt/L/payload) EOF",
+      "python3 - <<'EOF' (loaded miss-law/rows.jsonl: 387 rows with n_payload+L_app, 0 violations of L_app==n_payload+12; n_payload histogram; L_app==13 rows) EOF",
+      "python3 -c (quality/rows.jsonl: 115 rows, Counter row={'prediction':48,'request':48,'rep':12,'corpus':4,'compaction':3}, no cached_tokens key anywhere)",
+      "sed -n '105,112p' experiments/ptr-engine/measure/run_cells.py -> line 109 is \"/chat/completions\"",
+      "sed -n '85p' experiments/miss-law/LAW.md -> | 0 | 8000 | 13 | null | 8013 | 13 | 3/3 miss |"
+    ],
+    "offset_detail": "uncached-residue = 13 in all 9 warm rows (spread 0); P1-cached = residue exactly (5,2,2); cached == 64*floor(P1/64) True; cached == 64*floor((P1-1)/64) ALSO True (rules coincide off-boundary)",
+    "claim_arithmetic": "397/77=5.155 (77=64+L, one-block model); row-consistent alternative 397/13=30.5; literal cell-C reading cached=0 -> factor 1",
+    "open_factor_range": [5.16, 30.5]
+  },
+  "proposed_clause": {
+    "line": 114,
+    "current": "Consequence: ENGINE-R1's `397` should be ~`77` on that append — a **5.2× overstatement** … [then] C-ADJUDICATE: C1 CLOSED … the '5.2× overstatement' clause is therefore WITHDRAWN … [then] C1 reopened (RECON-ADJ-CLAIMS, from rows) … returns to OPEN pending re-adjudication.",
+    "corrected": "C1 — SGLang avalanche magnitude. OPEN (re-adjudicated 2026-10-25, RECON-C1, from `experiments/ptr-engine/measure/rows.jsonl`). What the rows establish: at residues 5/2 on `:8012 /chat/completions` `cached_tokens` is warm and exact — `cached = P1 − residue = 64·floor(P1/64)`, `uncached = residue + L` with `L = n_payload + 12 = 13` — so the prompt tail beyond the last complete 64-block is billed token-for-token and the whole append is billed (9/12 rows report; the 3 residue-0 cell-C rows report `cached_tokens: null`, `cached_reported: false`, `uncached = P1 + L = 397`). What they do NOT establish: any warm reading at residue 0. `cached = 64·floor(P1/64)` and `cached = 64·floor((P1−1)/64)` fit the 9 warm rows identically (they differ only when P1 is a multiple of 64 — exactly cell C), so `397 → 77` (5.16×) and `397 → 13` (30.5×) are both open and the '5.2× overstatement' is UNDECIDABLE, neither confirmed nor withdrawn. The C-ADJUDICATE citation `/generate` `meta_info.cached_tokens` = 384 warm is on a 423-token prompt (residue 39), not residue 0, and does not close residue 0 — withdraw that citation, keep C1 OPEN pending one residue-0 warm reading at P1 = 384."
+  },
+  "blocker": "",
+  "next_unit_hint": "MEASURE-R0 (write path: experiments/ptr-engine/measure/): add 3 reps of a residue-0 cell at P1 = 384 (exact multiple of 64) with L = 13 on the same `:8012 /chat/completions` path, requiring `cached_reported: true`; plus one residue-1 cell. That single number (cached 320 -> 77 -> 5.2x, or cached 384 -> 13 -> 30.5x) settles C1; do not re-adjudicate from residue >=2 rows again.",
+  "write_paths": ["orchestration/handoffs/RECON-C1.json", "orchestration/units/RECON-C1.md"],
+  "tool_calls": 9,
+  "bound": 14
+}

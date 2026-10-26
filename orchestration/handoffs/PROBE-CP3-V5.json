@@ -1,0 +1,126 @@
+{
+  "unit": "PROBE-CP3-V5",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/rows-longrun-v5-tools.jsonl",
+    "experiments/ptr-engine/measure/rows-longrun-v5-tools.grade-v3.json",
+    "experiments/ptr-engine/longrun/manifests/v5tools2-pointer-stable-pointer-stable-r1.json",
+    "orchestration/units/PROBE-CP3-V5.md"
+  ],
+  "evidence": {
+    "verdict": "CP3-FETCH-REFUSED",
+    "verdict_detail": "The fetch channel itself delivers (engine-base read of ptr_engine/resolve.py L66-110 executed at T1, base=engine, 45 lines, real _refuse body). CP3 still failed: the 24-round per-arm fetch budget was fully spent inside turn 3, so the T46 read of ptr_engine/resolve.py L66-71 was refused host-side with error=fetch_budget_exhausted. No <tool_result> was injected, no follow-up request was made, and no ANSWER: line was produced (grade_v3: marker_missing). Secondary finding: CP1/CP2 also became marker_missing, so enabling tools moved checkpoint accuracy 1/3 -> 0/3.",
+    "requests_spent": 72,
+    "turns": 48,
+    "followups": 24,
+    "requests_spent_breakdown": {
+      "turn_requests": 48,
+      "followup_requests": 24,
+      "total": 72,
+      "budget": 76,
+      "budget_headroom": 4,
+      "how_the_24_followups_were_spent": {
+        "delivered_content_at_least_one_executed_read": 16,
+        "wasted_all_calls_path_not_found": 8,
+        "wasted_path_not_found_paths": [
+          "ptr_engine/test_scope.py (real file is experiments/ptr-engine/tests/test_scope.py; engine base makes it ptr_engine/ptr_engine/test_scope.py)",
+          "tests/test_scope.py"
+        ],
+        "not_billed": {
+          "turn_call_cap_refusals": 6,
+          "served_from_conversation_cache": 3,
+          "fetch_budget_exhausted_refusals": 226
+        },
+        "per_turn_rounds": {"T1": 1, "T2": 2, "T3": 21, "T4-T48": 0}
+      }
+    },
+    "spend_curve": {
+      "fetch_rounds_used_by_turn": [1, 3, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24],
+      "cap": 24,
+      "last_turn_that_spent_a_round": 3,
+      "turns_after_exhaustion_that_still_emitted_tool_calls": 42
+    },
+    "rounds_left_at_t46": 0,
+    "cp3_exchange": {
+      "turn": 46,
+      "question": "Checkpoint 3/3: What does _refuse call, and what does it pass? (answer must be derivable from experiments/ptr-engine/...)",
+      "expected": "ledger.record_refusal(scope=..., serialized_ref=text, code=error.code), before re-raising",
+      "tool_call_text": "I need to look at the `_refuse` function in resolve.py lines 66-71.\n\n<tool_call>read_file {\"path\": \"ptr_engine/resolve.py\", \"start_line\": 66, \"end_line\": 71}\n</tool_call>",
+      "tool_call_record": {"path": "ptr_engine/resolve.py", "start_line": 66, "end_line": 71, "executed": false, "truncated": false, "error": "fetch_budget_exhausted"},
+      "tool_result_head": "NONE — no <tool_result> was injected; the call was refused host-side before any block was assembled (fetch_rounds_used 24/24 at the start of the round)",
+      "tool_followup_row": "absent: zero kind='tool-followup' rows for turn 46 (requests at T46 = 1)",
+      "final_answer_line": "NONE — no ^ANSWER: line on the T46 row (finish_reason=stop, completion_tokens=55, latency 1.68 s)",
+      "channel_proof_that_delivery_is_not_the_problem": {
+        "turn": 1,
+        "call": "ptr_engine/resolve.py L66-110",
+        "record": {"executed": true, "lines_returned": 45, "base": "engine", "truncated": false},
+        "block_head": "<tool_result for=\"read_file\" path=\"ptr_engine/resolve.py\" lines=\"66-110\" base=\"engine\">\ndef _refuse(ledger: Optional[Ledger], scope_name: str, text: str, error: PtrError) -> None:\n    \"\"\"Record the refusal before re-raising. A refusal is a measurement too.\"\"\"\n    if ledger is not None:\n        ledger.record_refusal(\n            scope=scope_name, serialized_ref=text, code=error.code\n        )",
+        "note": "The exact lines CP3 asks about were served at T1; the pointer arm rebuilds its prompt every turn from INDEX + pinned bodies, so that result was not in the T46 conversation."
+      },
+      "answer_was_in_the_prompt_anyway": "Reconstructed offline from Planner.build(t) (no request): the T46 prompt is 13,969 chars and contains the full pinned bodies, including 'def _refuse' -> 'ledger.record_refusal(' and 'DEFAULT_MAX_REFS = 64' and 31 occurrences of 'class Ptr'. The arm still fetched instead of answering — it states its own rule at T6: 'I cannot restate the checkpoint fact because I did not read it in this turn ... ANSWER: NOT-AN-ANSWER'."
+    },
+    "grade": {
+      "grader": "experiments/ptr-engine/longrun/grade_v3.py",
+      "rows_file": "experiments/ptr-engine/measure/rows-longrun-v5-tools.jsonl",
+      "out": "experiments/ptr-engine/measure/rows-longrun-v5-tools.grade-v3.json",
+      "verified_success": false,
+      "checkpoint_accuracy": "0/3",
+      "checkpoint_accuracy_pct": 0.0,
+      "tokens_to_verified_success": null,
+      "per_checkpoint": {
+        "cp.0.t12": {"pass": false, "reason": "marker_missing", "asked_for": "ptr_engine/resolve.py L35-45", "call_error": "fetch_budget_exhausted"},
+        "cp.1.t24": {"pass": false, "reason": "marker_missing", "asked_for": "ptr_engine/errors.py L15-250", "call_error": "fetch_budget_exhausted"},
+        "cp.2.t46": {"pass": false, "reason": "marker_missing", "asked_for": "ptr_engine/resolve.py L66-71", "call_error": "fetch_budget_exhausted"}
+      },
+      "other_checks": {
+        "repair.t30": "repair_not_acknowledged",
+        "acc.n2b": "ok",
+        "acc.n3b-acc.n3e": "unverifiable (no pattern; rows carry no write evidence)"
+      }
+    },
+    "cost_comparison": {
+      "this_cell": {"requests": 72, "turns": 48, "followups": 24, "prompt_tokens": 387480, "completion_tokens": 12302, "tokens_total": 399782, "wall_s": 358.9, "turn_p50_s": 2.11, "turn_p95_s": 12.74, "turn_mean_s": 5.79, "max_turn_s": 116.0, "truncated_rows": 1, "verified_success": false, "checkpoint_accuracy": "0/3"},
+      "same_arm_tools_off_v4_grid": {"rows": "experiments/ptr-engine/measure/rows-longrun-v4-2026-10-26.jsonl", "requests": 48, "tokens_total": 233042, "wall_s": 1275.4, "turn_p95_s": 136.88, "verified_success": false, "checkpoint_accuracy": "1/3", "cp3_reason": "marker_missing"},
+      "same_arm_tools_broken_v4": {"rows": "experiments/ptr-engine/measure/rows-longrun-v4-tools-2026-10-26.jsonl", "requests": 68, "tokens_total": 299055, "turn_p95_s": 6.01, "verified_success": false, "checkpoint_accuracy": "1/3", "cp3_reason": "marker_missing"},
+      "c_control_pointer_stable_card_stated": {"source": "instrument/rows-longrun-c-2026-10-26.jsonl (path does not exist in this workspace)", "p50_s": 167.02, "p95_s": 371.7, "s_per_turn": 3.7, "tokens": 22396, "cp1": "correct"},
+      "c_control_pointer_stable_on_disk": {"rows": "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl", "requests": 48, "prompt_tokens": 104468, "completion_tokens": 8936, "tokens_total": 113404, "wall_s": 309.6, "turn_p50_s": 2.56, "turn_p95_s": 9.31, "turn_mean_s": 6.45, "note": "figures differ from the card's quoted instrument/ numbers; no instrument/ directory exists here"},
+      "more_or_less_expensive_per_verified_success": "MORE, and strictly so. Verified success is false in every pointer-stable cell (this one, tools-off v4, tools-broken v4-tools), so cost per verified success is undefined for all of them; the tools channel adds 24 requests (+50%) and +166,740 tokens (+71.5%) over the tools-off control while moving checkpoint accuracy 1/3 -> 0/3. Half the cell's tokens (200,647 of 399,782) were burned in turns 1-3 on recon reads."
+    },
+    "tools_off_control_delta": {
+      "control": "experiments/ptr-engine/measure/rows-longrun-v4-2026-10-26.jsonl, arm pointer-stable, tools off, same CP3 checkpoint",
+      "requests": "+24 (48 -> 72)",
+      "tokens": "+166,740 (233,042 -> 399,782, +71.5%)",
+      "checkpoint_accuracy": "1/3 -> 0/3 (CP1 lost: cp.0.t12 number was correct tools-off, marker_missing with tools)",
+      "cp3_outcome": "unchanged in verdict (marker_missing), changed in cause (tools-off: model asked for a shell/grep it had no channel for; tools-on: read_file refused fetch_budget_exhausted)",
+      "verified_success": "false -> false"
+    },
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.tools2.json --arms pointer-stable --reps 1 --tools read_file --rows experiments/ptr-engine/measure/rows-longrun-v5-tools.jsonl --run-id v5tools2-pointer-stable --thinking off --max-tokens 4096 --timeout 600",
+      "python3 experiments/ptr-engine/longrun/run_longrun.py ... --resume   (after harness restart; 'resume: cell has turns 1..41; continuing at 42', 'fetch rounds already spent=24/24')",
+      "python3 experiments/ptr-engine/longrun/grade_v3.py --rows experiments/ptr-engine/measure/rows-longrun-v5-tools.jsonl --fixture experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.tools2.json --out experiments/ptr-engine/measure/rows-longrun-v5-tools.grade-v3.json"
+    ],
+    "commands_output": {
+      "final_summary": "rows=72 requests=72 truncated=1 ttft_n=72 max_tokens=4096 / answer_source {\"content\": 72, \"none\": 0} / finish_reason {\"length\": 1, \"stop\": 71}",
+      "resume_line": "resume: fetch rounds already spent=24/24 (manifest=0 derived_from_rows=24); --resume does not reset the counter",
+      "grade_line": "pointer-stable verified=False acc=0/3 ttvs=None over=0.0% reasons=marker_missing,marker_missing,marker_missing,repair_not_acknowledged"
+    }
+  },
+  "blocker": "",
+  "assumptions": [
+    "The card's Command block omits --thinking off and --max-tokens 4096 although the card's engine line states them and the hard rules forbid changing max_tokens. I added both to match the frozen v4 / v4-tools manifests (thinking=off, max_tokens=4096) and the byte-identity proof; without them the runner defaults are thinking=auto, max_tokens=16384 and the cell would not be comparable.",
+    "--timeout 600 enforces the card's 'kill if a turn costs > 600 s' rule mechanically. No turn approached it (max turn latency 116.0 s at T3).",
+    "The harness restarted at ~07:24 while the cell was at turn 41; the process died and 65 durable rows (41 turns + 24 follow-ups) were on disk. Per the card I resumed rather than restarted: same run-id, --resume, frozen manifest reused (sha 98b57b56fd72...), round counter honoured at 24/24 so no round was re-opened. Turns 42-48 ran in the second segment.",
+    "Two non-cell probe requests (POST /v1/chat/completions, max_tokens=1) checked that the server accepts the model id occamy-1.0-NVFP4 (it does; /v1/models advertises occamy-1.0). They are not cell turns or follow-ups and are not counted in requests_spent.",
+    "Verdict taxonomy: the T46 fetch was refused, so the verdict is CP3-FETCH-REFUSED rather than CP3-NO-ANSWER, even though no ANSWER was produced. Both facts are recorded.",
+    "The card cites instrument/rows-longrun-c-2026-10-26.jsonl for the c-control; no instrument/ directory exists in this workspace, so the c-control figures were taken from experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl and the card's cited numbers are quoted verbatim alongside the on-disk ones.",
+    "One row (T29) hit max_tokens=4096 with finish_reason=length; pre-existing model behaviour, not a channel effect, and left as recorded."
+  ],
+  "next_unit_hint": "PROBE-CP3-V6: the binding constraint is that the pointer arm issues a read nearly every turn while the per-arm round budget (24) is smaller than the turn count (48), so any cap below ~48 guarantees a refused fetch at T46 — the T3 burst (21 rounds) merely front-loads it. Test two cheap changes within the same 76-request cap: (a) do not bill a round when the requested range is already inside the prompt's pinned bodies (the T46 read is inside the resolve.py body the prompt already carries), and (b) cap rounds per turn at 3, so a recon burst cannot eat the cell. Prediction to falsify: rounds_left_at_t46 > 0 and cp.2.t46 pass. Do not touch the fixture, the checks, the marker rule or the graders.",
+  "write_paths": [
+    "orchestration/handoffs/PROBE-CP3-V5.json",
+    "orchestration/units/PROBE-CP3-V5.md",
+    "experiments/ptr-engine/measure/rows-longrun-v5-tools.jsonl",
+    "experiments/ptr-engine/measure/rows-longrun-v5-tools.grade-v3.json",
+    "experiments/ptr-engine/longrun/manifests/v5tools2-pointer-stable-pointer-stable-r1.json"
+  ]
+}

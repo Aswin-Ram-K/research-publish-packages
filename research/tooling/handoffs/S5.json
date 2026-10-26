@@ -1,0 +1,138 @@
+{
+  "unit": "S5",
+  "status": "done",
+  "date": "2026-10-23",
+  "purpose": "Correct the research record in place after verifier V1's contradictions, without rewriting the evidence documents.",
+  "artifacts": [
+    "research/tooling/CORRECTIONS.md",
+    "research/tooling/FINDINGS.md",
+    "research/tooling/01-inventory.md",
+    "research/tooling/README.md",
+    "research/tooling/handoffs/S5.json"
+  ],
+  "evidence": {
+    "command_or_count": "11 corrections (C1-C11); 6 from V1's contradictions, 5 record/fix items; every one re-verified in this session",
+    "commands": [
+      "sed -n '410,440p;620,635p;855,868p' src/resextract/refresh/review.py  # _run_graphify_update :416, argv :431, call :628, default True :861, threaded :904",
+      "sed -n '1760,1790p' src/resextract/run.py  # rationale :1768-1771, run_graph_update=False :1781",
+      "grep -rn \"_run_graphify_update\\|gf\\.extract\\|_graphify\\.query\\|run_graph_update\" src/ --include=*.py  # 3 families only",
+      ".venv/bin/graphify --help | python -  # 27 families, 46 top-level names incl 19 platform aliases",
+      "grep -rnE \"context\\.budget|from resextract\\.context import budget\" src/ tests/ experiments/  # 0 src/ importers; tests + U5/U14 experiments",
+      "python -c over state/kg/duval/graphify-out/manifest.json  # 227 keys; .ts 135 .json 59 .mjs 13 .py 9 .sh 8",
+      "python -c over graph.json source_file  # 175 distinct: .ts 136 .mjs 13 .py 9 .sh 8 .json 3",
+      "sed -n '1065,1085p' /home/zer0null/deepseek-harness/packages/core/tools/src/index.ts  # register :1071, throw :1077",
+      "grep -n 'output:' <plugin>/lib/index.js  # 173,256,339,417,491; grep render|schema -> 0 hits",
+      "cat <plugin>/node_modules/@deepseek-ai/dsh-tools/{package.json,index.js}  # 0.0.0-shim, 'NOT used by the live harness'",
+      "sed -n '196,208p' /home/zer0null/dsh-plugins/@local/dsh-plugin-openui/lib/index.js  # output:{schema, render} :201-203",
+      "grep -n -i 'rate limit|404' research/tooling/handoffs/S2.json  # :40 records 404 as a post-rate-limit label",
+      "sed -n '938,950p' src/resextract/refresh/review.py  # rework_entries call :945",
+      "python -c summed os.path.getsize over 227 manifest keys vs /home/zer0null/Duval  # 5,390,460 B = 5.39 MB, 0 missing"
+    ]
+  },
+  "corrections": [
+    {
+      "id": "C1",
+      "claim": "G5 / 01-inventory.md:28 and :138: no graphify update or watch call exists in src/; incremental re-index is 'absent'",
+      "truth": "refresh/review.py:416 defines _run_graphify_update, :431 builds argv ['stdbuf','-oL','-eL',binary,'update',copy_dir], :433 runs it, :628 calls it, :861 defaults run_graph_update=True, :904 threads it; only run.py:1781 passes False. It is a wired copy-then-update, disabled at one call site.",
+      "recommendation_effect": "P0-d changes kind: from 'build incremental refresh' (M) to 'enable and verify what exists' (S). The read-only rule is satisfied by construction because the update runs on the staged copy, never the target."
+    },
+    {
+      "id": "C2",
+      "claim": "FINDINGS/README/S1: '2 of 28 subcommands', ~93% unwired",
+      "truth": "3 of ~27 command families (extract run.py:1357, query candidates.py:920, update review.py:431); --help presents 27 families / 46 top-level names counting 19 platform aliases. Denominator is a help-text count, not a spec.",
+      "recommendation_effect": "No verdict change; headline becomes '3 of ~27 families, roughly 89% unused', and the update row moves from unused to wired-but-disabled."
+    },
+    {
+      "id": "C3",
+      "claim": "01-inventory.md:24 / G8 / FINDINGS §5: context/budget.py is 'imported only by tests'",
+      "truth": "No src/ importer; imported by tests/test_context_append_note.py:43 and experiments/context-cache/cells/U5/u5_cells.py:57 and U14/u14_append_note_probe.py:49.",
+      "recommendation_effect": "None substantively: the module still does not govern the live prompt (QUERY_BUDGET=700 and the 60/40 menu caps do)."
+    },
+    {
+      "id": "C4",
+      "claim": "02-candidates.md (9 sentences) / S2.json: '436-file Python target'",
+      "truth": "227 admitted files (manifest 227 keys: .ts 135 .json 59 .mjs 13 .py 9 .sh 8) and TypeScript-dominant (graph source_file 175 distinct: .ts 136 .mjs 13 .py 9 .sh 8 .json 3). Wrong on count and language.",
+      "recommendation_effect": "No verdict flips - zoekt/Sourcebot/Sourcegraph/CodeQL stay REJECT at either size - but every sizing sentence must cite 227 and the TS-dominant mix; the tree-sitter-adequacy argument gets stronger."
+    },
+    {
+      "id": "C5",
+      "claim": "02-candidates.md:25,:107: Sourcegraph repo 'not publicly retrievable (API 404 on 2026-10-23)'",
+      "truth": "S2's own handoff :40 records the 404 as the label applied after the unauthenticated GitHub API rate limit was exhausted; it is not evidence about the repo.",
+      "recommendation_effect": "None - REJECT rests on the separately sourced licence key; the defect is presenting a rate-limit fallback as an observation."
+    },
+    {
+      "id": "C6",
+      "claim": "FINDINGS §2b/§7.5: plugin registration 'unverified either way'; a fallback may carry it",
+      "truth": "Fails as shipped. register() (packages/core/tools/src/index.ts:1071) requires output.render and throws at :1077; the five output blocks (lib/index.js:173,256,339,417,491) are JSON schemas with no render/schema key (grep 0 hits); the package's node_modules/@deepseek-ai/dsh-tools 0.0.0-shim ('NOT used by the live harness') resolves the import. Comparator: openui lib/index.js:201-203 output:{schema,render}.",
+      "recommendation_effect": "P0-c becomes a code change as well as a config change: rewrite five output blocks, drop the shim, patch the graph path, then approval. Effort S -> S(code)+config."
+    },
+    {
+      "id": "C7",
+      "claim": "handoffs/S1.json evidence.commands 5, 7, 12",
+      "truth": "Alternation greps recorded without -E, so '|' is literal and they match nothing; with -E they return 25 and 12 lines (V1). The findings hold; the recorded commands cannot have produced them.",
+      "recommendation_effect": "None - record hygiene only. Recorded here rather than edited because S1.json is outside this unit's write path."
+    },
+    {
+      "id": "C8",
+      "claim": "01-inventory.md:4-7 presents graphify_version=0.9.80 as a top-level key",
+      "truth": "json['graphify_version'] is None; the value is nested at json['graph']['graphify_version']. Value correct, field path wrong.",
+      "recommendation_effect": "None - record accuracy only."
+    },
+    {
+      "id": "C9",
+      "claim": "01-inventory.md:117-120 lists 'both concrete' promotion blockers",
+      "truth": "A third blocker precedes them: the five tool definitions are not registry-ready under the harness contract (output:{schema, render} required, register() throws otherwise) - the same mechanism as C6.",
+      "recommendation_effect": "Adds the code change to P0-c's checklist; no verdict change."
+    },
+    {
+      "id": "C10",
+      "claim": "01-inventory.md:27 (§1 row 13) marks rework-backlog linkage '[inference: re-export implies use]'",
+      "truth": "Measured: src/resextract/refresh/review.py:945 entries = rework_entries(manifest, change, docket_links, now=now_dt).",
+      "recommendation_effect": "None - closes §5's first open bullet and strengthens P0-d's context: a rework backlog already exists and lacks only a mapping to a re-extraction command."
+    },
+    {
+      "id": "C11",
+      "claim": "C1's own first-pass fix: 'just flip run_graph_update=False'",
+      "truth": "The disabling is deliberate and stated: run.py:1768-1771 'graph update off - a graph update would copy the target into the workspace'. _stage_repo_copy copies the whole target tree (166,314 files); the admitted set is only 227 files / 5,390,460 B = 5.39 MB.",
+      "recommendation_effect": "P0-d becomes 'make the copy cheap, then enable': stage only the admitted set (227 files) and run the existing update on that copy, or keep refresh off and take incrementality from graphify extract --out state/kg/<slug>. Success test unchanged: a post-commit refresh stamps a new commit without copying 166k files to re-index 5.39 MB."
+    }
+  ],
+  "files_edited": [
+    "research/tooling/CORRECTIONS.md (created)",
+    "research/tooling/FINDINGS.md (14 targeted edits, each marked)",
+    "research/tooling/01-inventory.md (appended §7 Errata only; body untouched)",
+    "research/tooling/README.md (index rows + edit rule)",
+    "research/tooling/handoffs/S5.json (created)"
+  ],
+  "not_edited": [
+    "research/tooling/02-candidates.md (C4/C5 carried in the errata instead - source documents are the record and are not rewritten)",
+    "research/tooling/handoffs/S1.json (C7 recorded in CORRECTIONS.md; a prior unit's handoff is not this unit's write path)"
+  ],
+  "unchanged_constants": [
+    "graph sha256 4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b == config/graph_pin.toml:52",
+    "graph artifact 3,188,231 B",
+    "2,685 nodes / 7,102 links; directed=false",
+    "built_at_commit=6deaed07af0d998d1672fe3f1ab1579e6ba0cdc4",
+    "MENU_NODE_LIMIT=60 / MENU_EDGE_LIMIT=40 (mine/candidates.py:125-126); QUERY_BUDGET=700 (:105)",
+    "graphifyy 0.9.80 Apache-2.0; ast-grep-py 0.51.0 wheel; ripgrep 15.2.0; all ADD/EVALUATE/REJECT verdicts",
+    "containment: nothing written under src/, config/, docs/, tests/; no write inside /home/zer0null/Duval"
+  ],
+  "blocker": "",
+  "assumptions": [
+    "C2's denominator is stated as a help-text family count (27) rather than a versioned spec; re-count after any graphify upgrade.",
+    "C11's 5.39 MB is the admitted-set size summed against /home/zer0null/Duval (227 present, 0 missing) - a copy bound, not a claim that the refresh would copy the same bytes."
+  ],
+  "unverified": [
+    "Whether the patched plugin (output:{schema,render}) actually registers - the shipped failure is measured, the fix is not; would need a mount, which AGENTS.md forbids without user approval.",
+    "V1's 25/12 line counts for the -E greps (C7): I verified the recorded command strings, not the counts.",
+    "Whether bounding _stage_repo_copy to the admitted set alone keeps graphify update correct (predicate edges from ignored files are untested)."
+  ],
+  "next_unit_hint": "The two plan-changing items are now cheap and bounded: (1) bound the refresh copy to the admitted 227 files and enable run_graph_update, then prove a post-commit refresh stamps the new commit; (2) rewrite the five plugin output blocks to {schema, render} and drop the shim before any mount attempt. A V2 should re-check only the corrected clauses plus one red-green: set run.py:1781 to True on a scratch copy with a bounded copy and show the staged graph's sha changing while the original stays put.",
+  "write_paths": [
+    "research/tooling/CORRECTIONS.md",
+    "research/tooling/FINDINGS.md",
+    "research/tooling/01-inventory.md",
+    "research/tooling/README.md",
+    "research/tooling/handoffs/S5.json"
+  ]
+}

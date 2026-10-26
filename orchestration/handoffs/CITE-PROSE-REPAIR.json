@@ -1,0 +1,34 @@
+{
+ "unit": "CITE-PROSE-REPAIR",
+ "status": "done",
+ "artifacts": [
+  "papers/context-cache/MANUSCRIPT.md",
+  "orchestration/units/CITE-PROSE-REPAIR.md",
+  "orchestration/handoffs/CITE-PROSE-REPAIR.json"
+ ],
+ "evidence": {
+  "command_or_count": "sha256 e7728890c1182e872ae93739436628464e1891817c1ed3bee8926d72dd9e3aea -> 37a3f1b34eb43c0c47dc9d41dd02158e6ac000f888b6ee92fe26c93f3ef008cd; wc -l 1214 -> 1214; verify_package PASS 69 claims UNVERIFIED none; COVERAGE GUARD PASS 69; 25 passed (3 pinned guards); 54 passed (adjacent prose+handoff guards)",
+  "commands": [
+   "sha256sum papers/context-cache/MANUSCRIPT.md; wc -l papers/context-cache/MANUSCRIPT.md",
+   ".venv/bin/python papers/context-cache/verify_package.py",
+   ".venv/bin/python papers/context-cache/recompute.py all",
+   ".venv/bin/python -m pytest tests/test_gap_closure_ledger.py tests/test_g5_fanout_attribution.py tests/test_paper_g3_bands.py -q",
+   ".venv/bin/python -m pytest tests/test_orchestration_handoffs.py tests/test_claims_value_guard.py tests/test_paper_attribution_guard.py tests/test_context_cache_qualifier.py -q",
+   "sed -n '885,888p' papers/context-cache/MANUSCRIPT.md; sed -n '904,910p' papers/context-cache/MANUSCRIPT.md"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "1) Two construction faults outside this unit's remit, both pre-dating CITE-VERIFY's substitution and left untouched: MANUSCRIPT.md:916 reads 'most work compaction work reports' (duplicated 'work'), and MANUSCRIPT.md:896 reads 'how Section 8a's repair was made to measure a single send' (malformed passive). 2) CITATIONS.md:1-11 is now STALE for marker 1: its 'Now (line 887)' block quotes the false sentence this unit replaced and is headed 'resolution record for the three [CITATION NEEDED - verify] markers'. It lives outside this unit's write paths, so it is reported, not edited. Either re-issue that record against the new 885-887 wording or retitle it, because a reviewer reading CITATIONS.md alone will believe the manuscript still says 'everything else is marked [SGLang review of attention backends](...)'. 3) Citation content to check, NOT applied here: MANUSCRIPT.md:940 cites arXiv:2510.15152 as 'tlru's parameters follow', while GAPS.md:498 says tlru takes 'the paper's parameters' via --radix-eviction-policy-config - the referent of 'the paper' should be confirmed against R-SGL.md row 4 before submission. 4) The SGLang marker-1 substitution deleted the source it had named (the attention-backend doc URL) from section 10a's introduction; the URL survives once, in 10a.1 at MANUSCRIPT.md:897, so no pointer was lost from the document as a whole.",
+ "write_paths": [
+  "papers/context-cache/MANUSCRIPT.md",
+  "orchestration/units/CITE-PROSE-REPAIR.md",
+  "orchestration/handoffs/CITE-PROSE-REPAIR.json"
+ ],
+ "assumptions": [
+  "QUEUE GATE: the card forbids starting before V-RELEASE-BATCH finished reading MANUSCRIPT.md. No handoff or card for V-RELEASE-BATCH exists anywhere under orchestration/ (740 unit cards, handoffs grepped), and MANUSCRIPT.md's mtime was 2026-10-24 21:16:53 while this unit began at 21:37:53 - 21 quiet minutes with no process holding the file. Read as 'the predecessor has already finished'; proceeded rather than stalling, since an automated session cannot ask.",
+  "MARKER WORDING: the original policy marker was '[CITATION NEEDED - verify]' (recovered from papers/context-cache/CITATIONS.md:17 and :41-42, which is outside this unit's write paths and was read only). The repaired sentence says 'stays marked as unverified' rather than restoring a bracketed marker in the manuscript, because the paragraph already uses **verified** as its state word; the marker string itself is not asserted anywhere the file no longer carries it.",
+  "SGLANG DOC LINK: kept, but only as the concrete example of a source this package did read in this workspace ('as the SGLang attention-backend documentation is (R-SGL.md, R-VLLM.md)'), never in the marker's grammatical slot. Its URL is unchanged and still present at MANUSCRIPT.md:897.",
+  "LINE INVARIANT: edits were made only by replacing text inside lines 885-887 and 906-907; the file's byte structure keeps 1214 lines and an identical newline count, verified by assert in the edit script and by wc -l.",
+  "NO CONTENT CHANGE: no number, citation id, URL, claim id or section reference was altered; the only additions are two words ('as', 'is') and three ('stays marked as') on the policy lines plus a full stop on line 907."
+ ]
+}

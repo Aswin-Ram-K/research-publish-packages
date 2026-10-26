@@ -1,0 +1,57 @@
+{
+  "unit": "PTR-ENGINE-P0",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/SPEC.md",
+    "experiments/ptr-engine/ptr_engine/__init__.py",
+    "experiments/ptr-engine/ptr_engine/errors.py",
+    "experiments/ptr-engine/ptr_engine/reference.py",
+    "experiments/ptr-engine/ptr_engine/store.py",
+    "experiments/ptr-engine/ptr_engine/compile.py",
+    "experiments/ptr-engine/ptr_engine/resolve.py",
+    "experiments/ptr-engine/ptr_engine/annotate.py",
+    "experiments/ptr-engine/ptr_engine/ledger.py",
+    "experiments/ptr-engine/ptr_engine/adapter.py",
+    "experiments/ptr-engine/tests/conftest.py",
+    "experiments/ptr-engine/tests/test_roundtrip.py",
+    "experiments/ptr-engine/tests/test_determinism.py",
+    "experiments/ptr-engine/tests/test_oneway.py",
+    "experiments/ptr-engine/tests/test_textform.py",
+    "experiments/ptr-engine/tests/test_noprefetch.py",
+    "experiments/ptr-engine/tests/test_scope.py",
+    "experiments/ptr-engine/tests/test_annotate.py",
+    "experiments/ptr-engine/tests/test_ledger.py",
+    "experiments/ptr-engine/tests/test_negative_controls.py",
+    "experiments/ptr-engine/tests/test_warmpool.py",
+    "experiments/ptr-engine/examples/worked_example.py",
+    "orchestration/units/PTR-ENGINE-P0.md"
+  ],
+  "evidence": {
+    "command_or_count": "95 passed in 0.12s; r = bodies/index = 30000/447 = 67.1x (12 items, exactly 30000 body bytes, index 447 bytes, zero-resolution prompt 472 bytes)",
+    "commands": [
+      "cd experiments/ptr-engine && python3 -m pytest tests -q   ->  95 passed in 0.12s",
+      "cd experiments/ptr-engine && python3 examples/worked_example.py   ->  items 12; total body bytes 30000; index bytes 447; r = 67.1x; depth(root)=0 depth(leaf)=1; resolves @knowledge:i01@1 -> 2496 B, @artifact:plan#/goal@1 -> 25 B; append_cost 16 and 22 (both off the 64-byte grid); one-body prompt 3055 B; ledger rows 3",
+      "cd experiments/ptr-engine && python3 -m pytest tests/test_determinism.py -q  ->  two subprocesses, two different warmpool roots, identical index sha256; material order does not change index bytes",
+      "red check: patched store.get (hash compare -> if False) and resolve (scope compare -> if False); python3 -m pytest tests/test_roundtrip.py::test_store_refuses_a_tampered_body tests/test_scope.py::test_the_wrong_scope_is_ungranted tests/test_negative_controls.py -q  ->  4 failed, 6 passed; package restored from /tmp backup -> 95 passed",
+      "wc -l SPEC.md ptr_engine/*.py tests/*.py examples/*.py  ->  3281 total lines (engine 1641, tests 1094, SPEC 247, example 144)",
+      "no network, no model call, no server started; git was not run against /home/zer0null/Duval (files read with sed/sed -n only)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "V-PTR-ENGINE-P0: independently re-run pytest and the example, confirm the seven negative-control codes are distinct by reading tests/test_negative_controls.py, and red-check one guard the author did not mutate (recommend: adapter's PTR_BODY_MISMATCH check, or the warmpool-inside-repo refusal in store.assert_warmpool_root). Then PTR-ENGINE-P1 can measure a real turn: feed a host log's turn material through compile_turn and count refs the model would have had to resolve.",
+  "write_paths": [
+    "experiments/ptr-engine/",
+    "orchestration/units/PTR-ENGINE-P0.md",
+    "orchestration/handoffs/PTR-ENGINE-P0.json"
+  ],
+  "assumptions": [
+    "Projection is validated and carried but not materialised: this engine returns the item's body for any enumerated projection, because deriving views is a projection-engine job. Stated as a limit in SPEC.md section 10; a host that derives views supplies them as their own items.",
+    "A JSON pointer selects a region only in a JSON body; the selected value is canonicalised (sort_keys, ','/':' separators) and stored as its own content identity. Plain-text region addressing is not implemented.",
+    "The per-turn resolve budget is counted against the ledger handed to resolve(); a host wanting a per-turn budget passes a fresh ledger per turn (file may persist for the session).",
+    "The repository root is found by walking up from the engine's own file for '.git' or 'pyproject.toml' (found: /home/zer0null/reserach extarctor). If no marker exists the engine refuses nothing, so a vendored copy outside any repo still works.",
+    "Python 3.11+ assumed (uses dataclasses, pathlib.is_relative_to); executed on CPython 3.14.4 with pytest 9.0.2. No third-party dependency.",
+    "The ledger row carries two optional keys beyond the contracted set -- 'ref' (text as presented) and 'ref_index' (the index's spelling of the same entry) -- because a caller may omit a revision the index pins and the adapter must still recognise the resolve. Documented in SPEC.md section 7; all contracted keys are present in every row.",
+    "Corpus for the worked example is exactly 12 items and exactly 30,000 characters, chosen to sit at the measured crossover rather than to flatter the ratio; r = 67.1x is a property of 12 index lines over 30,000 bytes at ~2.5 KB per body, not a universal constant.",
+    "Warmpool roots in tests come from pytest tmp_path, which resolves under /tmp and is asserted (conftest, session-autouse) to be outside the repository before any test runs."
+  ]
+}

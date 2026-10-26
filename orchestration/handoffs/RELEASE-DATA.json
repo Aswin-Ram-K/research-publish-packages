@@ -1,0 +1,43 @@
+{
+  "unit": "RELEASE-DATA",
+  "status": "done",
+  "artifacts": [
+    "release/v0.1/state/config/rows.jsonl",
+    "release/v0.1/state/gap-ledger.json",
+    "release/v0.1/MANIFEST.json",
+    "release/REPRO.md",
+    "release/REPORT.md",
+    "orchestration/units/RELEASE-DATA.md",
+    "orchestration/handoffs/RELEASE-DATA.json"
+  ],
+  "evidence": {
+    "command_or_count": "shipped 2 state files (0 sanitisation replacements needed); manifest 943 -> 945 entries, 946 files on disk, entries == files-1 True, 0 sha256 mismatches; verify_package.py EXIT=0 PASS, recompute.py all EXIT=0 'COVERAGE GUARD PASS 69 claims documented, 67 runnable here + 2 script-backed', recompute_r2.py all EXIT=0 with 7x PASS n/n (61/61,38/38,48/48,75/75,85/85,70/70,50/50), test_gap_closure_ledger.py EXIT=1 '6 failed, 2 passed in 0.07s' (limitation L1: unresolvable content refs), test_g5_fanout_attribution.py EXIT=0 '4 passed', test_paper_g3_bands.py EXIT=0 '13 passed', grep 192.168 = 0, grep /home/zer0null = 0",
+    "commands": [
+      "cd release/v0.1 && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python papers/context-cache/verify_package.py   # EXIT=0",
+      "cd release/v0.1 && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python papers/context-cache/recompute.py all   # EXIT=0",
+      "cd release/v0.1 && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python papers/context-cache/recompute_r2.py all   # EXIT=0",
+      "cd release/v0.1 && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python -m pytest tests/test_gap_closure_ledger.py -q -p no:cacheprovider   # EXIT=1, 6 failed 2 passed",
+      "cd release/v0.1 && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python -m pytest tests/test_g5_fanout_attribution.py -q -p no:cacheprovider   # EXIT=0",
+      "cd release/v0.1 && PYTHONDONTWRITEBYTECODE=1 ../../.venv/bin/python -m pytest tests/test_paper_g3_bands.py -q -p no:cacheprovider   # EXIT=0",
+      "grep -rE '192\\.168\\.' release/v0.1 | wc -l   # 0",
+      "grep -rE '/home/zer0null' release/v0.1 | wc -l   # 0",
+      "python - <<'PY' (recompute MANIFEST.json from disk; verify each sha256)   # entries 945, disk 946, entries==files-1 True, mismatches []"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Verify this repair independently: re-run the six commands from cd release/v0.1 and confirm 3 numeric EXIT=0 + ledger EXIT=1 '6 failed, 2 passed', manifest 945 entries vs 946 files with all sha256 matching, and both greps 0. Red->green check: delete release/v0.1/state/config/rows.jsonl and recompute.py all must return to EXIT=1 at claim 65/69; delete release/v0.1/state/gap-ledger.json and the ledger guard must return to 8 failed on FileNotFoundError. Do NOT try to green the ledger guard by shipping orchestration/ or scratch/ - it is limitation L1 by design. Note for the card author: the venv is at the workspace root, so from release/v0.1 the interpreter is ../../.venv/bin/python, not ../.venv/bin/python.",
+  "write_paths": [
+    "release/**",
+    "orchestration/units/RELEASE-DATA.md",
+    "orchestration/handoffs/RELEASE-DATA.json"
+  ],
+  "assumptions": [
+    "A1: the minimum that makes the 69 claims re-derivable is state/config/rows.jsonl alone (recompute.py:1640 C63_R2_CELLS and recompute_r2.py:557 C65_R2_PATH both resolve through ROOT = parents[2] = the release root). Confirmed: with it both runners exit 0.",
+    "A2: state/gap-ledger.json (25,834 bytes) was shipped too, because tests/test_gap_closure_ledger.py:24 reads it directly and without it the guard crashes 8/8 on FileNotFoundError, hiding the real content-ref limitation the card asked me to document.",
+    "A3: state/config/live-server-config.json (61,336 bytes, carries 2 internal 192.168.* serving-host addresses) and state/sys-opt-verdict.json (a workspace verdict document) were deliberately NOT shipped; their absence is part of limitation L1, not an oversight.",
+    "A4: the card's stated REPRO.md path defect (root-level release/v0.1/verify_package.py, exit 2) did NOT reproduce - grep over all of release/ finds no root-level invocation and the previous REPRO.md already used papers/context-cache/. I corrected what was actually wrong there (stale 'NO as shipped' verdict, 943-file/61,035,244-byte header, $OLDPWD/.venv interpreter line) and recorded the non-reproduction as REPRO deviation D7 rather than manufacturing a change.",
+    "A5: sanitisation required 0 replacements - both shipped files had 0 occurrences of '192.168.' and 0 of '/home/zer0null' before copying, so shipped bytes are the live bytes; rows.jsonl re-parsed as JSONL (284 non-blank lines).",
+    "A6: pytest runs use -p no:cacheprovider so no .pytest_cache lands in the artefact; one .pytest_cache created by an early unfiltered run was deleted before MANIFEST.json was recomputed, so no test residue is listed or shipped.",
+    "A7: the REPRO.md rewrite and REPORT.md section 11 are outside release/v0.1, so they changed no manifest entry; release/v0.1 total_bytes 61,143,643 and 946 on-disk files were re-verified after all edits."
+  ]
+}

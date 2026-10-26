@@ -1,0 +1,41 @@
+{
+  "unit": "MISS-LAW",
+  "status": "done",
+  "artifacts": [
+    "experiments/miss-law/LAW.md",
+    "experiments/miss-law/rows.jsonl",
+    "experiments/miss-law/run.py",
+    "experiments/miss-law/grid2.py",
+    "experiments/miss-law/agg.py",
+    "experiments/miss-law/law_fit.json",
+    "orchestration/units/MISS-LAW.md"
+  ],
+  "evidence": {
+    "command_or_count": "764 rows, one per request, fsynced per row. B measured not assumed: SGLang cached stayed at 8000 across all 64 consecutive primed lengths P1=8000..8063 (only B=64 yields that plateau; 448,1344,2240,... are odd multiples of 64 so 56 is excluded) and vLLM stepped 5280->6336 at P1=7396 = 7*1056. LAW: SGLang uncached=(P1 mod 64)+L, residual 0 in 186/186 rows over residues 2..63 x 3 reps, and exact in all 20 payload-variant cells (n=16..128); vLLM uncached=(P1 mod 1056)+1056+L, residual exactly +1056 in every row over 18 residues x 3 reps and 12 payload variants. AVALANCHE: P1 mod 64 in {0,1} reports cached=null (whole prefix re-billed) in 6/6 rows at P1=8000/8001, in both n=64/128 cells at 8064, and at 2048,2049,4096,4097,6144,6145,7681,7936,7937,8000,8001 (11/11, four block indices) -> residue-based, not positional; an identical repeat at 8064 also reads null, so the entry is absent, not rounded. CONTROLS: warm identical repeat 8000/8053 = 99.3%; cold (prefix broken mid-history) null on both requests. No /flush_cache, no restarts. VALIDATION: the quoted +44.8% and -95.6% are both COLD cells (nonce per request), where the law collapses to R=P and reproduces them (+44.6% from shipped rows 6490 vs 658+1192+1747=3597; -95.7% from published 7065 vs 13822). The boundary term is identically 0 there and is bounded by 6*63=378 tokens against a 10244-token swing (<=3.7%), so the law does NOT explain the fetch-count sign flip. On the crossover's own shipped warm rows the law is exact in 57/60 (3 exceptions are round-1 rows with a non-resident prime) and warm L1 loses at both fetch counts (-525% at 3 rounds), so no flip exists once the prefix is warm.",
+    "commands": [
+      "curl -s http://192.168.2.168:8012/v1/chat/completions -d '{\"model\":\"occamy-1.0\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":1}'",
+      "curl -s http://192.168.2.168:8014/v1/chat/completions -d '{\"model\":\"qwen3.5-9b\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":1}'",
+      "curl -s http://192.168.2.168:8012/get_server_info  # page_size=1, enable_cache_report=True, chunked_prefill_size=8192, max_total_num_tokens=1514599",
+      "curl -s -X POST http://192.168.2.168:8012/v1/tokenize -d '{\"prompt\":\" the the the\"}'  # -> count 3, ' the' = 1 token",
+      "python3 experiments/miss-law/run.py --stage b",
+      "python3 experiments/miss-law/grid2.py sglang 620 64",
+      "python3 experiments/miss-law/grid2.py vllm 400 1056",
+      "python3 experiments/miss-law/agg.py"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Two follow-ups worth a fresh unit: (1) re-derive the vLLM '+1056' term with an independent instrument -- on this build BOTH vllm cache counters count tokens, so it currently rests on one quantity; (2) explain the SGLang avalanche at P1 mod 64 in {0,1} (measured on 13 primed lengths, 6/6 and 11/11 misses, mechanism unknown). Also: the crossover's n=30/size=30000 rows are NOT on disk, so the -95.6% validation uses published aggregates only.",
+  "write_paths": [
+    "experiments/miss-law/",
+    "orchestration/units/MISS-LAW.md",
+    "orchestration/handoffs/MISS-LAW.json"
+  ],
+  "assumptions": [
+    "null cached_tokens recorded as null with cached_reported=false, treated as 0 only for arithmetic",
+    "vLLM block_size=1056 taken from /metrics cache_config_info as a claim to test, then confirmed by the step at P1=7396",
+    "vLLM has no per-request cache field on this build; instrumented by delta of vllm:prompt_tokens_cached_total (serial single writer makes deltas attributable)",
+    "the brief's +44.82% / -95.6% were matched to RESULTS.md's occamy cold cells (+44.9%, -95.6%) -- that is the only pair with those values",
+    "pairs are compared with the crossover's own metric: uncached is a RUN TOTAL summed over that run's requests, which is why longer runs lose"
+  ],
+  "environment_note": "From the final verification step onward, every bash call fails with 'UNKNOWN: unknown error, write' (errno 122 = EDQUOT, disk quota exceeded) while the workspace write path still works; /tmp appears to be the exhausted filesystem. Bash/ripgrep are therefore unavailable for the last re-checks (row counts after the position control are counted from the script's own printed output). This is why the deliverable was completed with the write/edit tools and why the last few numbers are quoted from tool outputs already captured rather than re-derived."
+}

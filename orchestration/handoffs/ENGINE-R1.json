@@ -1,0 +1,49 @@
+{
+  "unit": "ENGINE-R1",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/ptr_engine/quantise.py",
+    "experiments/ptr-engine/tests/test_quantise.py",
+    "experiments/ptr-engine/measure/run_cells.py",
+    "experiments/ptr-engine/measure/rows.jsonl",
+    "experiments/ptr-engine/measure/summary.json",
+    "experiments/ptr-engine/measure/RESULTS.md",
+    "experiments/ptr-engine/SPEC.md",
+    "experiments/ptr-engine/ptr_engine/__init__.py",
+    "orchestration/units/ENGINE-R1.md"
+  ],
+  "evidence": {
+    "command_or_count": "Live measurement on :8012 (occamy-1.0, SGLang, B=64), LAW.md section 2 shape, 3 reps/cell, sole writer, no /flush_cache, no restart. rows.jsonl: 49 rows = 33 requests + 12 prediction rows (each fsynced BEFORE its request; verified programmatically that every prediction seq precedes its request seq) + 4 calibrations. LAW REPRODUCED: 12/12 measure rows have observed uncached == predict_billed(P1, L_measured, 64), L=13 in 12/12. CELL A (index as worked_example.py compiles it, 447 B, 37.25 B/line, r=67.1x, byte-identical to SPEC.md:75): residue 5, P1=325, pad 0, cached 320, uncached 18 = 5+13, 3/3 reps identical. CELL B (padded to residue 2): pad 60, P1=386, cached 384 (= P1-2), uncached 15 = 2+13, 3/3. CELL C (control, padded to residue 0): pad 58, P1=384, cached NULL (cached_reported=false), uncached 397 = P1+13 -- AVALANCHE CONFIRMED on a live request, 3/3, and nowhere else. CELL D (compact index 447->383 B, 31.92 B/line, r=78.3x): pad 50, P1=322, cached 320, uncached 15 = 2+13, 3/3. cached == floor((P1-2)/64)*64 in 9/9 non-avalanche rows, absent in 3/3 avalanche rows. CYCLE BILLS (prime + append): A 325+18=343, B 386+15=401 (delta +58 vs A), C 384+397=781 (+438), D 322+15=337 (-6 vs A, but D's own unpadded residue is 16 and would bill 272+29=301, so D's padding costs +36: D's -6 is the compact index's 54-token prompt saving, not the quantisation). VERDICT: quantisation pays only as avalanche insurance (397 -> 15 on one append, 26x) or at residue >= 35 (cycle_bill breakeven: residue 5 pad 61 saves 3 -> 21 warm turns; compact residue 16 pad 50 saves 14 -> 4 turns); at a benign residue it costs 36-58 billed tokens per cycle. TESTS: 45 passed for tests/test_quantise.py, full suite 153 passed (TMPDIR=/var/tmp; /tmp is quota-exhausted on this machine). FIRST PASS CONTAMINATED AND DISCARDED: aiming target_residue at the text (not the whole prompt) put cells B/C on residues 23/21 so the control never avalanched; fixed with choose_padding(offset_tokens=...) plus a per-rep wire check that read prompt_tokens and re-aimed (12/12 reps needed exactly one re-aim), which also exposed a +1 token shift where the padded tail meets the chat template's trailing marker (/v1/tokenize of raw text is not the templated count).",
+    "commands": [
+      "curl -s -m 60 http://192.168.2.168:8012/v1/chat/completions -d '{\"model\":\"occamy-1.0\",\"messages\":[{\"role\":\"system\",\"content\":\"alpha beta gamma\"},{\"role\":\"user\",\"content\":\"Reply with the single word OK.\"}],\"max_tokens\":1}'",
+      "curl -s -X POST http://192.168.2.168:8012/v1/tokenize -d '{\"prompt\":\" the the the\"}'  # -> {\"tokens\":[279,279,279],\"count\":3}",
+      "TMPDIR=/var/tmp PTR_TMP=/var/tmp python3 experiments/ptr-engine/measure/run_cells.py --write-rows",
+      "TMPDIR=/var/tmp python3 -m pytest experiments/ptr-engine/tests/test_quantise.py -q  # 45 passed",
+      "TMPDIR=/var/tmp python3 -m pytest experiments/ptr-engine/tests -q  # 153 passed",
+      "python3 -c \"import json,pathlib; rows=[json.loads(l) for l in pathlib.Path('experiments/ptr-engine/measure/rows.jsonl').read_text().splitlines()]; print(len(rows), sum(r['row']=='request' for r in rows), all(r['uncached_tokens']==r['law_uncached_measured_L'] for r in rows if r['row']=='request' and r['phase']=='measure'))\""
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Three follow-ups, in order of value. (1) FREE RESIDUE CONTROL: padding costs 66-r tokens to gain r-2, but the compact index shows the prompt can be made SHORTER -- so a compile can reach a cheap residue by cutting the index (compact_index is 64 B = 53 prompt tokens smaller) instead of by adding filler. A unit should search the compact/full variants (and the neutral-filler amount) for the cheapest total cycle, which turns a +58 cost into a choice. (2) The amortised claim is arithmetic only: breakeven_turns says 21 turns (full, residue 5) and 4 (compact, residue 16) -- measure it in a real warm multi-turn session, one padded prefix held resident, appends of L=13..140, since that is the only accounting in which padding at a benign residue ever pays. (3) Reconcile with the concurrent law card in ptr_engine/ledger.py: it now exports predict_uncached(server, P1, L) + SERVER_PROFILES (SGLANG block 64, avalanche {0,1}) while quantise.py exports predict_billed(P1, L, B) -- two implementations of one law that must not drift; and check whether SGLang can tokenize the RENDERED chat template (a /v1/tokenize of the raw text is off by the +1 template shift measured here), which would remove the wire-verification loop from every host.",
+  "write_paths": [
+    "experiments/ptr-engine/ptr_engine/quantise.py",
+    "experiments/ptr-engine/ptr_engine/__init__.py",
+    "experiments/ptr-engine/tests/test_quantise.py",
+    "experiments/ptr-engine/measure/",
+    "experiments/ptr-engine/SPEC.md",
+    "orchestration/units/ENGINE-R1.md",
+    "orchestration/handoffs/ENGINE-R1.json"
+  ],
+  "assumptions": [
+    "Cell A must be the example's exact artefact, so the run uses the example's own scope constant 'worked-example' (revision 1, block 64): the full index is then 447 B / 37.25 B per line / r=67.1x, byte-identical to SPEC.md:75. An earlier pass with scope 'engine-r1' produced 442 B and is superseded.",
+    "null cached_tokens recorded as cached_tokens=null with cached_reported=false, treated as 0 only for the arithmetic -- the same convention as LAW.md and the engine's own token rule (a 0 that means 'unknown' is a lie).",
+    "L in every row is the MEASURED prompt delta P2-P1 (13 in 12/12 rows); the pre-registered prediction used payload 1 + framing 12 from LAW.md section 2, so the prediction was made with a constant, never with a fitted value.",
+    "Two accountings are reported because they differ and the brief does not fix one: per-cycle (index recompiled every turn, padding re-paid: cycle_bill['delta']) and amortised (one padded prefix held warm: cycle_bill['breakeven_turns']). The headline 'quantisation costs 36-58 per cycle' is the per-cycle accounting, which is the one that matches the engine's compile-every-turn lifecycle.",
+    "Padding cost is quoted against the cell's own residue; the compact index's -6 cycle delta is attributed to its 64-byte smaller index (53 fewer prompt tokens), NOT to padding, because its own unpadded form (residue 16) would bill 301 rather than 337.",
+    "n=1 payload only, 3 reps per cell, one server; reps are deterministic so they bound transcription error, not sampling variance.",
+    "A concurrent card was editing ptr_engine/ (ledger.py, errors.py, test_ledger.py, SPEC.md, __init__.py) throughout this unit. The ptr_engine.quantise re-export was APPENDED to the end of __init__.py instead of merged into its import block so it cannot have clobbered that card's edits; if a later card rewrites __init__.py wholesale the appended block needs re-applying (ptr_engine.quantise itself is unaffected). The suite total reported here (153) therefore includes that card's tests, not only mine (45 in test_quantise.py).",
+    "A /tmp-quota-exhausted machine is unchanged: all runs used TMPDIR=/var/tmp, and the warmpool root was a temp dir under /var/tmp (outside the repo, so the engine's own guard passes)."
+  ],
+  "tool_calls": 44,
+  "bound": 45
+}

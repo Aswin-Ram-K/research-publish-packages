@@ -1,0 +1,18 @@
+{"unit":"PKG-VERIFY","overall":"partial",
+"checks":["verify_package.py PASS exit 0: 69 claims, 69 mapped 1:1, 69 functions present, UNVERIFIED none","recompute.py 65/65 claim ids exit 0, 0 mismatches","coverage_guard_selftest.py exit 0 SELFTEST PASS","grid_guard_selftest.py exit 0 GRID GUARD PASS 34 files 9121 sglang cached_tokens all multiples of 64"],
+"commands":[
+{"cmd":".venv/bin/python papers/context-cache/verify_package.py","exit":"0","tail":"verify_package: PASS — 69 claims in CLAIMS.md, 69 mapped 1:1, 8 script-backed + 61 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none"},
+{"cmd":"for c in C02..C67; do .venv/bin/python papers/context-cache/recompute.py $c; done","exit":"0","tail":"65/65 claim ids exit 0; 0 mismatch"},
+{"cmd":".venv/bin/python papers/context-cache/recompute.py --all","exit":"2","tail":"unknown claim '--all'; known: C02 C03 ... C61 — undocumented flag, no --all mode"},
+{"cmd":".venv/bin/python papers/context-cache/coverage_guard_selftest.py","exit":"0","tail":"OK gap named: got=True want=True SELFTEST PASS"},
+{"cmd":".venv/bin/python papers/context-cache/grid_guard_selftest.py","exit":"0","tail":"GRID GUARD PASS  34 file(s), 9121 sglang cached_tokens, every one a multiple of 64 exit=0"},
+{"cmd":"sha256sum experiments/context-cache/cells/U4b/rows.jsonl","exit":"0","tail":"c16d1783e42510120fb155ede9c87a6e2fbe6f8e5252bee975ccce90509e3246  (4600 B, 24 lines) — matches CLAIMS.md U4b-rows digest"},
+{"cmd":"sha256sum experiments/context-cache/cells/G1/rows.jsonl","exit":"0","tail":"9242ad383281b360ec3c4be92bc59e7de7d5cd751eb7e15c0944f2261497ae66 — matches C44 digest prefix 9242ad38"}],
+"spot_checks":[
+{"figure":"C05 B/A = 3.3133 (papers/context-cache/CLAIMS.md:87; MANUSCRIPT.md:176)","rederived":"independent means from U4b rows (sha256 c16d1783…): A=636.0625, B=864.125, C=570.65 ms -> B/A=1.358553601257738, C/A=0.8971; no path to 3.3133 or C/A=1.0000","agrees":false},
+{"figure":"C62 twelve arm means +134.6 to +747.2 and per-turn band -927 to +5,473 (CLAIMS.md:213)","rederived":"recomputed from the same row read recompute.py performs: per_arm/post_steady identical to paper; independent pass on G1/rows.jsonl could not reproduce C44 mean gross E=1,728.0/F=1,664.0 (saw E=4901.4545, F=5003.0303) because recompute.py reads an undisclosed gross_* column","agrees":true}],
+"skipped":["C01 and C16 are recomputed by CX-V2's own scripts cells/CX-V2/u5_recon.py and cells/CX-V2/u4_recon.py, named in CLAIMS.md not in recompute.py — not run by this unit","recompute.py --all: no such mode (exit 2), per-id loop used"],
+"not_reproduced":["C05 B/A=3.3133 from the cited U4b rows — provisionally marked superseded by CLAIMS.md:87 and MANUSCRIPT.md:169/176/202 (race-free G5 6.744), but no visible derivation for 3.3133 and C/A=1.0000 vs independently computed 0.8971","C44 mean gross E=1,728.0/F=1,664.0/ratio=1.0384615 — gross_* column undisclosed"],
+"blocker":"","next_unit_hint":"Confirm with the C05/C44 authors whether 3.3133 is a stale pre-race-free artifact (drop or annotate) and publish the gross_* column semantics so C44 is independently re-derivable. Prose edits this pass (ptr-engine RESULTS.md/RECORD.md, miss-law avalanche HARVEST.md) do not touch the claim census, so the green verifier does not cover them — a separate doc-consistency check is still owed.","assumptions":["Ran .venv/bin/python as instructed; venv present at workspace .venv","Idempotent file writes to /tmp logs only; no package file touched"],
+"write_paths":["orchestration/units/PKG-VERIFY.md","orchestration/handoffs/PKG-VERIFY.json"],
+"tool_calls":13,"bound":14}

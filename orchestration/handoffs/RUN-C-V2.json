@@ -1,0 +1,70 @@
+{
+  "unit": "RUN-C-V2",
+  "status": "partial",
+  "artifacts": [
+    "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl",
+    "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.analysis.txt",
+    "orchestration/handoffs/RUN-C-V2.json",
+    "orchestration/units/RUN-C-V2.md"
+  ],
+  "evidence": {
+    "dry_run_command": ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --dry-run --fixture experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-01.v2.json --thinking off",
+    "dry_run_exit": 0,
+    "dry_run_would_send_total": 192,
+    "dry_run_arm_split": "transcript-grow 48 / transcript-compact 48 / pointer-stable 48 / lease-reopen 48 (N=48 x reps=1), digest_requests=0",
+    "grid_command": ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v2/runtime-v2/LR-01.v2.json --arms transcript-grow,transcript-compact,pointer-stable,lease-reopen --reps 1 --thinking off --max-tokens 4096 --max-turns 48 --run-id longrun-c-v2-2026-10-26 --rows experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl --base-url http://192.168.2.168:8012/v1 --model occamy-1.0-NVFP4 --engine sglang --stream",
+    "grid_exit": 0,
+    "grid_summary_line": "rows=192 requests=192 truncated=15 ttft_n=192 max_tokens=4096 | finish_reason {\"length\": 15, \"stop\": 177} | failed_turns=15 answer_source none=0",
+    "scorer_exit_per_arm": {"transcript-grow": 1, "transcript-compact": 1, "pointer-stable": 1, "lease-reopen": 1},
+    "scorer_verified_success_per_arm": {"transcript-grow": false, "transcript-compact": false, "pointer-stable": false, "lease-reopen": false},
+    "scorer_tally_per_arm": "12 of 23 required checks pass / 11 fail in EVERY arm — identical failed set: cp.t12, cp.t24, cp.t46, acc.cp1, acc.cp2, acc.cp3, acc.1, acc.2, acc.3, acc.4, repair.main",
+    "scorer_note": "score_longrun.py run once per arm (arm-filtered copy of the row file). Scoring the WHOLE file scores it as one 'transcript-grow' cell and is invalid: the scorer dedupes by turn across arms and keeps the last arm's row (48 duplicate-turn notes).",
+    "tamper_checks": {"fixture_sha256_at_run": "0a07db1b14f30034902c23fe208e5717ad64856f31fe9dcfc1ab873bc2b90848", "fixture_sha256_at_score": "0a07db1b14f30034902c23fe208e5717ad64856f31fe9dcfc1ab873bc2b90848", "fixture_sha256_matched": "fixture_file", "tampered": false},
+    "analyzer_exit": 0,
+    "analyzer_validity": "VALID [COMPLETE] rows=192 turns=48/48, max_tokens_seen=[4096], answer_source_none_rows=0, ttft_missing_rows=0",
+    "per_arm_metric_lines": [
+      "transcript-grow  TTFT n=48 p50=482.24 p95=838.85 p99=849.79 max=849.98 | cached_share early=0.757 middle=0.957 late=0.969 | TTVS NOT VERIFIED observed_tokens=77356 observed_latency=1185.41s | cp t12 acc 0.000, t24 acc 0.000, t46 acc 0.000",
+      "transcript-compact  TTFT n=48 p50=202.49 p95=224.08 p99=393.13 max=537.24 | cached_share early=0.888 middle=0.964 late=0.972 | TTVS NOT VERIFIED observed_tokens=10461 observed_latency=66.32s | cp t12/t24/t46 acc 0.000",
+      "pointer-stable  TTFT n=48 p50=167.02 p95=356.12 p99=419.24 max=438.57 | cached_share early=0.723 middle=0.924 late=0.926 | TTVS NOT VERIFIED observed_tokens=22396 observed_latency=309.57s | cp t12/t24/t46 acc 0.000",
+      "lease-reopen  TTFT n=48 p50=134.96 p95=201.78 p99=260.02 max=265.38 | cached_share early=0.839 middle=0.891 late=0.897 | TTVS NOT VERIFIED observed_tokens=68239 observed_latency=2275.26s | cp t12/t24/t46 acc 0.000"
+    ],
+    "frozen_rule_arithmetic": "clause (i): p95(pointer-stable)=356.12 ms vs p95(transcript-grow)=838.85 ms -> ratio 0.4245 <= 0.5 TRUE. clause (ii): tokens_to_verified_success = null in both arms (0 verified successes) -> not establishable. clause (iii): 0/3 vs 0/3 -> TRUE (tie at zero). Two clauses true-and-vacuous + one unestablishable => UNDECIDABLE.",
+    "hours_guard": "not triggered: whole grid took 3837 s of measured turn latency (1.07 h) and ~1.4 h wall clock; a 24-row projection at the time of the first guard check was grow-mean 27 s/turn -> 192 x 27 s = 5184 s = 1.44 h, under the 6 h cap. No arm had two turns > 600 s (max single turn 152.2 s).",
+    "over_budget_arithmetic": "the runner emits NO over_budget column (teaching it is a separate card), so over_budget was computed here from content word counts against the fixture's words_per_turn_kind {work/plant/repair 150, checkpoint/verify 400}: grow 9/48 (18.8%), compact 0/48 (0.0%), pointer-stable 1/48 (2.1%), lease-reopen 17/48 (35.4%); grid 27/192 = 14.1%. F2 threshold is >=5/48 per arm or >=20/192 grid-wide -> FIRES.",
+    "engine": "GET http://192.168.2.168:8012/v1/models -> HTTP 200 at start; every turn returned HTTP 200 with content (answer_source none = 0).",
+    "handoff_guard": "pytest tests/test_orchestration_handoffs.py -> 12 passed, 1 failed: test_no_new_contract_key_gaps fails on a PRE-EXISTING file orchestration/handoffs/V2-RUNTIME.json (missing 'overall','checks', mtime 2026-10-26T04:34, written before this session started at 04:35:40). RUN-C-V2 contributes no unit-shape gap: the assertion's new_u/worse_u are both {}."
+  },
+  "blocker": "",
+  "assumptions": [
+    "Fixture of record for this unit is tasks-v2/runtime-v2/LR-01.v2.json (sha256 0a07db1b...b90848), not the older runtime/LR-01.json (b7e303a6...a500) named in RUN-C-PLAN.md; the card names the v2 fixture and its 192 total, and the dry-run on the v2 fixture returned exactly 192.",
+    "The runner emits no over_budget column, so the tier's over_budget rate was computed post hoc from each row's content word count against the fixture's own words_per_turn_kind. No re-prompt, no truncation, no row dropped.",
+    "The scorer is single-cell: run once per arm over an arm-filtered copy of the row file (arm-filtered copies were written to a throwaway temp path and deleted; the row file itself was never filtered or edited).",
+    "LONGRUN-PREREG names t60; N=48 ends at turn 48, so clause (i) and (iii) are evaluated at the final checkpoint (t46) plus the verify turn (t48) and the file says so; the rule was not otherwise changed.",
+    "A re-launch was needed: the first process was started with nohup inside a sandboxed call whose PID namespace died with the call after 2 rows; it was resumed with --resume (turns 1-2 reused, 190 further turns sent) so no turn was paid for twice."
+  ],
+  "next_unit_hint": "Before any further arm comparison, a card must fix the answer-degeneracy this grid measured: transcript-compact answered in ~15 words/turn (1804 completion tokens for the whole 48-turn arm vs 30455 for grow) and pointer-stable/lease-reopen emitted 1/14 runaway 4096-token truncated turns, while every arm scored 0/3 checkpoints — so the arms were never actually compared on a task any of them could solve. A second card should teach run_longrun.py to write the over_budget column rather than have it recomputed; a third should re-read experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.analysis.txt before spending anything, because that file already carries every per-arm number for config C.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl",
+    "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.analysis.txt",
+    "orchestration/handoffs/RUN-C-V2.json",
+    "orchestration/units/RUN-C-V2.md"
+  ],
+  "requests_spent": 192,
+  "rows_written": 192,
+  "hours_elapsed": 1.4,
+  "per_arm": {
+    "transcript-grow": {"ttft_p50_ms": 482.24, "ttft_p95_ms": 838.85, "tokens_to_verified_success": null, "observed_tokens_not_verified": 77356, "checkpoint_accuracy": {"t12": 0.0, "t24": 0.0, "t46": 0.0}, "checkpoint_accuracy_mean": "0/3", "over_budget_rate_pct": 18.8, "verified_success": false, "truncated_rows": 0},
+    "transcript-compact": {"ttft_p50_ms": 202.49, "ttft_p95_ms": 224.08, "tokens_to_verified_success": null, "observed_tokens_not_verified": 10461, "checkpoint_accuracy": {"t12": 0.0, "t24": 0.0, "t46": 0.0}, "checkpoint_accuracy_mean": "0/3", "over_budget_rate_pct": 0.0, "verified_success": false, "truncated_rows": 0},
+    "pointer-stable": {"ttft_p50_ms": 167.02, "ttft_p95_ms": 356.12, "tokens_to_verified_success": null, "observed_tokens_not_verified": 22396, "checkpoint_accuracy": {"t12": 0.0, "t24": 0.0, "t46": 0.0}, "checkpoint_accuracy_mean": "0/3", "over_budget_rate_pct": 2.1, "verified_success": false, "truncated_rows": 1},
+    "lease-reopen": {"ttft_p50_ms": 134.96, "ttft_p95_ms": 201.78, "tokens_to_verified_success": null, "observed_tokens_not_verified": 68239, "checkpoint_accuracy": {"t12": 0.0, "t24": 0.0, "t46": 0.0}, "checkpoint_accuracy_mean": "0/3", "over_budget_rate_pct": 35.4, "verified_success": false, "truncated_rows": 14}
+  },
+  "frozen_rule_outcome": {
+    "verdict": "undecidable",
+    "pointer_stable_wins": false,
+    "clause_i_p95_at_least_2x_better": {"holds": true, "pointer_stable_p95_ms": 356.12, "transcript_grow_p95_ms": 838.85, "ratio": 0.4245, "threshold": 0.5},
+    "clause_ii_tokens_to_verified_success_no_worse": {"holds": null, "pointer_stable": null, "transcript_grow": null, "reason": "neither arm has a verified success at N=48, so the clause has no measured success to compare; a tie at null is not 'no worse'"},
+    "clause_iii_checkpoint_accuracy_no_worse": {"holds": true, "pointer_stable": "0/3", "transcript_grow": "0/3", "reason": "tie at zero — true, but satisfied vacuously because no arm solved any checkpoint"},
+    "evaluated_at": "N=48 final checkpoint (t46) plus verify turn t48; the pre-registered t60 is unreachable at N=48"
+  },
+  "tier_rejected": true
+}

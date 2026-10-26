@@ -1,0 +1,31 @@
+{
+ "unit": "V-REPAIR-QP",
+ "overall": "pass",
+ "checks": [
+  "1 VERDICTS append-only: `head -n 4009 orchestration/VERDICTS.md | sha256sum` = 4c68aa0012f853d843893f03cf1f10f1b9e5dd6eacb361a32430ad6570383b53 \u2014 starts 4c68aa00, ends 3b53 => MATCH author-reported pre-append hash; `wc -l` = 4010 = 4009 + exactly 1 appended line.",
+  "1b `grep -c 'V-QUALITY-ARM' orchestration/VERDICTS.md` = 1 (single line, the appended one, at line 4010); `tail -1 | cut -c1-200` opens '- **V-QUALITY-ARM \u2014 PARTIAL (verifier, 2026-10-25).** CONFIRMED: 115 rows reconcile exactly ... discrimination control A 3/3, B 0/3, C 3/'.",
+  "2 figures sourced (grep -o counts, no memory): rows.jsonl -> '34190' x1, '49594' x2, '34390' x2; orchestration/handoffs/V-QUALITY-ARM.json -> '17,193' x5 ('C rep2: raw 34,201 measured 32,401, residual +17,193'), '32,401' x1, '34,190' x2 ('per_turn C rep2 T4 has residue 1, avalanche True, uncached 34,190 and billed 49,594'), '49,594' x3.",
+  "2b arithmetic on measured values: 49,594 - 17,193 = 32,401 (printed); C rep2 completion_tokens from rows.jsonl T1/T2/T3 = 2+2+2 = 6 (printed from the 10 C-rep2 rows; T4 = 7), matching handoff 'completions 2+2+2=6 vs a 17,193-token gap'.",
+  "2c residual triples exact in handoff line 9: 'A +151/+110/+106, B +117/+150/+127, C +159/+111/+17,193, D +100/+100/+100'; grep -o hit counts +151 x1, +110 x1, +106 x1, +117 x1, +150 x1, +127 x1, +159 x2, +111 x1, +100 x4.",
+  "3 discrimination intact in RESULTS.md: table rows 'D no-body (control) 0/3', 'A warmpool 3/3', 'B cap-3 0/3', 'C destructive-compaction 3/3'; billed 32,550 / 34,374 / 49,594 for C; `756741be` present (D x3 + prose); 458-byte index with sha256 e81ba025...105531d5 present. Repaired prose surrounds the table and does not alter a cell (line 102 table row unchanged in form).",
+  "4 red->green: /tmp/repair_stale.md = copy of RESULTS.md with 'does not hold exactly' restored to 'holds exactly' (line 254). Guard = file contains 'holds exactly' AND '+151/+110/+106' -> return 1, else 0. stale_copy_exit=1, repo_exit=0. Printed stale line 254 'holds exactly: residuals A +151/+110/+106,' vs repo line 177 'does **not** hold exactly'.",
+  "5 no measurement altered: `git --no-pager diff --numstat -- experiments/ptr-engine/quality/RESULTS.md` empty (working tree identical to HEAD for RESULTS.md); VERDICTS.md delta vs HEAD is +103/-1 at hunks @@ -15 +15,4 @@ and @@ -3908,0 +3912,99 @@ \u2014 inherited history from earlier units (HEAD is 3908 lines, 102 behind), not attributable to this append, whose sole new line is 4010."
+ ],
+ "verdicts_hash": "4c68aa0012f853d843893f03cf1f10f1b9e5dd6eacb361a32430ad6570383b53 MATCH",
+ "verdicts_rows": 1,
+ "unsourced_numbers": [],
+ "red_green": "stale_copy_exit=1, repo_exit=0",
+ "not_reproduced": [],
+ "overstated": [],
+ "unverified": [
+  "pre-append hash is author-reported (no independent record of the 4009-line state before the append); git HEAD is 3908 lines so a HEAD diff cannot serve as that record. VERDICTS.md -15 +15,4 hunk and +99-line tail vs HEAD predate this unit and are not attributable to V-QUALITY-ARM."
+ ],
+ "tool_calls": 13,
+ "bound": 12,
+ "bound_note": "12 calls: 1 failed write + 1 read + 1 stub write + 10 bash verifications; the 13th is this mandatory handoff write.",
+ "blocker": "",
+ "next_unit_hint": "Repairs verified pass \u2014 1-4 all hold; safe to gate forward. Do not diff VERDICTS.md against git HEAD to argue append-only: HEAD is 102 lines stale. If C rep2's 32,401 needs an independent primitive, it currently rests on the handoff plus the printed 49,594-17,193 subtraction.",
+ "write_paths": [
+  "orchestration/handoffs/V-REPAIR-QP.json"
+ ]
+}

@@ -1,0 +1,157 @@
+{
+  "unit": "V1",
+  "overall": "partial",
+  "date": "2026-10-23",
+  "documents_under_test": [
+    "research/tooling/01-inventory.md",
+    "research/tooling/02-candidates.md"
+  ],
+  "checks": [
+    {
+      "claim": "S1: exactly two graphify pipeline call sites in src/ (gf.extract at run.py:1357, self._graphify.query at candidates.py:920)",
+      "verdict": "reproduced",
+      "evidence": "grep -rn '\\bgf\\.\\|_graphify\\.' src/resextract/ --include=*.py -> only 'src/resextract/run.py:1357: result = gf.extract(' and 'src/resextract/mine/candidates.py:920: result = self._graphify.query('; the doc's 12-verb grep returns 25 lines, 23 of which are dict/hashlib .update( (occamy.py:233, dashboard/api.py:74, store.py:919, ...); refresh/review.py:428 'binary = Graphify().binary' instantiates without invoking a subcommand"
+    },
+    {
+      "claim": "S1: graph artifact 3,188,231 B / 2,685 nodes / 7,102 links / sha256 4790bbb1...897b / built_at_commit=6deaed07af0d998d1672fe3f1ab1579e6ba0cdc4 / directed=false",
+      "verdict": "reproduced",
+      "evidence": "stat -c %s state/kg/duval/graphify-out/graph.json -> 3188231; sha256sum -> 4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b; len(json['nodes'])=2685, len(json['links'])=7102, directed=False, built_at_commit=6deaed07af0d998d1672fe3f1ab1579e6ba0cdc4; relations calls 2216 / contains 2093 / imports 1254 / imports_from 687 / references 374 match the doc"
+    },
+    {
+      "claim": "S1: sha256 equals the pin at config/graph_pin.toml:52",
+      "verdict": "reproduced",
+      "evidence": "sed -n '51,54p' config/graph_pin.toml -> '[graphs.\"state/kg/duval/graphify-out/graph.json\"] sha256 = \"4790bbb1111b76ea7cfb8024a98cfb3ec8c4b038beb23f6e5b6fa729fcdd897b\"', byte-identical to the recomputed digest"
+    },
+    {
+      "claim": "S1: graphify_version=0.9.80 was measured by loading the JSON (listed beside directed/built_at_commit as a peer key)",
+      "verdict": "reproduced",
+      "evidence": "value is correct but nested: json['graphify_version'] is absent (None); json['graph'] = {\"schema_version\": 1, \"graphify_version\": \"0.9.80\"}"
+    },
+    {
+      "claim": "S1: run.py:1781 passes run_graph_update=False",
+      "verdict": "reproduced",
+      "evidence": "sed -n '1775,1786p' src/resextract/run.py -> 'report = refresh_target(' ... 'run_graph_update=False,' at :1781"
+    },
+    {
+      "claim": "S1: no graphify update/watch call exists in src/ (§1 row 14 status 'absent', G5)",
+      "verdict": "contradicted",
+      "evidence": "grep -rn '_run_graphify_update' src/ -> src/resextract/refresh/review.py:416 'def _run_graphify_update(copy_dir: Path, *, timeout: float) -> tuple[bool, int, str]' and review.py:628 'ok, rc, tail = _run_graphify_update(copy_root, timeout=timeout)'; review.py:861 declares 'run_graph_update: bool = True'. The wrapper methods exist too: kg/graphify.py:1245 def update(...), :1607 def watch(...). The pipeline therefore HAS a wired graphify-update path; run.py merely passes False into it"
+    },
+    {
+      "claim": "S1: MENU_NODE_LIMIT=60 / MENU_EDGE_LIMIT=40 at mine/candidates.py:125-126",
+      "verdict": "reproduced",
+      "evidence": "sed -n '120,130p' src/resextract/mine/candidates.py -> line 125 'MENU_NODE_LIMIT = 60', line 126 'MENU_EDGE_LIMIT = 40'"
+    },
+    {
+      "claim": "S1: src/resextract/context/budget.py is 'imported only by tests'",
+      "verdict": "contradicted",
+      "evidence": "grep -rn 'context.budget|context import budget' src/ tests/ experiments/ -> 0 src/ importers, 12 tests/ importers, and experiments/context-cache/cells/U5/u5_cells.py:57 'from resextract.context.budget import default_est_tokens' plus experiments/context-cache/cells/U14/u14_append_note_probe.py:49 'from resextract.context.budget import is_append_note'. Correct statement: no src/ module imports it; tests and experiments do"
+    },
+    {
+      "claim": "S1: graphify '--help' contains affected, query, update, check-update, benchmark, save-result, reflect, god-nodes, path, explain, label, cluster-only, diagnose, watch; update has NO --graph/--out; extract DOES have --out",
+      "verdict": "reproduced",
+      "evidence": ".venv/bin/graphify --help -> all 14 names present ('diagnose multigraph', 'affected \"X\"', 'god-nodes', 'save-result', 'reflect', 'check-update <path>', ...); 'update <path>' lists only '--force' and '--no-cluster'; 'extract <path>' lists '--out DIR, --output DIR output dir (default: <path>)'"
+    },
+    {
+      "claim": "S1 handoff counts: 'CLI has 28 subcommands'",
+      "verdict": "contradicted",
+      "evidence": ".venv/bin/graphify --help -> 46 distinct top-level command tokens (add affected aider antigravity benchmark check-update claude claw clone cluster-only codebuddy codex copilot cursor devin diagnose droid explain export extract gemini global god-nodes hermes hook install kilo kiro label merge-driver merge-graphs opencode path pi provider prs query reflect save-result trae trae-cn tree uninstall update vscode watch); excluding the 19 per-platform install aliases leaves 27. The doc's own §2 enumeration lists 27 items, the handoff says 28"
+    },
+    {
+      "claim": "S2/S3: graphifyy 0.9.80 is Apache-2.0",
+      "verdict": "reproduced",
+      "evidence": "grep -iE '^(Name|Version|License)' .venv/lib/python3.14/site-packages/graphifyy-0.9.80.dist-info/METADATA -> 'Name: graphifyy', 'Version: 0.9.80', 'License-Expression: Apache-2.0'; it also ships LICENSE-MIT, so the Apache-2.0 expression is the authoritative single licence"
+    },
+    {
+      "claim": "S3 (propagating S2): ast-grep-py 0.51.0 is installable as a wheel on this interpreter",
+      "verdict": "reproduced",
+      "evidence": "web_fetch https://pypi.org/pypi/ast-grep-py/0.51.0/json -> info.version 0.51.0, license MIT, requires_python >=3.8, and a cp314 wheel 'ast_grep_py-0.51.0-cp314-cp314-manylinux_2_28_x86_64.whl' (5,661,996 B, upload_time 2026-10-15T15:18:42) matching .venv Python 3.14.4 on manylinux x86_64"
+    },
+    {
+      "claim": "S1: unpromoted plugin exists outside the workspace, registers five tools at lib/index.js:146/230/315/399/470, inject=['tools'] only (:40)",
+      "verdict": "reproduced",
+      "evidence": "grep -n 'name:\\|defineTool\\|tools.register\\|inject' '.../dsh-plugin-graphify/package/lib/index.js' -> register(defineTool({ at 145/229/314/398/471 with name: at 146 graph_query, 230 graph_explain, 315 graph_path, 399 graph_stats, 472 graph_ensure (S1 wrote 470); 'export const inject = [\"tools\"]' at :40; package.json name @local/dsh-plugin-graphify v0.1.0 exports {'.':'./lib/index.js'}, and the path /home/zer0null/Desktop/... is outside this workspace"
+    },
+    {
+      "claim": "The defineTool passthrough fallback is harmless because tools.register accepts a plain definition",
+      "verdict": "contradicted",
+      "evidence": "register() at packages/core/tools/src/index.ts:1071 does accept a plain ToolDefinition (no defineTool call inside), but lines 1073-1080 throw 'TypeError: tool \"<name>\" must declare output { schema, render, presentationMeta? }' unless output.render is a function. The plugin's five output blocks (lib/index.js:173,256,339,417,491) contain no render and no schema key (grep 'render(' -> 0 hits), so registration fails either way; and the point is moot because the package ships node_modules/@deepseek-ai/dsh-tools (version '0.0.0-shim', 7-line defineTool that returns its argument unchanged, header 'NOT used by the live harness'), so the import resolves to that shim rather than to the real package or the fallback. Contrast: mounted @local/dsh-plugin-openui passes output:{schema:{type:'string'}, render(_args,value){...}} (lib/index.js:201-203) and imports no @deepseek-ai/* (comment only, :18)"
+    },
+    {
+      "claim": "Containment: S1/S2 wrote nothing under src/, config/, docs/, tests/",
+      "verdict": "reproduced",
+      "evidence": "find src config docs tests -newermt '2026-10-23 00:10' -type f (excluding __pycache__) -> 0 files; working tree is dirty repo-wide (900 porcelain entries) but all predate the S1/S2 window (01-inventory.md 00:19:28, 02-candidates.md 00:20:28)"
+    },
+    {
+      "claim": "Containment: no handoff command wrote inside /home/zer0null/Duval",
+      "verdict": "reproduced",
+      "evidence": "S1.evidence.commands -> 17 entries, none mentions Duval and none contains a write verb (cat/ls/grep/sed/sha256sum/python -c/pip list/--help only); S2.evidence has NO commands array at all (evidence = {sources:36, fetches:23}), so no S2 number has a command behind it"
+    },
+    {
+      "claim": "S2: '436-file Python target' / '436 Python files' (repeated as the sizing premise for zoekt/Sourcebot/Sourcegraph/CodeQL verdicts)",
+      "verdict": "contradicted",
+      "evidence": "the admitted build is 227 files (state/logs/U8.12-prefix-copy.md:176 '227/227 AST progress lines'; S3 also writes 227), and the graph's 175 distinct source_file are ts 136 / mjs 13 / py 9 / sh 8 / json 3 - TypeScript-dominant, not a Python target. The 436-file Python premise is wrong on both count and language"
+    },
+    {
+      "claim": "S2: Sourcegraph main repo 'not publicly retrievable (API 404 on 2026-10-23)'",
+      "verdict": "contradicted",
+      "evidence": "S2's own handoff states 'GitHub API rate limit (60/hr unauthenticated) was exhausted; counts for sourcegraph/sourcegraph ... are therefore recorded as 404/no-public-repo rather than as a star count' - i.e. the 404 was a fallback label after rate-limit exhaustion (which normally yields 403), yet the prose table and §4 present it as an observed API 404"
+    }
+  ],
+  "not_reproduced": [
+    "S1 'no graphify update/watch call exists in src/' - src/resextract/refresh/review.py:416 defines _run_graphify_update and :628 calls it; :861 defaults run_graph_update=True. Only the run.py:1781 caller disables it.",
+    "S1 'imported only by tests' for context/budget.py - experiments/context-cache/cells/U5/u5_cells.py:57 and U14/u14_append_note_probe.py:49 import it; src/ does not.",
+    "S1 handoff 'CLI has 28 subcommands' - 46 distinct top-level tokens in --help, 27 families without the per-platform install aliases, and the doc's own list has 27 items.",
+    "The 'fallback is harmless' premise - register() rejects the plugin's output blocks (no render), and the package's own node_modules/@deepseek-ai/dsh-tools shim is what resolves at import time, not the real harness package.",
+    "S2 '436-file Python target' - 227 admitted files, TypeScript-dominant (graph source_file: ts 136 / py 9).",
+    "S2 Sourcegraph 'API 404' as an observed fact - S2's own handoff says the 404 stands in for an exhausted rate limit."
+  ],
+  "overstated": [
+    "S1 handoff '28 subcommands' is a grouping convention stated as a count, and no convention yields 28 (46 raw, 27 families). Fix: '27 command families (46 top-level tokens, 19 of them per-platform install/uninstall aliases)'.",
+    "S1 'graphify_version=0.9.80 ... measured by loading the JSON' presents a nested key beside two top-level keys. Fix: 'graph.graphify_version=0.9.80 (nested under the graph metadata object)'.",
+    "S1 §1 row 14 / G5 'absent' and 'no graphify update/watch call exists in src/' are true of the run.py call site only. Fix: 'wired in the refresh engine (refresh/review.py:416,628; run_update default True at :861) but disabled by the only caller, run.py:1781'.",
+    "S1 'imported only by tests' ignores experiments/. Fix: 'imported by tests and by the U5/U14 context-cache experiment cells; by no src/ module'.",
+    "S1's recorded evidence commands are not the commands that produce the claimed outputs: grep -rn '\\.query(|\\.affected(|...' (BRE, unescaped |) returns 0 lines, and grep -rln 'context.budget|from resextract.context' tests/ returns 0 lines. Both need -E (they return 25 and 12 lines respectively with -E).",
+    "S1 'graph_ensure (lib/index.js:470)' - the name: line is 472 (register call at 471).",
+    "S2 'API 404 on 2026-10-23' and '436-file Python target' are inference/premise carried into prose as measured fact; the handoff records the first as a rate-limit fallback and the second has no command anywhere."
+  ],
+  "unverified": [
+    "Which plugin provides local_doc_*/local_knowledge_*/local_board_* - not re-traced (S1 records it as unverified; I did not search outside the profile tree).",
+    "graphify/security.py and validate.py purposes - not read, as S1 records.",
+    "Whether the running harness equals /home/zer0null/deepseek-harness checkout bit-for-bit - I used the checkout's register()/defineTool source plus the mounted openui plugin's shape as two independent corroborations; @deepseek-ai/dsh-tools is not resolvable from ~/.dsh/profiles/web/node_modules, so the checkout is the only local source of the contract.",
+    "Whether a promoted graphify plugin would still fail if its output blocks were rewritten - not tested (would need a mount, which AGENTS.md forbids without user approval).",
+    "S2's GitHub star/release snapshots (28 repos) - not re-fetched; only PyPI was re-checked (rate-limit budget).",
+    "graphify's 54 top-level modules counted (ls graphify/*.py = 54); the 35 extractor modules and 24 language packs were not recounted."
+  ],
+  "corrections": [
+    "01-inventory.md:14 (G5), §1 row 14 and §2b 'update/watch -> 0' - say the refresh engine does call graphify update (refresh/review.py:416,628) and only run.py:1781 disables it; reclassify 'absent' as 'present but disabled by the sole caller'.",
+    "01-inventory.md:24,G8 'imported only by tests' -> 'imported by tests and experiments/context-cache (U5, U14); no src/ importer'.",
+    "01-inventory.md:40-42 replace '28 subcommands' with the grouping used, e.g. '27 command families / 46 top-level tokens in --help'.",
+    "01-inventory.md:4-7 attach graphify_version to the nested path graph.graphify_version.",
+    "handoffs/S1.json evidence.commands: add -E to the two alternation greps (they currently return 0 hits as written); add the refresh/review.py:416,628 call to the update claim.",
+    "02-candidates.md: replace '436-file Python target' / '436 Python files' everywhere with the measured 227 admitted files and the actual mix (ts 136 / mjs 13 / py 9 / sh 8 / json 3 among graph source files); re-check whether the zoekt/Sourcebot/CodeQL 'not worth it' verdicts survive that correction (they do at any of these sizes, but the sentence must cite 227).",
+    "02-candidates.md:25 and :59,:107 downgrade the Sourcegraph 404 to 'unconfirmed - unauthenticated GitHub API was rate-limited; no public repo retrievable in this run'; keep the licence-key claim separate, since it is sourced.",
+    "Add to S1's promotion blockers (01-inventory.md:117-120) a third, concrete one: the five tool definitions are not registry-ready under the harness contract (output:{schema, render} required; packages/core/tools/src/index.ts:1071-1080 throws otherwise), and the package's node_modules/@deepseek-ai/dsh-tools is a 7-line offline shim ('NOT used by the live harness') that would satisfy the import and still hand register() an invalid definition; the working comparator is dsh-plugin-openui lib/index.js:201-203.",
+    "S1 §1 row 13: the '[inference: re-export implies use]' is now measured - refresh/review.py:945 'entries = rework_entries(manifest, change, docket_links, now=now_dt)' - promote it and drop the caveat."
+  ],
+  "containment": {
+    "workspace_writes_by_s1_s2": "none outside their declared files",
+    "declared_write_paths_observed": [
+      "research/tooling/01-inventory.md",
+      "research/tooling/02-candidates.md",
+      "research/tooling/handoffs/S1.json",
+      "research/tooling/handoffs/S2.json"
+    ],
+    "undeclared_but_present": "research/tooling/FINDINGS.md (00:25:07) and research/tooling/_probe/ (00:22:47, 3-node graph) are unit S3's, not S1/S2's - FINDINGS.md header says 'Unit: S3 (synthesis)', and neither S1 nor S2 lists them in write_paths",
+    "duval_touched": false
+  },
+  "tool_calls": 46,
+  "bound": 40,
+  "bound_exceeded": true,
+  "bound_note": "Disclosed overrun: ~46 read-only inspection calls against a 40-call bound. No write outside research/tooling/handoffs/V1.json, no graph rebuild, no pipeline or test run, no git against /home/zer0null/Duval.",
+  "blocker": "",
+  "next_unit_hint": "Re-delegate S1's G5/§1-row-14 and S2's 436-file premise to the authors; the third promotion blocker (registry-ready tool definitions) and the refresh-engine update path both change conclusions rather than wording. A V2 should re-check only the corrected lines plus one red-green: revert run.py:1781 to True in a scratch copy and show the refresh path invoking graphify update.",
+  "write_paths": [
+    "research/tooling/handoffs/V1.json"
+  ]
+}

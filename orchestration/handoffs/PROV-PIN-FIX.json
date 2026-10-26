@@ -1,0 +1,63 @@
+{
+  "unit": "PROV-PIN-FIX",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "state/gap-ledger.json",
+    "orchestration/handoffs/PROV-PIN-FIX.json",
+    "orchestration/units/PROV-PIN-FIX.md"
+  ],
+  "evidence": {
+    "command_or_count": "3 targeted guards: 3 passed (exit 0). verify_package.py: PASS 69 claims, UNVERIFIED none (exit 0). recompute_r2.py all: exit 0. Red->green: pre-fix prose RED_EXIT=1 (MANUSCRIPT.md:1110 '6.744 stated with no G5 provenance' + MANUSCRIPT.md:1112 [QUALIFIER]), fixed prose GREEN_EXIT=0 (2 passed), MANUSCRIPT.md digest a8dec093188f0170 identical before revert-copy and after restore. Full suite post-fix: 1 failed, 1374 passed, 1 skipped, in 102.49s (ALL_EXIT=1); the sole failure is tests/test_claims_value_guard.py::test_the_guard_bites_when_the_recomputation_moves, which passes standalone (9 passed, CVG_EXIT=0) and is a file this unit is forbidden to touch / another unit owns.",
+    "commands": [
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_g5_fanout_attribution.py::test_every_6744_site_names_cell_g5 tests/test_gap_closure_ledger.py::test_stale_citation_audit_is_accurate 'tests/test_paper_g3_bands.py::test_the_mean_band_is_never_presented_as_a_per_turn_bound[MANUSCRIPT.md]' -q  # pre-fix: 3 failed, exit 1",
+      "grep -n '6\\.744|258,035|1\\.5017|form, 1.249x, and its like-for-like quality on the same 20 probes does not impro' papers/context-cache/MANUSCRIPT.md",
+      "python3 (pin resolution): per-ref unique target via `found` startswith-prefix; 4/4 unique, 0 ambiguous, 0 vanished",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest <the three guards> -q  # post-fix: 3 passed, exit 0",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/verify_package.py  # exit 0: PASS, 69 claims, UNVERIFIED none",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/recompute_r2.py all  # exit 0",
+      "cp MANUSCRIPT.md /tmp/ms.fixed.copy && <revert to pre-fix prose> && pytest <G5-6744 + G3-qualifier> -q  # exit 1 (RED)",
+      "cp /tmp/ms.fixed.copy MANUSCRIPT.md && pytest <G5-6744 + G3-qualifier> -q  # exit 0, 2 passed (GREEN)",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q  # exit 1: 1 failed, 1374 passed, 1 skipped",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_claims_value_guard.py -q  # exit 0: 9 passed (foreign test, flake under full-suite ordering)"
+    ]
+  },
+  "quotes": {
+    "shifted": [
+      {"quote": "6.744", "was_line": 195, "now_line": 208, "note": "G5 attribution ref; disambiguated by its `found` prefix '**The live fan-out figure (cell G5, race-free; ...'. 6.744 also occurs at :17 :169 :176 :197 :202 :213 :1036 :1110."},
+      {"quote": "258,035", "was_line": 865, "now_line": 878, "note": "resident-capacity paragraph (M4-EVICT, 1.5017x); also at :1168, disambiguated by `found` prefix."},
+      {"quote": "1.5017", "was_line": 865, "now_line": 878, "note": "same paragraph; also at :1152 and :1167, disambiguated by `found` prefix."},
+      {"quote": "form, 1.249x, and its like-for-like quality on the same 20 probes does not improve at all", "was_line": 865, "now_line": 865, "note": "NOT a pin: this is what the audit found at :865 when it checked the 865 stale ref's `found`. The quote itself is unchanged and still on :865."}
+    ],
+    "vanished": []
+  },
+  "prose_fixes": [
+    {"line": 1110, "what": "added 'from cell G5' to the 6.744x fan-out bound so the sentence names its provenance in the same site (guard token \\bG5\\b, not satisfiable by 'pre-G5')"},
+    {"line": 1112, "what": "the mean band now reads '+134.6 to +747.2 uncached tokens per turn **on average** after a boundary (a range of twelve arm means, not a per-turn bound)' -- qualifier inside the guard's 400-char window, matching the vocabulary already used in the abstract (:47-52) and SS 6a"}
+  ],
+  "pins_repointed": [
+    {"gap": "G5", "ref": "MANUSCRIPT.md:195", "to": "MANUSCRIPT.md:208", "expect": "6.744", "stale": false},
+    {"gap": "G5", "ref": "MANUSCRIPT.md:865", "to": "MANUSCRIPT.md:878", "expect": "6.744", "stale": true},
+    {"gap": "G5", "ref": "MANUSCRIPT.md:865", "to": "MANUSCRIPT.md:878", "expect": "258,035", "stale": false},
+    {"gap": "G7", "ref": "MANUSCRIPT.md:865", "to": "MANUSCRIPT.md:878", "expect": "1.5017", "stale": false}
+  ],
+  "numbers_changed": 0,
+  "guard_assertions_weakened": 0,
+  "recommendation": "The audit in tests/test_gap_closure_ledger.py::test_stale_citation_audit_is_accurate is line-pinned by construction: each evidence_ref stores 'MANUSCRIPT.md:<N>' and the test compares the quoted text with that one line, so ANY prose insertion above a pin breaks it without changing a character of the quote. This has now been repointed at least four times by hand (114->129->194->195->208 and 453->468->643->801->849->850->865->878). Durable fix: pin by content, not by line -- store e.g. sha256 of the quoted line's text (or a document-wide 'quote must occur exactly once' assertion) and let ref_line() search for it, so an insertion cannot break the audit and a real deletion still fails it loudly. This is a change to the pin schema plus one test helper, so it needs its own unit.",
+  "assumptions": [
+    "The stale line references live ONLY in state/gap-ledger.json (`evidence_refs[].ref == 'MANUSCRIPT.md:<N>'`), which the card also lists under 'Do NOT touch state/**'. Those two clauses conflict; I read the earlier, more specific write allowance ('the specific audit/pin file(s) that hold the stale line references') as authorising exactly this file and nothing else under state/. I touched no other state/ path, no frozen baseline, no sqlite fixture. If the main session reads state/** as absolute, this file must be reverted and failure 2 stays red -- there is no other place a pin can be re-pointed without editing the assertion, which the card forbids.",
+    "The ledger file's own formatting is json.dumps(indent=1, ensure_ascii=False)+trailing newline; I verified a byte-identical round-trip of the unmodified object before writing, so the diff is the four `ref` strings plus four appended `detail` notes and nothing else.",
+    "Publication order: the 225-line PUB-PASS insertion shifted both cited sites by exactly +13 lines (195->208, 865->878); I did not assume the shift, I resolved each pin by unique `found` startswith-prefix and verified the expect/stale invariant at the target line before accepting it.",
+    "The full-suite failure tests/test_claims_value_guard.py::test_the_guard_bites_when_the_recomputation_moves is NOT attributable to this unit: it passes 9/9 standalone (exit 0), it touches none of my three write paths, and it sits in a file the card assigns to another unit that is editing it right now. Treated as a foreign/order-dependent flake and left untouched.",
+    "No network, no live requests, no containers, no git, no .occamy.lock, no ask_user_question. Zero measured numbers edited: the only MANUSCRIPT.md change is prose attribution/qualifier wording around figures that were already correct."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Case B is repaired but the audit is still line-pinned: the durable fix is to make evidence_ref pins content-addressed (store the quoted text's digest and have ref_line() locate it) in tests/test_gap_closure_ledger.py plus state/gap-ledger.json, so the next prose insertion cannot break the audit. Also: a separate unit should own the order-dependent flake in tests/test_claims_value_guard.py::test_the_guard_bites_when_the_recomputation_moves (passes standalone, fails in one full-suite ordering).",
+  "write_paths": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "state/gap-ledger.json",
+    "orchestration/handoffs/PROV-PIN-FIX.json",
+    "orchestration/units/PROV-PIN-FIX.md"
+  ],
+  "tool_calls_used": 18
+}

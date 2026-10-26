@@ -1,0 +1,49 @@
+TOOL T-1 -- coalesce_records
+
+Purpose. Merge duplicate records emitted by the ingestion fan-out into one row per
+natural key. The fan-out exists because a single upstream write can be observed by
+several collectors at once; without coalescing, the warehouse accumulates N rows per
+logical write, and every downstream join silently multiplies its result set. The tool
+is deliberately narrow: it does not deduplicate across time windows and it does not
+resolve keys, it only merges rows that already agree on a key.
+
+Interface. coalesce_records(rows, key, conflict="earliest")
+
+  rows      -- a list of dicts. Must be non-empty; an empty list returns an object
+               with .rows == [] and is not an error.
+  key       -- the field name used to group. Defaults to "record_id".
+  conflict  -- "earliest" or "latest" decides which timestamp wins when two rows in
+               the same bucket disagree on a field. Every other combination of
+               {prefer, conflict} spellings is rejected with a ValueError rather
+               than silently defaulted, because a silently defaulted conflict
+               policy produces a wrong answer with no signal.
+
+Behaviour.
+
+  * Rows are bucketed by the key value. Bucket order is the order of first
+    appearance in the input, so coalesce_records is stable with respect to input
+    order and two runs over the same list produce identical output.
+  * The winning row supplies every non-null field. Null fields are backfilled from
+    the other rows in bucket order, so a field that is null in the winner but
+    present in a loser is filled rather than lost.
+  * Rows whose key value is missing or null are dropped, and the count is reported
+    in .dropped. This is not an exception: partially-keyed batches are normal.
+  * Returns an object with .rows (list of dicts), .dropped (int), .groups (int).
+
+Limits. Memory is O(rows) and no chunking is performed. Do not call it on a stream
+wider than available RAM. A spilling variant exists for that case but it is NOT part
+of this tool; the two are not interchangeable because the spilling variant does not
+preserve first-appearance bucket order.
+
+Failure modes.
+
+  * If more than 5 percent of rows lack the key field, KeyLikeMismatch is raised.
+    That threshold exists because a handful of junk rows is dirt while a majority is
+    almost always the wrong argument.
+  * Passing key="id" when the data spells the field "record_id" drops every row and
+    reports .dropped == len(rows). Check .dropped before trusting an empty result.
+  * Timestamps are compared as strings, not parsed. Mixed formats in one bucket make
+    the conflict policy arbitrary; normalise timestamps before coalescing.
+
+Typical misuse. Calling this once per request in a hot path. It is a batch tool; the
+per-request cost is dominated by dict construction, not by the merge itself.

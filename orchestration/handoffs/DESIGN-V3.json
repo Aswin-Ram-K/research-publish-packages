@@ -1,0 +1,84 @@
+{
+  "unit": "DESIGN-V3",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/project_wallclock.py",
+    "experiments/ptr-engine/longrun/DESIGN-V3.md",
+    "experiments/ptr-engine/longrun/policy_reasoning_cap.json",
+    "orchestration/handoffs/DESIGN-V3.json",
+    "orchestration/units/DESIGN-V3.md"
+  ],
+  "evidence": {
+    "command_or_count": "17 tool calls of 20. 0 inference requests (no curl, no run_longrun.py, no server contact). Row files read only.",
+    "key_printed_lines": [
+      "POLICY FILE (rows-longrun-2026-10-26-policy.jsonl, max_tokens=16384, n=17): pooled mean 169.12 s, p50 67.38 s, p95 485.65 s, max 488.63 s, mean completion 5713.5 tok",
+      "transcript-grow n=8 mean 194.96 p50 94.17 p95 482.77 max 488.63 mean_comp 6460.2",
+      "transcript-compact n=3 mean 134.06 p50 36.40 p95 301.46 max 330.91 mean_comp 4802.0",
+      "pointer-stable n=3 mean 111.98 p50 67.38 p95 219.85 max 236.79 mean_comp 3994.7",
+      "lease-reopen n=3 mean 192.44 p50 89.80 p95 445.39 max 484.90 mean_comp 6352.7",
+      "FIX FILE max_tokens=4096 (n=9): pooled mean 64.49 p50 52.63 p95 114.02 max 114.07 mean_comp 2335.4; pointer 50.53/52.63/75.98, compact 63.46/40.35/106.70, grow 79.48/99.24/112.47",
+      "STAGE-1 (n=192, max_tokens=None): mean 3.38 s, p50 3.57, p95 3.67 per group; 140/192 rows at completion_tokens=128; 99/192 with empty content (e3b0c442...) => EXCLUDED from pricing",
+      "CENSUS policy-16k: over_120s=7 (grow t3 361.0s, compact t3 330.9s, pointer t3 236.8s, grow t3 150.5s, lease t1 484.9s, grow t4 471.9s, grow t5 488.6s); truncated=3 finish=length=3 completion==16384=3",
+      "CENSUS fix-16k: over_120s=8 truncated=3; CENSUS fix-4096: over_120s=0 truncated=2; CENSUS stage1: over_120s=0",
+      "r(completion_tokens, latency_s)=+0.997 n=31 at max_tokens=16384; throughput median 31.5 tok/s (27.6-38.0); buckets <2k=21.5s(n=13), 2-6k=104.0s(n=4), 6-12k=251.2s(n=5), 12k+=450.9s(n=9)",
+      "DEPTH stage1 r(turn,lat)=-0.115/+0.169/+0.118/+0.392, first3rd vs last3rd flat (3.35->3.05, 3.58->3.62)",
+      "GRID PRICE: 500 requests = 4 arms x 120 turns (N=60 x reps=2) + 20 extra -> hours_median=9.97 hours_p95=51.01 [policy.jsonl 16384]",
+      "GRID PRICE: 252 requests = 4 arms x 60 turns (reps=1) + 12 extra -> hours_median=4.26 hours_p95=7.20 [fix.jsonl 4096]",
+      "GRID PRICE: 204 requests = 4 arms x 48 turns (reps=1) + 12 extra -> hours_median=3.44 hours_p95=5.84 [fix.jsonl 4096, lease-reopen on pooled fallback]",
+      "GRID PRICE: 1360 requests = 4 arms x 340 turns (turns-per-arm override) + 0 extra -> hours_median=27.18 hours_p95=136.89 [16384]; at 4096 -> 23.12 / 38.64"
+    ],
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/project_wallclock.py --N 60 --reps 1 --grid 500 252 204  => exit 0",
+      "python3 experiments/ptr-engine/longrun/project_wallclock.py --turns-per-arm 340 --price-max-tokens 16384 => exit 0",
+      "python3 experiments/ptr-engine/longrun/project_wallclock.py --turns-per-arm 340 --price-max-tokens 4096 => exit 0",
+      "python3 experiments/ptr-engine/longrun/project_wallclock.py --N 48 --reps 1 --extra-requests 12 --price-max-tokens 4096 => exit 0 (3.44 / 5.84)",
+      "python3 experiments/ptr-engine/longrun/project_wallclock.py --N 60 --reps 2 --extra-requests 20 --price-max-tokens 16384 => exit 0 (9.97 / 51.01)",
+      "python3 experiments/ptr-engine/longrun/project_wallclock.py --rows /tmp/nolat.jsonl => exit 2 'no latency_s / latency_ms column'",
+      "python3 experiments/ptr-engine/longrun/project_wallclock.py --rows /tmp/half.jsonl => exit 2 'latency absent from >50% of rows (n_rows=2 usable=1)'",
+      "python3 experiments/ptr-engine/longrun/project_wallclock.py --price-max-tokens 8192 => exit 2 'no group with max_tokens=8192; refusing to price a grid from another group'",
+      "python3 -m py_compile project_wallclock.py => exit 0",
+      "python3 -c 'json.load(...)' policy_reasoning_cap.json + handoffs/DESIGN-V3.json => exit 0",
+      "wc -l DESIGN-V3.md => 117 (limit 120)"
+    ]
+  },
+  "blocker": "",
+  "assumptions": [
+    "PROJECTION MODEL: sequential driver, one request in flight per turn; hours = turns * per-turn percentile / 3600. Concurrency (occamy B=64) is unmeasured and deliberately NOT used to discount any figure.",
+    "n is small (17 rows at 16k, 9 at 4k, one task LR-01, one engine). p95 at n=3-17 is a hint, not a bound; this is stated in DESIGN-V3.md section 5 and matches METRICS.md.",
+    "The 4,096 group has no lease-reopen row; that arm is priced on the group's pooled latency and the script prints which arms fell back. All other arm figures come from that arm's own rows.",
+    "Stage-1 (rows-longrun-2026-10-26.jsonl) is EXCLUDED from pricing: its content channel is empty (99/192 empty-content hashes) and 140/192 rows stop at 128 completion tokens, so its 3.4 s latency is an empty parse, not a turn. Only its cache/depth columns were used.",
+    "The fix file grew during this unit (21 -> 22 rows observed between two reads); another process may still be appending. The script prints n beside every statistic so a re-run states its own sample size, and figures here are those printed at run time.",
+    "The 1,360-request grid is read as 4 arms x 340 turns, 340 = sum of fixture N over LR-01..06 (48+64+56+40+72+60) from longrun/runtime/*.json; wall_tokens=65536 in every fixture. If the operator intended a different composition of 1,360, only the per-arm multipliers change, not the per-turn costs.",
+    "max_tokens=4096 is applied identically to all four arms, so the cap cannot become an arm-level advantage; a cap change is a policy change, not a decision-rule change.",
+    "No file under longrun/fixtures, longrun/runtime, papers, state, tests, dockets was written or modified; run_longrun.py and score_longrun.py were not executed."
+  ],
+  "next_unit_hint": "LONGRUN-RUN-C: execute configuration C (204 requests: 4 arms x 48 turns x 1 rep on LR-01, cap 4,096, answer demand from policy_reasoning_cap.json, +2 digests +4 controls +6 repairs), arms serial or with a measured 2-arm pilot first. Before arm 1, run the 4 pre-registered controls plus the new answer-marker control; a RED control voids the batch. Score with the failed-turn rule and the reasoning-only -> UNVERIFIED rule as written; check the 10% finish=length falsifier at the first 20 turns, not at the end, because the measured 4k group already ran 2/9 truncated without an answer demand.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/project_wallclock.py",
+    "experiments/ptr-engine/longrun/DESIGN-V3.md",
+    "experiments/ptr-engine/longrun/policy_reasoning_cap.json",
+    "orchestration/handoffs/DESIGN-V3.json",
+    "orchestration/units/DESIGN-V3.md"
+  ],
+  "recommended_config": {
+    "id": "C",
+    "fixture": "LR-01",
+    "turns_per_task": 48,
+    "arms": 4,
+    "reps": 1,
+    "max_tokens": 4096,
+    "total_requests": 204,
+    "composition": "4 arms x 48 turns x 1 rep = 192, + 2 compaction digests, + 4 controls, + 6 repairs",
+    "priced_from": "measure/rows-longrun-2026-10-26-fix.jsonl max_tokens=4096 group (n=9)",
+    "policy": "longrun/policy_reasoning_cap.json"
+  },
+  "projected_hours": {
+    "recommended_C_204req_4096": {"median": 3.44, "p95": 5.84},
+    "candidate_A_500req_16384": {"median": 9.97, "p95": 51.01},
+    "candidate_B_252req_4096": {"median": 4.26, "p95": 7.20},
+    "approved_grid_1360req_16384": {"median": 27.18, "p95": 136.89},
+    "approved_grid_1360req_4096": {"median": 23.12, "p95": 38.64},
+    "fits_6h_block": "C only (p95 5.84 h)"
+  },
+  "requests_sent": 0
+}

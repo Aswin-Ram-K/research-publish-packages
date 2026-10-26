@@ -1,0 +1,37 @@
+{
+  "unit": "CITE-VERIFY",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/CITATIONS.md",
+    "orchestration/units/CITE-VERIFY.md",
+    "orchestration/handoffs/CITE-VERIFY.json"
+  ],
+  "evidence": {
+    "command_or_count": "sha256 before a8dec093188f017022765ca0108fe55a1d1b42c1e8dbce1290117bd90b23e6c2, wc -l before 1214 / after 1214 (e7728890c1182e872ae93739436628464e1891817c1ed3bee8926d72dd9e3aea); grep -c 'CITATION NEEDED' = 0 (was 3); verify_package: PASS - 69 claims in CLAIMS.md, 69 mapped 1:1, 8 script-backed + 61 recompute.py-backed, UNVERIFIED: none, exit 0; recompute.py all: COVERAGE GUARD PASS 69 claims documented, 67 runnable here + 2 script-backed; pytest 25 passed (test_gap_closure_ledger, test_g5_fanout_attribution, test_paper_g3_bands)",
+    "commands": [
+      "cd '/home/zer0null/reserach extarctor' && sha256sum papers/context-cache/MANUSCRIPT.md && wc -l papers/context-cache/MANUSCRIPT.md",
+      "grep -c 'CITATION NEEDED' papers/context-cache/MANUSCRIPT.md",
+      ".venv/bin/python papers/context-cache/verify_package.py",
+      ".venv/bin/python papers/context-cache/recompute.py all",
+      ".venv/bin/python -m pytest tests/test_gap_closure_ledger.py tests/test_g5_fanout_attribution.py tests/test_paper_g3_bands.py -q"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Marker 3 names only ONE in-family source (arXiv:2605.23296) and deliberately leaves the manuscript's own 'most compaction work reports task quality at a fixed number of turns' claim unattributed; a fresh unit should verify a real survey (ACON, MemGPT, Reflexion were candidates but were NOT fetch-confirmed in this session) before that sentence is given a citation. Also: the SGLang journal version is ACL Anthology, not SOSP - recorded in CITATIONS.md as a bibliography correction, not applied to prose.",
+  "write_paths": [
+    "papers/context-cache/MANUSCRIPT.md",
+    "papers/context-cache/CITATIONS.md",
+    "orchestration/units/CITE-VERIFY.md",
+    "orchestration/handoffs/CITE-VERIFY.json"
+  ],
+  "assumptions": [
+    "DeepSeek web_search had no API key in this session, so source discovery ran through the local SearXNG tool (local_web_search) and every id/DOI/title was confirmed by fetching the source's own landing page.",
+    "The citation style of the existing document ('(**Name** ([arXiv:XXXX](https://arxiv.org/abs/XXXX))\n`source row`)') was adopted verbatim for the new references.",
+    "Marker 1 sat on a purely METHODOLOGICAL sentence stating the citation policy, which no external source can 'support'. Conservative default: restate the policy self-consistently after 10a.1/10a.2 became supported, naming the SGLang attention-backend documentation the paper already cites at line 896, rather than inventing a paper for a methodological sentence.",
+    "Marker 3's '$[CITATION NEEDED —\nverify]$ **for the family as a whole**' marker was read as covering 'the family as a whole'. The cited source supports only the family premise (compaction via LLM summarization is bounded-but-lossy), so the manuscript's contrastive claim about the family is left as the paper's own positioning statement, not attributed to the source.",
+    "The private endpoint http://192.168.2.168:8012 at line 993 was NOT touched (this unit edited lines 887 and 906-916 only), so the serving-host substitution was not applicable and was not applied.",
+    "No number in the manuscript was changed; the 32/64k budget figures and the 2.6 points / McNemar p >= 0.38 figures are byte-identical to the pre-unit file.",
+    "The now-false clause 'this workspace pins the engines' documentation and source, not their papers' was deleted from line 907 because the unit resolved both papers."
+  ]
+}

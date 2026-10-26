@@ -1,0 +1,46 @@
+{
+ "unit": "DET-VERIFY-FIX",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/det_verify.py",
+  "experiments/ptr-engine/tools/tests/test_det_verify.py",
+  "experiments/ptr-engine/measure/det-verify-matrix.json",
+  "orchestration/units/DET-VERIFY-FIX.md",
+  "orchestration/handoffs/DET-VERIFY-FIX.json"
+ ],
+ "evidence": {
+  "test_green": "python3 experiments/ptr-engine/tools/tests/test_det_verify.py -> exit 0, Ran 31 tests, OK",
+  "degrade_naive": "DET_VERIFY_DEGRADE=naive python3 .../test_det_verify.py -> exit 1",
+  "degrade_mention": "DET_VERIFY_DEGRADE=mention python3 .../test_det_verify.py -> exit 1",
+  "gate": "python3 experiments/ptr-engine/tools/det_verify.py -> exit 0; POOLED FN 0/23, FP 0/22, omission_rejected 3/3",
+  "gate_denominator": "48 implemented probes (23 correct, 22 incorrect, 3 omission) of 58; 10 excluded: repair.t30 x5, acc.n2b x5 (no code handler for those checkpoints)",
+  "coverage": "8/13 decidable = cp.0.t12, cp.1.t24, cp.2.t46, acc.cp1, acc.cp2, acc.cp3, acc.1, acc.4; undecidable = acc.2, acc.3, acc.n2b, acc.n3b..acc.n3e, repair.t30",
+  "defect_FN_closed": "check_numeric('ANSWER: 64 (resolve.py:39)', 64) -> (True, 'asserted_value_matches'); old rule asserted 39",
+  "defect_FP_closed": "check_call('the handler should avoid calling ledger.record_refusal with scope, serialized_ref and code') -> (False, 'call_negated'); was (True, 'call_shape_matches')",
+  "new_cases": "8 numeral-citation cases (p.num.cite.*) each red under the old last-survivor rule and green under the citation rule; 10 negation variants (p.neg.*) all rejected as call_negated; 2 asymmetry probes where 'avoid' is in an unrelated clause and the correct call claim still PASSES",
+  "red_green": "NumeralRule.test_each_case_was_red_under_the_old_rule (8 cases) + DET_VERIFY_DEGRADE in {naive, mention} both exit 1",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/det_verify.py",
+   "python3 experiments/ptr-engine/tools/tests/test_det_verify.py",
+   "DET_VERIFY_DEGRADE=naive python3 experiments/ptr-engine/tools/tests/test_det_verify.py",
+   "DET_VERIFY_DEGRADE=mention python3 experiments/ptr-engine/tools/tests/test_det_verify.py"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Fresh verifier (not this author) should re-run the four commands and attack the two new rules: try a correct answer whose asserted value is followed by a SECOND value in the same clause (does first-in-slot win?), and a correct call claim with 'avoid calling X' describing a DIFFERENT callee in the same clause (must still pass). Also check acc.4's count stays 9 if tests/test_scope.py changes: the handler derives it from the acc.n3d pinned path, so a real edit would move the expected value, not break the check.",
+ "assumptions": [
+  "acc.4's truth path is read from fixture acc.n3d (no_write), not hard-coded; the fixture still points at experiments/ptr-engine/tests/test_scope.py, where ast.FunctionDef count is 9.",
+  "acc.1 is a distinct fixture entry asserting the same DEFAULT_MAX_REFS fact as acc.cp1; it is counted as its own decidable entry with its own probes rather than aliased, because the matrix has 13 entries and collapsing it would hide a check.",
+  "Spelled numerals ('sixty-four') stay rejected: accepting them would accept the omission control p.cp0.omit and turn a control into an FP.",
+  "EXTRA_PROBES live in det_verify.py because grader_fitness.py is forbidden to edit; the graders' PROBES are still imported read-only and unedited."
+ ],
+ "write_paths": [
+  "experiments/ptr-engine/tools/det_verify.py",
+  "experiments/ptr-engine/tools/tests/test_det_verify.py",
+  "experiments/ptr-engine/measure/det-verify-matrix.json",
+  "orchestration/units/DET-VERIFY-FIX.md",
+  "orchestration/handoffs/DET-VERIFY-FIX.json"
+ ],
+ "tool_calls": 16,
+ "bound": 28
+}

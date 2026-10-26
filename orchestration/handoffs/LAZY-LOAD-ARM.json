@@ -1,0 +1,47 @@
+{
+  "unit": "LAZY-LOAD-ARM",
+  "status": "done",
+  "artifacts": [
+    "experiments/agentic-lazy/build_corpus.py",
+    "experiments/agentic-lazy/corpus/MANIFEST.json",
+    "experiments/agentic-lazy/corpus/items.json",
+    "experiments/agentic-lazy/harness.py",
+    "experiments/agentic-lazy/runner.py",
+    "experiments/agentic-lazy/analyze.py",
+    "experiments/agentic-lazy/rows.jsonl",
+    "experiments/agentic-lazy/runs.json",
+    "experiments/agentic-lazy/RESULTS.md",
+    "orchestration/units/LAZY-LOAD-ARM.md"
+  ],
+  "evidence": {
+    "command_or_count": "12 runs / 21 request rows: corpus 12 items 22,162 chars (4 kinds x3), 21 JSONL rows, occamy C0=5359 tok vs L1=2625 tok (net saving 19.8%), qwen C0=5359 vs L1=3324 (18.1%), correctness 3/3 on every arm/model cell, L1 fetch counts [2,2,2] on both models with exactly the two required items (K-2, M-1) in 3/3 reps - corpus NOT swept",
+    "commands": [
+      "python3 experiments/agentic-lazy/build_corpus.py",
+      "python3 experiments/agentic-lazy/harness.py",
+      "python3 experiments/agentic-lazy/runner.py --dry-run",
+      "python3 experiments/agentic-lazy/runner.py --reps 3",
+      "python3 experiments/agentic-lazy/runner.py --reps 3 --models qwen3.5-9b --arms l1",
+      "python3 experiments/agentic-lazy/analyze.py",
+      "wc -l experiments/agentic-lazy/rows.jsonl"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Repeat with a WARM prefix cache on both arms: occamy served C0 at a 99.1% cache hit in every rep (5312/5359), which inverts the 18-20% cold-cache saving into a loss. Also sweep corpus size (3k/10k/30k chars) and needed fraction (2 of 12 vs 6 of 30) to locate the crossover, and give both models the same fetch protocol.",
+  "write_paths": [
+    "experiments/agentic-lazy/**",
+    "orchestration/units/LAZY-LOAD-ARM.md",
+    "orchestration/handoffs/LAZY-LOAD-ARM.json"
+  ],
+  "assumptions": [
+    "The named technique is 'lazy instruction loading'. The word 'pointer' is never used for it in any artefact under experiments/agentic-lazy/; it appears only in the unit card, to record why the pre-existing 'pointer' arm is not token compression and must not be reused as L1.",
+    "qwen3.5-9b (:8014) has no tool-call parser: tools+tool_choice returns 400 'auto tool choice requires --enable-auto-tool-choice and --tool-call-parser to be set'. The server must not be restarted, so qwen's L1 arm uses a text-emulated fetch protocol (FETCH <id> / ANSWER), recorded per row as protocol=text_emulated; occamy uses native function calling (protocol=native_function_calling). This makes the L1 runs 3 rounds on qwen vs 2 on occamy, which is why qwen's fetch overhead is higher. Cross-model comparison is indicative, not clean.",
+    "Completion budget fixed at 2048 tokens for every arm and model, because both models spend the budget on hidden reasoning before any visible content (occamy emitted 239 reasoning tokens for a 239-token answer). A smaller budget truncates runs for reasons unrelated to the arm.",
+    "Fetched-body tokens are estimated from characters using the characters-per-token ratio each model realises on the L1 index (occamy 2.11, qwen 3.32); no tokenizer was available. The estimate is applied symmetrically to both models. Likely understates the body cost, since technical text tokenizes denser than the prose index measure.",
+    "The 'realised saving' is a COLD-CACHE figure. occamy served C0 at a 99.1% cache hit on all three reps, so C0's marginal cost in a warm deployment is far lower than 5359. RESULTS.md states this as the headline caveat and does not quote 18-20% as the saving.",
+    "Temperature 0 with 3 reps: every cell returned identical prompt tokens and identical completions, so the reps establish stability rather than variance. n=3 cannot detect small effects.",
+    "Correctness saturated at 3/3 on every cell, so this task does not separate the arms on accuracy. Recorded as a limitation of the task, not as evidence the arms are equally robust.",
+    "Task, corpus and ground truth were fixed before the first live run and were not altered afterwards; no tuning was done to make L1 win. The only post-hoc change was to harness.check_answer, which had a scoring bug (it stripped underscores that are part of the field names it matches, marking every answer wrong); it was fixed and verified red-to-green (correct answer -> True, wrong numbers -> False, empty -> False) before any row was counted, and the two rows scored by the buggy version were quarantined as scratch_rows_badchecker.jsonl and are excluded from every table.",
+    "Rows from superseded probe runs of the emulated protocol (fetch=1, answer leaked as native tool syntax) were dropped from rows.jsonl and runs.json; the recorded rows are the final protocol only.",
+    "qwen's cached_tokens is unmeasured, not zero: :8014 never populates prompt_tokens_details."
+  ]
+}

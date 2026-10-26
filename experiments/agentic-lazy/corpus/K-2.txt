@@ -1,0 +1,30 @@
+KNOWLEDGE K-2 -- Log retention across storage tiers
+
+How the tier is chosen. Retention is set per storage tier, and the tier is determined
+by the producing service's classification label, not by log volume, not by the name of
+the service, and not by what the logs contain. A high-volume log from a tier:standard
+service costs more but is still retained for the standard period.
+
+Tier limits.
+
+  * tier interactive -- 7 days. Meant for debugging in-flight incidents only.
+  * tier standard    -- 30 days.
+  * tier compliance  -- 400 days. This is the tier that reconciliation windows run
+    against; the annual reconciliation window is the reason the number is 400 and
+    not 365, since the window may be opened late. Do not shorten it.
+
+The backfill tier is deliberately not in the table above. It holds 100 days and is
+described separately because it also carries a different export path, a different
+access control list, and a nightly export job. Quoting the standard tier limit for a
+backfill log is a common and expensive mistake: 30 days is not the limit for
+backfill, and a backfill log older than 30 days is still present and readable.
+
+Backfill tier detail. Retention is 100 days. Export runs nightly to cheap storage;
+the export path depends on shard count and is written into a manifest beside the
+export, so the path is discovered, never guessed. Access requires the analytics role;
+the standard read role is not sufficient, which is why a reader who can see every
+other tier's logs gets an empty page for backfill and assumes the data is gone.
+
+Changing a tier. Changing a producer's classification label does not retroactively
+change retention of logs already written; the log store keeps what was written under
+the old label until it ages out.

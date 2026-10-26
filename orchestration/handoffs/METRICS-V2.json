@@ -1,0 +1,68 @@
+{
+  "unit": "METRICS-V2",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/analyze_longrun.py",
+    "experiments/ptr-engine/longrun/METRICS.md",
+    "orchestration/handoffs/METRICS-V2.json",
+    "orchestration/units/METRICS-V2.md"
+  ],
+  "evidence": {
+    "command_or_count": "analyzer exit=0 on both row files; Stage 1 = INVALID-INSTRUMENT with metrics withheld; policy file = VALID/PARTIAL with explicit n per metric",
+    "commands": [
+      ".venv/bin/python experiments/ptr-engine/longrun/analyze_longrun.py experiments/ptr-engine/measure/rows-longrun-2026-10-26-policy.jsonl experiments/ptr-engine/measure/rows-longrun-2026-10-26.jsonl --json /tmp/metrics-v2.json",
+      ".venv/bin/python experiments/ptr-engine/longrun/analyze_longrun.py /tmp/partial.jsonl  # growing-file + corrupt-last-line robustness: exit 0, malformed row skipped",
+      ".venv/bin/python experiments/ptr-engine/longrun/analyze_longrun.py experiments/ptr-engine/measure/rows-longrun-2026-10-26-fix.jsonl | grep POOLING  # max_tokens 4096 vs 16384: groups split, POOLING REFUSED"
+    ]
+  },
+  "metrics_implemented": {
+    "1_ttft_percentiles": "p50, p95, p99, max in ms per arm with own n (ttft_ms, fallback ttft_s*1000)",
+    "2_cached_share": "cached_tokens/prompt_tokens per turn plus early/middle/late band means with turn ranges and n",
+    "3_tokens_to_verified_success": "sum(uncached+completion) turn 1..verifying checkpoint, exact match against runtime/LR-01.json; repairs charged to causing arm",
+    "4_time_to_verified_success_s": "sum(latency_s) turn 1..verifying checkpoint",
+    "5_failure_charged": "failed turn = (answer_source none or truncated true) and no expected; unverified run charged observed + unobserved turns at largest observed per-turn cost; never dropped",
+    "6_per_depth_checkpoint_accuracy": "turn 12/24/46 separately, exact match, observed quote, answer_source, n_observed, NOT_OBSERVED distinct from 0",
+    "7_false_claim_rate": "checkpoint/verify rows asserting completion with expected absent: count + quoted claim + answer_source",
+    "8_validity_block": "truncated_rows, answer_source_none/absent, ttft_missing, max_tokens_seen, completion_tokens_max, empty_content, completeness, VALID/INVALID-INSTRUMENT"
+  },
+  "stage1_verdict": {
+    "file": "experiments/ptr-engine/measure/rows-longrun-2026-10-26.jsonl",
+    "verdict": "INVALID-INSTRUMENT",
+    "reason": "answer_source absent on all 192 rows (content-only parser); max_tokens absent from every row; completion_tokens capped at 128; 99/192 rows missing TTFT. Per-arm metrics withheld, not a data point.",
+    "rows": 192,
+    "truncated_rows": 0,
+    "answer_source_absent_rows": 192,
+    "ttft_missing_rows": 99,
+    "completion_tokens_max": 128
+  },
+  "policy_verdict": {
+    "file": "experiments/ptr-engine/measure/rows-longrun-2026-10-26-policy.jsonl",
+    "verdict": "VALID",
+    "completeness": "PARTIAL (16 rows, turns 1-4 of 48; file still growing)",
+    "rows": 16,
+    "truncated_rows": 2,
+    "answer_source_none_rows": 1,
+    "ttft_missing_rows": 0,
+    "max_tokens_seen": [16384]
+  },
+  "per_arm_numbers": {
+    "transcript-grow": {"n_rows": 7, "n_runs": 2, "ttft_ms": {"n": 7, "p50": 179.86, "p95": 257.7, "p99": 278.08, "max": 283.18}, "cached_share_by_third": {"early": 0.993, "middle": 0.876, "late": 0.857}, "tvvs": {"verified": false, "worst_case_charge_tokens": [527011, 777811], "worst_case_charge_s": [16637.67, 21439.89]}, "per_depth_accuracy": {"quarter": "NOT_OBSERVED", "half": "NOT_OBSERVED", "end": "NOT_OBSERVED"}, "false_claims": 0},
+    "transcript-compact": {"n_rows": 3, "n_runs": 1, "ttft_ms": {"n": 3, "p50": 244.16, "p95": 252.0, "p99": 252.7, "max": 252.87}, "cached_share_by_third": {"early": 0.993, "middle": 0.796, "late": 0.837}, "tvvs": {"verified": false, "worst_case_charge_tokens": [588149], "worst_case_charge_s": [15293.15]}, "per_depth_accuracy": {"quarter": "NOT_OBSERVED", "half": "NOT_OBSERVED", "end": "NOT_OBSERVED"}, "false_claims": 0},
+    "pointer-stable": {"n_rows": 3, "n_runs": 1, "ttft_ms": {"n": 3, "p50": 131.65, "p95": 175.99, "p99": 179.93, "max": 180.92}, "cached_share_by_third": {"early": 0.974, "middle": 0.939, "late": 0.924}, "tvvs": {"verified": false, "worst_case_charge_tokens": [393617], "worst_case_charge_s": [10991.65]}, "per_depth_accuracy": {"quarter": "NOT_OBSERVED", "half": "NOT_OBSERVED", "end": "NOT_OBSERVED"}, "false_claims": 0},
+    "lease-reopen": {"n_rows": 3, "n_runs": 1, "ttft_ms": {"n": 3, "p50": 123.17, "p95": 134.43, "p99": 135.43, "max": 135.68}, "cached_share_by_third": {"early": 0.677, "middle": 0.951, "late": 0.688}, "tvvs": {"verified": false, "worst_case_charge_tokens": [759212], "worst_case_charge_s": [22397.98]}, "per_depth_accuracy": {"quarter": "NOT_OBSERVED", "half": "NOT_OBSERVED", "end": "NOT_OBSERVED"}, "false_claims": 0}
+  },
+  "failed_turn_rule": "A turn is FAILED when (answer_source == 'none' OR truncated == true) and no expected value is present. A run that never verifies is charged at worst case: observed per-turn cost plus the largest observed per-turn cost for every turn not observed up to N. Failed runs are never dropped.",
+  "frozen_rule_untouched": true,
+  "assumptions": [
+    "The policy row file is still growing (16 rows, turns 1-4 of 48); per-arm TTFT/TTVS numbers are PROVISIONAL and not decision-grade.",
+    "Rows-longrun-2026-10-26-fix.jsonl was inspected only to prove max_tokens pooling refusal; it is not one of the declared inputs and is not averaged into any reported number."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Once the policy row file reaches turn 46 with checkpoint rows carrying expected values, re-run the same command: TTVS becomes defined and per-depth accuracy stops being NOT_OBSERVED. Do not settle the frozen rule before then.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/analyze_longrun.py",
+    "experiments/ptr-engine/longrun/METRICS.md",
+    "orchestration/handoffs/METRICS-V2.json",
+    "orchestration/units/METRICS-V2.md"
+  ]
+}

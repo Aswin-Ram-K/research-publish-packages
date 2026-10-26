@@ -1,0 +1,178 @@
+{
+  "unit": "R2-VLLM-REPAIR",
+  "selftest": "selftest_offline.py",
+  "pass": 14,
+  "fail": 0,
+  "n_checks": 14,
+  "failed": [],
+  "checks": {
+    "test_R1_flag_in_oh1_oh1l_a1_unchanged": {
+      "ok": true,
+      "detail": {
+        "OH1_cmd": [
+          "--enable-prompt-tokens-details"
+        ],
+        "OH1_flag_count": 1,
+        "A1_flag_count": 1
+      }
+    },
+    "test_R2_absence_is_none_not_zero": {
+      "ok": true,
+      "detail": {
+        "absent": {
+          "prompt_tokens": 4595,
+          "completion_tokens": 1,
+          "cached": null,
+          "usage_has_details": false
+        },
+        "present": {
+          "prompt_tokens": 4595,
+          "completion_tokens": 1,
+          "cached": 1234,
+          "usage_has_details": true
+        },
+        "observed_miss": {
+          "prompt_tokens": 4595,
+          "completion_tokens": 0,
+          "cached": 0,
+          "usage_has_details": true
+        },
+        "battery_pass": {
+          "turns": 2,
+          "zero_cached": 0,
+          "unobserved": 2,
+          "total_cached": 0,
+          "pass_kind": "cold"
+        },
+        "coverage": {
+          "n_rows": 2,
+          "n_usage_has_details_true": 0,
+          "n_usage_has_details_false": 0,
+          "n_usage_has_details_absent": 2,
+          "n_unobserved": 2,
+          "n_observed": 0,
+          "n_cached_gt0": 0,
+          "blind": true
+        }
+      }
+    },
+    "test_R3_row_schema_and_blocks": {
+      "ok": true,
+      "detail": {
+        "prefix_sha256": "c3f238f6af14470e4d2e410963ac53982f79d43854d769e55696f472f965e474",
+        "recomputed": "c3f238f6af14470e4d2e410963ac53982f79d43854d769e55696f472f965e474",
+        "http_status": 200,
+        "status": 200,
+        "basis": "canonical_json(messages, sort_keys=True, separators=(',',':'))|utf-8",
+        "blocks_available": 2,
+        "fail_row": {
+          "http_status": 500,
+          "status": 500,
+          "has_error": true
+        }
+      }
+    },
+    "test_R4_blocks_available_math": {
+      "ok": true,
+      "detail": {
+        "4595//2096": 2,
+        "2105//2096": 1,
+        "2095//2096": 0,
+        "None": null,
+        "row_blocks": 2,
+        "row_blocks_no_blocksize": null
+      }
+    },
+    "test_R5_true_cold_pass": {
+      "ok": true,
+      "detail": {
+        "distinct_pass1_prompts": 16,
+        "pass1_equals_pass2": true,
+        "per_turn_salt_prevents_prefix": true
+      }
+    },
+    "test_R6_real_arms": {
+      "ok": true,
+      "detail": {
+        "identity_ok": true,
+        "body_differs": {
+          "A_vs_C": true,
+          "A_vs_H": false,
+          "A_vs_R": true,
+          "C_vs_H": true,
+          "C_vs_R": true,
+          "H_vs_R": true
+        }
+      }
+    },
+    "test_R7_analysis_guard": {
+      "ok": true,
+      "detail": {
+        "fresh": "write",
+        "stale_refused": true,
+        "moved_refused": true,
+        "forced": "forced: previous copied to analysis.stale-adb4ac6f.json",
+        "real_repo_refused": true,
+        "real_repo_n_rows": 420,
+        "real_repo_prev_n_rows": 222
+      }
+    },
+    "test_a1_scrubs_and_sets_pmu16": {
+      "ok": true,
+      "detail": null
+    },
+    "test_analyser_reproduces_block_grids": {
+      "ok": true,
+      "detail": null
+    },
+    "test_battery_render_is_prefix_stable": {
+      "ok": true,
+      "detail": null
+    },
+    "test_config_sha_moves_with_pmu": {
+      "ok": true,
+      "detail": null
+    },
+    "test_log_parser": {
+      "ok": true,
+      "detail": null
+    },
+    "test_oh1_recipe_has_one_pmu16": {
+      "ok": true,
+      "detail": null
+    },
+    "test_plan_is_within_cap": {
+      "ok": true,
+      "detail": null
+    }
+  },
+  "red_green": {
+    "flag_dropped_from_OH1": {
+      "reverted_by": [
+        "\"--reasoning-parser\", \"qwen3\", \"--trust-remote-cod",
+        "\"extra\": [\"--enable-prompt-tokens-details\"]"
+      ],
+      "check": "R1_flag_in_oh1_oh1l_a1_unchanged",
+      "red": true,
+      "red_error": "OH1: flag count 0",
+      "green": true
+    },
+    "arms_forced_to_one_policy": {
+      "reverted_by": [
+        "    policy = CompactionPolicy(policy if policy is "
+      ],
+      "check": "R6_real_arms",
+      "red": true,
+      "red_error": "arm identity collapsed: {\"ok\": false, \"n_arms\": 4, \"turns\": 16, \"min_distinct_prefix_sha256_per_turn\": 4, \"per_turn_prompt_nodes\": [{\"turn\": 1, \"n_arms\": 4, \"distinct_plans\": 1, \"merged_arms_at_this_turn\": [[\"A\", \"C\", \"H\", \"R\"]], \"merge_allowed\": false}, {\"turn\": 2, \"n_arms\": 4, \"distinct_plans\": 1,",
+      "green": true
+    },
+    "all_red_then_green": true
+  },
+  "network": {
+    "httpx_imported_real": false,
+    "note": "httpx aliased to a stand-in that raises on Client(); no socket, ssh or docker call site is executed"
+  },
+  "_edited_by": "R2-VLLM-REPAIR2",
+  "_edited_utc": "2026-10-24T03:07:14.583331+00:00",
+  "_edit_note": "Forensic record, not a re-measurement: the 14 checks and both red->green results in this file are exactly as measured at 2026-10-23T21:42Z by unit R2-VLLM-REPAIR. R2-VLLM-REPAIR2 only ANNOTATED it, because the test_plan_is_within_cap assertion \"2*per_config <= cell.TOTAL_REQUEST_CAP\" (238*2=476 <= 1000) silently encodes a 2-config assumption while the run actually drives 3 configs (OH1, OH1L, A1) at ~219 rows each = 657. The annotation is declared so no later reader mistakes this file for an untouched record. The authoritative post-repair measurement is logs/repair2-offline.json."
+}

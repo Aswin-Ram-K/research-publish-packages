@@ -1,0 +1,45 @@
+{
+  "unit": "PROMPT-O2",
+  "status": "failed",
+  "artifacts": [
+    "experiments/context-cache/cells/PROMPT-O2/analysis.json",
+    "experiments/context-cache/cells/PROMPT-O2/rows.jsonl",
+    "experiments/context-cache/cells/PROMPT-O2/prompt_o2_cell.py"
+  ],
+  "evidence": {
+    "free_m_before": "Mem: 124546 total, 57105 available (> 20000 gate); swap 49151 total 11536 used",
+    "docker_ps_before": "gx10-occamy-nvfp4 Up About an hour | gx10-qwen9b Up 2 hours",
+    "launch": "docker run -d --name gx10-p-o2 --gpus all --shm-size=32g --ipc=host -e HF_HUB_OFFLINE=1 -e TRANSFORMERS_OFFLINE=1 -v /home/zer0null/models/qwen3.5-9b-nvfp4:/model:ro -v /home/zer0null/.cache/huggingface:/root/.cache/huggingface -p 192.168.2.168:8017:30000 72457f09d20e <setups.O2.argv with --model-path /model>",
+    "container_exit": "exited exit=1 after ~7s, before binding :8017",
+    "error": "AssertionError: no_buffer only supports page_size=1.  (sglang/srt/server_args.py:5835 _validate_mamba_no_buffer)",
+    "slot_budget_error": "absent (0 occurrences of 'state cache is too small')",
+    "wc_l_rows": "0",
+    "arms_cachednull_non200": [
+      0,
+      0,
+      0
+    ],
+    "warmup_cached": "not measured - no server bound",
+    "restore_proof": "192.168.2.168:8012 -> 200 {\"id\":\"occamy-1.0\"} | 192.168.2.168:8014 -> 200 {\"id\":\"qwen3.5-9b\"} | docker ps: gx10-occamy-nvfp4 Up About an hour, gx10-qwen9b Up 2 hours | :8017 refused",
+    "commands": [
+      "ssh ... 'free -m; docker ps'",
+      "docker run ... 72457f09d20e",
+      "curl /v1/models poll loop",
+      "docker logs --tail 60 gx10-p-o2",
+      "docker rm -f gx10-p-o2",
+      "curl http://192.168.2.168:8012/v1/models ; :8014 ; :8017"
+    ]
+  },
+  "blocker": "AssertionError: no_buffer only supports page_size=1.",
+  "next_unit_hint": "O2 argv is internally unsatisfiable on image 72457f09d20e: --mamba-radix-cache-strategy no_buffer requires --page-size 1 but argv pins 64. Needs a config decision (owner of state/config/best-config.json). Re-derive which container/argv actually produced hit 0.958079 before spending another GX10 slot. The O2 cell script is written and ready to run unchanged once argv is fixed.",
+  "write_paths": [
+    "experiments/context-cache/cells/PROMPT-O2/**",
+    "orchestration/handoffs/PROMPT-O2.json",
+    "orchestration/units/PROMPT-O2.md",
+    "/home/zer0null/p-o2/**"
+  ],
+  "tool_calls": 10,
+  "bound": 20,
+  "live_requests": 0,
+  "live_request_cap": 400
+}

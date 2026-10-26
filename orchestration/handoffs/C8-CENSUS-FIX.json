@@ -1,0 +1,27 @@
+{
+  "unit": "C8-CENSUS-FIX",
+  "status": "failed",
+  "artifacts": [],
+  "evidence": {
+    "composition": {
+      "residue": "10 rows: server vllm, role 5 prime + 5 measure, n_payload {64:2, 512:4, 1056:4}",
+      "position": "11 rows: server sglang, role measure, n_payload {1:11}"
+    },
+    "role_split": "prime 5 / measure 16",
+    "class_now": "SNAPSHOT-LAG",
+    "counts_kept": {"total": 774, "n_rows": 753, "measure": 387, "prime": 383, "controls": 4},
+    "command": "python3 -c \"import json,collections;rows=[json.loads(l) for l in open('experiments/miss-law/rows.jsonl') if l.strip()];k=lambda r:(r.get('phase'),r.get('server'),r.get('role'),str(r.get('n_payload')));print(len(rows),dict(collections.Counter(r.get('role') for r in rows[-21:])));[print(b,a) for a,b in sorted(collections.Counter(k(r) for r in rows[-21:]).items(),key=lambda x:-x[1])]\"",
+    "c8_consequence": "NARROWED - a snapshot lag is a bookkeeping fact about when the fit was aggregated, not a contradiction in the law",
+    "verification": "recompute run 4x against the live tail; counts identical every time (774 lines, last21 = 11 (position,sglang,measure,1) + 5 (residue,vllm,prime,{512x2,1056x2,64x1}) + 5 (residue,vllm,measure,{512x2,1056x2,64x1})); roles last21 {prime:5, measure:16}; phases rows[753:] {residue:10, position:11}; no 'residue' key on any tail row; error null on all 21"
+  },
+  "assumptions": [
+    "The unit brief states the residue rows carry 'residue: None'; no such key exists on those rows (verified: residue_key_present False for both groups), so the corrected table renders the value as the literal string None rather than coalescing it to JSON null. This does not affect any count or the class."
+  ],
+  "blocker": "Could not persist the corrected experiments/miss-law/FIT-GAP.md: the file changed under this unit mid-flight (re-written by a concurrent unit to a different 73-line version), so the write was refused with 'file changed since it was read'. Re-read the new version and retried; refused again for the same reason. The bound was exhausted (10 tool calls). Correction is fully derived and reproducible via the evidence.command, but NOT written to disk.",
+  "next_unit_hint": "Re-issue C8-CENSUS-FIX against the CURRENT FIT-GAP.md (73-line version, sha differs from the 5,590 B pre-fix file; its section 3 is 'The 21 rows - 753 = 774 - 21' with a class table whose LAW GAP row reads 387 and DEFECT row reads 321): apply the same corrected residue/position composition (10 vllm 5prime+5measure n_payload 64/512/1056; 11 sglang measure n_payload 1; role != measure = 5), rename DEFECT -> SNAPSHOT-LAG, and take a write lock (or serialise units on this path) so the concurrent writer cannot invalidate the read-before-write. Note the new version also carries claims the driver did not verify (e.g. a single unreproducible Bprobe-400 row at residual -1056, 4 duplicate sglang-h* prime pairs, n_rows unreconstructible) - those are OUTSIDE this unit's brief and must not be inherited as verified.",
+  "write_paths": [
+    "experiments/miss-law/FIT-GAP.md",
+    "orchestration/handoffs/C8-CENSUS-FIX.json",
+    "orchestration/units/C8-CENSUS-FIX.md"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "unit": "SYS-OPT-CLOSE",
+  "status": "done",
+  "artifacts": [
+    "state/sys-opt-verdict.json (no_signal, best_version V0, closed_at_ceiling true, ceiling_round 1, per_model, quality guard, headroom, reopening rule, carried gaps)",
+    "docs/prompt-system/SYS-OPT-RESULTS.md (the VERSIONS.md section 4 'record the ceiling line' requirement; no such file existed)",
+    "docs/prompt-system/RELEASE-v1.json (the paired release: one prompt artefact + per-model serving)",
+    "orchestration/VERDICTS.md (one row appended to the table; no other line touched)",
+    "orchestration/STATUS.md (section 9 appended; no existing line touched)",
+    "orchestration/units/SYS-OPT-CLOSE.md",
+    "orchestration/handoffs/SYS-OPT-CLOSE.json"
+  ],
+  "evidence": {
+    "sources_read": "state/sys-opt-v1.json (21,523 B) and orchestration/handoffs/SYS-OPT-R1B.json (6,078 B); rule from docs/prompt-system/VERSIONS.md sections 2/4/5/6/8/9 + A1 + A2; round report from SYS-OPT-R1B-RESULTS.md",
+    "cross_check": "every per-model figure in SYS-OPT-R1B.json evidence re-compared against state/sys-opt-v1.json -> 0 discrepancies (moe P1 652.830986, moe delta 130.112676 [121.718310,138.394366], moe drift-corrected 66.957746, dense P1 1893.169014, dense delta 228.816901 [140.309859,319.183099], dense drift-corrected 215.690141, quality 20/20 and 18/20 all identical)",
+    "ceiling_rule_applied": "VERSIONS.md section 4: no_signal -> ceiling; best version = latest adopted, else V0; write closed_at_ceiling true and ceiling_round n",
+    "ceiling_line_recorded": "VERSIONS.md section 4 bullet 4 -> docs/prompt-system/SYS-OPT-RESULTS.md section 1 (the named path did not exist; R1B wrote the round-level SYS-OPT-R1B-RESULTS.md instead)",
+    "regression_guard": "section 5 threshold 1.0 pp; measured MoE 0.0 pp, dense -5.0 pp -> not fired. Section 5 does not decide the ceiling either way.",
+    "headroom": "section 6 condition 1 fails (no version improved on either model) -> no headroom claimed; the two unspent rounds are NOT headroom",
+    "config_sha256_rederived": "python3 recompute of sha256(json.dumps(argv, sort_keys, separators)) from state/config/best-config.json (recipe tools/best_config_build.py:84-88) -> O1 f2efaaac... and O4 163a5db6... both MATCH the values in A2.4",
+    "prompt_stream_digest": "sha256 492ee28f7f451a824a8dfc3b90bcc8aef02dddfd37a4aabb00c45e7d6958e98e over the 71 concatenated P1 prompts in the released form (quote_tokens 0), salt line 'RUN-SALT: sysopt-r1-20261024T12:30Z-a1'; computed offline from the frozen renderer (experiments/context-cache/cells/VLLM-CELL/vllm_cell.py) + the sysopt_r1.py overrides. Recorded with its limit: it proves the release is reproducible, NOT that the V0 R2-PROMPT rows were rendered with it.",
+    "json_valid": "python3 json.load -> state/sys-opt-verdict.json OK (19 top-level keys), docs/prompt-system/RELEASE-v1.json OK (12 top-level keys)",
+    "untouched_proof": "state/sys-opt-v1.json, docs/prompt-system/VERSIONS.md, docs/prompt-system/SYS-OPT-R1B-RESULTS.md, experiments/** were read and NOT written; no live request, no lock, no container, no git verb against any target",
+    "requests_live": "0",
+    "lock_acquired": false,
+    "tool_calls": 24,
+    "bound": 30
+  },
+  "blocker": "",
+  "next_unit_hint": "SYS-OPT is closed; do not run round 2. The one thing owed is an INDEPENDENT VERIFIER of this close-out (not this unit): re-read state/sys-opt-v1.json, confirm the section 2/4/5/6/9 requirements are met exactly as VERSIONS.md writes them, confirm state/sys-opt-verdict.json and RELEASE-v1.json carry no figure that is not a field of sys-opt-v1.json, and confirm VERSIONS.md sections 0-11 and state/sys-opt-v1.json are byte-identical to their pre-close state. Then FINAL-GOAL's close-out reads the release from docs/prompt-system/RELEASE-v1.json; any future SYS-OPT round needs a DECISIONS entry naming a section-8 lever with a measured basis (VERSIONS.md section 4).",
+  "write_paths": [
+    "state/sys-opt-verdict.json",
+    "docs/prompt-system/SYS-OPT-RESULTS.md",
+    "docs/prompt-system/RELEASE-v1.json",
+    "orchestration/units/SYS-OPT-CLOSE.md",
+    "orchestration/handoffs/SYS-OPT-CLOSE.json",
+    "orchestration/VERDICTS.md",
+    "orchestration/STATUS.md"
+  ],
+  "assumptions": [
+    "The release filename was not specified by the card or the handoff hint. docs/prompt-system/RELEASE-v1.json was chosen (versioned by the release, named once in state/sys-opt-verdict.json so a later reader can find it). The verdict and the section 4 results doc use the names the rule itself states: state/sys-opt-verdict.json and docs/prompt-system/SYS-OPT-RESULTS.md.",
+    "The handoff hint asks for pointer_block 'fields 4, quote_tokens 0, summary_len 90'. The round driver's index header has 4 columns plus ' | q:' only when quotes are on, so fields:4 is consistent with quote_tokens 0; summary_len 90 is the frozen summarise(text, limit=90) clip with a U+2026 marker.",
+    "The hint's 'scaffold_order/anchor as frozen' is recorded as 'frozen' rather than described as unchanged-by-this-unit only: the round driver appends a RUN-SALT line after the four frozen SCAFFOLD lines (sysopt_r1.py:94), which is recorded in the release under scaffold_order.salt_line_appended_by_the_round_driver so the artefact is reproducible rather than merely named.",
+    "The FALSIFICATION line in the handoff hint lists quote_tokens 0 among the V0 release fields; that is the revert mandated by A2.2 and is kept, with the reason recorded in pointer_block.quote_tokens_note.",
+    "Tool-call count differs between documents: SYS-OPT-R1B-RESULTS.md says 33, orchestration/handoffs/SYS-OPT-R1B.json says 39. The handoff is the unit's own report and 39 is carried in both new documents; the discrepancy is recorded in SYS-OPT-RESULTS.md section 8 and not resolved here.",
+    "The card names 'FINAL-GOAL close-out' as the step after this one. No FINAL-GOAL card, prompt or handoff exists on disk (grep of orchestration/handoffs, orchestration/units, docs/PLAN.md and orchestration/DRIVER_LOG.md finds no such artefact), so this unit did not invent one: it closed SYS-OPT and published the release, and left FINAL-GOAL's close-out to the session that holds that card's contract.",
+    "This unit could not perform AGENTS.md's mandatory independent verification of its own close-out: it IS the unit. The VERDICTS.md row and orchestration/STATUS.md section 9 both say so explicitly rather than implying a verdict was reached."
+  ]
+}

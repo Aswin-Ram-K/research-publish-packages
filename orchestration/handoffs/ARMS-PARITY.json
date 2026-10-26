@@ -1,0 +1,44 @@
+{
+ "unit": "ARMS-PARITY",
+ "status": "done",
+ "withdrawn": {
+  "by_unit": "ARMS-PARITY-WITHDRAW",
+  "date_utc": "2026-10-24",
+  "record": "state/logs/arms-parity-withdraw.json",
+  "verdict_falsified": true,
+  "reason": "PROMPT-O1 arm R is not corrupt. GROUND-TRUTH-PROMPT (fresh salt 63564242b54d8609) measures 589.2029 uncached/turn, n=69, 0 non-200: +1.0% vs the restored 583.14 and +50.5% vs the repaired 391.48, while R2-P1-O1's 390.80 sits +50.8% away from it. CACHED-AUDIT shows the duplicate cached_tokens signature also fires 37/69 on that fresh ground truth, so it cannot license 'artifact'; the only corpus off the 64-token grid is the repair (40/71 values, gcd 1).",
+  "prescription_inverted": "This unit told the next reader to publish R2-P1-O1's +133.3 and withdraw PROMPT-O1's -53.8. The reverse is true: A-R = -53.8451 [-96.6197, -10.4085] stands and +133.3/+138.5 are not publishable.",
+  "survives": "renderer parity: both cells import VLLM-CELL/vllm_cell.py (sha256 3e995107...) and their arm_messages bodies are byte-identical apart from the salt digest",
+  "original_next_unit_hint": "corrected headline A-R is positive +138.5; publish R2-P1-O1's +133.3 [123.7,143.0]; withdraw PROMPT-O1's -53.8"
+ },
+ "artifacts": [
+  "state/logs/arms-parity.json",
+  "orchestration/units/ARMS-PARITY.md"
+ ],
+ "evidence": {
+  "R_prompt_tokens_P1": "t1=468 t2=807 t3=1146 t20=6909 t40=13689 t70=23859",
+  "R_prompt_tokens_R2": "t1=467 t2=806 t3=1145 t20=6908 t40=13688 t70=23858",
+  "A_prompt_tokens_P1": "t1=477 t2=530 t3=581 t20=1467 t40=2504 t70=4051",
+  "A_prompt_tokens_R2": "t1=482 t2=535 t3=586 t20=1472 t40=2509 t70=4056",
+  "means_uncached": "P1 R=583.14 A=529.30; R2 R=390.80 A=529.48",
+  "rows_matching": "full-state R 71/71 both cells; pointer+delta A 71/71 both cells",
+  "root_cause": "PROMPT-O1 R cached_tokens corrupt on 40/71 turns: prompt-cached gap 736/755 vs correct 415/370",
+  "commands": [
+   "python3 per-turn prompt_tokens extraction from rows.jsonl (read-only)",
+   "diff of arm_text/arm_messages blocks between the two generators",
+   "sha256 of renderer path + config comparison"
+  ]
+ },
+ "assumptions": [
+  "cached_tokens in PROMPT-O1 R rows is a dedupe artifact because prompt_bytes/pad_tokens are byte-identical to R2's R rows"
+ ],
+ "blocker": "",
+ "next_unit_hint": "WITHDRAWN - do not publish ARMS-PARITY's +133.3/+138.5. Standing figure: A-R = -53.8451 [-96.6197,-10.4085] (A cheaper) from the restored PROMPT-O1 corpus sha256 dc0774d8..., confirmed by GROUND-TRUTH-PROMPT 589.2029. Guard: python3 tools/audit/arms_parity_status.py. See state/logs/arms-parity-withdraw.json. Any future A-R work should re-derive from rows.jsonl, never from rows.repaired-DO-NOT-USE.jsonl, and should treat R2-P1-O1's 390.80 as the open outlier question.",
+ "write_paths": [
+  "state/logs/arms-parity.json",
+  "orchestration/handoffs/ARMS-PARITY.json",
+  "orchestration/units/ARMS-PARITY.md"
+ ],
+ "tool_calls": 15,
+ "bound": 15
+}

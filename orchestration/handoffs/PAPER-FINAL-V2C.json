@@ -1,0 +1,66 @@
+{
+ "unit": "PAPER-FINAL-V2C",
+ "kind": "author-repair",
+ "started": "2026-10-24T08:43-05:00",
+ "finished": "2026-10-24T09:10-05:00",
+ "overall": "done",
+ "status": "done",
+ "question": "Repair the six prose defects PAPER-FINAL-V2B measured, without introducing new ones.",
+ "answer": "Five of the six V2B repairs are applied as recommended; the sixth (V2B's fix #2, 'replace gcd 16 with 1,088') is FALSIFIED and was NOT applied - the 16 is real and the 1,088 is a different quantity, so the repair was to separate them. Two further V2B findings that the task abbreviated (prompt bytes and the pad denominator) were also repaired, and both turned out to need different numbers than V2B proposed.",
+ "checks": [
+  "DEFECT 1 (gcd 16 -> 1,088): FALSIFIED V2B. Recomputed from state/config/rows.jsonl config O4: 284 rows, 223 hot (cached_tokens>0). gcd over all hot = 16. Per arm: R gcd 16 (69 hot, one row off the 1088 grid: turn 1, 432), A/C/H gcd 1088 (50/58/46 hot, zero off-grid). 222 of 223 hot rows are multiples of 1088. 432 = 1728 mod 1088, and 1728 = 1729//64*64, so the residue is the 1729-token seed on the 64-token page grid. The C63 gold means reproduce exactly under the same row set (879.0669), so this is one panel, two questions: gcd of observed hits = 16; launch block = 1,088. recompute.py:1801 records 1,088 via C63_GCD_OVERRIDE precisely because 'block geometry is a property of the LAUNCH ... not from a gcd of its hot values'. Repair: Section 9c now states both numbers and their relationship (:714-722); Section 11's 'the other's is 16, below a page' corrected to the launch-block-plus-residue reading (:928). Deleting 16 as V2B asked would have removed a true measurement for a wrong reason.",
+  "DEFECT 2 (prompt bytes -> tokens): REPAIRED, but V2B's proposed values are wrong for the column they sit in. V2B proposed 12,336 / 2,300.15 / 2,395.04 as 'prompt tokens'. Re-derived from cells/P2-REPAD/rows.jsonl: P0 mean prompt_tokens 12,336.00 over 71 rows (875,856 total); P1 2,326.1286 over its 70 countable rows (163,311 reproduces under NO reading, and 162,829 is the only value the file yields); P2 2,421.0286 over its 70 countable rows (170,048 is the 71-row total and 2,395.0423 the 71-row mean). The published 2,300 and 2,395 are therefore figures over a DIFFERENT row set (71 rows, uncountable turn 1 included) than the uncached means beside them (70 countable rows) - a third instance of the row-set mixing the pad defect is about. Repair: column relabelled 'mean prompt tokens' and given 12,336.00 / 2,326.13 / 2,421.03 with a note naming the 70-row basis (:490-497), so the table and the uncached means now count the same rows.",
+  "DEFECT 3 (pad denominator): REPAIRED. Verified from cells/P2-REPAD/rows.jsonl: pad over all 71 P2 turns = 6,737 (mean 94.8873, min 64, max 127); pad over the 70 countable rows = 6,643 (mean 94.9); 70 x 94.90 = 6,643.0 and 6,643 is also the recovered-cache total, which is the coincidence. Repair: the two readings are now visibly distinct at both places they appear (:500 gives 94.89 over 71 and 94.90 over 70; :532 says the 6,643 pad over the 70-count denominator is an arithmetic accident and the measured pad is 6,737, 'not 6,643').",
+  "DEFECT 4 (pays -> null): REPAIRED (:786). P1 - P0 on O3 is +55.65 [-136.49, +246.01], excludes_zero False; the sentence now reads 'null on all four setups ... one of those nulls is consistent with a large O4-sized loss', which keeps the per-engine point without reading a result off a null. The same defect class in the opposite direction was also repaired (:774): 'the cheapest direct evidence in this paper' -> evidence on the one setup where it was measurable, with the other three named as neither confirming nor denying.",
+  "DEFECT 5 (11 -> 12 of 12): REPAIRED (:901). recompute.py c62 'post_turns_below_zero' is 12 of 12; Section 6a's separate '11 of 12 intervals exclude zero' (:382) is about a different quantity (CIs, not turn censuses) and was left alone - verified distinct before editing.",
+  "DEFECT 6 (independence): REPAIRED (:706-711). 're-derived independently of recompute.py' is true of the CODE only: recompute_r2.py implements c65 separately (it even contradicts recompute.py on the gcd, which is how defect 1 surfaced). The ROWS are the same files. The sentence now says exactly that and names what the independence does not buy.",
+  "ALSO REPAIRED (V2B findings the task shortened): the drift control now names its machine-readable source (state/sys-opt-v1.json, per_model.{moe,dense}.v0.drift_check.drift = 63.15493 / 13.12676); the 'two of three budgeted rounds were unspent' process claim is now phrased as what the protocol allowed rather than as a measured outcome (:950)."
+ ],
+ "not_reproduced": [
+  "The two duplicated source-key rows (TRACK-t128, TRACK-t64 each appeared twice in CLAIMS.md's source-key table, identical in path/bytes/rows/sha) were not a V2B finding. They were carried by an earlier fold; both rows are byte-identical so neither carried a different figure. Dropped, leaving 45 unique keys; all 45 re-hashed and every path/byte-count/sha matches disk."
+ ],
+ "overstated": [
+  "V2B's scope verdict said '297 of 314 numbers are row-exact, 17 have no claim row'. Re-checked for the numbers V2C touched: C64's own key set carries the pad figures, so the pad defect was a READING of a correct row, not a missing row; the prompt column WAS genuinely unbacked. This unit did not re-run V2B's whole 314-token map and does not restate its count."
+ ],
+ "unverified": [
+  "V2B's recommendation #5 (add a C64 row for the prompt-token column) and #6 (add the drift control and the 565/500/39/30 budget to the SYSOPT key set) were NOT implemented. Adding keys to a pinned expected set is a claim-ledger change with its own review burden, and this unit's mandate was the prose; the prose now names the row/state path each figure comes from, which is the weaker but honest form. Both remain open.",
+  "Three unguarded claims are still unguarded, MEASURED not inferred: (a) planting the wrong dense mismatch reading in C69's cell leaves verify_package PASS and 1368 tests green; (b) re-planting '11 of 12 arms' at MANUSCRIPT.md:901 leaves the suite green; (c) the prompt-token column, the drift control and the budget figures have no guard at all. Only recompute_r2's own expected keys catch (a), and only when the CLAIMS cell is not what is being edited."
+ ],
+ "repairs_made": [
+  "MANUSCRIPT.md:490-497 - 8a table: column relabelled 'mean prompt tokens', values 12,336.00 / 2,326.13 / 2,421.03, note naming the 70-row basis and that no prompt byte count exists in the package.",
+  "MANUSCRIPT.md:500-501 - pad mean stated as 94.89 over all 71 padded turns (94.90 over the 70 countable).",
+  "MANUSCRIPT.md:529-532 - pad qualifier: 70 x 94.90 = 6,643.0 is the implied pad and coincides with the recovered total by arithmetic accident; the measured pad over 71 turns is 6,737, 'not 6,643'.",
+  "MANUSCRIPT.md:706-711 - independence restated as code-independence with its limit named.",
+  "MANUSCRIPT.md:714-722 - gcd 16 and launch block 1,088 separated, with the R-turn-1 / 432 / seed-1729 mechanism given.",
+  "MANUSCRIPT.md:774-776 - 'cheapest direct evidence in this paper' narrowed to the one supporting setup.",
+  "MANUSCRIPT.md:786-789 - 'pays +55.65' withdrawn; O3 is a null consistent with a large loss.",
+  "MANUSCRIPT.md:858-861 - drift control now names state/sys-opt-v1.json and its JSON path.",
+  "MANUSCRIPT.md:901 - '11 of 12 arms' -> 'all 12 arms'.",
+  "MANUSCRIPT.md:928-931 - Section 11's gcd sentence made consistent with 9c.",
+  "MANUSCRIPT.md:950-953 - 'two of three rounds unspent' rephrased as what the protocol allowed.",
+  "CLAIMS.md - two duplicated source-key rows removed (TRACK-t128, TRACK-t64).",
+  "state/gap-ledger.json - G5/G7's four MANUSCRIPT.md:850 refs repointed to :865 after the repair added 18 lines; each carries a dated V2C note; the three 'found' quotes, which had captured only the first 88 characters of a paragraph and could never match startswith(), were replaced with the full line. Pre-edit copy at state/logs/gap-ledger.before-V2C.json."
+ ],
+ "red_green": "Three guards exercised, one RED->GREEN demonstrated, two RED leaves shown STILL GREEN. (a) CLAIMS C69 dense '19/20 -> 18/20' -> '20/20 -> 20/20': recompute_r2 SYSOPT goes red and `recompute_r2 C69` exits 1 printing a dict instead of OK lines; restoring returns 50/50 OK. (b) MANUSCRIPT.md:901 'all 12 arms' -> '11 of 12 arms': the full 1368-test suite stays GREEN - no guard reads the census. (c) CLAIMS plant (a) again: verify_package still PASS, suite still green - the prose is not guarded. (d) Before this unit, the gap-ledger guard was RED for a different reason: three G5/G7 refs cited MANUSCRIPT.md:850 after the earlier fold had moved the resident-capacity paragraph to 865, and their 'found' quotes were 88-character truncations that the audit compares with startswith(). Repointed and re-quoted; tests/test_gap_closure_ledger.py 8/8 passes.",
+ "tool_calls": 78,
+ "bound": 90,
+ "containment": "0 live requests, 0 locks, 0 cells run, no container, no target-repo read or write, no git verb against any target. Writes: papers/context-cache/MANUSCRIPT.md, papers/context-cache/CLAIMS.md, state/gap-ledger.json, state/logs/gap-ledger.before-V2C.json (pre-edit copy), orchestration/VERDICTS.md, this handoff. Full suite 1368 passed / 1 skipped before and after; verify_package PASS before and after; all 45 source-key hashes match disk after the CLAIMS edit.",
+ "assumptions": [
+  "AUTOMATED session: never asked a question and never waited for input.",
+  "The card carried only the title. Its abbreviated 'V2B' list was read as the six items V2B's next_unit_hint actually enumerates, and V2B's report was read from orchestration/handoffs/PAPER-FINAL-V2B.json rather than from the card.",
+  "Where the card's shorthand and V2B's report disagreed, V2B's report was treated as the finding and the card's shorthand as a summary of it - which is how the prompt-bytes repair ended up with different numbers than the card implied (2,326.13 / 2,421.03 rather than 2,300.15 / 2,395.04), because the card's figures are real but come from a row set the table does not use.",
+  "V2B's fix #2 was treated as a recommendation, not an instruction: the rows were re-measured before applying it, it did not reproduce as stated, and the prose was repaired by separating the two quantities instead. Recorded rather than silently followed.",
+  "MANUSCRIPT.md is not a committed file (git shows it modified against an older baseline), so there is no git diff to show the change set; the before-text of each repair is quoted in this handoff and in the VERDICTS row.",
+  "An environment anomaly was observed and worked around, not repaired: /tmp files written in one bash call were absent in the next (/tmp/ms.bak, /tmp/c_before.md). Backups were therefore taken under state/logs/. No workspace file was restored from a /tmp copy."
+ ],
+ "blocker": "",
+ "next_unit_hint": "A fresh verifier should (1) re-run V2B's 314-token map against MANUSCRIPT.md as it now stands - the 297 row-exact figures should not need re-deriving, but the eleven edited regions do; (2) insist on closing the two MEASURED guard gaps before anything else is called verified: the C62 twelve-arm census at :901 and C69's prose, since a wrong value in either ships green today; (3) decide whether V2B's recommendations #5 and #6 (a C64 row for the prompt-token column; drift control and budget keys in the SYSOPT set) are worth the pinned-set change this unit declined; (4) if the guard gaps are closed, consider the note on 'found' quotes: the ledger audit compares with startswith() against truncated captures, which silently converges to 'never matches' - a full-line capture or a contains() comparison would fail loudly instead.",
+ "write_paths": [
+  "orchestration/handoffs/PAPER-FINAL-V2C.json",
+  "orchestration/VERDICTS.md",
+  "papers/context-cache/MANUSCRIPT.md",
+  "papers/context-cache/CLAIMS.md",
+  "state/gap-ledger.json",
+  "state/logs/gap-ledger.before-V2C.json"
+ ]
+}

@@ -1,0 +1,96 @@
+{
+ "unit": "V3-FIXTURE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/tasks-v3/LR-01.v3.json",
+  "experiments/ptr-engine/longrun/tasks-v3/runtime-v3/LR-01.v3.json",
+  "experiments/ptr-engine/longrun/adapt_v3.py"
+ ],
+ "evidence": {
+  "dry_run_exit_code": 0,
+  "would_send_total": 192,
+  "dry_run_cmd": ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --dry-run --fixture experiments/ptr-engine/longrun/tasks-v3/runtime-v3/LR-01.v3.json --thinking off --show-prompts",
+  "requests_sent": 0,
+  "previews_printed": 12,
+  "arms": [
+   "lease-reopen",
+   "pointer-stable",
+   "transcript-compact",
+   "transcript-grow"
+  ],
+  "system_prompt_channel": "run_longrun.py:210 messages() returns [{role:system, content:fixture['system_prompt']}, ...] verbatim -- no reconstruction, no drop",
+  "messages0_len": 1433,
+  "budget_sentence_at": 248,
+  "marker_sentence_at": 1284,
+  "order_ok": true,
+  "messages0_excerpt": "...an answer that omits a required fact to stay under budget has failed the task. End every answer with a final line: ANSWER: <the value, or NOT-AN-ANSWER>. The value must appear in that line, never only inside a pasted code block.",
+  "chat_template_kwargs": {
+   "enable_thinking": false
+  },
+  "marker_checker": {
+   "script": "/tmp/v3_marker_check.py",
+   "log": "/tmp/v3-marker-log.jsonl",
+   "line_regex": "^ANSWER:[ ]*\\S.*$",
+   "results": [
+    "turn=12 last_line='ANSWER: 64' marker_ok=True",
+    "turn=24 last_line='ANSWER: NOT-AN-ANSWER' marker_ok=True",
+    "turn=48 last_line='```' marker_ok=False (value left inside a fenced block)"
+   ]
+  },
+  "keys_changed": [
+   "answer_budget.system_prompt_addition",
+   "fixture_version",
+   "answer_marker (added)"
+  ],
+  "keys_added": [
+   "answer_marker.required",
+   "answer_marker.line_regex"
+  ],
+  "keys_removed": [],
+  "unchanged_proof": {
+   "checks_structured_equal": true,
+   "checks_structured_n": 12,
+   "answer_budget_equal_except_addition": true,
+   "turns_equal": true,
+   "checkpoints_equal": true,
+   "negative_constraints_equal": true,
+   "long_run_equal": true,
+   "sources_equal": true,
+   "N": 48,
+   "addition_is_exactly_one_appended_sentence": true
+  },
+  "adapter": {
+   "cmd": ".venv/bin/python experiments/ptr-engine/longrun/adapt_v3.py --fixture experiments/ptr-engine/longrun/tasks-v3/LR-01.v3.json --out-dir experiments/ptr-engine/longrun/tasks-v3/runtime-v3",
+   "exit_code": 0,
+   "idempotent_sha256_identical": true,
+   "runtime_sha256": "07abab0bd902bd88c86b8d2544f012caf63a9a4280b68b223bd605d399bd3e0b",
+   "reported": "N=48 items=4 checks_structured=12 negative_constraints=3 checkpoints=3 budget_in_system_prompt=True marker_in_system_prompt=True"
+  }
+ },
+ "blocker": "",
+ "assumptions": [
+  "answer_budget.fixture_version stays 'v2-bounded' inside the carried budget object, because the card forbids changing answer_budget or the budget sentence; the v3 tier is identified by the top-level fixture_version:'v3-answer-marker' plus answer_marker.",
+  "The marker sentence was appended to the authored fixture's own system_prompt_addition, not synthesised in the adapter; adapt_v3.py only verifies its presence and refuses if absent.",
+  "grade_v2.py was not pointed at the /tmp log: it grades rows against the v1 runtime/LR-01.json turn semantics, so a 3-row v3 log would score as a mismatch for reasons unrelated to the marker. A checker that applies answer_marker.line_regex verbatim was used instead (card allows this).",
+  "/tmp was not writable across separate tool invocations in this session; the dry-run, preview reads and diff were done inside one invocation."
+ ],
+ "next_unit_hint": "Pilot card: send LR-01.v3.json through the real runner with the same 4 arms x 1 rep (192 requests) and compare turns 12/24 acceptance (acc.cp1/acc.cp2 present as standalone '64'/'31'). Budget the check on the ANSWER: line, and expect answer scoring at v2 word caps unchanged; success criterion is acc.cp1/acc.cp2 passing in >=1 arm, not that every answer gains a marker. Also note the marker adds ~15 words to every answer, which eats into the 150-word work budget -- amending the budget text is a v4 decision, not this card's.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/tasks-v3/LR-01.v3.json",
+  "experiments/ptr-engine/longrun/tasks-v3/runtime-v3/LR-01.v3.json",
+  "experiments/ptr-engine/longrun/adapt_v3.py",
+  "/tmp/v3_marker_check.py",
+  "/tmp/v3-marker-log.jsonl",
+  "orchestration/handoffs/V3-FIXTURE.json",
+  "orchestration/units/V3-FIXTURE.md"
+ ],
+ "marker_in_payload": true,
+ "budget_still_present": true,
+ "keys_changed": [
+  "answer_budget.system_prompt_addition",
+  "fixture_version",
+  "answer_marker"
+ ],
+ "checks_structured": 12,
+ "n_unchanged": true
+}

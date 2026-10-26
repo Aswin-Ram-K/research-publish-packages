@@ -1,0 +1,177 @@
+{
+ "unit": "LIVE-CELLS-2",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/rows-live-2026-10-26.jsonl",
+  "orchestration/handoffs/LIVE-CELLS-2.json",
+  "orchestration/units/LIVE-CELLS-2.md"
+ ],
+ "hosts_probed": [
+  {
+   "url": "http://127.0.0.1:8012/get_server_info",
+   "curl_exit": 7,
+   "http": 0,
+   "answered": false,
+   "note": "connect refused in ~0.0001s"
+  },
+  {
+   "url": "http://192.168.2.168:8012/get_server_info",
+   "curl_exit": 0,
+   "http": 200,
+   "answered": true,
+   "note": "SGLang, occamy-1.0-NVFP4, ctx 131072"
+  },
+  {
+   "url": "http://127.0.0.1:8014/v1/models",
+   "curl_exit": 7,
+   "http": 0,
+   "answered": false,
+   "note": "connect refused in ~0.0001s"
+  },
+  {
+   "url": "http://192.168.2.168:8014/v1/models",
+   "curl_exit": 0,
+   "http": 200,
+   "answered": true,
+   "note": "vLLM, qwen3.5-9b, max_model_len 32768"
+  }
+ ],
+ "host_used": "192.168.2.168:8012 (SGLang, cells A+B); 192.168.2.168:8014 (vLLM, cell C)",
+ "engine_reachable": true,
+ "local_listeners": "no listener on 8012/8014/8016/8017/8020 on this host; both engines bind a non-loopback interface (192.168.2.168), as experiments/ptr-engine/measure/rows.jsonl token_source already said",
+ "rows_written": 27,
+ "cells_attempted": [
+  "A",
+  "B",
+  "C"
+ ],
+ "cached_nulls": 13,
+ "evidence": {
+  "commands": [
+   "ss -ltn | grep -E ':(8012|8014|8016|8017|8020)' -> no local listener on 8012/8014/8016/8017/8020",
+   "curl -m5 http://127.0.0.1:8012/get_server_info -> exit 7 (refused, 0.0001s)",
+   "curl -m5 http://192.168.2.168:8012/get_server_info -> exit 0 HTTP 200 model_path=.../models--Accio-Lab--occamy-1.0-NVFP4",
+   "curl -m5 http://127.0.0.1:8014/v1/models -> exit 7 (refused)",
+   "curl -m5 http://192.168.2.168:8014/v1/models -> exit 0 HTTP 200 data[0].id=qwen3.5-9b",
+   "curl -m5 http://192.168.2.168:8014/metrics -> vllm:time_to_first_token_seconds_sum present",
+   "POST http://192.168.2.168:8012/v1/chat/completions (cells A,B) and :8014 (cell C), serial, rows appended+fsynced"
+  ],
+  "cell_A": {
+   "P1": 384,
+   "residue": 0,
+   "reps_at_target": 3,
+   "prime_cached": [
+    "None"
+   ],
+   "identical_resend_cached": [
+    null,
+    null,
+    null
+   ],
+   "append_prompt_tokens": [
+    397,
+    397,
+    397
+   ],
+   "append_cached": [
+    320,
+    320,
+    320
+   ],
+   "append_L": [
+    13,
+    13,
+    13
+   ],
+   "usage_note": "SGLang returns prompt_tokens_details but OMITS cached_tokens when it is 0; null therefore means 0"
+  },
+  "cell_B": {
+   "P1_E": [
+    260,
+    260,
+    260
+   ],
+   "R_E": [
+    4,
+    4,
+    4
+   ],
+   "cached": [
+    null,
+    256,
+    256
+   ],
+   "compact_env_bytes": 383,
+   "index_lines": 12,
+   "padding": "none"
+  },
+  "cell_C": {
+   "P1_target": 7393,
+   "P1_measured": [
+    7393,
+    7393
+   ],
+   "B": 1056,
+   "residue": 1,
+   "prime_cached": [
+    0,
+    0
+   ],
+   "prime_ttft": [
+    2.001724,
+    1.999973
+   ],
+   "identical_resend_cached": [
+    6336,
+    6336
+   ],
+   "identical_resend_ttft": [
+    0.204398,
+    0.206856
+   ],
+   "append_P1": [
+    7406,
+    7406
+   ],
+   "append_cached": [
+    0,
+    0
+   ],
+   "append_ttft": [
+    1.770103,
+    1.773312
+   ],
+   "existing_7394_rows": "G6-P7394-r0/r1 same: cached 6336, ttft 0.210802/0.211353; app@7407: 0.213763/0.212416",
+   "ratio_vs_cited_7394_warm_same_vs_same": [
+    0.97,
+    0.98
+   ],
+   "ratio_vs_cited_7394_warm_append_vs_same": [
+    8.4,
+    8.41
+   ],
+   "ratio_append_vs_append_7394": [
+    8.28,
+    8.3
+   ],
+   "measured_8x5_reference": "FOLD-FIX-2: G6 residue 0 (P1 7392) same-row 1.789975/1.791956 vs residue 2 (P1 7394) same-row 0.210802/0.211353 = 8.49x/8.48x",
+   "ratio_definition": "ratio = measured ttft_server_s / baseline ttft_server_s (cited 7394 warm row 0.210802 and 0.211353; 7394 append rows 0.213763/0.212416)"
+  }
+ },
+ "assumptions": [
+  "cell A: 'prime once, then append L=13' read as one prime + one measured append per rep, with a 3rd diagnostic row (identical re-send) added per rep to separate insertion failure from matching failure; the append row is the contracted measure row.",
+  "cell A rep 2: two earlier shuffles missed the 384 target (385/383) because shuffling the same word multiset moves the token count by +-2; the delivered rep 2 is solved offline against /tokenize (framing F=22 constant), so all three reps sit at exactly 384.",
+  "first cell A batch ran off-target (P1 366/365) from a word-slice bug; those rows stay in the file (append-only contract) and are marked supersedes_offtarget_attempt, the corrected rows are the evidence.",
+  "cell B: compile/build_prompt ran against a temporary BodyStore + Ledger under /tmp so the declared write paths stay honoured.",
+  "cell C: 'warm-vs-warm' computed against the cited 7394 warm row in both shapes (same-vs-same and append-vs-same), since residue 1 behaves differently in each."
+ ],
+ "blocker": "",
+ "next_unit_hint": "C1 now has an SGLang residue-0 row (P1 384, 3/3 reps). C5 has R_E=4 for the unpadded compact index (not 2). C2's residue-1 G6 gap is closed: residue 1 misses ONLY across the 13-token append (cached 0, 1.770/1.773 s ~ 8.40x the cited warm 0.2108), while the identical re-send is warm (6336, 0.2044/0.2069). C2's wording should say 'residue 1 misses on append', not 'residue 1 misses'.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/rows-live-2026-10-26.jsonl",
+  "orchestration/handoffs/LIVE-CELLS-2.json",
+  "orchestration/units/LIVE-CELLS-2.md"
+ ],
+ "tool_calls": 13,
+ "bound": 24
+}

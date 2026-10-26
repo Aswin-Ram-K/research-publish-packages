@@ -1,0 +1,79 @@
+{
+  "unit": "FIXTURE-REACHABILITY-FIX",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/tasks-v4/LR-01.v4.json",
+    "experiments/ptr-engine/longrun/adapt_v4.py",
+    "experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.json",
+    "experiments/ptr-engine/longrun/controls/v4/pos-full.v4.jsonl",
+    "experiments/ptr-engine/longrun/controls/v4/pos-full.grade-v4.json",
+    "experiments/ptr-engine/measure/REACHABILITY-V4.md",
+    "orchestration/units/FIXTURE-REACHABILITY-FIX.md"
+  ],
+  "evidence": {
+    "before_matrix": [
+      {"arm": "transcript-grow", "turn": 12, "fact_in_prompt": true, "expected_present": false, "reachable": false, "note": "64 count 0"},
+      {"arm": "transcript-grow", "turn": 24, "fact_in_prompt": true, "expected_present": false, "reachable": false, "note": "31 count 0"},
+      {"arm": "transcript-grow", "turn": 46, "fact_in_prompt": true, "expected_present": true, "reachable": true, "note": "289 anchor hits"},
+      {"arm": "pointer-stable", "turn": 12, "fact_in_prompt": false, "expected_present": false, "reachable": false, "note": "tail keeps answers only"},
+      {"arm": "pointer-stable", "turn": 24, "fact_in_prompt": true, "expected_present": false, "reachable": false, "note": "errors.py slice 3 classes, ends mid-declaration"},
+      {"arm": "pointer-stable", "turn": 46, "fact_in_prompt": true, "expected_present": true, "reachable": true, "note": "168 anchor hits"}
+    ],
+    "after_matrix": [
+      {"arm": "transcript-grow", "turn": 12, "fact_in_prompt": true, "expected_present": true, "reachable": true, "how": "preloaded: resolve.py#L36-L110 carries 'DEFAULT_MAX_REFS = 64' (L39); literal 64 count 1"},
+      {"arm": "transcript-grow", "turn": 24, "fact_in_prompt": true, "expected_present": false, "reachable": true, "how": "resolvable-not-preloaded: errors.py body complete, 31 '^class Ptr' in prompt, literal '31' count 0 (a count, not a token in the source)"},
+      {"arm": "transcript-grow", "turn": 46, "fact_in_prompt": true, "expected_present": true, "reachable": true, "how": "preloaded: 476 anchor hits, 'ledger.record_refusal(' and 'before re-raising' present"},
+      {"arm": "pointer-stable", "turn": 12, "fact_in_prompt": false, "expected_present": true, "reachable": true, "how": "preloaded: all four bodies sit in the frozen prefix; literal 64 count 1"},
+      {"arm": "pointer-stable", "turn": 24, "fact_in_prompt": false, "expected_present": false, "reachable": true, "how": "resolvable-not-preloaded: errors.py body complete, 31 '^class Ptr' in prompt, literal '31' count 0"},
+      {"arm": "pointer-stable", "turn": 46, "fact_in_prompt": false, "expected_present": true, "reachable": true, "how": "preloaded: 355 anchor hits, 'ledger.record_refusal(' and 'before re-raising' present"}
+    ],
+    "grep_counts": {
+      "grep_c_class_ptr_errors_py": 31,
+      "class_ptr_in_v4_errors_body": 31,
+      "class_sets_equal": true,
+      "every_class_name_present_in_body": true,
+      "resolve_body_has_default_max_refs": "DEFAULT_MAX_REFS = 64 (literal '64' digit-bounded once per prompt)",
+      "resolve_body_has_refuse_call": "ledger.record_refusal(scope=..., serialized_ref=text, code=error.code)"
+    },
+    "grade_v3_rerun": {
+      "exit_code": 0,
+      "rows": "experiments/ptr-engine/longrun/controls/v4/pos-full.v4.jsonl (byte-identical to controls/pos-full.jsonl; no rebuild needed)",
+      "fixture": "experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.json",
+      "verdict": "pointer-stable verified=True acc=3/3 ttvs=13161 over=0.0% reasons='-' (matches v3 positive control)",
+      "out": "experiments/ptr-engine/longrun/controls/v4/pos-full.grade-v4.json"
+    },
+    "checks_changed": [],
+    "fixture_version_change": "v3-answer-marker -> v4-slice-widened",
+    "slice_delta": {"resolve.py": "#L66-L110 -> #L36-L110", "errors.py": "#L114-L126 -> #L15-L250", "test_scope.py": "unchanged", "test_negative_controls.py": "unchanged", "corpus_text_edited": false},
+    "no_http_proof": {"clients_patched": 5, "network_attempts": [], "requests_sent": 0},
+    "sha_provenance_note": "prompt_at_turn reports sha mismatches n/n for every v4 cell because the replayed canned replies are the v3 rows; a v4 prompt cannot hash-match a v3 row. Prompts are still built by run_longrun.Planner.build inside run_cell.",
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/adapt_v4.py --all",
+      "python3 experiments/ptr-engine/longrun/tools/prompt_at_turn.py --fixture experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.json --rows experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.jsonl --turns 12,24,46 --json /tmp/prompt_at_turn_v4.json",
+      "grep -c '^class Ptr' experiments/ptr-engine/ptr_engine/errors.py",
+      "python3 - (heredoc probe: re-drives prompt_at_turn.drive, extracts each v4 prompt, counts '^class Ptr' and literal '64'/'31'; probe recorded in REACHABILITY-V4.md section 3, JSON at /tmp/reachability_v4_probe.json)",
+      "cp experiments/ptr-engine/longrun/controls/pos-full.jsonl experiments/ptr-engine/longrun/controls/v4/pos-full.v4.jsonl",
+      "python3 experiments/ptr-engine/longrun/grade_v3.py --rows experiments/ptr-engine/longrun/controls/v4/pos-full.v4.jsonl --fixture experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.json --out experiments/ptr-engine/longrun/controls/v4/pos-full.grade-v4.json"
+    ]
+  },
+  "checks_changed": [],
+  "verdict": "RESOLVABLE-NOT-PRELOADED",
+  "blocker": "CP2's answer is a count of 31 '^class Ptr' declarations; the numeral '31' occurs nowhere in errors.py, so no honest slice widening (and no corpus edit, which is forbidden) can digit-bound it in the prompt. Both CP2 cells are now resolvable because the body is complete (31/31 declarations present, set-equal to the file) but not preloaded. Manufacturing a literal '31' would require inlining -> RECALL-NOT-RETRIEVAL.",
+  "assumptions": [
+    "CP2's cited range was changed from 'errors.py#L15-L142' to '#L15-L250' in the T24 question and checkpoints[1].source. L15-L142 contains only 20 of the 31 classes, so keeping the old citation would have asked for a count the cited range cannot produce; the turn plan, expected value and all check ids are unchanged.",
+    "CP1 was fixed by widening the resolve.py slice (L66 -> L36) rather than planting the value; 64 remains only in the pinned source, so the test stays retrieval.",
+    "The control rows were NOT rebuilt: no check id or spec changed, so controls/v4/pos-full.v4.jsonl is a byte-identical copy of controls/pos-full.jsonl and grade_v3 still returns verified=True 3/3.",
+    "prompt_at_turn sha-provenance mismatches (n/n) are expected: v4 prompts are compared against v3 settled rows, which is the only row set that exists; no v4 rows may be created by this unit.",
+    "Item order (resolve.py, errors.py, test_scope.py, test_negative_controls.py) is preserved because pointer-stable prefetches items[:t+1]."
+  ],
+  "next_unit_hint": "Before the 96-request run, re-run prompt_at_turn.py against the v4 runtime fixture once more if any slice changes, and tell the harness CP2 is a counting question (no literal 31). If the run reproduces NOT-AN-ANSWER on CP1/CP3 now that the material is complete, the remaining failure is behaviour, not fixture, and survives this repair.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/tasks-v4/**",
+    "experiments/ptr-engine/longrun/adapt_v4.py",
+    "experiments/ptr-engine/longrun/controls/v4/**",
+    "experiments/ptr-engine/measure/REACHABILITY-V4.md",
+    "orchestration/handoffs/FIXTURE-REACHABILITY-FIX.json",
+    "orchestration/units/FIXTURE-REACHABILITY-FIX.md"
+  ],
+  "requests_sent": 0
+}

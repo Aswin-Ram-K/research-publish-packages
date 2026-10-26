@@ -1,0 +1,18 @@
+{"unit":"FIX-CENSUS","status":"done",
+ "artifacts":["papers/context-cache/CLAIMS.md","papers/context-cache/verify_package.py"],
+ "evidence":{
+   "verify_package.py":".venv/bin/python papers/context-cache/verify_package.py -> PASS, exit 0: 69 claims in CLAIMS.md, 69 mapped 1:1, 8 script-backed + 61 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none",
+   "red_before":"exit 1: 69 x 'unrecognised row, invisible to the claim census' (one per claim row) -- not a single malformed row at CLAIMS.md:271",
+   "tests":"tests/test_paper_claim_census.py 8 passed; census+stray-refs+package-build 30 passed",
+   "recompute":"recompute.py all -> COVERAGE GUARD PASS 69 claims documented, 67 runnable here + 2 script-backed, exit 0",
+   "red_green_1":"revert admission fix (CENSUS_RE.match(first)) -> exit 1, all 69 rows invisible again; restore -> exit 0",
+   "red_green_2":"plant '| C67a | ... |' as its own row -> exit 1, 'sub-claim C67a stands as a row of its own'; restore -> exit 0"},
+ "root_cause":"verify_package.surface_errors tested the FIRST CELL against CENSUS_RE, which is anchored on the leading pipe (^\\|\\s*(C\\d{2})\\s*\\|), so it could never match; every claim row read as invisible. The sub-claim branch then skipped C64a/C67a, re-admitting exactly the two rows that are not claims -- the one malformed row and the 69 'missing' ids were the same defect.",
+ "fixes":["surface_errors now tests '| {first}|' with the one declared CENSUS_RE (no new pattern, so test_the_census_regex_is_the_same_in_every_source still passes)",
+           "sub-claim rows are refused instead of skipped, so a C64a/C67a row cannot ride its parent's runner silently",
+           "CLAIMS.md: the C64a and C67a sub-claim rows are folded into C64's and C67's claim cells as '**Correction (C64a).** <text>' / '**Correction (C67a).** <text>', bodies preserved verbatim, tier comments kept; 315 -> 313 lines, 69 claim rows unchanged"],
+ "notes":["READER-MAP.md needed no change: all 69 rows already parse (bare Cnn, 4 cells) and already covered every id -- the 'format mismatch' was on the CLAIMS.md side of the cross-check",
+          "the checker was NOT loosened: CLAIM_RE, CELL_RE, the 1:1 checks, the cell-row checks and the UNVERIFIED check are untouched; the admission test got stricter (sub-claim rows now fail)",
+          "concurrent writes observed in papers/context-cache during this unit (verify_package.py and recompute.py were edited by another writer at 07:45-07:48); the two changes reverted by my own red-green probes were verified byte-identical to my post-fix state before each check"],
+ "blocker":"","next_unit_hint":"run the package gate as a unit test in CI so a cell-only match cannot regress unseen",
+ "write_paths":["papers/context-cache/CLAIMS.md","papers/context-cache/verify_package.py","orchestration/handoffs/HANDOFF-FIX-CENSUS.json"]}

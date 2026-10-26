@@ -1,0 +1,37 @@
+{
+ "unit": "QUALITY-ARM",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/quality/PREREG.json",
+  "experiments/ptr-engine/quality/corpus.py",
+  "experiments/ptr-engine/quality/runner.py",
+  "experiments/ptr-engine/quality/rows.jsonl",
+  "experiments/ptr-engine/quality/RESULTS.md",
+  "experiments/ptr-engine/quality/run.log"
+ ],
+ "evidence": {
+  "command_or_count": "python3 quality/runner.py --arms A,B,C,D --reps 3 --fresh -> EXIT=0; rows.jsonl 115 rows (48 request + 48 prediction + 12 rep + 4 corpus + 3 compaction), fsync per row",
+  "discrimination_check": "arm D (no-body control) 0/3 task success, 0 bodies resolved, answer '756741be' (first 8 hex of k12's digest, echoed from the index) -> the index does NOT carry the fact",
+  "index_leak_proof": "index sha256 e81ba025cfb484a8460022dedffa8cb8e7ffe09a53b365f9b84227eb105531d5, 458 bytes, no 'AUD-', no 'lumen'; 'lumen' and AUD-4417 live in k01 only (corpus.py leak_check, offline, before any request)",
+  "task_success": "A warmpool 3/3, B cap-3 0/3, C destructive-compaction 3/3, D no-body 0/3",
+  "resolution_codes": "B raised PTR_STORE_MISS 33 times (11 per rep, every model fetch refused: 33 refusals, 0 silent empties); A 15 host + 10 model resolves, 0 refusals; C 15 host + 10 model resolves, 0 refusals, 1 body/turn destructively compacted 9000->273 B; D 15 withheld, 0 resolved",
+  "billed_tokens": "law uncached=(P1 mod 64)+L, avalanche at residue in {0,1}: A 34390/34372/30652, B 27346/27860/27622, C 32550/34374/49594, D 3386/3386/3386; median gap A-C = -2 (34372 vs 34374) and the sign flips with the model's own fetch choices",
+  "turns_to_finish": "4/4/4 in every arm; no arm needed a re-fetch; 0 observed avalanches across 48 requests (residues 10,11,20,37,53); C rep2's T4 prefix sits on residue 1, where the avalanche is PREDICTED but was not observed"
+ },
+ "assumptions": [
+  "Retention (B and C keep the 3 most recent bodies) is applied to EVERY body the session has read, including the model's own in-turn fetches -- the stricter, non-rescuing reading; a laxer reading that retained in-turn fetches would let cap-3 pass and was rejected",
+  "Arm B drops the bytes from its own warmpool, so the engine's store.get raises PTR_STORE_MISS; the code reaches the model in the tool result text, i.e. the engine SAYS SO rather than returning nothing",
+  "Arm C compaction = first 200 bytes of the body + a marker, written at the SAME content locator (destructive, resolvable, lossy)",
+  "The final question carries NO item reference (the pre-registered question names a constant, never a ref), so the model must choose what to fetch from the 12-line index; refs in the turn plan only keep the conversation realistic",
+  "One mechanical wording fix is disclosed in RESULTS.md §6: the question's preface was corrected after a dry run in which the model rejected the premise and refused for the wrong reason; the question's subject, the expected fact string and the judgement rule were never changed, and D was re-run to green",
+  "chat_template_kwargs {'enable_thinking': false}: dense factual lookup was tested in one probe (see RESULTS.md §5.1) and the 7-item-context variant of the question was NOT used in any rule state, because a wrong refusal in a control is a false negative for discrimination",
+  "tokens are the server's own prompt_tokens; the completion's own generating cost is NOT in the bill (the law bills appends, not generation)"
+ ],
+ "blocker": "",
+ "next_unit_hint": "Billed tokens now telescope exactly to sum(prompt_tokens)+12*(R-1) (max x 4 x 2.6 = 17,552 raw prefix vs 49,594 billed in C rep2); billed != raw prefix, but no column here proves the server re-billed it. The decisive follow-up is to read /generate's meta_info cached_tokens_prompt for each of these turns and reconcile the law per turn, which is the only way to turn this bill from arithmetic into a measurement. Second follow-up: A and C both finish and the token gap between them is dominated by fetch CHOICE, not by policy, so the interesting number needs a fixed fetch script per arm rather than a model-chosen one.",
+ "write_paths": [
+  "experiments/ptr-engine/quality/",
+  "orchestration/units/QUALITY-ARM.md",
+  "orchestration/handoffs/QUALITY-ARM.json"
+ ]
+}

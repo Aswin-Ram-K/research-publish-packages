@@ -1,0 +1,103 @@
+{
+ "unit": "BASELINE-COST-LAYER",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/RECORD.md",
+  "orchestration/handoffs/BASELINE-COST-LAYER.json",
+  "orchestration/units/BASELINE-COST-LAYER.md"
+ ],
+ "evidence": {
+  "append_only": "head -n 159 experiments/ptr-engine/RECORD.md | sha256sum -> bb1895d183b2442ebbac5a6889b492d313e41ee550ad2d39962c891b79853392 before AND after; also byte-prefix identical: after[:len(before)]==before -> True",
+  "line_count": "original_lines 159 -> final_lines 169 (+1 blank +5 layer paragraphs)",
+  "sentinels": "12 patterns, total occurrences 16 -> 16, per-pattern counts identical",
+  "rows_verified": "independent python pass over 100 rows recomputed: occamy C0F per-turn 5676.5/28.5/28.5 mean 1911.2, ttft median 0.182; C0FT 68/36/36 mean 46.7, ttft 0.181; R 9476/1044/52 mean 3524.0, ttft median 0.602 (0.751 excluding rep1 turn1); ratio 1.8441 mean / 1.6695 cold rep",
+  "accuracy": "occamy turn4 answer rows 3/3 C0F, 3/3 C0FT, 3/3 R (R has 6 turn-4 rows: 3 answers + 3 empty FETCH echoes)",
+  "vllm": "52 qwen3.5-9b rows, usage.prompt_tokens_details null on 52/52, cached_reported true on 0; 42 base rows with 27 empty answer_text at completion_tokens 300; 10 repair rows thinking_off true (C0F 3, R 7)",
+  "prior_defect": "orchestration/handoffs/C0-BASELINE.json:finding 'C0 never has k01 in context (turns carry k12, k10, k08 only)'; :c0_accuracy sglang 0 of 3, vllm 0 of 3; grep -rl 'fac350e6' orchestration/handoffs experiments/ptr-engine -> 0 hits",
+  "commands": [
+   "python3 (inline) rows recompute over experiments/ptr-engine/measure/rows-equalinfo-2026-10-26.jsonl",
+   "python3 (inline) append + sha256 prefix proof",
+   "grep -rl 'fac350e6' orchestration/handoffs experiments/ptr-engine -> (no output, exit 1)",
+   "python3 -c json.load orchestration/handoffs/C0-BASELINE.json -> c0_accuracy"
+  ],
+  "requests_sent": 0
+ },
+ "blocker": "",
+ "next_unit_hint": "No vLLM cost claim may cite rows-equalinfo-2026-10-26.jsonl: prompt_tokens_details is null on all 52 vLLM rows. A lawful vLLM cost row needs an engine that reports cached tokens (SGLang on the qwen model) or a fresh run on :8012; qwen C0FT (0 rows) and R reps 2-3 remain unmeasured and would need a separate <=105-request unit.",
+ "write_paths": [
+  "experiments/ptr-engine/RECORD.md",
+  "orchestration/handoffs/BASELINE-COST-LAYER.json",
+  "orchestration/units/BASELINE-COST-LAYER.md"
+ ],
+ "original_lines": 159,
+ "final_lines": 169,
+ "prefix_sha_before": "bb1895d183b2442ebbac5a6889b492d313e41ee550ad2d39962c891b79853392",
+ "prefix_sha_after": "bb1895d183b2442ebbac5a6889b492d313e41ee550ad2d39962c891b79853392",
+ "sentinels_before": {
+  "per_pattern": {
+   "Adjudicated 2026-10-25": 5,
+   "Partition withdrawn 2026-10-25": 1,
+   "C8 closes": 1,
+   "C8 REOPENED 2026-10-26": 1,
+   "C7 — the law applied": 1,
+   "C2 corrected 2026-10-26": 1,
+   "C1 DECIDED 2026-10-26": 1,
+   "Endpoint null semantics settled 2026-10-26": 1,
+   "C2 CLOSED 2026-10-26": 1,
+   "C5 CLOSED (narrowed) 2026-10-26": 1,
+   "Engine size restated": 1,
+   "Line citations are not evidence": 1
+  },
+  "total": 16
+ },
+ "sentinels_after": {
+  "per_pattern": {
+   "Adjudicated 2026-10-25": 5,
+   "Partition withdrawn 2026-10-25": 1,
+   "C8 closes": 1,
+   "C8 REOPENED 2026-10-26": 1,
+   "C7 — the law applied": 1,
+   "C2 corrected 2026-10-26": 1,
+   "C1 DECIDED 2026-10-26": 1,
+   "Endpoint null semantics settled 2026-10-26": 1,
+   "C2 CLOSED 2026-10-26": 1,
+   "C5 CLOSED (narrowed) 2026-10-26": 1,
+   "Engine size restated": 1,
+   "Line citations are not evidence": 1
+  },
+  "total": 16
+ },
+ "contradictions_with_card": [
+  {
+   "card": "vLLM reported prompt_tokens_details = null on 45/45 rows",
+   "row": "52/52 rows: the file holds 42 base + 10 repair qwen3.5-9b rows, all null, cached_reported false on all",
+   "resolution": "row wins; the layer states 52 of 52 and names the card/handoff 45/45 as the wrong count"
+  },
+  {
+   "card": "C0F rep2/3 28 uncached tokens/turn; C0FT 47; C0F mean 1911",
+   "row": "rep2/3 = 28.5, mean 1911.2, C0FT mean 46.7 (68/36/36)",
+   "resolution": "half-token arithmetic from sum-over-requests / 4 turns; layer quotes the exact values and notes the card rounded them"
+  },
+  {
+   "card": "Accuracy 3/3 on every arm",
+   "row": "occamy 3/3 C0F, 3/3 C0FT, 3/3 R; qwen C0FT 0 rows (unmeasured), qwen R 0/1",
+   "resolution": "true only for the occamy SGLang arms; the layer scopes the sentence to occamy"
+  },
+  {
+   "card": "R TTFT 0.602 s",
+   "row": "median 0.602 s across all R rows; 0.751 s excluding the cold rep-1 first request",
+   "resolution": "reproducible as stated, but the card's figure understates the penalty; the layer prints both"
+  },
+  {
+   "card": "the first baseline (fac350e6)",
+   "row": "grep -rl 'fac350e6' over orchestration/handoffs and experiments/ptr-engine returns 0 hits; the defect itself is confirmed in C0-BASELINE.json (k01 absent, 0 of 3 both models)",
+   "resolution": "defect cited from the handoff; the unit id is dropped rather than repeated"
+  }
+ ],
+ "assumptions": [
+  "The card's 'rows' were treated as the authority and re-derived independently rather than quoted from the handoff; where they differed the rows were used and the difference is listed in contradictions_with_card.",
+  "R's turn-4 row set includes 3 empty FETCH echoes; they are counted as requests, not as failed answers, because the handoff defines the rep answer as the final row."
+ ],
+ "tool_calls": 12,
+ "bound": 16
+}

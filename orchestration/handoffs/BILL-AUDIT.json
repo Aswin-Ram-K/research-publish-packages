@@ -1,0 +1,42 @@
+{
+ "unit": "BILL-AUDIT",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/audit/rows.jsonl",
+  "experiments/ptr-engine/audit/REPORT.md",
+  "experiments/ptr-engine/audit/audit.py",
+  "experiments/ptr-engine/audit/replay_quality.py",
+  "experiments/ptr-engine/audit/raw_meta.json",
+  "orchestration/units/BILL-AUDIT.md"
+ ],
+ "evidence": {
+  "command_or_count": "REPS=3 python3 audit.py -> EXIT=0; rows.jsonl 693 rows (21 measure + 672 aim probes), flush+fsync per row; python3 replay_quality.py -> EXIT=0",
+  "instrument_found": "POST /generate returns meta_info.cached_tokens (int) and meta_info.cached_tokens_details {device,host}. COLD request: cached_tokens=0, details=null. WARM repeat: cached_tokens=384, details={device:384,host:0}. 0 is a reported zero, NOT a null.",
+  "instrument_second_endpoint": "POST /v1/chat/completions returns usage.prompt_tokens_details=null on cold and {cached_tokens:384} on warm -- the endpoint QUALITY-ARM used; its runner kept only prompt_tokens/completion_tokens/reasoning_tokens.",
+  "measure_sample": "21 measure rows, 3 reps x 7 cells. Agreement: 12 exact, 9 off-by-k, 0 server-null. Residue 2..63: delta=0 in 12/12 (prefixes 424 and 8066). Residue 0: server uncached=64, law=P1+L. Residue 1: server uncached=1, law=P1+L.",
+  "avalanche_corrected": "residue 0 -> uncached = 64 + L; residue 1 -> uncached = 1 + L. One block, not the whole prefix. Measured at P1=448 (cached 384) and P1=8064 (cached 8000), 3/3 each.",
+  "replay": "QUALITY-ARM arm A, 4 turns, server-read cache. turns 1-3 faithful to within a constant 2-token offset (replay P1 2250/4469/8587 vs QM 2252/4471/8589). Turn1 server-null (reported=false, delta=null). Law with measured L=2 totals 123 tokens; server totals 7087 -> 57.6x understatement.",
+  "root_cause": "quality/runner.py:467 sets L = prompt_tokens + FRAMING, i.e. the whole prefix size, where miss-law/LAW.md defines L as the measured append P2-P1. With L~P1 the formula collapses to billed=sum(P1). Arm A rep0 claimed bills 2272/4534/8610/10932 vs law-with-L=13 values 23/66/24/33.",
+  "secondary_defect": "_billed() (quality/runner.py:630-670) per_turn array is misaligned by one turn with the request rows (rep-row P1 4471/8589/18927 carry residues 55/13/47; request rows prompt_tokens 2252/4471/8589 carry 10/53/11).",
+  "elapsed": "meta_info.e2e_latency recorded per row; queue_time 0.00016-0.0003 s. TTFT NOT measured (no streaming); no TTFT distribution claimed."
+ },
+ "verdict": "The law does NOT survive as an accounting instrument. A reader cannot trust a law-computed bill. Non-avalanche branch (residue 2-63, one warm append) is exactly right; residue {0,1} overstates by P1-64; multi-turn conversational bills are outside the law's stated scope (LAW.md section 8) and are QUALITY-ARM's entire regime.",
+ "blocker": "",
+ "next_unit_hint": "Re-run ENGINE-R1 cell C and QUALITY-ARM with cached_tokens read from meta_info.cached_tokens and L = P2-P1; the 397 token cell-C bill and the 34372/34374 A-vs-C gap are both law artifacts. Separately isolate why ENGINE-R1 saw cached=null at residue 0 on /v1/chat/completions while this unit saw a number at the same residue on /generate.",
+ "write_paths": [
+  "experiments/ptr-engine/audit/rows.jsonl",
+  "experiments/ptr-engine/audit/REPORT.md",
+  "experiments/ptr-engine/audit/audit.py",
+  "experiments/ptr-engine/audit/replay_quality.py",
+  "experiments/ptr-engine/audit/raw_meta.json",
+  "orchestration/units/BILL-AUDIT.md",
+  "orchestration/handoffs/BILL-AUDIT.json"
+ ],
+ "assumptions": [
+  "B=64 taken from miss-law/LAW.md; this unit's own evidence is indirect (every reported cached value is a multiple of 64: 384,448,2176,4352,8000,8448).",
+  "The replay's turn 4 is NOT a faithful reproduction of QUALITY-ARM turn 4 (9001 vs 18927 prompt tokens, because QM re-resolved a body inline on its final turn); only turns 1-3 are a direct audit of QM's bill.",
+  "Arm C's destructive compaction was not replayed; it shares arm A's _billed path, so auditing arm A suffices to falsify the shared instrument.",
+  "Residue cells were aimed by reading P1 back from the server (never by text arithmetic); each aim attempt is a real request recorded as a probe row.",
+  "The 2-token appends in the replay may fall below the cache's minimum reusable length; turn 1's server-null is recorded as reported=false rather than as zero."
+ ]
+}

@@ -1,0 +1,160 @@
+# RESULTS — lazy instruction loading: cold/warm crossover sweep
+
+**Verdict: CONDITIONAL.** Lazy instruction loading pays only under a **cold prefix**
+and only once the corpus reaches **~30,000 characters at 17 % needed**; against a
+**warm prefix it never pays in the swept range** — L1 loses on billed tokens in every
+warm cell measured.
+
+Status: **partial**. 66 of 144 planned runs completed (147 request rows). Two harness
+restarts and a duplicate unit sharing these write paths ended both sweep processes
+mid-grid; every unmeasured cell is named at the bottom rather than dropped or
+extrapolated.
+
+## Method
+
+- **Corpora** built by `cx_corpus.py`, which imports the first arm's `build_corpus.py`
+  and recombines its sentences as filler, so vocabulary and register match the arm
+  already measured. Seed `20261024`. Every corpus is **exactly** 3,000 / 10,000 /
+  30,000 characters (asserted, not approximated), with 12 items (2 needed, 17 %) or
+  30 items (6 needed, 20 %). The task text never names an item id (asserted).
+- **Regimes without touching a server.** No `/flush_cache`, no restart. COLD prepends a
+  unique random nonce to the system prefix of **every** request (`salt_scope:
+  per_request`), so the prefix can never be cache-matched. WARM sends the identical
+  request twice and records the **second** response's `cached_tokens`
+  (`salt_scope: per_run`). The nonce is recorded on every row.
+- **One fetch protocol on both models**: text-emulated `FETCH <id>` / `ANSWER`, so the
+  native-tool-call vs text-emulation confound the first arm disclosed is gone. L1 rows
+  carry `protocol=text_emulated`; C0 rows carry `protocol=plain_chat` because a
+  fully-inlined arm has nothing to fetch.
+- One JSONL row per request; a C0 run is 1 request, an L1 run is 1 + one per fetch
+  round, so L1's round trips are counted, not hidden.
+
+## Table 1 — realised saving `(C0_prompt − L1_prompt − fetched_body_tokens) / C0_prompt`
+
+| items | corpus chars | needed | occamy cold | occamy warm | qwen cold | qwen warm |
+|---|---|---|---|---|---|---|
+| 12 | 3,000 | 17 % | −288.4 % | −291.0 % | −288.1 % | −289.7 % |
+| 12 | 10,000 | 17 % | −307.3 % | −307.8 % | missing | missing |
+| 12 | 30,000 | 17 % | −324.3 % | −324.5 % | missing | missing |
+| 30 | 3,000 | 20 % | −751.2 % | −910.2 % | missing | missing |
+
+Realised saving is **negative in every cell**: L1's index and task are re-sent on every
+round trip, and at these corpus sizes that re-transmission costs more than the bodies
+L1 avoids shipping.
+
+## Table 2 — billed saving `(C0_uncached − L1_uncached) / C0_uncached`
+
+| items | corpus chars | needed | occamy cold | occamy warm | qwen cold | qwen warm |
+|---|---|---|---|---|---|---|
+| 12 | 3,000 | 17 % | −107.0 % | −1,288.9 % | −106.9 % | −105.7 % |
+| 12 | 10,000 | 17 % | −2.5 % | −2,192.3 % | missing | missing |
+| 12 | 30,000 | 17 % | **+44.8 %** | −702.8 % | missing | missing |
+| 30 | 3,000 | 20 % | −542.6 % | −1,781.2 % | missing | missing |
+
+## Table 2b — the absolute tokens behind those percentages
+
+A percentage over a ~12-token base is not a cost decision, so here is what each arm
+still bills after the prefix is cached.
+
+| items | chars | model | cache | C0 uncached | L1 uncached | delta (L1 − C0) |
+|---|---|---|---|---|---|---|
+| 12 | 3,000 | occamy | cold | 1,045 | 2,162 | **+1,117** |
+| 12 | 3,000 | occamy | warm | 6 | 83 | +77 |
+| 12 | 3,000 | qwen | cold | 1,046 | 2,163 | +1,118 |
+| 12 | 3,000 | qwen | warm | 1,030 | 2,119 | +1,089 |
+| 12 | 10,000 | occamy | cold | 2,460 | 2,523 | +63 |
+| 12 | 10,000 | occamy | warm | 13 | 298 | +285 |
+| 12 | 30,000 | occamy | cold | 6,492 | 3,582 | **−2,910** |
+| 12 | 30,000 | occamy | warm | 12 | 96 | +84 |
+| 30 | 3,000 | occamy | cold | 1,456 | 9,353 | +7,898 |
+| 30 | 3,000 | occamy | warm | 32 | 602 | +570 |
+
+Two things this makes visible that the percentages hide:
+- The **warm loss is small in absolute terms** (+77, +285, +84 uncached tokens per run)
+  but it is a consistent sign: the warm C0 base is ~12 tokens, so any L1 round trip
+  dominates the ratio. Under a warm prefix the corpus is already free; L1 keeps paying
+  for round trips and gains nothing.
+- The **cold win is real and large**: 6,492 → 3,582 uncached tokens (−45 %) at 30,000
+  characters.
+
+## Table 3 — correctness and fetch counts
+
+| items | chars | model | cache | C0 correct | L1 correct | L1 mean fetches | L1 fetched ids |
+|---|---|---|---|---|---|---|---|
+| 12 | 3,000 | occamy | cold | 3/3 | 3/3 | 2.0 | K-2, M-1 |
+| 12 | 3,000 | occamy | warm | 3/3 | 3/3 | 2.0 | K-2, M-1 |
+| 12 | 3,000 | qwen | cold | 3/3 | 3/3 | 2.0 | K-2, M-1 |
+| 12 | 3,000 | qwen | warm | 3/3 | 2/3 | 2.0 | K-2, M-1 |
+| 12 | 10,000 | occamy | cold | 3/3 | 3/3 | 2.0 | K-2, M-1 |
+| 12 | 10,000 | occamy | warm | 3/3 | 3/3 | 2.0 | K-2, M-1 |
+| 12 | 30,000 | occamy | cold | 3/3 | 3/3 | 2.0 | K-2, M-1 |
+| 12 | 30,000 | occamy | warm | 3/3 | 3/3 | 2.0 | K-2, M-1 |
+| 30 | 3,000 | occamy | cold | 3/3 | 2/3 | 5.0 | K-2, K-4, M-1, M-4, S-4, T-4 |
+| 30 | 3,000 | occamy | warm | 3/3 | 3/3 | 6.0 | K-2, K-4, M-1, M-4, S-4, T-4 |
+
+C0 answered correctly in **30/30** reps. L1 answered correctly in **28/30**. Every
+failure was an early `ANSWER` (a fact never fetched), not a wrong number. Fetch counts
+are exactly the needed items — **no wasted fetches anywhere**, and the fetched ids are
+always a subset of the needed set.
+
+## Table 4 — the regime, proved per cell rather than assumed
+
+| model | cache state | mean cached / prompt (C0) | mean cached / prompt (L1) | cache reported |
+|---|---|---|---|---|
+| occamy-1.0 | cold | 0.0 % | 0.0 % | yes |
+| occamy-1.0 | warm | **99.1 %** | **93.9 %** | yes |
+| qwen3.5-9b | cold | 0.0 % | 0.0 % | **NO — `prompt_tokens_details: null`** |
+| qwen3.5-9b | warm | 0.0 % | 0.0 % | **NO — `prompt_tokens_details: null`** |
+
+**The qwen cache instrument is blind, not cold.** That server returns
+`prompt_tokens_details: null` on every call, so its `cached_tokens` is *unknown* rather
+than zero. Its rows carry `cache_reporting: false`, and the billed column for qwen
+assumes 0 cached — the only defensible client assumption, and an upper bound on L1's
+disadvantage. Its realised column is unaffected: `prompt_tokens` is real either way.
+On occamy both regimes are **proved**: 0.0 % cold, 99.1 % / 93.9 % warm.
+
+## Crossover point
+
+- **Cold prefix: crossover exists at 30,000 chars / 12 items (17 % needed)** — billed
+  +44.8 %, absolute −2,910 uncached tokens. At 10,000 chars it is a wash (−2.5 %,
+  2,460 vs 2,523 tokens); at 3,000 chars L1 loses badly (−107 %, +1,117 tokens).
+- **Warm prefix: no crossover anywhere in the swept range.** L1 loses in all four
+  measured warm cells. The smallest loss is +77 tokens (12 items / 3,000 chars); the
+  largest +570 (30 items / 3,000 chars).
+- The **30 items / 3,000 chars** cell is pathological and is reported, not dropped: the
+  index alone is **84 % of the corpus** (2,522 chars of 3,000), so L1 pays to transmit
+  almost the whole corpus as metadata and then fetches 6 bodies on top.
+
+## Why the cold crossover lands where it does
+
+L1's cold cost is roughly `rounds × (index + task)`; C0's is `corpus + task`. L1 wins
+only when the corpus is large enough that one inline transmission costs more than three
+or four transmissions of the index. At 12 items the index is ~735–746 chars and C0's
+prompt grows 1,045 → 2,460 → 6,492 tokens across the three sizes, while L1 stays
+~2,100–3,600 — hence the crossover between 10,000 and 30,000 characters at 17 % needed.
+
+## What this does not say
+
+- The billed metric is per-run. A warm prefix is cached *because it was sent before*, so
+  over a session of N requests C0 amortises its first transmission; the per-run figure
+  is the card's definition, not a session-level total.
+- Percentages in Table 2 sit on bases as small as 12 tokens. Table 2b is the honest
+  reading: the warm penalty is tens to hundreds of tokens, not thousands.
+
+## Unmeasured cells (named, not extrapolated)
+
+The sweep processes were killed by two harness restarts, and a duplicate unit
+(`LAZY-LOAD-CROSSOVER-2`) sharing these write paths deleted `rows.jsonl`/`runs.json`
+and edited this runner's defaults mid-run (my run was isolated behind `--tag`).
+Not measured: **qwen at 12 items / 10,000 chars (1 of 6 runs), 12 items / 30,000 chars,
+and all 30-item cells**; **occamy at 30 items / 10,000 chars (5 of 6 runs) and
+30 items / 30,000 chars**. Resume with
+`python3 run_cx.py --resume --tag _occamy` (and `--tag _qwen`), then re-run
+`analyze_cx.py`.
+
+## Artifacts
+
+`corpus/{12,30}_{03000,10000,30000}/` + `corpus/MANIFEST.json` (exact sizes, per-item
+sha256, seed) · `cx_corpus.py` · `cx_harness.py` · `run_cx.py` · `analyze_cx.py` ·
+`rows.jsonl` (147 rows) · `runs.json` (66 runs) · `analysis.json` · `TABLES.md` ·
+`run_occamy.log` · `run_qwen.log`

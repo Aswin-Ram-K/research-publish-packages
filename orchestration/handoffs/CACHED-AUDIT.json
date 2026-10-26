@@ -1,0 +1,36 @@
+{
+ "unit": "CACHED-AUDIT",
+ "status": "done",
+ "artifacts": [
+  "tools/audit/cached_dedupe.py",
+  "tests/test_cached_dedupe.py",
+  "state/logs/cached-dedupe-audit.json",
+  "orchestration/units/CACHED-AUDIT.md"
+ ],
+ "evidence": {
+  "reproducer": "cells/PROMPT-O1/rows.pre-correction.jsonl arm R -> 39 fires / 71 rows (rate 0.549); first three turns 5: prompt 1824 cached 1088 gap 736; 6: 2163/1408/755; 8: 2841/2112/729",
+  "clean_control": "cells/R2-P1-O1/rows.jsonl arm R -> 0 fires / 69 rows, class clean, arm_quantum 64",
+  "non_discriminating": "GROUND-TRUTH-PROMPT 37/69 fires (same signature), PROMPT-O2-EXTRA 39/71, R2-P1-O2 39/71 -> pattern fires are never verdict-bearing",
+  "corpus_counts": "clean 21 / suspect 3 / corrupt 1 over 25 cells",
+  "worst_cell": "PROMPT-O1 (corrupt): rows.repaired-DO-NOT-USE.jsonl arm quantum None, 40 values off the 64 grid (1409, 1793, 2433, 2753, 3777 ...), each equal to prompt - R2-P1-O1's gap",
+  "controls": "rows.jsonl sha256 == rows.pre-correction.jsonl sha256 == dc0774d8ef7dc4dc... -> the card's 'repaired rows.jsonl' control does not exist on disk",
+  "pytest": ".venv/bin/python -m pytest tests/test_cached_dedupe.py -q -> 7 passed in 0.30s",
+  "commands": [
+   ".venv/bin/python tools/audit/cached_dedupe.py --json --out state/logs/cached-dedupe-audit.json",
+   ".venv/bin/python -m pytest tests/test_cached_dedupe.py -q"
+  ]
+ },
+ "blocker": "",
+ "assumptions": [
+  "The card's step 1 ('must fire on rows.pre-correction.jsonl') and step 4 ('must be silent on the repaired rows.jsonl') are mutually exclusive on current disk state, because RESTORE-O1 restored rows.jsonl to the pre-correction bytes at 03:03. Resolved in favour of step 4's calibration intent (silence on clean controls) and the workspace's own latest ground truth (CORRECTION.md, analysis.json, GROUND-TRUTH-PROMPT); the conflict is reported rather than hidden.",
+  "The 64-token grid is engine-specific (vLLM blocks differ), so 'impossible value' is judged against each arm's own quantum, not a hard-coded 64."
+ ],
+ "next_unit_hint": "The ARMS-PARITY verdict in state/logs/arms-parity.json is falsified by GROUND-TRUTH-PROMPT; a unit should mark it withdrawn and check whether papers/context-cache/CLAIMS.md still cites A-R = -53.85 from PROMPT-O1 (no CLAIMS.md id was found citing it: grep found only C25/U15-rows). Do not repair cells.",
+ "write_paths": [
+  "tools/audit/cached_dedupe.py",
+  "tests/test_cached_dedupe.py",
+  "state/logs/cached-dedupe-audit.json",
+  "orchestration/handoffs/CACHED-AUDIT.json",
+  "orchestration/units/CACHED-AUDIT.md"
+ ]
+}

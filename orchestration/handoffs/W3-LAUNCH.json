@@ -1,0 +1,39 @@
+{
+  "unit": "W3-LAUNCH",
+  "status": "done",
+  "artifacts": [
+    "orchestration/handoffs/W3-LAUNCH.json"
+  ],
+  "evidence": {
+    "success_criteria": "HTTP 200 on :8017 AND handoff on disk",
+    "health_8017": "200 (verified at t=136s, again +30s later)",
+    "container": "gx10-w3-dense9b",
+    "container_id": "6549ca7a610d13eccbd6a9d65560e303c01621226c759662baaa3a35e9bb3993",
+    "host_pid": 3808265,
+    "state": "running, OOMKilled=false",
+    "served_model": "qwen3.5-9b (max_model_len 32768, root qwen3.5-9b)",
+    "port_binding": "192.168.2.168:8017->30000",
+    "inference_proof": "POST /v1/chat/completions -> real completion, usage.prompt_tokens=16, completion_tokens=16, finish_reason=length",
+    "occamy_untouched": "gx10-occamy-nvfp4 StartedAt=2026-10-24T04:07:15Z (predates launch), /health 200 throughout; never stopped/restarted",
+    "qwen9b_untouched": "gx10-qwen9b /health 200, not stopped (attempt 1's launcher would have stopped it; this launch did not)",
+    "commands": [
+      "ssh zer0null@192.168.2.168 'sudo -n docker inspect gx10-occamy-nvfp4'  # spec cloned",
+      "ssh zer0null@192.168.2.168 'sudo -n docker create ... -p 192.168.2.168:8017:30000 ...'",
+      "ssh zer0null@192.168.2.168 'sudo -n docker start gx10-w3-dense9b'",
+      "curl http://192.168.2.168:8017/health -> 200",
+      "curl -X POST http://192.168.2.168:8017/v1/chat/completions -> 200 with completion"
+    ],
+    "why_attempt_1_was_false": "Attempt 1 claimed success at 88 s. The prior logs/P1-launch.json recorded no container key and no create argv, i.e. nothing was ever verified. Ground truth now: first create at --mem-fraction-static 0.18 died at t=19s with 'torch.AcceleratorError: CUDA error: out of memory' at model_runner set_device. Port 8017 had no listener at session start."
+  },
+  "assumptions": {
+    "mem_fraction_static": "0.08 chosen. 0.18 and 0.22 both OOM: GB10 has 121GB unified (73GB already committed by occamy 0.45 + qwen9b 0.15), 48GB available. 0.08 leaves room for occamy's slice.",
+    "context_length": "32768 instead of 65536, to fit the reduced mem fraction. NOTE: this is BELOW the 64k arm the DENSE-SGL cell reports (max_depth_tokens 65176), so 64k-arm rows are NOT reproducible on this instance as configured.",
+    "dropped_flags": "Reasoning/tool-call parsers kept; mamba-* / moe-runner / attention-backend flags omitted (dense model has no mamba/MoE layers).",
+    "gpu_memory_unmeasurable": "nvidia-smi on GB10 reports 'Not Supported' / no processes; sizing was inferred from host `free -g` (121 total / 48 available) rather than device counters."
+  },
+  "blocker": "",
+  "next_unit_hint": "Dense-9B on SGLang is live at http://192.168.2.168:8017 (PID 3808265). If the 64k arm is required, it cannot run at mem-fraction 0.08 with ctx 32768 -- that needs occamy stopped or a larger fraction, which is an operator decision (occamy is never to be touched without explicit approval).",
+  "write_paths": [
+    "orchestration/handoffs/W3-LAUNCH.json"
+  ]
+}

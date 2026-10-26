@@ -1,0 +1,54 @@
+{
+ "unit": "O4-R2",
+ "status": "done",
+ "artifacts": [
+  "state/config/best-config.json#setups.O4",
+  "state/config/r2-o4.json",
+  "state/config/rows.jsonl",
+  "state/config/startup.txt",
+  "experiments/context-cache/cells/VLLM-CELL/vllm_cell.py",
+  "tools/best_config_build.py",
+  "/home/zer0null/r2o4/{run.sh,run.out.log,battery.log,status,startup.txt,rows.jsonl,vllm_cell.py}"
+ ],
+ "evidence": {
+  "preflight": "Mem available 58555 MB; gx10-occamy-nvfp4 Up 192.168.2.168:8012->30000/tcp, gx10-qwen9b Up 8014 (both untouched)",
+  "rows": "wc -l state/config/rows.jsonl -> 284; arms R/A/C/H = 71 each; http_status {200}; cache_report {reported}",
+  "row_fields": "stack/config_id = ('vllm-0.27.1','O4') on all 284 rows (first3 both non-null)",
+  "cached_null": "0 of 284 rows have cached_tokens null",
+  "hit": "0.817432 (round-1 0.869037, delta -0.051605)",
+  "unc_per_turn": "879.0669 (round-1 2230.7782, delta -1351.7113)",
+  "unc_ci": "[824.7806, 933.3532] \u2014 excludes the round-1 baseline 2230.7782",
+  "arm_means": "R 900.9014 A 938.9718 C 588.0845 H 1088.3099, spread 500.2254",
+  "grid_unit": "1088 \u2014 startup.txt:43 'Setting attention block size to 1088 tokens to ensure that attention page size is >= mamba page size.' (--block-size 64); launched with --prefix-match-unit 16 --mamba-cache-mode align",
+  "run_window": "2026-10-24T05:05:11Z -> 05:06:58Z, exit=0",
+  "check": "CHECK setups identical to disk: True | O4 qwen3.5-9b vllm hit=0.817432 unc=879.0669 grid=1088 sha=163a5db6b4c4",
+  "restore": "8016 after docker rm -f gx10-o4-r2 -> HTTP 000 (container gone); 8014 -> qwen3.5-9b 32768; 8012 -> occamy-1.0; docker ps: gx10-occamy-nvfp4 Up, gx10-qwen9b Up",
+  "engine": "vllm 0.27.1 image 2c211a1273b4; engine log confirm: prefix_match_unit=16, mamba_cache_mode=align, enable_prefix_caching=True, speculative_config=None, kv_cache_dtype=fp8, max_model_len=32768, GPU KV cache 634,990 tokens (19.38x concurrency)"
+ },
+ "commands": [
+  "ssh -F /dev/null zer0null@192.168.2.168 \"free -m; docker ps --format ...\"",
+  "docker run -d --name gx10-o4-r2 --entrypoint vllm 2c211a1273b4 serve ... --port 30000",
+  "setsid nohup bash /home/zer0null/r2o4/run.sh &",
+  "python3 tools/best_config_build.py --check"
+ ],
+ "blocker": "",
+ "next_unit_hint": "R2-PROMPT may use O4: hit 0.817 vs O3 0.887 and O1 0.958 \u2014 O4 is the weakest cache hit of the four but cuts unc/turn to 879 (was 2230 under round-1 MTP). Note drop_in_hit vs round-1 is the MTP removal + prefix-match-unit 16, not a regression in the measurement.",
+ "write_paths": [
+  "state/config/best-config.json",
+  "state/config/r2-o4.json",
+  "state/config/rows.jsonl",
+  "state/config/startup.txt",
+  "tools/best_config_build.py",
+  "experiments/context-cache/cells/VLLM-CELL/vllm_cell.py",
+  "orchestration/handoffs/O4-R2.json",
+  "orchestration/units/O4-R2.md"
+ ],
+ "assumptions": [
+  "vllm_cell.py shipped without --stack/--config-id, so every row would have had stack=null/config_id=null (the acceptance defect named on the card). Added two optional args (defaults preserve old behaviour) and a row-level stack/config_id; red-green guards untouched and re-validated via --dry-run.",
+  "The vllm image ENTRYPOINT is already `vllm serve`, so passing `vllm serve ...` failed with 'vllm: error: unrecognized arguments: vllm serve' (exit 2). Relaunched with --entrypoint vllm and `serve ...`. Spec argv recorded as the effective in-container command line.",
+  "config_sha256 is canonical_argv_sha(argv) as tools/best_config_build.py computes it, so it is reproducible; O4 sha changed 8b692aa4 -> 163a5db6.",
+  "best_config_build.py hardcoded O4 from Round-1 WIN-VLLM/V1, so --check regenerated the banned round-1 entry. Rebound O4's source to the R2 argv + state/config/rows.jsonl + startup.txt, and classified the two new counted fields (cached_tokens_null, arm_spread) as MEASURED.",
+  "unc_ci is a normal-approximation 95% CI (1.96*SE over 284 rows), not a bootstrap \u2014 the cell writes no bootstrap; recorded as such in ci_source.",
+  "Relsused the old gx10-qwen9b vllm cache volume is NOT shared: the variant got its own /home/zer0null/.local/share/gx10-o4-r2/vllm-cache, so no warm state from the 8014 launch leaked into the measurement."
+ ]
+}

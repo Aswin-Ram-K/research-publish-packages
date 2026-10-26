@@ -1,0 +1,70 @@
+{
+  "unit": "SYS-OPT-R1",
+  "status": "partial",
+  "artifacts": [
+    "docs/prompt-system/VERSIONS.md",
+    "state/sys-opt-v1.json",
+    "orchestration/units/SYS-OPT-R1.md"
+  ],
+  "evidence": {
+    "append_only_proof": {
+      "command": "python3 -c \"import hashlib,pathlib;raw=pathlib.Path('docs/prompt-system/VERSIONS.md').read_bytes();L=raw.split(b'\\n');prefix=b'\\n'.join(L[:311])+b'\\n';print(len(prefix),hashlib.sha256(prefix).hexdigest())\"",
+      "actual_output": "16845 8e6e629331d2bcdcd6b52f190367f9a3e99f2fe1be219999f9f525c0786e0532",
+      "reading": "equals the freeze digest recorded by PRE-REG-SYSOPT (orchestration/handoffs/PRE-REG-SYSOPT.json evidence.sha256), so §§0-§11 are byte-identical and Amendment A1 is a pure append at line 315; freeze line still line 311, file now 443 lines"
+    },
+    "repad_rederived": {
+      "command": "python3 -c \"import json,statistics,hashlib;raw=open('experiments/context-cache/cells/P2-REPAD/rows.jsonl','rb').read();rows=[json.loads(l) for l in raw.decode().splitlines() if l.strip()];print(len(rows),hashlib.sha256(raw).hexdigest(),{r['requests_sent'] for r in rows},{r['corrections'] for r in rows});[print(a,round(statistics.mean([r['uncached_tokens'] for r in rows if r['arm']==a and isinstance(r['uncached_tokens'],(int,float))]),4)) for a in ('P0','P1','P2')]\"",
+      "actual_output": "213 1e55300788daf62c01376486beee5f1174b2dc8c8c53b60d0b8900a8131a5f44 {1} {0} | P0 541.0704 | P1 528.6429 | P2 549.4857",
+      "reading": "213 rows, requests_sent=1 on all, corrections=0; the instruction's P1 521.20 and P2 541.75 are NOT the pinned means"
+    },
+    "repad_deltas": {
+      "source": "state/r2-p2-repad.json deltas + verdict",
+      "actual_output": "P1/P0 -14.3429 [-57.429,26.957] null | P2/P0 +6.5000 [-35.457,45.971] null | P2/P1 +20.8429 [+9.857,+31.486] costs | verdict padding_costs | pad paid 94.8873, extra cached 74.0571 (0x9/+64x41/+128x20), net +20.8428",
+      "reading": "the padding_costs verdict rests on P2/P1; P2/P0 is null and must not be quoted as an established cost"
+    },
+    "v0_values": {
+      "command": "python3 -c \"import json;m=json.load(open('state/r2-prompt-matrix.json'));[print(s,m['cells'][s]['model'],m['cells'][s]['config_id'],m['cells'][s]['arms']['P1']['mean_uncached_per_turn'],m['cells'][s]['arms']['P1']['hit_fraction_weighted'],m['cells'][s]['rows_sha256']) for s in ('O1','O2')]\"",
+      "actual_output": "O1 occamy-1.0 O1 522.71831 0.770148 8d71a88f22310d59f6e63a1d43a0d6ed009c3dfe48de14d50f7a3d942c71db55 | O2 qwen3.5-9b O2 522.71831 0.770148 1b8268d5b70f237cd68531033f1be716f92841b108a053ac333300411879197a",
+      "reading": "V0 = P1 per model; identical by construction (shared tokenizer, page-64 grid), so dense is a replication of MoE"
+    },
+    "justification_arithmetic": {
+      "command": "python3 -c \"print(709.8592-583.1408, 961.9718-583.1408)\"",
+      "actual_output": "126.7184 378.831",
+      "reading": "both point estimates reproduce from PROMPT-O1's recorded arm means; the quoted CI bounds [47.9,205.4] and [191.7,514.9] do not - paired percentile bootstrap (10k, seed 20261020) gives [61.99,191.32] and [172.17,608.39], paired t(70) gives [59.75,193.69] and [155.26,602.40]"
+    },
+    "fanout_anchor": {
+      "source": "state/serving-brief.json S08 / recompute.py C53",
+      "actual_output": "B/A 6.7443 [4.0454, 9.4432]; A 20,328 vs B 123,256 uncached tokens; 8 fan-outs, 64 branches",
+      "reading": "reproduces as recorded; this is the pointer-layout justification, not a per-turn saving"
+    },
+    "c0_not_wired": {
+      "command": "grep -n '^ARMS' experiments/context-cache/cells/R2-PROMPT/prompt_r2prompt_cell.py; grep -c 'C0' experiments/context-cache/cells/R2-PROMPT/prompt_r2prompt_cell.py",
+      "actual_output": "62:ARMS = (\"P0\", \"P1\", \"P2\", \"P3\") | 0",
+      "reading": "the round harness carries no C0 arm; C0 exists only in the R2-P1 five-arm cell harness, so clause 5's 'C0 if already wired' resolves to not carried"
+    },
+    "absence_checks": {
+      "command": "ls experiments/context-cache/cells/SYS-OPT; ls state/sys-opt-quality.json",
+      "actual_output": "both: No such file or directory",
+      "reading": "no SYS-OPT cell exists and the §1.2 quality set is not frozen, so round 1 could not lawfully start"
+    },
+    "requests": "0 live requests; .occamy.lock never acquired; no GX10 contact; no ssh; no docker"
+  },
+  "blocker": "Round 1 is not definable yet. (1) The version headline is undefined: §1.2 defines it as the unweighted mean of four arm means, P2 is withdrawn and V0 is a single arm, so IMPROVEMENT(V1,V0) is not like-for-like - and the headline is the number the CEILING test reads. (2) No V1 change is named with a measured basis (VERSIONS.md §8 allows <=2, each traceable, written before the round). (3) state/sys-opt-quality.json is absent. Any one of these makes a round either invalid or post-hoc; all three must close before a live row exists.",
+  "next_unit_hint": "Operator resolves A1.7.1 (headline = P1 arm only, or unweighted mean of the three arms) and names V1's change from the five effective levers. Then one unit freezes state/sys-opt-quality.json (20 questions + answer keys + grader, sha256), writes V1's traceability entry (lever / measured finding + row digest / prediction / falsification), and runs 426 rows (2 models x P0,P1,P3 x 71 turns at 32768) under the lock, with byte-identity asserted across models. A separate verifier then (a) re-derives P2-REPAD (the §10 condition this amendment still lacks) and (b) re-derives the round from its rows.",
+  "assumptions": [
+    "V0's setup per model is the engine winner from MATRIX-2x2 (SGLang on both families), i.e. O1 for MoE and O2 for dense; this is what R2-PROMPT measured, so V0 cites it rather than a new choice",
+    "The instruction's two absolute means are treated as transcription slips (CI lower bound; the retired 541.75) because the pinned rows, the recorded deltas and the verdict all agree with each other and disagree with them",
+    "Amendment A1 is recorded as provisional because §10 requires an independent verifier, and none has re-derived P2-REPAD; the amendment was implemented anyway because it is a direct operator instruction and the round had not started",
+    "The quoted CI bounds for C0-R and H-R are kept as operator-stated with their non-reproduction flagged, rather than silently replaced by the locally derived intervals"
+  ],
+  "requests_live": 0,
+  "lock_acquired": false,
+  "tool_calls": 31,
+  "bound": 30,
+  "write_paths": [
+    "docs/prompt-system/VERSIONS.md",
+    "state/sys-opt-v1.json",
+    "orchestration/units/SYS-OPT-R1.md",
+    "orchestration/handoffs/SYS-OPT-R1.json"
+  ]
+}

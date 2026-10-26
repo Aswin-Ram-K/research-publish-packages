@@ -1,0 +1,40 @@
+{
+  "unit": "RUN-C-PLAN",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/RUN-C-PLAN.md",
+    "orchestration/units/RUN-C-PLAN.md"
+  ],
+  "evidence": {
+    "help_flag_line": "usage: run_longrun.py [-h] [--fixture FIXTURE] [--task TASK] [--arms ARMS] [--reps REPS] [--dry-run] [--self-test] [--manifest-dir MANIFEST_DIR] [--manifest-path MANIFEST_PATH] [--rows ROWS] [--base-url BASE_URL] [--model MODEL] [--engine {sglang,vllm}] [--stream] [--no-stream] [--thinking {auto,on,off}] [--max-tokens MAX_TOKENS] [--max-turns MAX_TURNS] [--smoke] [--timeout TIMEOUT] [--run-id RUN_ID] [--resume] [--show-prompts]",
+    "dry_run_would_send_total": 192,
+    "dry_run_exit_code": 0,
+    "help_exit_code": 0,
+    "score_help_exit_code": 0,
+    "per_arm_counts": "transcript-grow 48, transcript-compact 48, pointer-stable 48, lease-reopen 48 (N=48 x reps=1; digest_requests=0 offline)",
+    "manifest": "experiments/ptr-engine/longrun/manifests/dryrun-LR-01-pointer-stable-r1.json: dry_run true, renderer.thinking off, renderer.max_tokens 4096, fixture.sha256 b7e303a65f200e7b3dfd339cf3c6a1f3b4e684e57ca271e74f8f5539a348a500, rows_path experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl",
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/run_longrun.py --help",
+      "python3 experiments/ptr-engine/longrun/run_longrun.py --dry-run --fixture experiments/ptr-engine/longrun/runtime/LR-01.json --arms transcript-grow,transcript-compact,pointer-stable,lease-reopen --reps 1 --thinking off --max-tokens 4096 --run-id longrun-c-2026-10-26 --rows experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl",
+      "python3 experiments/ptr-engine/longrun/score_longrun.py --help"
+    ],
+    "requests_sent": 0
+  },
+  "blocker": "",
+  "assumptions": [
+    "runtime/LR-01.json (N=48) is the config-C fixture; --max-turns 48 is therefore a no-op guard, not a truncation.",
+    "The 2 digest requests are a reserved ceiling (expected_digests()==2), not a dry-run prediction: the dry-run reaches no digest turn within N=48.",
+    "The +4 controls and +6 repairs are host-side budgets outside the row-producing loop.",
+    "checks_structured for LR-01 is 12; the '55' total is the sum across LR-01..06, so the C cell's quality leg is 12 exact-match checks."
+  ],
+  "next_unit_hint": "Executor card: spend exactly 204 requests with the command in RUN-C-PLAN.md §1.2, then score per arm against runtime/LR-01.json. Do not pool across thinking/max_tokens/fixture-sha; do not re-run at another N if the rule fails; a second >600 s turn or >10% empty-length turns stops/rejects, it does not get tuned.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/RUN-C-PLAN.md",
+    "orchestration/handoffs/RUN-C-PLAN.json",
+    "orchestration/units/RUN-C-PLAN.md"
+  ],
+  "would_send_total": 192,
+  "missing_capabilities": [],
+  "budget_arithmetic": "204 = 192 arm-turns (4 arms x 48 turns x 1 rep) + 2 digest requests + 4 controls + 6 repairs; ceiling 4320 - 208 spent = 4112 left, of which config C consumes 204, leaving 3908.",
+  "decision_rule_verbatim_present": true
+}

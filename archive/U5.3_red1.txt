@@ -1,0 +1,1043 @@
+"""``resextract materialize`` — lane → material → docket, end to end.
+
+This is the module that turns the *parts* (U5.1's copy engine, U5.2's folder
+assembler + verifier, the store) into one finished artifact produced by a
+single command.  Nothing here calls a model.
+
+The job, in one paragraph: read a :class:`LaneSpec` (from the ``lanes`` table or
+from a JSON escape hatch), turn every provenance reference it carries into a
+**containment-checked** :class:`~resextract.docket.copy.CopyRequest`, copy the
+material the lane's claims actually rest on out of the read-only target repo,
+assemble the docket from *those copies* (never re-reading the source repo), run
+:func:`~resextract.docket.assemble.verify_docket` and fail loudly if it is not
+ok, then upsert the ``dockets`` row.  It is idempotent: a second run reports
+``unchanged`` copies, preserves ``ITEM.md.r1``, appends (never truncates)
+``HISTORY.md``, and updates — never duplicates — the ``dockets`` row.
+
+Two honesty guards, both red→green tested in
+``tests/test_docket_materialize.py``:
+
+* a lane whose every reference is unresolvable/uncopyable **refuses** to
+  materialize (:class:`MaterializeRefused`) and writes nothing — no half-docket;
+* a reference that escapes the target root (``../``, ``/etc/passwd``, a symlink)
+  is recorded as unresolved and is **never copied**.
+
+Unresolvable references are never silently dropped: they are carried in
+:attr:`MaterializedDocket.unresolved_refs` with a machine-readable reason.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import re
+import subprocess
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Iterable, Mapping, Sequence
+
+from resextract.docket.assemble import (
+    EvidenceItem,
+    assemble as assemble_docket,
+    material_report_from_docket,
+    verify_docket,
+)
+from resextract.docket.copy import (
+    CopyItem,
+    CopyPlan,
+    CopyReport,
+    CopyRequest,
+    Copier,
+    is_binary,
+    sha256_file,
+)
+from resextract.docket.manifest import split_ref
+from resextract import store as _store
+
+__all__ = [
+    "CATEGORY_BY_EXT",
+    "DEFAULT_DOCKET_ROOT",
+    "LaneSpec",
+    "MaterializeError",
+    "MaterializeRefused",
+    "MaterializedDocket",
+    "MemberSpec",
+    "RefPlan",
+    "UnresolvedRef",
+    "materialize_lane",
+    "read_head_sha",
+    "refs_to_copy_requests",
+    "resolve_target_root",
+    "target_category",
+]
+
+DEFAULT_DOCKET_ROOT = "dockets"
+DEFAULT_GRAPH_REL = os.path.join("state", "kg")
+
+#: Extension → material folder.  The four folders are the copy plan's convention
+#: (``material/{code,docs,figures,data}/``); anything unknown lands in ``data``.
+CATEGORY_BY_EXT: dict[str, str] = {
+    # code
+    ".py": "code", ".ts": "code", ".tsx": "code", ".js": "code", ".jsx": "code",
+    ".mjs": "code", ".cjs": "code", ".go": "code", ".rs": "code", ".java": "code",
+    ".rb": "code", ".sh": "code", ".bash": "code", ".zsh": "code", ".c": "code",
+    ".h": "code", ".cc": "code", ".cpp": "code", ".hpp": "code", ".cs": "code",
+    ".kt": "code", ".swift": "code", ".sql": "code", ".lua": "code", ".php": "code",
+    ".pl": "code", ".r": "code", ".jl": "code", ".scala": "code", ".vue": "code",
+    # docs
+    ".md": "docs", ".markdown": "docs", ".txt": "docs", ".rst": "docs",
+    ".adoc": "docs", ".cff": "docs", ".tex": "docs", ".bib": "docs",
+    ".org": "docs", ".1": "docs", ".license": "docs",
+    # figures
+    ".png": "figures", ".jpg": "figures", ".jpeg": "figures", ".gif": "figures",
+    ".svg": "figures", ".webp": "figures", ".pdf": "figures", ".eps": "figures",
+    ".bmp": "figures", ".tiff": "figures", ".drawio": "figures",
+    # data
+    ".json": "data", ".jsonl": "data", ".ndjson": "data", ".csv": "data",
+    ".tsv": "data", ".yaml": "data", ".yml": "data", ".toml": "data",
+    ".xml": "data", ".ini": "data", ".cfg": "data", ".parquet": "data",
+    ".npy": "data", ".npz": "data", ".sqlite": "data", ".db": "data",
+}
+
+#: ``path:L120`` / ``path:L120-L160`` — the graph-node-id shape U2.1 reported
+#: (e.g. ``src/decisions.ts:L1``).  ``split_ref`` already handles ``#L`` spans.
+_COLON_SPAN = re.compile(
+    r"^(?P<path>.+):L(?P<lo>\d+)(?:-L?(?P<hi>\d+))?$"
+)
+_SOURCE_LOC = re.compile(r"^L?(?P<lo>\d+)(?:-L?(?P<hi>\d+))?$")
+_GIT_TIMEOUT_S = 10
+
+_VERDICT_BY_STATE = {
+    "confirmed": "CONFIRMS",
+    "confirms": "CONFIRMS",
+    "verified": "CONFIRMS",
+    "extends": "EXTENDS",
+    "extended": "EXTENDS",
+    "contradicts": "CONTRADICTS",
+    "contradicted": "CONTRADICTS",
+    "refuted": "CONTRADICTS",
+}
+
+
+# --------------------------------------------------------------------------- #
+# errors
+# --------------------------------------------------------------------------- #
+
+
+class MaterializeError(RuntimeError):
+    """A hard failure while materializing (assembly/verification did not hold)."""
+
+
+class MaterializeRefused(MaterializeError):
+    """Raised instead of materializing a lane whose evidence cannot be copied.
+
+    ``reasons`` names *why*, one line per cause, so a refusal is diagnosable
+    without re-running with a debugger.
+    """
+
+    def __init__(self, reasons: Iterable[str]) -> None:
+        self.reasons = list(dict.fromkeys(str(r) for r in reasons if r))
+        super().__init__("materialize refused: " + "; ".join(self.reasons))
+
+
+# --------------------------------------------------------------------------- #
+# lane spec
+# --------------------------------------------------------------------------- #
+
+
+@dataclass
+class MemberSpec:
+    """One claim-bearing member of a lane (built from one candidate row)."""
+
+    id: str
+    kind: str = "claim"
+    title: str = ""
+    summary: str = ""
+    provenance_refs: list[str] = field(default_factory=list)
+    confidence: float | None = None
+    verification_state: str = "unverified"
+
+
+@dataclass
+class LaneSpec:
+    """A lane and the members whose provenance refs must be materialized."""
+
+    slug: str
+    title: str = ""
+    thesis: str = ""
+    audience: str = ""
+    type: str = "memo"  # noqa: A003 - matches the store/schema vocabulary
+    members: list[MemberSpec] = field(default_factory=list)
+    target_slug: str = ""
+    head_sha: str | None = None
+
+    # -- constructors --------------------------------------------------------
+
+    @classmethod
+    def from_store(
+        cls,
+        lane_row: Mapping[str, Any],
+        candidate_rows: Iterable[Mapping[str, Any]] = (),
+    ) -> "LaneSpec":
+        """Build a spec from a ``lanes`` row plus its candidate rows."""
+        members: list[MemberSpec] = []
+        for index, row in enumerate(candidate_rows):
+            cid = row.get("id")
+            mid = f"C{cid}" if cid is not None else f"C{index + 1}"
+            refs: list[str] = []
+            for ref in _candidate_refs(row):
+                if ref not in refs:
+                    refs.append(ref)
+            members.append(
+                MemberSpec(
+                    id=str(mid),
+                    kind=str(row.get("kind") or "claim"),
+                    title=str(row.get("title") or ""),
+                    summary=str(row.get("summary") or ""),
+                    provenance_refs=refs,
+                    confidence=_as_float(row.get("score")),
+                    verification_state=str(row.get("state") or "unverified"),
+                )
+            )
+        return cls(
+            slug=str(lane_row.get("slug") or ""),
+            title=str(lane_row.get("title") or ""),
+            thesis=str(lane_row.get("thesis") or ""),
+            audience=str(lane_row.get("audience") or ""),
+            type=str(lane_row.get("type") or lane_row.get("kind") or "memo"),
+            members=members,
+            target_slug=str(lane_row.get("target") or ""),
+            head_sha=lane_row.get("head_sha"),
+        )
+
+    @classmethod
+    def from_json(cls, path: str | os.PathLike[str]) -> "LaneSpec":
+        """Load a spec from a JSON file (the curated-docket escape hatch).
+
+        Accepts ``members[].provenance_refs`` or ``members[].refs``, and a member
+        ``kind`` that doubles as the member class.  Unknown keys are ignored so
+        a hand-curated file stays readable; missing required ones are defaulted
+        rather than raising a traceback at the user.
+        """
+        raw = json.loads(Path(path).read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            raise ValueError(f"{path}: lane spec must be a JSON object")
+        members: list[MemberSpec] = []
+        for index, entry in enumerate(raw.get("members") or ()):
+            if not isinstance(entry, dict):
+                raise ValueError(f"{path}: members[{index}] must be an object")
+            refs = entry.get("provenance_refs", entry.get("refs", [])) or []
+            if isinstance(refs, str):
+                refs = [refs]
+            members.append(
+                MemberSpec(
+                    id=str(entry.get("id") or f"C{index + 1}"),
+                    kind=str(entry.get("kind") or "claim"),
+                    title=str(entry.get("title") or ""),
+                    summary=str(entry.get("summary") or ""),
+                    provenance_refs=[str(r) for r in refs],
+                    confidence=_as_float(entry.get("confidence", entry.get("score"))),
+                    verification_state=str(
+                        entry.get("verification_state")
+                        or entry.get("state")
+                        or "unverified"
+                    ),
+                )
+            )
+        lane_type = str(raw.get("type") or raw.get("kind") or "memo")
+        return cls(
+            slug=str(raw.get("slug") or ""),
+            title=str(raw.get("title") or ""),
+            thesis=str(raw.get("thesis") or ""),
+            audience=str(raw.get("audience") or ""),
+            type=lane_type,
+            members=members,
+            target_slug=str(raw.get("target_slug") or raw.get("target") or ""),
+            head_sha=raw.get("head_sha"),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "slug": self.slug,
+            "title": self.title,
+            "thesis": self.thesis,
+            "audience": self.audience,
+            "type": self.type,
+            "target_slug": self.target_slug,
+            "head_sha": self.head_sha,
+            "members": [
+                {
+                    "id": m.id,
+                    "kind": m.kind,
+                    "title": m.title,
+                    "summary": m.summary,
+                    "provenance_refs": list(m.provenance_refs),
+                    "confidence": m.confidence,
+                    "verification_state": m.verification_state,
+                }
+                for m in self.members
+            ],
+        }
+
+
+def _as_float(value: Any) -> float | None:
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
+def _candidate_refs(row: Mapping[str, Any]) -> list[str]:
+    """Every provenance ref a candidate row carries, in row order.
+
+    The mining units store ``provenance_json`` as a list of dicts such as
+    ``{"kind": "graph_node", "ref": "src_lease_hold", ...}`` and
+    ``{"kind": "file_lines", "ref": "src/lease.ts#L169", ...}``; graph node ids
+    also live in ``graph_nodes_json``.  Both shapes are read, as are plain-string
+    provenance lists (older / hand-written rows).
+    """
+    out: list[str] = []
+    for key in ("provenance_json", "provenance"):
+        raw = row.get(key)
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except (ValueError, TypeError):
+                raw = [raw]
+        if not isinstance(raw, (list, tuple)):
+            continue
+        for entry in raw:
+            if isinstance(entry, str):
+                out.append(entry)
+            elif isinstance(entry, Mapping):
+                ref = entry.get("ref") or entry.get("path") or entry.get("node")
+                if ref:
+                    out.append(str(ref))
+    for key in ("graph_nodes_json", "graph_nodes"):
+        raw = row.get(key)
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except (ValueError, TypeError):
+                raw = [raw]
+        if isinstance(raw, (list, tuple)):
+            for node in raw:
+                if isinstance(node, str):
+                    out.append(f"graph:{node}")
+                elif isinstance(node, Mapping) and node.get("id"):
+                    out.append(f"graph:{node['id']}")
+    return out
+
+
+# --------------------------------------------------------------------------- #
+# refs → copy requests
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True)
+class UnresolvedRef:
+    """A reference that could not become a verifiable copy request."""
+
+    ref: str
+    reason: str
+    detail: str = ""
+
+    def to_dict(self) -> dict[str, str]:
+        return {"ref": self.ref, "reason": self.reason, "detail": self.detail}
+
+    def __str__(self) -> str:  # pragma: no cover - display helper
+        tail = f" ({self.detail})" if self.detail else ""
+        return f"{self.ref}: {self.reason}{tail}"
+
+
+@dataclass
+class RefPlan:
+    """The outcome of turning refs into copy requests."""
+
+    requests: list[CopyRequest] = field(default_factory=list)
+    by_ref: dict[str, str] = field(default_factory=dict)  # ref → dest_rel
+    unresolved: list[UnresolvedRef] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "requests": [
+                {
+                    "src": r.src,
+                    "dest_rel": r.dest_rel,
+                    "reason": r.reason,
+                    "excerpt": list(r.excerpt) if r.excerpt else None,
+                }
+                for r in self.requests
+            ],
+            "by_ref": dict(sorted(self.by_ref.items())),
+            "unresolved": [u.to_dict() for u in self.unresolved],
+        }
+
+
+def target_category(path: str) -> str:
+    """``code``/``docs``/``figures``/``data`` for ``path``, by extension."""
+    return CATEGORY_BY_EXT.get(os.path.splitext(path)[1].lower(), "data")
+
+
+def _dest_for(rel: str, used: dict[str, str]) -> str:
+    rel = rel.replace(os.sep, "/").lstrip("/")
+    base = os.path.basename(rel)
+    category = target_category(base)
+    dest = f"{category}/{base}"
+    if used.get(dest, rel) != rel:
+        stem, ext = os.path.splitext(base)
+        digest = hashlib.sha256(rel.encode("utf-8")).hexdigest()[:6]
+        dest = f"{category}/{stem}-{digest}{ext}"
+    return dest
+
+
+def _contained(src: str, target_root: str) -> bool:
+    real = os.path.realpath(src)
+    root = os.path.realpath(target_root)
+    return real == root or real.startswith(root + os.sep)
+
+
+def _line_count(path: str) -> int:
+    """Lines as ``readlines()`` would count them (what the verifier uses)."""
+    try:
+        with open(path, "rb") as fh:
+            return len(fh.read().splitlines())
+    except OSError:  # pragma: no cover - existence checked earlier
+        return 0
+
+
+def _read_head(target_root: str) -> str | None:
+    try:
+        proc = subprocess.run(
+            ["git", "-C", target_root, "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=_GIT_TIMEOUT_S,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    sha = proc.stdout.strip()
+    return sha or None
+
+
+def read_head_sha(target_root: str, fallback: str | None = None) -> tuple[str | None, str]:
+    """Return ``(head_sha, source)`` reading the target's real HEAD.
+
+    ``source`` is ``"git"`` when ``git rev-parse HEAD`` answered and
+    ``"lane_spec"`` when it did not (a fixture repo, a missing ``git``), in which
+    case the spec's own ``head_sha`` is used and recorded honestly.
+    """
+    sha = _read_head(target_root)
+    if sha:
+        return sha, "git"
+    return (fallback or None), "lane_spec"
+
+
+def _resolve_one(
+    ref: str,
+    *,
+    target_root: str,
+    by_id: Mapping[str, Any] | None,
+    graph_available: bool,
+    reason_prefix: str,
+    used: dict[str, str],
+) -> tuple[CopyRequest | None, UnresolvedRef | None]:
+    text = (ref or "").strip()
+    if not text:
+        return None, UnresolvedRef(ref, "empty_ref")
+    kind, path, span = split_ref(text)
+    if span is None:
+        match = _COLON_SPAN.match(path)
+        if match:
+            path = match.group("path")
+            span = (
+                int(match.group("lo")),
+                int(match.group("hi") or match.group("lo")),
+            )
+    if kind == "web":
+        return None, UnresolvedRef(ref, "web_ref_not_local", text)
+    if not path:
+        return None, UnresolvedRef(ref, "empty_ref", text)
+
+    # -- graph node ids (bare id, or an explicit ``graph:`` ref) -------------
+    is_node = kind == "graph" or (by_id is not None and path in by_id)
+    if is_node:
+        if not graph_available or by_id is None:
+            return None, UnresolvedRef(ref, "graph_unavailable", path)
+        node = by_id.get(path)
+        if node is None:
+            return None, UnresolvedRef(ref, "graph_node_not_found", path)
+        source_file = str(getattr(node, "source_file", "") or "").strip()
+        if not source_file:
+            kind_label = getattr(node, "type", None) or getattr(node, "file_type", None)
+            return None, UnresolvedRef(
+                ref, "graph_node_has_no_source_file", f"{path} ({kind_label})"
+            )
+        if span is None:
+            loc = str(getattr(node, "source_location", "") or "").strip()
+            match = _SOURCE_LOC.match(loc)
+            if match:
+                span = (
+                    int(match.group("lo")),
+                    int(match.group("hi") or match.group("lo")),
+                )
+        path = source_file
+
+    # -- containment (realpath) before anything is read ----------------------
+    src = path if os.path.isabs(path) else os.path.join(target_root, path)
+    if not _contained(src, target_root):
+        return None, UnresolvedRef(ref, "outside_target_root", src)
+    src = os.path.realpath(src)
+    if not os.path.isfile(src):
+        return None, UnresolvedRef(ref, "not_a_file_in_target", src)
+
+    rel = os.path.relpath(src, os.path.realpath(target_root)).replace(os.sep, "/")
+    dest = _dest_for(rel, used)
+
+    if span is not None:
+        span = (int(span[0]), int(span[1]))
+        if span[0] < 1 or span[1] < span[0]:
+            return None, UnresolvedRef(ref, "invalid_span", f"{span[0]}-{span[1]}")
+        if is_binary(src):
+            span = None  # a byte range has no lines to quote
+        else:
+            lines = _line_count(src)
+            if span[1] > lines:
+                return None, UnresolvedRef(
+                    ref, "span_past_eof", f"L{span[0]}-L{span[1]} of {lines}"
+                )
+
+    used.setdefault(dest, rel)
+    return (
+        CopyRequest(
+            src=src,
+            dest_rel=dest,
+            reason=f"{reason_prefix}:{ref}",
+            excerpt=span,
+        ),
+        None,
+    )
+
+
+def refs_to_copy_requests(
+    refs: Iterable[str],
+    *,
+    target_root: str,
+    graph: Any = None,
+    reason_prefix: str = "materialize",
+) -> RefPlan:
+    """Turn every ref shape this build produces into a :class:`CopyRequest`.
+
+    Handled shapes: ``file:path#L120-L160``, ``path#L120-L160``, ``path#L120``,
+    ``path:L120`` (the graph-node-id shape U2.1 reported, e.g.
+    ``src/decisions.ts:L1``), a bare graph node id (resolved through ``graph`` to
+    its ``source_file`` — plus ``source_location`` when present), and a bare
+    relative path with no line info.
+
+    Every request is containment-checked against ``target_root`` by realpath
+    *before* it is emitted, and destinations are deduplicated.  Anything that
+    cannot be resolved is returned in :attr:`RefPlan.unresolved` with a
+    machine-readable reason — never silently dropped.
+
+    ``graph`` may be a :class:`resextract.kg.Graph` or a plain node dict.
+    """
+    by_id: Mapping[str, Any] | None = None
+    if graph is not None:
+        if hasattr(graph, "by_id"):
+            try:
+                by_id = dict(graph.by_id())
+            except Exception:  # noqa: BLE001 - a broken graph is not fatal here
+                by_id = None
+        elif isinstance(graph, Mapping):
+            by_id = graph
+        elif isinstance(graph, (list, tuple)):
+            by_id = {
+                str(getattr(n, "id", None) or (n.get("id") if isinstance(n, Mapping) else "")): n
+                for n in graph
+            }
+            by_id.pop("", None)
+
+    requests: list[CopyRequest] = []
+    by_ref: dict[str, str] = {}
+    unresolved: list[UnresolvedRef] = []
+    used: dict[str, str] = {}
+    by_dest: dict[str, CopyRequest] = {}
+
+    for ref in refs or ():
+        request, problem = _resolve_one(
+            ref,
+            target_root=target_root,
+            by_id=by_id,
+            graph_available=by_id is not None,
+            reason_prefix=reason_prefix,
+            used=used,
+        )
+        if request is None:
+            assert problem is not None
+            unresolved.append(problem)
+            continue
+        existing = by_dest.get(request.dest_rel)
+        if existing is None:
+            by_dest[request.dest_rel] = request
+            requests.append(request)
+        elif existing.excerpt is None and request.excerpt is not None:
+            # keep the *deduplicated* request but carry the cited span forward so
+            # EXCERPTS.md still records why the bytes matter.
+            existing.excerpt = request.excerpt
+        by_ref[ref] = request.dest_rel
+
+    return RefPlan(requests=requests, by_ref=by_ref, unresolved=unresolved)
+
+
+# --------------------------------------------------------------------------- #
+# result
+# --------------------------------------------------------------------------- #
+
+
+@dataclass
+class MaterializedDocket:
+    """What one materialize run produced (or would produce, on ``dry_run``)."""
+
+    docket_dir: str
+    copy_report: CopyReport | None = None
+    manifest: Any = None
+    verification: Any = None
+    files_written: list[str] = field(default_factory=list)
+    refusals: list[str] = field(default_factory=list)
+    unresolved_refs: list[UnresolvedRef] = field(default_factory=list)
+    plan: CopyPlan | None = None
+    head_sha: str | None = None
+    head_sha_source: str = ""
+    dockets_row_id: int | None = None
+    dry_run: bool = False
+    notes: list[str] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        return bool(self.verification is not None and self.verification.ok)
+
+    def counts(self) -> dict[str, int]:
+        report = self.copy_report
+        return {
+            "copied": report.copied_count if report else 0,
+            "unchanged": report.unchanged_count if report else 0,
+            "linked": report.linked_count if report else 0,
+            "refused": report.refused_count if report else 0,
+            "missing": report.missing_count if report else 0,
+            "unresolved": len(self.unresolved_refs),
+            "files_written": len(self.files_written),
+        }
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "ok": self.ok,
+            "dry_run": self.dry_run,
+            "docket_dir": self.docket_dir,
+            "head_sha": self.head_sha,
+            "head_sha_source": self.head_sha_source,
+            "dockets_row_id": self.dockets_row_id,
+            "counts": self.counts(),
+            "files_written": list(self.files_written),
+            "refusals": list(self.refusals),
+            "unresolved_refs": [u.to_dict() for u in self.unresolved_refs],
+            "copy_report": self.copy_report.to_dict() if self.copy_report else None,
+            "verification": self.verification.to_dict() if self.verification else None,
+            "plan": self.plan.to_dict() if self.plan else None,
+            "notes": list(self.notes),
+        }
+
+
+# --------------------------------------------------------------------------- #
+# target resolution
+# --------------------------------------------------------------------------- #
+
+
+def _config_target_path(slug: str, config_dir: str = "config") -> str | None:
+    path = os.path.join(config_dir, "targets.toml")
+    if not os.path.isfile(path):
+        return None
+    try:
+        try:
+            import tomllib  # Python ≥ 3.11
+        except ModuleNotFoundError:  # pragma: no cover - older interpreters
+            import tomli as tomllib  # type: ignore[no-redef]
+        with open(path, "rb") as fh:
+            raw = tomllib.load(fh)
+    except (OSError, ValueError):
+        return None
+    entry = ((raw.get("targets") or {}) if isinstance(raw, dict) else {}).get(slug)
+    if isinstance(entry, dict) and entry.get("path"):
+        return str(entry["path"])
+    return None
+
+
+def resolve_target_root(
+    slug: str,
+    *,
+    con: Any = None,
+    config_dir: str = "config",
+) -> str | None:
+    """Resolve a target slug to a directory: store row, then config, then path.
+
+    The store's ``targets`` table is authoritative when a row exists; otherwise
+    ``config/targets.toml`` is consulted (that is where the read-only acceptance
+    target is declared); otherwise the slug is accepted as a directory path.
+    """
+    if con is not None:
+        try:
+            row = _store.get_target(con, slug)
+        except Exception:  # noqa: BLE001 - an unreadable store falls through
+            row = None
+        if row and row.get("path") and os.path.isdir(str(row["path"])):
+            return str(row["path"])
+    from_config = _config_target_path(slug, config_dir)
+    if from_config and os.path.isdir(from_config):
+        return from_config
+    if os.path.isdir(slug):
+        return slug
+    return None
+
+
+# --------------------------------------------------------------------------- #
+# the command
+# --------------------------------------------------------------------------- #
+
+
+def _docket_dir_for(lane: LaneSpec, target_slug: str, docket_root: str) -> str:
+    return os.path.join(docket_root, target_slug, lane.slug)
+
+
+def _store_dir(docket_dir: str) -> str:
+    rel = os.path.relpath(os.path.abspath(docket_dir))
+    return docket_dir if rel.startswith(os.pardir) else rel
+
+
+def _default_graph_path(target_slug: str) -> str | None:
+    candidate = os.path.join(
+        DEFAULT_GRAPH_REL, target_slug, "graphify-out", "graph.json"
+    )
+    return candidate if os.path.isfile(candidate) else None
+
+
+def _claim_for(
+    member: MemberSpec,
+    pairs: Sequence[tuple[str, str, CopyItem]],
+) -> dict[str, Any]:
+    provenance: list[str] = []
+    evidence: list[str] = []
+    for _ref, dest, item in pairs:
+        suffix = ""
+        if item.excerpt:
+            suffix = f"#L{item.excerpt[0]}-L{item.excerpt[1]}"
+        provenance.append(f"file:{dest}{suffix}")
+        evidence.append(f"material/{dest}{suffix}")
+    text = member.summary or member.title or f"Material claim {member.id}."
+    return {
+        "id": member.id,
+        "text": text,
+        "kind": member.kind,
+        "provenance": sorted(set(provenance)),
+        "verdict": _VERDICT_BY_STATE.get(member.verification_state.lower(), "UNVERIFIED"),
+        "evidence": sorted(set(evidence)),
+    }
+
+
+def _upsert_docket_row(
+    con: Any,
+    *,
+    lane: LaneSpec,
+    target_slug: str,
+    docket_dir: str,
+    manifest: Any,
+    head_sha: str | None,
+    graph_hash: str | None,
+    freshness: str,
+    verified_at: str | None,
+) -> int:
+    stored_dir = _store_dir(docket_dir)
+    lane_row = None
+    if lane.slug:
+        try:
+            lane_row = _store.get_lane_by_slug(con, target_slug, lane.slug)
+        except Exception:  # noqa: BLE001 - the row is optional metadata
+            lane_row = None
+    existing = None
+    for row in con.execute(
+        "SELECT id, dir FROM dockets WHERE dir=? OR dir=?", (stored_dir, docket_dir)
+    ).fetchall():
+        existing = dict(row)
+        break
+    manifest_json = (
+        manifest.model_dump(mode="json", by_alias=True) if manifest is not None else None
+    )
+    now = _store.utcnow()
+    if existing:
+        _store.upsert_docket(
+            con,
+            id=int(existing["id"]),
+            lane_id=(lane_row or {}).get("id"),
+            dir=stored_dir,
+            manifest_json=manifest_json,
+            source_head=head_sha,
+            graph_hash=graph_hash,
+            freshness=freshness,
+            verified_at=verified_at or now,
+            last_refresh_at=now,
+        )
+        return int(existing["id"])
+    return int(
+        _store.upsert_docket(
+            con,
+            lane_id=(lane_row or {}).get("id"),
+            dir=stored_dir,
+            manifest_json=manifest_json,
+            source_head=head_sha,
+            graph_hash=graph_hash,
+            freshness=freshness,
+            verified_at=verified_at or now,
+            last_refresh_at=now,
+        )
+    )
+
+
+def materialize_lane(
+    lane: LaneSpec,
+    *,
+    target_root: str,
+    docket_root: str = DEFAULT_DOCKET_ROOT,
+    graph_path: str | None = None,
+    dry_run: bool = False,
+    db_path: str | os.PathLike[str] | None = None,
+    config_dir: str = "config",
+) -> MaterializedDocket:
+    """Copy a lane's material, assemble + verify its docket, record the row.
+
+    See the module docstring for the guarantees.  Raises
+    :class:`MaterializeRefused` when the lane has no verifiable material (and
+    writes nothing), :class:`MaterializeError` when assembly/verification does
+    not hold.
+    """
+    target_root = os.path.abspath(target_root)
+    if not os.path.isdir(target_root):
+        raise MaterializeError(f"target root is not a directory: {target_root}")
+    if not lane.slug:
+        raise MaterializeRefused(["lane spec has no slug"])
+
+    target_slug = lane.target_slug or os.path.basename(target_root.rstrip(os.sep))
+    docket_dir = os.path.abspath(_docket_dir_for(lane, target_slug, docket_root))
+
+    # 1. the target's real HEAD, at the moment material is copied --------------
+    head_sha, head_source = read_head_sha(target_root, lane.head_sha)
+    notes: list[str] = []
+    if head_source != "git":
+        notes.append(
+            "head_sha: `git rev-parse HEAD` did not answer for "
+            f"{target_root}; recorded the LaneSpec head_sha instead"
+        )
+
+    # 2. refs → requests ------------------------------------------------------
+    if graph_path is None:
+        graph_path = _default_graph_path(target_slug)
+    graph = None
+    graph_hash: str | None = None
+    if graph_path and os.path.isfile(graph_path):
+        try:
+            from resextract.kg import read_graph
+
+            graph = read_graph(graph_path)
+            graph_hash = sha256_file(graph_path)
+        except Exception as exc:  # noqa: BLE001 - node ids become unresolvable
+            notes.append(f"graph_path {graph_path!r} could not be read: {exc}")
+            graph = None
+            graph_path = None
+
+    owners: dict[str, str] = {}
+    all_refs: list[str] = []
+    for member in lane.members:
+        for ref in member.provenance_refs:
+            if ref not in owners:
+                owners[ref] = member.id
+            all_refs.append(ref)
+    ref_plan = refs_to_copy_requests(
+        all_refs,
+        target_root=target_root,
+        graph=graph,
+        reason_prefix=f"lane:{lane.slug}",
+    )
+    unresolved: list[UnresolvedRef] = list(ref_plan.unresolved)
+
+    copier = Copier(target_root, docket_dir)
+    plan = copier.plan(ref_plan.requests)
+    plan_item_by_dest = {item.dest: item for item in plan.items}
+
+
+    # a refused/missing planned item is an unresolved ref, reported as such
+    for ref, dest in ref_plan.by_ref.items():
+        item = plan_item_by_dest.get(dest)
+        if item is None or item.status in ("refused", "missing"):
+            unresolved.append(
+                UnresolvedRef(
+                    ref,
+                    (item.refusal_reason if item is not None else "not_planned"),
+                    dest,
+                )
+            )
+    unresolved = list({(u.ref, u.reason): u for u in unresolved}.values())
+
+    member_pairs: dict[str, list[tuple[str, str, CopyItem]]] = {}
+    for ref, dest in ref_plan.by_ref.items():
+        item = plan_item_by_dest.get(dest)
+        if item is None or item.status in ("refused", "missing"):
+            continue
+        member_pairs.setdefault(owners.get(ref, ""), []).append((ref, dest, item))
+
+    # -- dry run: write nothing, report the plan ------------------------------
+    if dry_run:
+        would_write = sorted(
+            {
+                "MANIFEST.json", "README.md", "CLAIMS.md", "EVIDENCE.md",
+                "PRIOR_ART.md", "REFERENCES.md", "REFERENCES.bib", "RESULTS.md",
+                "METHOD.md", "CHECKLIST.md", "OPEN_QUESTIONS.md",
+                "UPDATE_BACKLOG.md", "ITEM.md", "HISTORY.md",
+                "web/README.md", "repro/README.md", "repro/run.sh",
+            }
+        ) + [f"material/{i.dest}" for i in plan.items if i.status == "copied"]
+        report = CopyReport(items=list(plan.items))
+        return MaterializedDocket(
+            docket_dir=docket_dir,
+            copy_report=report,
+            manifest=None,
+            verification=None,
+            files_written=would_write,
+            refusals=[],
+            unresolved_refs=unresolved,
+            plan=plan,
+            head_sha=head_sha,
+            head_sha_source=head_source,
+            dockets_row_id=None,
+            dry_run=True,
+            notes=notes,
+        )
+
+    # 4. execute the copies ---------------------------------------------------
+    report = copier.execute(plan)
+    executed_by_dest = {item.dest: item for item in report.items}
+
+    claims: list[dict[str, Any]] = []
+    for member in lane.members:
+        pairs = member_pairs.get(member.id) or []
+        live_pairs = [
+            (ref, dest, executed_by_dest[dest])
+            for ref, dest, _ in pairs
+            if executed_by_dest.get(dest) is not None
+            and executed_by_dest[dest].status in ("copied", "unchanged", "linked")
+        ]
+        if not live_pairs:
+            for ref in member.provenance_refs:
+                if not any(u.ref == ref for u in unresolved):
+                    unresolved.append(
+                        UnresolvedRef(ref, "not_materialized_for_this_member", member.id)
+                    )
+            continue
+        claims.append(_claim_for(member, live_pairs))
+    claims.sort(key=lambda c: c["id"])
+
+
+    # 5. assemble from the docket's *own* copies ------------------------------
+    material_report = material_report_from_docket(docket_dir, source_root=target_root)
+    # ``material_report_from_docket`` only knows the docket-internal dest; put the
+    # real source path back on each item so MANIFEST.json records where the bytes
+    # actually came from (the copied dest keeps the folder convention).
+    src_by_dest = {r.dest_rel: r.src for r in ref_plan.requests}
+    for item in material_report.items:
+        if item.dest in src_by_dest:
+            item.src = src_by_dest[item.dest]
+    verified_at = _store.utcnow()
+    freshness = {
+        "verified_at": verified_at,
+        "prior_art_checked_at": None,
+        "age_days": 0.0,
+        "state": "current",
+    }
+    target_meta = {
+        "slug": target_slug,
+        "head_sha": head_sha,
+        "graph_hash": graph_hash,
+    }
+    evidence = [
+        EvidenceItem(
+            ref=f"material/{item.dest}",
+            source_kind="local",
+            sha256=item.sha256,
+            context=f"{item.bytes} bytes copied from the read-only target",
+        )
+        for item in report.items
+        if item.status in ("copied", "unchanged")
+    ]
+    assembled = assemble_docket(
+        docket_dir,
+        lane={
+            "slug": lane.slug,
+            "type": lane.type,
+            "title": lane.title,
+            "thesis": lane.thesis,
+            "audience": lane.audience,
+            "status": "draft",
+        },
+        claims=claims,
+        evidence=evidence,
+        material_report=material_report,
+        target_meta=target_meta,
+        freshness=freshness,
+        graph_path=graph_path if graph is not None else None,
+        source_root=target_root,
+        model="",
+    )
+
+    # 6. verify — fail loudly, never register an unverified docket -------------
+    verification = verify_docket(docket_dir)
+    if not verification.ok:
+        raise MaterializeError(
+            "docket verification failed for "
+            f"{docket_dir}: " + "; ".join(verification.problems)
+        )
+
+    # 7. the dockets row (idempotent: same dir updates, never duplicates) ------
+    con = _store.connect(db_path) if db_path is not None else _store.connect()
+    try:
+        row_id = _upsert_docket_row(
+            con,
+            lane=lane,
+            target_slug=target_slug,
+            docket_dir=docket_dir,
+            manifest=assembled.manifest,
+            head_sha=head_sha,
+            graph_hash=graph_hash,
+            freshness=str(freshness["state"]),
+            verified_at=verified_at,
+        )
+    finally:
+        con.close()
+
+    files_written = list(assembled.files)
+    return MaterializedDocket(
+        docket_dir=docket_dir,
+        copy_report=report,
+        manifest=assembled.manifest,
+        verification=verification,
+        files_written=files_written,
+        refusals=[
+            f"{i.dest}: {i.refusal_reason}" for i in report.items if i.status == "refused"
+        ],
+        unresolved_refs=unresolved,
+        plan=plan,
+        head_sha=head_sha,
+        head_sha_source=head_source,
+        dockets_row_id=row_id,
+        dry_run=False,
+        notes=notes,
+    )

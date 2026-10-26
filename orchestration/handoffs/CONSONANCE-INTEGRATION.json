@@ -1,0 +1,199 @@
+{
+  "unit": "CONSONANCE-INTEGRATION",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/CONSONANCE-INTEGRATION.md",
+    "orchestration/handoffs/CONSONANCE-INTEGRATION.json",
+    "orchestration/units/CONSONANCE-INTEGRATION.md"
+  ],
+  "evidence": {
+    "command_or_count": "76-line document, sections A-F present; vLLM 0/52 rows report cached_tokens (prompt_tokens_details null 52/52), SGLang 46/48; handoff/card figures 45/45 and 47/48 do NOT reproduce on the cited row file",
+    "commands": [
+      "python3 -c \"json.loads over experiments/ptr-engine/measure/rows-equalinfo-2026-10-26.jsonl, counted cached_reported and cached_tokens non-null by model\" -> occamy-1.0-NVFP4 rows 48 / reported 46 / nonnull 46; qwen3.5-9b rows 52 / reported 0 / nonnull 0; ptd_null 48 and 52",
+      "wc -l papers/context-cache/CONSONANCE-INTEGRATION.md -> 76 (cap 140)",
+      "grep -rn 'close enough' over *.md/*.json -> no hit outside .verify-scratch corpus data, so the operator aim is cited as a 2026-10-26 direction, not a file",
+      "read-only: cat of the 6 package files, RECORD.md, CLAIMS.md, COMPILATION.md, GAPS-INVENTORY.md, C0-EQUALINFO.json, LIVE-CELLS-2.json, ADOPTION.md, 4 candidate briefs",
+      "zero network requests: no curl, no model call, no engine probe in this unit"
+    ]
+  },
+  "experiments_mapped": {
+    "E1": {
+      "status": "PARTLY",
+      "title": "CACHE-BOUNDARY-SWEEP",
+      "have": "residue law cached=64*floor((P1-1)/64) with uncached=(P1 mod 64)+L, L=n_payload+12, 186/186 rows residual 0 (RECORD.md sec.2, LAW.md:83-93); residue-0 anchor primer 384 -> append 397 -> cached 320 -> uncached 77 at 5.16x (LIVE-CELLS-2 evidence.cell_A); warm cells at residues 2 and 5, cached 384 / 320, uncached 15 / 18 (measure/rows.jsonl cells B, A); append control incl. vLLM cold re-bill cached 0, ttft 1.770/1.773 s (evidence.cell_C.append_cached)",
+      "missing": "the sweep proper: >=8 rewrite offsets tail->head x3 reps on one frozen build, placed so 'monotone in offset' and 'block alignment only' predict differently; a mismatched-tokenizer arm (does not exist at all)",
+      "budget_max": 60,
+      "budget_needed": 39
+    },
+    "E2": {
+      "status": "PARTLY",
+      "title": "CHECKPOINT-COST",
+      "have": "adjacent compaction arm ~1407.7 uncached/turn vs static transcript 1911.2 (card figure, no file carries it), on the invalid predecessor baseline 0/3 both models by construction (C0-BASELINE.json finding, c0_accuracy)",
+      "missing": "arms append-only / one checkpoint at ~70% / checkpoint every ~20 steps on one fixture and verifier, with time-to-verified-success and per-row verified_success; a no-op-checkpoint control that must cost ~0",
+      "budget_max": 120
+    },
+    "E3": {
+      "status": "NEW",
+      "title": "ORDERING",
+      "have": "mechanism adjacent only: C67/C67a - a mid-run edit in a cached prefix is null on three setups and costs on the fourth, O4 P3-P1 +23.5211 [8.39, 53.48]",
+      "why_it_matters": "most direct lever on the close-enough aim: suffix placement keeps the frozen prefix byte-identical, the asset the transcript arm holds (cached_tokens 22528) and the pointer arm spends per resolve",
+      "budget_max": 40
+    },
+    "E4": {
+      "status": "NEW",
+      "title": "32K-DENSE-TIER",
+      "have": "qwen3.5-9b max_model_len 32768 on :8014, no cache counters (0/52); /tokenize over-reads ~7.5k so 'fits raw' must be decided on served prompt_tokens; thinking-on left 27/42 base rows empty at completion_tokens 300, so enable_thinking=false is mandatory",
+      "only_experiment_needing_vllm": true,
+      "budget_max": 80
+    },
+    "E5": {
+      "status": "PARTLY",
+      "title": "HYBRID-REUSE-ELIGIBILITY",
+      "have": "occamy is hybrid (max_mamba_cache_size 64 binding, CLAIMS.md C54); ADOPTION.md:17 records the mamba/hybrid row as captured once 2026-10-20, never swept",
+      "missing": "the live /get_server_info answer on :8012 as the input, then the 8-length ladder x3 reps plus identical-repeat and first-token-differs controls",
+      "budget_max": 60
+    },
+    "E6": {
+      "status": "PARTLY",
+      "title": "EXP48-CONTROL-REPAIR",
+      "have": "the working-set comparison the consumer never ran: C0-EQUALINFO (items_in_context 12 every row, nothing dropped, 3 arms, AUD-4417 3/3 per arm); no-body discrimination already red (V-QUALITY-ARM checks[2]: arm D 0/3, 0 resolved, echoes 756741be)",
+      "red_before_green": [
+        "fact-absence: accuracy must fail with k01 withheld; already demonstrated accidentally at 0/3 both models (C0-BASELINE.json c0_accuracy)",
+        "truncation: truncation.dropped is empty every turn, so it has never fired - show it red on an over-window prompt or it is decoration (DO_NOT_REDO #8)",
+        "protocol identity: vLLM R ran a text FETCH because tool_choice auto is refused, so the pair is red by construction until both arms share one protocol",
+        "no-body control restated deliberately rather than by accident"
+      ],
+      "budget_max": 80
+    }
+  },
+  "answered": [],
+  "partly": [
+    "E1",
+    "E2",
+    "E5",
+    "E6"
+  ],
+  "new": [
+    "E3",
+    "E4"
+  ],
+  "contract_gaps": [
+    {
+      "id": "B1",
+      "gap": "cached_tokens semantics conflict; resolved per-engine",
+      "rule": "sglang + absent -> 0 (measured: LIVE-CELLS-2 cell_A usage_note 'OMITS cached_tokens when it is 0; null therefore means 0', P1 397 -> cached 320 -> uncached 77, 3/3 reps); vllm + null -> unknown (0 of 52 rows re-counted here, prompt_tokens_details null 52/52)",
+      "risk": "without the rule a joined table silently converts unknown into zero; RECORD.md's 2026-10-26 layer states the zero-reading as a UNIVERSAL sentence, true for :8012 and false for :8014, and needs engine scope at its source",
+      "count_drift": "handoff vllm_cache_limit says SGLang 47/48 (measured 46/48) and vLLM 45/45 (measured 0/52)"
+    },
+    {
+      "id": "B2",
+      "gap": "the four fingerprints are absent from row files",
+      "fields_to_add": [
+        "model_fingerprint (id + revision/quantisation digest)",
+        "tokenizer_fingerprint (tokenizer files or hash + chat-template hash)",
+        "renderer_fingerprint (content digest of the module->bytes renderer)",
+        "engine_fingerprint (image digest + exact serving flags)"
+      ],
+      "where": "per row and in run.json (INTERFACE_CONTRACT.md sec.1)",
+      "what_exists_instead": "model, token_source, LIVE-CELLS-2.json host_used, and one :8012 config capture (max_mamba_cache_size 64, cells/U2/server_config.json) - a capture, not a digest; no image id anywhere"
+    },
+    {
+      "id": "B3",
+      "gap": "run.json was never frozen before the 2026-10-26 runs",
+      "consequence": "rows-equalinfo-2026-10-26.jsonl and rows-live-2026-10-26.jsonl have no run.json, so under INTERFACE_CONTRACT.md sec.3 they are RETROSPECTIVE and must be reported as such, not as registered evidence",
+      "counter_example": "quality/PREREG.json registered_before_any_request: true"
+    },
+    {
+      "id": "B4",
+      "gap": "uncached_prefill_tokens is derived, never measured",
+      "formula": "prompt_tokens - cached_tokens (C0-EQUALINFO.json uncached_per_turn_by_arm.basis)",
+      "must_sit_under": "derived, with the formula named in the key (uncached_prefill_tokens_from_prompt_minus_cached)",
+      "third_quantity": "the law's predicted_uncached (ledger.py:420-448) is a model, not an observation"
+    }
+  ],
+  "vllm_decision": {
+    "decision": "retire vLLM from every cache, cost and hit-rate claim; keep exactly one use - E4's 32K dense tier, capability only (verified success, gross tokens, time-to-verified-success, never a hit rate)",
+    "basis": "SGLang reports cached_tokens on 46/48 rows in the 2026-10-26 file and 880/880 + 888/888 hot rows in the grid cells (CLAIMS.md C55, C57); the :8014 build reports 0/52 (null 52/52); DO_NOT_REDO #3 states the same rule as a prohibition",
+    "cost_to_paper": "cross-engine replication cannot be extended or re-derived: C55 vLLM legs (V1 1088 300/300, V2 1056 268/268, V3 2096 16/16), C63 2x2 and its engine main effect +549.33 [462.4, 631.9], C51, C60, C50 all rest on vLLM cells that DID report counters on stack vllm-0.27.1 - they stand as history but every table mixing them with live rows must say 'engine-specific, stack vllm-0.27.1' (DO_NOT_REDO #4), and no new cache claim gets second-engine confirmation",
+    "why_no_cheap_repair": "vLLM's counters are launch flags so a repair is a relaunch; DO_NOT_REDO #5 keeps gx10-occamy-nvfp4 up and treats a variant container as leaving production down (restore verified by :8012/v1/models, never /health); both engines bind 192.168.2.168 (:8012, :8014) and #9 warns a concurrent job there moves TTFT enough to invert an arm"
+  },
+  "total_budget_calls": 440,
+  "run_plan": [
+    {
+      "order": 1,
+      "experiment": "E1 CACHE-BOUNDARY-SWEEP",
+      "calls": 60,
+      "decides": "rewrite_depth predictor in economics.ts; per-token vs per-boundary checkpoint pricing",
+      "if_falsifier_fires": "drop the depth term, price per boundary, re-pre-register E2 against data not model"
+    },
+    {
+      "order": 2,
+      "experiment": "E2 CHECKPOINT-COST",
+      "calls": 120,
+      "decides": "the premise: does a checkpoint repay inside 20 steps as uncached work and time-to-verified-success",
+      "if_falsifier_fires": "BCF premise restated; M2 not built; Consonance told before further building"
+    },
+    {
+      "order": 3,
+      "experiment": "E3 ORDERING",
+      "calls": 40,
+      "decides": "whether the admission objective gains a positional term",
+      "if_falsifier_fires": "relevance-only ordering stays; the cheap lever on close-enough closes"
+    },
+    {
+      "order": 4,
+      "experiment": "E4 32K DENSE TIER",
+      "calls": 80,
+      "decides": "tier-selection policy and its floor",
+      "if_falsifier_fires": "no tier policy; 32K stays capability-only"
+    },
+    {
+      "order": 5,
+      "experiment": "E5 HYBRID REUSE ELIGIBILITY",
+      "calls": 60,
+      "decides": "branch reuse statable in tokens or only as 'engine says so'",
+      "if_falsifier_fires": "no token model of the boundary"
+    },
+    {
+      "order": 6,
+      "experiment": "E6 EXP#48 CONTROL REPAIR",
+      "calls": 80,
+      "decides": "whether EXPAND(ref) paging is a mechanism or a story",
+      "if_falsifier_fires": "arm reported void, not a null result"
+    }
+  ],
+  "hard_stop_after": {
+    "stage": 2,
+    "calls": 180
+  },
+  "operator_items": [
+    {
+      "item": "authorise stages 1-2 now (180 calls), hold 3-6",
+      "default": "E1 then E2 serially on :8012, stop and report after E2's verdict"
+    },
+    {
+      "item": "ratify the per-engine null rule and let the RECORD.md owner scope its universal sentence (B1)",
+      "default": "sglang + absent -> 0, vllm + null -> unknown, applied to new artefacts and joins; no row file rewritten (append-only)"
+    },
+    {
+      "item": "ratify the vLLM retirement and the engine-specific label on C55/C63's vLLM legs",
+      "default": "retire from cache/cost/hit-rate claims, keep E4 as the only use, label historical columns vllm-0.27.1 rather than pruning"
+    }
+  ],
+  "assumptions": [
+    "the operator's 'close enough' aim (2026-10-26) is carried from this unit's card; a repo-wide phrase search found it nowhere outside corpus data, so the document records that absence rather than inventing a citation",
+    "E2's 1407.7 uncached/turn is labelled a card figure: no file on disk carries it, and the arm it belongs to is the invalid predecessor baseline",
+    "fields in the equalinfo row file were counted directly rather than taken from C0-EQUALINFO.json:vllm_cache_limit, whose 45/45 and 47/48 do not reproduce (52/52 and 46/48 measured)",
+    "no request was made and no engine was probed; the /get_server_info input E5 needs is named as missing, not assumed"
+  ],
+  "blocker": "",
+  "next_unit_hint": "E1 first: run the tail->head rewrite ladder (>=8 offsets x 3 reps) on SGLang :8012 with a frozen run.json and a mismatched-tokenizer control - 39 of 60 calls. Before it, decide B1's per-engine null rule, because every E1 row writes cached_tokens and a universal zero-reading would corrupt the vLLM half of the sweep. E2's own 1407.7 figure has no file behind it; re-derive it from C0-BASELINE rows or drop it from the comparison.",
+  "tool_calls": 24,
+  "bound": 22,
+  "write_paths": [
+    "papers/context-cache/CONSONANCE-INTEGRATION.md",
+    "orchestration/handoffs/CONSONANCE-INTEGRATION.json",
+    "orchestration/units/CONSONANCE-INTEGRATION.md"
+  ],
+  "bound_note": "two calls over the 22-call bound: the unit card was written at 38 and then 32 lines before it met the 30-line cap. Both overruns are shaping work on the declared deliverable, not new measurement; no request was sent and no evidence file was touched."
+}

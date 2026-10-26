@@ -1,0 +1,99 @@
+{
+  "unit": "LONGRUN-HARNESS",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "orchestration/handoffs/LONGRUN-HARNESS.json",
+    "orchestration/units/LONGRUN-HARNESS.md"
+  ],
+  "evidence": {
+    "command_or_count": "dry-run exit 0; 242 requests would be sent (4 arms x 60 turns + 2 B digests); 12/12 preview request bodies sha256-verified; 4 manifests written and sha256-verified; 0 network requests; 0 rows written",
+    "commands": [
+      ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --dry-run --fixture /tmp/longrun-fixture/LR-01.json",
+      ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --self-test",
+      ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --dry-run --arms transcript-grow --fixture /tmp/longrun-fixture/LR-01.json --manifest-path /proc/longrun-harness/manifest.json"
+    ],
+    "request_counts": {
+      "transcript-grow": 60,
+      "transcript-compact": 62,
+      "pointer-stable": 60,
+      "lease-reopen": 60,
+      "would_send_total": 242
+    },
+    "previews": {
+      "files": 12,
+      "verified": 12,
+      "first": {
+        "transcript-grow": "5272bfcd2d1cf5f209dc8fde63a36381ccc991bfd4c134c4c1e80566de6d4e94",
+        "pointer-stable": "85867b6c7990a304388f004ef5a26b407181e00e51d5c06a3a048e29db0fc149",
+        "lease-reopen": "865b0179c80253512fd804bd6056724592a6cd082075a05a6b9da9a9f7cc0610"
+      }
+    },
+    "manifest": {
+      "files": [
+        "experiments/ptr-engine/longrun/manifests/dryrun-LR-01-transcript-grow-r1.json",
+        "experiments/ptr-engine/longrun/manifests/dryrun-LR-01-transcript-compact-r1.json",
+        "experiments/ptr-engine/longrun/manifests/dryrun-LR-01-pointer-stable-r1.json",
+        "experiments/ptr-engine/longrun/manifests/dryrun-LR-01-lease-reopen-r1.json"
+      ],
+      "verified": 4
+    },
+    "self_test": {
+      "sglang": "None -> 0",
+      "vllm": "None -> None",
+      "function_line": 98,
+      "exit": 0
+    },
+    "abort": "exit 3; FileNotFoundError /proc/longrun-harness; printed MANIFEST ABORT before any prompt; no network",
+    "no_rows_written": true,
+    "fixture_used": "/tmp/longrun-fixture/LR-01.json sha256=5cf9061380fea4d76d3df4bb1eb22c3fb029bc5d67f6389492e32140c763ccbb (CONSTRUCTED: the repo fixture tree is a 64-byte stub; card 2a6c4761 owns the real one)"
+  },
+  "arms": {
+    "transcript-grow": "replays the whole history each turn; FIFO-truncates from the front at the 64k cap; first truncation T23 on the test fixture",
+    "transcript-compact": "same replay until 64k, then one ~700-token digest request replaces older turns, recent 4 raw; 2 digest requests (T23, T53)",
+    "pointer-stable": "byte-identical index+bodies prefix, bodies appended one turn ahead, frozen from T12; tail = state line + new note + question, never rewrites the prefix",
+    "lease-reopen": "host-side close at [23,56]; reopen carries pointer index + <=400-token distilled state + current turn only"
+  },
+  "dry_run_exit": 0,
+  "previews_differ": {
+    "verdict": "differ exactly as the arm definitions say",
+    "transcript-grow_vs_transcript-compact": "0/3 differ - identical by design until B's first wall (T23)",
+    "all_other_pairs": "3/3 differ",
+    "pointer-stable_prefix": "T12 == T13 == T60 sha256=986b4b87f4dd77e0... (frozen)",
+    "lease_boundaries": "T22 lease 1, T23 lease 2, T55 lease 2, T56 lease 3"
+  },
+  "manifest_written": true,
+  "abort_proven": "deliberately unwritable --manifest-path (/proc/longrun-harness/manifest.json) exits 3 before any prompt is printed or any request is made",
+  "null_semantics": {
+    "function": "normalize_cached_tokens(raw_cached, engine)",
+    "location": "experiments/ptr-engine/longrun/run_longrun.py:98",
+    "sglang": "None -> 0 (server omits cached_tokens when 0)",
+    "vllm": "None -> None (null preserved, never imputed)",
+    "source": "experiments/ptr-engine/RECORD.md: 'Endpoint null semantics settled 2026-10-26'"
+  },
+  "requests_proposed": 2944,
+  "requests_proposed_breakdown": {
+    "core": "6 tasks x 4 arms x 60 turns x 2 reps = 2880",
+    "B_digests": "2 walls x 6 tasks x 2 reps = 24",
+    "repair_reserve": "3-attempt cap x 6 tasks x 2 reps = 36",
+    "controls": "4 batch-level controls (prereg §7)",
+    "total": 2944
+  },
+  "not_run": "ZERO requests sent. The live path (streaming chat/completions + include_usage) has never executed; the operator has not authorised a run.",
+  "assumptions": [
+    "The repo fixture tree is a 64-byte stub ({\"stub\": true}), so a constructed consonance.longrun-fixture/1 fixture in /tmp was used; the runner refuses the stub loudly (FIXTURE ERROR, exit 2).",
+    "Wall crossings for A/B are host-side estimates from fixture bytes_per_token=4.78 (the prereg's 22,594 tok / ~108 kB basis); live prompt_tokens are recorded per row and the analysis can check the estimate.",
+    "D's distilled state line is host-side extraction from recorded turns (<=1,800 B ~= <=400 tok), not a model request, to keep the prereg's request budget (D has 0 extra requests).",
+    "Streaming with stream_options.include_usage is assumed for SGLang /v1/chat/completions; if usage is absent the row records prompt_tokens=null with usage_missing=true rather than imputing.",
+    "max_tokens defaults to 128 so checkpoint answers stay short; no retries are attempted, one request per turn/digest."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Operator authorises 2,944 requests; then run LR-01..LR-06 x 4 arms x reps 1-2 against :8012 and score with score_longrun.py once card b16be695 lands.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/manifests/",
+    "/tmp/**",
+    "orchestration/handoffs/LONGRUN-HARNESS.json",
+    "orchestration/units/LONGRUN-HARNESS.md"
+  ]
+}

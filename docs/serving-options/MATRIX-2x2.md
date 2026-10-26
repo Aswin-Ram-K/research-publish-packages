@@ -31,23 +31,29 @@ all; same prompt prefix digest and length on all six cell pairs — `prefix_sha2
 |---|---|---:|---:|---:|
 | occamy-1.0 (MoE) | vLLM 0.27.1 | 0.901212 | 1,682.72 | 2,096 |
 | occamy-1.0 (MoE) | SGLang | 0.957153 | 729.76 | 64 |
-| qwen3.5-9b (dense) | vLLM 0.27.1 | 0.869037 | 2,230.78 | 1,088 |
+| qwen3.5-9b (dense) | vLLM 0.27.1 | 0.817432 | 879.07 | 1,088 |
 | qwen3.5-9b (dense) | SGLang | 0.956941 | 733.37 | 64 |
 
-- **The engine is the lever.** vLLM spends **+1,225.18** more uncached tokens per turn than SGLang
-  [1,132.2, 1,313.3], positive on **70 of 71** turns — a **2.6738x** ratio (2.3058x on the MoE,
-  3.0418x on the dense). That is **0.9115** of the 1,344.16-token grand mean.
-- **The model main effect is small:** **+275.83** [194.3, 357.6], **53 of 71** turns positive.
-  The engine effect is **4.4418x** larger.
-- **And it is engine-conditional (the interaction):** within vLLM the dense pays **+548.06**
-  [384.7, 711.9] more than the MoE (1.3257x); within SGLang the two models differ by **+3.61**
-  [0.0, 10.8] (1.0049x), positive on **1 of 71** paired turns. Interaction **+272.23**
-  [190.1, 354.6]; the model effect is **152.00x** larger under vLLM (the ratio of the
-  raw per-level means, rounded to 4 dp; dividing the two rounded operands 548.06/3.61 is an
-  artefact of rounding, not this figure).
-- **Why:** SGLang delivers the 64-token grid to both checkpoints; under vLLM the resolved block is a
-  property of the checkpoint (2,096 MoE / 1,088 dense). The engine that pages at 64 also hides the
-  model's per-turn cost.
+- **The engine is the lever.** vLLM spends **+549.33** more uncached tokens per turn than SGLang
+  [462.4, 631.9], positive on **66 of 71** turns — a **1.7523x** ratio (2.3058x on the MoE,
+  1.1987x on the dense). That is **0.5459** of the 1,006.23-token grand mean.
+- **The model main effect is negative:** **-400.02** [-474.2, -326.5], **8 of 71** turns
+  positive. The engine effect is **-1.3733x** the model effect — the two factors point opposite ways.
+- **And it is engine-conditional (the interaction):** within vLLM the dense pays **-803.65**
+  [-953.6, -655.2] FEWER uncached tokens than the MoE (0.5224x); within SGLang the two models
+  differ by **+3.61** [0.0, 10.8] (1.0049x), positive on **1 of 71** paired turns. Interaction
+  **-403.63** [-479.7, -328.5]; the model effect is **-222.89x** the SGLang figure under vLLM
+  (the ratio of the raw per-level means, rounded to 4 dp; dividing the two rounded operands is
+  an artefact of rounding, not this figure).
+- **Why:** SGLang delivers the 64-token grid to both checkpoints and erases the model
+  difference; under vLLM the resolved block is a property of the checkpoint (2,096 MoE / 1,088
+  dense) and the larger block costs the MoE more per turn.
+- **MTP correction:** the Round-1 vLLM dense cell carried `--speculative-config mtp` and was
+  re-measured at 879.0669 uncached/turn (2,230.7782 before, a 2.54x drop, CI
+  [824.78, 933.35]). The pre-correction figures (engine 1,225.18, model +275.83, interaction
+  +272.23, 4.4418x, 0.9115) are superseded; the superseded block is kept in
+  `recompute.py:C63_SUPERSEDED`. Decoder-speed features can change prompt-cache behaviour —
+  that is a finding, not an apology.
 - **Arm check:** recomputed per salt-separated arm, engine effect 1,216.2–1,229.7 and model effect
   274.0–281.2 across R/A/C/H — the result is not an artefact of one replicate.
 

@@ -1,0 +1,101 @@
+{
+  "unit": "RUN-INSTRUMENT-FIX",
+  "status": "partial",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/measure/rows-longrun-2026-10-26-fix.jsonl",
+    "experiments/ptr-engine/longrun/manifests/fix-smoke-lr01-transcript-grow-r1.json",
+    "experiments/ptr-engine/longrun/manifests/fix-smoke-lr01-transcript-compact-r1.json",
+    "experiments/ptr-engine/longrun/manifests/fix-smoke-lr01-pointer-stable-r1.json",
+    "experiments/ptr-engine/longrun/manifests/fix-smoke-lr01-lease-reopen-r1.json",
+    "experiments/ptr-engine/longrun/manifests/fix-smoke2-lr01-transcript-grow-r1.json",
+    "experiments/ptr-engine/longrun/manifests/fix-smoke2-lr01-transcript-compact-r1.json",
+    "experiments/ptr-engine/longrun/manifests/fix-arm-lr01-transcript-grow-r1.json",
+    "orchestration/handoffs/RUN-INSTRUMENT-FIX.json",
+    "orchestration/units/RUN-INSTRUMENT-FIX.md"
+  ],
+  "evidence": {
+    "command_or_count": "42 requests spent of the 60 bound; 29 rows in the fix row file; arm 12/48 turns, truncated=4, ttft_n=12",
+    "commands": [
+      ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --smoke --fixture experiments/ptr-engine/longrun/runtime/LR-01.json --run-id fix-smoke-lr01 --rows experiments/ptr-engine/measure/rows-longrun-2026-10-26-fix.jsonl --timeout 300",
+      ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --arms transcript-grow --reps 1 --max-turns 12 --fixture experiments/ptr-engine/longrun/runtime/LR-01.json --run-id fix-arm-lr01 --rows experiments/ptr-engine/measure/rows-longrun-2026-10-26-fix.jsonl --timeout 600",
+      ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --self-test"
+    ]
+  },
+  "blocker": "Proof (a) fails on truncation and proof (b) is incomplete at 12/48 turns. Two independent causes, both measured: (1) the endpoint is nondeterministic at temperature 0 on this model -- the byte-identical transcript-grow T1 prompt (7305 B, sha 9e28d60d...) completed in 639 completion tokens in the 16384 smoke and in 6073 tokens 10 minutes later in the arm, and transcript-compact T1 (same prompt as grow T1) rambled to the full 16384-token cap with answer_source=none; so no finite --max-tokens makes '0 truncated' reachable. (2) The turn-12 checkpoint is unanswerable from the fixture: items[resolve.py].body is 1680 B and stops mid-'raise PtrUnknownIdError(' -- it contains neither DEFAULT_MAX_REFS nor the expected 64, so 'expected: 64' is not in the pinned working set and the model correctly refused to invent it. The 48-turn arm could not be finished inside the bound: 42 of 60 requests were already spent on the failed calibrations (1 lost to a NameError, 12 to the 1024 cap, 2+7+3 to harness restarts, 5 to the aborted 16384 smoke), leaving 18 < 36.",
+  "requests_spent": 42,
+  "requests_breakdown": {
+    "nameerror_crash_lost_row": 1,
+    "smoke_at_1024_all12_truncated_7": 12,
+    "smoke_at_4096_first_attempt_interrupted": 2,
+    "smoke_at_4096_resume": 7,
+    "smoke_at_4096_final_resume_lease_reopen": 3,
+    "smoke_at_16384_aborted_after_5_rows": 5,
+    "arm_transcript_grow_12_turns": 12
+  },
+  "bound": 60,
+  "max_tokens_default": 16384,
+  "max_tokens_justification": "128 truncated 140/192 Stage 1 rows. 1024 still truncated 7/12 smoke rows (all reasoning-channel-only, completion_tokens == 1024). 4096 still truncated 2/12 (T3 of both transcript arms, reasoning only). 16384 was adopted and measured: on the transcript-grow arm 12 rows it left 4 truncated (T4, T5, T10, T11) and the rambling turns do terminate (T3 14501 tokens, T12 1232). Retained configurable via --max-tokens.",
+  "smoke": {
+    "result": "FAIL",
+    "attempt_1024": {
+      "rows": 12, "truncated": 7, "ttft_n": 12,
+      "content_source_counts": {"both": 7, "reasoning": 5},
+      "finish_reasons": {"length": 7, "stop": 5},
+      "note": "the 12 rows of this attempt were removed by the operator 'rm' before the 4096 attempt; the values quoted are the run's printed table, no longer present in the row file."
+    },
+    "attempt_4096": {
+      "rows": 12, "truncated": 2, "ttft_n": 12,
+      "truncated_turns": ["transcript-grow T3", "transcript-compact T3"],
+      "content_source_counts": {"both": 10, "reasoning": 2},
+      "note": "rows 1-12 of the fix row file; lease-reopen rows 10-12 were written at 16384 after a concurrent edit of run_longrun.py changed the default (mixed cap inside one file, documented, not hidden)."
+    },
+    "attempt_16384_aborted": {
+      "rows": 5, "truncated": 1, "ttft_n": 5,
+      "detail": "transcript-grow T1-T3 clean (639, 1025, 8079 tokens); transcript-compact T1 hit the cap at 16384 with answer_source=none on the SAME prompt that grow T1 answered in 639 tokens; compact T2 14057 tokens clean. Aborted to stop burning the last requests once the smoke had failed.",
+      "note": "the strict check the card requires is in the runner: any truncated row returns exit 7."
+    }
+  },
+  "arm_run": {
+    "arm": "transcript-grow",
+    "rows": 12,
+    "rows_expected": 48,
+    "truncated": 4,
+    "truncated_turns": [4, 5, 10, 11],
+    "ttft_n": 12,
+    "exit_code": 0,
+    "max_tokens": 16384,
+    "content_source_counts": {"both": 12, "content": 0, "reasoning": 0, "none": 0},
+    "answer_source_counts": {"content": 12, "reasoning-fallback": 0, "none": 0},
+    "checkpoint_12_answer": "I checked the pinned working set before answering.\n\n**Disclosure:** The working set contains `resolve.py` (1680 B), but its body is **truncated** — it cuts off mid-statement at an incomplete `raise PtrUnknownIdError(` call, around the ~45th displayed line. **Line 39 of that file was not clearly visible/readable**, and the question references the path `experiments/ptr-engine/ptr_engine/resolve.py`, which is **not a file in my pinned working set** (the working set only has `resolve.py` at the root).\n\nThe visible portion of `resolve.py` in the working set shows the `resolve()` function definition, its docstring, the two `isinstance` guards, and the start of the `try:` block with scope/kind/entry checks — but **no per-turn resolve budget constant** appears in the visible lines.\n\nPer my constraint to restate only facts I have actually read, I cannot derive the default per-turn resolve budget from a line I did not read. To answer T12, I would need either:\n1. The full body of `resolve.py` displayed so L39 is visible, or\n2. The file `experiments/ptr-engine/ptr_engine/resolve.py` pinned in the working set.\n\nWould you like to provide the full body of the file, or pin the correct path?",
+    "checkpoint_12_verdict": "answered in words, not empty and not a tool call -- but the content is a refusal to invent the fact, because the fixture body genuinely lacks it. Expected '64' appears nowhere in items[resolve.py].body.",
+    "ttft_range_ms": [127.092, 12658.502],
+    "note": "rows 1-12 of run fix-arm-lr01; turns 13-48 not run (bound). Cell is resume-safe: --resume continues at turn 13 against the same frozen manifest."
+  },
+  "content_source_counts": {"both": 24, "reasoning": 2, "content": 3, "none": 0},
+  "content_source_counts_note": "over all 29 rows in the fix file; the 2 'reasoning' rows are the 4096 truncations whose 4096 tokens of reasoning never produced a content channel.",
+  "defects_fixed": [
+    "1. --max-tokens default 128 -> 16384; finish_reason, truncated, max_tokens recorded per row; truncated rows counted in the summary and fatal in --smoke.",
+    "2. Both channels parsed: delta.reasoning_content -> reasoning, delta.content -> content; content_source in {content, reasoning, both, none}; content carries the answer-bearing text.",
+    "3. TTFT per row from dispatch to the first token on EITHER channel: ttft_ms added beside ttft_s; ttft_n equals the row count in every completed cell (12/12, 5/5, 12/12).",
+    "4. --smoke: 4 arms x 3 turns, per-row table, exit 7 on any truncated row or any content_source == 'none'.",
+    "5. Contracted row keys unchanged; every new field is an addition. --max-turns added for resume-safe partial cells.",
+    "6. is_checkpoint was always False: the fixture marks checkpoints with turn['kind']=='checkpoint' and fixture['checkpoints'], never a per-turn 'checkpoint' key. Fixed after the arm rows were written, so the 12 persisted arm rows carry is_checkpoint=false -- re-derive from fixture['checkpoints'] when scoring."
+  ],
+  "defects_found_not_fixed": [
+    "Fixture: items[resolve.py].body is 1680 B and truncated mid-raise; checkpoint turn 12 expects '64' (resolve.py#L39 DEFAULT_MAX_REFS) which is absent from the body. Editing fixtures is outside this card's write paths.",
+    "Endpoint: occamy-1.0 at temperature 0 is nondeterministic on identical prompts (639 vs 6073 completion tokens for the same 7305-byte prompt; one run rambled to the full 16384 cap). No max_tokens value makes '0 truncated' reachable; truncation must be reported, not eliminated."
+  ],
+  "assumptions": [
+    "The '60 requests' bound counts every POST to /v1/chat/completions, including the ones whose rows were lost to a crash or a restart; 42 is the honest count.",
+    "The 48-turn arm was shortened to 12 turns because 18 requests remained after the failed smoke calibrations and 36 more turns were required."
+  ],
+  "next_unit_hint": "Two independent cards: (i) FIXTURE-LR01-BODY -- rebuild runtime/LR-01.json items[resolve.py] from the pinned source so the 1680-byte cut ends at a statement boundary and L39 (DEFAULT_MAX_REFS = 64) is present; the turn-12/24/46 checkpoints are unanswerable until then. (ii) LONGRUN-ARM48 -- resume fix-arm-lr01 from turn 13 with --resume --max-turns 48 (36 requests, ~2-3 h at 200-680 s/turn) and score truncation as a reported count, not as a pass criterion.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/measure/rows-longrun-2026-10-26-fix.jsonl",
+    "experiments/ptr-engine/longrun/manifests/",
+    "orchestration/handoffs/RUN-INSTRUMENT-FIX.json",
+    "orchestration/units/RUN-INSTRUMENT-FIX.md"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "unit": "FIXTURE-ADAPTER",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/adapt_fixture.py",
+    "experiments/ptr-engine/longrun/runtime/LR-01.json",
+    "experiments/ptr-engine/longrun/runtime/LR-02.json",
+    "experiments/ptr-engine/longrun/runtime/LR-03.json",
+    "experiments/ptr-engine/longrun/runtime/LR-04.json",
+    "experiments/ptr-engine/longrun/runtime/LR-05.json",
+    "experiments/ptr-engine/longrun/runtime/LR-06.json",
+    "orchestration/handoffs/FIXTURE-ADAPTER.json",
+    "orchestration/units/FIXTURE-ADAPTER.md"
+  ],
+  "derived": {
+    "LR-01": {"path": "experiments/ptr-engine/longrun/runtime/LR-01.json", "sha256": "72c3832d95f9c7966b4358eda10fa2882775a416ee8a663d57b1c871ed19c44d", "N": 48, "from_sha256": "6e6075ae4229e050", "would_send_reps1": 192, "would_send_reps2": 384},
+    "LR-02": {"path": "experiments/ptr-engine/longrun/runtime/LR-02.json", "sha256": "b1d5c2b4a91c4d06f7df6c5b1f1ae931591d55c9f75ce6e1f241bf885c85f0e7", "N": 64, "from_sha256": "19988341413468ad", "would_send_reps1": 256, "would_send_reps2": 512},
+    "LR-03": {"path": "experiments/ptr-engine/longrun/runtime/LR-03.json", "sha256": "8811410fab41eed94659a6b15d9bc7668b7516e6594b417355a057b09b1b19a8", "N": 56, "from_sha256": "bbfd93f3b9ea8ca7", "would_send_reps1": 224, "would_send_reps2": 448},
+    "LR-04": {"path": "experiments/ptr-engine/longrun/runtime/LR-04.json", "sha256": "1cedc0d752db5d02a5db14adaade7d25845a12bc567a650f585a626958e60db8", "N": 40, "from_sha256": "ebec3f48876951a0", "would_send_reps1": 160, "would_send_reps2": 320},
+    "LR-05": {"path": "experiments/ptr-engine/longrun/runtime/LR-05.json", "sha256": "9ed39cfde173426a229d4829d0040a20d5c70c65a19293c3fc8e272d1576daf2", "N": 72, "from_sha256": "fc641054d07e2241", "would_send_reps1": 288, "would_send_reps2": 576},
+    "LR-06": {"path": "experiments/ptr-engine/longrun/runtime/LR-06.json", "sha256": "17592e88f8974a417d943d25bec7e9b22820e2516fe01973068f91db3d105b94", "N": 60, "from_sha256": "441d71db0796aa5d", "would_send_reps1": 240, "would_send_reps2": 480}
+  },
+  "bytes_per_token": {"LR-01": 4.0477, "LR-02": 4.1283, "LR-03": 4.2647, "LR-04": 4.0982, "LR-05": 4.1776, "LR-06": 4.1270,
+    "method": "total UTF-8 bytes of the loaded item bodies / tiktoken cl100k_base token count on the same text (local cache, offline)"},
+  "dryrun_exit_per_task": {"LR-01": 0, "LR-02": 0, "LR-03": 0, "LR-04": 0, "LR-05": 0, "LR-06": 0},
+  "would_send_reps1": 1360,
+  "would_send_reps2": 2720,
+  "digest_mismatches": [],
+  "score_longrun_help_exit": 0,
+  "score_empty_log_exit": 3,
+  "evidence": {
+    "command_or_count": "adapt --all exit 0, 6 runtime fixtures written; 6/6 dry-runs exit 0 at reps=1 and reps=2",
+    "commands": [
+      ".venv/bin/python experiments/ptr-engine/longrun/adapt_fixture.py --all",
+      ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --dry-run --fixture experiments/ptr-engine/longrun/runtime/LR-0N.json --reps 1",
+      ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --dry-run --fixture experiments/ptr-engine/longrun/runtime/LR-0N.json --reps 2",
+      ".venv/bin/python experiments/ptr-engine/longrun/score_longrun.py --help",
+      ".venv/bin/python experiments/ptr-engine/longrun/score_longrun.py --fixture experiments/ptr-engine/longrun/fixtures/LR-04.json --run /tmp/empty-run.ndjson"
+    ]
+  },
+  "blocker": "score_longrun.py accepts only schema consonance.fixture/1 (line: it errors {'error': \"fixture schema 'consonance.longrun-fixture/1' != 'consonance.fixture/1'\", exit 3}). Scoring a runtime fixture therefore needs either a scorer change (a later card owns that file) or scoring against the authored fixture; no file here was modified.",
+  "assumptions": {
+    "authored turns carry no 'question' key": "every authored turn has {turn, kind, instruction}; the adapter maps instruction -> question (recorded per runtime file under adaptation.turn_field_mapped)",
+    "wall_tokens": "no authored fixture states wall_tokens or long_run.wall_tokens, so the documented default 65536 was used for all six (recorded as adaptation.wall_tokens_default_used=true)",
+    "source body": "body = the pinned pointer slice (#L<a>-L<b>) of the file; the digest verification is of the whole pinned file against sources[].sha256, which is what the authored digests cover (both pointers to quantise.py share one digest)"
+  },
+  "next_unit_hint": "A card owning score_longrun.py should widen its fixture-schema acceptance to consonance.longrun-fixture/1 (or accept both) so runtime fixtures can be scored directly; until then score the authored fixture.",
+  "write_paths": ["experiments/ptr-engine/longrun/adapt_fixture.py", "experiments/ptr-engine/longrun/runtime/", "orchestration/handoffs/FIXTURE-ADAPTER.json", "orchestration/units/FIXTURE-ADAPTER.md"]
+}

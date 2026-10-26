@@ -1,0 +1,55 @@
+{
+ "unit": "R2-P1-O2",
+ "status": "failed",
+ "artifacts": [
+  "experiments/context-cache/cells/R2-P1-O2/LOCK.md"
+ ],
+ "evidence": {
+  "command_or_count": "ABORT AT PRE-FLIGHT (2 gates failed)",
+  "MemAvailable": [
+   "MemTotal:       31401576 kB",
+   "MemAvailable:   21672220 kB"
+  ],
+  "abort_threshold_kB": 35000000,
+  "docker_inspect_gx10-occamy-nvfp4": "error: no such object: gx10-occamy-nvfp4",
+  "docker_images_sglang_gx10": "none",
+  "docker_ps_names": "no gx10-* container of any kind",
+  "port_8017": "000",
+  "port_8012": "200 occamy-1.0",
+  "port_8014": "200 qwen3.5-9b",
+  "rows": 0,
+  "g0": "not run",
+  "commands": [
+   "grep MemAvailable /proc/meminfo",
+   "docker inspect gx10-occamy-nvfp4 --format '{{.Image}}'",
+   "docker ps -a --format '{{.Names}}\\t{{.Image}}\\t{{.Status}}\\t{{.Ports}}'",
+   "docker images | grep -iE 'sglang|gx10|lmsys'",
+   "curl -s -o /dev/null -w '%{http_code}' http://192.168.2.168:8017/v1/models",
+   "curl -s http://192.168.2.168:8012/v1/models",
+   "curl -s http://192.168.2.168:8014/v1/models",
+   "hostname -f",
+   "docker info --format '{{.Name}} | {{.OperatingSystem}} | runtime={{.DefaultRuntime}}'",
+   "nvidia-smi -L",
+   "docker context ls"
+  ],
+  "hostname": "CODEX",
+  "docker_info": "CODEX | Ubuntu 26.04 LTS | runtime=runc",
+  "nvidia_smi": "NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver.",
+  "docker_context": "default only (single local engine; no gx10 remote context)",
+  "MemAvailable_recheck_kB": 22078396
+ },
+ "blocker": "Two independent hard stops from the unit contract. (1) PRE-FLIGHT: MemAvailable 21.9 GB < the 35,000,000 kB abort threshold the card requires; launching a third server would risk the two live backends the RESTORE gate must preserve. (2) LAUNCH IMPOSSIBLE: the pinned image source `docker inspect gx10-occamy-nvfp4` returns 'no such object' -- that container does not exist on this host, so the image to copy cannot be resolved, and no sglang/gx10 image exists locally. The card forbids inventing an image. Additionally the `gx10-qwen9b` container that mounts /model and /model-nvfp4 is likewise absent, and nvidia/GPU tooling was not probed further once gates 1-2 failed. (3) HOST MISMATCH, decisive: this session runs on host CODEX (Ubuntu 26.04, one local docker engine, no GPU -- nvidia-smi cannot reach a driver), yet :8012/:8014 answer at 192.168.2.168 as remote SGLang/vLLM servers. Every gx10-* container in the card (gx10-occamy-nvfp4, gx10-qwen9b, and the target gx10-p-o2) lives on the remote gx10 box, so neither the image lookup nor the launch nor the restore can be performed from here at all.",
+ "next_unit_hint": "Re-run R2-P1-O2 only after (a) the gx10 host is the target (this session's docker is NOT that host -- 8012/8014 answer but no gx10-* containers exist here), and (b) MemAvailable >= 36 GB. The renderer is ready to reuse: experiments/context-cache/cells/R2-P1-O1/prompt_r2p1o1_cell.py (ARMS R/A/C/H/C0 imported from PROMPT-O2-EXTRA + PROMPT-O4, BASE_URL env RESEXTRACT_R2P1O1_BASE_URL, CELL constant to change).",
+ "write_paths": [
+  "experiments/context-cache/cells/R2-P1-O2/**",
+  "orchestration/handoffs/R2-P1-O2.json",
+  "orchestration/units/R2-P1-O2.md"
+ ],
+ "assumptions": [
+  "Abort rather than measure on an unpinned/implicit image: the card marks the image step 'do not invent', so a substitute is not available.",
+  "No rows file created, so no ARMS-PARITY cached_tokens guard was exercised.",
+  "Did not attempt a launch on CODEX: no NVIDIA driver, no sglang image, and the card's MemAvailable budget refers to the gx10 box (its 27 GB budget implies a different machine than this 31.4 GB one)."
+ ],
+ "tool_calls": 6,
+ "bound": 18
+}

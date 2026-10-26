@@ -1,0 +1,46 @@
+{
+  "unit": "V-PKG-CORR2",
+  "overall": "pass",
+  "checks": [
+    "C1 verify_package PASS re-derived: `python3 papers/context-cache/verify_package.py` EXIT=0 — 'verify_package: PASS — 63 claims in CLAIMS.md, 63 mapped 1:1, 2 script-backed + 61 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none'.",
+    "C2 recompute all PASS: exit code measured without a pipe (`recompute.py all > /tmp/pkg2_all.txt`), EXIT=0; '60 claims checked, all match' plus 5 COVERAGE GUARD ok/PASS lines ending 'COVERAGE GUARD PASS  63 claims documented, 61 runnable here + 2 script-backed'. The 60-vs-63 gap is the known structural quirk (C61 is a SPECIAL alias to grid_guard(), C63 runs only when named), not a hole.",
+    "C3 C63 PASS 43/43 re-derived live: engine_effect 549.33 (462.4, 631.9) 66/71; model_effect -400.02 (-474.2, -326.5) 8/71; interaction -403.63 (-479.7, -328.5); engine within MoE 952.96, within dense 145.70; model within vLLM -803.65, within SGLang 3.61 (1/71); ratios 2.3058/1.1987/1.7523/0.5224/1.0049/0.7636; engine_over_model -1.3733; engine_share_of_grand 0.5459; cells exactly the four 284-row cells with hot gcd 2096/64/1088/64; grand mean 1006.2306; 1136 rows.",
+    "C4 NAMED DEFECT CLOSED: PACKAGE.md §3 item 6 (:67-79) now states the post-MTP figures at :70-75 (+549.33 [462.4, 631.9], 1.7523x the mean, 2.3058x MoE / 1.1987x dense, 54.6 % of the 1,006.2306 grand mean, -400.02 [-474.2, -326.5] 8/71, -803.65 under vLLM 0.5224x against +3.61 under SGLang 1.0049x 1/71, interaction -403.63) and carries an explicit '**Supersession:**' paragraph at :77-79 that names the pre-MTP values as 'superseded, not live', gives the mtp mechanism and the re-measurement 2,230.7782 -> 879.0669 (2.54x). V-PKG-CORR's blocker no longer reproduces.",
+    "C5 Stale-number sweep re-run: `grep -nE '1,?225\\.18|275\\.83|2\\.6738|548\\.06|272\\.23|1,?497\\.41|0\\.9115|91\\.2' papers/context-cache/PACKAGE.md` returns exactly 3 hits — :77, :78, :79 — all inside the Supersession sentence. Zero live pre-MTP use remains anywhere in the file (the other superseded operands 1,497.41 / 0.9115 do not appear at all).",
+    "C6 pytest battery: 78 passed, 1 failed across tests/{test_paper_attribution_guard, test_paper_claim_census, test_paper_g3_bands, test_context_cache_qualifier, test_claims_decompose, test_orchestration_handoffs}.py. The single failure is test_orchestration_handoffs.py::test_no_new_contract_key_gaps and is NOT this batch's: it names other units' handoffs (R2-A2, R2-A3, R2-B2, R2-C, R2-SGL-CAP missing unit-shape keys; V-R2VLLM-TRIAGE, VLLM-CELL missing overall/checks). V-PKG-CORR2.json is not among the flagged gaps.",
+    "C7 red->green RE-DERIVED on a /tmp mirror (/tmp/vpkg2_rg: copy of recompute.py + symlinks to state/, experiments/, CLAIMS.md; zero repo writes): baseline 'PASS 43/43'; flipping the single expected value `\"engine_effect\": 549.33` -> 1225.18 (exactly 1 occurrence) gives 'FAIL engine_effect recomputed=549.33 paper=1225.18' and 'FAIL 42/43 values match'; restoring the file gives 'PASS 43/43'. Repo papers/context-cache/recompute.py sha256 unchanged at f8cb87ca52dd93be... before and after the test.",
+    "C8 Containment: my only writes are orchestration/handoffs/V-PKG-CORR2.json (stub, then this verdict). Anchors unchanged during verification — CLAIMS.md 2e6279954a4ec67c..., recompute.py f8cb87ca52dd93be..., verify_package.py e9854b81df254ffa..., PACKAGE.md c772e6cca01452da..., READER-MAP.md 687fafc5a5e2712c.... Scratch confined to /tmp/vpkg2_rg and /tmp/pkg2_all.txt; no live requests, no lock touched, no docker, no target repo access."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Three open items, all disclosed by the author units and none a regression: (1) the C63 prose is UNGUARDED — verify_package.py reads PACKAGE.md only for UNVERIFIED parity (verify_package.py:219-222) and recompute.py:2457 states prose counts in PACKAGE.md are 'not consulted', so a future edit can reintroduce a live pre-MTP figure with every gate green; closing that needs both a tests/ write path AND an edit to verify_package.py, so it is its own card, not a tail of this one. (2) CLAIMS.md's C63 row still prints 'MTP CORRECTION (2024-10-24)' — year typo, today is 2026-10-24; cosmetic, outside PACKAGE-C63-FOLD's write scope. (3) Board hygiene, other units' scope: 7 concurrent handoffs violate the contract and currently keep tests/test_orchestration_handoffs.py red.",
+  "write_paths": [
+    "orchestration/handoffs/V-PKG-CORR2.json"
+  ],
+  "not_reproduced": [],
+  "overstated": [],
+  "unverified": [
+    "MANUSCRIPT.md, EVIDENCE.md, SERVING-BRIEF.md and RUN.json were not re-read this pass; V-PKG-CORR's earlier finding that their pre-MTP mentions are disclosed as superseded was taken as prior evidence, not re-derived. If any of them still presents a pre-MTP number as live, this verdict would not have caught it.",
+    "PACKAGE.md outside :67-80 (plus the pattern greps) was not read line by line; a stale figure written in a form my patterns do not cover (e.g. a bare '1,225' or '2,674', or a re-rounded percentage) would not have been caught.",
+    "PACKAGE-C63-FOLD's per-file count ('pytest tests/test_paper_attribution_guard.py: 18 passed') was not re-run in isolation; my combined run of that file plus test_claims_decompose.py reported 31 passed.",
+    "verify_package.py's structural census was again not probed with a deliberately wrong value (its own text calls it a census, not a re-derivation); unchanged from V-PKG-CORR's unverified item.",
+    "The 7 malformed handoffs flagged by test_no_new_contract_key_gaps were not traced to their sessions; I only established that none of them is mine."
+  ],
+  "corrections": [
+    "CLAIMS.md C63 row still reads 'MTP CORRECTION (2024-10-24)'; the batch date is 2026-10-24. Cosmetic, still open (V-PKG-CORR named it; PACKAGE-C63-FOLD left it as a separate card).",
+    "PACKAGE.md's live item-6 line now prints 54.6 % where CLAIMS.md carries the decimal 0.5459 and recompute.py prints engine_share_of_grand=0.5459; 0.5459 rounds to 54.6 % — consistent, recorded only because the two files express it differently."
+  ],
+  "red_green": "C63 value guard, re-derived in /tmp/vpkg2_rg with symlinked data: PASS 43/43 -> revert expected engine_effect to the falsified pre-MTP 1225.18 -> FAIL engine_effect (recomputed=549.33 paper=1225.18), 42/43 -> restore -> PASS 43/43; repo recompute.py digest f8cb87ca... unchanged. Note the prose defect itself has no guard to go red on: the fix passes because it was re-read, not because a test pins it.",
+  "scope": "offline read-only verification of papers/context-cache prose and the package's own guards; no authoring, no source edits, no live measurement, no target-repo writes",
+  "assumptions": [
+    "The board prompt carried only the generic verifier stub, so the object of verification was taken from the prior pair: V-PKG-CORR's named blocker (PACKAGE.md §3 item 6 presenting pre-MTP figures as live) plus the repair unit PACKAGE-C63-FOLD (handoff 03:27) that claims to close it. The re-checked battery is V-PKG-CORR's checks 1-6 plus its red->green.",
+    "The repair unit's write scope was PACKAGE.md only, so the still-open CLAIMS.md date typo is recorded as a remaining cosmetic defect rather than a failed claim."
+  ],
+  "environment": "tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps is red at verification time for 7 handoffs written by concurrent units (R2-A2, R2-A3, R2-B2, R2-C, R2-SGL-CAP, V-R2VLLM-TRIAGE, VLLM-CELL). It was red before this verdict existed and is unrelated to papers/; the other 78 tests in the battery pass.",
+  "artifacts": [
+    "orchestration/handoffs/V-PKG-CORR2.json",
+    "/tmp/vpkg2_rg (scratch red->green mirror)",
+    "/tmp/pkg2_all.txt (recompute all output)"
+  ],
+  "tool_calls": 18,
+  "bound": 18
+}

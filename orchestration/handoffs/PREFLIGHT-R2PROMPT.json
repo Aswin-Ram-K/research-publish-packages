@@ -1,0 +1,141 @@
+{
+  "unit": "PREFLIGHT-R2PROMPT",
+  "status": "done",
+  "artifacts": [
+    "state/config/r2-prompt-preflight.json",
+    "orchestration/units/PREFLIGHT-R2PROMPT.md",
+    "orchestration/handoffs/PREFLIGHT-R2PROMPT.json"
+  ],
+  "evidence": {
+    "launchable": {
+      "O1": true,
+      "O2": true,
+      "O3": true,
+      "O4": true
+    },
+    "rule_statuses": {
+      "O1": [
+        [
+          "no_buffer requires page_size in (1, None) AND --",
+          "pass"
+        ],
+        [
+          "--page-size divides --mamba-track-interval when ",
+          "n/a"
+        ],
+        [
+          "--mem-fraction-static >= measured minimum viable",
+          "pass"
+        ],
+        [
+          "slot arithmetic: max_mamba_cache_size / S <= --m",
+          "warn"
+        ]
+      ],
+      "O2": [
+        [
+          "no_buffer requires page_size in (1, None) AND --",
+          "pass"
+        ],
+        [
+          "--page-size divides --mamba-track-interval when ",
+          "pass"
+        ],
+        [
+          "--mem-fraction-static >= measured minimum viable",
+          "pass"
+        ],
+        [
+          "slot arithmetic: max_mamba_cache_size / S <= --m",
+          "pass"
+        ]
+      ],
+      "O3": [
+        [
+          "--block-size divides the expected resolved block",
+          "fail"
+        ],
+        [
+          "--prefix-match-unit 16 divides the expected reso",
+          "pass"
+        ],
+        [
+          "--mamba-cache-mode align is legal for qwen3_5 / ",
+          "unknown"
+        ],
+        [
+          "no --speculative-config mtp",
+          "pass"
+        ],
+        [
+          "--enable-prompt-tokens-details present",
+          "pass"
+        ],
+        [
+          "--quantization modelopt_fp4 present only where t",
+          "pass"
+        ],
+        [
+          "checkpoint path exists on the box",
+          "unknown"
+        ]
+      ],
+      "O4": [
+        [
+          "--block-size divides the expected resolved block",
+          "pass"
+        ],
+        [
+          "--prefix-match-unit 16 divides the expected reso",
+          "pass"
+        ],
+        [
+          "--mamba-cache-mode align is legal for qwen3_5 / ",
+          "unknown"
+        ],
+        [
+          "no --speculative-config mtp",
+          "pass"
+        ],
+        [
+          "--enable-prompt-tokens-details present",
+          "pass"
+        ],
+        [
+          "--quantization modelopt_fp4 only if the NVFP4 ch",
+          "unknown"
+        ]
+      ]
+    },
+    "dry_run_tool": "cannot dry-run: the named tool does not exist on this disk; the directory experiments/context-cache/tools/ is absent too. Validators were therefore evaluated statically (card step 3 fallback).",
+    "O2_provenance": "experiments/context-cache/cells/PROMPT-O2-EXTRA/launch.json config_sha256 652ff99db16fb7fc90e2649955bf74dbcda4586ee1e13704290cf2b0bc9ab510 == best-config setups.O2.config_sha256; startup_fields page_size=64 extra_buffer mamba_track_interval=256 mem_fraction_static=0.22",
+    "O1_live": "192.168.2.168:8012 /health 200 at 2026-10-24T02:45:46Z and 02:46:26Z, container Up 19h (R2-VLLM-PREFLIGHT2)",
+    "slot_arithmetic": "O1 64/5=12.8 implied concurrency vs --max-running-requests 5 (warn, slots not binding); O2 40/5=8.0 vs unset cap (pass)",
+    "block_divisibility": "O3 2096 % 64 = 48 -> fail (grid law, not launch; 284 rows exist); O4 1088 % 64 = 0, 1088 % 16 = 0 -> pass; O3 2096 % 16 = 0 -> pass",
+    "divergence_doc_vs_json": "BEST-CONFIG.md:14-16 says O2 = page 64 + no_buffer + mem 0.08 (the illegal pair); best-config.json says extra_buffer + 0.22 + 355 rows. O4: doc 0.15 vs json 0.22. O2 unc_ci brackets 600.169, not 669.9944.",
+    "offline_proof": "0 model starts, 0 docker verbs, 0 HTTP, no ssh; .occamy.lock not touched",
+    "commands": [
+      "cat state/config/best-config.json",
+      "ls experiments/context-cache/tools/launch_variant.py  (absent; directory absent)",
+      "python3 -c 'json.load(PROMPT-O2-EXTRA/launch.json) vs best-config O2 argv'  (sha match)",
+      "grep -n '_validate_mamba_no_buffer|minimum viable|0.1732|0.174' orchestration/handoffs/*.json",
+      "python3 - <<'PY' (build state/config/r2-prompt-preflight.json)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Before the R2-PROMPT window: (a) fix docs/serving-options/BEST-CONFIG.md O2 paragraph (page 64 + no_buffer is illegal; 0.08 is below the 0.1732 floor) and reconcile O4's 0.22-vs-0.15 memory fraction, so a unit cannot launch from the prose; (b) re-read free unified memory at window start (O1 0.45 against the 0.4993-class floor); (c) O3/O4 need a docker create first (their containers were torn down) - and only one cache owner may hold :8014.",
+  "write_paths": [
+    "state/config/r2-prompt-preflight.json",
+    "orchestration/units/PREFLIGHT-R2PROMPT.md",
+    "orchestration/handoffs/PREFLIGHT-R2PROMPT.json"
+  ],
+  "tool_calls": 18,
+  "bound": 18,
+  "assumptions": [
+    "launch_variant.py does not exist, so validators were evaluated statically (the card's stated fallback); no synthetic dry-run was invented.",
+    "A launch that demonstrably completed (O1 live, O2 355 rows, O3/O4 284 rows each) is treated as proving its argv launchable; a rule it violates is recorded as launch_blocking:false with the row evidence.",
+    "The recorded occamy floor 0.4993 is treated as a dated observation for the --mem-fraction-static 0.50 config under co-tenant pressure, not as a bound that refutes O1's live 0.45 launch; the pre-window memory re-check carries the risk forward.",
+    "In-container model paths were not probed because the automated tag says offline; those checks are 'unknown' with the reason, not 'pass'.",
+    "best-config.json was read only; the doc/JSON divergence is reported for a later unit rather than edited here (card forbids editing the config)."
+  ]
+}

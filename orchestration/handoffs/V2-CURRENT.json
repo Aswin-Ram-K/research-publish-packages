@@ -1,0 +1,70 @@
+{
+ "status": "partial",
+ "unit": "V2-CURRENT",
+ "verifier_role": "independent verifier; not the author of any artefact checked",
+ "overall": "fail",
+ "checks": [
+  "A1 CONFIRMED (release is NOT self-sufficient): from cd release/v0.1 the scripts live at papers/context-cache/, not at the tree root. `papers/context-cache/verify_package.py` EXIT 0 ('verify_package: PASS \u2014 69 claims in CLAIMS.md, 69 mapped 1:1, 8 script-backed + 61 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none'). `papers/context-cache/recompute.py all` EXIT 1, first traceback line 'FileNotFoundError: [Errno 2] No such file or directory: /home/zer0null/reserach extarctor/release/v0.1/state/config/rows.jsonl'. `papers/context-cache/recompute_r2.py all` EXIT 1, same line. `tests/test_gap_closure_ledger.py` '8 failed in 0.14s' (FileNotFoundError state/gap-ledger.json). REPRO's paths are one directory off (release/v0.1/verify_package.py does not exist -> exit 2).",
+  "A2 MINIMAL SET: state/config/rows.jsonl ALONE (82,565 B) is sufficient for both recompute scripts -> EXIT 0, EXIT 0 ('COVERAGE GUARD PASS  69 claims documented, 67 runnable here + 2 script-backed'). It is NOT sufficient for the ledger tests: with rows.jsonl only -> '6 failed, 2 passed'; with rows.jsonl + state/gap-ledger.json (25,834 B) still 6 failed. 8/8 pass only after also shipping 9 transitive evidence paths: orchestration/VERDICTS.md, state/config/live-server-config.json, state/sys-opt-verdict.json, 5x scratch/cache-audit/docs/pin_*.{mdx,py}, orchestration/handoffs/{CACHE-AUDIT,PAPER-FINAL}.json. Minimal set recompute = 1 file; minimal set ledger tests = 11 files.",
+  "A3 UNREACHABLE CLAIMS: 6 of 69 are unreachable as shipped \u2014 C62, C63, C65, C66, C67, C68. recompute.py prints 59 claim blocks then crashes at C56; recompute_r2.py prints 0 claim blocks (it starts at C63). Live tree prints 65 claim blocks, shipped prints 59 \u2014 the 6 difference are exactly those ids. So 'every number re-derives from raw rows' FAILS for the shipped artefact.",
+  "A4 MANIFEST: 943 entries, 0 with a path starting state/ (matches expectation). The shipped paper is byte-identical to live apart from sanitisation, yet its data dependency is unshipped \u2014 the manifest structurally cannot contain it.",
+  "B2 RECOMPUTED (runs.json, 66 runs, per-run prompt_tokens \u2212 cached_tokens, mean over 3 reps): occamy 3k/12 cold C0=1044.7 L1=2162.0 \u2212106.96%; 3k/12 warm C0=6.0 L1=83.3 \u22121288.89%; 3k/30 cold C0=1455.7 L1=9353.3 \u2212542.55%; 3k/30 warm C0=32.0 L1=602.0 \u22121781.25%; 10k/12 cold C0=2460.0 L1=2522.7 \u22122.55%; 10k/12 warm C0=13.0 L1=298.0 \u22122192.31%; 30k/12 cold C0=6492.0 L1=3582.0 +44.82%; 30k/12 warm C0=12.0 L1=96.3 \u2212702.78%. qwen 3k/12 cold C0=1045.7 L1=2163.3 \u2212106.89%; 3k/12 warm C0=1030.0 L1=2119.0 \u2212105.73%. analysis.json independently reproduces every one of these to 3 s.f.",
+  "B3 RESULTS.md / cells.json do NOT reproduce: they publish 12 cells, 5 of which have no L1 data at all and 2 more whose qwen L1 'cached' is fabricated as 0 on rows that DO report caching. Spot-signed examples: occamy 3k/12 cold L1_unc RESULTS \u2212106.8% = 2161 vs runs.json 2162.0 (\u2212106.96%); occamy 3k/12 warm L1_unc 184 (\u221280.8%) vs 83.3 (\u22121288.89%, 45x off); occamy 10k/12 cold 2161 (\u2212107%) vs 2522.7 (\u22122.55%); occamy 3k/30 cold 7 requests vs 3 in runs.json; qwen 3k/12 warm saving +31.42% claimed vs \u2212105.73% measured.",
+  "B4 COLD-CACHE CROSSOVER: NOT 'unmeasured at 30k' \u2014 the 30,000-char cold L1 cells DO exist for occamy (3 reps, 9 rows): saving_billed = +81.61% on the round-summed basis and +44.82% on the per-run basis. So on OCCAMY the cold-cache saving crosses zero between 10,000 (\u22126.31% / \u22122.55%) and 30,000 (+81.61% / +44.82%); at 30,000 it is POSITIVE, not negative. For qwen the cold 30k L1 cell is ABSENT (no rows) \u2014 that half is UNMEASURED.",
+  "B5 VERDICT THE ROWS SUPPORT: CONDITIONAL. Cold cache: L1 loses at 3,000 (\u2212106.96%), ~breakeven at 10,000 (\u22122.55%), wins at 30,000 (+44.82% per-run / +81.61% round-summed). Warm cache: L1 loses in EVERY measured warm cell, from \u2212168.75% to \u22122192.31%. Decisive numbers: warm 30k/12 occamy C0_unc=12.0 vs L1_unc=96.3 (\u2212702.78%); cold 30k/12 occamy C0_unc=6492.0 vs L1_unc=3582.0 (+44.82%). RESULTS.md's headline 'NEGATIVE ... anywhere in the 3k\u201330k range' is NOT what the rows show for the cold regime \u2014 but RESULTS.md's own warm-prefix claim (L1 loses with a warm prefix) IS supported in every warm cell that exists. The handoff's status 'done' is OVERSTATED: its published 12-row table includes cells with zero L1 rows, its '24 runs / 65 request rows' framing contradicts runs.json (66 runs) and rows.jsonl (147), and no committed artefact records the 3 reps that runs.json actually contains.",
+  "C1 live papers/context-cache/MANUSCRIPT.md: wc -l 1214 (matches), grep -c 'CITATION NEEDED' = 0 (matches), sha256 37a3f1b34eb43c0c47dc9d41dd02158e6ac000f888b6ee92fe26c93f3ef008cd, '192.168.' = 1 hit (line 993).",
+  "C2 release copy: sha256 9490bba6f3555bbae6ff32ac3df783d92503131c0c1e8254ed7dbe7559d6d700 (matches expected 9490bba6...), wc -l 1214, 'CITATION NEEDED' 0, '192.168.' 0. The two copies differ by exactly ONE line (line 993: live 'http://192.168.2.168:8012' -> release 'http://serving-host'): the release is sanitised of internal LAN endpoints, hence the differing digest.",
+  "C3 live-tree runs: verify_package.py EXIT 0 ('verify_package: PASS \u2014 69 claims ... UNVERIFIED: none'); recompute.py all EXIT 0 (PASS 43/43, GRID GUARD PASS 7/7, COVERAGE GUARD PASS 69); recompute_r2.py all EXIT 0 (PASS 85/85, 70/70, 50/50, 61/61, 38/38, 48/48, 75/75).",
+  "C4 live pytest tests/test_gap_closure_ledger.py tests/test_g5_fanout_attribution.py tests/test_paper_g3_bands.py -q -> '25 passed in 0.09s'.",
+  "C5 release/v0.1/LICENSE line 5 vs /home/zer0null/Duval/LICENSE line 5 -> IDENTICAL (byte-compared with cmp; 'Required Notice: Copyright As win-Ram-K (https://github.com/As win...'). No git command was run against the target.",
+  "B1 CELL COMPLETENESS, measured by me from rows_occamy.jsonl (119 rows), rows_qwen.jsonl (28 rows) and runs.json (66 runs), keyed on (size,n_items,arm,cache_state) with reps counted from run-level rows (round-level rows are NOT reps: L1 carries up to 7 rounds per rep). OCCAMY, 8 grid slots: COMPLETE (3 reps, both arms): 3,000/12 cold, 3,000/12 warm, 3,000/30 cold, 3,000/30 warm, 10,000/12 cold, 10,000/12 warm, 30,000/12 cold, 30,000/12 warm = 7 COMPLETE; INCOMPLETE: 3,000... precisely: 10,000/30 cold has c0 reps 1-2 only and ZERO L1 runs. QWEN, 4 grid slots (only 3,000/12 was ever attempted): COMPLETE 3,000/12 cold and 3,000/12 warm (3 reps each) = 2 COMPLETE; INCOMPLETE 10,000/12 cold (c0 3 reps, 0 L1 runs) and 10,000/12 warm (1 c0 rep, 0 L1 runs). ABSENT for qwen: every 30,000 row (both sizes of corpus) and every n=30 row. Totals: 10 complete cells, 3 incomplete, 11+ absent of the published 12-row table."
+ ],
+ "not_reproduced": [
+  "release/REPRO.md claims scripts at the tree root (release/v0.1/verify_package.py, release/v0.1/recompute.py): they are at release/v0.1/papers/context-cache/ \u2014 REPRO's own paths exit 2 'No such file or directory'.",
+  "RESULTS.md 12-cell table: 5 cells (occamy 10k/30 cold+warm, occamy 30k/30 cold+warm, qwen 10k/12 cold+warm, qwen 30k/12 x2, qwen 30k/30 x2) have NO L1 rows on disk; 10 of 12 published numbers differ from the raw-run recomputation.",
+  "RESULTS.md 'qwen 3k/12 warm saving \u2212105.3%' is the only warm-qwen number that matches; its companion occamy warm figures (184, 508, 1412) do not.",
+  "Handoff claims '24 runs complete, 65 request rows': runs.json holds 66 runs, rows.jsonl 147, rows_occamy 119 + rows_qwen 28.",
+  "RESULTS.md 'Status: complete \u2014 all 12 grid cells measured': the grid as published is 12 rows over 3 corpus cells (12/3k, 12/30k, 30/30k) x 2 arms x 2 cache states x 2 models = 24 runs, but only 2 model/corpus cells (occamy 3k/12, 3k/30, 30k/12 \u2014 10 of 24) are complete on disk."
+ ],
+ "overstated": [
+  "LAZY-LOAD-CROSSOVER.json status 'done' \u2014 4 of the published cells have zero L1 rows and 2 qwen cells have L1 rows whose cached_tokens field contradicts cells.json.",
+  "RESULTS.md headline 'Verdict: NEGATIVE ... does not beat inline loading on billed tokens anywhere in the 3k-30k range' \u2014 contradicted by its own cold 30k occamy cell (+81.61% round-summed / +44.82% per-run) which the pages do report but then refuse to call a crossover.",
+  "RESULTS.md \u00a72 'A B in the last column means the server returned prompt_tokens_details: null \u2014 the cache instrument is blind': on the two cells I could check (qwen 3k/12 cold and warm) the rows report cache_reporting True and non-zero cached_tokens, so 'blind' does not describe those rows.",
+  "REPRO.md self-sufficiency claim \u2014 the shipped tree cannot re-derive 6 of its 69 claims."
+ ],
+ "unverified": [
+  "Whether the 3,000-char and 30,000-char corpora regenerate byte-for-byte from SEED=20261024 (cx_harness.py SELFCHECK was not re-run: it would need the serving stack).",
+  "Whether the response bodies / correctness counts (2/2, 6/6) are genuine \u2014 no model server was available; I verified token accounting only.",
+  "The cause of the 10k/30 cold c0 reps 1-2 truncation (runs_occamy.json shows run 51/72 started and never finished; run_occamy.log ends mid-line) \u2014 pipeline interruption, not a measurement result.",
+  "Whether the 'REALISED' numbers in RESULTS.md were produced before or after the runs.json\u2192rows.jsonl rewrite (mtime order: runs_occamy 22:11, runs.json 22:12, cells.json 22:31, RESULTS.md 22:31)."
+ ],
+ "blocker": "release/v0.1 is not self-sufficient: state/config/rows.jsonl (82,565 B) is absent from the shipped tree and unlisted in MANIFEST.json, so recompute.py/recompute_r2.py exit 1 and 6 claims (C62,C63,C65,C66,C67,C68) cannot be re-derived; the gap-ledger tests need 11 further live-tree paths. Separately, the crossover experiment's published table is not backed by its own raw rows for 5 of 12 cells.",
+ "next_unit_hint": "Two independent repairs. (1) RELEASE-DATA: ship state/config/rows.jsonl + the 11 evidence paths into release/v0.1, add them to MANIFEST.json, and re-run the four REPRO commands to green; then correct REPRO.md's paths (scripts live under papers/context-cache/). (2) CROSSOVER-REPAIR: re-run the 10 incomplete cells to 3 reps with a committed multi-rep analysis script, have RESULTS.md/cells.json regenerate from rows*.jsonl instead of hand-assembly, drop the '24 runs / 65 rows' claim, and re-state the verdict as CONDITIONAL (warm: L1 loses everywhere measured; cold: L1 wins at 30k occamy +44.82%). The crossover is NOT in the paper or the release, so it does not block the release.",
+ "write_paths": [
+  "orchestration/units/V2-CURRENT.md",
+  "orchestration/handoffs/V2-CURRENT.json",
+  ".verify-scratch/**"
+ ],
+ "assumptions": [
+  "REPRO.md's 'from cd release/v0.1' was read as 'run the scripts that ship in release/v0.1'; since they sit one level down, I ran them from papers/context-cache/ as the closest defensible reading, and separately confirmed the literal commands exit 2.",
+  "saving_billed was computed with uncached = prompt_tokens \u2212 cached_tokens treating a null cached_tokens as 0 (the rows' own convention) over the mean of 3 reps; I report both the per-run basis (runs.json, authoritative, since lazy-loading cost is per billed request) and the round-summed basis (rows*.jsonl) because they disagree and cells.json used a third basis.",
+  "No model server was contacted: this unit verifies artefacts, not re-measurement, and dotenv/test servers are out of scope for a filesystem verifier.",
+  "review/v0.1 was never written to; every probe that needed extra files ran on a copy at .verify-scratch/rel/."
+ ],
+ "tool_calls": 35,
+ "bound": 40,
+ "containment": {
+  "release_v01_modified": false,
+  "papers_modified": false,
+  "experiments_modified": false,
+  "writes": [
+   "orchestration/units/V2-CURRENT.md",
+   "orchestration/handoffs/V2-CURRENT.json",
+   ".verify-scratch/"
+  ],
+  "git_run_against_target": false,
+  "pycache_prevented_by": "PYTHONDONTWRITEBYTECODE=1 on every python invocation",
+  "pytest_cache_note": "pytest run from inside release/v0.1 created release/v0.1/.pytest_cache/ (self-ignoring: contains only CACHEDIR.TAG, .gitignore, README.md, v/cache/{lastfailed,nodeids}); I removed it in the same pass. Every other file in release/v0.1 kept its pre-existing mtime (MANIFEST.json 21:51, LICENSE 21:19, MANUSCRIPT.md 21:50 all predate this unit).",
+  "no_artefact_altered": true
+ }
+}

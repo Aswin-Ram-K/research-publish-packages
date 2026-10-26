@@ -1,0 +1,107 @@
+{
+  "unit": "O3-P2-REPEAT",
+  "salt": "o3-repeat-20261024T11:05Z-a1",
+  "n_rows": 213,
+  "grid_used": 16,
+  "grid_declared": 48,
+  "arms": {
+    "P0": {
+      "mean_uncached_per_turn": 1293.521127,
+      "t_ci95": [
+        1141.400366,
+        1445.641887
+      ],
+      "hit_fraction_weighted": 0.895143,
+      "pad_tokens_total": 0,
+      "n_zero_cached": 4
+    },
+    "P1": {
+      "mean_uncached_per_turn": 1371.253521,
+      "t_ci95": [
+        1234.43803,
+        1508.069012
+      ],
+      "hit_fraction_weighted": 0.403843,
+      "pad_tokens_total": 0,
+      "n_zero_cached": 39
+    },
+    "P2": {
+      "mean_uncached_per_turn": 389.408451,
+      "t_ci95": [
+        244.069237,
+        534.747664
+      ],
+      "hit_fraction_weighted": 0.832461,
+      "pad_tokens_total": 1713,
+      "n_zero_cached": 11
+    }
+  },
+  "deltas": {
+    "P1/P0": {
+      "mean": 77.732394,
+      "ci95": [
+        -113.717152,
+        269.181941
+      ],
+      "pct_vs_baseline": 6.01,
+      "ratio_of_means": 1.060094,
+      "excludes_zero": false
+    },
+    "P2/P0": {
+      "mean": -904.112676,
+      "ci95": [
+        -1101.696547,
+        -706.528805
+      ],
+      "pct_vs_baseline": -69.9,
+      "ratio_of_means": 0.301045,
+      "excludes_zero": true
+    }
+  },
+  "replication": "the -51.5% NUMBER replicates and grows to -69.9% (P2/P0 -904.11, t-CI [-1101.70,-706.53]), but the PADDING interpretation does not",
+  "artifact": {
+    "mechanism": "the P2 pad-alignment correction re-sends the SAME turn with a longer pad; the row records only the second send, whose cached_tokens is the first send's prompt",
+    "n_corrected_rows_repeat": 68,
+    "n_corrected_rows_original": 70,
+    "direct_proof_A1_A2": "A1 prompt 4153 cached 4096 -> A2 prompt 4157 cached 4144 (A2.cached == A1.prompt rounded to 16)",
+    "prefix_semantics_proof": "prompt 4264 -> cached 4128; same-length prompt with one mid-prompt sha8 changed -> cached 2112",
+    "p2_true_uncached_estimate_per_turn": 1395.38,
+    "p2_recorded_uncached_per_turn": 389.408451,
+    "p1_uncached_per_turn": 1371.253521,
+    "reading": "true P2 cost ~= P1 cost + pad => padding to the grid saves nothing",
+    "clean_first_attempt_rows": [
+      {
+        "turn": 25,
+        "p2_prompt": 1760,
+        "p2_cached": 0,
+        "p1_prompt": 1733,
+        "p1_cached": 0
+      },
+      {
+        "turn": 30,
+        "p2_prompt": 2016,
+        "p2_cached": 1984,
+        "p1_prompt": 1994,
+        "p1_cached": 0
+      },
+      {
+        "turn": 67,
+        "p2_prompt": 3920,
+        "p2_cached": 3888,
+        "p1_prompt": 3902,
+        "p1_cached": 2112
+      }
+    ]
+  },
+  "quality": {
+    "mismatch_rate": 1.0,
+    "cause": "answer-form divergence, not degradation: P0 form (whole 24k history) answers by quoting the span text; P1 form (pointer index) answers with the span length and the sha8 from the index line; P1's sha8 values are correct (t003 471d8e55, t006 35ea24b7 == sha256(delta_block)[:8]); O1 also measured 1.0, so 1.0 is not O3-specific"
+  },
+  "restore": {
+    "r2o3": "removed",
+    "8012": "200 occamy-1.0 131072 sglang",
+    "8014": "200 qwen3.5-9b 32768",
+    "gx10-occamy-nvfp4": "Up About an hour, never stopped",
+    "available_mb": 59687
+  }
+}

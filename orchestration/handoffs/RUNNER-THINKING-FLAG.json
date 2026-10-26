@@ -1,0 +1,47 @@
+{
+  "unit": "RUNNER-THINKING-FLAG",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests_thinking_flag.py",
+    "orchestration/handoffs/RUNNER-THINKING-FLAG.json",
+    "orchestration/units/RUNNER-THINKING-FLAG.md"
+  ],
+  "evidence": {
+    "requests_sent": "0 (all evidence offline; --dry-run + payload-builder unit tests only)",
+    "dry_run_auto": "--dry-run --thinking auto --show-prompts --fixture runtime/LR-01.json -> exit 0; grep -c chat_template_kwargs = 0; would_send_total=192",
+    "dry_run_off": "--dry-run --thinking off -> exit 0; payload carries \"chat_template_kwargs\": {\"enable_thinking\": false} (12 printed payloads); would_send_total=192",
+    "dry_run_on": "--dry-run --thinking on -> exit 0; payload carries \"chat_template_kwargs\": {\"enable_thinking\": true} (12 printed payloads); would_send_total=192",
+    "payload_forms": {
+      "auto": "{\"max_tokens\": 16384, \"messages\": [{\"content\": \"S\", \"role\": \"system\"}, {\"content\": \"Q\", \"role\": \"user\"}], \"model\": \"m\", \"stream\": true, \"stream_options\": {\"include_usage\": true}, \"temperature\": 0}",
+      "off": "{\"chat_template_kwargs\": {\"enable_thinking\": false}, \"max_tokens\": 16384, \"messages\": [{\"content\": \"S\", \"role\": \"system\"}, {\"content\": \"Q\", \"role\": \"user\"}], \"model\": \"m\", \"stream\": true, \"stream_options\": {\"include_usage\": true}, \"temperature\": 0}",
+      "on": "{\"chat_template_kwargs\": {\"enable_thinking\": true}, \"max_tokens\": 16384, \"messages\": [{\"content\": \"S\", \"role\": \"system\"}, {\"content\": \"Q\", \"role\": \"user\"}], \"model\": \"m\", \"stream\": true, \"stream_options\": {\"include_usage\": true}, \"temperature\": 0}"
+    },
+    "proposal_counts": "transcript-grow 48, transcript-compact 48, pointer-stable 48, lease-reopen 48, digest_requests=0 each, would_send_total=192 for auto, off AND on (identical)",
+    "arms_still_differ": "same arm-specific payloads as before the flag: pointer-stable T1 3043 B / T2 5883 B / T3 7410 B vs transcript-grow 7306 / 7560 / 7751 B vs lease-reopen 837 / 904 / 841 B (auto); off/on add exactly 62 B of kwargs per body (auto T1 sha ca274de5..., off d0d40054..., on 33c534bb...)",
+    "pytest_green": ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests_thinking_flag.py -q -> '7 passed in 0.02s' (exit 0)",
+    "pytest_red": "auto branch temporarily made to return {\"enable_thinking\": true} -> '4 failed, 3 passed in 0.03s' (exit 1) on test_auto_has_no_chat_template_kwargs_key, test_auto_is_byte_identical_to_the_pre_flag_payload, test_missing_attribute_defaults_to_auto, test_only_the_thinking_key_differs_between_settings; source then restored (diff -q clean), green again '7 passed'",
+    "ast_parse": "python -c ast.parse(...) -> 'ast ok', exit 0",
+    "line_count": "wc -l run_longrun.py: 1161 before -> 1205 after (+44)",
+    "manifest_keeps_setting": "dry-run manifests: thinking=auto/off/on and renderer.chat_template_kwargs=None/{'enable_thinking': False}/{'enable_thinking': True}",
+    "row_key": "make_row carries \"thinking\": thinking_setting(cfg) next to \"stream\""
+  },
+  "auto_payload_has_kwargs": false,
+  "requests_proposed_per_arm": 48,
+  "requests_proposed_total": 192,
+  "row_key_added": "thinking",
+  "blocker": "",
+  "assumptions": [
+    "Dry-runs were pointed at experiments/ptr-engine/longrun/runtime/LR-01.json because fixtures/LR-01.json is an authored/stub fixture the runner refuses; runtime/ is the adapted runtime fixture and was not modified.",
+    "Dry-run manifests/previews were written under /tmp/think-manifests-<setting>/ so no repo manifest or row file was touched.",
+    "The seam used is the existing request_body(cfg, messages); thinking_kwargs() is the testable branch, no send-path restructuring.",
+    "Manifest bytes change for auto too (new \"thinking\": \"auto\" + renderer.chat_template_kwargs: null keys), per the requirement to freeze the setting; row schema gains only \"thinking\"."
+  ],
+  "next_unit_hint": "Request-spending card: 4 arms x N turns at --thinking off (and on) on the SGLang endpoint, one run id per setting, never pooled with existing rows. Expect ~62 B more per body; the 16,384 max_tokens and --timeout 900 stay as today; the thing to measure is completion_tokens/content vs reasoning split and zero answer_source=='none' rows.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests_thinking_flag.py",
+    "orchestration/handoffs/RUNNER-THINKING-FLAG.json",
+    "orchestration/units/RUNNER-THINKING-FLAG.md"
+  ]
+}

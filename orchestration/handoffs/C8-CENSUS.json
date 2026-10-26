@@ -1,0 +1,29 @@
+{
+  "unit": "C8-CENSUS",
+  "status": "done",
+  "artifacts": ["experiments/miss-law/FIT-GAP.md"],
+  "evidence": {
+    "denominator": 774,
+    "unfit_count": 21,
+    "classes": {"outlier": 0, "law_gap": 0, "defect": 21},
+    "groups": [
+      {"reason": "phase=position, server=sglang, role=measure, error=null: row post-dates the fit (agg.py ran 2026-10-24 23:55:04.988, row fsynced by rows.jsonl mtime 23:55:57.864) so the fit's population never contained it; the row is sound, the artefact pair is stale", "count": 11},
+      {"reason": "phase=residue, server=sglang, role=measure, n_payload=1, error=null: same staleness in the residue arm - exactly the -5 vllm delta plus tail sglang growth that n_residue_rows 305 vs 310 on disk exposes; residue_ok/residue_miss are a snapshot of a shorter file", "count": 10}
+    ],
+    "join_failures": [],
+    "command": "cd \"experiments/miss-law\" && wc -l rows.jsonl && python3 -c \"import json,collections; rows=[json.loads(l) for l in open('rows.jsonl')]; d=json.load(open('law_fit.json')); print('denom',len(rows),'unfit',len(rows)-d['n_rows'],'scope',sum(v['n_residue_rows'] for v in d['servers'].values())); print('disk residue+measure',sum(1 for r in rows if r['phase']=='residue' and r['role']=='measure')); print('meas()',sum(1 for r in rows if r['role']=='measure' and not r['error'] and r['server'] in ('sglang','vllm'))); print('no-fit-input',sum(1 for r in rows if r['role']=='measure' and not ('L_app' in r or 'L_res' in r))); print('position',sum(1 for r in rows if r['phase']=='position'),'rows-with-id',sum(1 for r in rows if 'id' in r)); print('null-cache',sum(1 for r in rows if r.get('cached_tokens') is None))\"",
+    "command_output": "774 / denom 774 unfit 21 scope 305 / disk residue+measure 310 / meas() 387 / no-fit-input 0 / position 11 rows-with-id 0 / null-cache 379",
+    "c8_recommendation": "CLOSED - the law is neither silent nor wrong on anything; the fit is exhaustive over its own population (387/387 measure rows selected by agg.py meas() carry a fit input, 0 lack one; OUTLIER 0 and LAW GAP 0 are checked, not assumed - sglang residue_miss [0,1] is the cached_tokens IS NULL priming cell, and all 379 null-cache rows are measure rows inside the fit). Closing carries two caveats: n_rows at experiments/miss-law/agg.py:63 is a runtime file length, not a coverage count; and law_fit.json is a stale snapshot predating 21 of 774 rows, so vllm n_residue_rows understates the file by 5.",
+    "fit_notion_of_fits": "no per-row pass/fail field and no row id in law_fit.json; fits is recorded by n_rows (bare total 753 = len(rows) at agg.py:63) and by the per-server residue_ok/residue_miss index lists over [r for r in rows if r.server==S and r.phase=='residue' and r.role=='measure']",
+    "join_method": "positional in agg.py's own index space; rows.jsonl has 0/774 rows carrying an id, so the card's id-join is unsatisfiable as written",
+    "artifact_lines": 93
+  },
+  "assumptions": [
+    "The card's 'join on the row id it uses' is unsatisfiable: neither law_fit.json nor rows.jsonl carries a row id (0/774 rows have an 'id' key). Used the producer's own index space, positional, and reported join_failures as none.",
+    "The 21-row identity split (11 position + 10 residue) is read from the appended tail's phase field, corroborated by residue_ok completing to exactly 64 (sglang) and 18 (vllm) residues and by the 305-vs-310 residue delta; a timestamp alone does not name rows, so this identity is the strongest available and is stated as such in the file.",
+    "A prior FIT-GAP.md stub (present at read time, mtime 08:36:10, its own method citing agg.py mtimes) was rewritten in place per the card's ONE-deliverable instruction; its mtime-based provenance finding and its counts were independently re-derived and are preserved in the new file."
+  ],
+  "blocker": "",
+  "next_unit_hint": "A later unit owns the C8 paragraph in experiments/ptr-engine/RECORD.md: it should record C8 as CLOSED with the two caveats (n_rows is a runtime file length, not a coverage count; law_fit.json is a stale snapshot 21 rows behind rows.jsonl, vllm n_residue_rows 5 short), and may also flag law_fit.json's vllm residue_ok as 1-based (len 18 vs declared 73) so a re-run keys it consistently.",
+  "write_paths": ["experiments/miss-law/FIT-GAP.md", "orchestration/handoffs/C8-CENSUS.json"]
+}

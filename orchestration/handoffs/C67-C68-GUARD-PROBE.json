@@ -1,0 +1,68 @@
+{
+  "unit": "C67-C68-GUARD-PROBE",
+  "status": "done",
+  "artifacts": [
+    "tests/test_claims_value_guard.py",
+    "orchestration/handoffs/C67-C68-GUARD-PROBE.json",
+    "orchestration/units/C67-C68-GUARD-PROBE.md"
+  ],
+  "evidence": {
+    "command_or_count": {
+      "guard_alone": "9 passed in 2.27s",
+      "guard_exit": 0,
+      "suite": "1377 passed, 1 skipped in 103.87s (live test skipped by design)",
+      "suite_exit": 0,
+      "verify_package": "PASS - 69 claims in CLAIMS.md, 69 mapped 1:1, 8 script-backed + 61 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none",
+      "verify_exit": 0,
+      "recompute_r2_all_exit": 0,
+      "probe_report": "C66: 2 guarded key(s) moved (T64_minus_T256_A, T64_minus_T256_A_ci95); C67: 7 structural figure(s) no longer satisfied (O4_P1 delta + interval move); C68: 1 structural figure no longer satisfied (O1 vs O3 no longer differs on config_id/config_sha256)"
+    },
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_claims_value_guard.py -q  ->  exit 0",
+      ".venv/bin/python -m pytest tests/ -q  ->  exit 0",
+      ".venv/bin/python papers/context-cache/verify_package.py  ->  exit 0",
+      ".venv/bin/python papers/context-cache/recompute_r2.py all  ->  exit 0",
+      ".venv/bin/python -m pytest tests/test_claims_value_guard.py -q -k 'not c67_intervals and not c68_pairs and not bites'  ->  exit 0 (pre-existing legs, plant in cell: blind)",
+      "python3 (row-targeted plant of the C67 Value cell, then restore; sha256 checked after each)"
+    ]
+  },
+  "reproduction": {
+    "C67": "exit 0. Plant 'O4 +23.5211 [8.39, 53.48]' -> '[8.39, 58.48]' in the C67 VALUE CELL, pre-existing legs only: '6 passed, 3 deselected', exit 0. Confirmed cause: the four interval keys are in NOT_IN_CELL (waived) and the leg their waiver names, test_c67_intervals_and_c67a, did not exist; the generic leg only asks that a number appear anywhere among the cell's numbers. TRAP: '[8.39, 53.48]' occurs twice on the C67 row - once in the claim prose, once in the Value cell. A first-occurrence replace (as described in C66-C68-GUARD) hits the PROSE and leaves the guarded cell untouched, so that exit 0 was real but confounded; the cell-targeted plant is the honest reproduction and also exits 0.",
+    "C68": "exit 0. Plant '277 (O1 vs O3)' -> '271 (O1 vs O3)' in the C68 Value cell, pre-existing legs only, exit 0. Cause: every guarded C68 key is a count compared as a bag of all numbers in the cell, and 277 appears a second time as '(O2 vs O3)', so the leg cannot tell which pair moved; '284' appears six more times as shared_keys."
+  },
+  "red_green": {
+    "C67": {
+      "plant": "CLAIMS.md C67 Value cell: 'O4 +23.5211 [8.39, 53.48] (**P3 costs**)' -> '[8.39, 58.48]' (cell occurrence only; claim prose left as written)",
+      "red": "exit 1 - tests/test_claims_value_guard.py::test_c67_intervals_and_c67a AND ::test_the_guard_bites_when_the_recomputation_moves: 'C67:O4_P3_minus_P1_ci95 upper bound written 58.48 but pinned 53.479 renders 53.48' (the untouched-pins check inside the bites leg reports the same line)",
+      "green": "restored -> '9 passed in 2.27s', exit 0",
+      "sha_after_restore": "3fbf199f85b103d2e954eee225084da04c81776f1c1692ad726544798d68178e"
+    },
+    "C68": {
+      "plant": "CLAIMS.md C68 Value cell: '277 (O1 vs O3)' -> '271 (O1 vs O3)'",
+      "red": "exit 1 - tests/test_claims_value_guard.py::test_c68_pairs_are_counted_once: 'C68:O1_vs_O3_rows_with_different_cache_counters written 271 for (O1 vs O3) but pinned 277'",
+      "green": "restored -> '9 passed in 2.27s', exit 0",
+      "sha_after_restore": "3fbf199f85b103d2e954eee225084da04c81776f1c1692ad726544798d68178e"
+    }
+  },
+  "cannot_bite": [],
+  "focus_hack_removed": true,
+  "tolerances_loosened": 0,
+  "claims_md_sha_before": "3fbf199f85b103d2e954eee225084da04c81776f1c1692ad726544798d68178e",
+  "claims_md_sha_after": "3fbf199f85b103d2e954eee225084da04c81776f1c1692ad726544798d68178e",
+  "assumptions": [
+    "focus_hack_removed means the C68 exemption in test_the_guard_bites_when_the_recomputation_moves was removed: the assertion now requires C66, C67 AND C68 to bite, and the comment justifying the exemption ('a relabelled copy leaves every guarded key at its pinned value') was retired because it is no longer true once the pair key is part of the comparison.",
+    "The C67 fix is a stricter comparison, not a cell change: every guarded C67/C68 pin is written at 2-4 dp and the new legs compare the pin rendered to the cell's OWN precision (decimal ROUND_HALF_UP from the pin's shortest repr), so -88.845 renders -88.85 exactly as the cell writes it. No cell needs to state a value at higher precision, so no CLAIMS.md change is proposed.",
+    "A real leg was chosen over extending the waiver: the two waiver reasons named a test that did not exist; test_c67_intervals_and_c67a and test_c68_pairs_are_counted_once now exist under those exact names, so NOT_IN_CELL's reasons are true as written (no waiver text changed).",
+    "Bash-call overrun: 18 bash calls against a bound of 12. Seven were spent on one trap - '[8.39, 53.48]' appears twice on the C67 row (claim prose and Value cell), so a first-occurrence plant silently edits the prose; discovering this cost the debug runs. The unit card records the overrun.",
+    "No file outside the three declared write paths was modified; CLAIMS.md was written only transiently inside the probes and restored from a copy each time, and its sha256 was checked before and after every probe.",
+    "Full-suite failures caused by the concurrent PROV-PIN-FIX edits (test_g5_fanout_attribution.py, test_gap_closure_ledger.py, test_paper_g3_bands.py) did not occur in this run: the suite was fully green."
+  ],
+  "blocker": "",
+  "next_unit_hint": "A verifier should re-run the two cell-targeted plants itself and confirm the OLD legs are blind (6 passed, 3 deselected, exit 0) while the new legs are red, because the C67 literal is duplicated on its row: any probe that greps for '[8.39, 53.48]' and replaces the first hit measures nothing. C66's leg is unchanged by this unit (2 keys moved). Next real gap: the C67 arm means and deltas are now slot-checked, but C66's arm means are still only bag-checked (waived to 2-dp prose), so the same 'same number appears twice' blindness may exist there.",
+  "write_paths": [
+    "tests/test_claims_value_guard.py",
+    "orchestration/handoffs/C67-C68-GUARD-PROBE.json",
+    "orchestration/units/C67-C68-GUARD-PROBE.md"
+  ],
+  "tool_calls_used": 30
+}

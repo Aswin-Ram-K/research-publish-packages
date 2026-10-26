@@ -1,0 +1,61 @@
+# resextract configuration — verified endpoints and stage policy.
+
+[version]
+config_version = 1
+
+[endpoints]
+occamy_base_url = "http://serving-host/v1"
+occamy_model = "occamy-1.0"
+searxng_base_url = "http://127.0.0.1:8080"
+crawl_scrape_base_url = "http://127.0.0.1:8891"
+crawl_endpoint = "http://127.0.0.1:8891/crawl"
+scrape_endpoint = "http://127.0.0.1:8891/scrape"
+health_endpoint = "http://127.0.0.1:8891/health"
+docling_bridge_base_url = "http://127.0.0.1:8893"
+docling_optional = true
+
+[prior_art]
+prior_art_ttl_days = 30
+
+[copy_caps]
+max_bytes_per_file = 2097152      # 2 MiB
+max_bytes_per_docket = 209715200  # 200 MiB
+
+[exclude]
+# Duval-side paths never indexed/copied.
+duval = [
+  ".worktrees/",
+  "node_modules/",
+  ".git/",
+  "graphify-out/",
+]
+
+# Stage-to-model thinking policy.
+# Mechanical stages (deterministic/IO-bound graphify work) run with thinking OFF.
+# Mining/assessment/drafting run with thinking ON and an explicit token cap.
+[stages.ingest]
+thinking = false
+model = "occamy-1.0"
+
+[stages.graph]
+thinking = false
+model = "occamy-1.0"
+
+[stages.clone]
+thinking = false
+model = "occamy-1.0"
+
+[stages.mining]
+thinking = true
+model = "occamy-1.0"
+max_thinking_tokens = 4096
+
+[stages.assessment]
+thinking = true
+model = "occamy-1.0"
+max_thinking_tokens = 8192
+
+[stages.drafting]
+thinking = true
+model = "occamy-1.0"
+max_thinking_tokens = 8192

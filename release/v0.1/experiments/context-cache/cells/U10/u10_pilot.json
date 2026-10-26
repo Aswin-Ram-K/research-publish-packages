@@ -1,0 +1,28 @@
+{
+  "unit": "U10",
+  "kind": "exploratory pilot probes (excluded from the 5-trial table)",
+  "requests_cost": 39,
+  "why": "The exact-length harness and the cache's cold-isolation semantics had to be verified before spending the sweep; a wrong assumption here would silently invalidate every cell.",
+  "findings": [
+    {
+      "claim": "tax law on a verified hit",
+      "evidence": "L=958 -> cached=896; L=979 -> 960; L=1003 -> 960; L=1024 -> 960; all equal 64*floor((L-1)/64)"
+    },
+    {
+      "claim": "a fresh marker is cold",
+      "evidence": "three independent tests: novel prompt -> prompt_tokens_details=null; same body but different first word (L=1022) -> null; same body sent again after three intervening requests -> null (L=979). Prefix match starts at token 0, as U9 assumed."
+    },
+    {
+      "claim": "the immediate repeat can miss or be partial",
+      "evidence": "fresh body b2 (L=965) then a same-body/different-tail request sent immediately -> cached=0; a 1024-token cell's first repeat -> cached=768 (12 of 15 blocks) with TTFT 129.5 ms against a 215.8 ms cold"
+    },
+    {
+      "claim": "an intervening request or ~1 s can make the hit appear",
+      "evidence": "L=1003 repeat after 3 intervening requests -> cached=960, TTFT 85.7 ms; L=958 repeat after 1.0 s sleep -> 896 (896 is the tax-law value, so full)"
+    },
+    {
+      "claim": "pilot anomaly, fully explained, forces verified-cold starts",
+      "evidence": "three prompts with different markers each reported cached=960; cause: the pilot scripts all started their marker sequence at SEED*1000+1, so pilot #2 reused pilot #1's markers and its longer body extended a cached prefix. Live run now starts a million seeds later and retries any request that reports a non-zero cache on a cold role."
+    }
+  ]
+}

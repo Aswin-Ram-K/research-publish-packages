@@ -1,0 +1,28 @@
+KNOWLEDGE K-3 -- Search index rebuild notes
+
+What a rebuild is. The search index is rebuilt nightly from the source of truth.
+A rebuild streams source rows, chunks them, embeds the chunks, and writes new
+segments. Old segments are deleted only after the new ones are marked healthy, so a
+rebuild is always atomic from a reader's perspective: a query sees the old index or
+the new one, never a mixture.
+
+Why rebuild time grows superlinearly. Rebuild time scales with the number of chunks,
+and the chunk count scales with average document length. Longer documents therefore
+hurt rebuild time before they hurt query latency, and the relationship is worse than
+linear because longer documents also produce more overlapping chunks. Teams that
+optimise query latency by shortening chunks make rebuilds slower, not faster.
+
+Staleness. Between rebuilds the index lags the source. The lag is bounded by the
+rebuild interval, so the index is at most one day stale for rows written after the
+last rebuild began. Anything that needs fresher reads must query the source
+directly; there is no incremental update path at this layer, and a "quick partial
+rebuild" is not supported.
+
+Failure handling. A rebuild that fails partway leaves the previous index in place.
+Nothing is served from the half-built segments, and the failure is reported in the
+rebuild notification rather than on the search side, which is why search dashboards
+stay green through a failed rebuild.
+
+Do not. Do not trigger a rebuild to fix a single wrong document. The whole index is
+rebuilt or nothing is, and a rebuild for one row costs the same as a rebuild for the
+whole corpus.

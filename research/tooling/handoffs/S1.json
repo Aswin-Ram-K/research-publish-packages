@@ -1,0 +1,36 @@
+{
+  "unit": "S1",
+  "status": "done",
+  "artifacts": ["research/tooling/01-inventory.md"],
+  "evidence": {
+    "commands": [
+      "cat pyproject.toml",
+      ".venv/bin/python -m pip list",
+      ".venv/bin/graphify --help",
+      ".venv/bin/graphify-mcp --help",
+      "ls .venv/lib/python3.14/site-packages/graphify/",
+      "grep -rn 'leiden|graphifyignore' .venv/lib/python3.14/site-packages/graphify/{cluster,detect}.py",
+      "grep -n 'name=\"' .venv/lib/python3.14/site-packages/graphify/serve.py",
+      "grep -rn '\\.query(|\\.affected(|\\.god_nodes(|\\.extract(|\\.update(' src/ --include=*.py",
+      "sed -n '1280,1420p' src/resextract/run.py",
+      "sed -n '880,965p' src/resextract/mine/candidates.py",
+      "python -c 'load state/kg/duval/graphify-out/graph.json; count nodes/links/relations'",
+      "sha256sum state/kg/duval/graphify-out/graph.json",
+      "grep -rln 'context.budget|from resextract.context' tests/",
+      "cat ~/.dsh/profiles/web/package.json; cat ~/.dsh/profiles/web/cordis.patch.yml",
+      "grep -ril mcp ~/.dsh/profiles/web/{package.json,cordis.patch.yml}  # 0 hits",
+      "cat '~/Desktop/deepseek agent harness testing/scratch-graphify/dsh-plugin-graphify/package/package.json'",
+      "grep -n 'name:' .../dsh-plugin-graphify/package/lib/index.js"
+    ],
+    "counts": "graph artifact: 2,685 nodes / 7,102 links / 3,188,231 bytes / sha256 4790bbb1...897b (matches config/graph_pin.toml:52); relations calls 2216, contains 2093, imports 1254, imports_from 687, references 374; graphify 0.9.80 ships 54 top-level modules + 35 extractors + 24 tree-sitter language packs; CLI has 28 subcommands; graphify-mcp registers 10 tools + 6 resources; resextract calls exactly 2 of them from src/ (extract, query)"
+  },
+  "gaps": ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12", "G13", "G14", "G15"],
+  "blocker": "",
+  "assumptions": [
+    "Read/marshal only: no build, install, test or pipeline run was executed; graph numbers are read from the existing artifact, not regenerated.",
+    "The only tool-usage proof used is a grep for Graphify method call sites in src/ plus the two explicit line references; a call made through a different alias would be missed.",
+    "refresh_target -> backlog.rework_entries linkage is inferred from refresh/__init__.py re-exports, not traced line by line.",
+    "local_doc_*/local_knowledge_*/local_board_* tool provenance is recorded as unverified (not found in profile node_modules)."
+  ],
+  "write_paths": ["research/tooling/01-inventory.md", "research/tooling/handoffs/S1.json"]
+}

@@ -1,0 +1,48 @@
+{
+  "unit": "V-PKG-CORR",
+  "overall": "fail",
+  "checks": [
+    "C1 verify_package PASS: `python3 papers/context-cache/verify_package.py` EXIT=0; 'verify_package: PASS — 63 claims in CLAIMS.md, 63 mapped 1:1, 2 script-backed + 61 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none'.",
+    "C2 recompute all PASS: `.venv/bin/python papers/context-cache/recompute.py all` EXIT=0; '60 claims checked, all match' plus 4 'COVERAGE GUARD ok' lines and 'COVERAGE GUARD PASS 63 claims documented, 61 runnable here + 2 script-backed'. The printed count is 60 because recompute.py:1234 SPECIAL = {'C61': lambda: grid_guard()} and :2333-2334 set claims=list(FUNCS); C61 is only run when named.",
+    "C3 grid_guard_selftest PASS: EXIT=0; GREEN 'GRID GUARD PASS 31 file(s), 9121 sglang cached_tokens, every one a multiple of 64'; its own planted RED row 3 cached_tokens=1409 gives 'GRID GUARD FAIL ... 1 off-grid cached_tokens'; removal gives PASS again.",
+    "C4 pytest PASS: `.venv/bin/python -m pytest tests/test_paper_attribution_guard.py tests/test_claims_decompose.py tests/test_serving_brief.py -q -p no:cacheprovider` EXIT=0, '34 passed in 5.59s'. Extra, not on the card: tests/test_cached_dedupe.py + tests/test_c63_ratio_raw_operands.py -> '13 passed in 0.85s'.",
+    "C5 falsified-number sweep FAIL: 3.3133 (11 occurrences / 10 lines) and 1.700 (40 occurrences / 10 files) are always disclosed as superseded or re-attributed (EVIDENCE.md:77 'superseded pre-G5'; CLAIMS.md:77 'superseded as an effect size'; MANUSCRIPT.md:33-36, 296-298; CLAIMS.md:239-240). 137.8, 390.80 and -53.85 have ZERO hits in papers/; 1225.18 appears only at recompute.py:1651 (C63_SUPERSEDED) and RUN.json:834 under mtp_correction.superseded (RUN.json:822-826, status 'superseded-values-replaced'). BUT papers/context-cache/PACKAGE.md:70-76 presents the pre-MTP numbers as live: '+1,225.18 ... 2.6738x ... 91.2 % of the grand mean, while the model main effect is +275.83 ... +548.06 under vLLM ... interaction of +272.23' with no supersession marker, while CLAIMS.md:219-220 marks every one of those SUPERSEDED and replaced. Named defect: PACKAGE.md:70 (with :71-76).",
+    "C6 C63 published values PASS: CLAIMS.md:219-220 carries the post-correction 'engine main effect is +549.33 [462.4, 631.9]' and 'model effect ... -400.02 [-474.2, -326.5]', ratio -1.3733, and the disclosure sentence 'the Round-1 vLLM dense cell ran with --speculative-config mtp; removing it re-measured that cell 2,230.7782 -> 879.0669 uncached tokens/turn'. `recompute.py C63` -> 'PASS 43/43 values match'.",
+    "C6 red->green PASS: on a /tmp/vpkg_rg copy (no repo writes) baseline 'PASS 43/43'; reverting the corrected expected value at recompute.py:2176 ('\"engine_effect\": 549.33' -> 1225.18) gives 'FAIL engine_effect recomputed=549.33 paper=1225.18' and 'FAIL 42/43 values match'; restoring the file gives PASS 43/43 again. Patching the CLAIMS.md C63 row to 1,225.18 instead changes nothing (still 43/43) because expected values live in recompute.py, not CLAIMS.md.",
+    "Restore integrity PASS: experiments/context-cache/cells/PROMPT-O1/rows.jsonl and rows.pre-correction.jsonl are byte-identical, 355 lines, 238087 B, sha256 dc0774d8ef7dc4dcaa6b295460bc9a73bf676f21db93b40d6ba3b18542101eff; quarantined rows.repaired-DO-NOT-USE.jsonl is 355 lines, 240711 B, sha256 58c95fae92f08de63ad4ad1ace59228e20edf02ba7d3849cbe9eded121c9269c; both match the card's stated digests.",
+    "Containment PASS: no writes under papers/, state/, experiments/ or dockets/ (anchor hashes unchanged: CLAIMS.md 2e627995..., recompute.py f8cb87ca..., rows.jsonl dc0774d8...); only /tmp/vpkg_rg scratch plus the two permitted orchestration files; zero live requests, no lock touched, no docker."
+  ],
+  "blocker": "papers/context-cache/PACKAGE.md:70-76 (§3 item 6) states the pre-MTP-correction C63 numbers as live: engine +1,225.18 [1,132.2, 1,313.3], 2.6738x, 91.2 % of grand mean, model +275.83 [194.3, 357.6], model-within-vLLM +548.06, interaction +272.23; CLAIMS.md:219-220 marks all of these SUPERSEDED and replaced. The file's own superseded markers (PACKAGE.md:112, :201, :223) do not cover §3 item 6.",
+  "next_unit_hint": "Fresh repair unit: rewrite PACKAGE.md:67-76 to the post-MTP values (+549.33 [462.4, 631.9], -400.02 [-474.2, -326.5], model-within-vLLM -803.65, engine-within-dense 145.70, interaction -403.63, ratio -1.3733, engine share 0.5459, 2.3058x/1.1987x) and add an explicit supersession marker; also fix the '2024-10-24' year typo at CLAIMS.md:219. Then re-run this card's checks 1-6.",
+  "write_paths": [
+    "orchestration/handoffs/V-PKG-CORR.json",
+    "orchestration/units/V-PKG-CORR.md"
+  ],
+  "not_reproduced": [],
+  "overstated": [
+    "Card check 6 asserts that the C63 recompute can be pointed at a /tmp copy of CLAIMS.md 'if the harness supports a path argument'. It does not: recompute.py has no path argument (main(argv), :2325-2357, takes claim ids only; CLAIMS_MD_PATH is fixed at :2362). A CLAIMS-only edit therefore cannot go red — the expected values live in recompute.py's C63 block (:2176).",
+    "Card check 6's fallback ('prove the attribution guard's presence by quoting the line in tests/test_paper_attribution_guard.py that pins the C63 numbers') is false: grep for C63, 549.33, 400.02 and 1225.18 in tests/test_paper_attribution_guard.py returns 0 hits. The number guard is recompute.py:2176 (and tests/test_c63_ratio_raw_operands.py), which is what the red->green above exercises."
+  ],
+  "unverified": [
+    "RUN.json:141, :522 and :583 sentences around '1.700' were not read to sentence level; the three 3.3133 hits at GAPS.md:270, CLAIM-HEALTH.md:13 and MANUSCRIPT.md:139-146 were read only in part.",
+    "SERVING-BRIEF.md:146 row was truncated at 200 characters in this session; the clause after 'A beat' was not read.",
+    "verify_package.py's behaviour on a deliberately wrong value was not tested — its own text calls it a structural census, not a re-derivation, and the card did not ask for it."
+  ],
+  "tool_calls": 17,
+  "bound": 20,
+  "assumptions": [
+    "The board prompt carried only a generic verifier stub; the authoritative six-check contract was taken from task card be6d5796-127e-41bc-97e4-b4535d3683d9 (description) read via task_board_list.",
+    "Claim rows live under experiments/context-cache/cells/ (not papers/context-cache/cells/); the paper documents are under papers/context-cache/, which is the 'papers/' scope of check 5."
+  ],
+  "corrections": [
+    "CLAIMS.md:219 prints 'MTP CORRECTION (2024-10-24)'; today is 2026-10-24 — a year typo, cosmetic.",
+    "recompute.py all reports 60 checked claims against 63 documented / 61 runnable because C61 is a SPECIAL alias to grid_guard() and is excluded from list(FUNCS); grid_guard still runs via GRID_CLAIMS. Not a coverage hole in verify_package.py, but the printed count is easy to misread."
+  ],
+  "red_green": "C63 number guard: baseline PASS 43/43; revert to the falsified pre-MTP value (recompute.py:2176 engine_effect 549.33 -> 1225.18) => FAIL engine_effect (recomputed=549.33 paper=1225.18), 42/43; restore => PASS 43/43. Grid guard carries its own planted-row red->green (cached_tokens=1409 => FAIL, removed => PASS).",
+  "scope": "offline read-only verification of papers/ and the paper tests; no authoring, no source edits, no live measurement",
+  "artifacts": [
+    "orchestration/handoffs/V-PKG-CORR.json",
+    "orchestration/units/V-PKG-CORR.md",
+    "/tmp/vpkg_rg (scratch red->green tree)"
+  ]
+}

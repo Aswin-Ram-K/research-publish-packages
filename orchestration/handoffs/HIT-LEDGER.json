@@ -1,0 +1,75 @@
+{
+  "unit": "HIT-LEDGER",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/ptr_engine/ledger.py",
+    "experiments/ptr-engine/ptr_engine/errors.py",
+    "experiments/ptr-engine/ptr_engine/__init__.py",
+    "experiments/ptr-engine/tests/test_ledger.py",
+    "experiments/ptr-engine/SPEC.md",
+    "orchestration/units/HIT-LEDGER.md"
+  ],
+  "evidence": {
+    "command_or_count": "Suite 100 passed -> 108 passed (8 new tests, 0 regressions). New code total 4 (PTR_LAW_UNKNOWN_SERVER, PTR_LAW_BOUND_INVALID, PTR_LAW_SERIES_LENGTH, PTR_LAW_OBSERVED_INVALID) in a separate LEDGER_LAW_CODES tuple because test_negative_controls asserts len(LEDGER_CODES)==5; package enumeration is now 16 named codes (7 controls + 5 ledger + 4 law) and 0 bare ValueError raise sites (grep 'raise ValueError' over ptr_engine/ and tests/ -> 0). reconcile() exercised on the REAL rows: experiments/miss-law/rows.jsonl, 387 measure rows (sglang 301, vllm 86; every row with role=measure and a prev_prompt_tokens), P1=prev_prompt_tokens, L from n_payload via law_L, observed=uncached_tokens -> 387/387 exact, 0 mismatches, 0 unknown, explained_fraction 1.0; the same replay confirms L_app == n_payload + 12 in 387/387 rows, that the 83 null-cache rows are exactly the 83 avalanche turns, and that their residues are exactly {0,1}.",
+    "commands": [
+      "cd experiments/ptr-engine && python3 -m pytest -q   # 108 passed",
+      "cd experiments/ptr-engine && grep -rn 'raise ValueError' ptr_engine/ tests/ | wc -l   # 0",
+      "python3 -c \"from ptr_engine import LEDGER_CODES, LEDGER_LAW_CODES; print(len(LEDGER_CODES), len(LEDGER_LAW_CODES))\"   # 5 4",
+      "cd experiments/ptr-engine && cp -r ptr_engine tests .sabA/ && sed -i 's/block_size=64,/block_size=32,/' .sabA/ptr_engine/ledger.py && (cd .sabA && python3 -m pytest -q)",
+      "cd experiments/ptr-engine && cp -r ptr_engine tests .sabB/ && <delete the avalanche branch in .sabB/ptr_engine/ledger.py> && (cd .sabB && python3 -m pytest -q)"
+    ],
+    "suite_before": "100 passed in 0.17s",
+    "suite_after": "108 passed in 0.14s",
+    "new_code_total": 4,
+    "code_enumeration_total": 16,
+    "repair_finding": {
+      "row": "vllm cell Bprobe-400, P1=453 (< B=1056), observed 467 = P1 + L",
+      "pre_fix_failure_verbatim": "AssertionError: vllm: ('turn 0 (vllm cell=Bprobe-400): could not explain -- observed 467 vs predicted 1523 (delta -1056)',)",
+      "fix": "boundary term = min(boundary_blocks, P1 // B) * B -- one rule from block arithmetic, no per-cell special case; inert when P1 >= B"
+    },
+    "replay_rows": "387 of 774 rows in experiments/miss-law/rows.jsonl (read only, never written): all rows with role=measure and a prev_prompt_tokens (sglang 301, vllm 86). 387/387 exact."
+  },
+  "red_green": {
+    "sabotage_a": {
+      "what": "SGLang block size 64 -> 32 in a throwaway copy (.sabA, removed afterwards)",
+      "result": "2 failed, 105 passed, 1 skipped",
+      "verbatim": "tests/test_ledger.py:158: AssertionError\nE       assert (63, (44, False)) == (63, (76, False))\nE         At index 1 diff: (44, False) != (76, False)\ntests/test_ledger.py:182: AssertionError\n>       assert (sglang.block_size, sglang.boundary_blocks) == (64, 0)\nE       assert (32, 0) == (64, 0)\nFAILED tests/test_ledger.py::test_law_reproduces_both_servers_at_named_residues\nFAILED tests/test_ledger.py::test_profiles_are_the_measured_ones"
+    },
+    "sabotage_b": {
+      "what": "avalanche branch deleted from ServerProfile.predict in a throwaway copy (.sabB, removed afterwards)",
+      "result": "2 failed, 105 passed, 1 skipped",
+      "verbatim": "tests/test_ledger.py:155: AssertionError\ntests/test_ledger.py:220: AssertionError\n>       assert (avalanche.residue, avalanche.avalanche) == (0, True)\nE       assert (0, False) == (0, True)\nFAILED tests/test_ledger.py::test_law_reproduces_both_servers_at_named_residues\nFAILED tests/test_ledger.py::test_avalanche_is_its_own_outcome_with_its_own_cost"
+    },
+    "green": "unmodified suite: 108 passed in 0.14s",
+    "note": "the replay test skips inside a copy because it resolves rows.jsonl at parents[2]/miss-law from its own file, which is not the real tests directory; it runs and passes in the real tree"
+  },
+  "blocker": "",
+  "next_unit_hint": "Three follow-ups: (1) re-derive vLLM's +B and its avalanche with an independent instrument -- both vllm cache counters count tokens, so the term rests on one quantity, and residue 0/1 was never sampled on vLLM (27 residues, none 0/1), so HitEntry.avalanche_extrapolated is currently a prediction, not a measurement; (2) explain the SGLang avalanche at P1 mod 64 in {0,1} (measured, mechanism unknown); (3) multi-append reconciliation -- the law is one append onto a primed prefix, and HitLedger records turns independently, so a run of K appends is not yet predicted end to end (LAW.md section 8). The sub-block cap (min(boundary_blocks, P1 // B)) should be re-measured on vLLM at one more P1 < 1056 before it is trusted beyond the single Bprobe row.",
+  "write_paths": [
+    "experiments/ptr-engine/ptr_engine/ledger.py",
+    "experiments/ptr-engine/ptr_engine/errors.py",
+    "experiments/ptr-engine/ptr_engine/__init__.py",
+    "experiments/ptr-engine/tests/test_ledger.py",
+    "experiments/ptr-engine/SPEC.md",
+    "orchestration/units/HIT-LEDGER.md",
+    "orchestration/handoffs/HIT-LEDGER.json"
+  ],
+  "assumptions": [
+    "autonomous session: no human present, no question asked; every missing value resolved to the most conservative default and recorded here",
+    "predict applies the avalanche branch BEFORE the tail formula, so an avalanche residue always bills P1 + L (never under-predict a bill)",
+    "vLLM's avalanche at residue 0/1 is UNMEASURED (27 residues swept, none 0/1): the rule is kept so a host is never given a number that is too low, but every such turn is flagged avalanche_extrapolated=True and counted by summarise(); the alternative -- refusing to predict -- leaves the host with no number",
+    "FRAMING_TOKENS=12 is the measured request shape's constant; a host with a different template must pass L directly, and record() refuses L and payload_tokens together so the two cannot disagree silently",
+    "LEDGER_CODES was NOT extended: tests/test_negative_controls.py asserts len(set(LEDGER_CODES))==5 and a 12-code total, so the four law codes live in LEDGER_LAW_CODES and both totals (5+4, 16 named codes) are asserted in test_ledger.py instead of regressing a passing guard",
+    "the brief's '218/218 on SGLang' does not match any subset boundary I could reproduce (a role=measure + prev_prompt_tokens filter yields 301 SGLang rows); the numbers reported here are the replayed ones, and the vllm '85/86' is identified as the sub-block Bprobe-400 row",
+    "the sub-block cap is derived from block arithmetic and confirmed by exactly one measured row (P1=453 on vLLM); it is inert for every row with P1 >= B, so it changes none of the 386 other replayed rows"
+  ],
+  "not_done": [
+    "no network, no server call, no tokenizer at import time -- the law is replayed arithmetic over rows already on disk",
+    "the avalanche mechanism is still unexplained and SPEC.md 13.3 says so",
+    "multi-append runs are out of scope"
+  ],
+  "tool_calls": 28,
+  "bound": 35,
+  "concurrent_write_note": "experiments/ptr-engine/measure/ (rows.jsonl, run_cells.py) appeared at 00:15 during this unit, written by another concurrent unit; it is outside this unit's write paths, was never read or modified here, and nothing in this handoff depends on it.",
+  "files_touched_check": "only the seven declared write paths were modified; experiments/miss-law/ was read only (rows.jsonl mtime unchanged at 2026-10-24 23:55:57, 359944 bytes); the two sabotage copies (experiments/ptr-engine/.sabA, .sabB) were removed after the red runs"
+}

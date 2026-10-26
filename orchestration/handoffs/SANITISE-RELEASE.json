@@ -1,0 +1,43 @@
+{
+  "unit": "SANITISE-RELEASE",
+  "status": "done",
+  "artifacts": [
+    "release/v0.1/ (943 files, 61,028,602 bytes, ~62M)",
+    "release/v0.1/MANIFEST.json",
+    "release/REPORT.md",
+    "orchestration/units/SANITISE-RELEASE.md"
+  ],
+  "evidence": {
+    "command_or_count": "gates 1-7 all pass: gate1=0 lines, gate2=0 lines, gate3=empty, gate4=PolyForm heading (1) + exact Required Notice line present (EXIT=0), gate5=all 4 control files present, gate6=942 entries / 0 sha256 mismatches / 0 unlisted on-disk files, gate7=62M / 943 files. 170 files sanitised: 850 host/port + 244 absolute-path replacements.",
+    "commands": [
+      "grep -rE '192\\.168\\.' release/v0.1 | wc -l   # -> 0",
+      "grep -rE '/home/zer0null' release/v0.1 | wc -l   # -> 0",
+      "find release/v0.1 -size +25M   # -> (empty)",
+      "grep -c \"PolyForm Noncommercial License 1.0.0\" release/v0.1/LICENSE   # -> 1",
+      "grep -Fx \"Required Notice: Copyright Aswin-Ram-K (https://github.com/Aswin-Ram-K/Consonance)\" release/v0.1/LICENSE   # -> line printed, EXIT=0",
+      "ls -1 release/v0.1/{NOTICE,COMMERCIAL.md,CONTRIBUTING.md,THIRD-PARTY-NOTICES.md}   # -> all 4 present",
+      "python3 -c \"...sha256 verify MANIFEST.json...\"   # -> entries=942 mismatched=0 on_disk=942 unlisted=0 all_have_sha256=True",
+      "du -sh release/v0.1   # -> 62M",
+      "find release/v0.1 -type f | wc -l   # -> 943",
+      "sha256sum /home/zer0null/Duval/LICENSE   # -> a66aa879d12019240c67f56c14e0c95393300758263814a58c4827b35f5e18e3 (identical to shipped LICENSE)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "HUMAN RULING NEEDED on the Required Notice line (release/REPORT.md section 6): the licence template of record strategy/licence-templates/RELEASED-PIECE/LICENSE carries 'Required Notice: Copyright 2026 Aswin-Ram-K', which does NOT satisfy card gate 4; /home/zer0null/Duval/LICENSE line 5 is byte-identical to the required text and was shipped instead (sha256 a66aa879...). If the template form is the intended notice, gate 4 or the template must change and the release needs only a LICENSE swap plus one manifest re-hash. Secondary follow-ups: (1) verify whether any test depends on the withheld tests/fixtures/copy-src/.env; (2) review config/targets.toml (internal target registry) being withheld for software reasons; (3) note that repro/encoder-crossover-190-SANITISED/ is already 'sanitised' upstream yet left 11 residual host/path hits re-scrubbed here.",
+  "write_paths": [
+    "release/**",
+    "orchestration/units/SANITISE-RELEASE.md",
+    "orchestration/handoffs/SANITISE-RELEASE.json"
+  ],
+  "assumptions": [
+    "A1 Duval/LICENSE is the licence of record for the Required Notice line, over the RELEASED-PIECE template's 'Copyright 2026' form: the card names it as 'the upstream licence to carry' and its line 5 matches the card's required text byte-for-byte; the template matches neither. Escalated to a human ruling, not decided silently.",
+    "A2 'any port suffix' is read broadly: host:port is replaced whole, so 192.168.2.168:8000 becomes serving-host (not serving-host:8000).",
+    "A3 Over-sanitisation preferred to under-sanitisation: the near-miss address 192.168.2.1 (3 files) and the RFC1918 CIDR 192.168.0.0/16 in src/resextract/web/fetch.py also went to the placeholder, because gate 1 is a raw 192\\.168\\. grep. Cost: 3 test files + 1 doc sentence carry a placeholder.",
+    "A4 tests/fixtures/copy-src/.env (secret-shaped) and config/targets.toml (internal target registry) were withheld although both live under INCLUDE trees; the include list says 'curate from', not 'ship everything'. Consequence: any test depending on that .env fixture fails in the release tree.",
+    "A5 All 27 docs/ files kept: the card says 'curated docs/' without naming cuts; every file documents the shipped code.",
+    "A6 release/v0.1/README.md was generated from the verbatim Case B paragraph in README-PARAGRAPHS.md (required by PLACEMENT.md) plus a start-here table.",
+    "A7 No test suite was run (forbidden by the card); correctness claims rest on the gates and the hash manifest.",
+    "A8 repro/encoder-crossover-190-SANITISED/ kept as-is apart from 11 residual host/path substitutions, because its own EXCLUDED.md/INTEGRITY.md/REDACTION_REPORT.md define its scope.",
+    "A9 Sanitisation performed by two scripted passes (build_release_v01.py, then pass2_paths.py which broadened the path rule after gate 2 failed with 68 residual lines) - no hand edits to shipped content. NOTICE was regenerated once because the first version reprinted the raw addresses it was describing."
+  ]
+}

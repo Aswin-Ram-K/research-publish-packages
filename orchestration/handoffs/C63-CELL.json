@@ -1,0 +1,159 @@
+{
+ "unit": "C63-CELL",
+ "status": "done",
+ "artifacts": [
+  "papers/context-cache/CLAIMS.md",
+  "papers/context-cache/recompute_r2.py",
+  "tests/test_claims_value_guard.py",
+  "orchestration/handoffs/C63-CELL.json",
+  "orchestration/units/C63-CELL.md"
+ ],
+ "evidence": {
+  "command_or_count": {
+   "verify_package": "verify_package: PASS — 69 claims in CLAIMS.md, 69 mapped 1:1, 8 script-backed + 61 recompute.py-backed functions all present, every referenced cell has rows, UNVERIFIED: none (exit 0)",
+   "recompute_all": "COVERAGE GUARD PASS  69 claims documented, 67 runnable here + 2 script-backed (exit 0)",
+   "recompute_r2_all": "7 PASS lines: C63 61/61, C64 38/38, C65 48/48, C66 75/75, C67 85/85, C68 70/70, SYSOPT 50/50; exit 0",
+   "pytest_trio": "37 passed in 0.14s (exit 0)",
+   "pytest_full": "1374 passed, 1 skipped in 95.53s (exit 0); the skip is the opt-in live test banner, not a failure",
+   "c63_keys_pinned": 61,
+   "c63_rows": "1,136 = 4 cells x 284 (verified: cell_rows_* = 284 for all four)",
+   "pre_existing_red_found_and_fixed": "tests/test_paper_matrix_fold.py::test_claims_and_reader_map_map_c63_to_four_cells_and_one_command was RED after my first C63 row edit (it requires the literal 'recompute.py C63' inside CLAIMS.md, which my rewrite had replaced with 'recompute_r2.py C63'). Fixed by keeping the original recompute.py command in the cell alongside the new r2 command; test now 9 passed. This was MY regression, not a pre-existing red."
+  },
+  "commands": [
+   "python3 papers/context-cache/verify_package.py",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/recompute.py all",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/recompute_r2.py all",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python papers/context-cache/recompute_r2.py C63",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_claims_value_guard.py tests/test_paper_attribution_guard.py tests/test_claims_decompose.py -q",
+   "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/ -q -x",
+   "sha256sum papers/context-cache/CLAIMS.md papers/context-cache/recompute_r2.py tests/test_claims_value_guard.py"
+  ]
+ },
+ "red_green": {
+  "r2_pin_break": "papers/context-cache/recompute_r2.py EXPECTED['C63']['engine_effect'] 549.33 -> 464.55",
+  "r2_pin_red_output": "FAIL engine_effect  recomputed=549.33  paper=464.55 / FAIL  60/61 values match (exit 1)",
+  "r2_pin_sha_before_plant": "b422788a240cefc8b0a6128a1c2ac77bfb15d0d0ccd64e660b98e2ee7eb0d464",
+  "r2_pin_green_after_restore": "PASS  61/61 values match (exit 0)",
+  "r2_pin_sha_after_restore": "b422788a240cefc8b0a6128a1c2ac77bfb15d0d0ccd64e660b98e2ee7eb0d464 (byte-identical)",
+  "r2_pin_restore_method": "the /tmp copy was not durable between calls, so the single planted literal was reverted in place; sha256 proves byte identity",
+  "guard_break": "CLAIMS.md C63 Value cell 'Engine main effect 549.33 [462.4, 631.9]' -> '464.55'",
+  "guard_red_output": "2 failed, 4 passed - test_pinned_values_are_legible_in_their_value_cell: 'C63:engine_effect=549.33 is pinned by recompute_r2 but does not appear in C63's Value cell'; test_c63_headline_figures_are_legible: \"C63's headline figures are not spelled in its Value cell: ['Engine main effect 549.33 [462.4, 631.9]']\"",
+  "guard_sha_before_plant": "4bc0047b7aa34de68a54b3fc9d0308ef87cb3b3e1100aafe0a61ca1a8a9e118e",
+  "guard_green_after_restore": "6 passed in 0.02s",
+  "guard_sha_after_restore": "4bc0047b7aa34de68a54b3fc9d0308ef87cb3b3e1100aafe0a61ca1a8a9e118e (byte-identical)",
+  "extra_negative_probe": "planting '284 -> 288' in C63's Value cell did NOT go red (row counts are waived as 'cell states 284 rows each'). Honest gap, recorded under assumptions; the row-count plant was reverted before the headline plant."
+ },
+ "c63_pins": [
+  {
+   "key": "engine_effect",
+   "value": "549.33",
+   "source_cell": "MOE-VLLM-rows, G3-rows, R2P-O4, DENSE-SGL-rows"
+  },
+  {
+   "key": "engine_effect_ci95",
+   "value": "(462.4, 631.9)",
+   "source_cell": "same four cells"
+  },
+  {
+   "key": "model_effect",
+   "value": "-400.02",
+   "source_cell": "same four cells"
+  },
+  {
+   "key": "model_effect_ci95",
+   "value": "(-474.2, -326.5)",
+   "source_cell": "same four cells"
+  },
+  {
+   "key": "interaction_effect",
+   "value": "-403.63",
+   "source_cell": "same four cells"
+  },
+  {
+   "key": "interaction_effect_ci95",
+   "value": "(-479.7, -328.5)",
+   "source_cell": "same four cells"
+  },
+  {
+   "key": "ratio_engine_over_moe",
+   "value": "2.3058",
+   "source_cell": "MOE-VLLM-rows / G3-rows"
+  },
+  {
+   "key": "ratio_engine_over_dense",
+   "value": "1.1987",
+   "source_cell": "R2P-O4 / DENSE-SGL-rows"
+  },
+  {
+   "key": "engine_within_moe",
+   "value": "952.96",
+   "source_cell": "MOE-VLLM-rows / G3-rows"
+  },
+  {
+   "key": "engine_within_dense",
+   "value": "145.7",
+   "source_cell": "R2P-O4 / DENSE-SGL-rows"
+  },
+  {
+   "key": "model_within_vllm",
+   "value": "-803.65",
+   "source_cell": "R2P-O4 / MOE-VLLM-rows"
+  },
+  {
+   "key": "model_within_sglang",
+   "value": "3.61",
+   "source_cell": "DENSE-SGL-rows / G3-rows"
+  },
+  {
+   "key": "cell_hit/unc/gcd for 4 cells",
+   "value": "0.901212/1,682.7218/2,096; 0.957153/729.7641/64; 0.817432/879.0669/16; 0.956941/733.3697/64",
+   "source_cell": "one per cell"
+  },
+  {
+   "key": "grand_mean",
+   "value": "1006.2306",
+   "source_cell": "four cell means"
+  },
+  {
+   "key": "ratio_engine_over_model",
+   "value": "-1.3733",
+   "source_cell": "derived from engine/model effects"
+  },
+  {
+   "key": "ratio_model_effect_vllm_over_sglang",
+   "value": "-222.8887",
+   "source_cell": "derived from unrounded per-turn means"
+  },
+  {
+   "key": "replicate_arms_engine/model",
+   "value": "(560.0, 583.7, 395.7, 657.9) / (-384.8, -372.0, -546.4, -296.8)",
+   "source_cell": "per-arm from the four cells"
+  }
+ ],
+ "unverifiable_in_c63": [
+  "cell_hot_gcd_qwen3.5-9b_vllm = 1,088. The gcd of that cell's hot cached_tokens recomputes to 16; 1,088 is a LAUNCH reading (state/config/startup.txt:43, --block-size 64 --prefix-match-unit 16 --mamba-cache-mode align) recorded in recompute.py C63_GCD_OVERRIDE. It cannot be re-derived from rows and is NOT pinned; the cell states it, and the guard waives the key with that reason. Do not 'fix' the 16 to 1088.",
+  "The three main-effect intervals are pinned at the 1-dp precision C63 publishes, using recompute.py's _c63_boot recipe (seed 20251023, round(...,1) before truncation). recompute_r2's generic boot_mean (seed 20261020) gives (463.1, 631.8) instead - a different interval, not a contradiction. The r2 runner uses a dedicated boot_mean_c63 so the two runners pin ONE number."
+ ],
+ "date_typo_fixed": "2024-10-24 -> 2026-10-24",
+ "other_bracketed_dates": [],
+ "date_audit_note": "Every date-shaped string in CLAIMS.md now lives on line 229 (row pointer), 235-236 (the typo record, which deliberately quotes the old 2024 form) and 239 (the relocated Superseded block, corrected). No other claim row (C01..C62, C64..C69) carries a bracketed date or a year. Line-level check also caught bare 4-digit groups at CLAIMS.md:181,196,197,269 (2096/268/1056/1088...) - all are block sizes and row counts, not years.",
+ "assumptions": [
+  "The superseded MTP block was moved verbatim to a new '### Superseded (C63)' subsection immediately below the matrix table (CLAIMS.md:231-239), positioned before the Round-2 section so it stays inside the same table's scope. Nothing was deleted; the correction text, every superseded value (engine 1,225.18 -> 549.33, model +275.83 -> -400.02, interaction +272.23 -> -403.63, model within vLLM +548.06 -> -803.65, engine within dense +1,497.41 -> 145.70, ratios 2.6738x/3.0418x/1.3257x/1.1653x -> 1.7523x/1.1987x/0.5224x/0.7636x, engine/model 4.4418 -> -1.3733, engine share 0.9115 -> 0.5459) and the WHAT SURVIVES paragraph are all preserved.",
+  "The file had no prior '**Superseded**' paragraph style, only '### Supersessions by G1' and the 'Corrections to the source cards' table. I copied the '### <Topic>' heading style and used a bold '**Superseded —' lead on the relocated text.",
+  "The claim text was shortened from one long 2-line sentence to 5 sentences while keeping every figure it originally stated (549.33, 631.9, 3.61, -400.02, 803.65, -403.63 [-479.7, -328.5], 2.3058x, 1.1987x).",
+  "I also fixed a genuine defect in the shared test helper: the module-level _NUM regex required a letter/digit on both sides, so every multiplier-shaped figure was truncated to its integer part ('-222.8887x' -> -222, '1.249x' -> 1, '2.3058x' -> 2). Adding C63 exposed it because C63's ratios are all written with a trailing x. I replaced _NUM + numbers() with a digit-run scanner plus a boundary test. This is a STRENGTHENING of the guard (it stops '1' from trivially satisfying a leg whose real value is 1.249) and it made two pre-existing legs newly strict: C65's model_share_of_grand (-0.3975, previously unparsed because the sentence ends 'model -0.3975.') and C62's post_delta_max (747.2, previously read as -747.2 because '134.6-747.2' was treated as a minus). Both now pass; no test was weakened.",
+  "Decimal precision: the r2 function rounds the main effects and the within-model engine contrasts to 2 dp and everything else to 4 dp, matching what the cell and recompute.py publish. Pinning 4-dp values the paper never states would have been an invented figure.",
+  "The C63 row keeps BOTH commands: the new recompute_r2.py C63 (independent re-derivation) and the original recompute.py C63, because tests/test_paper_matrix_fold.py requires the latter literal.",
+  "Known guard gap, recorded not hidden: the four cell_rows_* keys are waived ('cell states 284 rows each'), so planting '284 -> 288' in the cell does NOT go red. Pinning the total (n_rows_total=1136) is not enough either since the cell writes 1,136 separately. A future unit could require the four-row statement as an exact phrase."
+ ],
+ "blocker": "",
+ "next_unit_hint": "C63 is now guarded end to end (61 pinned values, cell legible, red->green proven on both legs). Two follow-ups worth a card: (1) close the row-count waiver gap so '4 cells x 284' is asserted as an exact phrase rather than waived per key; (2) C66/C67/C68 remain unguarded at cell level (FIX-CLAIMSTABLE residual[2]) - they are covered only by recompute_r2 PASS, not by the value-cell contract.",
+ "write_paths": [
+  "papers/context-cache/CLAIMS.md",
+  "papers/context-cache/recompute_r2.py",
+  "tests/test_claims_value_guard.py",
+  "orchestration/handoffs/C63-CELL.json",
+  "orchestration/units/C63-CELL.md"
+ ],
+ "tool_calls_used": 30
+}

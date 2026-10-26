@@ -1,0 +1,40 @@
+SKILL S-1 -- Pre-release checklist
+
+When to use. Before tagging a release of a service that has downstream consumers.
+For a leaf service with no consumers, only steps 1, 2 and 5 apply; the rollback
+rehearsal is calibrated for changes that other teams pin.
+
+Steps.
+
+  1. Pin the dependency set and commit the lockfile. An unlocked release is not a
+     release, it is a reproduce-on-good-luck build. If the lockfile diff is large and
+     surprising, that is itself the finding, not churn to ignore.
+
+  2. Run the full test suite on the release commit, not on a branch tip and not on a
+     merge-queue head. The point is to test the exact tree that will be tagged.
+
+  3. Rehearse the rollback on a staging copy: deploy the candidate, then roll back,
+     then confirm the previous version still serves. Rehearsal must precede the tag,
+     because after the tag the previous build is already being evicted from the
+     staging fleet and the rehearsal stops being meaningful.
+
+  4. Write the changelog entry before the tag, so the tag points at text that
+     already exists. Writing the changelog afterwards reliably produces a release
+     described by whatever was remembered at the end rather than by what shipped.
+
+  5. Tag, push the tag, and announce in the channel with the exact commit hash.
+     Announcing a branch name instead of a hash is the single most common way an
+     announcement becomes stale within the hour.
+
+Verification. The release is complete only when step 3 has a recorded rehearsal
+naming the version pair (previous, candidate). A checklist with step 3 skipped is a
+deploy, not a release, and should be labelled as such in the announcement.
+
+Failure modes. The common trap is rehearsing rollback after the tag, when the
+previous version has already left staging. The second trap is treating a green unit
+suite as step 2 while skipping the integration jobs, which is where release-blocking
+failures actually live.
+
+Estimated effort. Step 3 is the only one that costs real time; on a service with a
+simple deploy it is under fifteen minutes, and it is the step that has caught the
+most defects in practice.

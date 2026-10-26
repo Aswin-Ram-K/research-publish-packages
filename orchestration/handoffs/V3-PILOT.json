@@ -1,0 +1,84 @@
+{
+  "unit": "V3-PILOT",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.jsonl",
+    "experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.grade-v2.json",
+    "experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.census.json",
+    "experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.score.json",
+    "experiments/ptr-engine/longrun/manifests/v3-transcript-grow-transcript-grow-r1.json",
+    "experiments/ptr-engine/longrun/manifests/v3-pointer-stable-pointer-stable-r1.json"
+  ],
+  "evidence": {
+    "fixture_sha256_verified": "07abab0bd902bd88c86b8d2544f012caf63a9a4280b68b223bd605d399bd3e0b",
+    "requests_per_arm": {
+      "transcript-grow": 48,
+      "pointer-stable": 48
+    },
+    "transcript-grow": {
+      "rows": 48,
+      "marker_pct": 100.0,
+      "marker_turns": "48/48",
+      "acc_cp1": "fail",
+      "acc_cp2": "fail",
+      "acc_cp3": "fail",
+      "checkpoint_accuracy": "0/3",
+      "verified_success": false,
+      "grade_v2_accuracy": "0/10 (old and new identical)",
+      "over_budget_pct": 0.0,
+      "truncated": 0,
+      "t12_last200": "I'll read the specified lines of resolve.py.\n\nANSWER: NOT-AN-ANSWER",
+      "t24_last200": "I'll read errors.py to count Ptr* error classes.\n\nANSWER: NOT-AN-ANSWER"
+    },
+    "pointer-stable": {
+      "rows": 48,
+      "marker_pct": 64.58,
+      "marker_turns": "31/48",
+      "acc_cp1": "fail",
+      "acc_cp2": "fail",
+      "acc_cp3": "fail",
+      "checkpoint_accuracy": "0/3",
+      "verified_success": false,
+      "grade_v2_accuracy": "0/10 (old and new identical)",
+      "over_budget_pct": 4.17,
+      "truncated": 1,
+      "t12_last200": "I need to read the full resolve.py to find the default per-turn resolve budget. Let me look at line 39 and surrounding context.\n\nANSWER: NOT-AN-ANSWER",
+      "t24_last200": "I need to count the Ptr* error classes defined in errors.py. Let me read that file.\n\n<tool_call>READ@1@ptr_engine/errors.py@1-331\ntool_call>RUN@1@cd /home/user/ptr-engine && grep -n \"^class Ptr\" ptr_engine/errors.py\nANSWER: 7\nANSWER: 7"
+    },
+    "numeric_checkpoint_fate": {
+      "cp1_expected_64": "no arm states a standalone number; both emit ANSWER: NOT-AN-ANSWER",
+      "cp2_expected_31": "transcript-grow emits ANSWER: NOT-AN-ANSWER; pointer-stable states standalone ANSWER: 7 (wrong value, guessed from the string 'test_all_seven_codes_are_distinct' in another item)"
+    },
+    "grader_exit_codes": {
+      "marker_census": 0,
+      "grade_v2": 0,
+      "score_longrun": 1
+    },
+    "score_longrun_exit_note": "exit 1 is its normal 'one or more required checks failed' status, not a crash: fixture.digest passed, cp.t12/t24/t46 and acc.* all failed.",
+    "root_cause_finding": "The injected item bodies are TRUNCATED EXCERPTS that do not contain the expected answers. resolve.py body is 1680 chars ending mid-function inside resolve() and never reaches L39 (the per-turn resolve budget = 64); the strings '64' and '31' appear nowhere in any of the 4 bodies. errors.py body is 331 chars containing 3 class stubs, cut off mid-class at 'class PtrBodyMismatchError(PtrError):', vs the expected 31 classes. NOT-AN-ANSWER is therefore the honest answer, not a refusal to conclude. The model says so itself at turn 46: 'I cannot answer from the pinned body because `resolve.py` is truncated at the `PtrUnknownIdError(' .",
+    "grade_v2_fixture_path": "accepted --fixture; pointed directly at the v3 runtime fixture, no /tmp fork of the rule text was needed."
+  },
+  "verdict": "MARKER-FAILS",
+  "cost": {
+    "requests_spent": 96,
+    "wallclock_s": 720
+  },
+  "blocker": "",
+  "assumptions": [
+    "over_budget is not implemented in run_longrun.py (TASKS-V2-PREREG.md says teaching it that is a new card), so it was computed here from the row content: whitespace words > 150 on work turns, > 400 on checkpoint turns, per the fixture's answer_budget block.",
+    "Marker census matches the LAST non-empty line against ^ANSWER:\\s*\\S.*$ on the graded completion content, per the card.",
+    "grade_v2.py exposes no checkpoint_accuracy/verified_success keys; those were read from score_longrun.py's checks (0/3 and false for both arms).",
+    "/tmp is not persistent between tool calls in this sandbox, so scoring scripts were run inline and their outputs were written under the allowed measure/ path instead."
+  ],
+  "next_unit_hint": "The v3 marker is a working formatting device (100% / 64.6% of turns carry the line) that cannot fix a missing fact. Before any further marker iteration, fix the fixture: pin full item bodies (resolve.py through L39, errors.py through L142) or the checkpoints are unanswerable by construction. Re-run this same two-arm pilot on the repaired fixture to test the marker against answers that are actually derivable. Also: pointer-stable's wrong-but-confident ANSWER: 7 shows the marker converts 'no conclusion' into 'wrong conclusion' when a nearby number exists - that is a quality regression the verdict rules do not yet name.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.jsonl",
+    "experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.grade-v2.json",
+    "experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.census.json",
+    "experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.score.json",
+    "experiments/ptr-engine/longrun/manifests/v3-transcript-grow-transcript-grow-r1.json",
+    "experiments/ptr-engine/longrun/manifests/v3-pointer-stable-pointer-stable-r1.json",
+    "orchestration/handoffs/V3-PILOT.json",
+    "orchestration/units/V3-PILOT.md"
+  ]
+}

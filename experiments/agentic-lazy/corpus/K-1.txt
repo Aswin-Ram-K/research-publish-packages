@@ -1,0 +1,28 @@
+KNOWLEDGE K-1 -- Queue abstraction notes
+
+Segmentation. The queue is segmented by time, not by key. Each segment is sealed when
+it reaches a size target and a new segment is opened. Readers hold handles to two
+segments in the normal case: the sealed one they are draining and the open one they
+are following. This is why a reader's memory footprint is roughly twice the segment
+size regardless of how much data the reader has actually consumed.
+
+Swap semantics. Rebuilding a segment copies it into a staging path and then swaps it
+in. Readers never observe a partially written segment. They may, however, observe the
+old segment for a short window after the swap, so a rebuild is not a way to
+immediately remove data from a reader's view.
+
+Long polls. A long poll parks for up to 30 seconds. A parked reader that wakes to an
+empty segment re-parks immediately. This is why idle consumers look busy in metrics:
+parking and re-parking are indistinguishable from work at the poll layer, and a
+consumer group with no traffic still shows a steady poll rate.
+
+Backpressure. Backpressure is applied at the producer. Producers are never dropped,
+only slowed, because dropping at the queue boundary loses the ordering guarantee that
+the rest of the system depends on. The practical consequence is that a wedged
+consumer always shows up first as rising producer latency rather than as an error
+anywhere, so the first place to look for a consumer problem is the producer's
+dashboard.
+
+Do not. Do not treat the segment size as a throughput knob. Segments are sized for
+read amplification, not for throughput, and shrinking them multiplies the number of
+sealed segments a reader must hold.

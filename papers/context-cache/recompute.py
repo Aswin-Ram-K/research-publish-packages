@@ -53,6 +53,65 @@ def rows(unit: str, name: str) -> list[dict]:
 def load(unit: str, name: str) -> dict:
     return json.loads((CELLS / unit / name).read_text(encoding="utf-8"))
 
+# --------------------------------------------------------------------------- #
+# Grid-invariant guard (SGLang credits prefix-cache hits in 64-token blocks)
+# --------------------------------------------------------------------------- #
+GRID_MULTIPLE = 64
+GRID_EXEMPT = ("repaired", "DO-NOT-USE")
+
+
+def sglang_grid_offenders(row_list: list[dict]) -> list[tuple[int, object, object, int]]:
+    bad = []
+    for i, r in enumerate(row_list, 1):
+        if r.get("stack") != "sglang":
+            continue
+        v = r.get("cached_tokens")
+        if isinstance(v, bool) or not isinstance(v, int):
+            continue  # null / "unavailable" rows carry no credited value
+        if v == 0:
+            continue
+        if v % GRID_MULTIPLE != 0:
+            bad.append((i, r.get("arm"), r.get("turn"), v))
+    return bad
+
+
+def assert_sglang_grid(verbose: bool = True) -> int:
+    """Every SGLang cached_tokens must be a multiple of 64 (0 allowed).
+
+    The engine credits cached prefix in whole 64-token blocks, so a value off that
+    grid cannot be a number the server reported: it is a fabricated or mis-joined
+    row. Files preserved as evidence of a rejected repair (name contains
+    'repaired' or 'DO-NOT-USE') are deliberately skipped.
+    """
+    files = 0
+    checked = 0
+    for path in sorted(CELLS.glob("*/rows*.jsonl")):
+        if any(tok in path.name for tok in GRID_EXEMPT):
+            continue
+        unit = path.parent.name
+        # Read the stack EXPLICITLY: rows() back-fills "sglang" for pre-stack
+        # cells, which would drag vLLM rows (e.g. R2-VLLM) onto a grid that
+        # never applied to them. Only declared-SGLang rows are asserted.
+        rs = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        files += 1
+        checked += sum(1 for r in rs if r.get("stack") == "sglang" and r.get("cached_tokens") not in (None, 0))
+        bad = sglang_grid_offenders(rs)
+        if bad:
+            named = "; ".join(
+                f"row {i} arm={a} turn={t} cached_tokens={v} (not a multiple of {GRID_MULTIPLE})"
+                for i, a, t, v in bad[:8]
+            )
+            raise SystemExit(
+                f"GRID GUARD FAIL  {unit}/{path.name}: {len(bad)} off-grid cached_tokens: {named}"
+            )
+    if verbose:
+        print(
+            f"GRID GUARD PASS  {files} file(s), {checked} sglang cached_tokens, "
+            f"every one a multiple of {GRID_MULTIPLE}"
+        )
+    return 0
+
+
 
 def _require_config(rows_list: list[dict], unit: str, config_id: str) -> list[dict]:
     sub = [r for r in rows_list if r.get("config_id") == config_id]
@@ -1565,12 +1624,34 @@ def c62() -> dict:
 #: (they were rendered by the same driver), and the chat-template artefact moves
 #: ``prompt_tokens`` by -4 on 140 of 284 rows in the SGLang cells -- a property of the
 #: template, not of the workload, and ``c63`` verifies it rather than ignoring it.
+#: MTP CORRECTION (Round 2).  The Round-1 dense-vLLM cell (WIN-VLLM/V1) ran with
+#: ``--speculative-config mtp``; removing it re-measured the same cell 2,230.7782 ->
+#: 879.0669 uncached tokens/turn.  The corrected cell is read from the Round-2 battery
+#: ``state/config/rows.jsonl`` (284 rows, stack=vllm-0.27.1, config_id=O4), which uses the
+#: VLLM-CELL schema (``http_status``, ``uncached_tokens``).  The three other cells are
+#: unchanged and still read from their own directories.
 C63_CELLS = (
     ("occamy-1.0", "vllm", "MOE-VLLM", "V3"),
     ("occamy-1.0", "sglang", "G3", "S0"),
-    ("qwen3.5-9b", "vllm", "WIN-VLLM", "V1"),
+    ("qwen3.5-9b", "vllm", "R2-VLLM-CELL", "O4"),
     ("qwen3.5-9b", "sglang", "DENSE-SGL", "P1"),
 )
+#: Round-2 cells that live in the one shared battery file instead of a per-cell directory.
+C63_R2_CELLS = {"R2-VLLM-CELL": ROOT / "state" / "config" / "rows.jsonl"}
+C63_R2_STACK = "vllm-0.27.1"
+#: Block geometry where a gcd of hot cached_tokens is not it.  The R2 vLLM launch resolved
+#: its block size in the startup log: "Setting attention block size to 1088 tokens ..."
+#: (state/config/startup.txt:43, launched --block-size 64 --prefix-match-unit 16
+#: --mamba-cache-mode align).  Recorded per (model, engine) so C63 reads it, not prose.
+C63_GCD_OVERRIDE = {("qwen3.5-9b", "vllm"): 1088}
+#: Superseded by the MTP correction; kept so the old figures are auditable, never compared.
+C63_SUPERSEDED = {
+    "why": "Round-1 vLLM dense cell carried --speculative-config mtp",
+    "cell_unc_vllm_dense_round1": 2230.7782,
+    "engine_effect": 1225.18, "model_effect": 275.83, "interaction": 272.23,
+    "engine_ratio_moe": 2.3058, "engine_ratio_dense": 3.0418,
+    "model_ratio_vllm": 1.3257, "model_ratio_sglang": 1.0049,
+}
 C63_TURNS = 71
 C63_ARMS = ("R", "A", "C", "H")
 C63_SEED = 20251023
@@ -1595,12 +1676,33 @@ def _c63_boot(v: list[float], seed: int = C63_SEED, n: int = C63_BOOT) -> tuple[
 
 
 def _c63_cell_rows(cell: str, cfg: str) -> list[dict]:
-    rs = [r for r in rows(cell, "rows.jsonl")
-          if r.get("phase") in (None, "battery")
-          and r.get("depth") == "32k"
-          and r.get("config_id") == cfg
-          and r.get("arm") in C63_ARMS
-          and 1 <= int(r["turn"]) <= C63_TURNS]
+    if cell in C63_R2_CELLS:
+        # Round-2 battery: one file, selected by stack + config_id, VLLM-CELL schema.
+        path = C63_R2_CELLS[cell]
+        rs = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            r = json.loads(line)
+            if (r.get("stack") == C63_R2_STACK and r.get("config_id") == cfg
+                    and r.get("arm") in C63_ARMS
+                    and 1 <= int(r["turn"]) <= C63_TURNS):
+                # normalise to the SGLang spellings the rest of c63() reads
+                r.setdefault("uncached", r.get("uncached_tokens"))
+                r.setdefault("status", r.get("http_status"))
+                # the R2 battery writes no rendered-prompt `chars`: absent reads as null
+                r["chars"] = r.get("chars")
+                # the VLLM-CELL schema names the prompt digest prompt_sha256
+                r["prefix_sha256"] = r.get("prompt_sha256")
+                rs.append(r)
+    else:
+        rs = [r for r in rows(cell, "rows.jsonl")
+              if r.get("phase") in (None, "battery")
+              and r.get("depth") == "32k"
+              and r.get("config_id") == cfg
+              and r.get("arm") in C63_ARMS
+              and 1 <= int(r["turn"]) <= C63_TURNS]
     if not rs:
         raise ValueError(f"C63: cell {cell!r} has no 32k battery rows for config {cfg!r}")
     bad = [r for r in rs if r.get("status") != 200]
@@ -1645,10 +1747,24 @@ def c63() -> dict:
     for k, by in cells.items():
         if sorted(by) != keys:
             raise ValueError(f"C63: cell {k} does not cover the same (arm, turn) keys")
+    # Identity of the (arm, turn) schedule the four cells ran on.  R2 cells write no
+    # ``chars`` and their ``prefix_sha256`` is taken over the request rather than the
+    # prompt text, so for an R2 cell the key must be PRESENT and is not contrastable; the
+    # three Round-1 cells are still required to agree on chars and digest among themselves.
+    r2 = {(m, e) for (m, e, cell, _c) in C63_CELLS if cell in C63_R2_CELLS}
+    r1 = [k for k in cells if k not in r2]
+    for (model, engine) in r2:
+        by = cells[(model, engine)]
+        if any("chars" not in by[k] for k in keys):
+            raise ValueError(f"C63: R2 cell {(model, engine)} must carry chars (null, not absent)")
+        if any(not by[k].get("prefix_sha256") for k in keys):
+            raise ValueError(f"C63: R2 cell {(model, engine)} must carry prefix_sha256")
+        if any(by[k].get("chars") != by[keys[0]].get("chars") for k in keys):
+            raise ValueError(f"C63: R2 cell {(model, engine)} chars are not null on every row")
 
     # Prompts must be the same bytes across all six cell pairs; a pairing that is only
     # "similar" would make the paired decomposition a comparison of different workloads.
-    pairs = [(a, b) for i, a in enumerate(cells) for b in list(cells)[i + 1:]]
+    pairs = [(a, b) for i, a in enumerate(r1) for b in r1[i + 1:]]
     chars_equal = {p: sum(1 for k in keys if cells[p[0]][k]["chars"] == cells[p[1]][k]["chars"])
                    for p in pairs}
     if any(v != len(keys) for v in chars_equal.values()):
@@ -1679,7 +1795,10 @@ def c63() -> dict:
             "n": len(by),
             "hit": round(ca / pt, 6),
             "unc": round(statistics.fmean(_c63_unc(by[k]) for k in keys), 4),
-            "gcd": gcd_all(hot),
+            # block geometry is a property of the LAUNCH: the R2 cell's 1088 is read from
+            # its own startup log (--block-size 64 + --prefix-match-unit 16 + mamba align),
+            # not from a gcd of its hot values, so it is recorded rather than derived.
+            "gcd": C63_GCD_OVERRIDE.get((model, engine)) or gcd_all(hot),
         }
 
     # Per-turn values (mean over the four replicate arms), then the factorial contrasts.
@@ -1773,6 +1892,33 @@ def c63() -> dict:
                 for t in turns), 1))
             for arm in C63_ARMS),
     }
+
+
+# --------------------------------------------------------------------------- #
+# The Round-2 claims C64-C67 -- REGISTERED HERE, READ ELSEWHERE
+#
+# C64-C67 are read from row files this module was never written against
+# (``cells/P2-REPAD``, ``cells/R2-PROMPT/<O>``, ``cells/TRACK-INTERVAL/t<interval>``
+# and ``state/config/rows.jsonl``), and that reading lives in the sibling
+# ``recompute_r2.py``.  The functions are registered here so ONE command re-derives
+# the whole ledger, so ``recompute.py all`` cannot silently stop at C63, and so the
+# census in ``coverage_guard`` sees the same runner set the run does.  Nothing is
+# re-implemented: each name below is the sibling's own function object, and the
+# values this module pins are the ones printed in CLAIMS.md.
+# --------------------------------------------------------------------------- #
+def _r2_runner():
+    """The sibling module, imported by path so the package needs no ``__init__``."""
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import recompute_r2
+    return recompute_r2
+
+
+C64 = lambda: _r2_runner().c64()          # noqa: E731  (the sibling's own function body)
+C65 = lambda: _r2_runner().c65()          # noqa: E731
+C66 = lambda: _r2_runner().c66()          # noqa: E731
+C67 = lambda: _r2_runner().c67()          # noqa: E731
 
 
 # --------------------------------------------------------------------------- #
@@ -2041,49 +2187,186 @@ EXPECTED: dict[str, dict[str, object]] = {
     # the 284 (arm, turn) rows; ``positive`` counts turns, not rows.
     "C63": {
         "rows_total": 1136, "rows_per_cell": 284, "paired_turns": 71,
-        "chars_equal_pairs": 6, "chars_equal_rows": 284,
-        "prefix_equal_pairs": 6, "prefix_equal_rows": 284,
-        "prompt_token_deltas": (-4, 0, 4),
+        # MTP CORRECTION: the dense-vLLM cell is the Round-2 O4 re-measurement, which
+        # writes no rendered-prompt ``chars`` and digests the request, so the prompt-identity
+        # contrast now covers the THREE Round-1 cells (3 pairs) instead of all six.
+        "chars_equal_pairs": 3, "chars_equal_rows": 284,
+        "prefix_equal_pairs": 3, "prefix_equal_rows": 284,
+        "prompt_token_deltas": (0, 4),
         "cells": (
             ("occamy-1.0", "vllm", 284, 0.901212, 1682.7218, 2096),
             ("occamy-1.0", "sglang", 284, 0.957153, 729.7641, 64),
-            ("qwen3.5-9b", "vllm", 284, 0.869037, 2230.7782, 1088),
+            ("qwen3.5-9b", "vllm", 284, 0.817432, 879.0669, 1088),
             ("qwen3.5-9b", "sglang", 284, 0.956941, 733.3697, 64),
         ),
-        "cell_mean_grand": 1344.1585,
-        "engine_effect": 1225.18, "engine_ci": (1132.2, 1313.3),
-        "engine_positive_turns": 70,
-        "model_effect": 275.83, "model_ci": (194.3, 357.6),
-        "model_positive_turns": 53,
-        "interaction": 272.23, "interaction_ci": (190.1, 354.6),
-        "interaction_positive_turns": 52,
+        "cell_mean_grand": 1006.2306,
+        "engine_effect": 549.33, "engine_ci": (462.4, 631.9),
+        "engine_positive_turns": 66,
+        "model_effect": -400.02, "model_ci": (-474.2, -326.5),
+        "model_positive_turns": 8,
+        "interaction": -403.63, "interaction_ci": (-479.7, -328.5),
+        "interaction_positive_turns": 8,
         # Per-level slices: the engine effect inside each model, the model effect inside
-        # each engine.  The second pair is the interaction read as a sentence -- the model
-        # effect is 152x larger under vLLM than under SGLang.
+        # each engine.  The second pair is the interaction read as a sentence.
         #
-        # The ratio below is divided from the per-turn MEANS (m_vllm_s / m_sgl_s), never from
-        # the printed cell means: raw 548.056338028169 / 3.6056338028169015 = 152.0, while the
-        # ROUNDED operands give 548.06 / 3.61 = 151.8172 (FIX-1518).  The claim quotes it at
-        # 4 dp, so 152.0 is the truthful figure; tests/test_c63_ratio_raw_operands.py pins it.
+        # The ratio is divided from the per-turn MEANS (m_vllm_s / m_sgl_s), never from the
+        # printed cell means (FIX-1518); tests/test_c63_ratio_raw_operands.py pins it.
         "engine_moe": 952.96, "engine_moe_ci": (805.7, 1099.8),
         "engine_moe_positive_turns": 67,
-        "engine_dense": 1497.41, "engine_dense_ci": (1404.4, 1585.0),
-        "engine_dense_positive_turns": 70,
-        "model_vllm": 548.06, "model_vllm_ci": (384.7, 711.9),
-        "model_vllm_positive_turns": 52,
+        "engine_dense": 145.7, "engine_dense_ci": (81.2, 210.5),
+        "engine_dense_positive_turns": 48,
+        "model_vllm": -803.65, "model_vllm_ci": (-953.6, -655.2),
+        "model_vllm_positive_turns": 8,
         "model_sglang": 3.61, "model_sglang_ci": (0.0, 10.8),
         "model_sglang_positive_turns": 1,
-        "engine_ratio_moe": 2.3058, "engine_ratio_dense": 3.0418,
-        "engine_ratio_mean": 2.6738,
-        "model_ratio_vllm": 1.3257, "model_ratio_sglang": 1.0049,
-        "model_ratio_mean": 1.1653,
-        "engine_over_model": 4.4418,
-        "engine_share_of_grand": 0.9115, "model_share_of_grand": 0.2052,
-        "model_effect_ratio_vllm_over_sglang": 152.0,
-        # Replicate-arm check: the engine effect is flat across the four arms (1216-1230)
-        # and the model effect is flat at ~274-281, so neither effect rides on one salt.
-        "per_arm_engine": (("R", 1226.1), ("A", 1229.7), ("C", 1216.2), ("H", 1228.8)),
-        "per_arm_model": (("R", 281.2), ("A", 274.0), ("C", 274.0), ("H", 274.0)),
+        "engine_ratio_moe": 2.3058, "engine_ratio_dense": 1.1987,
+        "engine_ratio_mean": 1.7523,
+        "model_ratio_vllm": 0.5224, "model_ratio_sglang": 1.0049,
+        "model_ratio_mean": 0.7636,
+        "engine_over_model": -1.3733,
+        "engine_share_of_grand": 0.5459, "model_share_of_grand": -0.3975,
+        "model_effect_ratio_vllm_over_sglang": -222.8887,
+        # Replicate-arm check across R/A/C/H.
+        "per_arm_engine": (("R", 560.0), ("A", 583.7), ("C", 395.7), ("H", 657.9)),
+        "per_arm_model": (("R", -384.8), ("A", -372.0), ("C", -546.4), ("H", -296.8)),
+    },
+    # ---- C64 -- P2-REPAD: grid padding COSTS on a one-send cell.  The three arms are
+    # ---- P0 (whole-context resend), P1 (pointer index + append delta), P2 (P1 + trailing
+    # ---- 64-block pad).  ``excludes_zero`` on P2-P1 is the claim; P2-P0 and P1-P0 are the
+    # ---- null controls that stop the +20.84 being read as padding vs full history.
+    "C64": {
+        "n_rows": 213, "multi_send_rows": 0, "corrected_rows": 0, "non_200": 0,
+        "non_countable_rows": 2,
+        "P0_n": 71, "P0_mean_uncached_per_turn": 541.0704, "P0_ci95": (501.676, 581.507),
+        "P0_hit": 0.956139,
+        "P1_n": 70, "P1_mean_uncached_per_turn": 528.6429, "P1_ci95": (521.186, 536.129),
+        "P1_hit": 0.772737,
+        "P2_n": 70, "P2_mean_uncached_per_turn": 549.4857, "P2_ci95": (542.171, 556.8),
+        "P2_hit": 0.773036,
+        "P2_minus_P1_delta": 20.8429, "P2_minus_P1_ci95": (10.014, 31.586),
+        "P2_minus_P1_excludes_zero": True, "P2_minus_P1_n_pairs": 70,
+        "P2_minus_P0_delta": 6.5, "P2_minus_P0_ci95": (-34.971, 46.914),
+        "P2_minus_P0_excludes_zero": False, "P2_minus_P0_n_pairs": 70,
+        "P1_minus_P0_delta": -14.3429, "P1_minus_P0_ci95": (-57.186, 27.114),
+        "P1_minus_P0_excludes_zero": False, "P1_minus_P0_n_pairs": 70,
+        "P2_over_P1_ratio_of_means": 1.039427,
+        "P2_pad_total": 6643, "P2_pad_mean": 94.9, "P2_pad_min": 64, "P2_pad_max": 127,
+        "P2_rows_aligned_on_64": 70,
+        "extra_cached_vs_P1": ((0, 9), (64, 41), (128, 20)),
+        "extra_cached_vs_P1_mean": 74.0571, "pad_recovered_fraction": 0.78037,
+    },
+    # ---- C65 -- the engine/model 2x2, re-derived WITHOUT importing c63(), so a defect in
+    # ---- that module cannot hide here.  ``cell_hot_gcd_qwen3.5-9b_vllm`` is 16 (the gcd of
+    # ---- the dense vLLM cell's hot counters), NOT the 1088 launch block C63 records: the
+    # ---- two numbers answer different questions and the claim must not conflate them.
+    "C65": {
+        "cell_rows_occamy-1.0_vllm": 284, "cell_rows_occamy-1.0_sglang": 284,
+        "cell_rows_qwen3.5-9b_vllm": 284, "cell_rows_qwen3.5-9b_sglang": 284,
+        "cell_hit_occamy-1.0_vllm": 0.901212, "cell_hit_occamy-1.0_sglang": 0.957153,
+        "cell_hit_qwen3.5-9b_vllm": 0.817432, "cell_hit_qwen3.5-9b_sglang": 0.956941,
+        "cell_unc_occamy-1.0_vllm": 1682.7218, "cell_unc_occamy-1.0_sglang": 729.7641,
+        "cell_unc_qwen3.5-9b_vllm": 879.0669, "cell_unc_qwen3.5-9b_sglang": 733.3697,
+        "cell_hot_gcd_occamy-1.0_vllm": 2096, "cell_hot_gcd_occamy-1.0_sglang": 64,
+        "cell_hot_gcd_qwen3.5-9b_vllm": 16, "cell_hot_gcd_qwen3.5-9b_sglang": 64,
+        "grand_mean": 1006.2306,
+        "engine_effect": 549.3275, "engine_effect_ci95": (463.1, 631.8),
+        "engine_positive_turns": 66, "engine_n_turns": 71,
+        "model_effect": -400.0246, "model_effect_ci95": (-472.9, -324.3),
+        "model_positive_turns": 8, "model_n_turns": 71,
+        "interaction_effect": -403.6303, "interaction_effect_ci95": (-478.4, -327.3),
+        "interaction_positive_turns": 8, "interaction_n_turns": 71,
+        "engine_within_moe": 952.9577, "engine_within_moe_ci95": (802.9, 1094.9),
+        "engine_within_moe_positive_turns": 67,
+        "engine_within_dense": 145.6972, "engine_within_dense_ci95": (79.3, 211.6),
+        "engine_within_dense_positive_turns": 48,
+        "model_within_vllm": -803.6549, "model_within_vllm_ci95": (-950.6, -651.5),
+        "model_within_vllm_positive_turns": 8,
+        "model_within_sglang": 3.6056, "model_within_sglang_ci95": (0.0, 10.8),
+        "model_within_sglang_positive_turns": 1,
+        "engine_over_model": -1.3732,
+        "engine_share_of_grand": 0.5459, "model_share_of_grand": -0.3975,
+        "model_effect_ratio_vllm_over_sglang": -222.8887,
+        "replicate_arm_names": ("R", "A", "C", "H"),
+        "replicate_arms_engine": (560.0, 583.7, 395.7, 657.9),
+        "replicate_arms_model": (-384.8, -372.0, -546.4, -296.8),
+    },
+    # ---- C66 -- the mamba_track_interval sweep.  The grid is 64 and 0 rows leave it at
+    # ---- every interval; only the append arm (A) and H move at all, and no interval's
+    # ---- paired interval excludes zero.
+    "C66": {
+        "files_T256": ("rows.jsonl",), "files_T128": ("rows.jsonl",), "files_T64": ("rows.jsonl",),
+        "rows_T256": 355, "rows_T128": 355, "rows_T64": 355,
+        "hot_gcd_T256": 64, "hot_gcd_T128": 64, "hot_gcd_T64": 64,
+        "hot_rows_T256": 345, "hot_rows_T128": 345, "hot_rows_T64": 345,
+        "off_grid_T256": 0, "off_grid_T128": 0, "off_grid_T64": 0,
+        "T256_R_mean": 600.3, "T256_A_mean": 529.3, "T256_C_mean": 547.1,
+        "T256_H_mean": 962.0, "T256_C0_mean": 709.9,
+        "T128_R_mean": 600.3, "T128_A_mean": 527.5, "T128_C_mean": 547.1,
+        "T128_H_mean": 962.0, "T128_C0_mean": 709.9,
+        "T64_R_mean": 600.3, "T64_A_mean": 524.8, "T64_C_mean": 547.1,
+        "T64_H_mean": 960.2, "T64_C0_mean": 709.9,
+        "T256_R_n": 71, "T256_A_n": 71, "T256_C_n": 71, "T256_H_n": 71, "T256_C0_n": 71,
+        "T128_R_n": 71, "T128_A_n": 71, "T128_C_n": 71, "T128_H_n": 71, "T128_C0_n": 71,
+        "T64_R_n": 71, "T64_A_n": 71, "T64_C_n": 71, "T64_H_n": 71, "T64_C0_n": 71,
+        "T128_minus_T256_R": 0.0, "T128_minus_T256_R_ci95": (0.0, 0.0),
+        "T128_minus_T256_R_excludes_zero": False,
+        "T128_minus_T256_A": -1.803, "T128_minus_T256_A_ci95": (-5.41, 1.8),
+        "T128_minus_T256_A_excludes_zero": False,
+        "T128_minus_T256_C": 0.0, "T128_minus_T256_C_ci95": (0.0, 0.0),
+        "T128_minus_T256_C_excludes_zero": False,
+        "T128_minus_T256_H": 0.0, "T128_minus_T256_H_ci95": (0.0, 0.0),
+        "T128_minus_T256_H_excludes_zero": False,
+        "T128_minus_T256_C0": 0.0, "T128_minus_T256_C0_ci95": (0.0, 0.0),
+        "T128_minus_T256_C0_excludes_zero": False,
+        "T64_minus_T256_R": 0.0, "T64_minus_T256_R_ci95": (0.0, 0.0),
+        "T64_minus_T256_R_excludes_zero": False,
+        "T64_minus_T256_A": -4.507, "T64_minus_T256_A_ci95": (-12.62, 2.7),
+        "T64_minus_T256_A_excludes_zero": False,
+        "T64_minus_T256_C": 0.0, "T64_minus_T256_C_ci95": (0.0, 0.0),
+        "T64_minus_T256_C_excludes_zero": False,
+        "T64_minus_T256_H": -1.803, "T64_minus_T256_H_ci95": (-4.51, 0.0),
+        "T64_minus_T256_H_excludes_zero": False,
+        "T64_minus_T256_C0": 0.0, "T64_minus_T256_C0_ci95": (0.0, 0.0),
+        "T64_minus_T256_C0_excludes_zero": False,
+    },
+    # ---- C67 -- the prompt-layout round after P2 was withdrawn.  P1-P0 and P3-P1 per
+    # ---- setup; the only intervals excluding zero are O4's, and they point opposite ways.
+    "C67": {
+        "O1_rows": 284, "O1_usable_rows": 284, "O1_non_200": 0,
+        "O2_rows": 284, "O2_usable_rows": 284, "O2_non_200": 0,
+        "O3_rows": 284, "O3_usable_rows": 284, "O3_non_200": 0,
+        "O4_rows": 284, "O4_usable_rows": 284, "O4_non_200": 0,
+        "O1_arms_present": ("P0", "P1", "P2", "P3"),
+        "O2_arms_present": ("P0", "P1", "P2", "P3"),
+        "O3_arms_present": ("P0", "P1", "P2", "P3"),
+        "O4_arms_present": ("P0", "P1", "P2", "P3"),
+        "O1_engine": ("sglang/occamy-1.0",), "O2_engine": ("sglang/qwen3.5-9b",),
+        "O3_engine": ("vllm/occamy-1.0",), "O4_engine": ("vllm/qwen3.5-9b",),
+        "O1_P0_n": 71, "O1_P0_mean": 530.3944, "O1_P1_n": 71, "O1_P1_mean": 522.7183,
+        "O1_P2_n": 71, "O1_P2_mean": 541.7465, "O1_P3_n": 71, "O1_P3_mean": 520.5493,
+        "O2_P0_n": 71, "O2_P0_mean": 530.3944, "O2_P1_n": 71, "O2_P1_mean": 522.7183,
+        "O2_P2_n": 71, "O2_P2_mean": 456.1127, "O2_P3_n": 71, "O2_P3_mean": 519.6479,
+        "O3_P0_n": 71, "O3_P0_mean": 1290.0563, "O3_P1_n": 71, "O3_P1_mean": 1345.7042,
+        "O3_P2_n": 71, "O3_P2_mean": 625.5775, "O3_P3_n": 71, "O3_P3_mean": 1205.3944,
+        "O4_P0_n": 71, "O4_P0_mean": 1883.8592, "O4_P1_n": 71, "O4_P1_mean": 1664.3521,
+        "O4_P2_n": 71, "O4_P2_mean": 2271.0986, "O4_P3_n": 71, "O4_P3_mean": 1687.8732,
+        "O1_P1_minus_P0_delta": -7.6761, "O1_P1_minus_P0_ci95": (-50.099, 35.324),
+        "O1_P1_minus_P0_excludes_zero": False, "O1_P1_minus_P0_n_pairs": 71,
+        "O2_P1_minus_P0_delta": -7.6761, "O2_P1_minus_P0_ci95": (-50.099, 35.324),
+        "O2_P1_minus_P0_excludes_zero": False, "O2_P1_minus_P0_n_pairs": 71,
+        "O3_P1_minus_P0_delta": 55.6479, "O3_P1_minus_P0_ci95": (-136.493, 246.014),
+        "O3_P1_minus_P0_excludes_zero": False, "O3_P1_minus_P0_n_pairs": 71,
+        "O4_P1_minus_P0_delta": -219.507, "O4_P1_minus_P0_ci95": (-353.831, -88.845),
+        "O4_P1_minus_P0_excludes_zero": True, "O4_P1_minus_P0_n_pairs": 71,
+        "O1_P3_minus_P1_delta": -2.169, "O1_P3_minus_P1_ci95": (-35.437, 42.042),
+        "O1_P3_minus_P1_excludes_zero": False, "O1_P3_minus_P1_n_pairs": 71,
+        "O2_P3_minus_P1_delta": -3.0704, "O2_P3_minus_P1_ci95": (-36.296, 40.972),
+        "O2_P3_minus_P1_excludes_zero": False, "O2_P3_minus_P1_n_pairs": 71,
+        "O3_P3_minus_P1_delta": -140.3099, "O3_P3_minus_P1_ci95": (-289.099, 8.211),
+        "O3_P3_minus_P1_excludes_zero": False, "O3_P3_minus_P1_n_pairs": 71,
+        "O4_P3_minus_P1_delta": 23.5211, "O4_P3_minus_P1_ci95": (8.394, 53.479),
+        "O4_P3_minus_P1_excludes_zero": True, "O4_P3_minus_P1_n_pairs": 71,
+        "cells_whose_summary_disagrees_with_rows": (),
     },
 }
 
@@ -2156,7 +2439,16 @@ TOLERANCE = {
     "C31": 0.05, "C32": 0.05, "C33": 1e-3, "C34": 1e-3, "C35": 1e-3,
     "C46": 1e-4, "C47": 1e-4, "C49": 1e-9, "C50": 1e-4, "C51": 1e-4,
     "C53": 1e-9, "C54": 1e-6, "C58": 1e-3, "C60": 1e-4, "C63": 1e-6,
+    # C64-C67: three decimals of a token mean, an exact six-decimal config counter, a
+    # gcd check, and a three-decimal paired delta.  The R2 cells bootstrap with seed
+    # 20261020 over 10,000 draws and the intervals are printed to three decimals.
+    "C64": 1e-3, "C65": 1e-6, "C66": 1e-3, "C67": 1e-4,
 }
+
+#: Claims whose rows the sibling reads from OUTSIDE ``experiments/context-cache/cells/``:
+#: C64-C67 read ``state/config/rows.jsonl`` and the TRACK-INTERVAL trees, which is why their
+#: reading code stayed in ``recompute_r2.py`` and only the registration moved here.
+R2_CELL_CLAIMS = ("C64", "C65", "C66", "C67")
 
 FUNCS = {
     "C02": c02, "C03": c03, "C04": c04, "C05": c05, "C06": c06,
@@ -2171,6 +2463,10 @@ FUNCS = {
     "C45": c45, "C46": c46, "C47": c47, "C48": c48, "C49": c49, "C50": c50,
     "C51": c51, "C52": c52, "C53": c53, "C54": c54,
     "C55": c55, "C56": c56, "C57": c57, "C58": c58, "C59": c59, "C60": c60,
+    # C64-C67: the Round-2 claims.  The bodies live in recompute_r2.py because their rows
+    # do; ``check`` pins the published figures here, and ``special_cmd`` routes the ONE
+    # claim of the four whose command hands off to a sibling script (C65's own script).
+    "C64": C64, "C65": C65, "C66": C66, "C67": C67,
     "C62": c62, "C63": c63,
 }
 
@@ -2210,6 +2506,8 @@ def main(argv: list[str]) -> int:
         print("claims:", " ".join(FUNCS))
         return 0
     claims = argv[1:]
+    if claims and claims[0] in ("grid-invariant", "grid64"):
+        return assert_sglang_grid()
     if claims == ["all"]:
         claims = list(FUNCS)
     if claims and claims[0] == "grid-guard":
@@ -2242,10 +2540,69 @@ ROOT_DIR = PKG_DIR.parents[1]
 CLAIMS_MD_PATH = PKG_DIR / "CLAIMS.md"
 
 
+def cid_of(first_cell: str) -> str | None:
+    """The claim id a table row's first cell carries, anchor or not; None if it carries none.
+
+    One reader for every guard that has to know which claim a row is: the anchor is the id
+    when there is one, and a label such as ``C64a`` is a sub-claim of ``C64``.
+    """
+    m = ANCHOR_OPEN.search(first_cell)
+    if m:
+        return m.group(1)
+    cell = first_cell.strip()
+    if len(cell) >= 3 and cell[0] == "C" and cell[1:3].isdigit():
+        if len(cell) >= 4 and cell[3] in "ab" and not cell[3].isdigit():
+            return cell[:3] if not (len(cell) > 4 and cell[4].isalpha()) else None
+        return cell[:3]
+    return None
+
+
 def coverage_ids() -> list[str]:
-    """Claim ids as the first cell of a CLAIMS.md table row, in file order."""
+    """Claim ids as the first cell of a CLAIMS.md table row, in file order.
+
+    A row may open with its own anchor (``| <a id="C64"></a>C64 | …``) so a downstream
+    document can link to the claim rather than to the file.  The anchor is stripped BEFORE
+    the row is matched: a census that stops recognising every claim row must fail loudly,
+    not return an empty list, because an empty census is what ``max()`` and the gap check
+    downstream then crash on.
+    """
     text = CLAIMS_MD_PATH.read_text(encoding="utf-8")
-    return re.findall(r"^\|\s*(C\d{2})\s*\|", text, re.MULTILINE)
+    # A row may open with its own anchor: "| <a id=\"C64\"></a>C64 | ...".
+    # Scan with str.split, not a ^-anchored regex scan: this module has already been bitten
+    # once by a caret-scanner that silently matched every character but the ones wanted,
+    # and an empty census only crashes three checks later inside max().
+    ids: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            # An indented table row is still a row: skipping it would hide the claim from the
+            # census (and from surface_defects(), which does not skip it) -- a silent hole.
+            continue
+        cell = stripped[1:].split("|", 1)[0].strip()
+        anchor = ""
+        if anchor_match := ANCHOR_OPEN.search(cell):
+            # "| <a id="C64"></a>C64 <title> | ..." -- the id is inside the anchor, so read it
+            # from there; the visible label may carry a space after the tag or not, and a
+            # sub-claim's label is "C64a", which shares C64's runner.  Read the anchor before
+            # the label is split, or surface_defects() sees a cell that is neither a bare id
+            # nor a declared source key and reports the row it was just told to count.
+            anchor = anchor_match.group(1)
+            cell = cell[anchor_match.end():].strip()
+            # The anchor is authoritative whatever label follows it, and it must survive a
+            # space or a malformed tag: "| <a id="C64"></a> C64 ...|" and "| <a id="C64">..."
+            # are the same claim.  (An absent/non-id anchor falls through to the label test.)
+            ids.append(anchor)
+            continue
+        if len(cell) >= 4 and cell[0] == "C" and cell[1:3].isdigit() and cell[3] in "ab":
+            # "C64a **Supersedes** ..." is a sub-claim: it corrects its parent's reading and
+            # shares the parent's runner, so it is the SAME census entry. Counting it again
+            # makes C64 a "duplicate row" and 71 ids against 66 runners -- a defect reported
+            # against a file that is exactly right.
+            continue
+        if len(cell) >= 3 and cell[0] == "C" and cell[1:3].isdigit():
+            # "C64" or "C64 ..." is the claim.
+            ids.append(cell[:3])
+    return ids
 
 
 # A row whose first cell is one of these is not a claim: the title rows of the
@@ -2254,6 +2611,58 @@ def coverage_ids() -> list[str]:
 NONCLAIM_HEADERS = ("#", "Abbrev")
 SOURCE_KEY_SECTION = "Source rows and digests"
 NONCLAIM_COUNTER = re.compile(r"\d{1,3}")
+
+
+# Attributes of a CLAIMS.md row that live OUTSIDE its five table cells: the row's anchor
+# (``<a id="C64"></a>``) and its tier note (``<!-- tier: editable -->``), both keyed by claim
+# id.  The census below used to ignore anything after the last pipe, and nothing it derived
+# covered "this row's figure is a computed string, not a pin" -- so the notes are pinned here.
+ANCHOR = re.compile(r'<a\s+id="(C\d{2})"\s*></a>')
+# The opening half of an anchor, for the census: matched before </a> so a tag whose closing
+# form is unusual ("<a id="C64">") still yields the id instead of falling through to the label.
+ANCHOR_OPEN = re.compile(r'<a\s+id="\s*(C\d{2})\s*"[^>]*>')
+TIER_NOTE = re.compile(r"<!--\s*tier:\s*([a-z_-]+)\s*-->")
+#: A tier note belongs to the row it sits on, so it is keyed by that row's own id: a note in
+#: a prose line ("pinned to ...") used to be read as a tier called ``pinned`` and reported as
+#: an anchor defect.  The row is read here, in one place, exactly as ``coverage_ids`` reads it.
+NOTED_ROW = re.compile(r"^\|\s*(C\d{2})\s*\|")
+
+#: Tiers a row may declare.  ``editable`` is a claim whose displayed figure is composed at
+#: print time rather than pinned; every other value names the recomputation that produced it.
+DECLARED_TIERS = ("editable", "pinned", "script-backed", "guard")
+
+
+def anchor_tiers() -> dict[str, tuple[str | None, str | None]]:
+    """claim id -> (anchor id or None, declared tier or None), read out of CLAIMS.md."""
+    out: dict[str, tuple[str | None, str | None]] = {}
+    for line in CLAIMS_MD_PATH.read_text(encoding="utf-8").splitlines():
+        # ANCHOR_OPEN, not ANCHOR: the closing form a tag happens to be written in must not
+        # decide whether its claim is anchored, which is what a </a>-requiring pattern did
+        # when it was read beside ANCHOR_OPEN in the census.
+        anchor = ANCHOR_OPEN.search(line)
+        tier = TIER_NOTE.search(line)
+        if not tier:
+            # The ledger's rows are bare `| Cnn |` (the canonical census form), so the anchor
+            # is optional: without this fallthrough a row carrying a tier note but no <a id>
+            # declares no tier at all, and every claim reads as underived.  The anchor, when
+            # one is present, is still what must name the row.
+            row = NOTED_ROW.match(line)
+            if row is None:
+                continue
+            tier = TIER_NOTE.search(line)
+            if tier is None:
+                continue
+        if tier is not None and anchor is None:
+            row = NOTED_ROW.match(line)
+            if row is None:
+                continue  # a note on a prose line declares no row, so it declares no tier
+        # A sub-claim anchor ("C64a") is C64's own row: key it by the parent id, which is
+        # what the census counts, or it reads as an anchor pointing at a row that is missing.
+        found = (anchor.group(1) if anchor else NOTED_ROW.match(line).group(1))
+        cid = found[:3] if len(found) == 4 and found[3] in "ab" else found
+        prev = out.get(cid, (None, None))
+        out[cid] = (cid if anchor else prev[0], tier.group(1) if tier else prev[1])
+    return out
 
 
 def surface_defects() -> list[str]:
@@ -2267,12 +2676,33 @@ def surface_defects() -> list[str]:
     """
     defects: list[str] = []
     section = ""
+    seen: dict[str, int] = {}
     for lineno, line in enumerate(CLAIMS_MD_PATH.read_text(encoding="utf-8").splitlines(), 1):
         stripped = line.strip()
         if stripped.startswith("|"):
             cells = [c.strip() for c in stripped.strip("|").split("|")]
             first = cells[0] if cells else ""
-            if re.fullmatch(r"C\d{2}", first):
+            # A claim row's first cell is its id, optionally behind its own anchor:
+            # "| <a id="C64"></a> C64 Grid-aligned padding costs ... |".  Strip the anchor and
+            # take the id the anchor names, or this guard reports every anchored row as an
+            # invisible row -- the exact thing it exists to catch -- on a file where it was
+            # deliberately made visible.
+            anchored = re.match(r'<a\s+id="(C\d{2})"\s*></a>', first)
+            label = anchored.group(1) if anchored else first.split(" ", 1)[0]
+            # "C64a" is a sub-claim: a correction to C64's reading, ruled by C64's runner.
+            if len(label) == 4 and label[3] in "ab":
+                continue
+            if re.fullmatch(r"C\d{2}", label):
+                # A claim row's own id is the census key.  Two rows sharing it would let
+                # one runner stand for two claims, and the duplicate check downstream only
+                # sees ids, so the collision is caught here where both line numbers are.
+                # Two ids are one census key, by design: a sub-claim (``C64a``, ``C67a``)
+                # carries a correction to its parent's reading and shares the parent's
+                # runner, so it is labelled as the parent's row rather than refused.
+                if label in seen:
+                    defects.append(f"CLAIMS.md:{lineno} claim {label} already has a row at "
+                                   f"CLAIMS.md:{seen[label]}")
+                seen.setdefault(label, lineno)
                 continue
             if first in NONCLAIM_HEADERS or set(first) <= set("-: "):
                 continue
@@ -2288,6 +2718,26 @@ def surface_defects() -> list[str]:
             section = stripped.split("**")[1].strip().rstrip(".").strip()
         elif re.match(r"#{1,6}\s", stripped):
             section = re.sub(r"^#{1,6}\s+", "", stripped).strip().rstrip(".").strip()
+    return defects
+
+
+def anchor_defects() -> list[str]:
+    """Anchors and tier notes that point at claims the census cannot find, or vice versa."""
+    tiers = anchor_tiers()
+    documented = set(coverage_ids())
+    defects: list[str] = []
+    for cid, (anchor, tier) in tiers.items():
+        if tier is not None and tier not in DECLARED_TIERS:
+            defects.append(f"{cid}: declared tier {tier!r} is not one of {', '.join(DECLARED_TIERS)}")
+        if anchor is not None and anchor != cid:
+            defects.append(f"{cid}: anchor names {anchor!r}")
+        if cid not in documented:
+            defects.append(f"{cid}: carries an anchor or a tier note but has no claim row")
+    # A row with neither an anchor nor a tier note is silent about how its figure was
+    # derived -- but that is the shipped convention for the ledger's bare `| Cnn |` rows,
+    # where the derivation is the claim's own recompute command in the next cell.  Anchor
+    # and tier-note defects are still reported; absence of both is a recorded convention,
+    # not a defect, or the guard would fail 63 rows that the census itself reads correctly.
     return defects
 
 
@@ -2314,8 +2764,13 @@ def script_backed() -> dict[str, Path]:
         if not stripped.startswith("|"):
             continue
         cells = [c.strip() for c in stripped.strip("|").split("|")]
-        if len(cells) != 5 or not re.fullmatch(r"C\d{2}", cells[0]):
+        # The id may sit behind the row's anchor ("| <a id="C01"></a> C01 | ..."): read it out
+        # of the anchor, or every anchored row is skipped here and its script exemption is
+        # lost -- which reads downstream as "this script-backed claim has no runner".
+        head = cid_of(cells[0]) if cells else None
+        if len(cells) != 5 or head is None:
             continue
+        cells[0] = head
         command = re.search(r"(\S+\.py)", cells[4])
         if command is None:
             UNRUNNABLE.append(f"{cells[0]} (CLAIMS.md:{lineno}, command {cells[4][:40]!r})")
@@ -2326,21 +2781,47 @@ def script_backed() -> dict[str, Path]:
             path = (ROOT_DIR / rel).resolve()
         if path == (PKG_DIR / "recompute.py").resolve():
             continue  # an ordinary FUNCS runner, not an external script
+        if path == (PKG_DIR / "recompute_r2.py").resolve():
+            # The Round-2 sibling registers C64-C68 in its own FUNCS; that guard
+            # checks the pairing.  Rows C01..C63 still pair with this file.
+            continue
         rows[cells[0]] = path
     return rows
+
+
+def r2_runner_ids() -> set[str]:
+    """Claim ids the Round-2 sibling ``recompute_r2.py`` registers in its own ``FUNCS``.
+
+    Read out of the sibling's source rather than imported: importing it would execute a
+    module that reads row files at import time, and a runner set is all this guard needs.
+    A sibling that is absent contributes nothing, which is correct -- the Round-1 claims
+    never depended on it.
+    """
+    path = PKG_DIR / "recompute_r2.py"
+    if not path.is_file():
+        return set()
+    text = path.read_text(encoding="utf-8")
+    # EVERY FUNCS block: the sibling registers its claim runners in one and its derived
+    # (non-claim) tables in another, and a guard that read only the first would report the
+    # claims registered in the second as having no runner.
+    ids: set[str] = set()
+    for m in re.finditer(r"^FUNCS = \{.*?^\}", text, re.MULTILINE | re.DOTALL):
+        ids |= set(re.findall(r'"(C\d{2})":', m.group(0)))
+    return ids
 
 
 def coverage_guard() -> int:
     """Loudly fail if the claim census and the runnable census disagree.
 
     Derived, never asserted: every id is read from CLAIMS.md, every runner from
-    FUNCS / SPECIAL. A prose count in CLAIMS.md or PACKAGE.md is not consulted.
+    FUNCS / SPECIAL (and, for the Round-2 claims, from recompute_r2.py's own FUNCS). A
+    prose count in CLAIMS.md or PACKAGE.md is not consulted.
     """
     documented = coverage_ids()
-    runners = set(FUNCS) | set(SPECIAL)
+    runners = set(FUNCS) | set(SPECIAL) | r2_runner_ids()
     scripts = script_backed()
     bad = 0
-    invisible = surface_defects()
+    invisible = surface_defects() + anchor_defects()
     if invisible:
         bad += 1
         print(f"COVERAGE GUARD FAIL  {len(invisible)} CLAIMS.md row(s) invisible to the census, "
@@ -2367,15 +2848,28 @@ def coverage_guard() -> int:
     # Every count above is blind to a row that vanished *above* the maximum id: a
     # lost C40 leaves the census 61 ids that still agree with 61 runners.  The ids
     # are C01..C(n) by construction, so a gap is a defect.
+    #
+    # Fail-safe: an EMPTY census is itself the loudest possible defect -- it means no row
+    # was parsed at all -- so it is reported as one here and NOT handed to ``max()``.  That
+    # call is what used to end the guard in ``ValueError: max() iterable argument is empty``
+    # (raw traceback, no verdict line, and the checks after it never ran); a coverage guard
+    # must never be the thing that crashes.
     numbered = [int(c[1:]) for c in dict.fromkeys(documented)]
-    gaps = [f"C{n:02d}" for n in range(1, max(numbered) + 1) if n not in numbered] if numbered else []
-    if gaps:
+    if not numbered:
         bad += 1
-        print(f"COVERAGE GUARD FAIL  claim-id gap(s) below the maximum C{max(numbered):02d}: "
-              f"{', '.join(gaps)}")
+        print("COVERAGE GUARD FAIL  the census is empty: no claim row in "
+              f"{CLAIMS_MD_PATH.name} parsed as C<n>, so the id-contiguity check cannot run "
+              "(a guard must never be the thing that crashes)")
     else:
-        print(f"COVERAGE GUARD ok    claim ids are contiguous C01..C{max(numbered):02d} "
-              f"(no row lost above the maximum)")
+        top = max(numbered)
+        gaps = [f"C{n:02d}" for n in range(1, top + 1) if n not in numbered]
+        if gaps:
+            bad += 1
+            print(f"COVERAGE GUARD FAIL  claim-id gap(s) below the maximum C{top:02d}: "
+                  f"{', '.join(gaps)}")
+        else:
+            print(f"COVERAGE GUARD ok    claim ids are contiguous C01..C{top:02d} "
+                  f"(no row lost above the maximum)")
     if missing_script:
         bad += 1
         print(f"COVERAGE GUARD FAIL  script-backed claim(s) with no script on disk: {'; '.join(missing_script)}")

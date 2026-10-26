@@ -261,11 +261,22 @@ dense/SGLang); the **model** effect is the mean of (dense/vLLM − MoE/vLLM) and
 MoE/SGLang); the **interaction** is the difference of the two engine-within-model contrasts.
 Intervals are percentile bootstraps over the 71 turns (10,000 resamples, seed 20251023) —
 C62's recipe, applied to turns rather than rows because the arms are replicates. Result:
-engine +1,225.18 [1,132.2, 1,313.3] (70/71 turns positive), model +275.83 [194.3, 357.6]
-(53/71), interaction +272.23 [190.1, 354.6] (52/71); engine within MoE +952.96 [805.7,
-1,099.8], within dense +1,497.41 [1,404.4, 1,585.0]; model within vLLM +548.06 [384.7, 711.9]
-(52/71), within SGLang +3.61 [0.0, 10.8] (1/71). Grand mean 1,344.1585; engine share 0.9115,
-model share 0.2052; engine/model 4.4418.
+engine +549.33 [462.4, 631.9] (66/71 turns positive), model -400.02 [-474.2, -326.5]
+(8/71), interaction -403.63 [-479.7, -328.5] (8/71); engine within MoE +952.96 [805.7,
+1,099.8], within dense +145.70 [81.2, 210.5]; model within vLLM -803.65 [-953.6, -655.2]
+(8/71), within SGLang +3.61 [0.0, 10.8] (1/71). Grand mean 1,006.2306; engine share 0.5459,
+model share -0.3975; engine/model -1.3733.
+
+MTP CORRECTION: the vLLM dense cell is the Round-2 re-measurement (`state/config/rows.jsonl`,
+284 rows, `stack=vllm-0.27.1`, `config_id=O4`, hit 0.817432, 879.0669 uncached/turn, CI
+[824.7806, 933.3532]). The Round-1 cell carried `--speculative-config mtp`; removing it moved
+the cell 2,230.7782 -> 879.0669 (2.54x). The superseded derivation read engine +1,225.18
+[1,132.2, 1,313.3] (70/71), model +275.83 [194.3, 357.6] (53/71), interaction +272.23 [190.1,
+354.6] (52/71), model within vLLM +548.06, engine within dense +1,497.41, grand 1,344.1585,
+engine share 0.9115, engine/model 4.4418 — all replaced by the figures above and retained in
+`recompute.py:C63_SUPERSEDED`. Because the R2 cell writes no rendered-prompt `chars` and
+digests the request rather than the prompt, the prompt-identity contrast covers the three
+Round-1 cells (3 pairs, 284/284 rows) rather than all six.
 
 The mechanism line is measured, not inferred: the hot-row unit each engine reports is 64 in
 both SGLang cells and 2,096 (MoE) / 1,088 (dense) in the vLLM cells (`gcd` over hot rows with

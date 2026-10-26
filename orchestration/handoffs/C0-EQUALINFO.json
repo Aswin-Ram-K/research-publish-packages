@@ -1,0 +1,87 @@
+{
+  "unit": "C0-EQUALINFO",
+  "status": "partial",
+  "artifacts": [
+    "experiments/ptr-engine/measure/rows-equalinfo-2026-10-26.jsonl",
+    "orchestration/handoffs/C0-EQUALINFO.json",
+    "orchestration/units/C0-EQUALINFO.md"
+  ],
+  "evidence": {
+    "rows": "100 rows, 0 errors, 0 retries used",
+    "requests": "100 generation requests (90 design + 10 instrument repair), probes excluded",
+    "sglang_rep1_c0f": "prompt_tokens 22575 -> 22556/22565/22594 on t2..t4; cached_tokens 22528 after the cold prime",
+    "vllm_base_instrument_failure": "27 of 42 base vLLM rows returned empty content at completion_tokens 300 (thinking-on burned the budget as reasoning); only 15 had content, and R rows only echoed 'FETCH ...'",
+    "vllm_C0F_repair": "3/3 'AUD-4417' with chat_template_kwargs.enable_thinking=false, prompt_tokens 22594 each",
+    "vllm_R_repair": "rep1 answers 'OK' at T4 after fetching k12/k10/k08+k02 and never fetching k01",
+    "commands": [
+      "curl -m5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8012/get_server_info  -> 200, exit 0",
+      "curl -m5 -o /dev/null -w '%{http_code}' http://192.168.2.168:8014/v1/models        -> 200, exit 0",
+      "python3 - (inline runner) -> TOTAL_REQUESTS 90; python3 - (repair) -> REPAIR_REQUESTS 10"
+    ]
+  },
+  "commands": [
+    "curl -m5 http://192.168.2.168:8012/get_server_info  (200)",
+    "curl -m5 http://192.168.2.168:8014/v1/models (200)",
+    "inline streaming runner, 4 turns x 3 reps x 3 arms x 2 models"
+  ],
+  "blocker": "",
+  "next_unit_hint": "vLLM must be run with chat_template_kwargs.enable_thinking=false; C0FT on vLLM (12 rows) and R reps 2-3 (16 rows) were not re-measured inside the 105-request cap. Redo those 28 rows in a fresh 105-request unit if the vLLM growth curve / R spread is needed.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/rows-equalinfo-2026-10-26.jsonl",
+    "orchestration/handoffs/C0-EQUALINFO.json",
+    "orchestration/units/C0-EQUALINFO.md"
+  ],
+  "arms_completed": ["C0F", "C0FT", "R"],
+  "requests_sent": 100,
+  "rows_written": 100,
+  "accuracy": {
+    "occamy-1.0-NVFP4": {
+      "C0F": {"correct": 3, "of": 3, "answers": "AUD-4417"},
+      "C0FT": {"correct": 3, "of": 3, "answers": "AUD-4417"},
+      "R": {"correct": 3, "of": 3, "answers": "AUD-4417 after fetching k01 at T4 (2 requests at T4)"}
+    },
+    "qwen3.5-9b": {
+      "C0F": {"correct": 3, "of": 3, "answers": "AUD-4417", "note": "repair rows, thinking off; the 12 base C0F rows returned empty content and are not evidence of a model failure"},
+      "C0FT": {"correct": 0, "of": 0, "note": "NOT MEASURED: thinking-on base rows empty; 12-row re-run did not fit the request cap"},
+      "R": {"correct": 0, "of": 1, "note": "repair rep1, thinking off: never fetched k01 at T4, answered OK; base R rows (0/3) had empty content and are invalid"}
+    }
+  },
+  "uncached_per_turn_by_arm": {
+    "basis": "per rep = sum(uncached over every request in the rep) / 4 turns; uncached = prompt_tokens - cached_tokens where reported, else gross prompt_tokens",
+    "occamy-1.0-NVFP4": {
+      "C0F": {"rep1": 5676, "rep2": 28, "rep3": 28, "mean": 1911, "note": "rep1 pays the cold prime of the 22.5k working set once; t2..t4 hit 22528 cached tokens"},
+      "C0FT": {"rep1": 68, "rep2": 36, "rep3": 36, "mean": 47},
+      "R": {"rep1": 9476, "rep2": 1044, "rep3": 52, "mean": 3524, "note": "8 requests per rep (2 per turn); each resolve appends a body, so the prefix changes and does not cache"}
+    },
+    "qwen3.5-9b": {
+      "C0F": {"rep1": 22594, "rep2": 22594, "rep3": 22594, "mean": 22594, "per_request": 22594, "note": "gross prompt (vLLM reports no cached tokens): one request per turn, 22594 tokens every turn; reps share the prompt size because C0F resends the full set"},
+      "C0FT": {"mean": null, "note": "not measured"},
+      "R": {"rep1": 6531, "mean": 6531, "note": "rep1 only, 7 requests; SGLang-style rep2/3 omitted for budget"}
+    }
+  },
+  "ttft_by_arm": {
+    "occamy-1.0-NVFP4": {"C0F": 0.182, "C0FT": 0.181, "R": 0.602, "unit": "s, median of first content token"},
+    "qwen3.5-9b": {"C0F": 0.53, "C0FT": null, "R": 0.499, "note": "C0F n=3, R n=7 repair rows; C0FT not measured"}
+  },
+  "headline_ratio": {
+    "definition": "R_uncached_per_turn / C0F_uncached_per_turn, same model, same turn plan",
+    "occamy-1.0-NVFP4": {"all_reps_mean": 1.84, "cold_rep1": 1.67, "reading": "pointer arm is DEARER, not cheaper: 3524 vs 1911 uncached tokens per turn"},
+    "qwen3.5-9b": {"all_reps_mean": 0.29, "reading": "pointer arm cheaper at gross prompt level (6531 vs 22594 per turn), but n=1 rep and the denominator is an upper bound because vLLM never reports cached tokens"}
+  },
+  "truncation": {
+    "dropped": [],
+    "per_model": {
+      "occamy-1.0-NVFP4": {"kept": "k01..k12", "context_est_tokens": 22524, "window": 131072},
+      "qwen3.5-9b": {"kept": "k01..k12", "context_est_tokens": 30159, "window": 32768, "measured_prompt_tokens": 22594}
+    },
+    "note": "no item dropped on either model; all 12 bodies were in every C0F/C0FT prompt. The /tokenize estimate (30159) over-reads by ~7.5k tokens versus the served prompt_tokens (22594), so vLLM had ~10k tokens of headroom."
+  },
+  "vllm_cache_limit": "vLLM qwen3.5-9b returned prompt_tokens_details = null on all 45 rows (0/45 reported), so every vLLM uncached figure above is GROSS prompt tokens, an upper bound; rows carry cached_reported:false. Only occamy-1.0-NVFP4 reports cached tokens (47/48 rows).",
+  "assumptions": [
+    "qwen3.5-9b: chat_template_kwargs.enable_thinking=false was NOT sent on the 90-request design run (the card named that flag for SGLang only); 27/42 base vLLM rows came back empty because thinking consumed the 300-token budget. The 10 repair rows carry thinking_off:true and instrument:'repair: ...' so they are separable from the base rows.",
+    "runs at C0F turn 4 are self-contained (system carries the full set, user message is the question), so the 3 repaired qwen C0F rows are the same prompt the arm would have sent, not a substitute transcript.",
+    "T1..T3 instructions kept the PREREG turn plan verbatim in wording; only the pointer syntax @knowledge:kNN@1 was rendered as 'knowledge item kNN' in the C0F/C0FT arms, which have no resolver.",
+    "vLLM R ran the text FETCH protocol (image refuses tool_choice auto), so the two pointer arms are not protocol-identical; this caveat carries over from C0-BASELINE.",
+    "no item was exempted from truncation because nothing needed truncating; had it been needed, k01 (the fact item) would have been kept, since dropping it would rebuild the predecessor's design defect."
+  ]
+}

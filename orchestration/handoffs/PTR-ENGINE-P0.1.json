@@ -1,0 +1,71 @@
+{
+  "unit": "PTR-ENGINE-P0.1",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/tests/test_oneway.py",
+    "experiments/ptr-engine/tests/test_roundtrip.py",
+    "experiments/ptr-engine/tests/test_ledger.py",
+    "experiments/ptr-engine/tests/test_negative_controls.py",
+    "experiments/ptr-engine/ptr_engine/errors.py",
+    "experiments/ptr-engine/ptr_engine/ledger.py",
+    "experiments/ptr-engine/ptr_engine/__init__.py",
+    "experiments/ptr-engine/ptr_engine/compile.py",
+    "experiments/ptr-engine/SPEC.md",
+    "experiments/ptr-engine/CHANGELOG-P0.1.md",
+    "orchestration/units/PTR-ENGINE-P0.1.md",
+    "orchestration/handoffs/PTR-ENGINE-P0.1.json"
+  ],
+  "evidence": {
+    "command_or_count": "100 passed in 0.98s / 100 tests collected (TMPDIR=/var/tmp python3 -m pytest tests -q), up from 95: 5 new tests, all passing. Red->green on D1: registry-backed bridge in a scratch copy -> 2 failed, 98 passed (the pre-existing synthetic one-way test still passed: 5 passed, 2 deselected); bridge removed -> 100 passed. r unchanged: total body bytes 30000 / index bytes 447 = 67.1x, index sha256 e08700c9876162544ba0f6c73c47868f605d1ebfea2302d2b66eee866a099bd2. 0 'raise ValueError' sites left in ptr_engine; 26 error classes carrying 26 distinct codes (seven negative controls unchanged; five ledger codes added -> twelve named codes in the enumeration).",
+    "commands": [
+      "TMPDIR=/var/tmp python3 -m pytest tests -q  ->  100 passed in 0.98s",
+      "TMPDIR=/var/tmp python3 -m pytest tests -q --collect-only  ->  100 tests collected in 0.01s",
+      "TMPDIR=/var/tmp python3 -m pytest tests -q -k 'superseded_revision or ledger_failure or ledger_codes or resolve_issued or issued_region'  ->  5 passed, 95 deselected",
+      "cp -r ptr_engine tests SPEC.md examples .p0-scratch/ && install registry-backed recover()  ->  TMPDIR=/var/tmp python3 -m pytest tests -q  ->  2 failed, 98 passed in 0.97s ('ptr_engine.recover.recover -> Reference')",
+      "TMPDIR=/var/tmp python3 -m pytest tests/test_oneway.py -q -k 'not resolve_issued and not issued_region'  ->  5 passed, 2 deselected (the synthetic sweep alone still says compliant)",
+      "rm -rf .p0-scratch && TMPDIR=/var/tmp python3 -m pytest tests -q  ->  100 passed in 1.58s",
+      "TMPDIR=/var/tmp python3 examples/worked_example.py  ->  total body bytes 30000, index bytes 447, index lines 12, r = 67.1x, index sha256 e08700c9...99bd2",
+      "grep -c 'raise ValueError' ptr_engine/*.py  ->  0 in every module",
+      "python3 -c 'import ptr_engine.errors'  ->  26 PtrError subclasses, 26 distinct codes",
+      "wc -l  ->  engine 1896, tests 1222, SPEC.md 260, examples/worked_example.py 144 (total 3522)"
+    ]
+  },
+  "checks": [
+    "D1 behaviourally closed: tests/test_oneway.py::test_no_public_callable_turns_a_resolve_issued_resourceref_into_a_reference and ::test_no_public_callable_turns_an_issued_region_ref_into_a_reference resolve a real reference, prove issuance via store.get(real) working while store.get(DUMMY) raises, then sweep every public callable (positional, keyword-only, with scope/store/index as extra args). A registry-backed recover(ResourceRef)->Reference fails both (2 failed, 98 passed) while the old synthetic test passes (5 passed, 2 deselected); removed -> 100 passed.",
+    "D2 SPEC.md:85-92 now states the measured truth (ResourceRef from an older resolve still opens those bytes; a Reference pinned to a superseded revision is refused with PTR_REVISION_MISMATCH, deliberately). tests/test_roundtrip.py::test_a_superseded_revision_is_refused_but_its_bytes_survive pins both halves.",
+    "D3 six bare ValueError sites (ledger.py:51,60,136,138,141,213) now raise PtrLedgerCountError / PtrLedgerBlockSizeError / PtrLedgerIdError / PtrLedgerScopeError / PtrLedgerRefusalCodeError, declared as LEDGER_CODES and exported. PtrLedgerError inherits (PtrError, ValueError) so pre-code callers and the existing test_ledger ValueError test keep working unchanged. SPEC enumeration: 7 fixed controls + 5 ledger codes = 12; tests/test_negative_controls.py asserts disjointness and completeness. Seven control codes untouched (their ordered-equality assertion passes).",
+    "D4 SPEC.md:44-47 no longer says 'enforced structurally' (it says: property of the API surface, no such function, behavioural sweep); SPEC.md:72-75 now says the byte length is the body's for a plain item and the selected region's canonicalised length for a pointer item; TurnIndex.body_bytes deleted (no caller, no test, reported 102 where the body is 112 bytes) - not serialised, index bytes and sha256 unchanged.",
+    "Containment: writes only under experiments/ptr-engine/ (SPEC.md, ptr_engine/{errors,ledger,__init__,compile}.py, tests/{test_oneway,test_roundtrip,test_ledger,test_negative_controls}.py, CHANGELOG-P0.1.md, transient .p0-scratch removed) and orchestration/{units,handoffs}/PTR-ENGINE-P0.1.*; __pycache__ removed; nothing written to release/, papers/, src/, experiments/agentic-lazy/, experiments/miss-law/; /home/zer0null/Duval not read and no git command run against it."
+  ],
+  "blocker": "",
+  "next_unit_hint": "PTR-ENGINE-P1: push a real host log's turn material through compile_turn and count refs the model would have had to resolve; the one-way guard is now behavioural, so any future bridge is caught by a resolved ref, not a synthetic one.",
+  "write_paths": [
+    "experiments/ptr-engine/SPEC.md",
+    "experiments/ptr-engine/CHANGELOG-P0.1.md",
+    "experiments/ptr-engine/ptr_engine/errors.py",
+    "experiments/ptr-engine/ptr_engine/ledger.py",
+    "experiments/ptr-engine/ptr_engine/__init__.py",
+    "experiments/ptr-engine/ptr_engine/compile.py",
+    "experiments/ptr-engine/tests/test_oneway.py",
+    "experiments/ptr-engine/tests/test_roundtrip.py",
+    "experiments/ptr-engine/tests/test_ledger.py",
+    "experiments/ptr-engine/tests/test_negative_controls.py",
+    "orchestration/units/PTR-ENGINE-P0.1.md",
+    "orchestration/handoffs/PTR-ENGINE-P0.1.json"
+  ],
+  "assumptions": [
+    "TMPDIR=/var/tmp for every pytest run: /tmp on this machine is a 15G tmpfs with the user quota exhausted (a 5 MB write fails with EDQUOT), so default tmp_path fixtures die with OSError [Errno 122]. /var/tmp is on the real disk (115G free) and outside the repository, so the warmpool-outside-repo guard still applies. The leaked /tmp/seed-shallow-fixture-* and /tmp/dsh-workspace-changes-* dirs belong to other sessions and were not touched.",
+    "D4c resolved by DELETION, not by adding a caller: body_bytes had no consumer, its dedup keyed region size against the whole-body hash, and inventing a caller would have added an unrequested feature. The SPEC index-line field (Entry.size / body_len) is a different field and is untouched.",
+    "D3 implemented as PtrLedgerError(PtrError, ValueError) rather than plain PtrError: the SPEC sentence ('every failure is a PtrError subclass with a stable code') is now true, and tests/test_ledger.py:96-98 was left untouched instead of being rewritten. No existing test was weakened or deleted.",
+    "LINE NUMBERS cited were re-measured after the SPEC edits: one-way rule SPEC.md:44-47, index-line length SPEC.md:72-75, superseded revision SPEC.md:85-92, error enumeration SPEC.md:169-196. The verifier's original numbers (44-45, 72-73, 86-87, 166) shift because the correction added lines.",
+    "Line counts reported here are measured now (engine 1896, tests 1222, SPEC 260, example 144, total 3522) and move with every edit; no fixed wall time is claimed (observed 0.93s/0.98s/1.58s/1.74s across runs, machine- and load-dependent)."
+  ],
+  "not_reproduced": [],
+  "overstated": [],
+  "unverified": [
+    "the sweep cannot see a bridge that requires an argument richer than scope/store/index/None (e.g. a host catalogue object). It is strictly stronger than the synthetic-DUMMY sweep and catches the registry-backed case the verifier demonstrated; a bridge hidden behind an unsupplied catalogue argument would still raise TypeError and read as compliant.",
+    "no concurrency claim: the ledger remains single-process append-only; unchanged by this unit."
+  ],
+  "tool_calls": 32,
+  "bound": 35
+}

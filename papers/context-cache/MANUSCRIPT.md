@@ -67,15 +67,46 @@ what turns that from an inference into a measurement (C62).
 
 **A sixth result separates the engine from the model.** Filling the 2x2 — two checkpoints
 (`occamy-1.0` MoE, `qwen3.5-9b` dense) x two engines (SGLang, vLLM 0.27.1) — on one
-shared 32k schedule (4 arms x 71 turns = 284 rows per cell, 1,136 rows, with the same
-prompt prefix digest and length on every cell pair: `prefix_sha256` 284/284, `chars` 284/284) shows that the **engine**, not the model, sets the
-per-turn uncached bill: vLLM spends **+1,225.18** uncached tokens per turn more than SGLang
-[1,132.2, 1,313.3], a **2.6738x** ratio, against a model main effect of **+275.83** [194.3,
-357.6]. The model effect is **engine-conditional**: **+548.06** [384.7, 711.9] under vLLM
-versus **+3.61** [0.0, 10.8] under SGLang (one of 71 paired turns positive), an interaction
-of **+272.23** [190.1, 354.6] — the model effect is **152.00x** larger under vLLM. SGLang
-pages both checkpoints on the same 64-token grid; under vLLM each checkpoint's resolved
-block (1,088 dense, 2,096 MoE) sets its own bill (C63).
+shared 32k schedule (4 arms x 71 turns = 284 rows per cell, 1,136 rows; the Round-1
+cells agree on prompt prefix digest and length 284/284, the Round-2 vLLM cell records the
+request digest instead) shows that the **engine** sets the per-turn uncached bill far more
+than the model: vLLM spends **+549.33** uncached tokens per turn more than SGLang
+[462.4, 631.9], a **1.7523x** ratio, while the model main effect is **-400.02** [-474.2, -326.5]
+— the model does not add a uniform surcharge, it is **engine-conditional**:
+**-803.65** [-953.6, -655.2] under vLLM (the MoE pays more, not the dense model) versus
+**+3.61** [0.0, 10.8] under SGLang (one of 71 paired turns positive), an interaction of
+**-403.63** [-479.7, -328.5]. SGLang pages both checkpoints on the same 64-token grid and
+erases the model difference; under vLLM each checkpoint's resolved block (1,088 dense,
+2,096 MoE) sets its own bill (C63).
+
+**Round 2 asked what could break those results, and it broke one of ours.** A second harness
+re-derived the 2x2 from its raw rows and reproduced every value (§9c), and a sweep of the
+linear-attention tracking interval showed it is not a grid lever at any of its three settings.
+The claim it withdrew was one this paper had made itself: padding the tail to the 64-token
+grid *halves* the per-turn bill — the arm measured a same-turn self-hit rather than a padding
+effect, and a one-send-per-turn repair shows padding **costs** +20.84 uncached tokens per turn
+(§8a). The prompt-layout round is then decided per engine (§9d): the pointer layout is null on
+both SGLang setups, buys -219.51 tokens per turn on one vLLM checkpoint and nothing on the
+other, and a mid-run edit to a cached index costs +23.52 wherever it is measurable. A final
+version round, pre-registered against the shipped prompt form with a ceiling, found no cheaper
+form on either production checkpoint — **+130.11** tokens per turn on the MoE and **+228.82**
+on the dense one, with like-for-like quality unmoved (20/20 and 19/20 -> 18/20 probes
+mismatched) — and is published as the null it is (§10, C69). With that round the experiment
+is **closed**: no further arm is planned, and what remains open is named as a gap rather than
+scheduled as work.
+
+**What this paper is, and what it is not.** This paper is a measurement of *serving-stack
+economics and context placement*: how many prompt tokens a production-style server re-prefills
+on each turn, how that count moves when the shared bytes are laid out differently, and how much
+of a compaction policy's cost is truncation rather than the break event. It is **not** a claim
+about model intelligence, answer quality, or the quality of any summariser. The accuracy figures
+we report are a *sensitivity check* — whether an aggregate score can see a fact the policy
+deleted (Section 4) — not a benchmark of either model, and the compaction policies themselves run
+a deterministic offline stub summariser rather than a model-generated summary (Section 11). A
+reader should therefore not read the title ("where the cache win lives") as a capability claim
+about caching, or about compaction as a technique. Every figure in this paper is an uncached-token
+count or a time-to-first-token taken from a request log; none is a task score, and no arm in the
+package was run in order to improve one.
 
 ## 1. The question, and the answers we can defend
 
@@ -460,6 +491,63 @@ is that a context that grows will not get the byte-identical repeat's reuse, and
 cost model that assumes `64 * floor((L-1)/64)` for growing contexts will under-predict
 uncached tokens by hundreds to thousands per turn.
 
+## 8a. Aligning to the grid costs more than it recovers
+
+The launch documentation for this deployment says to pad the transcript tail so the prompt
+length is a multiple of 64, "so the prefix stays aligned and does not pay a re-prefill". The
+rule is measurable, and measured it loses (C64). On the production SGLang substrate (the O1
+cell of Section 9d's round), three arms were run over the same 71-turn schedule with one
+request per measured turn: whole-context resend (P0), pointer index plus append-only newest
+delta (P1), and P1 with the tail padded to the next 64-token boundary (P2).
+
+| arm | uncached tokens/turn | 95 % CI | mean prompt tokens |
+|---|---:|---|---:|
+| P0 whole-context resend | 541.07 | [501.68, 581.51] | 12,336.00 |
+| P1 pointer + tail | 528.64 | [521.19, 536.13] | 2,326.13 |
+| P2 P1 + grid pad | 549.49 | [542.17, 556.80] | 2,421.03 |
+
+The last column is prompt **tokens**, read from the rows' own `prompt_tokens` field over the
+70 countable rows of each arm (C64); the package stores no prompt byte count, and a
+thousand-token prompt here is about 3.5 times a thousand *bytes*.
+
+The pad itself is real and exactly as documented — 64 to 127 tokens per turn, mean 94.89
+over all 71 padded turns (94.90 over the 70 that carry a readable cache counter), and every
+padded turn lands on the grid. What it buys is smaller than what it costs. Against
+the same turn's P1 row, the padded row's cache recovers **+74.06 tokens** — 78.0 % of the
+94.90-token pad, split over 9 turns that recovered nothing, 41 that recovered exactly one
+64-token page and 20 that recovered two. The remaining 22 % is paid. Net, P2 costs
+**+20.84 uncached tokens per turn** over P1, [+10.01, +31.59], paired over 70 turns and
+excluding zero — a 3.9 % increase on a bill of 528.64. Against whole-context resend the
+padded arm is indistinguishable (+6.50, [-34.97, +46.91]), and so is the pointer layout it
+is built on (-14.34, [-57.19, +27.11]).
+
+**This supersedes a result this paper first reported.** The original P2 arm appeared to *halve* the
+per-turn bill (a 51.5 % reduction in one cell, 14.0 % in another). It did not: the arm resent a turn
+whenever the pad came out misaligned and recorded only the second send's cache state, so the recorded
+"cached_tokens" was the first send's prompt — a same-turn self-hit, and 68 of that arm's 71 rows were
+second sends (the other three carry `pad_corrections` 0, `cells/R2-PROMPT/O3-REPEAT/rows.jsonl`). The
+measurement above has no correction path at all (0 rows with more than one send, 0 corrections); the
+earlier figure is withdrawn and its per-cell values stay in the claim ledger, marked superseded.
+
+The lesson is narrower than "padding is bad". A 64-token pad is 64 to 127 tokens of new
+prefix, and the grid can return at most one page per turn of it — so padding can only win
+when the tail it aligns would otherwise be *misaligned by more than the pad*, which this
+workload does not produce. On a workload whose prompts end at arbitrary offsets the
+arithmetic could invert; we did not measure such a workload, and do not claim it.
+
+**One arithmetic qualifier the rows impose.** The 78.0 % is measured against the *row*, not
+against the pad: 9 padded turns recovered nothing, 41 recovered one page and 20 recovered
+two, and the two rows with no readable counter (turn 1 of P1 and of P2, `cached_tokens:
+"unavailable"`) are excluded from that split — which is why the extra cache over the 70
+*pairs* is 6,643 **tokens recovered**, not 6,643 pad tokens: 70 x 94.90 = 6,643.0 is only
+the pad the 70-count denominator implies, and it coincides with the recovered total by
+arithmetic accident — the measured pad over all 71 P2 turns is 6,737 tokens (mean **94.89**,
+range 64-127), **not** 6,643. A turn that recovers two pages recovers
+*more than its own pad*, because it also picks up the page it would have picked up unpadded.
+The honest statement is therefore "the padded row's cache lands 74.06 tokens ahead of the
+same turn's unpadded row", not "the pad funds 78 % of itself". The sign and the size of the
+net effect survive either reading, because both rest on rows that were sent exactly once.
+
 ## 9. A boundary rule at L = 0 mod 64
 
 The immediate-repeat miss is not random. Only lengths with `L mod 64 == 0` miss on the
@@ -550,7 +638,8 @@ does not change any recomputed value — it bounds what "the grid exists on engi
 a regularity observed, not a contract verified.
 
 **What does not travel.** The boundary rule (Section 9) is verified on SGLang only (C40–C43).
-The append deviation (Section 8, C38) is SGLang-only. The 1.700x head-rewrite number (§6) and
+The append deviation (Section 8, C38) is SGLang-only. The "1.700x" head-rewrite number (§6) — "quoted", since G1 re-attributes it to
+post-compaction window truncation rather than to the break or to avoiding compaction (C44) — and
 the compaction findings (§4, §5) are SGLang-only and were not re-run on the second stack. The
 vLLM unit 1088 is not a page size an operator can request — V1 asked for 64 and V2 for 16 —
 so nothing here licenses choosing a vLLM block size to control the unit, and the vLLM battery
@@ -575,41 +664,159 @@ at this band, so the four arms are salt-separated replicates, not four policies.
 |---|---|---:|---:|---:|
 | occamy-1.0 (MoE) | vLLM 0.27.1 | 0.901212 | 1,682.72 | 2,096 |
 | occamy-1.0 (MoE) | SGLang | 0.957153 | 729.76 | 64 |
-| qwen3.5-9b (dense) | vLLM 0.27.1 | 0.869037 | 2,230.78 | 1,088 |
+| qwen3.5-9b (dense) | vLLM 0.27.1 | 0.817432 | 879.07 | 1,088 (resolved block; see note) |
 | qwen3.5-9b (dense) | SGLang | 0.956941 | 733.37 | 64 |
 
-**The engine is the lever.** Averaged over the two models, vLLM spends **+1,225.18** more
+The last column is the block each cell's configuration resolved to, which is what the
+per-turn bill follows (Section 9a). It is not a gcd of the observed hot hits: re-read from the
+rows in Round 2, the MoE cell's hot tokens are all multiples of 2,096 and the dense cell's are
+only multiples of 16, so the dense cell's hot-hit distribution carries no resolved block at
+all (§9c). The resolved 1,088 remains the right description of how that cell was launched; it
+is not evidence that every hit landed on a 1,088-token boundary, and Section 9a's own rows
+(300/300 multiples of 1,088 in the earlier V1 cell) are the evidence for the block, not this
+one.
+
+**The engine is the lever.** Averaged over the two models, vLLM spends **+549.33** more
 uncached tokens per turn than SGLang — 95 % percentile bootstrap over the 71 turns
-[1,132.2, 1,313.3], 70 of 71 turns positive — a **2.6738x** ratio (2.3058x on the MoE,
-3.0418x on the dense weights). That is **0.9115** of the 1,344.16-token grand mean. The
-**model** main effect, averaged over the two engines, is **+275.83** [194.3, 357.6] — the
-engine effect is **4.4418x** larger. The four salt-separated arms agree: recomputed per arm, the
-engine effect is 1,216.2-1,229.7 and the model effect 274.0-281.2 across R/A/C/H.
+[462.4, 631.9], 66 of 71 turns positive — a **1.7523x** ratio (2.3058x on the MoE,
+1.1987x on the dense weights). That is **0.5459** of the 1,006.23-token grand mean. The
+**model** main effect, averaged over the two engines, is **-400.02** [-474.2, -326.5],
+which is **-1.3733x** the engine effect: the two factors push in opposite directions. The
+four salt-separated arms agree: recomputed per arm, the engine effect is 395.7-657.9 and
+the model effect -546.4--296.8 across R/A/C/H.
 
 **The model effect is engine-conditional, and that is the interaction.** Within vLLM the
-dense checkpoint pays **+548.06** [384.7, 711.9] more uncached per turn than the MoE
-(1.3257x); within SGLang the two models differ by **+3.61** [0.0, 10.8] uncached per turn
-(1.0049x), positive on **1 of 71** paired turns. The interaction is **+272.23** [190.1,
-354.6]: the model effect is **152.00x** larger under vLLM than under SGLang. The mechanism is
-the one Section 9a measured: SGLang delivers the 64 grid to both checkpoints (hot gcd 64 in
-both cells), while under vLLM the resolved block is a property of the checkpoint — 2,096 for
-the MoE, 1,088 for the dense hybrid — and the dense hybrid forfeits one block per turn rather
-than losing one at block completions (Section 9a; the pilot-level contrast is in `CAPTURE`,
-not a claim here). The engine that pages at 64 also hides the model's per-turn cost.
+dense checkpoint pays **-803.65** uncached tokens per turn against the MoE
+([-953.6, -655.2], 0.5224x); within SGLang the two models differ by **+3.61**
+[0.0, 10.8] uncached per turn (1.0049x), positive on **1 of 71** paired turns. The
+interaction is **-403.63** [-479.7, -328.5]: under vLLM the model effect is **-222.89x**
+its SGLang value. The mechanism is the one Section 9a measured, read with the sign
+reversed: SGLang delivers the 64 grid to both checkpoints (hot gcd 64 in both cells) and
+the model does nothing; under vLLM the resolved block is a property of the checkpoint —
+2,096 for the MoE, 1,088 for the dense hybrid — and the larger block costs the MoE more
+per turn (Section 9a; the pilot-level contrast is in `CAPTURE`, not a claim here). The
+engine that pages at 64 hides the model's per-turn cost; the engine that pages per-model
+exposes it, and the model that is better optimised for that engine wins.
 
-**What this licenses, and what it does not.** At this band, an engine main effect predicts
-each model's engine ratio to within 14 % (2.6738x against 2.3058x and 3.0418x), and a model
-main effect predicts each engine's model ratio to within 14 % as well (1.1653x against
-1.3257x and 1.0049x) — the residual is the interaction, and it says a per-turn bill cannot
-be read off either factor alone. It is one schedule at one band (32k, 71 turns), one seed,
+**MTP is part of this finding.** The Round-1 vLLM cell ran with `--speculative-config mtp` (speculative decoding) enabled and Round 2 ran it disabled; removing the flag moved that cell by 2.54x (2,230.7782 -> 879.0669 uncached tokens/turn). Decoder-speed features are not free of the prompt cache: MTP changed what the cache could reuse, and that is a measurable engine property, not an artefact to be apologised for.
+
+**What this licenses, and what it does not.** At this band neither main effect predicts the
+level it averages: the engine mean ratio 1.7523x sits far from its two levels (2.3058x MoE,
+1.1987x dense), and the model mean ratio 0.7636x sits far from 0.5224x under vLLM and 1.0049x
+under SGLang. The interaction is of the same order as both main effects, so a per-turn bill
+cannot be read off either factor alone. It is one schedule at one band (32k, 71 turns), one seed,
 one GPU; the two checkpoints differ in size and architecture as well as MoE-vs-dense, and
 the engine axis also carries each cell's launch flags (vLLM resolved blocks 1,088 / 2,096;
 SGLang `--mem-fraction-static` 0.22 on the dense cell). The 64k band was run on SGLang only;
 the matrix is a measured 2x2, not a law over models or engines (`GAPS.md` G4).
 
+## 9c. The 2x2 survives every Round-2 re-check, and the sweep that could have broken it is null
+
+Two questions can falsify Section 9b: is the engine effect an artefact of the 2x2 being
+one dense-vLLM cell measured once, and is the 64-token grid an artefact of one launch flag?
+Both were re-measured, and both answers are no (C65, C66).
+
+The 2x2 was re-derived from its raw rows by a second runner that does not import the harness
+which produced its published values — the same 1,136 rows, read by
+`papers/context-cache/recompute_r2.py` instead of `recompute.py`, written before that round's
+own result was published. What that independence does and does not buy is stated where it can
+be checked: the *code* is a separate implementation, but the rows are the same files, so this
+is a re-derivation, not a replication.
+Every cell mean, hit rate, main effect, interaction, within-cell
+contrast and per-arm replicate reproduces exactly: the engine main effect stays **+549.33**
+[463.1, 631.8] with 66 of 71 turns positive, the model main effect **-400.02** [-472.9,
+-324.3] with 8 of 71, the interaction **-403.63** [-478.4, -327.3], and the engine/model
+ratio -1.3732. One reading needs separating, because the two numbers answer different
+questions. The dense-vLLM cell's hot-token gcd *over all 223 hot rows* is **16**, not 1,088;
+**1,088** is the block that cell's launch resolved to (Section 9b), and it is what 222 of
+those 223 rows are multiples of. The single exception is the repeating arm's first turn,
+whose prompt is the 1,729-token seed the 64-token page grid rounds to 1,728 — it carries
+432 cached tokens, and 432 is 1,728 mod 1,088. So the cell's hits do land on the 1,088 grid,
+with a first-turn sub-page residue that the gcd of a small hot set reports as 16. Section 9b
+is unaffected either way: it quotes 1,088 as the *resolved block*, and both vLLM cells' hit
+rates (0.901 and 0.817) remain far below the 0.957/0.957 of SGLang. What survives is the
+engine contrast, not a claim that either vLLM cell pages at 64: under vLLM neither cell does.
+
+The grid is a property of the cache chunk, not of the linear-attention replay window. That
+was tested by sweeping `mamba_track_interval` over 256, 128 and 64 on the same five-arm 71-turn
+schedule (355 rows per interval). **All three deliver a 64-token grid**: the hot cached-token
+gcd is 64 at every interval, with 0 off-grid hot rows out of 345. Three of the five arms (a
+repeat, a compaction and its control) are byte-for-byte identical across the three intervals
+— zero difference in both cache counters on all 71 turns. The two arms that move (an append
+arm and a hybrid arm) move within a single 64-token page: -1.80 and -4.51 uncached tokens per
+turn at the shortest interval, with intervals that include zero. **No interval's confidence
+interval excludes zero on any arm.** The window that `mamba_track_interval` controls is not
+the window the prompt cache pages at, and an implementer should not tune it expecting a
+different grid.
+
+Two qualifications on the null, because an implementer will read it as one. It is a null at
+the *size* of the differences, not a proof of identity: three arms are byte-identical on
+both counters, and the two that move do so by 1.80 and 4.51 uncached tokens per turn at
+one-page scale, which is the same order as the +3.61 (dense/SGLang) model effect Section 9b
+already treats as zero. The moving arms move in the direction of a cheaper bill at the
+shorter interval, so if the interval has an effect at all it is small and unpriced here
+rather than absent by construction. Second, this sweep changes no measured *page size* —
+what it changes is which replay window the serving stack tracks — so it rules out the
+interval as a grid lever, and says nothing about the pager flags of Section 9a (`GAPS.md`
+G16's reading rule applies unchanged).
+
+## 9d. The prompt-layout round: what actually moves the bill
+
+With the padding arm withdrawn (Section 8a), the layout round is four setups — two
+checkpoints on two engines, the same 2x2 as Section 9b — each running 4 arms x 71 turns of the
+same 32k schedule against one fixed reference (C67). The arms are the whole-context resend
+(P0), the pointer index plus append-only newest delta (P1), the grid-padded P1 (P2), and P1
+with one earlier index line rewritten once at turn 40 (P3). This is the one place all four
+arms exist on all four setups, so it is where a renderer recommendation has to be decided.
+
+| setup | P0 | P1 | P2 | P3 | P1 - P0 (paired, 71 turns) | P3 - P1 |
+|---|---:|---:|---:|---:|---|---|
+| O1 occamy-1.0 / SGLang | 530.39 | 522.72 | 541.75 | 520.55 | -7.68 [-50.10, +35.32] null | -2.17 [-35.44, +42.04] null |
+| O2 qwen3.5-9b / SGLang | 530.39 | 522.72 | 456.11 | 519.65 | -7.68 [-50.10, +35.32] null | -3.07 [-36.30, +40.97] null |
+| O3 occamy-1.0 / vLLM | 1,290.06 | 1,345.70 | 625.58 | 1,205.39 | +55.65 [-136.49, +246.01] null | -140.31 [-289.10, +8.21] null |
+| O4 qwen3.5-9b / vLLM | 1,883.86 | 1,664.35 | 2,271.10 | 1,687.87 | **-219.51** [-353.83, -88.85] | **+23.52** [+8.39, +53.48] |
+
+Read with Section 9b, the pattern is consistent and unhelpful for a single recommendation:
+on the engine that pages at 64 the pointer layout buys nothing measurable (two setups,
+identical to three significant figures because the two SGLang servers are byte-identical on
+this schedule), and on the engine that pages per-model it buys a great deal on one checkpoint
+and nothing on the other. **The pointer layout is not a portable optimisation; it is a way of
+converting an engine's block geometry into saved tokens, and it only pays where the geometry
+is coarse.** The edit control is the clean negative result: rewriting one line of a cached
+index costs +23.52 tokens per turn on the most expensive setup and is null on the other
+three. It is direct evidence that a mid-run edit of a cached prefix can be paid for per
+turn rather than once at the edit — on the one setup where it was measurable; the other
+three neither confirm nor deny it.
+
+**The "null on all four" framing of that edit control is withdrawn.** It is null on three
+setups and it **costs** on the fourth: O4 P3 - P1 = **+23.5211** [+8.39, +53.48], an interval
+that excludes zero. Writing a mid-run edit into a cached prefix is therefore not free
+anywhere this round could measure it, and the one place it was measurable is the setup with
+the largest bill (1,664.35 uncached tokens per turn on P1) — where a per-turn cost of about
+twenty-four tokens is roughly 1.4 % of the bill. Three of the four intervals straddle zero,
+so the correct summary is "costly where measurable, unmeasured elsewhere", not "free on
+three". The same reading applies to the pointer layout once the padding arm is set aside:
+**P1 - P0 is null on all four setups — including O3, whose +55.65 [-136.49, +246.01] crosses
+zero — but one of those nulls is consistent with a large O4-sized loss**, which is
+what a per-engine decision means here — and it is why `GAPS.md` G4's single-schedule
+limitation is load-bearing for this section rather than decorative.
+
+One cell-level consistency check belongs here because it is what makes the table admissible:
+no cell's stored `analysis.json` disagrees with its own rows on any of the sixteen arm means
+above, and each cell holds 284 rows across 4 arms with 0 non-200 responses.
+
+The four setups are also a check on the measurement itself (C68): they carry four distinct
+configuration digests (`f2efaaac…`, `652ff99d…`, `f8ab1dce…`, `163a5db6…`), four distinct
+models-and-stacks, four disjoint wall-time windows, and their same-turn cache counters differ
+on 62 to 284 of the 284 shared turn-keys (62 O1 vs O2, 277 O1 vs O3, 284 O1 vs O4, 277 O2 vs
+O3, 284 O2 vs O4, 158 O3 vs O4). No pair of files passes the "same prompts, different
+configuration, same counters" test that would mark one measurement filed twice: 0 of 6 pairs
+are flagged, and no pair's prompts are counted twice. Each cell also carries 284 distinct
+prompt digests and repeats its own P0 digest on 0 of the P1/P2/P3 rows.
+
 ## 10. What a designer should take away
 
-Five rules follow from the measurements, in descending order of confidence.
+Six rules follow from the measurements, in descending order of confidence.
 
 1. **Keep shared bytes identical and branch late.** Fan-out reuse is bought by byte layout,
    not by pointer bookkeeping (Section 3). Any serializer that prefixes per-branch metadata
@@ -627,7 +834,16 @@ Five rules follow from the measurements, in descending order of confidence.
 4. **Do not assume the 64-grid for growing contexts.** It holds for repeats (44/44) and
    fails for appends (372/372), and lengths on the boundary pay a full re-prefill (§9).
    Budget the observed residual, not the law.
-5. **If the workload will not fit, budget the boundary as a window cost, not a one-off —
+5. **Do not pad to the grid, and do not expect the tracking interval to change it.**
+   Padding the tail to a 64-token boundary recovers about four fifths of what it pays and
+   costs +20.84 uncached tokens per turn net (§8a); `mamba_track_interval` at 256, 128 or 64
+   delivers the same 64-token grid with no measurable difference (§9c). Both are the sort of
+   knob that reads as free alignment and is not.
+   **Neither is a place to look for the last few tokens.** The optimisation round this paper
+   ran last was turned on the prompt form itself, was pre-registered against a ceiling, and
+   found nothing (the null recorded at the end of this section): the only prompt-side change
+   with a measured sign is the pointer layout, and its sign is an engine's, not ours (§9d).
+6. **If the workload will not fit, budget the boundary as a window cost, not a one-off —
    and budget it per turn, not on the average.** Compacted at a real 32k/64k limit, the
    compacting arms pay +134.6 to +747.2 uncached tokens per turn *on average* (twelve arm
    means) for the rest of the run, against a compaction-free baseline they were
@@ -640,7 +856,136 @@ Five rules follow from the measurements, in descending order of confidence.
    uncached tokens over all 18 compactions, against the baseline's own window drop at
    1,236-1,321 over six drop rows).
 
+**And the optimisation round we ran to make the memory cheaper ended in a published null.**
+A version round was pre-registered against the shipped prompt form (V0) with a ceiling: it
+would stop after one round, and a version survived only if it kept the hit rate within 10
+percentage points degraded *and* added no more than 45 uncached tokens per turn. The headline
+candidate (V1 P1) failed that gate on **both** production setups (C69). On the MoE checkpoint
+at SGLang it costs **+130.11 uncached tokens per turn** [+121.72, +138.39] against the shipped
+form, 1.249x, and its like-for-like quality on the same 20 probes does not improve at all
+(20/20 probes mismatched before, 20/20 after). On the dense checkpoint at vLLM it costs
+**+228.82** [+140.31, +319.18], 1.137x, and the same probes go 19/20 -> 18/20 mismatched. The
+no-change option beats it on both axes, and the ceiling declares V0 the best version. We
+publish it because a reader deciding whether to spend an afternoon optimising prompt-memory
+rendering should know that this one costs a full afternoon and loses, and because a null that
+was pre-registered before any cell ran is worth more than the same claim made after the fact.
+The drift control matters here: identical P0 bytes measured in the same session sit 63.15
+(MoE) and 13.13 (dense) tokens per turn away from the pinned cell's P0
+(`state/sys-opt-v1.json`, `per_model.{moe,dense}.v0.drift_check.drift`), which bounds how much
+of either delta could be instrument drift rather than the change — it does not close the gap,
+which is roughly twice (MoE) and seventeen times (dense) that drift.
+
 Resident capacity (cell M4-EVICT, 283 documents at 1.5017x pressure). The binding constraint is the state cache (max_mamba_cache_size 64), not KV token capacity: only 30-31 documents (258,035-266,636 tokens, 0.1592-0.1645 of the 1,620,892 declared token capacity) remain resident; verdict consistent_with_lru, with token-pool LRU (188.45 documents) excluded.
+
+## 10a. Related work
+
+This section is bounded by what could be verified **inside this workspace, without network
+access**: the primary sources, upstream documentation pins and paper identifiers collected by the
+serving-option surveys under `docs/serving-options/` (`R-SGL.md`, `R-VLLM.md`, `R-CROSS.md`,
+`R-PROD.md`), each of which records the URL it read. A citation is marked **verified** only when
+this package could name a source that was read *in this workspace*, as the SGLang
+attention-backend documentation is (`R-SGL.md`, `R-VLLM.md`); anything else stays marked as unverified and is resolved against the primary source, as in 10a.1 and 10a.2.
+Two of the five families below could **not** be supported from this workspace at all, and say so
+in their own lines rather than carrying an invented reference.
+
+### 10a.1 Prefix caching in the serving engines this paper ran
+
+Both engines implement prefix reuse as a *prefix tree over KV blocks*, with reuse granted only on
+an exact prefix match. SGLang's RadixAttention cache is the baseline of every SGLang cell in this
+paper: it is default-on, token/page-granular, and `--disable-radix-cache` turns it off, which is
+how Section 8a's repair was made to measure a single send rather than a same-turn self-hit
+([SGLang attention-backend and radix-cache documentation](https://docs.sglang.io/docs/advanced_features/attention_backend),
+`docs/serving-options/R-SGL.md` row 1). vLLM's automatic prefix caching (APC) keys each block by
+a *chained* hash — `hash(parent_hash, block_tokens, extra_hashes)` — so a block is reusable only if
+its whole prefix is identical, and **only full blocks are cached**; `--prefix-match-unit N` sets
+the finest token boundary a hit may land on, independently of the physical block size
+(`docs/serving-options/R-VLLM.md` rows 1-2). That chained-hash construction is the mechanism behind
+the engine result of Section 9b: the *storage* block sets the bill, while the *match* unit can be
+finer, which is why one grid is visible on SGLang at two page sizes and none is visible in the
+vLLM hot-hit distributions at the resolved blocks those cells launched with. The papers that
+introduced the two engines are known and are cited here: **vLLM/PagedAttention** (Kwon et al., [arXiv:2309.06180](https://arxiv.org/abs/2309.06180);
+SOSP 2023, [doi:10.1145/3600006.3613165](https://doi.org/10.1145/3600006.3613165)) and **SGLang/RadixAttention** (Zheng et al., [arXiv:2312.07104](https://arxiv.org/abs/2312.07104)) — both resolved.
+
+### 10a.2 LLM-agent context management, compaction and summarisation
+
+This is the family the compaction findings of Sections 4, 6 and 6a sit in; **[Parallel Context Compaction for Long-Horizon LLM Agent Serving](https://arxiv.org/abs/2605.23296)** (Cim et al.,
+[arXiv:2605.23296](https://arxiv.org/abs/2605.23296); [doi:10.48550/arXiv.2605.23296](https://doi.org/10.48550/arXiv.2605.23296)) **for the family as a whole** states this paper's own premise: compaction via
+LLM-based summarization keeps a growing conversation bounded but is inherently lossy, so what an agent retains fluctuates
+across runs — the one citable in-family statement this workspace can assert. Its surveys (`docs/serving-options/*.md`,
+`docs/prompt-system/*.md`) carry no other agent-memory source in citable form, so nothing further is asserted: what
+this paper contributes to that family is the shape its own literature is least likely to have measured — most work
+compaction work reports *task quality* at a fixed number of turns, whereas
+Section 6a drives eight arms past a real 32k and 64k budget and reports the **uncached tokens per
+turn** the policy costs the server afterwards, and Section 4 shows that the quality figure can be
+flat (at most 2.6 points, McNemar p >= 0.38) while a planted fact is deleted in every compacted
+cell. A related-work subsection cannot be completed from this workspace; it must be written
+against a real bibliography before submission, and the gap is recorded as such in `GAPS.md` G16,
+which already records that two cache-option rejections cite a source that does not say what they
+claim.
+
+### 10a.3 Retrieval-structured or pointer-based context versus a plain transcript
+
+Reusing KV that is *not* a prefix is the class the pointer layout of Sections 3 and 9d starts
+from, and several surveyed methods go further than this paper's scope. **Prompt Cache**
+([arXiv:2311.04934](https://arxiv.org/abs/2311.04934)) declares reusable prompt modules and
+re-places cached attention states with tracked positions, reporting 8x to 60x time-to-first-token
+reductions on document-QA and recommendation prompts (`docs/serving-options/R-CROSS.md` row 2).
+**EPIC / LegoLink** ([arXiv:2410.15332](https://arxiv.org/abs/2410.15332)) makes cached chunks
+position-independent and recomputes at each document boundary to kill the stitched-cache
+attention sink, reporting up to 8x TTFT and 7x throughput (`R-CROSS.md` row 3). **CacheBlend**
+([arXiv:2405.16444](https://arxiv.org/abs/2405.16444)) reuses chunk KVs regardless of prefix and
+selectively recomputes a small subset of tokens per layer (`R-CROSS.md` row 1). Against that
+class, this paper's pointer result is deliberately weaker in mechanism and stronger in
+attribution: moving only the branch tag reproduced the full fan-out win (1.00x) with no pointer
+machinery at all (Section 3), which is a statement about *placement*, not about position-
+independent reuse — the two are different levers and this package measured the cheaper one.
+
+### 10a.4 KV eviction and memory-bound serving for long context
+
+The cells that put this paper in that family are M4-EVICT and the SLRU arm. **H2O**
+([arXiv:2306.14048](https://arxiv.org/abs/2306.14048)) evicts KV tokens, keeping heavy hitters
+plus a recent window (`R-CROSS.md` row 5); **SnapKV** ([arXiv:2404.14469](https://arxiv.org/abs/2404.14469))
+selects important positions per head from an observation window at the prompt end (`R-CROSS.md`
+row 5b); **PyramidKV** ([arXiv:2406.02069](https://arxiv.org/abs/2406.02069)) gives layers
+pyramidal budgets (`R-CROSS.md` row 5c). Those methods shrink the *cache* at a quality cost, which
+is why the surveys classify them as approximate-only and why none of them is on this paper's
+measurement axis, where a hit must be an exact prefix match. The eviction evidence this paper
+actually uses is operational rather than algorithmic: **AttentionStore / CachedAttention**
+([arXiv:2403.19708](https://arxiv.org/abs/2403.19708)) keeps a hierarchical KV cache across turns
+with layer-wise preloading (`R-CROSS.md` row 6), **LMCache**
+([arXiv:2510.09665](https://arxiv.org/abs/2510.09665)) extracts and stores KV outside GPU memory
+for both vLLM and SGLang (`R-CROSS.md` row 6b), and **Mooncake**
+([arXiv:2407.00079](https://arxiv.org/abs/2407.00079)) builds a KVCache-centric disaggregated
+prefill/decode stack with a DRAM/SSD KV pool (`R-CROSS.md` row 4b). The large-scale trace
+characterisation **KVCache in the Wild** ([arXiv:2506.02634](https://arxiv.org/abs/2506.02634))
+reports that KV reuse is skewed across requests, that single-turn reuses matter as much as
+multi-turn ones, and that the cache size required for an ideal hit ratio is *moderate*
+(`docs/serving-options/R-PROD.md` § J) — a workload finding this paper's synthetic corpora
+(Section 11, `GAPS.md` G12) cannot reproduce. SGLang's own eviction policies, including `slru`'s
+`TEL-safe` `tlru` variant for agentic workloads, are documented upstream and `tlru`'s parameters
+follow ([arXiv:2510.15152](https://arxiv.org/abs/2510.15152)); this package measured exactly one
+policy (`slru`, default parameter), a scope limit recorded in `GAPS.md` G16.
+
+### 10a.5 Prior work on prompt layout and renderer effects on cache hit rate
+
+This is the family Section 9d's prompt-layout round belongs to, and the closest antecedent in the
+workspace's collection is **Irminsul** ([arXiv:2605.05696](https://arxiv.org/abs/2605.05696)),
+which reports operators seeing cache-hit regressions on *unchanged content* when token positions
+shift between turns, up to TTFT spikes of 10-16 s (`docs/serving-options/R-PROD.md` § 5). This
+paper's layout result is the controlled version of that report: the pointer layout is null on
+both SGLang setups, buys -219.51 uncached tokens per turn on one vLLM checkpoint and nothing on
+the other, and a mid-run edit to a cached index costs +23.52 wherever it is measurable
+(Section 9d) — the layout matters where the block is coarse, and a two-arm experiment on SGLang
+alone would have concluded that rendering does not matter. The **RR-Evict** report
+([arXiv:2609.32278](https://arxiv.org/abs/2609.32278); `R-PROD.md` § 4) is the eviction-side
+sibling: accesses to one agent's history refresh its nodes together, so LRU concentrates eviction
+on a few agents' private histories and a returning agent recomputes nearly its entire context.
+Both are `reported-only` in the workspace's own classification — papers describing deployments,
+not reproducible configurations — so neither is a baseline this package re-measured. No prior work
+specifically isolating *renderer* choice as a cache-hit variable was found in this workspace:
+Section 2's result (one library's two render modes emitting byte-identical prompts, 760/760 cells,
+C01) is reported as a mechanism for *why* no such effect should exist within one appender, not as
+a comparison against an external renderer study.
 
 ## 11. Limitations
 
@@ -676,7 +1021,7 @@ per-turn one.** The median matched-turn difference after the boundary is **10 / 
 against **836–900** for the other nine arm-instances (32k `F`, `S-k800`, `F-k800`; every 64k
 arm). Their means are larger than their medians because a minority of turns, the ones around
 the baseline's own window drops, carry the whole excess: 32k `F-ptr` has a mean of +134.6 but
-a median of +7, and 11 of 12 arms contain at least one turn below their baseline. A reader
+a median of +7, and all 12 arms contain at least one turn below their baseline. A reader
 must therefore not read the arm ranking (pointer renderer and `keep_last` 800 "cheap") as a
 claim about a typical turn — under it is a mix of near-zero turns and a few very expensive
 ones, and only the mean orders the arms.
@@ -698,6 +1043,41 @@ repetitions each (139 of a planned 200 requests); U10's boundary cells are n = 5
 on 159 requests, and its wider pool came from a second phase rather than a replication of the
 first. U15 ran one corpus, one scenario and 40 turns per arm.
 
+**The grid does not transfer across engines, and one engine does not expose it at all.** The
+64-token grid this paper reports as a hit law is a property of the SGLang cache chunk on this
+deployment. In the 2x2's two vLLM cells no 64-token grid is visible in the hot-hit
+distribution at all: one cell's launch resolved a 2,096-token block and the other's 1,088,
+and the lesser of the two figures a gcd of the hot rows returns for that cell — 16 — is the
+first-turn sub-page residue described in Section 9c, not a page size. So the "grid" there is
+a coarse block that varies by checkpoint and cannot be described by a single number. A reader should not carry the boundary rule of Section 9 or
+the append deviation of Section 8 to another engine without re-measuring: both were measured
+on SGLang-era cache geometry, and the sweep in Section 9c shows the one obvious mitigation
+knob (`mamba_track_interval`) does not move the grid at any of its three settings.
+
+**The prompt-layout recommendation is engine-conditional and rests on four setups.** Section
+9d's conclusion — that pointer bookkeeping converts an engine's block geometry into saved
+tokens rather than saving them by itself — comes from two checkpoints on two engines, one
+seed, one band. On the two SGLang setups the layouts are indistinguishable, and a two-arm
+experiment on SGLang alone would have concluded that rendering does not matter. It does; it
+just matters only where the block is coarse. The padded arm's cost (Section 8a) is likewise a
+property of this workload's tail offsets: a workload whose prompts end further from the grid
+could invert the arithmetic, and no such workload was run.
+
+**The optimisation round is closed, and its carried gaps are part of the record.** The version
+round above stopped at its ceiling after one round, so the paper's optimisation story is a
+measured null and not a search in progress. Three qualifications travel with it and should be
+quoted whenever its numbers are: the pre-registered round ran **565** live requests against a
+**500** bound and **39** tool calls against **30**, so it is a null read from a budget that
+was overrun, not from a budget that was met; the dense-model quality guard compares
+like-for-like probe sets whose before-state was 19/20 mismatching, so that half of the null
+rests on a one-probe move; and the protocol allowed three rounds while the round ran one,
+so the ceiling was declared by the stop rule rather than by exhausting the design — the
+rounds that were never started are the protocol's, and no measurement of their outcome
+exists. The stored prompt-form
+control (C0) was never wired, so the round's `V_n/C0` comparison is unavailable by
+construction. None of this changes the sign or the interval of either cost figure, and all of
+it is listed as an open gap in `GAPS.md` G4 rather than as work in progress.
+
 **Mechanism is thinner than the measurements.** We can decompose R's penalty arithmetically
 (Section 6) but we did not instrument the server, so the per-turn re-prefill is described, not
 explained; the mamba-checkpoint account of the append deviation (Section 8) is an untested
@@ -712,12 +1092,120 @@ with long generations, concurrent batches (the server allowed 5 running requests
 requests were sent serially), or interleaved sessions could change both the cache-hit
 economics and the latency ratios.
 
+### 11.1 Threats to validity
+
+The paragraphs above are the limitations the measurements themselves state. This subsection
+collects them as *threats*, each with the fact that grounds it, and — the distinction that
+matters most for an external reader — separates the threats that attack a **magnitude** from the
+one class they do not: the **cache-hit law** findings, which are mechanism.
+
+**Which findings the threats below do attack, and which they do not.** The cache-hit **law**
+class — the 64-token grid of Section 8, the boundary rule of Section 9 and the placement rule of
+Section 3 — is a *mechanism* finding: it says that a hit lands on a resolved unit, that the unit
+is a property of the stack rather than of the model, and that reuse is decided by where the
+shared bytes sit. Those statements are exposed to *scope* (they were measured on these stacks and
+would have to be re-measured elsewhere) but not to *sampling*: a single seed cannot make
+"multiples of 64 on 880/880 hot rows" a coincidence, and G5's fan-out result is confirmed by a
+second mechanism (moving only the tag reproduced the win with no pointer machinery, 1.00x).
+Everything in the paper stated as a **magnitude** — the 6.744x fan-out bound from cell G5, the
+1.700x append-versus-summarise ratio (which G1 reattributes to a post-compaction window-truncation
+cost, not a fork/append cost, C44), the +134.6 to +747.2 uncached tokens per turn **on average**
+after a boundary (a range of twelve arm means, not a per-turn bound), the +549.33 and -400.02
+2x2 main effects, and every latency figure — is a *point estimate from
+one run of one corpus on one box*, and those are what the threats below are chiefly against. A
+reader should not carry the magnitudes across stacks, corpora or hardware without re-measuring;
+a reader may carry the mechanism further, with the scope caveats below.
+
+**T1 — One seed (`GAPS.md` G4).** Every cell in the package, including the 2x2 and the
+boundary cell, was run on one seed; no arm was ever repeated on a second. G4 records this as a
+carried condition that the X-SYNTH and 2x2 passes narrowed but did not remove. It is the single
+largest threat to the magnitudes and almost no threat to the grid: a seed changes *which* turns
+are expensive, not whether hot rows land on multiples of the resolved unit.
+
+**T2 — Two models, both Qwen-family (`GAPS.md` G4).** The cells use `occamy-1.0` (a Qwen3.5-MoE
+checkpoint, NVFP4, hybrid attention with 30 of 40 layers linear) and `qwen3.5-9b` (a dense
+checkpoint). G4 states plainly that the two differ in size and architecture as well as
+MoE-versus-dense, so nothing here separates model family from model size, and a non-Qwen
+checkpoint — or a pure-attention one — could show neither the boundary rule nor the append
+deviation. The grid class survives this threat only as a stack property (Section 9a shows the
+unit tracking the resolved block on five units across seven stacks); the append deviation of
+Section 8 remains SGLang-on-this-checkpoint only.
+
+**T3 — Two engines (`GAPS.md` G4).** SGLang and vLLM 0.27.1. The grid does **not** transfer
+across them, and one engine does not expose it at all: in the two vLLM cells no 64-token grid is
+visible in the hot-hit distribution, and the resolved blocks were 2,096 (MoE) and 1,088 (dense).
+The engine result of Section 9b is therefore a statement about these two engines, and the
+prompt-layout recommendation of Section 9d is explicitly engine-conditional on four setups.
+
+**T4 — One GPU (`GAPS.md` G4).** All cells ran on one GB10. Every latency figure — the
+208.7 ms to 86.4 ms and 7,541.9 ms to 231.6 ms time-to-first-token pair, the hit/miss ratio near
+L^-0.78, the residual ~4.7 microseconds per token — is a GB10 measurement, and GB10 is a
+unified-memory part whose `--mem-fraction-static 0.50` already sits at the crash-loop boundary.
+The uncached-token counts are less exposed to this than the timings are, because they are read
+from the server's own counters rather than from a clock, but the capacity bound of M4-EVICT is a
+GB10 capacity bound.
+
+**T5 — Synthetic corpora (`GAPS.md` G12).** Corpora are generated in-cell text with one driver
+and one seed (1729); turns are roughly constant in size and requests were sent serially. G12 —
+cited here for the first time in this manuscript — records the sharper consequence: the
+append-versus-summarise corpus never met eviction pressure (the declared capacity is 1,620,892
+tokens against U15's roughly 20k-token prompts), so the append arm's advantage assumes a cache
+that never evicts. Deliberate pressure exists elsewhere (M4-EVICT at 1.5017x, TUNED at 1.505083x
+under SLRU) but neither replays a real agent trace, and the signature of real traffic — variable
+turns, concurrency, retries, evictions — is absent from these rows. The compaction magnitudes are
+the findings this threat attacks hardest, because compaction changes the *length* of a context and
+a corpus whose length never approaches the eviction point cannot show what a real trace would.
+
+**T6 — Block size and `--prefix-match-unit` resolution are launch-specific (`GAPS.md` G4).** The
+resolved block is a property of the launch configuration, not a constant of the engine: vLLM's
+`--prefix-match-unit` defaults to the gcd of the prefix-cacheable groups' block sizes and can be
+finer than the physical block, and SGLang's production page size sits at 1 while the grid still
+lands on 64. The two vLLM cells in the 2x2 differ in resolved block *by checkpoint*. A reader
+reproducing any grid result must pin the launch flags, not just the version, and `RUN.json`
+`stacks[]` is where those flags are recorded for each cell.
+
+**T7 — The state cache is untied beyond a derived bound (`GAPS.md` G4; cell M4-EVICT).** The
+binding constraint at 1.5017x pressure is the mamba/linear-attention state cache
+(`max_mamba_cache_size 64`), not KV token capacity: only 30-31 documents (258,035-266,636 tokens,
+0.1592-0.1645 of the 1,620,892 declared capacity) remain resident, and token-pool LRU (188.45
+documents) is excluded. That is a *resident-capacity* measurement under a derived bound, not a
+timing of eviction behaviour under the same pressure, and it is measured on a hybrid checkpoint
+whose state cache a pure-attention model does not have at all.
+
+**T8 — Mechanism is thinner than the measurement, and the summariser is a stub (Sections 4, 6,
+11; `GAPS.md` G6).** The per-turn re-prefill is decomposed arithmetically but not instrumented;
+the mamba-checkpoint account of the append deviation (Section 8) is an untested hypothesis
+(`GAPS.md` G7); and the compaction policies use a deterministic offline stub summariser (750
+characters, about 188 tokens), so the absolute compaction numbers would move under a real
+summariser even if the ordering held. This threat attacks the *decomposition* of the 1.700x, not
+the 1.700x itself. The figure is a compaction-window-policy cost, not a fork/append cost (G1,
+E/F = 1.038): its 92.2 % window-truncation share is an arithmetic identity over `cached_tokens`
+that a real summariser would shift, while the break-cost term it is measured against was
+re-measured independently and does not depend on the summariser's quality.
+
+**T9 — The optimisation round is a null read from an overrun budget (Section 11; `GAPS.md`
+G4).** The version round ran 565 live requests against a 500 bound and 39 tool calls against 30,
+one of three allowed rounds, with the dense-model quality guard resting on a one-probe move and
+the stored prompt-form control (C0) never wired. Its null is therefore a stopped search, not an
+exhausted one; it threatens the *recommendation* "no cheaper form exists" and does not touch any
+earlier magnitude, none of which depends on that round.
+
+**What would close the magnitude threats, in order of cost.** A second seed on one cell; a
+non-Qwen checkpoint on SGLang; one non-GB10 stack; and a replay of a real agent trace under a
+small KV budget, which is what G12's closer names. None of these is scheduled — the experiment is
+closed (Section 11) — so they are recorded as the threats they are rather than as work in
+progress.
+
 ## 12. Provenance and how to recompute
 
 Every value in this manuscript is listed in `CLAIMS.md` with one command per claim: the
 recompute harness `papers/context-cache/recompute.py` for values derived from rows, and the
 two verifier replay scripts (`cells/CX-V2/u5_recon.py`, `cells/CX-V2/u4_recon.py`) for the
-renderer-identity and fixed-library results. `RUN.json` carries the unit table, request
+renderer-identity and fixed-library results. Round 2 is recomputed by a second harness,
+`papers/context-cache/recompute_r2.py`, which reads the same raw `rows*.jsonl` files and
+nothing else; it also carries a source-falsification guard (`recompute_r2.py redgreen`) that
+breaks each Round-2 claim's input rows and requires the claim to move, and an evidence mode
+(`recompute_r2.py EVIDENCE`) that reconciles each cell's own stored summary against its rows. `RUN.json` carries the unit table, request
 counts, corpus digests, row digests, and the pre-registered kill conditions with their
 outcomes. The independent verification of the source units is `orchestration/handoffs/CX-V2.json`
 (overall verdict: fail — it refuted a mid-run-rewrite premise and resolved two

@@ -1,0 +1,24 @@
+{
+ "unit": "CLAIM-SENSITIVITY",
+ "status": "done",
+ "artifacts": ["papers/context-cache/CLAIM-SENSITIVITY.md", "state/logs/claim-sensitivity.json", "orchestration/handoffs/CLAIM-SENSITIVITY.json", "orchestration/units/CLAIM-SENSITIVITY.md"],
+ "evidence": {
+  "verdict": "SURVIVES 1 / MOVES 12 / UNDECIDABLE 0",
+  "counts": {"SURVIVES": 1, "MOVES": 12, "UNDECIDABLE": 0},
+  "survives": ["C44"],
+  "undecidable": [],
+  "moves": ["C17","C18","C19","C20","C21","C22","C23","C24","C46","C47","C50","C51"],
+  "worst_case": {"claim": "C22", "statistic": "break share of R excess", "published": 0.078454, "repaired": 0.1006, "shift_pct": 28.153},
+  "worst_headline": {"claim": "C23", "statistic": "arm R mean uncached turns 19-34", "published": 1659.9375, "repaired": 1314.75, "shift_pct": -20.795},
+  "as_published_mismatches": [],
+  "fire_counts_reproduced": {"U15": {"R": "7/40", "F": "2/40", "C": "2/40", "A": "1/40"}, "G1": {"F": "13/132", "E": "1/132"}, "G3": {"A": "8/222", "C": "7/222", "H": "7/222", "R": "7/222"}, "WIN-SGL": {"A": "6/444", "R": "5/444", "C": "4/444", "H": "4/444"}, "WIN-VLLM": {"A": "14/142", "C": "14/142", "H": "14/142", "R": "14/142"}},
+  "headline_published_excluded_repaired": {"C17": [1279.3, 1155.9697, 1118.525], "C18": [1177.0, 1151.3684, 1124.2], "C19": [752.425, 733.9744, 728.275], "C20": [763.075, 728.6316, 716.125], "C21": [1.700236, 1.332646, 1.535855], "C22": [0.078454, 0.1549, 0.1006], "C23": [1659.9375, 1538.4, 1314.75], "C24": [1.0679802, 1.02386, 1.038928], "C44": [1.0384615, 1.0384615, 1.0384615], "C46": [740.4, 727.3, 720.4], "C47": [739.2, 715.9, 705.7], "C50": [2230.8, 2135.4, 2104.2], "C51": [3.074, 3.032, 3.018]},
+  "live_requests": 0,
+  "commands": ["python3 recompute-driver: papers/context-cache/recompute.py functions with rows() monkey-patched + tools/audit/cached_dedupe.py _arm_results for flags (read-only)", "python3 writer: state/logs/claim-sensitivity.json + papers/context-cache/CLAIM-SENSITIVITY.md"],
+  "forbidden_writes": []
+ },
+ "blocker": "",
+ "next_unit_hint": "Only C44 is immune: G1 break rows are cold misses (cached=0), never flagged, so the decomposition is bit-identical. The 12 MOVES all point the same way - cached_tokens over-credited, so published hit is low and published uncached is high. U15 first: A/R 1.700 -> 1.536 leaves ~2 percent margin over the 1.5x test and R/F 1.0869 -> 0.9950 removes the within-8.7-percent statement; C51 3.074x -> 3.018x keeps the cross-stack claim qualitatively.",
+ "write_paths": ["papers/context-cache/CLAIM-SENSITIVITY.md", "state/logs/claim-sensitivity.json", "orchestration/handoffs/CLAIM-SENSITIVITY.json", "orchestration/units/CLAIM-SENSITIVITY.md"],
+ "assumptions": ["Repair = cached_true := prompt_tokens - baseline_gap_p25(arm) from the detector itself; repair-by-copying-the-previous-credit is a tautological no-op because the fired row already holds that value.", "Exclusion is reported but never decisive: dropping turns changes turn-window means, so it is a sample change, not an estimate of the same quantity.", "No CI is published for any of the 13, so the verdict band is +-1 percent of the published point value.", "gcd_cached excluded from the verdict: a base-gap repair is unquantised, so gcd->1 is a repair artefact."]
+}

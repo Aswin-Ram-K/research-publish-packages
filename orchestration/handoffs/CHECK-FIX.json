@@ -1,0 +1,44 @@
+{
+  "unit": "CHECK-FIX",
+  "status": "done",
+  "artifacts": [
+    "tools/best_config_build.py",
+    "tests/test_best_config_check.py",
+    "orchestration/units/CHECK-FIX.md",
+    "orchestration/handoffs/CHECK-FIX.json"
+  ],
+  "evidence": {
+    "deciding_line_before": "same = json.loads(cur)[\"setups\"] == doc[\"setups\"] if cur else False  (tools/best_config_build.py:341, whole-entry dict equality incl. measured fields)",
+    "check_real": "CHECK setups identical to disk: True",
+    "check_real_strict": "CHECK setups identical to disk: True",
+    "red_config_sha256": "FAIL O1.config_sha256: built='f2efaaac1559...' disk='0000...'  / CHECK setups identical to disk: False",
+    "red_argv": "FAIL O1.argv: built=['sglang', 'serve', '--model-path', ...] disk=['sglang', 'serve', '--port', '9999']  / False",
+    "green_restore": "CHECK setups identical to disk: True",
+    "bogus_non_strict": "WARN O1.invented: key in neither DERIVED nor MEASURED - not compared / CHECK setups identical to disk: True (exit 0)",
+    "bogus_strict": "WARN O1.invented ... / STRICT: unknown key(s) present -> FAIL / CHECK setups identical to disk: False (exit 1)",
+    "skipped_printed": "SKIPPED measured fields (not compared): ci_arm, ci_note, ci_source, endpoint_seen, evidence, grid_unit, grid_unit_meaning, headline_arm, hit, n_rows, note_grid, optimised_from, resolved_block_size, resolved_block_size_source, unc_ci, unc_per_turn [grid_unit: gcd of observed data]",
+    "pytest": "7 passed in 0.44s",
+    "commands": [
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python tools/best_config_build.py --check",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python tools/best_config_build.py --check --strict",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python tools/best_config_build.py --check --config /tmp/ckfix/sha.json",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python tools/best_config_build.py --check --config /tmp/ckfix/argv.json",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python tools/best_config_build.py --check --config /tmp/ckfix/bogus.json",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python tools/best_config_build.py --check --strict --config /tmp/ckfix/bogus.json",
+      "PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_best_config_check.py -q"
+    ]
+  },
+  "assumptions": [
+    "`grid_unit` is a gcd OF OBSERVED rows; the brief lists it under MEASURED, so MEASURED wins and it is skipped (documented in the constant GRID_IS_MEASURED rather than left as an unexplained overlap).",
+    "The brief's MEASURED list omits keys the real file actually carries (ci_arm, ci_note, grid_unit_meaning, resolved_block_size, resolved_block_size_source, endpoint_seen, headline_arm, note_grid, engine_version, rows_sha256, unc_naive_history, prompt_tokens_sum-style derived stats). With only the brief's set, --strict would fail against the REAL file on those keys; so each was classified: launch/measurement notes -> MEASURED; engine_version and rows_sha256 -> DERIVED (engine_version is argv-independent but IS a function of the launch artefact the builder reads, and rows_sha256 is the integrity link between the compared argv and the rows it was derived from). unc_naive_history -> DERIVED (pure function of rows).",
+    "Added --config <path> so red tests perturb a /tmp copy while --check still builds from the repo artefacts; the real disk file was never written."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Any future setup field must be added to DERIVED or MEASURED in tools/best_config_build.py or --strict will (correctly) turn red; tests/test_best_config_check.py::test_key_sets_are_disjoint_and_cover_disk_config enforces coverage without --strict.",
+  "write_paths": [
+    "tools/best_config_build.py",
+    "tests/test_best_config_check.py",
+    "orchestration/handoffs/CHECK-FIX.json",
+    "orchestration/units/CHECK-FIX.md"
+  ]
+}

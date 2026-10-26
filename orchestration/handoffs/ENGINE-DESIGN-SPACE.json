@@ -1,0 +1,78 @@
+{
+  "unit": "ENGINE-DESIGN-SPACE",
+  "status": "done",
+  "artifacts": [
+    "papers/context-cache/ENGINE-DESIGN-SPACE.md",
+    "orchestration/handoffs/ENGINE-DESIGN-SPACE.json",
+    "orchestration/units/ENGINE-DESIGN-SPACE.md"
+  ],
+  "evidence": {
+    "document_lines": "86 (cap 140)",
+    "mechanism_rows": "14",
+    "verdict_counts": "3 TESTABLE-HERE / 6 TESTABLE-ONLY-ELSEWHERE / 5 NOT-TESTABLE-HERE",
+    "requests_sent": 0,
+    "sources_opened": [
+      "docs/serving-options/R-CROSS.md (all 153 lines; row numbers cited from its section 1 table)",
+      "papers/context-cache/MANUSCRIPT.md:900-975 (10a.1-10a.4)",
+      "papers/context-cache/GAPS.md:440-560 (G16, incl. HiCache/session_radix_cache/vLLM-offload bullets)",
+      "papers/context-cache/PACKAGE.md section 4 (page-size null 887/888; HiCache withdrawal at :93-99)",
+      "papers/context-cache/SERVING-BRIEF.md:110-135 (the 'No unmeasured feature is recommended against' sentence)",
+      "experiments/miss-law/LAW.md:1-60 (L1 formula, B=64/1056, null-is-not-zero instrument note)",
+      "experiments/ptr-engine/RECORD.md:155-167 (L2 settled null semantics; L3 equal-info 1.84x, 0.602 vs 0.182 s)",
+      "orchestration/handoffs/C0-EQUALINFO.json (ttft_by_arm, uncached_per_turn_by_arm)",
+      "handoff from consonance/DO_NOT_REDO.md (item 5: production container stays up)",
+      "state/config/live-server-config.json (hicache_ratio 2.0, hicache_size 0, max_mamba_cache_size 64, radix_eviction_policy lru, page_size 1)"
+    ],
+    "commands": [
+      "wc -l docs/serving-options/R-CROSS.md papers/context-cache/MANUSCRIPT.md papers/context-cache/GAPS.md papers/context-cache/PACKAGE.md experiments/miss-law/LAW.md experiments/ptr-engine/RECORD.md -> 153/1214/612/258/228/169",
+      "sed -n '900,975p' papers/context-cache/MANUSCRIPT.md",
+      "grep -n 'HiCache' papers/context-cache/PACKAGE.md -> :93 (withdrawal note)",
+      "wc -l papers/context-cache/ENGINE-DESIGN-SPACE.md -> 86"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Run shortlist #1 (vLLM --prefix-match-unit, 2-4 requests on :8014) before any PIC reproduction: it decides whether L1's vLLM +B term is a law or a launch default. Shortlist #2 is 0-request arithmetic and can be folded into the same unit.",
+  "write_paths": [
+    "papers/context-cache/ENGINE-DESIGN-SPACE.md",
+    "orchestration/handoffs/ENGINE-DESIGN-SPACE.json",
+    "orchestration/units/ENGINE-DESIGN-SPACE.md"
+  ],
+  "mechanisms_total": 14,
+  "testable_here": 3,
+  "testable_elsewhere": 6,
+  "not_testable": 5,
+  "laws_affected": {
+    "TESTABLE-HERE": ["L1 append-cost law and its vLLM +B term (experiments/miss-law/LAW.md:7-12)", "L3 fetch-rewrites-prefix penalty (experiments/ptr-engine/RECORD.md:161-163)", "L4 64-token grid and page_size null (PACKAGE.md section 4)"],
+    "TESTABLE-ONLY-ELSEWHERE": ["L3 (all position-independent rows: CacheBlend, EPIC, Prompt Cache)", "L1 (selective recompute budget vs full-suffix prefill)", "L4 (position-independent chunking has no prefix grid)", "L2 (session/offload reporting semantics)"],
+    "NOT-TESTABLE-HERE": ["L1 and L2 are unreachable, not at risk: token-subset hits (H2O/SnapKV/PyramidKV) cannot be expressed in exact-prefix accounting", "L1 capacity story at fleet scale (Mooncake) does not exist on one node"]
+  },
+  "gaps_contradiction_ruling": "The SERVING-BRIEF.md:123 sentence ('No unmeasured feature is recommended against. LMCache, HiCache and friends are absent because no cell tests them') stands. GAPS.md:505-511 quotes PACKAGE.md section 4 in a wording PACKAGE.md:93-99 already withdrew on 2026-10-23 (CACHE-AUDIT): section 4 now says HiCache is 'not attempted', not 'rejected on configuration'. So the two sentences no longer contradict: GAPS should say section 4 FORMERLY recorded a no-go and now records not-attempted; the rejection that genuinely fails is LAUNCH-SGLANG.md:107-150, whose quoted error text has no source URL and is absent from the cited thread for build 0.0.0.dev1+g4ccff141d. Neither SERVING-BRIEF.md nor PACKAGE.md should change.",
+  "shortlist": [
+    {
+      "rank": 1,
+      "mechanism": "vLLM block-chained hash prefix caching with --prefix-match-unit",
+      "changes": "whether L1's vLLM '+ one whole block (1056)' term is a storage-block law or a launch default (MANUSCRIPT.md:900-902 says the match unit can be finer than the storage block)",
+      "requests": "2-4",
+      "container_safety": "vLLM variant endpoint :8014 (qwen3.5-9b); the production gx10-occamy-nvfp4 on :8012 is neither restarted nor stopped (DO_NOT_REDO #5). Assumption: :8014 is non-production, not verified in this unit.",
+      "measurement": "same P1 pair at default vs --prefix-match-unit 64; does the extra whole block shrink from 1056?"
+    },
+    {
+      "rank": 2,
+      "mechanism": "LMCache / HiCache offload break-even (exact-prefix, outside GPU)",
+      "changes": "whether the 3.3x fetch-rewrite penalty is a compute cost (L3 keeps full weight) or a bandwidth cost (L3 becomes a capacity claim)",
+      "requests": "0",
+      "container_safety": "pure arithmetic on state/config/live-server-config.json and existing rows; the host->device bandwidth figure is UNSOURCED, so one local pinned-host copy timing outside the serving container would be taken (still 0 requests).",
+      "measurement": "bytes(64-token KV block) / host->device bandwidth vs measured 64-token prefill time (R-CROSS section 2 F3)"
+    }
+  ],
+  "requests_proposed": 4,
+  "unsourced": [
+    "HiCache's cached_tokens reporting semantics when a hit is served from the L2 host tier (no opened source states it)",
+    "the box's measured host->device (CPU->GPU) bandwidth, needed as the denominator of the shortlist-2 break-even",
+    ":8014's status as a non-production container (assumed from DO_NOT_REDO #5 naming gx10-occamy-nvfp4/:8012 as production)"
+  ],
+  "assumptions": [
+    "TESTABLE-HERE is read as 'the decisive measurement can be executed on this box without touching the production container' - which admits a 0-request arithmetic/upper-bound computation, not only a reproduction. Under the stricter reading (mechanism must be runnable here) only the vLLM match-unit row qualifies and the shortlist shrinks to one.",
+    "L1-L4 labels are this document's, mapped to experiments/miss-law/LAW.md, experiments/ptr-engine/RECORD.md and PACKAGE.md section 4; they are not pre-existing identifiers."
+  ]
+}

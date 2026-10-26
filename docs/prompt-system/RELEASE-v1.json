@@ -1,0 +1,138 @@
+{
+  "release": "SYS-OPT paired release v1",
+  "published": "2026-10-24T12:16:00Z",
+  "unit": "SYS-OPT-CLOSE",
+  "version": "V0",
+  "version_basis": "V0 = the R2-PROMPT P1-arm pairing per model (VERSIONS.md §9, filled by A1.3, dense re-pinned by A2.4). Published because SYS-OPT closed at its ceiling (VERSIONS.md §4) with nothing adopted: best version = V0.",
+  "ceiling": {
+    "closed_at_ceiling": true,
+    "ceiling_round": 1,
+    "verdict": "no_signal",
+    "verdict_record": "state/sys-opt-verdict.json",
+    "rounds_remaining_unavailable": 2
+  },
+  "design_requirement": "ONE prompt artefact, identical bytes on both models; only the served endpoint differs. Per-model serving configs are the only permitted difference (VERSIONS.md §7).",
+  "prompt": {
+    "form": "pointer index + newest delta, append-only",
+    "arms": {
+      "P1": {
+        "role": "the released arm",
+        "shape": "SCAFFOLD (with RUN-SALT line) + pointer_index(turn-1) + '\\nNEWEST DELTA:\\n' + delta_block(turn) + '\\n' + CANARY",
+        "index_header": "id | span | sha8 | summary",
+        "index_line": "t%03d | <len(block)> | <sha256(block)[:8]> | <first 90 flattened chars of block, U+2026 if clipped>",
+        "edit_policy": "append-only — an entry once written is never rewritten in P1"
+      },
+      "P0": {"role": "reference arm, not released", "shape": "SCAFFOLD + 'HISTORY:\\n' + full body + CANARY"},
+      "P3": {"role": "mid-edit negative control, not released", "shape": "P1 with one earlier index line rewritten at turn 40"}
+    },
+    "scaffold_order": {
+      "value": "frozen, as in experiments/context-cache/cells/VLLM-CELL/vllm_cell.py:30-36",
+      "lines": [
+        "You are an offline cache-probe agent working over a transcript.",
+        "TASK: answer the newest delta. Do not restate the history.",
+        "OUTPUT CONTRACT: one JSON object per turn with keys {answer, evidence_ids, confidence}. No prose outside the object.",
+        "TOOLS: search(query), fetch(fetch_ref), cite(evidence_id), write_json(obj)."
+      ],
+      "salt_line_appended_by_the_round_driver": "RUN-SALT: <salt>  (sysopt_r1.py:94 — after the four frozen lines, unchanged position)",
+      "anchor_marker": "CANARY = \"turn-canary-occamy-vllm-cell-0042\", placed as the final line of every P1 render (vllm_cell.py:91-100)",
+      "changed_in_release": false
+    },
+    "pointer_block": {
+      "fields": 4,
+      "fields_list": ["id", "span", "sha8", "summary"],
+      "quote_tokens": 0,
+      "quote_tokens_note": "V1 raised this to 40 (A2.2) and was FALSIFIED on both models; A2.2's pre-registered falsification reverts it to 0. Lever 1 may not be retried without a new measured finding (VERSIONS.md §8).",
+      "summary_len": 90,
+      "summary_clip_marker": "U+2026",
+      "entry_cap": "none — one entry per delta in the body, up to the turn"
+    },
+    "tail_policy": {
+      "pad_to": "none",
+      "pad_to_note": "grid padding is withdrawn — it costs (P2/P1 +20.8429, CI [+9.857, +31.486], cells/P2-REPAD, sha256 1e55300788daf62c01376486beee5f1174b2dc8c8c53b60d0b8900a8131a5f44); VERSIONS.md A1.1/A1.5",
+      "blocks": 1,
+      "block": "NEWEST DELTA: <delta_block(turn)>",
+      "canary_tail": true
+    },
+    "delta_batching": {"value": "per_turn", "note": "every k>1 was never measured in this lineage"},
+    "edit_policy": {"value": "append-only", "note": "P3's mid-edit rewrite is a control, never the released policy"},
+    "retrieval_hint_wording": {"value": "unchanged from the frozen renderer", "lever_status": "unused, unmeasured"},
+    "prompt_stream_digest": {
+      "what": "concatenation of the 71 P1 prompts, turns 1..71, released form, salt line 'RUN-SALT: sysopt-r1-20261024T12:30Z-a1'",
+      "sha256": "492ee28f7f451a824a8dfc3b90bcc8aef02dddfd37a4aabb00c45e7d6958e98e",
+      "bytes": "171,600 total over 71 turns (lengths 1,742..9,862 chars)",
+      "provenance": "computed by SYS-OPT-CLOSE from the frozen renderer module (vllm_cell.py) + the sysopt_r1.py overrides, offline, 0 requests. NOT read out of a cell row file: the rows carry per-row prefix_sha256 only.",
+      "verification_limit": "This digest proves the release is reproducible from the frozen renderer plus the documented overrides. It does NOT prove the V0 baseline rows were rendered with it — V0's rows are R2-PROMPT's and predate the salt line.",
+      "stale_salt_warning": "The salt is the round-1 salt. Re-cutting the salt regenerates the digest; the release bytes are otherwise identical."
+    }
+  },
+  "serving": {
+    "shared": {
+      "substrate_file": "state/config/best-config.json",
+      "substrate_sha256": "c5d11074c2a0d1ffe8a5a44e32380747e24dd2927517b8681eacc30a0b39c38d",
+      "config_sha256_recipe": "sha256 of json.dumps(argv, sort_keys=True, separators=(',',':')) — tools/best_config_build.py:84-88",
+      "verified_by_close_unit": "both config_sha256 values below were re-derived from state/config/best-config.json argv by SYS-OPT-CLOSE and match"
+    },
+    "moe": {
+      "model": "occamy-1.0",
+      "engine": "sglang",
+      "setup": "O1",
+      "endpoint": "http://192.168.2.168:8012/v1",
+      "config_sha256": "f2efaaac1559ebc0a706c5012715dacff6948058ee8e5c946d5d45c622880c67",
+      "context_length": 131072,
+      "why": "production substrate, untouched by every round of this lineage",
+      "v0_measurement": {
+        "arm": "P1",
+        "rows": "experiments/context-cache/cells/R2-PROMPT/O1/rows.jsonl",
+        "rows_sha256": "8d71a88f22310d59f6e63a1d43a0d6ed009c3dfe48de14d50f7a3d942c71db55",
+        "n": 71,
+        "unc_per_turn": 522.71831,
+        "t_ci95": [506.07, 539.37],
+        "hit_fraction_served_weighted": 0.770148,
+        "unc_per_turn_remeasured_round1_p0_drift_corrected": 586.704226
+      }
+    },
+    "dense": {
+      "model": "qwen3.5-9b",
+      "engine": "vllm",
+      "setup": "O4",
+      "endpoint": "http://192.168.2.168:8014/v1",
+      "config_sha256": "163a5db6b4c432e2a2ea17ffd6c44e336ed12af6eff39dce96be854032d77cb4",
+      "context_length": 32768,
+      "why": "9B never started on SGLang (:8017 answered nothing at 11:53Z), so dense serves on vLLM O4; A2.4 re-pinned dense V0 to O4/P1 so the delta is measured on the serving endpoint",
+      "v0_measurement": {
+        "arm": "P1",
+        "rows": "experiments/context-cache/cells/R2-PROMPT/O4/rows.jsonl",
+        "rows_sha256": "23547e3a9611d0b5591f1b55726e854a607e9360fb123527b2b6c38ad25d4aab",
+        "n": 71,
+        "unc_per_turn": 1664.352113,
+        "t_ci95": [1536.25, 1792.45],
+        "hit_fraction_served_weighted": 0.2681,
+        "unc_per_turn_remeasured_round1_p0_drift_corrected": 1677.478873,
+        "cross_engine_reference": {
+          "setup": "O2 SGLang :8017",
+          "unc_per_turn": 522.71831,
+          "status": "RETAINED AS A CROSS-ENGINE REFERENCE ONLY (A2.4). Not the dense delta basis; must never be quoted as if dense ran on SGLang."
+        }
+      }
+    }
+  },
+  "claims_this_release_may_make": [
+    "One prompt artefact, byte-identical across MoE and dense: V1 round 1 measured 213/213 (arm,turn) pairs with 0 mismatched prefix_sha256 (state/sys-opt-v1.json prompt_byte_identity).",
+    "V0/P1 on MoE (O1 SGLang :8012) = 522.718 unc/turn, hit 0.770, 71 turns.",
+    "V0/P1 on dense (O4 vLLM :8014) = 1664.352 unc/turn, hit 0.268, 71 turns.",
+    "No prompt version was adopted: SYS-OPT closed at ceiling round 1 with verdict no_signal."
+  ],
+  "claims_this_release_may_not_make": [
+    "No per-turn saving against plain chat: C0 was never wired into the round harness (A1.4), so the §1.3 V_n/C0 headline is UNAVAILABLE on this lineage.",
+    "No quality claim: the frozen quality set's P0 form is unanswerable by construction (A2.3) and the absolute P1-form mismatch rates are 100 % (MoE) and 95 % (dense).",
+    "No improvement claim for any SYS-OPT version: V1 raised unc/turn by +130.113 (MoE) and +228.817 (dense), CIs excluding zero (state/sys-opt-v1.json).",
+    "No headroom claim (VERSIONS.md §6 condition 1 failed).",
+    "No engine-swap claim: O1/O4 are the substrates the paired numbers were measured on; nothing here measures O3 or O2."
+  ],
+  "integrity": {
+    "live_requests_by_close_unit": 0,
+    "lock_acquired": false,
+    "nothing_restarted": true,
+    "target_repos_touched": []
+  }
+}

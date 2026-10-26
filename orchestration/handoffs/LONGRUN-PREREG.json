@@ -1,0 +1,178 @@
+{
+  "unit": "LONGRUN-PREREG",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/LONGRUN-PREREG.md",
+    "orchestration/handoffs/LONGRUN-PREREG.json",
+    "orchestration/units/LONGRUN-PREREG.md"
+  ],
+  "evidence": {
+    "command_or_count": "requests_sent: 0 \u2014 no curl, no row file, no engine contact. Reads: CLAIMS.md C27-C33/C62, RECORD.md (169 lines), C0-EQUALINFO.json (87 lines), LIVE-CELLS-2.json (27 rows), consonance MEASURED_FACTS.md F1/F2, consonance EXPERIMENTS.md E2/E3. 13 tool calls used of 20 at write time.",
+    "commands": [
+      "grep -n 'C2[7-9]|C3[0-3]|C62' papers/context-cache/CLAIMS.md",
+      "read experiments/ptr-engine/RECORD.md",
+      "python3 - (json.load orchestration/handoffs/C0-EQUALINFO.json)",
+      "python3 - (evidence keys of orchestration/handoffs/LIVE-CELLS-2.json)",
+      "sed -n '1,60p' 'handoff from consonance/MEASURED_FACTS.md'",
+      "grep -n -A 16 '^#.*E2|^#.*E3' 'handoff from consonance/EXPERIMENTS.md'"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Execute as LONGRUN-RUN: 500 requests, 4 arms x 60 turns x 2 reps on occamy-1.0/SGLang :8012. Run the 4 controls of section 7 BEFORE arm 1; any RED control voids the batch rather than being reported. Write one JSONL row per turn with the 8 metric fields; code unverifiable turns UNVERIFIED, never impute.",
+  "write_paths": [
+    "experiments/ptr-engine/LONGRUN-PREREG.md",
+    "orchestration/handoffs/LONGRUN-PREREG.json",
+    "orchestration/units/LONGRUN-PREREG.md"
+  ],
+  "objective": "Minimise p95 TTFT (ms/turn) and tokens-to-verified-success (tokens) over 60-turn runs at equal-or-better verification, on occamy-1.0/SGLang :8012; uncached tokens/turn is a diagnostic only.",
+  "replaces_objective": {
+    "replaces": "uncached tokens per turn (the cost thesis)",
+    "demoted_to": "diagnostic / secondary reading",
+    "retained_because": "it predicted latency and that latency was measured: C0-EQUALINFO ttft_by_arm transcript 0.182 s vs pointer 0.602 s at 12 items (3.3x slower)",
+    "cost_gap_kept": "1.84x (1911 vs 3524 uncached tokens/turn, C0-EQUALINFO.uncached_per_turn_by_arm)",
+    "new_objective": "p95 TTFT + tokens-to-verified-success over long runs at equal-or-better verification"
+  },
+  "arms": [
+    {
+      "id": "A",
+      "name": "transcript-grow",
+      "policy": "whole history replayed; FIFO truncation from the front at the 64,000-token cap; fails at the 131,072 window (22,594 + 60*1,883 = 135,600)",
+      "requests_per_turn": 1
+    },
+    {
+      "id": "B",
+      "name": "transcript-compact",
+      "policy": "state update at the wall: ~700-token digest replaces older turns at 64k, recent 4 turns raw, appends between walls",
+      "requests_per_turn": 1,
+      "extra_requests_per_run": 2
+    },
+    {
+      "id": "C",
+      "name": "pointer-stable",
+      "policy": "frozen index prefix byte-identical, fetched body appended in the suffix, next body prefetched in the same request; no rewrite lands in the reused prefix",
+      "requests_per_turn": 1,
+      "is_redesign_of": "R arm (C0-EQUALINFO) that was 0.602 s vs 0.182 s"
+    },
+    {
+      "id": "D",
+      "name": "lease-reopen",
+      "policy": "close at the wall and reopen a fresh session carrying only pointers plus a distilled state line (<=400 tok); reopens at turns 23 and 56",
+      "requests_per_turn": 1
+    }
+  ],
+  "turns": 60,
+  "reps": 2,
+  "total_requests": 500,
+  "budget_derivation": "4 arms x 60 turns x 2 reps = 480; + 4 compaction digests (B, 2 per run); + 4 controls; + 12 repair attempts (3-attempt cap, band 24-27, 2 reps) = 500. 3 reps would be 720 and break the cap.",
+  "predictions": [
+    {
+      "id": "P1",
+      "claim": "pointer-stable p95 TTFT <= 0.5x transcript-grow at N=60",
+      "mechanism": "A truncates every turn after 23 and re-prefills 40-64k; C's index+bodies are frozen from turn 12 and each turn pays only the ~700-token tail",
+      "falsified_if": "C/A >= 0.5, or C's cached share after turn 12 < 0.80"
+    },
+    {
+      "id": "P2",
+      "claim": "transcript-grow tokens-to-verified-success >= 1.5x pointer-stable, and the excess is repair turns, not per-turn cost",
+      "mechanism": "truncation destroys the turn-2 k04 fact and the k01 source, so A burns 3-attempt repairs at 64k scale; C repairs in one resolve",
+      "falsified_if": "A repair_turns <= C's, or A's non-repair per-turn uncached (within 1.2x of C's) explains the gap"
+    },
+    {
+      "id": "P3",
+      "claim": "lease-reopen has the lowest p95 TTFT but loses checkpoint accuracy at t30/t60 unless the <=400-token state line carries the turn-2 fact and the turn-24 correction",
+      "mechanism": "lease close discards anything not distilled; cold prefill of a ~2.5k prompt is cheap (208.7 ms at 1,024 tok, C27) but only what the state line names survives",
+      "falsified_if": "D ties C's checkpoint accuracy"
+    },
+    {
+      "id": "P4",
+      "claim": "transcript-compact lands within 2x of pointer-stable on p95 but fails t30 where its digest dropped the turn-2 code",
+      "mechanism": "a digest is lossy exactly where the fact is incidental; between walls B is cheap",
+      "falsified_if": "B ties C's accuracy at lower total tokens"
+    }
+  ],
+  "falsifier": "If pointer-stable is not faster at p95 than transcript-grow AND does not solve with fewer total tokens, the 'use the space better' thesis fails on this hardware and LONGRUN-PREREG.md section 4 says so. Secondary narrowing: if lease-reopen wins p95 and ties accuracy, the win belongs to scoped reopening, not the frozen prefix; if transcript-compact ties accuracy at fewer tokens, compaction is sufficient.",
+  "metrics": [
+    {
+      "field": "ttft_ms",
+      "unit": "ms",
+      "definition": "dispatch to first content token, streaming; ttft_server_s alongside; p50/p95 pooled per arm"
+    },
+    {
+      "field": "tokens_to_verified_success",
+      "unit": "tokens",
+      "definition": "sum(uncached prompt + completion) from turn 1 until the t60 checkpoint verifies, repairs included"
+    },
+    {
+      "field": "repair_turns",
+      "unit": "count",
+      "definition": "turns after a failed verification, capped at 3 per checkpoint"
+    },
+    {
+      "field": "checkpoint_accuracy",
+      "unit": "0-1",
+      "definition": "exact match on t10 / t30 / t60, per checkpoint and pooled"
+    },
+    {
+      "field": "cached_tokens_share",
+      "unit": "ratio",
+      "definition": "cached / prompt_tokens per request; null means 0 per LIVE-CELLS-2 usage_note"
+    },
+    {
+      "field": "items_in_context",
+      "unit": "count",
+      "definition": "item bodies the prompt can actually resolve this turn"
+    },
+    {
+      "field": "evicted",
+      "unit": "count",
+      "definition": "turns dropped from the prompt this turn (A truncation, B compaction, D close)"
+    },
+    {
+      "field": "context_age_of_surviving_facts",
+      "unit": "turns",
+      "definition": "turn index where each surviving checkpoint fact was stated"
+    }
+  ],
+  "controls": [
+    {
+      "n": 1,
+      "control": "identical repeat must hit",
+      "must": "resend turn 12's exact prompt: cached >= 0.95x prompt",
+      "red_if": "cached < 0.90 (counter is not measuring reuse; batch void)"
+    },
+    {
+      "n": 2,
+      "control": "never-sent must miss",
+      "must": "a 23k prompt never sent before: cached = 0",
+      "red_if": "cached > 64 (host hash mistaken for server reuse)"
+    },
+    {
+      "n": 3,
+      "control": "mismatched tokenizer must show no reuse",
+      "must": "same body behind a different leading template: cached <= 64, on :8012 only (vLLM reports 0/45 cache counters)",
+      "red_if": "cached >= 1,000 (reuse is text-blind)"
+    },
+    {
+      "n": 4,
+      "control": "no-op checkpoint costs ~0",
+      "must": "checkpoint answered from the last 200 tokens: repair_turns 0, uncached <= residue + 700",
+      "red_if": "pays a re-prefill >= 5% of the prompt (wall accounting wrong)"
+    }
+  ],
+  "assumptions": [
+    "The 64,000-token cap is a design choice (half of occamy's 131,072 window), not a measured wall; a different cap moves turn 23 and re-parameterises every prediction.",
+    "C's prefetch is expressible in one request on occamy's native tool-call fetch; vLLM's text FETCH protocol is not used in this design.",
+    "N=60 with 2 reps is chosen over N=60 with 3 reps (720 requests) and over N=100 (4 arms x 100 x 2 = 800) purely to respect the <=500 cap.",
+    "Checkpoint questions are the turn's own instruction, so they cost no extra request; a checkpoint scored from a separate request would add 3 per run per arm."
+  ],
+  "cannot_settle": [
+    "one GPU, one model (occamy-1.0-NVFP4, SGLang B=64); no vLLM cache claim is possible",
+    "synthetic fixture (12 items x 9,000 B, one work-note shape)",
+    "exact-match scoring, blind to a right answer reached for the wrong reason",
+    "no multi-agent contention, no human turn-taking",
+    "2 reps: p95 estimated from 120 samples per arm",
+    "digests and state lines are the same model's own output (self-distillation is not independent)",
+    "the 64,000-token cap is a design choice, not a measured wall"
+  ],
+  "requests_sent": 0
+}

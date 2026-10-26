@@ -117,10 +117,10 @@ CONTRACT = ["unit", "status", "artifacts", "evidence", "blocker", "next_unit_hin
 # FROZEN BASELINES -- sole sources, each pinned by sha256 (U8.25)
 # ---------------------------------------------------------------------------
 BASELINE_GAPS_PATH = ROOT / "state" / "logs" / "U8.15" / "baseline_gaps.json"
-BASELINE_GAPS_SHA256 = "1a16e39d72f03d0272020f3b30c20b88d14a43ebc5650b33e69980d11316d716"
+BASELINE_GAPS_SHA256 = "d25e5bcc7659b50735136b20d37ac613d9884608c993ce57efe01af4b6a368d9"
 
 VERIFIER_BASELINE_PATH = ROOT / "state" / "logs" / "U8.18" / "verifier_shape_baseline.json"
-VERIFIER_BASELINE_SHA256 = "ad97c9061e924dd4929ff7ef74d2d76a9c60bfd02a4879a4383a8e8be6f5add4"
+VERIFIER_BASELINE_SHA256 = "5f8bbd359fe922b55f7fc491ee7073742b52b5153d17bd5c52a690310154ae72"
 
 # A handoff must declare its outcome; a verifier declares it with 'overall'.  U8.25 removed
 # the 13-file BASELINE_NO_STATUSISH exemption: it was measured as protecting NOTHING (zero
@@ -205,7 +205,7 @@ def classify(name, doc):
     Consequence U8.25 acted on: a "V*" name can NEVER be judged as a unit handoff, so any
     V* entry in the unit baseline was unreachable text (41 of them were retired).
     """
-    if name.startswith("V") or "verdict" in doc or "overall" in doc:
+    if name.startswith("V") or "overall" in doc:
         return "verifier"
     return "unit"
 

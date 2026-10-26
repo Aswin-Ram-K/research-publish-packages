@@ -1,0 +1,48 @@
+{
+  "unit": "EVAL-PRACTICE-SURVEY",
+  "status": "done",
+  "artifacts": [
+    "docs/EXTERNAL-EVAL-PRACTICE.md",
+    "orchestration/units/EVAL-PRACTICE-SURVEY.md",
+    "orchestration/handoffs/EVAL-PRACTICE-SURVEY.json"
+  ],
+  "evidence": {
+    "command_or_count": "0 inference requests; 30 sources read (repos/docs/papers) + exact-binomial arithmetic computed locally; deliverable 9 sections incl. ADOPT/REJECT/MODIFY (15 rows), sample-size answer, answer contract",
+    "commands": [
+      "sed -n 1,120p experiments/ptr-engine/measure/GRADER-FITNESS.md",
+      "python3 -c json det-verify-matrix.json gate/definition/coverage",
+      "sed -n 1,60p experiments/ptr-engine/longrun/METRICS.md",
+      "grep DEFAULT_MAX_REFS experiments/ptr-engine/ptr_engine/resolve.py -> line 39",
+      "python3 exact McNemar + Wilson + order-statistic CI arithmetic",
+      "urllib fetch: arxiv abs/html/pdf for 2306.05685, 2305.17926, 2411.00640, 2406.12045, 2310.06770, 2406.19314, 2404.06654, 2107.03374, 2410.06992, 2405.15793, 2308.14508, 2211.09110, 2206.04615, 2311.12983",
+      "raw.githubusercontent: EleutherAI/lm-evaluation-harness docs/task_guide.md + lm_eval/api/metrics.py; UKGovernmentBEIS/inspect_ai docs/metrics.qmd + docs/eval-logs.qmd; openai/evals docs/eval-templates.md + docs/build-eval.md; SWE-bench/SWE-bench README; vllm-project/vllm docs/features/structured_outputs.md; openai/human-eval human_eval/evaluation.py"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Two executable follow-ups ranked by value: (1) ANSWER-CONTRACT unit - implement the JSON checkpoint contract in longrun/run_longrun.py + a decidable grader, replacing prose grading in the decision path (1 card, 0 requests); (2) EVAL-STATS unit - add Wilson CIs, exact McNemar on item-level pairs with a D<6 refusal, and pass^3 to longrun/analyze_longrun.py (1 card, 0 requests). The checkpoint-coverage change (3 -> 12 decidable checkpoints) is a fixture edit; it costs 108 extra checkpoint requests across 4 arms x 3 runs.",
+  "write_paths": [
+    "docs/EXTERNAL-EVAL-PRACTICE.md",
+    "orchestration/units/EVAL-PRACTICE-SURVEY.md",
+    "orchestration/handoffs/EVAL-PRACTICE-SURVEY.json"
+  ],
+  "tool_calls": 24,
+  "bound": 45,
+  "assumptions": [
+    "offline for the model under test: zero inference requests, all evidence from web + repo reading",
+    "no human rater set exists offline, so judge-human agreement is reported from the field, not measured locally",
+    "vendor claims (OpenAI strict json_schema) are labelled as vendor claims and were not re-fetched this run"
+  ],
+  "unverified": [
+    "GAIA answer scoring mechanics (abstract read only; repo README did not state it)",
+    "BIG-bench exact programmatic-vs-human split (abstract read only)",
+    "OpenAI structured-outputs docs site not fetched (JS-rendered)",
+    "McNemar/Dietterich citation not re-fetched; the statistics quoted were computed here from the binomial null"
+  ],
+  "key_findings": [
+    "Established suites grade effects (SWE-bench tests, tau-bench DB state, LiveBench objective values, lm-eval filter->typed value), not prose token presence.",
+    "Our grader noise attenuates arm differences by 1-FN-FP = 0.237 (v3) / 0.231 (v4): a true 10pp gap appears as ~2.4pp; ~18x items needed to compensate.",
+    "3 checkpoints cannot support any arm ranking at any n: max 3 discordant pairs, exact McNemar minimum two-sided p = 0.25; reruns cluster the same 3 items.",
+    "Cheapest supportable design: 12 decidable checkpoints x 3 runs/arm = 36 paired items (108 extra requests), exact McNemar at alpha .05 on one pre-registered contrast, Wilson 95% CIs, pass^3.",
+    "p95 CI at n=48 spans the 8 largest observations; a 2x p95 decision rule needs n in the hundreds (192 = four 48-turn runs per arm)."
+  ]
+}

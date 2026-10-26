@@ -1,0 +1,27 @@
+MEMORY M-2 -- Internal registry mirror notes
+
+What the mirror is. Every build pulls images and packages through an internal mirror
+rather than from upstream. The mirror caches on first request and serves subsequent
+requests locally.
+
+Conventions that matter day to day:
+
+  * Pinning by tag alone is not pinning. Tags in the mirror can be re-pointed when
+    the upstream tag moves, so reproducible builds pin by digest. A build that
+    mentions only a tag may resolve differently tomorrow with no error.
+  * The mirror does not cache negative results. A missing artifact is re-checked
+    against upstream every time, which is correct behaviour and also why a broken
+    upstream token shows up as slow builds rather than as failures.
+  * Retention is 90 days for unused artifacts, measured from last pull, not from
+    last push. An artifact nobody has pulled in 90 days is evicted and re-fetched
+    from upstream on the next request.
+  * The mirror is read-only for build hosts. Pushing from a build host fails
+    authorisation and is deliberate.
+
+Failure modes. The most common outage cause is a full mirror disk, which surfaces to
+builders as timeouts rather than as registry errors. If many builds fail at once,
+check mirror health before bisecting individual pipelines.
+
+What this note does NOT cover. The access control list, the on-call rotation, and the
+capacity plan are elsewhere. Do not quote retention numbers from this note for
+anything except the mirror.

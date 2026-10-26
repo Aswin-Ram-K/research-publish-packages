@@ -1,0 +1,68 @@
+{
+  "unit": "REASONING-PILOT-OFF",
+  "status": "partial",
+  "artifacts": [
+    "experiments/ptr-engine/measure/rows-pilot-thinking-2026-10-26.jsonl",
+    "experiments/ptr-engine/longrun/manifests/pilot-off-lr01-r1-transcript-grow-r1.json",
+    "experiments/ptr-engine/longrun/manifests/pilot-on-lr01-r1-transcript-grow-r1.json",
+    "orchestration/handoffs/REASONING-PILOT-OFF.json",
+    "orchestration/units/REASONING-PILOT-OFF.md"
+  ],
+  "evidence": {
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/run_longrun.py --help",
+      "curl -s -o /tmp/models.json -w '%{http_code}' http://192.168.2.168:8012/v1/models",
+      "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/runtime/LR-01.json --arms transcript-grow --reps 1 --thinking off --max-turns 5 --rows experiments/ptr-engine/measure/rows-pilot-thinking-2026-10-26.jsonl --run-id pilot-off-lr01-r1 --timeout 900",
+      "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/runtime/LR-01.json --arms transcript-grow --reps 1 --thinking on --max-turns 5 --rows experiments/ptr-engine/measure/rows-pilot-thinking-2026-10-26.jsonl --run-id pilot-on-lr01-r1 --timeout 900",
+      "python3 experiments/ptr-engine/longrun/run_longrun.py ... --thinking {off,on} --max-turns 5 --dry-run (payload capture, zero requests)"
+    ],
+    "target_sanity": "GET http://192.168.2.168:8012/v1/models -> HTTP 200, data[0].id='occamy-1.0' (served id is NOT literally 'occamy-1.0-NVFP4'; the runner's DEFAULT_MODEL alias 'occamy-1.0-NVFP4' is accepted by SGLang and is what historical rows used).",
+    "exit_codes": {"A_off": 0, "B_on": "killed at turn 2 (job bash-b5260dcef8784aee cancelled)"},
+    "killed_at_turn": 2,
+    "kill_method": "job_kill on the background job after the 600 s stop rule fired for the second time; rows file verified stable at 6 rows afterwards (no partial row for B turn 2 was written).",
+    "per_setting_table": {
+      "off": {"n_rows": 5, "n_content_nonempty": 5, "latency_s": {"mean": 183.782, "median": 83.476, "p95_nearest_rank": 640.96, "min": 5.231, "max": 640.96}, "mean_completion_tokens": 4470.2, "mean_prompt_tokens": 13013.4, "mean_cached_tokens": 8089.6, "finish_reason": {"stop": 5}, "content_ever_carries_checkpoint_value": "no - expected=null on all rows (no checkpoint turn inside T1..T5)"},
+      "on": {"n_rows": 1, "n_content_nonempty": 1, "latency_s": {"mean": 686.54, "median": 686.54, "p95_nearest_rank": 686.54, "min": 686.54, "max": 686.54}, "mean_completion_tokens": 16384.0, "mean_prompt_tokens": 1870.0, "mean_cached_tokens": 1856.0, "finish_reason": {"length": 1}, "content_ever_carries_checkpoint_value": "no - expected=null"}
+    },
+    "a_rows_turn_table": [[1, 179.860936, 4465, 1872, 1856, "stop"], [2, 83.475947, 2027, 6389, 1856, "stop"], [3, 640.959633, 15624, 8453, 6336, "stop"], [4, 9.381504, 119, 24103, 6336, "stop"], [5, 5.230708, 116, 24250, 24064, "stop"]],
+    "b_row_turn_table": [[1, 686.539525, 16384, 1870, 1856, "length", "truncated=true failed_turn=true timing_usable=false content_source=both reasoning_tokens~143 content_tokens~32436"]],
+    "runner_summary_A": "rows=5 requests=5 truncated=0 ttft_n=5 max_tokens=16384; content_source {\"content\":5}; answer_source {\"content\":5}; finish_reason {\"stop\":5}; failed_turns=0 timing_usable=5",
+    "payload_diff": {
+      "note": "Captured from the runner's own request_body/dry-run preview (identical constructor to the live body; zero requests spent). Both settings, transcript-grow, LR-01, turn-01.",
+      "off_line": "{\"chat_template_kwargs\":{\"enable_thinking\": false}, \"max_tokens\":16384, \"messages\":<sha256_16 3f9c6eefdcc7b8de>, \"model\":\"occamy-1.0-NVFP4\", \"stream\":true, \"stream_options\":{\"include_usage\":true}, \"temperature\":0}  bytes=7368 sha256_16=d0d400540b8a4d59",
+      "on_line": "{\"chat_template_kwargs\":{\"enable_thinking\": true}, \"max_tokens\":16384, \"messages\":<sha256_16 3f9c6eefdcc7b8de>, \"model\":\"occamy-1.0-NVFP4\", \"stream\":true, \"stream_options\":{\"include_usage\":true}, \"temperature\":0}  bytes=7367 sha256_16=33c534bb7e515ca9",
+      "proved": "same 7 top-level keys; messages bytes identical (sha16 3f9c6eefdcc7b8de in both); every other field equal; the only differing value is chat_template_kwargs (false vs true), which is the 1-byte size delta."
+    }
+  },
+  "blocker": "Pre-registered measurement not completed: the hard stop rule (a single turn over 600 s, twice) fired on A turn 3 (640.96 s) and B turn 1 (686.54 s), so B has n=1 instead of n=5. B turn 1 also hit the 16384 completion-token cap (finish_reason=length, truncated=true, failed_turn=true, timing_usable=false), so under the runner's own timing gate there is no usable B latency at all. verif verdict is therefore not decidable from this run; 4 of the 10 allowed requests remain unspent.",
+  "assumptions": [
+    "Target check: /v1/models lists id 'occamy-1.0', not 'occamy-1.0-NVFP4'. Treated HTTP 200 on 192.168.2.168:8012 as 'up' and kept the runner default alias, because every historical manifest/row on this endpoint used 'occamy-1.0-NVFP4' successfully. No substitute endpoint used.",
+    "p95 = nearest-rank (ceil(0.95*n)-1) on the sorted latency list; stated because n is tiny.",
+    "The two settings are never pooled: rows are separated by the 'thinking' field and by run_id (pilot-off-lr01-r1-transcript-grow-r1, pilot-on-lr01-r1-transcript-grow-r1).",
+    "A row with cached_tokens=null was counted as 0 (SGLang omits the key at 0); no such row occurred here (all 6 rows report a value).",
+    "The payload-diff lines come from the runner's dry-run preview of the same request_body builder (--dry-run sends zero requests); live bodies are built by the same function, so the documented 1-key difference is the one actually sent.",
+    "projected_lr01_hours treats 192 requests = 4 arms x 48 turns x 1 rep, i.e. one full LR-01 grid, using this run's A latency distribution."
+  ],
+  "next_unit_hint": "Spend the 4 remaining requests finishing B: same command with --run-id pilot-on-lr01-r1 --resume (rows are append-only, cell resumes at the first missing turn). Then re-evaluate clauses (ii)/(iii) on B n=5 and settle ACCEPT-off/REJECT-off. Provisional signal favours ACCEPT-off: A cut completion tokens 4470 vs 16384 and ran 2.7x faster, with 5/5 content answers, but B's single row was cap-truncated, so the comparison is not yet honest.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/rows-pilot-thinking-2026-10-26.jsonl",
+    "orchestration/handoffs/REASONING-PILOT-OFF.json",
+    "orchestration/units/REASONING-PILOT-OFF.md"
+  ],
+  "prereg": "Setting A = --thinking off, setting B = --thinking on, both on arm transcript-grow, rep 1, fixture experiments/ptr-engine/longrun/runtime/LR-01.json, 5 turns each, run A first. ACCEPT off as the grid policy iff: (i) at least 4 of 5 A-turns carry non-empty content (the answer channel, not reasoning), AND (ii) A's mean latency_s <= 0.3 x B's mean latency_s, AND (iii) A's mean completion_tokens < B's mean completion_tokens. Otherwise REJECT and say which clause failed. Do not re-tune; a rejected policy is a result.",
+  "verdict": "blocked",
+  "verdict_basis": "B n=1 (not the pre-registered n=5) and that row is the runner's failed_turn/timing_usable=false, so clause (ii) has no timing-valid B mean. Clause values below are recorded on the raw numbers available and are advisory, not a decision.",
+  "clauses": {
+    "(i) >=4/5 A-turns non-empty content": {"value": true, "number": "5/5 (A)"},
+    "(ii) A mean latency <= 0.3 x B mean latency": {"value": true, "number": "183.782 <= 0.3 x 686.540 = 205.962 (ratio 0.2677); B n=1 only, and that row is timing_usable=false -> not decision-grade"},
+    "(iii) A mean completion_tokens < B mean completion_tokens": {"value": true, "number": "4470.2 < 16384 (B n=1, hit the max_tokens cap)"}
+  },
+  "requests_spent": 6,
+  "projected_lr01_hours": {
+    "basis": "192 requests (4 arms x 48 turns x 1 rep) x A latency",
+    "from_mean_s": 9.8,
+    "from_median_s": 4.45,
+    "from_p95_s": 34.18,
+    "note": "A is cheap at the median but has a heavy tail: one 15624-token turn cost 640.96 s (70% of the cell's total wall clock). Config C is cheap only if that tail does not recur."
+  }
+}

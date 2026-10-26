@@ -1,0 +1,48 @@
+{
+ "unit": "DET-VERIFY",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/det_verify.py",
+  "experiments/ptr-engine/tools/tests/test_det_verify.py",
+  "experiments/ptr-engine/measure/det-verify-matrix.json",
+  "experiments/ptr-engine/longrun/ANCHOR-PREREG-V2-ERRATA.md",
+  "orchestration/units/DET-VERIFY.md",
+  "orchestration/handoffs/DET-VERIFY.json"
+ ],
+ "evidence": {
+  "gate": "det_verify pooled FN 0/8 correct-intent, FP 0/7 incorrect-intent, omission rejected 3/3 (gate pass); per checkpoint cp.0.t12 0/3,0/2; cp.1.t24 0/2,0/2; cp.2.t46 0/3,0/3",
+  "grades_same_probes": "v3 restricted to decidable subset FN 12/32 (37.5%) FP 12/28 (42.9%); v4 FN 10/32 (31.3%) FP 14/28 (50.0%); det 0/8,0/7",
+  "ground_truth": "DEFAULT_MAX_REFS=64 at resolve.py:39 (sha256 71a14c2c.. matches fixture); 31 Ptr* classes in errors.py (sha256 402dc958.. matches); _refuse calls ledger.record_refusal kwargs scope,serialized_ref,code at resolve.py:69",
+  "red_naive": "DET_VERIFY_DEGRADE=naive test_det_verify.py -> exit 1, pooled FN 4/8 (ANSWER: 64. fails)",
+  "red_mention": "DET_VERIFY_DEGRADE=mention test_det_verify.py -> exit 1, FP 2/7 (p.cp2.neg, p.cp2.negr1gap accepted)",
+  "green": "python3 test_det_verify.py -> exit 0, 17 tests OK",
+  "coverage": "7/12 fixture acceptance checks decidable (cp.0/cp.1/cp.2 + acc.cp1/acc.cp2/acc.cp3/acc.1); acc.2, acc.3, acc.4, acc.n2b, acc.n3b..n3e, repair.t30 handed back with reasons",
+  "errata": "ANCHOR-PREREG-V2.md:59-60 false under rule :55-58 and contradicted by :117; census 0/11; rule_digest b1654830..eb9ad57 reproduced; file sha256 173f0c1c..a844aa; ANCHOR-PREREG-V2.md not edited",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/det_verify.py",
+   "python3 experiments/ptr-engine/tools/tests/test_det_verify.py",
+   "DET_VERIFY_DEGRADE=naive python3 experiments/ptr-engine/tools/tests/test_det_verify.py",
+   "DET_VERIFY_DEGRADE=mention python3 experiments/ptr-engine/tools/tests/test_det_verify.py",
+   "sha256sum experiments/ptr-engine/longrun/ANCHOR-PREREG-V2.md"
+  ]
+ },
+ "assumptions": [
+  "grader v3/v4 columns read from committed measure/grader-fitness.json (same probes) instead of re-running the graders, because a fresh run would write a grade file",
+  "cp.1.t24 counted over the whole cited module: fixture expected 31 equals whole-file AST count; its #L15-L142 range alone yields 20",
+  "gate denominators are distinct probes (n=8 correct/7 incorrect), not the 4x fixture repetition",
+  "errata census impact 0/11 verified: committed census rows contain no PtrBudget cell and census is unchanged 11/11 on class"
+ ],
+ "blocker": "",
+ "next_unit_hint": "Use det_verify for cp.0/cp.1/cp.2 arm rankings; do NOT report checkpoint_accuracy over repair.t30, acc.n2b or the runtime acceptance checks. Next: wire det_verify into the arm-comparison harness replacing grade_v3/v4 for those three checks.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/det_verify.py",
+  "experiments/ptr-engine/tools/tests/test_det_verify.py",
+  "experiments/ptr-engine/measure/det-verify-matrix.json",
+  "experiments/ptr-engine/longrun/ANCHOR-PREREG-V2-ERRATA.md",
+  "orchestration/units/DET-VERIFY.md",
+  "orchestration/handoffs/DET-VERIFY.json"
+ ],
+ "tool_calls": 29,
+ "bound": 30,
+ "requests": 0
+}

@@ -1,0 +1,123 @@
+{
+  "unit": "PROMPT-O4B",
+  "status": "done",
+  "stack": "vllm",
+  "config_id": "O4",
+  "artifacts": [
+    "experiments/context-cache/cells/PROMPT-O4/rows.jsonl",
+    "experiments/context-cache/cells/PROMPT-O4/analysis.json",
+    "experiments/context-cache/cells/PROMPT-O4/warmup.json",
+    "experiments/context-cache/cells/PROMPT-O4/launch.json",
+    "experiments/context-cache/cells/PROMPT-O4/summary.json"
+  ],
+  "evidence": {
+    "g0_warmup_call2_cached_tokens": "5616",
+    "resolve_block": "{}",
+    "observed_grid_gcd": "1088",
+    "per_arm_mean_uncached_per_turn": {
+      "R": 915.662,
+      "A": 921.0,
+      "C": 932.8873,
+      "H": 1098.9859,
+      "C0": 913.7746
+    },
+    "per_arm_ci95": {
+      "R": [
+        840.1907754996988,
+        991.1331681622729
+      ],
+      "A": [
+        846.6756896116319,
+        995.3243103883681
+      ],
+      "C": [
+        858.6025276070426,
+        1007.1721202802813
+      ],
+      "H": [
+        940.579420835825,
+        1257.3924101500904
+      ],
+      "C0": [
+        838.1428930881868,
+        989.406402686461
+      ]
+    },
+    "deltas_vs_R": {
+      "A-R": [
+        5.338,
+        false
+      ],
+      "C-R": [
+        17.2254,
+        false
+      ],
+      "H-R": [
+        183.3239,
+        true
+      ],
+      "C0-R": [
+        -1.8873,
+        false
+      ]
+    },
+    "arms_identical": "none",
+    "requests": "357",
+    "commands": [
+      ".venv/bin/python experiments/context-cache/cells/PROMPT-O4/prompt_o4_cell.py",
+      "wc -l experiments/context-cache/cells/PROMPT-O4/rows.jsonl",
+      "python3 -c \"import json;rows=[json.loads(l) for l in open('experiments/context-cache/cells/PROMPT-O4/rows.jsonl')];print(sorted({r['arm'] for r in rows}), sum(1 for r in rows if r['cached_tokens'] is None), sum(1 for r in rows if r['http_status']!=200), sum(1 for r in rows if (r['cached_tokens'] or 0)>0))\""
+    ],
+    "wc -l experiments/context-cache/cells/PROMPT-O4/rows.jsonl": "355",
+    "python3 -c \"import json;rows=[json.loads(l) for l in open('experiments/context-cache/cells/PROMPT-O4/rows.jsonl')];print(sorted({r['arm'] for r in rows}), sum(1 for r in rows if r['cached_tokens'] is None), sum(1 for r in rows if r['http_status']!=200), sum(1 for r in rows if (r['cached_tokens'] or 0)>0))\"": "['A', 'C', 'C0', 'H', 'R'] 0 0 284",
+    "geometry_from_docker_logs": {
+      "raw": [
+        "INFO 10-24 06:38:17 [interface.py:911] Setting attention block size to 1088 tokens to ensure that attention page size is >= mamba page size.",
+        "INFO 10-24 06:38:17 [interface.py:935] Padding mamba page size by 3.82% to ensure that mamba page size and attention page size are exactly equal.",
+        "INFO 10-24 06:39:42 [kv_cache_utils.py:2235] GPU KV cache size: 677,500 tokens",
+        "INFO 10-24 06:37:07 [api_utils.py:273] non-default args: {... 'block_size': 64, 'prefix_match_unit': 16, 'mamba_cache_mode': 'align'}"
+      ],
+      "attention_block_size": 1088,
+      "block_size_flag": 64,
+      "prefix_match_unit": 16,
+      "mamba_page_padding_pct": 3.82,
+      "kv_cache_tokens": 677500,
+      "observed_grid_gcd": 1088,
+      "grid_matches_geometry": true
+    },
+    "readiness": {
+      "url": "http://192.168.2.168:8016/v1/models",
+      "final_code": 200,
+      "time_to_200_s": 120,
+      "note": "container restarted mid-first-attempt; second poll to 200 = 120 s"
+    },
+    "restore": {
+      "gx10-p-o4_removed": true,
+      "docker_ps_a_grep_count": 0,
+      "8014": "200 qwen3.5-9b",
+      "8012": "200 occamy-1.0",
+      "prod_containers_up": [
+        "gx10-occamy-nvfp4",
+        "gx10-qwen9b"
+      ]
+    }
+  },
+  "blocker": "",
+  "next_unit_hint": "verifier re-runs the two acceptance commands, rebuilds the per-arm t-intervals from rows.jsonl and confirms the 16-grid gcd",
+  "write_paths": [
+    "experiments/context-cache/cells/PROMPT-O4B/**",
+    "orchestration/handoffs/PROMPT-O4B.json",
+    "orchestration/units/PROMPT-O4B.md"
+  ],
+  "detail": {
+    "rows_sha256": "abd6b6add0705141e255e4eeed0b957122a91bac1a76e6607dae4a29c1b9a2a5",
+    "requests": 357,
+    "status": "done",
+    "g0_gate": "passed"
+  },
+  "assumptions": [
+    "Arms/first-prompt sha256 are byte-identical to PROMPT-O2-EXTRA (R 8924004..., A 0ac37de..., C 708d60c..., H a0f9468..., C0 aa96e1a...): the same arm artefacts, different engine.",
+    "cached_tokens null never rewritten to 0: 0 null rows observed, all 355 rows report the key.",
+    "The observed 1088-token grid is not block_size(64) but the resolved attention block size (1088 = 64 x 17), so --prefix-match-unit 16 is not what floors the reuse here."
+  ]
+}
