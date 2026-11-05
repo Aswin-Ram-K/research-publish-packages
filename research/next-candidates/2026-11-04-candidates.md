@@ -24,7 +24,7 @@ picking a winner silently.
 | Date | Finding | Where |
 |---|---|---|
 | 2026-10-26 | **The append-cost law**: `uncached = (P1 mod B) + L`, residual 0 in 186/186 rows; a residue-0/1 cliff that re-bills the prefix; vLLM's `+B` term | `experiments/miss-law/LAW.md` |
-| 2026-10-26 | The fetch-count sign flip (+44.8 % → −95.6 %) is the **cold arm**, not block boundaries (≤3.7 % of the swing) | `LAW.md` §6 |
+| 2026-10-26 | The fetch-count sign flip (+44.9 % → −95.6 % per `crossover/RESULTS.md:52,54`) is the **cold arm**, not block boundaries (≤3.7 % of the swing) | `LAW.md` §6 |
 | 2026-10-28 | **The quality emitter cannot say yes** (`PATH-CANNOT-SAY-YES`): five-log truth table, four negatives indistinguishable from the positive, two mutually exclusive graders | `experiments/ptr-engine/longrun/QUALITY-POSITIVE-CONTROL.md` |
 | 2026-10-28 | **Four instrument defects in one live grid**; H1 `not_adjudicable_floor` at n_eff 26.14 < 60; p95 refused | `docs/GRID-2-FINAL.md`, `docs/GRID-GAP-DIAGNOSIS.md` |
 | 2026-10-28 | Ledger reconciliation made delta-aware after a stale freeze refused every launch | `docs/LEDGER-RECONCILE.md` |
@@ -52,10 +52,32 @@ the per-stack grid, but neither states the append law, the vLLM `+B` term, or th
 argues the *opposite* way about padding.
 
 Two things must be settled in the paper's own text before submission, and both are named in the brief:
-the **instrument-dependent magnitude** of the cliff (`RECORD.md` C1 reads 64 + L on a second instrument where
-`LAW.md` reads the whole prefix), and the **scope collision** with the manuscript's `L − 64` recovery result,
-which is a different request shape (immediate repeat vs one append). A paper that hides either one will be
-caught in the first review round; a paper that states both is stronger than either source alone.
+the **instrument-dependent cliff**, where `RECORD.md` C1's second instrument reads `cached = 8,000` and
+`64 + L` at the same P1 at which `LAW.md`'s field reads `null` and the whole prefix — the 5.2× ratio between
+them is **undecidable on the rows** and must be quoted as such, not as a correction — and the **scope
+collision** with the manuscript's `L − 64` recovery result, which is true for a second byte-identical repeat
+and not for a fresh cold prime. A paper that hides either one will be caught in the first review round; a
+paper that states both is stronger than either source alone.
 
 N4 is the second move because it costs nothing and unblocks a submission that has been sitting since 2026-10-24
 with four datasets on disk that its own manuscript does not cite.
+
+## Corrections after independent re-check (2026-11-04)
+
+A separate read-only unit re-derived N1's numbers against the rows and returned six corrections and a
+do-not-carry list. They are folded into `N1-residue-law.md` and recorded here so the next reader can see what
+moved and why.
+
+| corrected | was | now |
+|---|---|---|
+| block indices behind the 11/11 positional control | "four" (from `LAW.md:116` prose) | **six** — #32, #64, #96, #120, #124, #125 — which is what the law's own position list contains; the 11/11 count itself reproduces from `rows.jsonl` |
+| the cliff's status across instruments | "both instruments agree the entry is absent" | **they do not**: `/generate` reads `cached = 8,000` at P1=8064 while `usage.prompt_tokens_details` reads `null`; `RECORD.md:114` records the 5.2× between the readings as withdrawn then **UNDECIDABLE** |
+| `L − 64` recovery vs non-reproduction | presented as a live conflict | **both true, different shapes**: recovery is on the second byte-identical repeat (E4 rep2 `cached = 960` ×20; E4R 40/40), while `LAW.md`'s 7,936 row is a fresh cold prime with varying nonce |
+| the crossover cells reproduced by the law | +44.8 % → −95.6 % | **+44.9 % → −95.6 %** (`crossover/RESULTS.md:52,54`); `TABLES.md:32`'s +44.8 % is the first-attempt table |
+| the padding rule's saving | stated once | **positive under every reading** — ≈64 tokens if the counter reading holds, ≈`P1 − r` if the null reading holds [INFERENCE for the first] |
+| C9 / FOLD bucket (iii) | superseded | **superseded only as a bar to the residue law**; C9 still governs HARVEST's 378-row cell table (`experiments/ptr-engine/ADOPTION.md:38`) |
+
+**Do not carry into any paper:** the 5.2× as fact; absence as a cross-instrument claim; 8,013 as a universal
+re-bill magnitude; "recovery at `L − 64` is not reproduced" without the shape qualifier; `LAW.md:116`'s "four
+block indices"; the 0.211 s residue-2 warm TTFT as a general figure (one G6 pair, 8.49× on that pair).
+
