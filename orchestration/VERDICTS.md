@@ -4008,3 +4008,432 @@ and `R2-VLLM-CELL-rows` resolvable, (2) add a guard that parses CLAIMS.md value 
 
 - **V-PAPER-CLOSE — PARTIAL (verifier, 2026-10-25).** Independent re-check of §10: verify_package PASS; recompute C64 38/38, C65 48/48, C66 75/75, C67 85/85 (+C68 70/70, SYSOPT 50/50 from recompute_r2) and COVERAGE GUARD PASS; serving_brief --check PASS; G17 present and state/gap-ledger.json = 3 closed / 3 narrowed / 11 open / 1 unverifiable; C63 '+-' count 0 with both guards requiring absence; check_divergence directions/values/own-accusation all as repaired; handoff baselines sha256-pinned with the over-declares guard green; RED->GREEN shown on the C63 double-sign guard via '+-222.89x' in a /tmp copy. NOT reproduced: 'pytest tests/ -q -> 1368 passed, 1 skipped' — actual 1376 passed, 1 skipped, **1 FAILED** (test_no_new_contract_key_gaps on NEW verifier-shape gap {'BILL-AUDIT.json': ['overall','checks']}), caused by a handoff written 2026-10-25 00:58 by another unit, so the suite is red for a reason outside PAPER-FINAL's three repairs. The close is verified in 6 of 8 checks; the test-count sentence is not certifiable as written.
 - **V-QUALITY-ARM — PARTIAL (verifier, 2026-10-25).** CONFIRMED: 115 rows reconcile exactly (48 request + 48 prediction + 12 rep + 4 corpus + 3 compaction); discrimination control A 3/3, B 0/3, C 3/3, D 0/3 — arm D resolves 0 of 5 withheld bodies and answers `756741be`; index 458 B, sha256 `e81ba025cfb484a8460022dedffa8cb8e7ffe09a53b365f9b84227eb105531d5` (hash re-derived from the in-row `index_text`; the standalone artefact was lost with the /tmp run roots); no `AUD-`/`lumen` in the index, the fact lives in `k01` only; PREREG matches the run. REFUTED: billed tokens do NOT telescope to `sum(prompt_tokens)+12·(R−1)` — residuals A +151/+110/+106, B +117/+150/+127, C +159/+111/+17,193, D +100×3; `RESULTS.md:176` "raw 34,201" measures 32,401; `RESULTS.md:150` "0 avalanches" is contradicted by `per_turn` (residue 1, avalanche True, uncached 34,190); `RESULTS.md:174` claims exactness in a sentence whose own next clause shows it does not hold. ROOT CAUSE: per-turn `usage.prompt_tokens_details.cached_tokens` is read at `runner.py:585-596` but never written to `rows.jsonl`; `billed_tokens_measured` is a recomputation at `runner.py:688`. GUARD: bites — `corpus.py` offline gate in a /tmp copy: `position == 1` → `>= 1` turns GREEN_EXIT=0 into RED_EXIT=1 with `fact_unique_to_k01 False`; restore sha `9bc91d68…b4e97fdea64` byte-identical. CONTAINMENT: no attributable write outside `quality/**` plus its own two files; undisclosed artefacts `runner.py`, `probe_instrument.py`, `rerun_corrected.py`, `rows-corrected.jsonl`, `rerun-corrected.log` written 01:07-01:10, after the 00:39 handoff. CONSEQUENCE: the moat argument survives on its discrimination control; no paper or claim may rest on the billing identity until a live re-run persists per-turn `cached_tokens`. Handoff `orchestration/handoffs/V-QUALITY-ARM.json`.
+
+---
+
+## Batch: ptr-engine longrun (2026-10-26)
+
+**Batch membership rule (re-derivable, no judgement).** A card belongs to this batch if its handoff carries a verifier
+`overall` verdict dated `>= 2026-10-23`, **or** it has a journal in `orchestration/journals/` (93 files) — the cards this
+programme created and declared. Nothing is inferred from prose: every row below is machine-extracted from
+`orchestration/handoffs/*.json` and `orchestration/journals/*.jsonl` by that rule. `exec id` is the board
+`executionId`/`taskId` where a journal recorded one; `—` means **the record never carried an execution id**, not that
+no execution ran.
+
+**Recovered rows: 134.** Split: **PASS 15 · FAIL 11 · partial 34 · cancelled 0**, plus **73** rows whose
+only recorded outcome is the author's own `status: done` — printed as `author-report`, because a unit reporting itself
+is not a verdict — and **1** `pending`.
+
+| card id | unit | exec id | verdict | command | exit | sha |
+|---|---|---|---|---|---|---|
+| `ACCURACY-DENOMINATOR-RECOMPUTE` | `ACCURACY-DENOMINATOR-RECOMPUTE` | `—` | author-report | `python3 /tmp/acc/recompute.py -> records 4 \| regrade affe…` | — | — |
+| `ADOPTION-AUDIT` | `ADOPTION-AUDIT` | `—` | partial | `—` | — | — |
+| `ARM-INTEGRITY` | `ARM-INTEGRITY` | `—` | partial | `python3 /tmp/arm_integrity_probe.py` | — | — |
+| `ARM-TREATMENTS-FIRE` | `ARM-TREATMENTS-FIRE` | `—` | partial | `python3 experiments/ptr-engine/tools/arm_treatments_probe.…` | — | — |
+| `ATTACK-GRADE-V5` | `ATTACK-GRADE-V5` | `—` | author-report | `python3 experiments/ptr-engine/tools/attack_grade_v5.py` | — | — |
+| `ATTACK-GRADE-V5-2` | `ATTACK-GRADE-V5-2` | `—` | author-report | `python3 experiments/ptr-engine/tools/attack_grade_v5_2.py` | — | — |
+| `BUDGET-SCHEDULE` | `BUDGET-SCHEDULE` | `—` | author-report | `python3 -c 'json.load(open("experiments/ptr-engine/measure…` | — | — |
+| `C8-CENSUS-FIX-V2` | `C8-CENSUS-FIX-V2` | `—` | author-report | `—` | — | — |
+| `CACHE-CREDIT-CHAT` | `CACHE-CREDIT-CHAT` | `—` | author-report | `python3 experiments/ptr-engine/tools/cache_credit_probe.py…` | 0 | — |
+| `CAPGATE-FOREIGN-RED` | `CAPGATE-FOREIGN-RED` | `—` | author-report | `python3 -m unittest discover -s experiments/ptr-engine/lon…` | — | — |
+| `CHECKPOINT-ITEMS-V2` | `CHECKPOINT-ITEMS-V2` | `—` | partial | `python3 -m pytest experiments/ptr-engine/longrun/tests/tes…` | 0 | — |
+| `CLAIM-ROW-STAMP` | `CLAIM-ROW-STAMP` | `—` | partial | `—` | — | — |
+| `DEDUPE-ROOT-CAUSE` | `DEDUPE-ROOT-CAUSE` | `—` | author-report | `python3 experiments/ptr-engine/longrun/tests/test_request_…` | — | — |
+| `DRIVER-LOG-LINE` | `DRIVER-LOG-LINE` | `—` | author-report | `python3 (read) experiments/ptr-engine/measure/ANSWER-DEGEN…` | — | — |
+| `ENDPOINT-CAVEAT-FIX` | `ENDPOINT-CAVEAT-FIX` | `—` | author-report | `bash -c 'python3 -m json.tool experiments/ptr-engine/measu…` | — | — |
+| `ENDPOINT-STATE-NOW` | `ENDPOINT-STATE-NOW` | `—` | author-report | `python3 - (2x POST http://192.168.2.168:8012/v1/completion…` | — | — |
+| `EXIT-CODE-TABLE` | `EXIT-CODE-TABLE` | `—` | author-report | `python3 exit_codes.py` | — | — |
+| `EXIT-CODE-TABLE-2` | `EXIT-CODE-TABLE-2` | `—` | author-report | `python3 experiments/ptr-engine/longrun/tests/test_exit_cod…` | — | — |
+| `FAILED-TRIAGE` | `FAILED-TRIAGE` | `—` | author-report | `python3 (ledger-v2 + handoffs + verdict.jsonl + stat) -> e…` | — | — |
+| `FIXTURE-GENERATIONS` | `FIXTURE-GENERATIONS` | `—` | author-report | `python3 experiments/ptr-engine/tools/build_fixture.py --va…` | — | — |
+| `FIXTURE-TREATMENTS` | `FIXTURE-TREATMENTS` | `—` | author-report | `python3 experiments/ptr-engine/longrun/tests/test_treatmen…` | — | — |
+| `FROZEN-TREE` | `FROZEN-TREE` | `—` | author-report | `python3 -m pytest experiments/ptr-engine/longrun/tests/tes…` | 0 | — |
+| `GATE-CHAIN-FIX` | `GATE-CHAIN-FIX` | `—` | author-report | `python3 -m unittest discover -s experiments/ptr-engine/lon…` | — | — |
+| `GATE-OPERAND-VALIDATION` | `GATE-OPERAND-VALIDATION` | `—` | author-report | `python3 experiments/ptr-engine/tools/gate_attack.py --quie…` | — | — |
+| `GRADE-V5-REPAIR` | `GRADE-V5-REPAIR` | `—` | partial | `python3 experiments/ptr-engine/tools/attack_grade_v5.py` | — | — |
+| `GRADE-V6-DERIVE` | `GRADE-V6-DERIVE` | `—` | author-report | `python3 -m pytest experiments/ptr-engine/longrun/tests/tes…` | — | — |
+| `GRADER-STAMP` | `GRADER-STAMP` | `—` | author-report | `python3 -m pytest experiments/ptr-engine/longrun/tests/tes…` | — | — |
+| `H1-CONDITIONING` | `H1-CONDITIONING` | `—` | author-report | `python3 -m pytest experiments/ptr-engine/longrun/tests/tes…` | — | — |
+| `HANDOFF-RECOVERY` | `HANDOFF-RECOVERY` | `—` | author-report | `python3 experiments/ptr-engine/tools/handoff_lint.py orche…` | — | — |
+| `HARNESS-MAP-V2` | `HARNESS-MAP-V2` | `—` | author-report | `python3 - <<'PY' (journal+handoff census: 20 cards, tool_c…` | 0 | — |
+| `HARNESS-MAP-V3` | `HARNESS-MAP-V3` | `—` | author-report | `python3 - <<'PY' (parse orchestration/journals/*.jsonl spa…` | — | — |
+| `HYPOTHESIS-SMOKE-MODE` | `HYPOTHESIS-SMOKE-MODE` | `—` | author-report | `python3 experiments/ptr-engine/longrun/tests/test_claim_mo…` | 0 | — |
+| `JOURNAL-LINT` | `JOURNAL-LINT` | `—` | author-report | `python3 experiments/ptr-engine/tools/handoff_lint.py orche…` | — | — |
+| `LATENCY-ERA-CENSUS` | `LATENCY-ERA-CENSUS` | `—` | author-report | `python3 -c "[fence-extract docs/LATENCY-ERA-CENSUS.md §10 …` | — | `f17663d1fed0…` |
+| `LATENCY-REPORT` | `LATENCY-REPORT` | `—` | partial | `python3 experiments/ptr-engine/longrun/analyze_stats.py --…` | — | — |
+| `LATENCY-REPORT-2` | `LATENCY-REPORT-2` | `—` | author-report | `python3 experiments/ptr-engine/tools/latency_report.py --r…` | — | — |
+| `LATENCY-UNDER-DISPUTE` | `LATENCY-UNDER-DISPUTE` | `—` | author-report | `python3 experiments/ptr-engine/tools/latency_report.py --r…` | — | — |
+| `LEDGER-CONSERVATIVE` | `LEDGER-CONSERVATIVE` | `—` | author-report | `python3 experiments/ptr-engine/tools/request_ledger.py --c…` | — | — |
+| `LINT-RECOVERED-STATUS` | `LINT-RECOVERED-STATUS` | `—` | author-report | `python3 -m pytest experiments/ptr-engine/longrun/tests/tes…` | — | — |
+| `LOST-FIXTURE` | `LOST-FIXTURE` | `—` | author-report | `python3 -m pytest experiments/ptr-engine/longrun/tests/tes…` | — | — |
+| `MATRIX-DECLARED-SPACE` | `MATRIX-DECLARED-SPACE` | `—` | author-report | `python3 experiments/ptr-engine/tools/matrix_audit.py --out…` | — | — |
+| `NEVER-ANSWERED-ROOT` | `NEVER-ANSWERED-ROOT` | `—` | partial | `—` | — | — |
+| `NEVER-ANSWERED-ROOT-2` | `NEVER-ANSWERED-ROOT-2` | `—` | author-report | `python3 experiments/ptr-engine/tools/never_answered.py --p…` | — | — |
+| `OPERATOR-BRIEF` | `OPERATOR-BRIEF` | `—` | author-report | `python3 -c '<H2: prompt_tokens and cached_tokens per arm f…` | — | — |
+| `OPERATOR-BRIEF-2` | `OPERATOR-BRIEF-2` | `—` | author-report | `python3 -c 'json.load(open("experiments/ptr-engine/measure…` | — | — |
+| `P95-POWER-DIGEST-FIX` | `P95-POWER-DIGEST-FIX` | `—` | author-report | `bash experiments/ptr-engine/measure/p95-power-verify.sh ->…` | 1 | — |
+| `P95-POWER-FROM-ROWS` | `P95-POWER-FROM-ROWS` | `—` | author-report | `python3 experiments/ptr-engine/measure/p95_power_gen.py (1…` | 0 | — |
+| `PAPER-FINAL-V` | `PAPER-FINAL-V` | `—` | pending | `—` | — | — |
+| `PAPER-FINAL-V2A` | `PAPER-FINAL-V2A` | `—` | partial | `—` | — | — |
+| `PAPER-FINAL-V2B` | `PAPER-FINAL-V2B` | `—` | partial | `—` | — | — |
+| `PAPER-FINAL-V2C` | `PAPER-FINAL-V2C` | `—` | author-report | `—` | — | — |
+| `PAPER-FINAL-V2D` | `PAPER-FINAL-V2D` | `—` | FAIL | `—` | — | — |
+| `PARM-1-ERRATA` | `PARM-1-ERRATA` | `—` | author-report | `python3 experiments/ptr-engine/tools/parm1_errata_check.py…` | 0 | — |
+| `PKG-VERIFY` | `PKG-VERIFY` | `—` | partial | `—` | — | — |
+| `PREREG-ARM-RUN` | `PREREG-ARM-RUN` | `—` | author-report | `python3 - sum prompt_tokens per arm from trials rows-longr…` | — | — |
+| `PROJECTION-CALIBRATION` | `PROJECTION-CALIBRATION` | `—` | author-report | `python3 experiments/ptr-engine/longrun/tests/test_projecti…` | — | — |
+| `PROJECTION-MODE` | `PROJECTION-MODE` | `—` | author-report | `—` | — | — |
+| `PROSE-VALUE-METRIC` | `PROSE-VALUE-METRIC` | `—` | author-report | `python3 experiments/ptr-engine/tools/asserted_value.py` | — | — |
+| `PUBLISHED-NUMBER-AUDIT` | `PUBLISHED-NUMBER-AUDIT` | `—` | author-report | `python3 -c json.load grade-v5 arms[arm].checkpoint_accurac…` | — | — |
+| `QUALITY-ERA-TABLE` | `QUALITY-ERA-TABLE` | `—` | author-report | `python3 experiments/ptr-engine/tools/regrade.py --all --re…` | — | — |
+| `QUALITY-REASON-MIX` | `QUALITY-REASON-MIX` | `—` | author-report | `python3 experiments/ptr-engine/tools/reason_mix.py` | — | — |
+| `RECLAIM-ACCEPTANCE` | `RECLAIM-ACCEPTANCE` | `—` | partial | `python3 -m unittest discover -s experiments/ptr-engine/lon…` | — | — |
+| `RECORD-STOP-REASON` | `RECORD-STOP-REASON` | `—` | author-report | `python3 experiments/ptr-engine/longrun/tests/test_record_s…` | — | — |
+| `REGRADE-ONE-COMMAND` | `REGRADE-ONE-COMMAND` | `—` | author-report | `python3 experiments/ptr-engine/tools/regrade.py --all --re…` | — | — |
+| `REGRADE-STAMP-WIRE` | `REGRADE-STAMP-WIRE` | `—` | author-report | `python3 -m pytest experiments/ptr-engine/longrun/tests/tes…` | — | — |
+| `REQUEST-LEDGER` | `REQUEST-LEDGER` | `—` | author-report | `python3 experiments/ptr-engine/tools/request_ledger.py --w…` | — | — |
+| `REQUEST-LEDGER-2` | `REQUEST-LEDGER-2` | `—` | author-report | `python3 experiments/ptr-engine/tools/request_ledger.py --w…` | — | — |
+| `ROW-PROVENANCE` | `ROW-PROVENANCE` | `—` | author-report | `python3 experiments/ptr-engine/tools/row_provenance.py` | — | — |
+| `RUNNER-WALL-KEY` | `RUNNER-WALL-KEY` | `—` | author-report | `python3 experiments/ptr-engine/longrun/tests/test_wall_key…` | — | — |
+| `SEAM-TEST-RED` | `SEAM-TEST-RED` | `—` | author-report | `python3 -m unittest discover -s experiments/ptr-engine/lon…` | — | — |
+| `STOP-REASON-AUDIT` | `STOP-REASON-AUDIT` | `—` | author-report | `python3 experiments/ptr-engine/tools/stop_reason_audit.py` | — | — |
+| `STOP-REASON-HOLES` | `STOP-REASON-HOLES` | `—` | author-report | `python3 experiments/ptr-engine/longrun/tests/test_stop_rea…` | — | — |
+| `TTFT-KIND-DEFINITION` | `TTFT-KIND-DEFINITION` | `—` | author-report | `—` | — | — |
+| `TURN-ROW-ATTRIBUTION` | `TURN-ROW-ATTRIBUTION` | `—` | author-report | `—` | — | — |
+| `TVS-CENSORED` | `TVS-CENSORED` | `—` | author-report | `python3 -c "import re,pathlib; ...write /tmp/tvs_censored.…` | — | — |
+| `TVS-DEFINE-AND-COMPUTE` | `TVS-DEFINE-AND-COMPUTE` | `—` | author-report | `python3 experiments/ptr-engine/tools/tokens_to_verified.py…` | — | — |
+| `TVS-REGRADE` | `TVS-REGRADE` | `—` | author-report | `python3 experiments/ptr-engine/longrun/grade_v5.py --rows …` | — | — |
+| `UNIT-JOURNAL` | `UNIT-JOURNAL` | `—` | author-report | `python3 -m unittest discover -s experiments/ptr-engine/lon…` | — | — |
+| `V-ANCHOR-PREREG` | `V-ANCHOR-PREREG` | `—` | partial | `—` | — | — |
+| `V-ARM-RECONCILE` | `V-ARM-RECONCILE` | `—` | PASS | `—` | — | — |
+| `V-C8-LAYER` | `V-C8-LAYER` | `—` | PASS | `—` | — | — |
+| `V-CLAIMAUD2` | `V-CLAIMAUD2` | `—` | PASS | `—` | — | — |
+| `V-DET` | `V-DET` | `—` | FAIL | `—` | — | — |
+| `V-DET-2` | `V-DET-2` | `—` | partial | `—` | — | — |
+| `V-DUPLICATE-RULE` | `V-DUPLICATE-RULE` | `—` | FAIL | `—` | — | — |
+| `V-ENGINE-P0` | `V-ENGINE-P0` | `—` | PASS | `—` | — | — |
+| `V-FINAL` | `V-FINAL` | `—` | PASS | `—` | — | — |
+| `V-FINAL2` | `V-FINAL2` | `—` | partial | `—` | — | — |
+| `V-FINAL3` | `V-FINAL3` | `—` | partial | `—` | — | — |
+| `V-FIXTURE-V7` | `V-FIXTURE-V7` | `—` | PASS | `—` | — | — |
+| `V-FIXTURE-V8` | `V-FIXTURE-V8` | `—` | PASS | `—` | — | — |
+| `V-FOLD` | `V-FOLD` | `—` | FAIL | `—` | — | — |
+| `V-FOLD-2` | `V-FOLD-2` | `—` | partial | `—` | — | — |
+| `V-FOLD-RESIDUAL` | `V-FOLD-RESIDUAL` | `—` | partial | `—` | — | — |
+| `V-GATE-CHAIN` | `V-GATE-CHAIN` | `—` | FAIL | `—` | — | — |
+| `V-GATE-CHAIN-2` | `V-GATE-CHAIN-2` | `—` | FAIL | `—` | — | — |
+| `V-GATE-CHAIN-3` | `V-GATE-CHAIN-3` | `—` | FAIL | `—` | — | — |
+| `V-GATE-OPERAND` | `V-GATE-OPERAND` | `—` | partial | `—` | — | — |
+| `V-GATE-REPIN` | `V-GATE-REPIN` | `—` | partial | `—` | — | — |
+| `V-INSTRUMENTS` | `V-INSTRUMENTS` | `—` | partial | `python3 experiments/ptr-engine/tools/request_ledger.py` | — | — |
+| `V-MATRIX-FOLD` | `V-MATRIX-FOLD` | `—` | PASS | `—` | — | — |
+| `V-PAPER-CLOSE` | `V-PAPER-CLOSE` | `—` | partial | `—` | — | — |
+| `V-PAPER2` | `V-PAPER2` | `—` | PASS | `—` | — | — |
+| `V-PAPER3` | `V-PAPER3` | `—` | partial | `—` | — | — |
+| `V-PKG-CORR` | `V-PKG-CORR` | `—` | FAIL | `—` | — | — |
+| `V-PKG-CORR2` | `V-PKG-CORR2` | `—` | PASS | `—` | — | — |
+| `V-QUALITY-ARM` | `V-QUALITY-ARM` | `—` | partial | `—` | — | — |
+| `V-R2-VLLM` | `V-R2-VLLM` | `—` | partial | `—` | — | — |
+| `V-R2-VLLM-RERUN` | `V-R2-VLLM-RERUN` | `—` | partial | `—` | — | — |
+| `V-R2.1` | `V-R2.1` | `—` | partial | `—` | — | — |
+| `V-REASON-MIX` | `V-REASON-MIX` | `—` | partial | `python3 - <<'EOF' ... walk 11 grade-v5 docs, key-set diff …` | — | — |
+| `V-RECON-ARCHIVED` | `V-RECON-ARCHIVED` | `—` | PASS | `—` | — | — |
+| `V-RECORD` | `V-RECORD` | `—` | partial | `—` | — | — |
+| `V-RECORD-2` | `V-RECORD-2` | `—` | partial | `—` | — | — |
+| `V-REPAIR-QP` | `V-REPAIR-QP` | `—` | PASS | `—` | — | — |
+| `V-REQUEST-IDENTITY` | `V-REQUEST-IDENTITY` | `—` | PASS | `—` | — | — |
+| `V-STAMP-NEUTRAL` | `V-STAMP-NEUTRAL` | `—` | partial | `—` | — | — |
+| `V-XSTACK` | `V-XSTACK` | `—` | FAIL | `—` | — | — |
+| `V-XSTACK2` | `V-XSTACK2` | `—` | partial | `—` | — | — |
+| `V2-CURRENT` | `V2-CURRENT` | `—` | FAIL | `—` | — | — |
+| `V8-DRYRUN-REFREEZE` | `V8-DRYRUN-REFREEZE` | `—` | author-report | `python3 experiments/ptr-engine/longrun/cell.py --dry-run -…` | — | — |
+| `VERDICT-ADOPTION` | `VERDICT-ADOPTION` | `—` | author-report | `—` | — | — |
+| `VERDICT-DISPUTE` | `VERDICT-DISPUTE` | `—` | FAIL | `python3 -c 'exec(open("orchestration/units/V-GATE-CHAIN-3.…` | 0 | `f17663d1fed0…` |
+| `VERDICT-READJUDICATE-27` | `VERDICT-READJUDICATE-27` | `—` | author-report | `python3 tools/audit/arms_parity_status.py -> exit 0 (C5_su…` | 0 | — |
+| `VERDICT-RITUAL` | `VERDICT-RITUAL` | `—` | author-report | `—` | — | — |
+| `VERIFY-BATCH-1` | `VERIFY-BATCH-1` | `—` | PASS | `—` | — | — |
+| `VERIFY-CENSUS` | `VERIFY-CENSUS` | `—` | partial | `python3 scratch/fixrun/check_digest_pins.py -> VERDICT FAI…` | 0 | — |
+| `VERIFY-CLASSIFIER-FIX` | `VERIFY-CLASSIFIER-FIX` | `—` | PASS | `—` | — | — |
+| `WAVE-ABC-VERIFY` | `WAVE-ABC-VERIFY` | `—` | partial | `—` | — | — |
+| `WIRE-CAP-GATE` | `WIRE-CAP-GATE` | `—` | author-report | `python3 -m unittest discover -s experiments/ptr-engine/lon…` | — | — |
+| `WIRE-CLAIM-MODE` | `WIRE-CLAIM-MODE` | `—` | author-report | `python3 experiments/ptr-engine/longrun/tests/test_claim_wi…` | — | — |
+| `WIRE-GATES` | `WIRE-GATES` | `—` | author-report | `python3 -m unittest discover -s experiments/ptr-engine/lon…` | — | — |
+| `WIRE-PROVENANCE-INTO-STATS` | `WIRE-PROVENANCE-INTO-STATS` | `—` | author-report | `python3 -m pytest experiments/ptr-engine/longrun/tests/tes…` | — | — |
+| `WITHDRAWN-INDEX` | `WITHDRAWN-INDEX` | `—` | author-report | `python3 experiments/ptr-engine/tools/withdrawn_index.py --…` | 0 | — |
+
+### Unrecoverable — 133 of 134 rows cannot carry a command, an exit and a sha
+
+A verdict row is worth only what its three fields are worth. Measured over the 134 rows above:
+
+| missing | rows | what is absent |
+|---|---|---|
+| none — complete | 1 | — |
+| `sha` | 11 | command and exit recorded, no commit named: the row proves a command exited N against *some* tree, not a named one |
+| `exit` and `sha` | 64 | the command text survives in the handoff evidence, its exit status never was: the row proves a command was **run**, not that it passed |
+| `command`, `exit`, `sha` | 58 | nothing but a stated outcome: a report, not a verdict — the gate never saw it |
+
+**The 133 cards carrying an outcome but no reconstructable command+exit+sha**, listed so silence is not mistaken
+for coverage: `ACCURACY-DENOMINATOR-RECOMPUTE`, `ADOPTION-AUDIT`, `ARM-INTEGRITY`, `ARM-TREATMENTS-FIRE`, `ATTACK-GRADE-V5`, `ATTACK-GRADE-V5-2`, `BUDGET-SCHEDULE`, `C8-CENSUS-FIX-V2`, `CACHE-CREDIT-CHAT`, `CAPGATE-FOREIGN-RED`, `CHECKPOINT-ITEMS-V2`, `CLAIM-ROW-STAMP`, `DEDUPE-ROOT-CAUSE`, `DRIVER-LOG-LINE`, `ENDPOINT-CAVEAT-FIX`, `ENDPOINT-STATE-NOW`, `EXIT-CODE-TABLE`, `EXIT-CODE-TABLE-2`, `FAILED-TRIAGE`, `FIXTURE-GENERATIONS`, `FIXTURE-TREATMENTS`, `FROZEN-TREE`, `GATE-CHAIN-FIX`, `GATE-OPERAND-VALIDATION`, `GRADE-V5-REPAIR`, `GRADE-V6-DERIVE`, `GRADER-STAMP`, `H1-CONDITIONING`, `HANDOFF-RECOVERY`, `HARNESS-MAP-V2`, `HARNESS-MAP-V3`, `HYPOTHESIS-SMOKE-MODE`, `JOURNAL-LINT`, `LATENCY-ERA-CENSUS`, `LATENCY-REPORT`, `LATENCY-REPORT-2`, `LATENCY-UNDER-DISPUTE`, `LEDGER-CONSERVATIVE`, `LINT-RECOVERED-STATUS`, `LOST-FIXTURE`, `MATRIX-DECLARED-SPACE`, `NEVER-ANSWERED-ROOT`, `NEVER-ANSWERED-ROOT-2`, `OPERATOR-BRIEF`, `OPERATOR-BRIEF-2`, `P95-POWER-DIGEST-FIX`, `P95-POWER-FROM-ROWS`, `PAPER-FINAL-V`, `PAPER-FINAL-V2A`, `PAPER-FINAL-V2B`, `PAPER-FINAL-V2C`, `PAPER-FINAL-V2D`, `PARM-1-ERRATA`, `PKG-VERIFY`, `PREREG-ARM-RUN`, `PROJECTION-CALIBRATION`, `PROJECTION-MODE`, `PROSE-VALUE-METRIC`, `PUBLISHED-NUMBER-AUDIT`, `QUALITY-ERA-TABLE`, `QUALITY-REASON-MIX`, `RECLAIM-ACCEPTANCE`, `RECORD-STOP-REASON`, `REGRADE-ONE-COMMAND`, `REGRADE-STAMP-WIRE`, `REQUEST-LEDGER`, `REQUEST-LEDGER-2`, `ROW-PROVENANCE`, `RUNNER-WALL-KEY`, `SEAM-TEST-RED`, `STOP-REASON-AUDIT`, `STOP-REASON-HOLES`, `TTFT-KIND-DEFINITION`, `TURN-ROW-ATTRIBUTION`, `TVS-CENSORED`, `TVS-DEFINE-AND-COMPUTE`, `TVS-REGRADE`, `UNIT-JOURNAL`, `V-ANCHOR-PREREG`, `V-ARM-RECONCILE`, `V-C8-LAYER`, `V-CLAIMAUD2`, `V-DET`, `V-DET-2`, `V-DUPLICATE-RULE`, `V-ENGINE-P0`, `V-FINAL`, `V-FINAL2`, `V-FINAL3`, `V-FIXTURE-V7`, `V-FIXTURE-V8`, `V-FOLD`, `V-FOLD-2`, `V-FOLD-RESIDUAL`, `V-GATE-CHAIN`, `V-GATE-CHAIN-2`, `V-GATE-CHAIN-3`, `V-GATE-OPERAND`, `V-GATE-REPIN`, `V-INSTRUMENTS`, `V-MATRIX-FOLD`, `V-PAPER-CLOSE`, `V-PAPER2`, `V-PAPER3`, `V-PKG-CORR`, `V-PKG-CORR2`, `V-QUALITY-ARM`, `V-R2-VLLM`, `V-R2-VLLM-RERUN`, `V-R2.1`, `V-REASON-MIX`, `V-RECON-ARCHIVED`, `V-RECORD`, `V-RECORD-2`, `V-REPAIR-QP`, `V-REQUEST-IDENTITY`, `V-STAMP-NEUTRAL`, `V-XSTACK`, `V-XSTACK2`, `V2-CURRENT`, `V8-DRYRUN-REFREEZE`, `VERDICT-ADOPTION`, `VERDICT-READJUDICATE-27`, `VERDICT-RITUAL`, `VERIFY-BATCH-1`, `VERIFY-CENSUS`, `VERIFY-CLASSIFIER-FIX`, `WAVE-ABC-VERIFY`, `WIRE-CAP-GATE`, `WIRE-CLAIM-MODE`, `WIRE-GATES`, `WIRE-PROVENANCE-INTO-STATS`, `WITHDRAWN-INDEX`.
+
+Only the complete rows may be read as evidence by a later gate call without re-running anything. Every other row is a
+pointer to a command that must be run again before it can settle a card.
+
+### Withdrawn numbers — do not cite
+
+**Pasted, not re-derived,** from `experiments/ptr-engine/measure/WITHDRAWN.json` (`WITHDRAWN-INDEX` settled `done`:
+**15 entries** = 8 seeded + 7 found; self-test 0 problems, guard `experiments/ptr-engine/tools/withdrawn_index.py`).
+By kind `{"wrong_unit": 1, "unsound_rule": 1, "wrong_denominator": 3, "retracted_finding": 8, "overstated_mechanism": 2}`; by status `{"withdrawn": 9, "superseded": 6}`; **1** row has no replacement at all; **3** carry a recorded discrepancy.
+
+Screen any draft with the register's own guard:
+
+```
+python3 experiments/ptr-engine/tools/withdrawn_index.py --check <file>   # exit 1 = withdrawn claim quoted without its correction
+python3 experiments/ptr-engine/tools/withdrawn_index.py --self-test      # every decided_by path exists
+```
+
+| id | claim as published | status | replacement / correction | decided by |
+|---|---|---|---|---|
+| `WI-001` | ≈466 of 4,320 requests used | withdrawn | 1,101 requests used (raw); 3,219 remaining of 4,320 — 466 counted turn rows only, not requests: the turn-row count is 801 and the artefact has no row … | `REQUEST-LEDGER` |
+| `WI-002` | requests 1,071 · remaining 3,249 | superseded | 1,101 requests used · 3,219 remaining (both already present as requests_raw / remaining_raw) — The 30-row deduction is visible but NOT applied: deduct… | `V-DUPLICATE-RULE` |
+| `WI-003` | accuracy 55/64 wilson95 n=64 0.8594 [0.7538, 0.9242] (undecidabl… | superseded | checkpoint_accuracy 3/3 (decidable 3) — 55/64 is a proportion over the run transcript's 64 TURN ROWS, printed as if it were checkpoint accuracy. The i… | `PUBLISHED-NUMBER-AUDIT` |
+| `WI-004` | p95 318.14 [235.00, 526.41] n=68 (G7 V4-TOOLS pointer-stable) | withdrawn | none — no replacement exists — Withdrawn on two independent grounds: the de-duplicated sample is 51 < the n>=60 order-statistic floor for p95 (n*(1-q)… | `LATENCY-UNDER-DISPUTE` |
+| `WI-005` | 5/43 mixes grader eras | withdrawn | 5/43 reproduced identically under det_verify.py sha256 12ccc74e… (pass 5, fail 38, missing 36, undecidable 13) — The charge is false: 5/43 is det_veri… | `QUALITY-ERA-TABLE` |
+| `WI-006` | pointer-stable grows like a transcript … reaches 217k at turn 48 | withdrawn | max prompt_tokens on any arm/grid = 34,279; pointer-stable turn 48 = 2,197; G4 pointer-stable slope 4.4433 tok/turn — 216,951 is not an endpoint: it i… | `V-ARM-RECONCILE` |
+| `WI-007` | 0 of 66 are wrong values | superseded | 0 of 66 on the ANSWER: line only; 5 cells assert a value in prose, 4 of them wrong (asserted_wrong 4, asserted_right 1) — True only of the graded ANSW… | `NEVER-ANSWERED-ROOT-2` |
+| `WI-008` | the gate chain has no surviving hole (the V-GATE-CHAIN-3 closure… | superseded | overall: fail — 6 bypasses survive; 0 of 3 decision expressions fully validated — 6 of 26 assertions encoded the bypasses as their pass condition, so … | `VERDICT-DISPUTE` |
+| `WI-009` | starts at 1,867 tokens | withdrawn | pointer-stable G4 turn 1 = 967 prompt tokens — No row on disk has prompt_tokens 1,867. Nearest are 1,864 (1 row) and 1,870 (13 rows), all G1 transcrip… | `V-ARM-RECONCILE` |
+| `WI-010` | a slope of 1.21x per turn (r = 0.9799) | withdrawn | 1.017614x/turn, i.e. 4.4433 tok/turn; OLS r = 0.3265 (log-linear 0.3113) — Self-inconsistent as well: 1,867->217,000 implies 1.1065x/turn at n=48 and … | `V-ARM-RECONCILE` |
+| `WI-011` | pointer-stable's p50 advantage is explained by 98.7 % prefix cac… | withdrawn | measured cached share 0.871157 (not 0.987) — Unsupported rather than arithmetically wrong: the arm's cached share measures 0.871157, so 98.7 % is not … | `V-ARM-RECONCILE` |
+| `WI-012` | run_longrun.py:436 reset at 6,000 vs :441 reset at 8,000 | withdrawn | 0 resets exist: :436 is `value = int(raw)` and :441 a CapUsageError line, both in allocation_for(); the only 8000 is TOOL_READ_CAP_CHARS at :209, and … | `V-ARM-RECONCILE` |
+| `WI-013` | transcript-grow 0.85x/turn, reaching ~620k | withdrawn | 1.061068x/turn (676.9636 tok/turn), 2,114 -> 34,279; the 901,109 figure is a 48-turn SUM (mean 18,773.1), not a prompt size — Same unit error as WI-00… | `V-ARM-RECONCILE` |
+| `WI-014` | accuracy 3/27 = 11.1 % (the stored grade_v5 headline) | superseded | 3/25 current (pointer-stable 3/10 after the one drifted grid); as-recorded form was 3/27 with pointer-stable 3/12 — One grid of 23 regraded pairs drif… | `V-ARM-RECONCILE` |
+| `WI-015` | accuracy 55/64 wilson95 n=64 0.8594 [0.7538, 0.9242] (undecidabl… | superseded | 3/3 (decidable implied by grade-v5) — Row proportion (64 rows) published as checkpoint accuracy; registered in PUBLISHED-NUMBERS.json as PN-002. arm t… | `PUBLISHED-NUMBER-AUDIT` |
+
+Quote rule from the register itself: `never` = do not repeat the number in any new document; `only with the correction
+attached` = the number may appear only beside its correction, instrument and sha. This table quotes each withdrawn
+claim **only as a labelled row beside its correction**, the one use the register permits.
+
+### What a verdict row can and cannot prove
+
+**It proves that one command exited with the recorded status against a named commit.** That is all. It does **not**
+prove the card's claim was true, because the command decides only what its assertions test — and the assertions are
+written by the same unit that wants to pass.
+
+The case that settles the argument is **`VERDICT-DISPUTE`** (`orchestration/journals/VERDICT-DISPUTE.jsonl`). A
+gate-chain closure presented a green attack script: **26 assertions, exit 0** — a row any ledger would book as PASS.
+Re-reading the script showed **6 of those 26 assertions encoded the bypass as their pass condition**:
+`B2_max_wall_1e308_allows`, `G_tiny_override_allows`, `H_artefact_zero_allows`, `D_turns0_H3_runs_full`,
+`D2_turns_neg_runs_full`, `I2b_cap_zero_passed_to_runner` each asserted `exit == 6` (the hole fires) and the suite
+called that green. Five of the card's eight surviving bypasses were thus asserted *as* PASS conditions; the smallest
+assertion that would have caught it is `assert by['B2_max_wall_1e308']['exit'] == 8`; and the card's own `overall` was
+**`fail`**. The PASS was supportable only as *"the attack script ran green"*, never as *"the gate chain has no
+surviving hole"* — a distinction the row itself cannot make. `WI-008` carries that withdrawal.
+
+Two consequences this ledger adopts. (1) **A row names its command.** A verdict whose command cannot be recovered
+(133 of 134 rows above) is a report; the gate must not read it as evidence. (2) **A PASS answers exactly the
+question its assertions ask.** Where a card's claim is larger than its assertion set, the row is `partial` at best
+however green its exit code.
+
+### needs_correction (recorded here, not edited)
+
+Existing lines found wrong or ambiguous. Per this card they are **named, not touched**:
+
+- `orchestration/STATUS.md:221` — `## 8. R2-VLLM instrument repair batch (2026-10-23/24)` already occupies section 8;
+  the section appended by this card is also `## 8. Current programme`, so STATUS.md now carries two §8 headings.
+- `orchestration/STATUS.md:320` — `## 9. SYS-OPT prompt system …` repeats the number of `:286` `## 9. Next structural
+  steps`. The duplication predates this card (it is why the new section follows the card's own heading instead of
+  inventing §11); a numbering pass over STATUS.md is owed.
+- `orchestration/VERDICTS.md:1-4010` — the ledger carried **no entry for this batch** until this append: measured
+  `sha256 d01359d2d127153b53b02d377af311e9ef03e98b0acac604b54be708e6a1cbde`, 424,582 B, 4,010 lines, last written
+  2026-10-25 02:39, i.e. **every PASS and FAIL this batch earned was missing from the file a fresh session reads
+  first**. The absence is what this card repairs; its cause (no unit was ever bound to journal its verdict here) is
+  recorded, not fixed.
+
+## PATH-REFS-BATCH-FIX — author measurement, 2026-10-26 (NOT a verifier verdict)
+
+The author's measured record, appended because the card's write list names this file. The gate call belongs to a
+verifier unit that is not this author; nothing here is a PASS.
+
+| Measure | Before | After |
+|---|---|---|
+| `path_refs.py` census `wrong_dir` | 794 | 645 |
+| `path_refs.py` census `missing` | 266 | 266 |
+| `path_refs.py --check` exit | 1 ("1057 known (baselined), 1054 new" at freeze; 3 new at pass start) | **0** ("911 known (baselined), 0 new") |
+| baseline anchors / occurrences | 752 / 1,057 | **641 / 911** |
+| citations substituted | — | **150 in 68 files** (54 distinct tokens) |
+
+Red→green on the guard, reproduced: `/tmp` tree carrying the shrunk baseline → clean document `--check` exit **0**; the
+deliberate bad citation `tests/test_exit_codes.py` appended → exit **1** (`0 known (baselined), 1 new`); removed → exit
+**0**. Token-only check: **68/68** files byte-identical after normalising every citation token to `<P>`.
+`docs/**/*.md` resolve rate **95.20 %** (1,863/1,957). Full evidence and the 68-row per-file table:
+[`orchestration/units/PATH-REFS-BATCH-FIX.md`](units/PATH-REFS-BATCH-FIX.md).
+
+| 2026-10-27T20:56:12Z | LEDGER-KIND-RULE | pass | 1321/2999, gap 0, 25/25 files agree, 7 tests OK, unknown kind refuses | remaining-1056=1943 fits |
+
+## Batch: Consonance bounded-context research (2026-11-03)
+
+**Batch membership rule (re-derivable, no judgement).** A card belongs here if its
+`orchestration/handoffs/*.json` names one of the two Consonance bounded-context deliverables
+(`research/next-candidates/consonance-bounded-context-report.md`,
+`…-evaluation.md`) as its `target`/`artifacts`, **or** it is a repair/recheck of such a card, **or** it is
+the close-out unit `SESSION-CLOSE-BC-2026-11-03`. Nothing is inferred from prose. **0 live requests,
+0 model calls, 0 target-repo writes** in every row; the ledger was not touched (2,591 spent / 1,729
+remaining of 4,320, `as_of` 2026-10-28). `—` in `command` means the row is a verifier verdict whose
+evidence is a list of named reads/recomputes rather than one shell line.
+
+| card id | shape | verdict | what decided it | calls / bound | command | exit |
+|---|---|---|---|---|---|---|
+| `V-CONSONANCE-BC-REPORT` | verdict | **`partial`** | A1–A9 pass (355 lines, sha `a60b311e…` unchanged; 8+ headlines traced; all 10 corrections present; recompute `C53` 18/18); **A10 fails** — E2 at ≤120 presented as deciding the premise | 35 / 60 | `.venv/bin/python papers/context-cache/recompute.py C53` | 0 |
+| `CONSONANCE-BC-REPORT-FIX` | unit | `done` | the four corrections applied; 23 changed lines, evidence ledger and §4 untouched; sha `a60b311e…` → `aae035df…` | — | `diff` vs pre-repair copy | — |
+| `V-CONSONANCE-BC-REPORT-RECHECK` | verdict | **`pass`** | 1a–1d, 2, 3, 5 pass; E2 = "one-rep descriptive (123 actual) / 369–450 adjudicable"; M1 at `README.md:27`; 1.8441 caveat; C54 wording | 16 / 20 | `/tmp/verify_bc_report.py` | 0 |
+| `V-CONSONANCE-BC-EVAL` | verdict + `status: done` | **`partial`** | 12/13 structural criteria, 59/59 invariants; **one material defect** (§6.3 `6,300` vs derived `7,560`) + four minor | 37 / 60 | `/tmp/check_protocol.py` | 0 |
+| `CONSONANCE-BC-EVAL-FIX` | unit | `done` | §6.3 → `5,040 + 2,520 = 7,560`, `4.37×`; caps `A 147 / B 150 / C 153`; E1 thresholds; falsifier cells; arm C `t40`; 505 → 517 lines, sha `1632c29f…` → `e53d8856…` | — | `grep -n '6,300\|3\.64'` → no matches | — |
+| `V-CONSONANCE-BC-EVAL-RECHECK` | verdict | **`pass`** | c1a–c5 pass (7,560 / 4.37×, caps, thresholds, falsifier cells, `t40`, no stale total, write scope, no live call); **c6 overrun** 25/20, reported not hidden | 25 / **20** | `/tmp/check_protocol.py` | 0 |
+
+### Verifier histories — each a `partial → repair → PASS` chain
+
+**Report.** `V-CONSONANCE-BC-REPORT` graded `partial` on exactly one finding: the report presented
+`E2-CHECKPOINT-COST` at the handoff's **≤120 calls** as deciding the premise and firing the falsifier,
+while protocol arithmetic gives `3 arms × 40 turns = 120 turn requests + 3 checkpoint requests = 123` for
+**one rep** — a descriptive probe by the workspace's own rule — and `3 × 123 = 369` for the adjudicable
+three-rep run, `450` with the 12-checkpoint fixture. `CONSONANCE-BC-REPORT-FIX` applied that correction
+plus three word-level ones (M1 quote moved to `handoff from consonance/README.md:27`; the `1.8441` figure
+kept only as a source-quoted rounding of `1.8438677`; "C54 forbids" → "C54 supplies no basis").
+`V-CONSONANCE-BC-REPORT-RECHECK` passed `1a–5`: no unqualified `120`/`123` survives near "decides the
+premise", and the 26-row evidence ledger is byte-intact (23 changed lines, all enumerated).
+
+**Protocol.** `V-CONSONANCE-BC-EVAL` passed 12 of 13 criteria and 59/59 invariants but graded `partial`
+on **one material arithmetic defect**: `5 arms × 420 turns × 3 reps = 6,300` silently prices arm D at one
+request per turn, though D is a two-request arm — `5,040` (A/B/C/E) `+ 2 × 420 × 3 = 2,520` = **7,560**,
+i.e. **4.37×** of the 1,729 remaining, not 3.64×. `CONSONANCE-BC-EVAL-FIX` corrected that and four minor
+items (per-arm caps, E1 control thresholds, falsifier cells, arm C's `t40`). The recheck re-derived every
+number, found no stale `6,300`/`3.64×` anywhere in the protocol, and passed.
+
+### Plan clauses checked (both artifacts, independently)
+
+- **Report traces each headline to its original** — `RECORD.md` §1 `30000/447 = 67.1141` (body/index
+  **bytes**, not tokens, cost or latency); `RECORD.md` §4 A 3/3 · B 0/3 (33× `PTR_STORE_MISS`) · C 3/3 ·
+  D 0/3; `GRID-2-FINAL` H1 p50 `156.151 ms [146.306, 291.926]`, n=48, `n_eff 26.14`, p95 refused; H3
+  `x/12` placeholders; TVS `UNDEFINED`; `CLAIMS.md` C54 `258,035–266,636`; C53 mean `6.744331504` vs
+  ratio-of-totals `6.063360882`; `CONSONANCE-INTEGRATION` §A `1,8441×`; `CLAIM-HEALTH` SAFE 7 / BLOCKED
+  13; `CLAIM-SENSITIVITY` SURVIVES 1 / MOVES 12.
+- **All ten corrections present** — bytes-not-tokens; 3/3 = narrow capability; gen-6 `not_adjudicable`;
+  C54 is a server-wide resident set under one pressure; body-store retention ≠ KV/state cache;
+  `cached_tokens: null` unknown except the SGLang `:8012` endpoint/field case, never a schema-wide zero;
+  append-only still grows; no universal padding/residue/pinning/no-compaction; residue engine-specific;
+  `6.744` is a mean of eight ratios; `BOUNDARY-PREREG` separate and unexecuted.
+- **One proposed system, contract fields only** — `consonance.call/1` / `consonance.fixture/1` keys only;
+  no `consonance.fetch/1` invented; no Rust or omp API invented; prompt tokens, external storage, index
+  work and rebuild cost stated as separate quantities; exponential prompt growth denied outright.
+- **Protocol order and budgets** — E1 `≤60` (36 planned: 12 controls + 24 offsets) then E2; five paired
+  arms (full transcript, existing compaction, masking without fetch, bounded+pointer/fetch, oracle
+  upper-bound) on a **shared fixture/fingerprint** requirement; positive **and** negative controls;
+  `NOT_FOUND` / `STALE_OR_REVOKED` / `SCOPE_UNGRANTED` controls; falsifier and call budget per arm;
+  horizons 10/30/60 × 3 reps; `min_n_for(0.95) = 60` with p95 refused at n=48.
+- **Absence is not success** — the worked hypothetical `HYP-ABSENT-01`: a bounded arm records a
+  retrieval miss and `verified_success: false` with `tokens_to_verified_success: null` ("undefined, not
+  zero"); the oracle arm may answer only if the fact is inside its budget; an arm that answers anyway is
+  named a protocol failure. Multi-hop and stale/revoked fixture classes are **absent** and recorded
+  `UNAVAILABLE` / `NOT_OBSERVED`.
+- **Separation** — `BOUNDARY-PREREG` (696 scheduled, ceiling 810, registered 2026-10-26T01:22-0500) is
+  not executed, not approved, not E1/E2 and never pooled; the handoff's `E1`/`E2` are not the mechanism
+  batch's `E1 fork-break-cost` / `E2 cache-forensics` (`orchestration/STATUS.md` §7.1).
+- **No live call, no spend** — verified by command lists (0 of 6/6 request-making), same-day mtime
+  sweeps, and the absence of any new row/measure/ledger file. This is a checked negative, not a proof.
+
+### Red→green (each checker fails on a mutated number)
+
+| Checker | Green | Red |
+|---|---|---|
+| `/tmp/verify_bc_report.py` (report) | PASS, exit 0 — 10 corrections + 24 headline numbers + 7 arithmetic checks; post-repair **67/67** invariants | number-altered mutant (`32,401 → 34,201`, 3 sites) → FAIL exit 1 `C2 narrow capability: missing 32,401`; `123 → 120` on the E2 line → FAIL once the "E2 sentence exact" assertion was added (the first version of that check was too loose and was tightened after the mutant passed) |
+| `/tmp/check_protocol.py` (protocol) | 59/59 on the pre-repair text, **67/67** after the repair, EXIT 0 | `450 → 440` → `AssertionError: e2_arithmetic :: 369/440`, EXIT 1; post-repair `7,560 → 6,300` → `AssertionError: comparative_arithmetic_7560`, MUTANT_EXIT=1 |
+
+### Gate call
+
+**`advance — accepted; no live run`.** Both artifacts ship as a research recommendation and a
+preregistered protocol. The two `partial` verdicts are *"a statement corrected against its arithmetic"*,
+not rejected artifacts, and each correction was re-verified by a unit that wrote none of the text.
+
+**Next, and the only licensed next:** `E1-CACHE-BOUNDARY-SWEEP` at ≤60 calls (ledger reconciled first),
+then `E2-CHECKPOINT-COST` at an **owner-approved** budget — `123` descriptive, `369` adjudicable, `450`
+with the 12-checkpoint fixture. The comparative is **7,560 / 1,729 = 4.37× ⇒ `UNFUNDED`**; the 185-call
+pilot is the funded alternative. Quality arms stay blocked on the fixture/grader owner
+(`PATH-CANNOT-SAY-YES`, E-17).
+
+### Residual, recorded not edited
+
+- `orchestration/units/CONSONANCE-BC-EVAL.md:42` still quotes the pre-fix `6,300 (3.64×)` as the original
+  unit's record. It is outside the repair's write paths; the corrected protocol supersedes it. A later
+  unit may annotate it; historical verdicts are **not** edited.
+- `orchestration/handoffs/V-CONSONANCE-BC-EVAL.json` quotes `6,300` by design — it is the verdict that
+  *found* the defect.
+- `V-CONSONANCE-BC-REPORT-RECHECK`'s two `unverified` items (E2 arithmetic and the "descriptive-only"
+  argument) are arithmetic/design checks, not measurements; nothing here tests them.
+- `V-CONSONANCE-BC-EVAL-RECHECK` overran its own 20-call bound (25) while localising two moved phrases and
+  adding the mutation test; recorded in the row, not hidden.
+
+## Batch: paper candidates after the 2026-10-24 compile (2026-11-04, **verdict: pass-with-corrections**)
+
+**What this batch is.** Not an experiment and not a measurement: a candidate survey answering "which single
+paper can this workspace publish from the work produced since `papers/context-cache/MANUSCRIPT.md` was sealed
+(2026-10-24 21:39)?". Four one-page briefs, one recommendation, one independent re-check. **0 endpoint
+requests, 0 model calls, 0 target writes**; ledger untouched (2,591 / 1,729 of 4,320).
+
+**Artifacts.** `research/next-candidates/2026-11-04-candidates.md` (index + correction table) and
+`research/next-candidates/briefs/{N1-residue-law,N2-instrument-liveness,N3-the-wall,N4-finish-flagship}.md`.
+Recorded on branch `research/paper-candidates-2026-11-04` (`f28e2ef` → `c8b7b7e` → close-out), parented on
+`f17663d`, not on `research/next-candidates-2026-10-24`.
+
+### What survived re-checking
+
+| claim | how checked | result |
+|---|---|---|
+| append law, SGLang B=64 | `LAW.md:84-95` fit table + 3 reps/residue over P1 8000–8063 | **holds**: residual 0 in 186/186 rows |
+| the cliff | residues {0,1}, 6 rows | **holds as a class change**: 6/6 misses, `uncached` 8,013/8,014 vs predicted 13/14 |
+| residue-not-position | 11 rows across six block indices | **holds**: 11/11 |
+| vLLM `+B` | step position (5,280 through P1 7330, 6,336 at 7,396 = 7×1056) | **holds as stated**, single counter — wants independent re-derivation |
+| rival explanation for the sign flip | boundary term ≤ 6×63 = 378 of a 10,244-token swing | **refuted**: ≤3.7 % |
+| N4's uncited cells and horizon | `cells/{E1,E2,E3,E4,E4R,LIVE-MEAS,M1-M}` vs `MANUSCRIPT.md`/`CLAIMS.md` | **holds**: seven batches uncited; 1.2988 [1.2147, 1.3828] at 80 turns missing from the abstract |
+
+### Corrections the re-check forced (folded in, not silently dropped)
+
+1. the positional control spans **six** block indices, not four — `LAW.md:116`'s prose undercounts its own list;
+2. the two instruments **disagree on absence** at residue 0 (`/generate` 8,000 vs `usage` null), so the 5.2×
+   stays **UNDECIDABLE** (`RECORD.md:114`, `orchestration/units/RECON-C1.md`);
+3. `L − 64` recovery (E4 rep2 `cached = 960` ×20; E4R 40/40) and `LAW.md`'s 7,936 miss are **different request
+   shapes** — second byte-identical repeat vs fresh cold prime;
+4. the crossover cells are **+44.9 % / −95.6 %** (`crossover/RESULTS.md:52,54`); `+44.8 %` is `TABLES.md:32`;
+5. the padding rule is **positive under every reading** (≈64 tokens counter reading; ≈`P1 − r` null reading);
+6. C9 / FOLD bucket (iii) is superseded **only as a bar to the residue law**; C9 still governs HARVEST's 378
+   rows (`experiments/ptr-engine/ADOPTION.md:38`).
+
+### Red→green
+
+The re-check is falsifiable in the way that matters here: each corrected number was re-read from its row file
+(`rows.jsonl`, `crossover/RESULTS.md`, `e4r_rows.jsonl`), not from prose, and the do-not-carry list names the
+claims that would have survived a prose-only reading. **Limit, recorded:** the six corrections were applied by
+the same writer that composed the brief; there was no second verifier after the repair, so this section is a
+*pass-with-corrections*, not a verified `pass`.
+
+### Gate call
+
+**`advance — research recommendation accepted; no paper written, no cell run.`** N1 is the paper, N4 is the
+free unlock behind it, N3 waits on ≈920 requests, N2 folds into N1 as the "what a hit is" section unless kept
+as a standalone workshop paper.
+
+### Residual, recorded not edited
+
+- **Independence is partial.** N1 was re-derived by a unit that wrote none of it; **N2, N3 and N4 were not**
+  independently re-derived, and all four briefs were materialised by the parent because every unit's toolset
+  was read-only despite its card naming a write path. N1's own re-check also reported that its
+  `decompress`-toFile probe may have written transcript bytes to the brief's path; the file was verified
+  byte-identical to the branch commit afterwards (`MATCH` for all five paths), so the clobber — if it landed —
+  did not survive.
+- **Not run, and the reason is funding not doubt:** the 9-request decisive cell (P1=8000 prime → identical
+  resend → three appends, both instruments). Until it runs, the cliff's charged magnitude is undecidable and
+  N1 must say so in its own text.
+- **The instruments' dispute is not resolved by this batch.** `RECON-C1` already graded it UNDECIDABLE; nothing
+  here narrows it. That is the honest state of the strongest claim in the strongest candidate.
+- `research/next-candidates/2026-10-24-sweep.md` remains the previous sweep and is not superseded by this one —
+  it covers a different window and its `P1` (the wall) is now candidate N4/N3 here. The two files should be
+  read together; neither should be deleted.
