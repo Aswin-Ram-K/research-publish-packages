@@ -1,0 +1,138 @@
+{
+ "unit": "GRID-RUN-2",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/measure/GRID-RUN-2.json",
+  "docs/GRID-RUN-2.md",
+  "experiments/ptr-engine/measure/rows-cell-*.jsonl (16 files, one per cell)",
+  "orchestration/units/GRID-RUN-2.md",
+  "orchestration/handoffs/GRID-RUN-2.json",
+  "journal/2026-10-27.md"
+ ],
+ "evidence": {
+  "command_or_count": "16/16 cells run; 6 usable (pointer-stable 4, lease-reopen 2), 8 excluded_by_stamp, 2 refused exit 4; spent 2591/4320, remaining 1729, delta +1270, ledger gap 0 at 15/15 re-checks; verdict row pass exit 0 tree 33ee2f5b unchanged",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/run_a_star.py --cell N --tools read_file  (N=1..16, NEARLY: env RUN_A_STAR_LEDGER_LIVE pointing at a recomputed scratch ledger)",
+   "python3 experiments/ptr-engine/tools/request_ledger.py --write .scratch/grid2/ledger.json",
+   "python3 experiments/ptr-engine/tools/run_grid_report.py --rows <16> --grade <14> --manifest-dir measure --sanity .scratch/grid2/sanity.json --ledger .scratch/grid2/ledger.json --baseline measure/LEDGER-GRID-BASELINE-4.json --print",
+   "python3 experiments/ptr-engine/tools/tree_freeze.py --wrap .scratch/grid2/VERDICT-REC-2.json --path <18 declared> --verdict-row -- bash -c \"<report command>\""
+  ],
+  "counts": {
+   "cells_attempted": 16,
+   "cells_usable": 6,
+   "cells_excluded_by_stamp": 8,
+   "cells_refused_exit4": 2,
+   "spend": 2591,
+   "remaining": 1729,
+   "cap": 4320,
+   "delta_vs_baseline_4": 1270,
+   "price_line": 1056,
+   "report_verdicts": {
+    "h1": "not_adjudicable_floor",
+    "h2": "not_adjudicable",
+    "h3": "not_adjudicable",
+    "tvs": "UNDEFINED"
+   },
+   "cell_py_sha256": "c494e212679f8e73c84226cf486566d0716559c0f2cd677f20845b24057baf86"
+  },
+  "verdict_row": {
+   "record": ".scratch/grid2/VERDICT-REC-2.json",
+   "verdict": "pass",
+   "exit_code": 0,
+   "tree_sha256_before": "33ee2f5bd5ed4f198bf43471f5d8afa327edcb8d448eea2fce9afe92cd43af01",
+   "tree_sha256_after": "33ee2f5bd5ed4f198bf43471f5d8afa327edcb8d448eea2fce9afe92cd43af01",
+   "moved": [],
+   "deleted": [],
+   "created": [],
+   "head": "f17663d1fed0162a7dc3c5a0a58d372c710974c3"
+  },
+  "h1": {
+   "pointer-stable": {
+    "p50": 156.151,
+    "ci": [
+     146.306,
+     291.926
+    ],
+    "n": 48,
+    "r_lag1": 0.2949,
+    "n_eff": 26.14
+   },
+   "lease-reopen": {
+    "p50": 198.395,
+    "ci": [
+     130.843,
+     270.899
+    ],
+    "n": 48,
+    "r_lag1": -0.1188,
+    "n_eff": 60.95
+   },
+   "binding_arm": "transcript-grow (zero usable cells; no C/A pair)"
+  },
+  "h2": {
+   "pointer-stable": {
+    "cached_inclusive_per_turn": 5395.09,
+    "uncached_per_turn": 355.62,
+    "sign": 1,
+    "n": 364
+   },
+   "lease-reopen": {
+    "cached_inclusive_per_turn": 1497.85,
+    "uncached_per_turn": 332.28,
+    "sign": 1,
+    "n": 184
+   }
+  },
+  "h3": {
+   "x_12": 0,
+   "x_9": 0,
+   "answered_ratio": 0.0,
+   "contract_adherence": "pre-check column; not folded into accuracy",
+   "none_flagged": [
+    "cp.3.t14 pass",
+    "cp.5.t20 undecidable",
+    "cp.10.t42 pass"
+   ]
+  },
+  "verbosity": {
+   "pointer-stable": {
+    "completion_tokens": 72.65,
+    "answer_chars": 80.95,
+    "n": 372
+   },
+   "lease-reopen": {
+    "completion_tokens": 78.73,
+    "answer_chars": 54.48,
+    "n": 187
+   }
+  },
+  "forbidden_untouched": {
+   "cell.py": "c494e212679f8e73c84226cf486566d0716559c0f2cd677f20845b24057baf86",
+   "request_ledger": "3f879fa424105319cf87b6f571ac88424ccad9d394e052ac65a00c359fe2968a",
+   "harness_pin": "fc1b56856def43ba988f6a5d8c6e25ec719463c5774094d6d45cf3e9900fad1a",
+   "grid_params": "10596c5442154990fd2c9f160d016638cb98e62c4a190eaf553c2816cc3a7898"
+  }
+ },
+ "blocker": "Two harness-side gaps, both reported not repaired: (1) cell.py nests rows_path under run.rows_path so analyze_stats.load_cell_manifests cannot link rows to stamps (report needs a census); (2) the transcript-grow and transcript-compact treatments do not fire inside 48 turns (evicted_turns=0, digest_rows=0), so their 8 cells are stamped unusable and the C/A pair is empty \u2014 H1/H2/H3/TVS cannot be adjudicated until the treatments fire or the horizon is extended.",
+ "next_unit_hint": "Harness-owning card: (a) write rows_path at the manifest top level (or teach load_cell_manifests to read run.rows_path); (b) fix why the transcript wall/digest never fires at 48 turns with 5\u201312.5k prompt tokens (preflight claims first wall at T21) and why the runner cap gate refuses pointer-stable cells at T47/T48 with 94 requests against a projected allocation; then re-run the two transcript arms (8 cells \u2248 700 requests). Do NOT re-run pointer-stable/lease-reopen cells already stamped usable.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/rows-cell-*.jsonl",
+  "experiments/ptr-engine/measure/GRID-RUN-2.json",
+  "docs/GRID-RUN-2.md",
+  "orchestration/units/GRID-RUN-2.md",
+  "orchestration/handoffs/GRID-RUN-2.json",
+  "journal/2026-10-27.md",
+  ".scratch/grid2/"
+ ],
+ "assumptions": [
+  "repository REQUEST-LEDGER.json left untouched; spend attributed via a recomputed scratch ledger passed through the launcher documented RUN_A_STAR_LEDGER_LIVE hook (precedent: execution 1 of this card)",
+  "the report census (.scratch/grid2/sanity.json) is derived from the manifests themselves; usable_for copied verbatim, [] only for the two manifests-absent exit-4 cells",
+  "exit 4 (runner cap-gate refusal) is treated as an unusable, never-pooled cell (rows kept, named); the three-abandon stop rule counts exit-6 abandons only, of which there were none"
+ ],
+ "prior_execution": {
+  "execution": 1,
+  "status": "failed",
+  "cells": 0,
+  "blocker": "launcher ledger gap"
+ }
+}

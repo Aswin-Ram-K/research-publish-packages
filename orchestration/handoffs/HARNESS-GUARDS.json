@@ -1,0 +1,61 @@
+{
+  "unit": "HARNESS-GUARDS",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/client.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/cell.py",
+    "experiments/ptr-engine/longrun/tests/test_guards.py",
+    "experiments/ptr-engine/measure/RUNAWAY-INCIDENT.md",
+    "orchestration/units/HARNESS-GUARDS.md"
+  ],
+  "evidence": {
+    "command_or_count": "python3 experiments/ptr-engine/longrun/tests/test_guards.py -> 6/6 GREEN, exit 0 (each case carries its red half); test_cell.py Ran 7 tests OK; test_client_ttft.py 8/8; test_wire_client.py 18/18; preflight projection for a 48-turn v5 cell: projected_wall=8640s vs cap=3600s -> exit 8",
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/tests/test_guards.py",
+      "python3 experiments/ptr-engine/longrun/tests/test_cell.py",
+      "python3 experiments/ptr-engine/longrun/tests/test_client_ttft.py",
+      "python3 experiments/ptr-engine/longrun/tests/test_wire_client.py",
+      "python3 experiments/ptr-engine/longrun/tests/test_tool_channel.py",
+      "python3 -m pytest experiments/ptr-engine/longrun/tests_thinking_flag.py -q",
+      "python3 -m py_compile experiments/ptr-engine/longrun/{client,run_longrun,cell}.py experiments/ptr-engine/longrun/tests/test_guards.py"
+    ],
+    "red_green": {
+      "a": "pre-fix payload (no max_tokens) fails _require_max_tokens; the client payload passes",
+      "b": "capped stream raises TurnWallCap and the fake response is closed; the same fold without wall_cap_s reads to the end",
+      "c": "--runaway-turns 2 -> exit 6 with 2 partial rows; --runaway-turns 99 -> exit 0 with 4 rows",
+      "c2": "row error=turn_wall_cap, truncated=true, ttft_source=first_delta, first_token_kind=reasoning, ttft_ms != wall_ms",
+      "d": "default -> exit 8, runner marker absent; --max-wall 0 -> runner marker written (rc != 8)",
+      "e": "DEFAULT_THINKING=off and row thinking=off; thinking=auto omits chat_template_kwargs"
+    },
+    "projected_wall_48_turn_v5_cell": 8640,
+    "pre_existing_failures": [
+      "tests/test_tool_channel.py assertion_f_followup_accounting: rounds==3 vs TOOL_FETCH_ROUNDS_PER_ARM (fetch-round accounting; untouched by this unit)",
+      "tests_thinking_flag.py::test_unknown_setting_is_refused: thinking_kwargs('maybe') does not raise (thinking_kwargs untouched by this unit)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Re-run the live cell that was cancelled (dbed0e9d) with the new defaults (max_tokens=4096, thinking=off, --turn-wall-cap 180, --runaway-turns 2) and a raised --max-wall only when the projection is accepted on purpose; compare the first-runaway turn against rows-cell-pointer-stable-20261026T145758Z.jsonl.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/client.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/cell.py",
+    "experiments/ptr-engine/longrun/tests/test_guards.py",
+    "experiments/ptr-engine/measure/RUNAWAY-INCIDENT.md",
+    "orchestration/units/HARNESS-GUARDS.md",
+    "orchestration/handoffs/HARNESS-GUARDS.json"
+  ],
+  "assumptions": [
+    "The wall cap is checked when a chunk arrives; a server that stalls without emitting stays bounded by --timeout (unchanged).",
+    "completion_tokens on an aborted turn is the count of emitted delta pieces, not a server usage figure (the usage chunk never arrives on a closed stream).",
+    "A wall-cap on a digest/planning request aborts the cell immediately with exit 6 (no partial turn to resume).",
+    "The projection check runs immediately after stage_budget rather than inside stage 1: it needs the dry-run would_send_total and must not preempt the contracted budget refusal (exit 3) in tests/test_cell.py::check_budget_refusal; no live request has been sent at that point.",
+    "--max-wall 0 disables the projection (used only by the red half of test (d))."
+  ],
+  "bounds": {"tool_calls_declared": 30, "inference_requests": 0},
+  "orders_kept": [
+    "grade_v5.py / analyze_stats.py / fixture / historical row and grade files untouched",
+    "rows-cell-pointer-stable-20261026T145758Z.jsonl untouched (6 rows read, never modified)",
+    "--dry-run still offline; every existing CLI flag still works"
+  ]
+}

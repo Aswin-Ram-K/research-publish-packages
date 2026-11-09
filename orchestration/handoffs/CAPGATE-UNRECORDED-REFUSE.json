@@ -1,0 +1,46 @@
+{
+ "unit": "CAPGATE-UNRECORDED-REFUSE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_cap_gate.py",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/CAPGATE-UNRECORDED-REFUSE.md",
+  "orchestration/handoffs/CAPGATE-UNRECORDED-REFUSE.json",
+  "orchestration/journals/CAPGATE-UNRECORDED-REFUSE.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "13 passed, exit 0, zero requests; cell.py sha unchanged e24e867b8fe9eec7d1344f5738d9f04022f9f5d0968fa0f575ab9c30e6edf013; run_longrun.py sha after 29445320c205bfe8c5d52ba150054cdbb4a915f598f0f56588e1b174a9069a61",
+  "commands": [
+   "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_cap_gate.py -> 13 passed, exit 0",
+   "red delta<0: AssertionError: 0 != 9 ... CAP GATE UNRECORDED (delta=-1) ... reported, never silent -> after fix exit=9",
+   "red delta==0 (rc forced 7): AssertionError: 7 != 0 -> restored, exit 0",
+   "red delta>0 (rc assignment removed): AssertionError: 0 != 9 -> restored, exit 9",
+   "red pre-send (over_cap disabled): AssertionError: 0 != 4 -> restored, exit 4, 0 rows, 0 calls"
+  ],
+  "sha": "29445320c205bfe8c5d52ba150054cdbb4a915f598f0f56588e1b174a9069a61",
+  "cell_py_sha": "e24e867b8fe9eec7d1344f5738d9f04022f9f5d0968fa0f575ab9c30e6edf013",
+  "refusal_line": "CAP GATE UNRECORDED (delta=-1) — refusing, exit 9: 1 request(s) reached the wire but their rows were not written before the run stopped (used_in_run=1 rows_gained=0 headroom_before=4310 headroom_after=4310 rows=/tmp/.../rows-cell.jsonl); rows were not persisted, so the ledger cannot be trusted for the next check — it would grant 1 request(s) beyond the true headroom."
+ },
+ "blocker": "",
+ "next_unit_hint": "delta<0 now exits 9 through the conductor unchanged. A distinct unrecorded code would need exit_codes.EXIT_TABLE + its source-scan test + docs/EXIT-CODES.md (different card); 9 is reused deliberately.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_cap_gate.py",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/CAPGATE-UNRECORDED-REFUSE.md",
+  "orchestration/handoffs/CAPGATE-UNRECORDED-REFUSE.json",
+  "orchestration/journals/CAPGATE-UNRECORDED-REFUSE.jsonl"
+ ],
+ "write_paths_deviations": [
+  "card listed experiments/ptr-engine/longrun/cell.py; the gate has no code there (grep: no RequestCapGate/reconcile/spent_at_start/UNRECORDED), so the fix is in run_longrun.py where _gate_finish lives; cell.py untouched"
+ ],
+ "assumptions": [
+  "EXIT_CAP_DIVERGENCE=9 is the correct refusing code per the card; a distinct unrecorded code is a recommendation only."
+ ],
+ "tool_calls": 20,
+ "bound": 24,
+ "live_requests": 0,
+ "network": false,
+ "containment": "offline tests only; no rows/grade/REQUEST-LEDGER/spawn_record/PARM-1 edits"
+}

@@ -1,0 +1,62 @@
+{
+ "unit": "LEDGER-RECONCILE-DELTA",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-3.json",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/tests/test_ledger_reconcile.py",
+  "docs/LEDGER-RECONCILE.md",
+  "orchestration/units/LEDGER-RECONCILE-DELTA.md",
+  "journal/2026-10-26.md"
+ ],
+ "evidence": {
+  "command_or_count": "CANARY DRY RUN GREEN: exit 0, canary_arms=4 canary_requests=48 refused=0, RECONCILE baseline=1176 attributed_delta=0 live=1176 explained=1176 gap=0. New suite: 9 passed. Affected suites: 55 passed / 3 failed (all 3 pre-existing stale 3192 pins). Full ptr-engine: 364 passed, 10 failed, 1 xfailed.",
+  "commands": [
+   "python3 -c 'request_ledger.build_report(sorted(glob(measure/rows-*.jsonl)), 4320, 0, 0)' -> requests 1176 / remaining 3144 over 19 files, identical to the on-disk REQUEST-LEDGER.json (generated_at 2026-10-26T22:33:00Z)",
+   "/usr/bin/python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --hypothesis smoke --max-wall 900 --dry-run -> exit 0; RUN-A RECONCILE baseline=1176 attributed_delta=0 live=1176 explained=1176 gap=0 as_of=2026-10-26T22:33:00Z files=none; RUN-A DRY END cells=4 refused=0 requests=0 claim=smoke turns=12 max_wall=900.0 canary_arms=4 canary_requests=48",
+   "same dry run with RUN_A_STAR_LEDGER_BASELINE=v2-copy, RUN_A_STAR_LEDGER_LIVE=live+7 -> exit 1: REFUSED: 7 request(s) of ledger gap cannot be attributed to any rows file billed after 2026-10-26T19:04:18Z -- baseline=1128 + attributed_delta=48 = 1176, live=1183, unexplained=7",
+   "same dry run with baseline v2 + live unchanged -> exit 0: RECONCILE baseline=1128 attributed_delta=48 live=1176 explained=1176 gap=0 files=<the four 12-row files, each with sha12>",
+   "same dry run with baseline path missing -> exit 1: REFUSED: ledger baseline /tmp/.../does-not-exist.json is missing or carries no `remaining`, so no delta can be attributed; live ledger is 1176 requests / 3144 remaining",
+   "/usr/bin/python3 experiments/ptr-engine/tools/ledger_delta.py --baseline experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-3.json -> spent_before 1176, spent_now 1176, delta 0, remaining 3144, rows_guard checked 19, verdict OK",
+   "/usr/bin/python3 experiments/ptr-engine/tools/ledger_delta.py --baseline experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-2.json -> delta 48 (1128 -> 1176), rows_guard_new = the four 20261026T20xx files, verdict OK",
+   "python3 -m pytest experiments/ptr-engine/tests/test_ledger_reconcile.py -q -> 9 passed",
+   "python3 -m pytest test_ledger_reconcile + test_launcher_pin_and_cells + test_ledger + test_request_ledger_sound + test_request_ledger_dedup -q -> 3 failed, 55 passed",
+   "python3 -m pytest experiments/ptr-engine/tests -q -> 10 failed, 364 passed, 1 xfailed"
+  ],
+  "before_this_card": "test_launcher_pin_and_cells.py was 6 failed / 6 passed, all six tracebacks the same SystemExit at run_a_star.py:233 'ledger records disagree on `remaining`' \u2014 the deadlock, not a test defect.",
+  "negative_proof_detail": "(a) baseline+delta < live by 7 unattributed -> REFUSED naming 7 and listing the four attributed files; (b) baseline+delta == live -> allowed, exit 0; (c) baseline missing -> refused by name. Red->green: with both refusal branches removed (`if False and ...`) the same +7 case exits 0, so the guard is load-bearing (test_reverted_delta_check_lets_the_seven_through).",
+  "offline": "every launcher invocation was --dry-run; a recorder test asserts 4 children, each carrying --dry-run, and fails on socket()/create_connection(); no cell.py live launch, no request spent, no network."
+ },
+ "verdict_recorded_before_handoff": true,
+ "verdict_row": {
+  "command": "bash -lc 'cd \"/home/zer0null/reserach extarctor\" && python3 -m pytest experiments/ptr-engine/tests/test_ledger_reconcile.py -q'",
+  "exitCode": 0,
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "measured_beside": "canary dry run exit 0 with canary_arms=4 canary_requests=48 refused=0 (see evidence.commands)",
+  "note": "orchestration_verdict refuses an absolute /usr/bin/python3 (command-not-allowed, 'only test/build runners'), so the local runs above use the absolute path while the recorded row is the bare `python3 -m pytest` form the plugin accepts.",
+  "grid_may_launch": true
+ },
+ "blocker": "",
+ "next_unit_hint": "The gate is open: measure/HARNESS-PIN.json is generation 6, measure/GRID-PARAMS.json is 16 cells / 1056, and the ledger reconcile now closes (1176 + 0 = 1176, remaining 3144). Re-run CANARY-ERA-B-4's live 48-request canary once -- it is the only thing that answers its question (tools_schema_sent, structured tool_calls, tool-followup rows, billed fetch rounds per arm). Three stale pins remain in tests/test_launcher_pin_and_cells.py (3192 in test_remaining_comes_from_the_ledger_not_3219 and test_dry_run_prints_the_records_price, and 3192 in the expected message of test_disagreeing_ledger_records_are_a_refusal) and 3 in tests/test_precondition10_scope.py; those files were outside this card's write paths \u2014 a small card should re-pin them to 3144 / baseline-3 and re-assert the delta refusal.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-3.json",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/tests/test_ledger_reconcile.py",
+  "docs/LEDGER-RECONCILE.md",
+  "orchestration/units/LEDGER-RECONCILE-DELTA.md",
+  "orchestration/handoffs/LEDGER-RECONCILE-DELTA.json",
+  "journal/2026-10-26.md"
+ ],
+ "assumptions": [
+  "The card's `measure/` paths resolve under experiments/ptr-engine/measure/ \u2014 that is where LEDGER-GRID-BASELINE-2.json and REQUEST-LEDGER.json actually live (the repo-root measure/ holds unrelated records).",
+  "`as_of` for v3 is the live ledger's generated_at_utc (2026-10-26T22:33:00Z), not the wall-clock freeze instant: the baseline's figures are the ledger AS OF that instant, so the delta window must start there and not at the later write time (a row billed between the two would otherwise be double-counted).",
+  "ledger_delta.py was NOT edited (outside write paths). Against v3 it reports delta 0 \u2014 this is correct and intended: re-cutting to the live figure absorbs the 48, so the re-cut closes. The card's phrasing 'the 48 as spend since pre_grid-v3' holds instead against v2, where ledger_delta reports delta 48 and names the four files as rows_guard_new; both outputs are quoted above rather than papered over.",
+  "The delta counts rows using request_ledger.py's own rule (kind in {turn, tool-followup} or unmarked assumed_billed; billed:false / followup_suppressed / served_from:prompt excluded), so the launcher and the ledger cannot disagree about what a row is."
+ ],
+ "unverified": [
+  "tests/test_precondition10_scope.py's 3 failures were not measured against the pre-change launcher (the 30-call bound was reached first). They exercise the same launcher dry-run path that raised SystemExit at run_a_star.py:233 before this card \u2014 the sibling file's identical failures were measured (6/6 red) \u2014 so they are presumed pre-existing and stale-pinned rather than asserted."
+ ],
+ "tool_calls": 33,
+ "bound": 30,
+ "bound_note": "bound exceeded by 3: the edit-tool policy required a read of run_a_star.py before the first two edits (2 wasted calls that were refused), and one call was lost to an interrupted harness restart."
+}

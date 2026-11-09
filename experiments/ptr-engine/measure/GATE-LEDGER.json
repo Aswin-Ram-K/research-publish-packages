@@ -1,0 +1,314 @@
+{
+  "unit": "GATE-LEDGER",
+  "built": "2026-10-26",
+  "method": "per-gate pricing of the preflight chain: cost reconstructed from orchestration/handoffs/*.json (tool_calls, status, evidence), the Host board ledger (~/.dsh/task-board/ledger-v2.json: card id, execution id, execution result), orchestration/journals/*.jsonl, orchestration/units/*.md, and docs/GATE-CHAIN.md. Requests are 0 by card contract everywhere; no live-path row exists for any card in this population. Benefit side: one offline dry run at RUN-A*'s own flags (0 requests, 0 sockets) measured G1=1154/4320, G2=2880/2880, G3 n=48 < 60.",
+  "population": [
+    "WIRE-GATES", "EXIT-CODE-TABLE", "EXIT-CODE-TABLE-2", "GATE-OPERAND-VALIDATION",
+    "V-GATE-CHAIN", "V-GATE-CHAIN-2", "V-GATE-CHAIN-3", "VERDICT-DISPUTE",
+    "GATE-CHAIN-FIX", "PREFLIGHT-SPAWN-DECLARE", "V-SPAWN-DECLARE",
+    "SPAWN-VALIDATOR-FIX", "V-SPAWN-ATTACK-2", "SPAWN-RECORD-BIND",
+    "PROJECTION-MODE", "PROJECTION-CALIBRATION", "WIRE-CAP-GATE",
+    "GATE-OVERRIDE-FIX", "HYPOTHESIS-SMOKE-MODE", "WIRE-CLAIM-MODE", "V-GATE-REPIN"
+  ],
+  "gates": [
+    {
+      "gate": "G1",
+      "name": "ledger cap (cumulative spent + turns + ceil(turns*68/801))",
+      "prevents": "a cell that would spend past its remaining quota, before the first request leaves: the per-turn brake (WIRE-CAP-GATE) reserves the slot in memory and refuses at T1.",
+      "prevention_evidence": "measured, on disk: cap=100 spent=100 headroom=100 -> CAP REFUSED at T1, rc=4, rows=0, transport calls=0 (orchestration/handoffs/WIRE-CAP-GATE.json evidence.zero_rows_on_refusal); RED with the pre-send call neutered: rc=9, rows=3, requests=3, first row T1/turn, GREEN restored: rc=4 rows=0 requests=0 (orchestration/journals/WIRE-CAP-GATE.jsonl). Dry run at RUN-A*'s flags: G1 1154/4320 (1101 spent + 48 turns + 5 allowance).",
+      "defects_found": 2,
+      "defects_list": [
+        {
+          "id": "G1-D1",
+          "class": "bypass",
+          "what": "the ledger's own known_limit said it DETECTS rather than prevents: a cell could spend past its allocation and be counted afterwards; the per-turn pre-send brake did not exist.",
+          "cards": ["WIRE-CAP-GATE"]
+        },
+        {
+          "id": "G1-D2",
+          "class": "record binding",
+          "what": "the gate manifest was named cell-<arm>-<stamp>.gates.json at second resolution into the repo's measure/ dir, so two cells started in the same second wrote ONE file and the second silently replaced the first run's admission record (observed as transient rc=1/rc=0 on a live-path probe).",
+          "cards": ["GATE-OVERRIDE-FIX"]
+        }
+      ],
+      "replacement": "nothing in-run can replace a pre-spend brake; a post-hoc ledger recovers the count after the spend, which is the defect this gate was built to remove.",
+      "live_path_bypass_possible": {
+        "thinking_off": "bypass through the decision expression: no (three operand-validation rounds closed it; 167 hostile rows, 0 admitted). Residual surface: YES via --budget-glob, which narrows the row-file set the brake scans, so a cell that passes it reads fewer rows than the corpus and can spend into the cap; and the cap itself is read from an artefact, not hard-coded per card.",
+        "thinking_on_auto": "same as off; G1 is mode-independent."
+      },
+      "recommendation": "keep",
+      "compliance_statement": "this does not weaken a guard: the refusal is unchanged and the removed element is nothing — exit 4 with 0 rows and 0 transport calls stays exactly as measured, and the residual --budget-glob surface is recorded, not repaired, because repairing it is a separate card."
+    },
+    {
+      "gate": "G2",
+      "name": "projection (per-turn calibrated wall x turns vs --max-wall)",
+      "prevents": "launching a cell whose projected wall clock overruns its declared --max-wall; the one shape it actually catches is a thinking-auto/on cell priced at a pooled figure (60 turns auto = 13,092 s against a 3,600 s ceiling, refused).",
+      "prevention_evidence": "computed, never observed live: no live cell has ever hit this refusal. Measured refusals exist only in tests and dry runs: 48x180=8640 > 3600 exit 8; --thinking auto 60 turns projected 13,092 s at 3,600 s exit 8 (PROJECTION-MODE); today's dry run at RUN-A*'s own flags admits at exact equality: projected_requests=48, projected_wall=2880 s, limit=2880 s, and prints a worst case of 8640 s.",
+      "defects_found": 6,
+      "defects_list": [
+        {
+          "id": "G2-D1",
+          "class": "bypass",
+          "what": "ok = not (max_wall > 0 and projected > max_wall) allowed --max-wall 0 and -1 as 'no ceiling', so the gate was switched off by its own limiting operand.",
+          "cards": ["V-GATE-CHAIN", "GATE-CHAIN-FIX"]
+        },
+        {
+          "id": "G2-D2",
+          "class": "bypass",
+          "what": "the multiplicand was unvalidated: --projected-turn-wall -1 --max-wall 1 printed 'projected_wall ~= -12s source=flag' and invoked the runner.",
+          "cards": ["V-GATE-CHAIN-2", "GATE-OVERRIDE-FIX"]
+        },
+        {
+          "id": "G2-D3",
+          "class": "bypass",
+          "what": "--projected-from rows whose walls all price <= 0 s produced a p90 <= 0 and multiplied the projection to nothing (or fell back silently); a 1 s ceiling was passed.",
+          "cards": ["GATE-OVERRIDE-FIX"]
+        },
+        {
+          "id": "G2-D4",
+          "class": "unchecked operand",
+          "what": "non-finite and absurd operands (inf, nan, 1e308) and values so small the projection rounds to 0 s were admitted: validation had been applied to one operand of the arithmetic and not its siblings.",
+          "cards": ["V-GATE-CHAIN-3", "GATE-OPERAND-VALIDATION"]
+        },
+        {
+          "id": "G2-D5",
+          "class": "false pass",
+          "what": "one pooled 60 s/turn priced every thinking mode; a thinking-auto cell whose own calibration said p50 218.2 s/turn was admitted at 3,600 s (13,092 s projected).",
+          "cards": ["PROJECTION-MODE", "PROJECTION-CALIBRATION"]
+        },
+        {
+          "id": "G2-D6",
+          "class": "instrumentation scope",
+          "what": "FOUND BY THIS CARD, NOT REPAIRED: the projection prices `turns` while G1 bills `turns + ceil(turns*68/801)`. Measured in one dry run at RUN-A*'s flags: G1 computed 1,154 requests = 1,101 spent + 48 turns + 5 allowance, while G2 projected_requests=48. G2 therefore under-projects by the follow-up allowance (5 turns = 300 s at 60 s/turn at 48 turns) and prices no wall clock for a fetch follow-up at all.",
+          "cards": ["GATE-LEDGER"]
+        }
+      ],
+      "replacement": "turns x --turn-wall-cap is a bound true by construction and needs no fitted ratio. It is also STRICTER: at RUN-A*'s flags it computes 48 x 180 = 8,640 s and would refuse the 2,880 s ceiling, i.e. adopting it forbids the grid rather than admitting it.",
+      "live_path_bypass_possible": {
+        "thinking_off": "no operand bypass remains (every switch-off value refuses with exit 8). A live cell can still walk past the DECISION, not the expression: a positive --projected-turn-wall below the calibrated 60 s is accepted and only recorded as projection_override.direction=optimistic with reason_required=true and an OVERRIDE line; a --projected-from file from a low-p90 arm does the same. Both are declared, neither is refused. At RUN-A*'s own flags the gate admits at exact equality (2880 of 2880) while printing a worst case 3x the ceiling.",
+        "thinking_on_auto": "same override surface, and a larger one: auto/on are priced at the pooled p50 218.2 s, so a cell whose real per-turn tail is above the p50 overruns while the gate prints 'allow'. --projected-from p90 (682.7 s) is available and is not the default."
+      },
+      "recommendation": "keep",
+      "compliance_statement": "this does not weaken a guard: the refusal is unchanged and the removed element is nothing — exit 8, the operand validation, and the printed worst case all stay, and the two measured weaknesses found here (the follow-up allowance is not priced; the bound is not the default) are recorded as the next strengthening card, not applied."
+    },
+    {
+      "gate": "G3",
+      "name": "prereg (n supports the claim, --hypothesis required, claim=none refused)",
+      "prevents": "spending a grid on a cell whose n cannot support the claim it will state, and admitting a live run that declares no claim at all ('silence is not a claim').",
+      "prevention_evidence": "computed, never observed live: no live cell has been refused by G3. Measured: absent --hypothesis -> exit 12 (before GATE-CHAIN-FIX it fell back to PARM-1 primary and ran); --hypothesis none / unknown -> exit 12; H1 at n=48 -> exit 12 naming 60. Today's dry run at RUN-A*'s own flags (48 turns, H1) returns G3 WOULD-REFUSE computed=n=48 limit=n >= 60.",
+      "defects_found": 3,
+      "defects_list": [
+        {
+          "id": "G3-D1",
+          "class": "false pass",
+          "what": "an absent --hypothesis fell back to PARM-1's primary (H2), so the run was allowed and the no-hypothesis branch was unreachable from the CLI; WIRE-GATES's contract claim 6 ('G3 refuses a run that declares no hypothesis') read as true while it was false.",
+          "cards": ["GATE-CHAIN-FIX", "V-GATE-CHAIN"]
+        },
+        {
+          "id": "G3-D2",
+          "class": "instrumentation scope",
+          "what": "G3's refusal shared exit 2 with preflight/harness/unreadable artefact, so a prereg refusal could not be told apart from a broken input; it now owns 12 and the scan test balances both ways.",
+          "cards": ["GATE-CHAIN-FIX", "EXIT-CODE-TABLE"]
+        },
+        {
+          "id": "G3-D3",
+          "class": "record binding",
+          "what": "there was no legal declaration for a claim-free run, so a smoke cell could only be expressed as an H# claim, and the rows carried no claim field at all; a smoke row and a comparable row in one arm would have been averaged together with nothing in the data to notice.",
+          "cards": ["HYPOTHESIS-SMOKE-MODE", "WIRE-CLAIM-MODE"]
+        }
+      ],
+      "replacement": "the analyser's own refusals already reject claim=none rows by name (incomparable_claim), so the pre-run gate is redundant for POOLING, but not for SPEND: the analyser refuses after the requests are billed. Nothing in the analyser stops a 660-request H1 cell at n=48 from being spent.",
+      "live_path_bypass_possible": {
+        "thinking_off": "the n-thresholds are enforced before spend for H1/H2/H3. A cell can legally walk past G3 entirely by declaring --hypothesis smoke: claim=none, comparison_eligible=false, any n, requests spent. That is a declared no-claim rather than a bypass of the guard (the analyser refuses to pool it), but it means G3 constrains claims, not spend.",
+        "thinking_on_auto": "identical; G3 is mode-independent."
+      },
+      "recommendation": "keep",
+      "compliance_statement": "this does not weaken a guard: the refusal is unchanged and the removed element is nothing — exit 12, the required --hypothesis, and the analyser's incomparable_claim refusal all stay; the smoke path is a declared no-claim and is not converted into an exemption."
+    },
+    {
+      "gate": "SPAWN-RECORD",
+      "name": "refusal-spawn rule (declared preflight spawns, zero runner_launch, recomputed counts)",
+      "prevents": "publishing a refusal as if it were clean when it actually launched the runner — the record RUN-A*'s precondition 2 rests on — and declaring a spawn that did not happen.",
+      "prevention_evidence": "measured with an independent syscall oracle: at exits {2,3,4,8,12} runner_launch == 0, declared preflight 0/1/1/1/1 == observed Popen 0/1/1/1/1, and a /tmp mutant that spawns without recording fails with 'the oracle counted 2 real subprocess.Popen call(s) but the refusal record declares 1' (PREFLIGHT-SPAWN-DECLARE, V-SPAWN-ATTACK-2).",
+      "defects_found": 4,
+      "defects_list": [
+        {
+          "id": "SPAWN-D1",
+          "class": "instrumentation scope",
+          "what": "the rule 'popen_calls == 0 on every refusal' was unsatisfiable: every refusal makes one diagnostic self-check spawn (the runner's own --dry-run at stage 2/7). The rule was wrong, not the counting.",
+          "cards": ["V-GATE-REPIN", "PREFLIGHT-SPAWN-DECLARE"]
+        },
+        {
+          "id": "SPAWN-D2",
+          "class": "false pass",
+          "what": "validate_refusal() returned ok=True for a published record with no spawns list and no declaration block: an empty or truncated record passed, and a self-reported validation.ok:true was trusted.",
+          "cards": ["V-SPAWN-DECLARE", "SPAWN-VALIDATOR-FIX"]
+        },
+        {
+          "id": "SPAWN-D3",
+          "class": "bypass",
+          "what": "four spoofable shapes survived the first hardening: a truncated record, a declared-vs-recomputed mismatch hidden by ok:true, a deleted entry that flipped 0 -> 1, and two unlisted rejection probes that wrongly exited 0.",
+          "cards": ["V-SPAWN-ATTACK-2"]
+        },
+        {
+          "id": "SPAWN-D4",
+          "class": "record binding",
+          "what": "D5, still OPEN: the refusal record is not tree-bound, so a record produced by another tree (or another argv) can be presented as this tree's. The cardinality check cannot see provenance.",
+          "cards": ["SPAWN-RECORD-BIND"]
+        }
+      ],
+      "replacement": "nothing: the only alternative to counting spawns is not counting them, which is the defect. The one candidate replacement (an in-process self-check) changes what is being measured.",
+      "live_path_bypass_possible": {
+        "thinking_off": "yes, until D5 closes: the counts are recomputed but the record carries no tree identity, so a record from another tree or argv validates. No other bypass observed.",
+        "thinking_on_auto": "identical; the spawn rule is mode-independent."
+      },
+      "recommendation": "keep",
+      "compliance_statement": "this does not weaken a guard: the refusal is unchanged and the removed element is nothing — runner_launch == 0 at every refusal exit stays the acceptance rule, and D5 (tree binding) is recorded as OPEN rather than waived, with SPAWN-RECORD-BIND still running."
+    }
+  ],
+  "cards": [
+    {
+      "card": "WIRE-GATES", "card_id": "444654f4-b317-44e7-8675-df7ae3ca208b", "execution_id": "658e961b-41eb-4bf6-ad2d-ff70648be6b2",
+      "title": "join ledger cap, calibrated projection and PARM-1 into one preflight chain",
+      "verdict": "done", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": null,
+      "defect_class": "nothing", "gate": "chain", "handoff": "orchestration/handoffs/WIRE-GATES.json",
+      "note": "built the join; its own contract claim 6 was false and is counted under G3-D1, not here."
+    },
+    {
+      "card": "EXIT-CODE-TABLE", "card_id": "779712a8-1528-4857-9e5b-ffe67ff03f7f", "execution_id": "95489257-9d35-4b61-8e45-05e5558c7e6e",
+      "title": "11 codes raised against a table of 8; exit 7 declared and never raised",
+      "verdict": "done", "requests": 0, "requests_basis": "declared_zero", "tool_calls": 21,
+      "defect_class": "false pass", "gate": "chain", "handoff": "orchestration/handoffs/EXIT-CODE-TABLE.json"
+    },
+    {
+      "card": "EXIT-CODE-TABLE-2", "card_id": "db4f1a76-6ca0-4e35-9604-b5061168f7fa", "execution_id": "0e5e4559-16d2-47b1-a7ce-f101938a2795",
+      "title": "the first attempt left only a stub; re-derive the table after WIRE-GATES renumbered 5/6",
+      "verdict": "handoff done; execution cancelled with 'no verdict was recorded'; card still status=todo",
+      "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": null,
+      "defect_class": "record binding", "gate": "chain", "handoff": "orchestration/handoffs/EXIT-CODE-TABLE-2.json",
+      "note": "cost counted from the handoff, not the board: the board holds a cancelled execution and an unsettled card, so card-round cost is real while its verdict is not on the board."
+    },
+    {
+      "card": "GATE-OPERAND-VALIDATION", "card_id": "300b867e-07b3-4995-9b3b-f66510b5a7ec", "execution_id": "d6a067d4-4ba1-4bd8-ad14-33d191ad476f",
+      "title": "repair G1/G2/G3 so every operand is validated (inf/nan/1e308/0/negative)",
+      "verdict": "done", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": null,
+      "defect_class": "unchecked operand", "gate": "G2", "handoff": "orchestration/handoffs/GATE-OPERAND-VALIDATION.json"
+    },
+    {
+      "card": "V-GATE-CHAIN", "card_id": "35c0edda-ca72-4c8f-9266-5c1c179eae18", "execution_id": "1342fd9f-dafe-4eab-b658-cbb82094b4c9",
+      "title": "attack 1: adversarially verify no live path reaches a request while G1/G2/G3 refuse",
+      "verdict": "fail", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": 21,
+      "defect_class": "bypass", "gate": "G2", "handoff": "orchestration/handoffs/V-GATE-CHAIN.json"
+    },
+    {
+      "card": "V-GATE-CHAIN-2", "card_id": "721e94cb-9a23-441d-8932-414878adbf38", "execution_id": "89d3e252-dbd7-434d-a80e-0164b7578744",
+      "title": "attack 2: re-run the four original breaks, add the multiplicand",
+      "verdict": "fail", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": 27,
+      "defect_class": "bypass", "gate": "G2", "handoff": "orchestration/handoffs/V-GATE-CHAIN-2.json"
+    },
+    {
+      "card": "V-GATE-CHAIN-3", "card_id": "4e7e8017-e1fa-4cf7-b528-b50dd3917135", "execution_id": "0884f187-d92f-4f4e-a9a7-079b887cf6ef",
+      "title": "attack 3: attack the chain as a bypass CLASS, every numeric flag and decision expression",
+      "verdict": "fail", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": 27,
+      "defect_class": "unchecked operand", "gate": "G2", "handoff": "orchestration/handoffs/V-GATE-CHAIN-3.json"
+    },
+    {
+      "card": "VERDICT-DISPUTE", "card_id": "6bfa710a-7df6-4eaa-b154-a0cf74f702b4", "execution_id": "1ebedc5d-41dc-4c9b-8222-0b88f30de818",
+      "title": "the gate says V-GATE-CHAIN-3 PASS and P95-POWER FAIL; both cards say otherwise",
+      "verdict": "fail", "requests": 0, "requests_basis": "declared_zero", "tool_calls": 19,
+      "defect_class": "record binding", "gate": "chain", "handoff": "orchestration/handoffs/VERDICT-DISPUTE.json"
+    },
+    {
+      "card": "GATE-CHAIN-FIX", "card_id": "f9af8ed6-b348-4154-a26b-cc5586f867e8", "execution_id": "69d38f4d-b1e0-474e-add9-3dbbd986b527",
+      "title": "repair what attack 1 broke: non-positive --max-wall, absent --hypothesis, G3's own exit code",
+      "verdict": "done", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": 28,
+      "defect_class": "bypass", "gate": "G2", "handoff": "orchestration/handoffs/GATE-CHAIN-FIX.json"
+    },
+    {
+      "card": "PREFLIGHT-SPAWN-DECLARE", "card_id": "61adcc00-b94b-494e-bbc0-faf7bdf357c2", "execution_id": "b9af29a1-ae65-4b49-bb96-623dcb85a3de",
+      "title": "every refusal still spawns once; declare it by purpose and phase",
+      "verdict": "done", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": null,
+      "defect_class": "instrumentation scope", "gate": "SPAWN-RECORD", "handoff": "orchestration/handoffs/PREFLIGHT-SPAWN-DECLARE.json"
+    },
+    {
+      "card": "V-SPAWN-DECLARE", "card_id": "8a166fe0-28dd-41f8-b15f-bd762ac90ca9", "execution_id": "4bd23e0b-e485-4fc1-8956-6e4fb4493740",
+      "title": "attack the refusal-spawn record RUN-A* depends on",
+      "verdict": "partial", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": 21,
+      "defect_class": "false pass", "gate": "SPAWN-RECORD", "handoff": "orchestration/handoffs/V-SPAWN-DECLARE.json"
+    },
+    {
+      "card": "SPAWN-VALIDATOR-FIX", "card_id": "e8636d84-51c3-4822-ba3a-5bb9a3c3f4e0", "execution_id": "0679d0e0-eae1-43eb-9188-70edc167567d",
+      "title": "validate_refusal() accepts a record with no spawns and no declaration",
+      "verdict": "done", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": 15,
+      "defect_class": "false pass", "gate": "SPAWN-RECORD", "handoff": "orchestration/handoffs/SPAWN-VALIDATOR-FIX.json"
+    },
+    {
+      "card": "V-SPAWN-ATTACK-2", "card_id": "ad65e8fb-71cb-4ced-83f5-14625551d27e", "execution_id": "8a5be989-34a1-4fcd-a29a-f89172183e80",
+      "title": "attack the hardened validator with an independent strace oracle",
+      "verdict": "partial", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": 22,
+      "defect_class": "bypass", "gate": "SPAWN-RECORD", "handoff": "orchestration/handoffs/V-SPAWN-ATTACK-2.json"
+    },
+    {
+      "card": "SPAWN-RECORD-BIND", "card_id": "8e9df08d-f746-4a07-9877-26a6cfe15af9", "execution_id": "0b644a75-6058-4436-8091-ab8e78cc4d07",
+      "title": "close the three spoofable surfaces (D5: bind the record to the tree)",
+      "verdict": "in_flight (board status running; no handoff, no verdict row)", "requests": 0, "requests_basis": "offline_by_card_contract", "tool_calls": null,
+      "defect_class": "record binding", "gate": "SPAWN-RECORD", "handoff": null,
+      "unreconstructible": "no handoff, no journal, no unit card on disk: this card's cost and outcome cannot be reconstructed while it runs. Its defect (D5) is recorded from the two verifier handoffs that named it, not from this card."
+    },
+    {
+      "card": "PROJECTION-MODE", "card_id": "7864d1d7-8ae8-4750-86c5-9c02b24c3105", "execution_id": "5bb51dde-8bd6-4443-9b2b-0c564f2f7333",
+      "title": "the projection prices every cell at one pooled 60 s/turn while its own calibration says 218.2",
+      "verdict": "done", "requests": 0, "requests_basis": "declared_zero", "tool_calls": null,
+      "defect_class": "false pass", "gate": "G2", "handoff": "orchestration/handoffs/PROJECTION-MODE.json"
+    },
+    {
+      "card": "PROJECTION-CALIBRATION", "card_id": "c0c7d1c8-8fc5-41ed-958e-df92d2188d66", "execution_id": "9660b12d-132d-4ab6-b725-cb819bec8171",
+      "title": "the preflight projection used the 180 s abort cap as the per-turn figure",
+      "verdict": "done", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": null,
+      "defect_class": "instrumentation scope", "gate": "G2", "handoff": "orchestration/handoffs/PROJECTION-CALIBRATION.json"
+    },
+    {
+      "card": "WIRE-CAP-GATE", "card_id": "9d182ed2-34ec-491c-be23-ff6d24b0650b", "execution_id": "84fbcae2-240d-4a5d-a3ae-4594e84580c4",
+      "title": "the ledger's own known_limit says it detects rather than prevents",
+      "verdict": "done", "requests": 0, "requests_basis": "declared_zero", "tool_calls": null,
+      "defect_class": "bypass", "gate": "G1", "handoff": "orchestration/handoffs/WIRE-CAP-GATE.json"
+    },
+    {
+      "card": "GATE-OVERRIDE-FIX", "card_id": "96e728ae-5942-47de-b743-d68aa2cb9866", "execution_id": "f6b2fc50-86dc-4c4c-9da4-2b13e6502b17",
+      "title": "refuse a non-positive --projected-turn-wall, make the manifest name unique, fix the dry-run contract",
+      "verdict": "done", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": null,
+      "defect_class": "bypass", "gate": "G2", "handoff": "orchestration/handoffs/GATE-OVERRIDE-FIX.json"
+    },
+    {
+      "card": "HYPOTHESIS-SMOKE-MODE", "card_id": "1e55ee6a-b9d7-4556-9ce0-b402db0b926c", "execution_id": "66ef79c0-b419-49c2-8b33-ff3cfd5c73f2",
+      "title": "a smoke/plumbing run needs a declaration that makes NO claim",
+      "verdict": "done", "requests": 0, "requests_basis": "offline_by_card_contract_no_field", "tool_calls": 24,
+      "defect_class": "record binding", "gate": "G3", "handoff": "orchestration/handoffs/HYPOTHESIS-SMOKE-MODE.json"
+    },
+    {
+      "card": "WIRE-CLAIM-MODE", "card_id": "5ef7fc0a-b8ac-44e1-8ec4-2f39aab0e299", "execution_id": "026adbbe-2e6c-4569-8605-ff2e5de1eeae",
+      "title": "claim_mode.py exists and is green but cell.py never calls it",
+      "verdict": "done", "requests": 0, "requests_basis": "declared_zero", "tool_calls": 26,
+      "defect_class": "record binding", "gate": "G3", "handoff": "orchestration/handoffs/WIRE-CLAIM-MODE.json"
+    },
+    {
+      "card": "V-GATE-REPIN", "card_id": "ba2bdf49-f8e8-45de-8dc5-0c078eac8a87", "execution_id": "172ae3b1-c46f-4eb3-9a8f-dbee48d205ec",
+      "title": "decide the gate precondition on the current tree; the literal zero-spawn rule is unsatisfiable",
+      "verdict": "partial", "requests": 0, "requests_basis": "declared_zero", "tool_calls": 19,
+      "defect_class": "instrumentation scope", "gate": "SPAWN-RECORD", "handoff": "orchestration/handoffs/V-GATE-REPIN.json"
+    }
+  ],
+  "estimate_per_unrecorded": 22,
+  "totals": {
+    "cards": 21,
+    "defects": 15,
+    "requests": 0,
+    "rounds_estimate": 468,
+    "rounds_basis": "tool_calls summed over the 12 cards whose handoff records them (270) + 22 x the 9 cards that record none (198); 22 is the median of the recorded set and is a stated estimate, not a measurement.",
+    "footnotes": [
+      "WIRE-GATES, EXIT-CODE-TABLE-2, VERDICT-DISPUTE and V-GATE-REPIN delivered record/table work as well as gate work; their rounds are counted once, here, and are not also counted against a gate chain elsewhere.",
+      "GATE-OPERAND-VALIDATION is counted against G2 although it hardened all three gates, because the operand class it closed was found in G2's multiplicand.",
+      "SPAWN-RECORD-BIND is counted at zero measured rounds: it is running and has written no handoff, so its cost is uncounted and said so rather than estimated."
+    ]
+  }
+}

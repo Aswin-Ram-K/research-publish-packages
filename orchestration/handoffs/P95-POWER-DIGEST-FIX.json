@@ -1,0 +1,63 @@
+{
+ "unit": "P95-POWER-DIGEST-FIX",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/P95-POWER.json",
+  "experiments/ptr-engine/measure/p95_power_gen.py",
+  "experiments/ptr-engine/measure/p95-power-verify.sh",
+  "experiments/ptr-engine/tools/p95_power_probe.py",
+  "docs/P95-POWER.md",
+  "orchestration/units/P95-POWER-DIGEST-FIX.md",
+  "orchestration/journals/P95-POWER-DIGEST-FIX.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "verifier exit 1 -> exit 1 -> (fix) exit 0 twice; probe exit 0, 13 sets, 0 failures; two generator runs byte-identical (sha256 c5c74b39\u2026, same as committed JSON)",
+  "commands": [
+   "bash experiments/ptr-engine/measure/p95-power-verify.sh -> BEFORE exit 1 twice: 'Files \u2026 differ', diff line 125 method.analyze_stats_sha256_atimport 0a9a7861\u2026 vs 2c9756f3\u2026",
+   "git ls-files --error-unmatch experiments/ptr-engine/longrun/analyze_stats.py -> exit 1 (untracked); sha256sum = 0a9a786102ca870edb3ff714538a512e0ea59534e4ced2f3d012aec0e39b493b, mtime 11:45 vs JSON 11:41",
+   "python3 experiments/ptr-engine/measure/p95_power_gen.py <out> x2 -> cmp identical (byte-stable), sha256 c5c74b3944ef60ce6c92c2cf47531f561c1296b3171154933d8b5a6afa923309",
+   "bash experiments/ptr-engine/measure/p95-power-verify.sh -> AFTER exit 0 twice: 'P95-POWER.json regenerated identically'",
+   "python3 experiments/ptr-engine/tools/p95_power_probe.py -> exit 0: 13 sets, 0 failure(s); gaps c/v3/v4 p50 315.29/32.39/11.99, p95 529.99/-2.35/-57.65, d144=100.0%, median lag1 0.417, fisher 0.37, n_eff(144)=66.2"
+  ],
+  "digest_provenance": "(a)+(c): stale for an earlier content revision of the same path (JSON written 11:41, file edited 11:45) and genuinely unreproducible because the module is untracked; not (b) \u2014 same path. Old value 2c9756f3\u2026 withdrawn. Generator hashed a path literal (sha(ANALYZE_STATS)) and declared analyze_stats_imported=false.",
+  "regenerated_method_block": {
+   "analyze_stats": {
+    "dirty": true,
+    "imported": true,
+    "path": "experiments/ptr-engine/longrun/analyze_stats.py",
+    "realpath": "experiments/ptr-engine/longrun/analyze_stats.py",
+    "sha256_atimport": "0a9a786102ca870edb3ff714538a512e0ea59534e4ced2f3d012aec0e39b493b",
+    "tracked": false
+   },
+   "analyze_stats_sha256_atimport": "0a9a786102ca870edb3ff714538a512e0ea59534e4ced2f3d012aec0e39b493b",
+   "seed": 20261026,
+   "power_outer": 1000,
+   "power_inner": 200,
+   "inference_requests": 0
+  },
+  "claims": {
+   "A* sufficient": "reproduces \u2014 derived by the stated rule from d144 = 100.0 % >= 80 on rows-longrun-c; probe re-derives the verdict and the 100.0 % rule input. Scope caveat: d144 is an ECDF extrapolation (largest real cell = 48), and 2 of 3 grids do not separate.",
+   "paired disjointness n=48/60/144": "reproduces \u2014 c 100/100/100, v3 1.3/2.7/1.6, v4 4.5/5.8/12.9 (probe checks set inventory, gaps and the separation rule; percentages certified reproducible by byte-identical regeneration)",
+   "median lag-1 0.417; Fisher-z 0.37 over 13 sets": "reproduces \u2014 probe recomputes lag1 per set independently, median 0.417, tanh(mean arctanh) 0.37, n_sets 13",
+   "effective n \u2248 66 at raw 144": "reproduces \u2014 144*(1-0.37)/(1+0.37) = 66.2",
+   "315.29 ms p50 gap c-only; v3=32.39, v4=11.99; p95 gaps negative on v3/v4": "reproduces \u2014 p50 gaps 315.29/32.39/11.99, p95 gaps 529.99/-2.35/-57.65 from raw rows",
+   "no number moved": "true \u2014 only the method block changed; thresholds, seed, POWER_OUTER/INNER, min_n_for(0.95)=60 and every statistic are untouched"
+  },
+  "certifies": "the verifier now certifies that P95-POWER.json is byte-identical to what p95_power_gen.py computes from the rows on disk today \u2014 reproducibility of a computation, never the truth of a sampling assumption."
+ },
+ "blocker": "",
+ "next_unit_hint": "Independent verifier can re-run the two commands and the probe; the untracked analyze_stats.py should be added to git (or the digest accepted as tracked=false) so 'dirty' stops being permanent.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/P95-POWER.json",
+  "experiments/ptr-engine/measure/p95_power_gen.py",
+  "experiments/ptr-engine/measure/p95-power-verify.sh",
+  "experiments/ptr-engine/tools/p95_power_probe.py",
+  "docs/P95-POWER.md",
+  "orchestration/units/P95-POWER-DIGEST-FIX.md",
+  "orchestration/handoffs/P95-POWER-DIGEST-FIX.json",
+  "orchestration/journals/P95-POWER-DIGEST-FIX.jsonl"
+ ],
+ "tool_calls": 17,
+ "bound": 26,
+ "inference_requests": 0
+}

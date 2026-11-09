@@ -1,0 +1,43 @@
+{
+ "unit": "RUNNER-ROUNDS-48",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/longrun/tests/test_tool_channel2.py",
+  "orchestration/units/RUNNER-ROUNDS-48.md",
+  "orchestration/handoffs/RUNNER-ROUNDS-48.json",
+  "orchestration/journals/RUNNER-ROUNDS-48.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "1) pool 24->48 at run_longrun.py:230; 2) --fetch-rounds-per-arm added (default 48, resolver fetch_rounds_per_arm, 9 former constant uses rewired, 0/-1 refused exit 2 by name); 3) run_a_star.py:181 budget 67->108 and :44 FETCH_ALLOWANCE 24->48; 4) test_tool_channel2 assertion_d updated 24->48 with card comment; red->green (a) 48/48 then fetch_budget_exhausted, (b) 0 and -1 refused by name, (c) NOT REPRODUCED",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/run_longrun.py --fetch-rounds-per-arm 48 --self-test -> exit 0",
+   "python3 experiments/ptr-engine/longrun/run_longrun.py --fetch-rounds-per-arm 0 -> exit 2 '--fetch-rounds-per-arm must be a positive integer (got 0); 0 and negative values are refused'",
+   "python3 experiments/ptr-engine/longrun/run_longrun.py --fetch-rounds-per-arm -1 -> exit 2 same message (got -1)",
+   "python3 experiments/ptr-engine/longrun/tests/test_tool_channel2.py (cwd workspace root) -> (d) 'used=48/48; T2 tool_calls error=fetch_budget_exhausted', then AssertionError at assertion_e (pre-existing baseline drift)",
+   "cell.py --dry-run pointer-stable --budget 67 and --budget 108 -> both exit 0, '0 of 3 gate(s) would refuse', stage 3b 'projected_requests=48' for both; G1 'allow computed=1,224 requests limit=4,320'"
+  ],
+  "requests_sent": 0,
+  "network_events": 0
+ },
+ "assumptions": [
+  "Pool 48 is provisioning; per-turn cap stays 3. No pool raise on this unit's authority.",
+  "run_a_star.py defaults (run_cell budget=, argparse --budget default) moved 67->108 with the argv so no path can launch 67."
+ ],
+ "findings": [
+  "F1 --budget is not the refusal gate at 67 on the current cell.py: dry run passes at 67 and 108; stage 3b projection is turns-only (48) and G1 is priced from the ledger cap 4,320, not --budget.",
+  "F2 test_tool_channel2 assertion_e fails (pre-existing): tools-off stdout differs from manifests/v4tools2-baseline-pre.py because the baseline predates TREATMENTS (+61 B per prompt).",
+  "F3 test_tool_channel.py assertion_f fails with rounds==3 (per-turn cap) - identical call shape at HEAD, pre-existing."
+ ],
+ "blocker": "",
+ "next_unit_hint": "If 4(c) is still wanted, re-derive the budget gate against the CURRENT cell.py (which stage reads --budget) before launching; using BUDGET-48-WIRE's claim would have produced a false 'refuses at 67' red. Budget 108 is harmless but unproven as necessary.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/longrun/tests/test_tool_channel2.py",
+  "orchestration/units/RUNNER-ROUNDS-48.md",
+  "orchestration/handoffs/RUNNER-ROUNDS-48.json",
+  "orchestration/journals/RUNNER-ROUNDS-48.jsonl"
+ ]
+}

@@ -1,0 +1,83 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/measure/TRANCH1-DRYRUN.json",
+  "experiments/ptr-engine/measure/dryrun-t1-pointer-stable-r1.json",
+  "experiments/ptr-engine/measure/dryrun-t1-transcript-grow-r1.json",
+  "experiments/ptr-engine/measure/dryrun-t1-transcript-compact-r1.json",
+  "experiments/ptr-engine/measure/dryrun-t1-lease-reopen-r1.json",
+  "docs/TRANCH1-DRYRUN.md",
+  "experiments/ptr-engine/tools/tranch1_dryrun.py",
+  "experiments/ptr-engine/longrun/tests/test_tranch1_dryrun.py",
+  "orchestration/units/TRANCH1-DRYRUN.md"
+ ],
+ "assumptions": [
+  "One invocation = one cell = 48 turns at --reps 1 (the shape the runner executes and the ledger charges 53 requests for). The rep label indexes the cell only; the pooled shape is probed separately.",
+  "'cap 900' is read as the per-cell request ceiling: marginal 53 << 900; the ledger cap is the artefact's 4,320 (headroom 3,219).",
+  "The per-arm 8-token warm-up is inside run_longrun's own allocation and is NOT in cell.py's G1 arithmetic; declared not-projected rather than omitted."
+ ],
+ "blocker": "Grid HELD: G3 refuses H1 at n=48 for every 48-turn cell; the pooled shape that clears n>=60 is refused by G2 (8640/5760 s > 2880 s). No flag change inside the pinned limits opens both gates; needs a card-level decision (--max-wall >= 8640, or per-rep cells claimed as H2).",
+ "evidence": {
+  "all_ten_allowed": false,
+  "commands": [
+   "python3 experiments/ptr-engine/tools/tranch1_dryrun.py",
+   "python3 experiments/ptr-engine/tools/tranch1_dryrun.py --check   # exit 1, 10 G3 refusals",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_tranch1_dryrun.py -q   # 3 passed"
+  ],
+  "design_cap_tokens": 10616,
+  "g1": "1,101 already spent + 48 turns + 5 allowance = 1,154 per cell; cap 4,320, headroom 3,219; marginal 53/cell, 530 total",
+  "g2": "48 x 60 s = 2,880 s vs --max-wall 2880, ratio 1.0000, source=artefact-mode (thinking=off), raw + allowance; turn-wall-cap 180 NOT used, pooled 218.2 s NOT used",
+  "g3_refusal_verbatim": "PARM-1 admits H1 (p95 TTFT, q=0.95) only at n >= 60 completed turns; this cell would have n=48, so its own n cannot support the claim it would state",
+  "pins": {
+   "moved": [],
+   "stamp": "stamped"
+  },
+  "pooled_probes": {
+   "lease-reopen": {
+    "g2": "refused 5760 s > 2880 s",
+    "g3": "allow",
+    "n": 96,
+    "reps": 2
+   },
+   "pointer-stable": {
+    "g2": "refused 8640 s > 2880 s",
+    "g3": "allow",
+    "n": 144,
+    "reps": 3
+   },
+   "transcript-compact": {
+    "g2": "refused 5760 s > 2880 s",
+    "g3": "allow",
+    "n": 96,
+    "reps": 2
+   },
+   "transcript-grow": {
+    "g2": "refused 8640 s > 2880 s",
+    "g3": "allow",
+    "n": 144,
+    "reps": 3
+   }
+  },
+  "treatments": {
+   "compact_wall_turn": 21,
+   "grow_evict_turn": 21,
+   "lease_step_turn": 23,
+   "pointer_prefix_turn": 2
+  },
+  "zero_network": true,
+  "zero_spawns": true
+ },
+ "head_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+ "next_unit_hint": "Re-run this rehearsal after the launch shape is re-decided (max-wall for pooled cells, or H2 for per-rep cells). cell.py must not be edited to force a pass.",
+ "status": "done",
+ "unit": "TRANCH1-DRYRUN",
+ "write_paths": [
+  "experiments/ptr-engine/measure/TRANCH1-DRYRUN.json",
+  "experiments/ptr-engine/measure/dryrun-*",
+  "docs/TRANCH1-DRYRUN.md",
+  "experiments/ptr-engine/tools/tranch1_dryrun.py",
+  "experiments/ptr-engine/longrun/tests/test_tranch1_dryrun.py",
+  "orchestration/units/TRANCH1-DRYRUN.md",
+  "orchestration/handoffs/TRANCH1-DRYRUN.json",
+  "orchestration/journals/TRANCH1-DRYRUN.jsonl"
+ ]
+}

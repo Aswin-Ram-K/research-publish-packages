@@ -1,0 +1,44 @@
+{
+ "unit": "GRID-RUNBOOK",
+ "status": "done",
+ "artifacts": ["docs/GRID-RUNBOOK.md", "orchestration/units/GRID-RUNBOOK.md",
+               "orchestration/handoffs/GRID-RUNBOOK.json", "orchestration/journals/GRID-RUNBOOK.jsonl"],
+ "evidence": {
+  "command_or_count": "pin recompute -> fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac == HARNESS-PIN generation 4 harness_sha256 (MATCH)",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/grid_resume.py",
+   "python3 experiments/ptr-engine/tools/ledger_delta.py",
+   "python3 experiments/ptr-engine/longrun/exit_codes.py",
+   "python3 experiments/ptr-engine/tools/harness_baseline.py --help",
+   "python3 experiments/ptr-engine/tools/unit_journal.py --help",
+   "python3 experiments/ptr-engine/longrun/analyze_stats.py :: min_n_for(0.95)",
+   "for f in experiments/ptr-engine/measure/rows-cell-*.jsonl; do wc -l < \"$f\"; done"
+  ],
+  "measured": {
+   "pin_generation": 4,
+   "pin_sha256": "fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac",
+   "grid_params_pin_STALE": "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871 (generation 3) -> exits 2 at 2/7 harness",
+   "ledger": {"spent_now": 1128, "remaining_now": 3192, "cap": 4320, "delta": 0,
+              "baseline_sha256": "3b79f4766abc8479a7a963f9e04063837928d09d48d2435e91f488b3c6d3ae0d"},
+   "fixture_sha256": "0804b51575cce3454a1c628a9a2447a01856321e67ac3fd1ff8c9baa48467641",
+   "cells_complete": 0,
+   "rows_files": [
+    {"file": "rows-cell-pointer-stable-20261026T145758Z.jsonl", "turns": 6, "note": "earlier fixture sha 967cef03..."},
+    {"file": "rows-cell-pointer-stable-20261026T182535Z.jsonl", "turns": 27, "note": "era_a_excluded, tools_mode=off 27/27, stop_reason=runaway_turn at 27"}
+   ],
+   "min_n_for_0_95": 60,
+   "exit_code_site": "cell.py:1616 (NOT :1568 as the card stated)"
+  }
+ },
+ "blocker": "",
+ "next_unit_hint": "A launch unit should re-read docs/GRID-RUNBOOK.md section 1 and pass --expect-harness from HARNESS-PIN.json (generation 4), never the value quoted in GRID-PARAMS.json. Before cell 1, decide whether the 27 era-A rows stay excluded (they must not be deleted).",
+ "write_paths": ["docs/GRID-RUNBOOK.md", "orchestration/units/GRID-RUNBOOK.md",
+                 "orchestration/handoffs/GRID-RUNBOOK.json", "orchestration/journals/GRID-RUNBOOK.jsonl"],
+ "tool_calls": 23,
+ "bound": 24,
+ "unverified_commands": [],
+ "assumptions": [
+  "The 600 s figure in the G2 canary-wall finding was taken as the comparison the finding used; the runbook instructs the reader to re-read the effective --max-wall default from cell.py rather than trusting it.",
+  "docs/TRANCHE-CANARY.md:181 quotes ≈720 as a REQUEST count, not seconds; kept separate from the 12x60=720 s wall arithmetic."
+ ]
+}

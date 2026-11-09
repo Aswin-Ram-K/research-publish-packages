@@ -1,0 +1,57 @@
+{
+  "unit": "TREE-FREEZE",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/tools/tree_freeze.py",
+    "experiments/ptr-engine/longrun/exit_codes.py",
+    "experiments/ptr-engine/longrun/tests/test_tree_freeze.py",
+    "experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+    "experiments/ptr-engine/measure/TREE-FREEZE.json",
+    "docs/TREE-FREEZE.md",
+    "docs/EXIT-CODES.md",
+    "orchestration/units/TREE-FREEZE.md"
+  ],
+  "evidence": {
+    "frozen_current_shas": "cell.py 5a812a9861dd8a393078d2ec006dd8f3745213f17366fc26a5b8fc1532402cb9 (card had measured 24627d7b) | run_longrun.py 9e8c30df9355e7bee243a15bf9ea67b23a20dd4c3d6ced6c9af1e53a6d76add1 | grade_v5.py 056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772 (both still match the card's pin)",
+    "classifier_red_green": "moved /tmp copy of grade_v5.py (append after 0.2s) -> row 'moved', verdict=moved_during_run, command exit 0, tool exit 13; clean run -> verdict=pass, exit 0",
+    "verdicts": "moved_during_run (exit_code 0, moved 1, exit 13) | pass (0,0,exit 0) | failed (exit_code 3, moved 0, exit 1) | failed_and_moved (exit_code 3, moved 1, exit 1)",
+    "exit_13": "exit_codes.EXIT_TREE_MOVED = 13, name 'tree-moved', EXTERNAL_CODES {13: experiments/ptr-engine/tools/tree_freeze.py}; cell.py never raises it",
+    "scan_test_balance": "set-equality holds both ways: EXIT_TABLE - EXTERNAL_CODES == cell.py raised sites; without the external declaration 13 names itself as declared-but-never-raised; an injected sys.exit(17) is still caught",
+    "commands": [
+      "python3 experiments/ptr-engine/tools/tree_freeze.py freeze --out /tmp/tf-demo-MqeM/freeze.json experiments/ptr-engine/longrun/cell.py experiments/ptr-engine/longrun/run_longrun.py experiments/ptr-engine/longrun/grade_v5.py",
+      "python3 experiments/ptr-engine/tools/tree_freeze.py verify /tmp/tf-demo-MqeM/freeze.json",
+      "python3 experiments/ptr-engine/tools/tree_freeze.py --wrap /tmp/tf-demo-MqeM/moved.json /tmp/tf-demo-MqeM/live.py -- python3 /tmp/tf-demo-MqeM/mover.py /tmp/tf-demo-MqeM/live.py 0",
+      "python3 experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+      "python3 experiments/ptr-engine/longrun/tests/test_tree_freeze.py"
+    ],
+    "test_counts": "test_exit_codes.py 20 tests OK; test_tree_freeze.py 14 tests OK",
+    "foreign_red_separated": "test_gate_operand_validation F1 expected exit 8 got 1: wrapper verdict=failed moved=[] on a still tree (cell.py 5a812a98), and an in-memory A/B (EXIT_TABLE.pop(13)) gives F1=1 both ways, so code 13 is inert; the visible cause is gate_attack's stub not accepting cell._run's new `purpose` kwarg -- a foreign in-flight mismatch, recorded, not settled as this unit's failure",
+    "gate_operand_validation": "9 tests, 1 failure (F1) -- pre-existing/foreign, outside this unit's write paths; not repaired here"
+  },
+  "blocker": "",
+  "next_unit_hint": "Settle-time consumers should read the wrapper's `verdict`, not the process status: a `moved_during_run` result must be re-run against the settled tree and must never be settled FAIL. A future card could wire --wrap into the evidence command of each verdict row.",
+  "write_paths": [
+    "experiments/ptr-engine/tools/tree_freeze.py",
+    "experiments/ptr-engine/longrun/exit_codes.py",
+    "experiments/ptr-engine/longrun/tests/test_tree_freeze.py",
+    "experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+    "experiments/ptr-engine/measure/TREE-FREEZE.json",
+    "docs/TREE-FREEZE.md",
+    "docs/EXIT-CODES.md",
+    "orchestration/units/TREE-FREEZE.md",
+    "orchestration/handoffs/TREE-FREEZE.json",
+    "orchestration/journals/TREE-FREEZE.jsonl"
+  ],
+  "assumptions": [
+    {
+      "what": "wrote docs/EXIT-CODES.md (one table row + one sentence), which is outside the card's declared write list",
+      "why": "tests/test_exit_codes.py::DocsTableTests asserts the human table equals EXIT_TABLE; declaring 13 without the row leaves a live guard red, and weakening that guard would be the larger defect"
+    },
+    {
+      "what": "13 is declared EXTERNAL (owner tools/tree_freeze.py) instead of raising it from cell.py",
+      "why": "cell.py is under concurrent edit and is the hazard this card measures; the card forbids touching it"
+    }
+  ],
+  "tool_calls": 17,
+  "requests": 0
+}

@@ -1,0 +1,65 @@
+{
+ "unit": "V-GATE-CHAIN",
+ "overall": "fail",
+ "scope": "preflight gate chain G1 ledver cap -> G2 calibrated projection -> G3 PARM-1 n/reps in experiments/ptr-engine/longrun/cell.py, pinned at sha256 f387c4ab",
+ "checks": [
+  "A fabricated ledger: cap=11 allows (G1 11/11, runner invoked); cap=5 refuses EXIT 4 naming 'computed 11 requests | limit 5 requests (cap 5 - reserve 0 - spent 0)' and the artefact sha; cap is read only from artefact budget.cap",
+  "B projection: projected 600s, worst 1800s; 601s and 600s allow, 599s EXIT 8; 700s allows so no fallback to the 180s/turn worst case (PROJECTION-CALIBRATION regression absent)",
+  "B DEFECT: --max-wall 0 and --max-wall -1 both ALLOW and the runner is invoked although projected 600 > 0; eval_gate_projection 'ok': not (max_wall > 0 and projected > max_wall)",
+  "C: H1@48 EXIT 2 naming n>=60; --hypothesis none EXIT 2 'silence is not a claim'; H9 EXIT 2; H2@10 allows (correct)",
+  "C DEFECT: no --hypothesis flag at all ALLOWS (runner invoked, claim H2 source=default:built-in); _declared_hypothesis defaults to H2 so the no-hypothesis branch is unreachable by silence -- contract claim 6 is false",
+  "D: unknown flag rc2 no runner; --dry-run rc0 prints G1/G2/G3 and invokes no runner; --offline skips gates but sends nothing; --turns 0 rc2; no route returns 0 with a gate refusing; no route reaches a request with no gate verdict",
+  "D AUDIT SURFACE: CELL_LEDGER_ARTEFACT / CELL_PROJECTION_ARTEFACT / CELL_PREREG_ARTEFACT env vars let the caller choose the limit artefact (used to flip G1 cap 5 vs 11)",
+  "E induced codes: 2 (bad fixture), 2 (bad prereg), 2 (H1@48), 2 (explicit none), 2 (unknown flag), 3 (budget=1), 4 (cap=5), 8 (max-wall 599), 10 (fake runner -> grade); not induced: 1,5,6,7,9,11",
+  "E COLLISION: code 2 covers both preflight/harness and G3 prereg refusal (plus argparse usage and unreadable gate artefact); documented in exit_codes.EXIT_PREFLIGHT but the card gives G3 no code of its own",
+  "F: verdict artefact_sha256 07add6778ad1b940 equals sha256 of the artefact bytes at read time; appending one byte changed it to 58709559156cf685 so the digest is of bytes not of a name; write_gate_manifest (cell.py:1204) runs before stage_run (cell.py:1212) and records artefact_digests"
+ ],
+ "red_green": [
+  "G1 neutered 'ok': bool(b[\"within_budget\"]) -> True: dry-run intact=REFUSE, neutered=ALLOW, restored byte-identical",
+  "G2 neutered 'ok': not (max_wall > 0 and projected > max_wall) -> True: intact=REFUSE, neutered=ALLOW, restored byte-identical",
+  "G3 neutered H1 'ok = n >= min_n' -> True: intact=REFUSE, neutered=ALLOW, restored byte-identical"
+ ],
+ "attacks": {
+  "A_fabricated_headroom": "held",
+  "B_projection": "held except DEFECT B1 (--max-wall <= 0 disables G2)",
+  "C_silent_claim": "DEFECT C1 (silence passes as H2 default)",
+  "D_gate_skip": "held except DEFECT D1 (--max-wall 0) and env-var artefact substitution",
+  "E_exit_codes": "collision at 2 named; 6 codes uninduced",
+  "F_digest_phantom": "held"
+ },
+ "test_counts_observed": "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_cell_gates.py' from repo root: Ran 9, FAILED (errors=1) ModuleNotFoundError: No module named 'exit_codes'; with PYTHONPATH=<longrun> or cwd=longrun: OK 9/9",
+ "test_count_note": "the stated command is currently red because the concurrent exit-code unit added a top-level 'import exit_codes' at cell.py:68; the suite is green under an unstated invocation",
+ "repository_shas": {
+  "experiments/ptr-engine/longrun/cell.py": "f387c4abbb835f2e28dc641f6ba2ee962dc5b0ee29a25514ac94cdb338a89fc2",
+  "experiments/ptr-engine/longrun/tests/test_cell_gates.py": "47eab81913d19f692334a9bbf4c498479ea1f32e5d78f2d68f87e46d5209dfcf",
+  "experiments/ptr-engine/longrun/exit_codes.py": "f75e2649ea4345241635b6360b6ade9305c8fdb9138cd37c3e744bc9ca2b0c32",
+  "docs/GATE-CHAIN.md": "1ec5aca9ac3d295faa1045c6604e1fcfa2f02d717a6cfd3c60d81e6366f3f70f"
+ },
+ "containment": "no repository file written by this unit; all mutation in /tmp copies; cell.py sha identical before and after every run; zero requests, no network, no git",
+ "overstated": [
+  "WIRE-GATES handoff '9/9 gate tests OK' is not reproducible by its own stated command today (8 pass + 1 error, ModuleNotFoundError: exit_codes)",
+  "contract claim 6 'G3 refuses a run that declares no hypothesis (silence is a refusal)' is false: silence defaults to H2 and is admitted",
+  "contract claim 3 'exit codes are distinct and pinned' does not hold for G3, which shares code 2 with preflight/harness/argparse/unreadable-artefact"
+ ],
+ "not_reproduced": [
+  "no fallback of G2 to the 180s/turn worst case: correctly absent (700s allows at projected 600s)"
+ ],
+ "unverified": [
+  "exit codes 1, 5, 6, 7, 9, 11 could not be induced offline without a live request",
+  "the manifest was exercised through write_gate_manifest's source order and eval_gate_ledger's digest, not by a full live run that passes all three gates (that would send a request)"
+ ],
+ "live_cell_without_a_gate": "yes_by_route -- no route reaches a request with zero gate verdicts, but --max-wall 0 (or any negative value) reaches a request with G2's refusal condition (projected 600 > 0) true, and CELL_*_ARTEFACT env vars let the caller choose G1/G2/G3's limit artefacts",
+ "blocker": "",
+ "next_unit_hint": "fix evals: (1) eval_gate_projection must refuse a non-positive --max-wall instead of treating it as 'no ceiling'; (2) G3 must treat an absent --hypothesis as 'none' (require an explicit declaration) rather than defaulting to H2; (3) give G3 its own exit code or state in docs that 2 is shared; (4) freeze the exit_codes import so the stated test command stays green",
+ "write_paths": [
+  "orchestration/units/V-GATE-CHAIN.md",
+  "orchestration/handoffs/V-GATE-CHAIN.json",
+  "orchestration/journals/V-GATE-CHAIN.jsonl"
+ ],
+ "tool_calls": 21,
+ "bound": 34,
+ "assumptions": [
+  "the chain unit is the pinned sha f387c4ab because cell.py was rewritten at 10:59:10 by a concurrent unit; earlier reads saw 1313 lines",
+  "a non-positive --max-wall is treated as a bypass rather than a documented 'unlimited' mode because neither the help text nor docs/GATE-CHAIN.md declares such a mode"
+ ]
+}

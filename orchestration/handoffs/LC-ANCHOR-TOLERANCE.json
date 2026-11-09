@@ -1,0 +1,82 @@
+{
+ "unit": "LC-ANCHOR-TOLERANCE",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/tools/launch_contract_diff.py",
+  "tests/test_launch_contract_diff.py",
+  "measure/LAUNCH-CONTRACT-DIFF.json",
+  "orchestration/units/LC-ANCHOR-TOLERANCE.md",
+  "orchestration/handoffs/LC-ANCHOR-TOLERANCE.json",
+  "orchestration/journals/LC-ANCHOR-TOLERANCE.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "pytest 9 passed (was 2 failed / 4 passed); text-agrees 5 passed; --check before exit 1 (DISAGREES=1) and after exit 1 (DISAGREES=1); 22 numbers, 0 rows changed class",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check  # BEFORE: exit 1, 22 numbers AGREES=15 DISAGREES=1 STALE-BY-DESIGN=6",
+   "PYTHONPATH=src python3 -m pytest tests/test_launch_contract_diff.py -q  # BEFORE: 2 failed, 4 passed",
+   "PYTHONPATH=src python3 -m pytest experiments/ptr-engine/tests/test_launch_text_agrees_with_code.py -q  # 5 passed, still green",
+   "python3 experiments/ptr-engine/tools/launch_contract_diff.py --write  # artefact re-recorded, check_exit 1",
+   "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check  # AFTER: exit 1, same class counts, disagreements: harness_pin_digest",
+   "PYTHONPATH=src python3 -m pytest tests/test_launch_contract_diff.py -q  # AFTER: 9 passed",
+   "/tmp/lcd-proof: help string 108->67 => exit 1, reason 'competing values: 108, 67 (108 at experiments/ptr-engine/tools/run_a_star.py:241; 67 at experiments/ptr-engine/tools/run_a_star.py:367)'",
+   "/tmp/lcd-proof: docs/GRID-PARAMS.md pool 48->24 => exit 1, reason 'competing values: 24, 48 (48 at experiments/ptr-engine/longrun/run_longrun.py:230; 24 at docs/GRID-PARAMS.md:90)'",
+   "/tmp/lcd-proof: duplicate CANARY_MAX_WALL = 900 => exit 0, canary_max_wall AGREES occurrence_count=2 reason 'single value across 2 occurrence(s)', pairs run_a_star.py:214 and :215"
+  ]
+ },
+ "before": {
+  "check_exit": 1,
+  "counts": {
+   "AGREES": 15,
+   "DISAGREES": 1,
+   "STALE-BY-DESIGN": 6
+  },
+  "pytest": "2 failed, 4 passed"
+ },
+ "after": {
+  "check_exit": 1,
+  "counts": {
+   "AGREES": 15,
+   "DISAGREES": 1,
+   "STALE-BY-DESIGN": 6
+  },
+  "pytest": "9 passed",
+  "class_changes": 0
+ },
+ "failing_assertion_verbatim": "AssertionError: mutation anchor missing in experiments/ptr-engine/tools/run_a_star.py: 'handed to cell.py (default 67)'\nassert 'handed to cell.py (default 67)' in '#!...'",
+ "assertion_change": {
+  "old": "test_contract_artefact_records_the_trap asserted status['harness_pin_digest'] == 'DISAGREES' unconditionally, plus that both the GRID-PARAMS digest and the pin digest were in entry['values'].",
+  "new": "it derives both digests from the record and the bytes on disk: when they differ it requires DISAGREES, both digests recorded, a run_a_star.py:<line> pair and a 'bytes moved: \u2026grade_v5.py' hint; when they match it requires AGREES. It now pins 'pin drift is recorded, not reconciled' rather than 'this particular drift exists' \u2014 the old form would break on the very pin bump that fixes the tree.",
+  "behaviour_pinned": "drift between pinned bytes and live bytes is RECORDED as a disagreement naming the moved input, and never silently absorbed"
+ },
+ "path_correction": {
+  "card_declared": [
+   "experiments/ptr-engine/tests/test_launch_contract_diff.py",
+   "experiments/ptr-engine/measure/LAUNCH-CONTRACT-DIFF.json"
+  ],
+  "actually_written": [
+   "tests/test_launch_contract_diff.py",
+   "measure/LAUNCH-CONTRACT-DIFF.json"
+  ],
+  "why": "the card's paths do not exist; the canonical suite and artefact are the repo-root ones (as the predecessor card LAUNCH-CONTRACT-DIFF declares), and writing copies would fork one suite and one artefact into two drifting files"
+ },
+ "findings": [
+  "CLAIM 1 OF THE CARD IS FALSE: --check exits 1, not 0. experiments/ptr-engine/longrun/grade_v5.py moved at 2026-10-26T19:44:44Z, 17 minutes after HARNESS-PIN generation 4 froze at 19:27:25Z. Recorded harness_sha256 fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac, live a3fa2ee0e771a010cc8c2ca28d2e253a005fc69cb1f2d425ae91a9155a5e970a. The tool reports this correctly; no edit here can make it exit 0 without bumping the pin, which task 10 forbids.",
+  "CLAIM 2's path does not exist: there is no experiments/ptr-engine/tests/test_launch_contract_diff.py. The real suite is tests/test_launch_contract_diff.py, and the red was 'mutation anchor missing \u2026 (default 67)', not a _single_valued() raise inside the tool.",
+  "_single_valued() lives in the TEST file, not in launch_contract_diff.py; the tool's equivalent defect was grep 'break on first match' (run_probe), which admitted in its own notes that it took the first hit."
+ ],
+ "assumptions": [
+  "Kept writing to the repo-root test/artefact paths instead of the card's non-existent experiments/ptr-engine/... paths, because a duplicate suite would drift; recorded above rather than silently.",
+  "Left launch numbers, pin generation, run_a_star.py:367 and docs/GRID-PARAMS.md untouched as instructed.",
+  "The /tmp fixture re-pins its COPY over the copy's own bytes to prove exit 0 is reachable; the real HARNESS-PIN.json is not modified."
+ ],
+ "blocker": "harness_pin_digest cannot be reconciled inside this unit: a pinned harness input (grade_v5.py) drifted after generation 4 froze, and task 10 forbids changing the pin generation. Needs a pin-bump card.",
+ "next_unit_hint": "A pin-bump card should regenerate HARNESS-PIN.json to generation 5 over the current bytes (grade_v5.py 3d70ed1d\u2026), update run_a_star.py HARNESS_PIN + docs/GRID-RUNBOOK.md:68,119 and GRID-PARAMS.json harness_pin; after that --check should reach exit 0 (AGREES=16, STALE-BY-DESIGN=6) and the artefact check_exit becomes 0.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/launch_contract_diff.py",
+  "tests/test_launch_contract_diff.py",
+  "measure/LAUNCH-CONTRACT-DIFF.json",
+  "orchestration/units/LC-ANCHOR-TOLERANCE.md",
+  "orchestration/handoffs/LC-ANCHOR-TOLERANCE.json",
+  "orchestration/journals/LC-ANCHOR-TOLERANCE.jsonl"
+ ]
+}

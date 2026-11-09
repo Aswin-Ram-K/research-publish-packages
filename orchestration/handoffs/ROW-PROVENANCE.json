@@ -1,0 +1,76 @@
+{
+ "unit": "ROW-PROVENANCE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/client.py",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/tools/row_provenance.py",
+  "docs/ROW-PROVENANCE.md",
+  "experiments/ptr-engine/measure/ROW-PROVENANCE.json",
+  "experiments/ptr-engine/longrun/tests/test_row_provenance.py",
+  "orchestration/units/ROW-PROVENANCE.md",
+  "orchestration/journals/ROW-PROVENANCE.jsonl"
+ ],
+ "evidence": {
+  "fields_written": "nine provenance fields on every row + provenance_complete + provenance_missing: arm, model, endpoint, fixture_id, fixture_sha256, harness_sha256, max_tokens, thinking, tools_mode (the card lists nine names while its prose says 'eight'; all nine are written)",
+  "stamp_sites": [
+   "experiments/ptr-engine/longrun/run_longrun.py:1647 (make_row)",
+   "experiments/ptr-engine/longrun/run_longrun.py:1199 (build_manifest)"
+  ],
+  "retrofit": "1 of 14 files FULL / 13 PARTIAL / 0 'unknown'-only; missing harness_sha256 13/14 files, arm 9/14, thinking 6/14, fixture_sha256 4/14",
+  "retrofit_sources": {
+   "rows-baseline-2026-10-26.jsonl": "row",
+   "rows-cell-pointer-stable-20261026T145758Z.jsonl": "manifest+row",
+   "rows-equalinfo-2026-10-26.jsonl": "row",
+   "rows-live-2026-10-26.jsonl": "row",
+   "rows-longrun-2026-10-26-fix.jsonl": "manifest+row",
+   "rows-longrun-2026-10-26-policy.jsonl": "manifest+row",
+   "rows-longrun-2026-10-26.jsonl": "manifest+row",
+   "rows-longrun-c-2026-10-26.jsonl": "manifest+row",
+   "rows-longrun-v3-2026-10-26.jsonl": "manifest+row",
+   "rows-longrun-v4-2026-10-26.jsonl": "manifest+row",
+   "rows-longrun-v4-tools-2026-10-26.jsonl": "manifest+row",
+   "rows-longrun-v5-tools.jsonl": "manifest+row",
+   "rows-longrun-v6-tools.jsonl": "cell+manifest+row",
+   "rows-pilot-thinking-2026-10-26.jsonl": "manifest+row"
+  },
+  "deltas": "20 PROVEN load-bearing differences between file pairs, 70 pairs differ only through an 'unknown'",
+  "same_provenance": "same_provenance(a,b) compares ONLY {fixture_sha256, model, thinking, tools_mode}; returns (True, []) when they agree, else (False, [differing field names]). Differing only in arm -> (True, []). Either side 'unknown' (or file-level 'mixed') -> (False, [...]).",
+  "red_green": "RED: removed `row.update(provenance_for(cfg, fixture, arm))` from run_longrun.py:1647 -> `python3 -m pytest tests/test_row_provenance.py -q` = '11 failed, 1 passed'; GREEN after restore = '12 passed in 0.03s'.",
+  "tests": "tests/test_row_provenance.py: 12 passed in 0.03s",
+  "historical_grids_that_differ": [
+   "rows-cell-pointer-stable-20261026T145758Z.jsonl ran thinking=auto; every other grid ran thinking=off (proven: thinking)",
+   "LR-01.v4-slice-widened names THREE different fixture contents: 5a5f8c4be202 (rows-longrun-v4), a592a48ff3e5 (rows-longrun-v4-tools), 5bf5f6393946 (rows-longrun-v5-tools AND rows-longrun-v6-tools) -> proven fixture_sha256 differences",
+   "rows-longrun-v4-2026-10-26.jsonl vs rows-longrun-v4-tools-2026-10-26.jsonl differ on fixture_sha256 AND tools_mode (proven), so that head-to-head was never like-for-like",
+   "rows-longrun-v6-tools.jsonl ran the v4 fixture bytes (5bf5f6393946), same as rows-longrun-v5-tools.jsonl: 'v6' names the probe, not the fixture generation"
+  ],
+  "commands": [
+   "python3 experiments/ptr-engine/tools/row_provenance.py",
+   "python3 experiments/ptr-engine/tools/row_provenance.py --json experiments/ptr-engine/measure/ROW-PROVENANCE.json",
+   "python3 experiments/ptr-engine/tools/row_provenance.py --cost",
+   "python3 experiments/ptr-engine/tools/row_provenance.py --deltas",
+   "python3 -m pytest tests/test_row_provenance.py -q"
+  ],
+  "preexisting_unrelated": "tests/test_wire_client.py:66 does a module-level `socket.socket = _no_socket` with no teardown, so the two socket-opening tests in tests/test_stop_reason_producers.py fail ONLY when collected in the same pytest process as test_wire_client.py (alone: 8 passed). Not caused by this unit."
+ },
+ "blocker": "",
+ "next_unit_hint": "Wire `same_provenance` into `analyze_stats.py` (owned by another card) so a cell pair whose load-bearing provenance differs is refused at analysis time instead of only being reportable; then re-run LATENCY-REPORT to see which of its NOT COMPARABLE pairs are now provable rather than inferred.",
+ "write_paths": [
+  "client.py",
+  "run_longrun.py",
+  "experiments/ptr-engine/tools/row_provenance.py",
+  "docs/ROW-PROVENANCE.md",
+  "experiments/ptr-engine/measure/ROW-PROVENANCE.json",
+  "experiments/ptr-engine/longrun/tests/test_row_provenance.py",
+  "orchestration/units/ROW-PROVENANCE.md",
+  "orchestration/handoffs/ROW-PROVENANCE.json",
+  "orchestration/journals/ROW-PROVENANCE.jsonl"
+ ],
+ "assumptions": [
+  "the card's 'in client.py, make_row' is a location error: make_row is run_longrun.py:1484. Helpers in client.py (shared), stamping in run_longrun.py.",
+  "the card names nine provenance fields but calls them 'eight'; all nine named fields are written.",
+  "tools_mode format is 'off' or 'on:<csv>'; a manifest's ABSENCE of a tools block is read as 'off' because build_manifest splices that block only on a --tools run.",
+  "harness_sha256 for rows written from now on is recomputed per tree (it will differ from the digests recorded in 2026-10-26 cell reports, because run_longrun.py/client.py changed). Historical rows keep 'unknown' unless a cell report binds them.",
+  "rows-pilot-thinking-2026-10-26.jsonl reports thinking 'mixed': two manifests (off and on) match it and no tie-break may pick one."
+ ]
+}

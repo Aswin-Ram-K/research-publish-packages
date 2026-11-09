@@ -1,0 +1,153 @@
+{
+ "card_wording_still_right": "necessary but not sufficient: 'any shape_degenerate => STOP' would wave through tomorrow's shape_unknown",
+ "changes_applied": 0,
+ "date": "2026-10-26",
+ "gate_sentence": "RUN-A-STAR-2's canary gate should require shape_ok on the tools-on cell's first 12 turns with stop_reason read from finish_reason and the answer contract confirmed by checkpoint answer_verified; shape_degenerate => STOP and shape_unknown => STOP, because an unreadable row is not a pass.",
+ "instrument": {
+  "bytes": 19236,
+  "exit_codes": {
+   "cannot_run": 3,
+   "degenerate": 1,
+   "ok": 0,
+   "unknown": 2
+  },
+  "mode": "replay",
+  "path": "experiments/ptr-engine/tools/tranche_canary.py"
+ },
+ "live_tomorrow": "shape_unknown exit=2 at turn 1 at every N (era B rows via run_longrun.py), which would not be right",
+ "n_sweep": {
+  "change_threshold_turns": {
+   "v4": 45,
+   "v5": 29,
+   "v6": null
+  },
+  "note": "in {2,5,8,12} the tools-on verdict is constant shape_unknown; schema, not window, decides it",
+  "tools_on_verdict_changes_with_n": false,
+  "window": [
+   2,
+   5,
+   8,
+   12,
+   48
+  ]
+ },
+ "offline": {
+  "network_events": 0,
+  "requests_sent": 0
+ },
+ "positive_control": {
+  "completion_tokens": 4096,
+  "file": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl",
+  "fires": true,
+  "max_tokens": 4096,
+  "n": 5,
+  "rows": 27,
+  "sha256_16": "46afc892480ae1db",
+  "stop_reason": "length",
+  "truncated": true,
+  "turn": 3,
+  "verdict": "shape_degenerate",
+  "wall_ms": 114838.846
+ },
+ "recommended_rule": [
+  "read stop_reason with finish_reason fallback; a present finish_reason must not yield shape_unknown",
+  "require corroboration (failed_turn / unparseable checkpoint answer / calibrated fan-out) before shape_degenerate",
+  "use answer_verified as the era B answer-contract check instead of answer_turn",
+  "window: N>=3 keeps the era-A control live; N=5 defensible as a floor, earliest measured tools-on cap-length completion is turn 29"
+ ],
+ "secondary_positive": {
+  "completion_tokens": 16384,
+  "file": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T145758Z.jsonl",
+  "max_tokens": 16384,
+  "n": 5,
+  "rows": 6,
+  "sha256_16": "5ac9dd992f5d8715",
+  "stop_reason": null,
+  "turn": 5,
+  "verdict": "shape_degenerate",
+  "wall_ms": 475873.291
+ },
+ "shape_unknown_rate": {
+  "cause": "era B rows carry finish_reason only: 0/144 turns have stop_reason or answer_turn; shape_ok is structurally unreachable",
+  "count_not_rate": "3 of 3",
+  "tools_on_files": 3,
+  "unknown_at_n5": 3
+ },
+ "threshold": {
+  "evidence": "late fires at T29/T45 are real runaway tool fan-out (130/116 read_file calls, failed_turn true, finish length) against manifest max_calls_per_turn 2; v6 healthy turn 26 = 3283/4096 = 80.1% of ceiling shows a legitimate long answer approaches the limit indistinguishably",
+  "rule": "completion_tokens >= max_tokens (or truncated+stop_reason=length), or stop_reason in {runaway_turn,turn_wall_cap}, within N turns",
+  "too_coarse": true,
+  "too_strict_on_substance": false
+ },
+ "tools_on_files": [
+  {
+   "answer_turn_rows": 0,
+   "answer_verified_turns": [
+    12
+   ],
+   "cap_hits": [
+    45
+   ],
+   "file": "experiments/ptr-engine/measure/rows-longrun-v4-tools-2026-10-26.jsonl",
+   "first_cap_turn": 45,
+   "lines": 68,
+   "n48": "shape_degenerate",
+   "n48_cap_turn_tool_calls": 116,
+   "n48_failed_turn": true,
+   "n48_turn": 45,
+   "n5": "shape_unknown",
+   "n5_trigger": "stop_reason_outside_vocabulary",
+   "n5_trigger_turn": 1,
+   "sha256_16": "f11391aa2989949f",
+   "stop_reason_rows": 0,
+   "tool_calls": 165,
+   "turns": 48,
+   "wall_ms_rows": 0
+  },
+  {
+   "answer_turn_rows": 0,
+   "answer_verified_turns": [],
+   "cap_hits": [
+    29
+   ],
+   "file": "experiments/ptr-engine/measure/rows-longrun-v5-tools.jsonl",
+   "first_cap_turn": 29,
+   "lines": 72,
+   "n48": "shape_degenerate",
+   "n48_cap_turn_tool_calls": 130,
+   "n48_failed_turn": true,
+   "n48_turn": 29,
+   "n5": "shape_unknown",
+   "n5_trigger": "stop_reason_outside_vocabulary",
+   "n5_trigger_turn": 1,
+   "sha256_16": "586b66f27939bd05",
+   "stop_reason_rows": 0,
+   "tool_calls": 258,
+   "turns": 48,
+   "wall_ms_rows": 0
+  },
+  {
+   "answer_turn_rows": 0,
+   "answer_verified_turns": [
+    12
+   ],
+   "cap_hits": [],
+   "file": "experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl",
+   "first_cap_turn": null,
+   "lines": 72,
+   "max_completion_tokens": 3283,
+   "max_completion_turn": 26,
+   "n48": "shape_unknown",
+   "n5": "shape_unknown",
+   "n5_trigger": "stop_reason_outside_vocabulary",
+   "n5_trigger_turn": 1,
+   "sha256_16": "1e78d75f259afbe0",
+   "stop_reason_rows": 0,
+   "tool_calls": 316,
+   "turns": 48,
+   "wall_ms_rows": 0
+  }
+ ],
+ "unit": "CANARY-FALSE-POSITIVE",
+ "verdict": "canary_blind"
+}

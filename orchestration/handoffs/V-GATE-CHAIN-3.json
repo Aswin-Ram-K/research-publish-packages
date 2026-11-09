@@ -1,0 +1,82 @@
+{
+ "unit": "V-GATE-CHAIN-3",
+ "overall": "fail",
+ "checks": [
+  "PIN experiments/ptr-engine/longrun/cell.py sha256 fd4f2b01a6bfdeea425a92de428f770bf9f07fbe3bdc3b1d8cfd1f4a17ee2ec6 (1600 lines) and exit_codes.py 97cdfc1e63471aecff83fc212346a56b719d44ecde13ae58c0f9bd4f8a3a86c8 before and after all 33 probes: byte-identical; cell_pinned assertion True; docs/GATE-CHAIN.md sha 358d4c3acc6600af5f15ef7b41934df3896b58ac79304cd01d79b491141a3a0d read only",
+  "ENUM 8 numeric flags on the argparse surface (--turns --reps --budget --turn-wall-cap --projected-turn-wall --fetch-followup-allowance --runaway-turns --max-wall), 8/8 attacked with 0, -1/-48, 1e-9, 1e308, inf, nan, and 'abc', alone and with a permissive sibling; 33 end-to-end cases + 11 direct gate evaluations, failed_assertions=[]",
+  "G1 decision verbatim: ok = bool(b['within_budget']); projected = requests_published + would_spend; would_spend = turns*arms*reps + allowance; headroom = cap - reserve. cap presence/parse/read-errors refuse (2), but the SIGN of the cost is unvalidated",
+  "G2 decision verbatim: ok = (max_wall > 0 and projected <= max_wall); projected = int(round(requests * proj_turn)); worst = int(round(requests * cap_turn)). Ceiling sign validated, ceiling magnitude/finiteness NOT; flag multiplicand sign validated, magnitude NOT; artefact multiplicand (_mode_wall -> float(table[mode])) not validated at all",
+  "G3 decision verbatim: ok = n >= min_n; n = turns*reps; H1 min_n=60 (imported from analyze_stats.min_n_for(0.95)), H2 min_n=1, H3 min_n=8 checkpoints. H3 never reads n, so n's sign is free",
+  "F1 --max-wall 1e308: G2 ok=True, projected_wall~=11520s against a 1e308 s ceiling, runner invoked, exit 6 -- an undeclared unlimited mode by MAGNITUDE, contradicting docs/GATE-CHAIN.md section 4 'there is no unlimited mode'",
+  "F2 --projected-turn-wall 1e-9 --max-wall 1: projected_wall~=0s, G2 ok=True, runner invoked, exit 6; GATE-OVERRIDE-FIX F1's check is value > 0 with no lower bound, so any sub-1e-6 positive still zeroes the projection",
+  "F3 PROJECTION.json defaults.projected_turn_wall_s_by_mode.absent = 0.0 / -12.0 / 1e-9 (CELL_PROJECTION_ARTEFACT redirected in-process, /tmp file): G2 ok=True with --max-wall 1, projected 0 / -2304 / 0 s, runner invoked, exit 6 each; the artefact operand of the same multiplication is unvalidated",
+  "F4 --turns 0 --hypothesis H3 on a 12-checkpoint fixture (tasks-v6/LR-01.v7.json) --max-wall 1e308: G1 prices would_spend=0, G2 and G3 allow, runner invoked with NO --max-turns (truncated=False because n_turns==0), i.e. the full 48-turn cell, exit 6",
+  "F5 --turns -48 --hypothesis H3: G1 would_spend=-48, projected 1053 < spent 1101 -> ok=True; runner invoked, exit 6; --max-turns -48 is passed and ignored by the runner (longrun/run_longrun.py:1916-1918 'if max_turns > 0'), so the whole fixture runs",
+  "F6 --fetch-followup-allowance -100: fetch_followup_allowance() returns max(0, int(fixed)) = 0 (default 5), so G1 prices 48 requests instead of 53 -- a negative operand silently reduces the reserve instead of refusing",
+  "F7 finiteness holes: --max-wall inf and nan, --turn-wall-cap inf, PROJECTION.json by-mode NaN all exit 1 with OverflowError/ValueError from int() inside eval_gate_projection's verdict line; --projected-turn-wall inf is REFUSED but crashes in _num() -> exit 1. The gate's own contract is exit 8 with the five facts; exit 1 is EXIT_INTERNAL, declared in exit_codes.EXIT_TABLE but absent from docs/GATE-CHAIN.md section 2",
+  "F8 --turn-wall-cap 0 --max-wall 1e308: no validation, 0.0 handed to the runner as its live abort threshold, runner reached (exit 6); --turn-wall-cap is in G2's printed worst-case expression (requests * cap_turn) and is the live bound, yet has no lower or upper check",
+  "SILENCE: absent --hypothesis refuses (exit 8 with default flags because G2 is evaluated first; exit 12 once --max-wall 1e308 lets G2 allow); --hypothesis none refuses 12; empty PREREG artefact refuses 12 once G2 allows; empty LEDGER artefact (no budget.cap) refuses 2; ledger artefact listing an unreadable row file refuses 2; missing ledger artefact refuses 2; empty fixture refuses 2 at preflight; absent --budget refuses 3. No absent input was found that produces an allow",
+  "ORDER: live mode enforces G1(4) -> G2(8) -> G3(12) and _enforce raises immediately, so no earlier refusal is hidden by a later allow; the only documented divergence is --dry-run returning 0 with a WOULD-REFUSE line, which is the GATE-OVERRIDE-FIX F3 contract and spawns 0 subprocesses (verified)",
+  "SPAWNS ON REFUSAL: for every live-mode refusal in the matrix, spawns_live=0, rows-*=0, *.gates.json=0; but spawns_dryrun=1 for every one of them, because stage_budget() runs the runner's --dry-run BEFORE G1/G2/G3. 'A refusal spawns no runner process' is literally false: it spawns exactly one offline dry-run, then no live invocation, no row, no manifest. --dry-run and preflight refusals spawn 0",
+  "EXIT TABLE both directions: EXIT_TABLE keys 0..12 (13); raised by cell.py {0,1,2,3,4,7,8,9,10,11,12}; {5,6} provisioned by RUNNER_CODES propagation; raised_undeclared=[]; docs/GATE-CHAIN.md section 2 table has {0,2,3,4,5,6,7,8,9,10,11,12} -> docs_missing=[1], docs_extra=[]",
+  "DOC DRIFT: docs/GATE-CHAIN.md section 2 omits code 1 (internal-error, observed 4x here); section 4 names defaults.projected_turn_wall_s (60) while cell.py reads defaults.projected_turn_wall_s_by_mode[mode] (PROJECTION.json labels the scalar LEGACY); section 5's 'no hypothesis -> exit 12' holds only when G2 would allow (J1 exits 8)",
+  "POSITIVE CONTROL: --projected-turn-wall 18 --max-wall 3600 -> projected 3456 <= 3600, G2 allows, runner invoked (exit 6) -- the gate can allow, so the refusals above are not a dead harness",
+  "NOT BYPASSES (verified controls): --max-wall 0 and -1 -> exit 8, 0 live spawns; --projected-turn-wall -1 -> 8, 0 live spawns; --max-wall nan -> 1 (crash, no spawn); --runaway-turns -5 -> passed through but run_longrun.py clamps max(1, ...), tightening not disabling; --turns abc -> argparse SystemExit(2), the declared preflight code"
+ ],
+ "class_findings": [
+  {"flag": "--max-wall", "value": "1e308", "what_happened": "G2 ok=True; projected_wall 11520 s vs ceiling 1e308 s; stage_run invoked the runner. An undeclared unlimited mode by magnitude; docs say there is none.", "exit": 6},
+  {"flag": "--projected-turn-wall", "value": "1e-9 (with --max-wall 1)", "what_happened": "projected_wall 0 s; G2 ok=True; stage_run invoked. GATE-OVERRIDE-FIX F1 validates sign only, not magnitude.", "exit": 6},
+  {"flag": "PROJECTION.json defaults.projected_turn_wall_s_by_mode.absent", "value": "0.0 / -12.0 / 1e-9", "what_happened": "_mode_wall returns float(table[mode]) unchecked; G2 ok=True at --max-wall 1; stage_run invoked three times. Same defect as F2 on the artefact operand.", "exit": 6},
+  {"flag": "--turns", "value": "0 (with --hypothesis H3 on a 12-checkpoint fixture, --max-wall 1e308)", "what_happened": "G1 would_spend=0, all three gates allow, runner invoked with no --max-turns so the full 48-turn fixture runs (requests unaccounted against the ledger).", "exit": 6},
+  {"flag": "--turns", "value": "-48 (with --hypothesis H3)", "what_happened": "G1 would_spend=-48, projected 1053 below spent 1101 -> allow; runner invoked; --max-turns -48 ignored by run_longrun.py 'if max_turns > 0'.", "exit": 6},
+  {"flag": "--fetch-followup-allowance", "value": "-100", "what_happened": "clamped to 0 by max(0, int(fixed)); G1 prices 48 instead of the measured 53; the follow-up reserve is silently removed rather than refused.", "exit": 0},
+  {"flag": "--max-wall / --turn-wall-cap / --projected-turn-wall / artefact by-mode", "value": "inf, nan", "what_happened": "int(inf)/int(nan) inside the verdict line raises OverflowError/ValueError; the conductor returns 1 (internal error) -- or crashes in _num() on the refusal path for --projected-turn-wall inf -- instead of the gate's declared exit 8 with five facts.", "exit": 1},
+  {"flag": "--turn-wall-cap", "value": "0 (with --max-wall 1e308)", "what_happened": "passed verbatim to the runner as its live per-turn abort threshold (0.0); no lower/upper bound at the gate boundary; runner reached.", "exit": 6}
+ ],
+ "bypasses_remaining": [
+  "cell.py --arm transcript-grow --fixture experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json --budget 600 --turns 48 --hypothesis H2 --max-wall 1e308  (G2 allow, runner invoked; F1)",
+  "… --max-wall 1 --projected-turn-wall 0.000000001  (projected 0 s, runner invoked; F2)",
+  "… --max-wall 1 with PROJECTION.json defaults.projected_turn_wall_s_by_mode.absent in {0, -12, 1e-9}  (runner invoked; F3)",
+  "… --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v7.json --turns 0 --hypothesis H3 --max-wall 1e308  (G1 prices 0 requests, full cell runs; F4)",
+  "… --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v7.json --turns -48 --hypothesis H3 --max-wall 1e308  (G1 prices -48; F5)",
+  "… --fetch-followup-allowance -100  (G1 undercounts the follow-up reserve; F6)",
+  "… --turn-wall-cap 0 --max-wall 1e308  (live abort threshold handed over as 0; F8)"
+ ],
+ "not_reproduced": [
+  "V-GATE-CHAIN's break (non-positive --max-wall allows) does not reproduce: 0 and -1 exit 8 with zero live spawns",
+  "V-GATE-CHAIN-2's break (--projected-turn-wall -1 allows) does not reproduce: -1 exits 8 with zero live spawns; the F1 fix landed",
+  "the card's premise that a gate refusal might spawn a runner does not reproduce for any exit code tested: spawns_live=0 for every refusal (the one spawn before the gates is the offline --dry-run accounting call)",
+  "no absent input was found that produces an allow: absent hypothesis, empty/missing/unreadable artefacts and an empty fixture all refuse"
+ ],
+ "overstated": [
+  "GATE-CHAIN-FIX and GATE-OVERRIDE-FIX framing that G2 is repaired in the unsafe direction: the ceiling's sign and the flag's sign are validated, but magnitude (1e308, 1e-9) and the artefact multiplicand are not, so G2 can still be switched off on three independent operands",
+  "docs/GATE-CHAIN.md section 4 'there is no unlimited mode' is false as written: --max-wall 1e308 is an unlimited mode, and --max-wall inf does not refuse with 8 (it crashes with 1)",
+  "the 'no runner process is spawned on refusal' claim: one offline runner --dry-run process is spawned at stage 3 before G1/G2/G3 on every live invocation",
+  "docs/GATE-CHAIN.md section 5 'a cell that declares no hypothesis is refused with exit 12': with default flags it is refused with exit 8, because G2 is enforced before G3"
+ ],
+ "unverified": [
+  "whether a real run_longrun.py (not the in-process recorder) would send requests after F1-F5 -- proving actual billing needs a live endpoint, which this unit may not use; the bypass is proved at the subprocess boundary only (argv handed to stage_run)",
+  "the runner-side effect of --reps 0 and of --turns 0 with an H3 fixture: this unit proves the conductor admits them and passes no --max-turns; run_longrun.py's own behaviour under reps=0 was not executed",
+  "G1's own cap-refusal exit 4 was not re-triggered end-to-end in this run (the ledger artefact's headroom is 3219 and the recorder reports would_send_total=192); the 4 path is unchanged and was verified by V-GATE-CHAIN-2"
+ ],
+ "blocker": "SIX BYPASSES SURVIVE. The repaired operands are the ones with a sign check; their siblings are open: --max-wall 1e308 lets G2 allow; --projected-turn-wall 1e-9 zeroes the projection; PROJECTION.json by-mode 0/-12/1e-9 does the same; --turns 0 (H3) makes G1 price 0 requests while the full fixture runs; --turns -48 makes G1 price -48; --fetch-followup-allowance -100 removes the follow-up reserve. inf/nan crash the gate with exit 1 instead of refusing with 8. RUN-A* must not be launched.",
+ "next_unit_hint": "One repair unit, class-shaped, not instance-shaped: in cell.py validate EVERY variable of the three decision expressions at the boundary -- max_wall finite and in (0, BOUND]; proj_turn positive, finite and >= a declared floor for flag, p90 and artefact sources alike; turns/reps positive integers; fetch-followup-allowance >= 0 or absent; turn-wall-cap positive and bounded -- and make _num()/_gate_message finiteness-safe so inf/nan yield the gate's exit 8. Add red->green for each operand (positive control: --projected-turn-wall 18 under --max-wall 3600 still runs). Then fix docs/GATE-CHAIN.md section 2 (code 1 missing) and section 4 (by-mode key name). Re-run this unit's embedded script after the repair: it is written to fail loudly (failed_assertions) as long as a bypass survives.",
+ "write_paths": [
+  "orchestration/units/V-GATE-CHAIN-3.md",
+  "orchestration/handoffs/V-GATE-CHAIN-3.json",
+  "orchestration/journals/V-GATE-CHAIN-3.jsonl",
+  "/tmp/vgc3/**"
+ ],
+ "tool_calls": 27,
+ "bound": 32,
+ "containment": "no repo source, row, grade, measurement or docs file edited; cell.py sha256 identical before and after; the only mutations are orchestration/units|handoffs|journals/V-GATE-CHAIN-3.* and per-call /tmp/vgc3; zero inference requests, zero sockets, no git write; the runner was never spawned (cell.subprocess.run replaced in-process)",
+ "red_green": "GREEN half is built in: the same script asserts the refusals (--max-wall 0 -> 8, --projected-turn-wall -1 -> 8, absent hypothesis -> 12 once G2 allows, empty/missing artefacts -> 2/12, --dry-run 0 spawns) AND the positive control (--projected-turn-wall 18 --max-wall 3600 -> runner reached). RED half is the six bypass assertions: if a repair lands, the corresponding assertion flips and the script exits non-zero, naming the operand.",
+ "artifacts": [
+  "orchestration/units/V-GATE-CHAIN-3.md"
+ ],
+ "assumptions": [
+  "cell.subprocess.run replaced in-process by a recorder is a faithful stand-in at the subprocess boundary: it records the exact argv stage_run would execute and returns rc 6 (the runner's runaway code) so the case ends at the run stage; no process, socket or request is created",
+  "the fixture tasks-v6/LR-01.v7.json (12 checkpoints, N=48) is a legitimate fixture for H3: preflight derives all 12 truths from the pinned source tree when run from the repo root",
+  "the conductor's own `--dry-run` (argparse) is distinct from the runner's `--dry-run` spawned at stage 3; only the latter is counted as a spawn"
+ ]
+}

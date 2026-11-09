@@ -7,7 +7,7 @@ prediction, per-turn reconciliation and totals, and the avalanche as a first-cla
 **Bound.** 35 tool calls. Fully offline: no network, no server calls, no tokenizer at import.
 
 **Write paths.** `experiments/ptr-engine/ptr_engine/ledger.py`, `.../ptr_engine/errors.py`,
-`.../ptr_engine/__init__.py`, `.../tests/test_ledger.py`, `.../SPEC.md`,
+`.../ptr_engine/__init__.py`, `.../experiments/ptr-engine/tests/test_ledger.py`, `.../SPEC.md`,
 `orchestration/units/HIT-LEDGER.md`, `orchestration/handoffs/HIT-LEDGER.json`.
 `experiments/miss-law/**` was **read only** (`rows.jsonl`); nothing else was touched.
 
@@ -64,7 +64,7 @@ profile change cannot redraw a bill that was already issued.
 ## 4. Codes
 
 Four new codes, in their own tuple `LEDGER_LAW_CODES` so the row contract's five stay
-five (`tests/test_negative_controls.py` asserts `len(LEDGER_CODES) == 5`, so extending
+five (`experiments/ptr-engine/tests/test_negative_controls.py` asserts `len(LEDGER_CODES) == 5`, so extending
 that tuple would have been a regression): `PTR_LAW_UNKNOWN_SERVER`,
 `PTR_LAW_BOUND_INVALID`, `PTR_LAW_SERIES_LENGTH`, `PTR_LAW_OBSERVED_INVALID`.
 **New code total: 4. Package enumeration: 16 named codes (7 controls + 5 ledger + 4 law).**
@@ -74,7 +74,7 @@ is also a `ValueError` (the existing ledger family), asserted by test.
 ## 5. Suite
 
 `100 passed` before → **`108 passed`** after (`python3 -m pytest -q`, no regressions).
-Eight new tests in `tests/test_ledger.py`: the law on both servers at residues 0/1/2/63
+Eight new tests in `experiments/ptr-engine/tests/test_ledger.py`: the law on both servers at residues 0/1/2/63
 and a payload boundary; the profiles being the measured ones; `reconcile` naming a
 mismatching turn; avalanche as its own outcome with its own cost; unknown-observed not
 treated as zero; the four law codes; the 16-code enumeration; and the replay.
@@ -89,26 +89,26 @@ directory, so it is not in `../..` of a copy).
 **Sabotage A — `B = 32` for SGLang:**
 
 ```
-tests/test_ledger.py:158: AssertionError
+experiments/ptr-engine/tests/test_ledger.py:158: AssertionError
 E       assert (63, (44, False)) == (63, (76, False))
 E         At index 1 diff: (44, False) != (76, False)
-tests/test_ledger.py:182: AssertionError
+experiments/ptr-engine/tests/test_ledger.py:182: AssertionError
 >       assert (sglang.block_size, sglang.boundary_blocks) == (64, 0)
 E       assert (32, 0) == (64, 0)
-FAILED tests/test_ledger.py::test_law_reproduces_both_servers_at_named_residues
-FAILED tests/test_ledger.py::test_profiles_are_the_measured_ones
+FAILED experiments/ptr-engine/tests/test_ledger.py::test_law_reproduces_both_servers_at_named_residues
+FAILED experiments/ptr-engine/tests/test_ledger.py::test_profiles_are_the_measured_ones
 2 failed, 105 passed, 1 skipped in 0.22s
 ```
 
 **Sabotage B — avalanche branch deleted:**
 
 ```
-tests/test_ledger.py:155: AssertionError
-tests/test_ledger.py:220: AssertionError
+experiments/ptr-engine/tests/test_ledger.py:155: AssertionError
+experiments/ptr-engine/tests/test_ledger.py:220: AssertionError
 >       assert (avalanche.residue, avalanche.avalanche) == (0, True)
 E       assert (0, False) == (0, True)
-FAILED tests/test_ledger.py::test_law_reproduces_both_servers_at_named_residues
-FAILED tests/test_ledger.py::test_avalanche_is_its_own_outcome_with_its_own_cost
+FAILED experiments/ptr-engine/tests/test_ledger.py::test_law_reproduces_both_servers_at_named_residues
+FAILED experiments/ptr-engine/tests/test_ledger.py::test_avalanche_is_its_own_outcome_with_its_own_cost
 2 failed, 105 passed, 1 skipped in 0.22s
 ```
 
@@ -139,7 +139,7 @@ exactly `{0, 1}`. The brief's "85/86 on vLLM" is the sub-block row of §2, now e
    different request shape must pass `L` directly; `record` refuses both `L` and
    `payload_tokens` at once so the two cannot quietly disagree.
 4. **`LEDGER_CODES` was not extended.** The law codes live in `LEDGER_LAW_CODES`
-   because `tests/test_negative_controls.py::test_ledger_codes_extend_the_enumeration_without_colliding`
+   because `experiments/ptr-engine/tests/test_negative_controls.py::test_ledger_codes_extend_the_enumeration_without_colliding`
    asserts `len(set(LEDGER_CODES)) == 5` and a 12-code total; extending it would have
    broken a passing guard. Both totals are now asserted instead (5 + 4, 16 named codes).
 5. **The brief's "218/218 SGLang"** does not match any subset boundary I could

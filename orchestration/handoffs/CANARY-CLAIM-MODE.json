@@ -1,0 +1,32 @@
+{
+ "unit": "CANARY-CLAIM-MODE",
+ "status": "done",
+ "artifacts": ["docs/CANARY-ARGV.md", "tests/test_canary_claim_mode.py", "orchestration/units/CANARY-CLAIM-MODE.md", "orchestration/journals/CANARY-CLAIM-MODE.jsonl"],
+ "evidence": {
+  "command_or_count": "5 passed; 12/12 rows claim=none eligible=false; analyzer prints CLAIM REFUSAL incomparable_claim; H2 flip prints no refusal; 0 requests, 0 sockets",
+  "commands": [
+   "PYTHONPATH=src python3 -m pytest tests/test_canary_claim_mode.py -q",
+   "python3 analyze_stats.py --rows <12 synthetic smoke rows>",
+   "python3 analyze_stats.py --rows <same 12 rows flipped to H2>"
+  ],
+  "claim_mode_table": {
+   "runner": "run_longrun.py:2831-2839 --claim-mode smoke|plumbing|H1|H2|H3; resolved :2962; refusal exit 12 :2971-2975; temp-dir exemption :1754-1763/:2965-2970",
+   "conductor": "cell.py:1887 --hypothesis; resolved :1311-1325; G3 verdict :1404-1418; smoke :1427-1429",
+   "analyser": "analyze_stats.py:173 INCOMPARABLE_CLAIM, :216-240 require_comparable_claim, :1345-1353 analyze()",
+   "cell_forwards_claim": "YES — cell.py:1590-1594 argv += [--claim-mode, smoke if is_smoke else claim]; sidecar cell.py:1566-1587",
+   "tools_not_forwarded": "cell.py has no --tools argument; run_a_star.py:52-66 CELL_RUNNER_PATH runpy shim appends --tools read_file"
+  },
+  "smoke_row_quoted": "{\"arm\": \"pointer-stable\", \"claim\": \"none\", \"comparison_eligible\": false, \"max_tokens\": 4096, \"stop_reason\": \"stop\", \"turn\": 1}",
+  "refusal_quoted": "CLAIM REFUSAL  incomparable_claim smoke.jsonl: refusing a comparison that includes 12 cell row(s) which make no claim (claim_free): ... turn=12.",
+  "h2_flip_quoted": "no CLAIM REFUSAL line; arm pointer-stable (rows n=12) reported",
+  "verdict": "PASS f17663d1"
+ },
+ "assumptions": [
+  "The 48-request canary is 4 arms x 12 turns (GRID-PARAMS.json :: canary), one cell.py invocation per arm; the argv documented is the per-arm one.",
+  "--max-tokens 4096 is the runner default (run_longrun.py:2801) and has no cell.py flag; documented as effective default, not as a forwarded token.",
+  "Rows were generated offline with run_longrun.make_row and a synthetic response (the repo's claim-row test pattern); no request and no socket was opened."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Apply the one-line launcher wiring (run_a_star.cell_argv must carry its hypothesis parameter, currently hard-coded --hypothesis H2 at run_a_star.py:182) in a separate card; do not edit cell.py/run_longrun.py.",
+ "write_paths": ["docs/CANARY-ARGV.md", "tests/test_canary_claim_mode.py", "orchestration/units/CANARY-CLAIM-MODE.md", "orchestration/handoffs/CANARY-CLAIM-MODE.json", "orchestration/journals/CANARY-CLAIM-MODE.jsonl"]
+}

@@ -1,0 +1,54 @@
+{
+ "unit": "ANSWER-CONTRACT",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "experiments/ptr-engine/longrun/tests/test_answer_contract.py",
+  "experiments/ptr-engine/longrun/tests/test_grade_v5.py",
+  "orchestration/units/ANSWER-CONTRACT.md"
+ ],
+ "evidence": {
+  "fixture_carries_system_prompt": "y - LR-01.v5.json system_prompt states the four ANSWER forms verbatim, names T12/T24/T46 and says tools are unavailable on them; leak check: '64' and '31' absent from system_prompt and from every turns[].question",
+  "checkpoints_decidable": "3/3 - cp.0.t12 NUM by integer equality (ast.Assign DEFAULT_MAX_REFS, resolve.py:39); cp.1.t24 NUM by integer equality (ast.ClassDef count ^Ptr\\w*$, errors.py:15-247); cp.2.t46 CALL by exact callee + exact kwarg name set + value text (ast.Call inside _refuse, resolve.py:69)",
+  "test_answer_contract": "26/26 assertions passed (rc 0); --red: 0/26, RED CONFIRMED, rc 1",
+  "test_grade_v5": "16/16 guard cases passed (rc 0); --red (CALL/NONE stubbed to pass): 8/16 FAILED, rc 1",
+  "runner_offline_fake_model": "12 in-process fixture replies, --tools read_file: T12 row answer_turn=True answer_kind=NUM answer_value=64 answer_raw='ANSWER: NUM 64' answer_parse_error=None tool_calls=None; a checkpoint reply carrying <tool_call> still produced 12 total requests (0 follow-ups); T12 prompt contains 'TOOLS ARE DISABLED'",
+  "dry_run": "v5: would_send_total=48 (offline); legacy tasks-v4/runtime-v4/LR-01.v4.json: would_send_total=48 (back-compat)",
+  "grade_v5_cli": "python3 experiments/ptr-engine/longrun/grade_v5.py --rows /tmp/ac_rows3.jsonl --fixture .../LR-01.v5.json --out /tmp/ac-grade5.json -> rc 0, cells carry verdict/reason/asserted/expected/derivation['text'] = 'experiments/ptr-engine/ptr_engine/resolve.py:39 ast.Assign DEFAULT_MAX_REFS = 64' and 'errors.py:15-247 ast.ClassDef count(^Ptr\\w*$) = 31'",
+  "token_cost_offline_cl100k": "contract batch 6+6+20 = 32 tok vs representative prose 22+18+23 = 63 tok -> delta 31 tok (49% of prose) per 3-checkpoint batch; CALL line 20 tok == v4's documented cp3 prose string (20 tok); over the 40 checkpoint rounds: 1280 vs 2520 tok",
+  "requests_spent": 0,
+  "tool_calls": 15,
+  "red_green": "both guards: green exit 0, --red exit 1 (contract 26/26 fail; grade_v5 8/16 fail)",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/tests/test_answer_contract.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_answer_contract.py --red",
+   "python3 experiments/ptr-engine/longrun/tests/test_grade_v5.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_grade_v5.py --red",
+   "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json --arms transcript-grow --dry-run --manifest-path /tmp/ac-dry.json",
+   "python3 experiments/ptr-engine/longrun/grade_v5.py --rows /tmp/ac_rows3.jsonl --fixture experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json --out /tmp/ac-grade5.json"
+  ]
+ },
+ "blocker": "",
+ "assumptions": [
+  "prose before/after the single ANSWER line is tolerated (counted, never read) instead of failing the cell: the measured compliance failure is formatting, and the contract line is the only evidence read",
+  "NONE passes only where the source has no such call; all three v5 checkpoints are derivable so NONE fails there by design",
+  "a declared elision in the fixture's documented expected string (scope=... in cp3) accepts '...'/U+2026 or the exact AST value text; recorded per cell as elided_kwargs",
+  "the v5 score fixture tasks-v5/LR-01.v5.json was not written (outside the declared write paths)"
+ ],
+ "corrections": [
+  "card premise 'tasks-*/…/LR-01*.json has no system_prompt key at all': true for the score fixture tasks-v4/LR-01.v4.json (consonance.fixture/1), FALSE for the longrun fixture tasks-v4/runtime-v4/LR-01.v4.json, which already carries a system_prompt ending in an ambiguous 'ANSWER: <the value, or NOT-AN-ANSWER>' instruction; v5 replaces that tail with the contract",
+  "the citation rule named in the card lives in experiments/ptr-engine/tools/det_verify.py; experiments/ptr-engine/longrun/det_verify.py does not exist"
+ ],
+ "next_unit_hint": "run the v5 fixture on a tools-on arm (real requests) and grade with grade_v5.py --rows <rows> --fixture experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json --out <grade>; if a score-side fixture is wanted, adapt tasks-v5/LR-01.v5.json from tasks-v4/LR-01.v4.json",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "experiments/ptr-engine/longrun/tests/test_answer_contract.py",
+  "experiments/ptr-engine/longrun/tests/test_grade_v5.py",
+  "orchestration/units/ANSWER-CONTRACT.md",
+  "orchestration/handoffs/ANSWER-CONTRACT.json"
+ ]
+}

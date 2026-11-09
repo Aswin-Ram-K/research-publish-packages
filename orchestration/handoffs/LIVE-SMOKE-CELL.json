@@ -1,0 +1,35 @@
+{
+ "unit": "LIVE-SMOKE-CELL",
+ "status": "partial",
+ "artifacts": [
+  "orchestration/units/LIVE-SMOKE-CELL.md",
+  "experiments/ptr-engine/measure/cell-pointer-stable-20261026T145722Z.json",
+  "experiments/ptr-engine/measure/cell-pointer-stable-20261026T145722Z.md",
+  "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T145758Z.jsonl"
+ ],
+ "evidence": {
+  "endpoint": "GET http://192.168.2.168:8012/v1/models -> HTTP 200 in 0.005398s; data[0].id=occamy-1.0 max_model_len=131072",
+  "stage1_offline": "exit 0; rows n=72; ttft_p50 n=72 158.19ms [146.19,200.61]; ttft_p95 n=72 435.27ms [346.51,529.89]; accuracy UNDECIDABLE (n=0 decidable turns)",
+  "stage1_p95": "p95 was ADMISSIBLE at n=72: analyze_stats.py:223 refuses only when n<20 or n*(1-q)<3 (p95 -> n<60); the card's premise that these rows carry <60 usable timings is false",
+  "stage2_live": "aborted by unit at 6/48 turns: requests spent 6/130, no cell record (conductor never reached stage 5). rows=6, mean turn wall 191s, turns 5-6 hit completion_tokens=16384 cap with wall 475873ms / 379528ms",
+  "stage3_fields": "ttft_ms present with ttft_source=first_delta on all 6 rows (never equal to wall_ms); first_token_kind=reasoning on all 6, NO tool_call turn occurred; cached_tokens present from turn 2 with cached_source=prompt_tokens_details (256/3008/3776/3776/4160); answer_kind UNVERIFIED on live rows - the first checkpoint is T12 and the cell stopped at T6",
+  "commands": [
+   "curl -s -w 'HTTP %{http_code}' http://192.168.2.168:8012/v1/models",
+   "python3 experiments/ptr-engine/longrun/cell.py --offline experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl --arm pointer-stable --fixture experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json --budget 0",
+   "python3 experiments/ptr-engine/longrun/cell.py --arm pointer-stable --fixture experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json --turns 48 --reps 1 --budget 130 --endpoint http://192.168.2.168:8012/v1"
+  ]
+ },
+ "blocker": "Live cell is not cheap at SGLang reasoning cost: 191s mean per turn, with turns 5-6 running to the 16384-token completion cap (475.9s, 379.5s). 48 turns projects to ~2.5-5h and the first checkpoint (T12) is ~40min in, so a full 48-turn smoke cell exceeded this unit's bound. Checkpoint answer_kind therefore remains unverified on live rows.",
+ "next_unit_hint": "Run a checkpoint-tight smoke cell: --turns 12 (single checkpoint T12) so the grade/analyse/record stages actually execute on live rows within ~40min, and cap reasoning (fixture max_tokens / reasoning_policy) so per-turn wall is not dominated by 16k-token reasoning. Also reconcile the grader-vs-analyser decidability split (grade says decidable=3, analyse says n=0).",
+ "write_paths": [
+  "orchestration/units/LIVE-SMOKE-CELL.md",
+  "orchestration/handoffs/LIVE-SMOKE-CELL.json",
+  "experiments/ptr-engine/measure/cell-*.json",
+  "experiments/ptr-engine/measure/cell-*.md"
+ ],
+ "assumptions": [
+  "Aborted the live cell rather than run ~5h: the unit bound is a smoke test, and a partial with per-row evidence was preferred over an unattended multi-hour job holding the cell lock.",
+  "Endpoint model id observed as occamy-1.0 (card said occamy-1.0-NVFP4); used the serving id.",
+  "No harness file was edited."
+ ]
+}

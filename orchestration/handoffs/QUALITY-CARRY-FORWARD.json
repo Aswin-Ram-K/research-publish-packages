@@ -1,0 +1,75 @@
+{
+ "unit": "QUALITY-CARRY-FORWARD",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/quality_carry_forward.py",
+  "experiments/ptr-engine/tests/test_quality_carry_forward.py",
+  "experiments/ptr-engine/measure/QUALITY-CARRY-FORWARD.json",
+  "docs/QUALITY-CARRY-FORWARD.md",
+  "orchestration/units/QUALITY-CARRY-FORWARD.md",
+  "orchestration/journals/QUALITY-CARRY-FORWARD.jsonl"
+ ],
+ "evidence": {
+  "recomputed_figures": {
+   "counterfactual_modal_pass_per_arm": "0/12 (worst arm; 29 arms checked, all 0 of 12)",
+   "counterfactual_modal_pass_total": "0/348 checkpoint grades",
+   "none_id_counterfactual_pass": "0/3 (cp.5.t14, cp.7.t20, cp.11.t42)",
+   "none_id_observed_pass": "1/3 (cp.7.t20, none_confirmed_absent_in_source) - reading distinction recorded separately",
+   "observed_pass_total": "3/29 groups, all pointer-stable (cp.0.t12 x2 num_equal, cp.7.t20)",
+   "observed_passes_that_are_modal": "0/3",
+   "distinct_answers": "pointer-stable 48/48, lease-reopen 46/48, transcript-grow 33/48, transcript-compact 9/48 (rows-longrun-c)",
+   "turns_with_path_read_invitation": "46/48 (turns 30 and 48 do not)",
+   "turns_with_at_knowledge": "0/48",
+   "turns_with_literal_read_file": "0/48",
+   "era_a_grade_v5_pass": "3/25 = 12.0 %"
+  },
+  "figures_that_did_not_reproduce": [],
+  "drift": [],
+  "guard_green": "python3 experiments/ptr-engine/tools/quality_carry_forward.py --check -> OK 15 figures, 2 statements, 10 citations match a fresh recomputation (exit 0)",
+  "guard_red": "/tmp/QUALITY-CARRY-FORWARD-mutated.json with distinct_answers.transcript-grow 33->34 -> DRIFT distinct_answers.transcript-grow.value: recorded 34 != recomputed 33 (exit 1)",
+  "tests": "6 passed (test_quality_carry_forward.py); full experiments/ptr-engine/tests suite 230 passed in 2.11s",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/quality_carry_forward.py --write",
+   "python3 experiments/ptr-engine/tools/quality_carry_forward.py --check",
+   "python3 experiments/ptr-engine/tools/quality_carry_forward.py --check --record /tmp/QUALITY-CARRY-FORWARD-mutated.json",
+   "python3 -m pytest -q experiments/ptr-engine/tests/test_quality_carry_forward.py",
+   "python3 -m pytest -q experiments/ptr-engine/tests"
+  ]
+ },
+ "needs_citation": [
+  {"path": "docs/OPERATOR-BRIEF.md", "line": 18, "wording": "| **H3** quality | lose no more than 2 of 12 checkpoints (16.7 pp), veto at b+c >= 6, either arm < 8 of 12 decidable -> no verdict"},
+  {"path": "docs/OPERATOR-BRIEF.md", "line": 85, "wording": "3. Pointer-stable >= 8 of 12 decidable and losing > 2 checkpoints -> H3 veto kills the latency win"},
+  {"path": "orchestration/STATUS.md", "line": 392, "wording": "**H3 quality - not evaluable at this n.** ... it measures answer production, not pointer mechanics."},
+  {"path": "orchestration/STATUS.md", "line": 394, "wording": "Spend and quality figures live in `measure/REQUEST-LEDGER.json`, `measure/QUALITY-ERAS.json`, `measure/TVS-CENSORED.json`."},
+  {"path": "docs/QUALITY-ERAS.md", "line": 19, "wording": "that grid reads **3/27 = 11.1 %** as recorded and **3/25 = 12.0 %** when every pair is put through the current grader"},
+  {"path": "docs/QUALITY-ERAS.md", "line": 63, "wording": "| as recorded on disk | **3/27** | 11.1 % | 3/12 | 0/3 | 0/6 | 0/6 |"},
+  {"path": "docs/QUALITY-ERAS.md", "line": 64, "wording": "| all pairs under the current grader | **3/25** | 12.0 % | 3/10 | 0/3 | 0/6 | 0/6 |"},
+  {"path": "docs/QUALITY-ERAS.md", "line": 73, "wording": "The `grade_v5.py` grid, if quoted at all, is **3/25 = 12.0 %** (pointer-stable 3/10) and its stored **3/27 = 11.1 %** form is withdrawn."},
+  {"path": "docs/GRID-SHAPE.md", "line": 61, "wording": "**Counts.** 46/48 turns invite a read."},
+  {"path": "docs/GRID-SHAPE.md", "line": 64, "wording": "on a tool-inviting turn**; 0/12 sit on a turn that does not."}
+ ],
+ "statements_block": {
+  "statement-1": "era A's checkpoint answers are answer-production measurements under an instruction to read sources the arm could not read (46 of 48 turns in v5/v6/v7/v8 invite a read; `@knowledge:` 0/48, literal `read_file` 0/48)",
+  "statement-2": "under the modal-answer reading every arm scores 0/12; the three observed passes are one-off, one-arm, and none is the arm's most frequent answer.",
+  "attribution": "unit MODAL-ANSWER-ACCURACY, experiments/ptr-engine/measure/MODAL-ANSWER.json sha256 b8cb6e790fdb57f1f6c2c06a08d46e2026e8080eed2855d308c1c1fb8cb795bb, per-statement figure_ids in the record"
+ },
+ "assumptions": [
+  "docs/OPERATOR-BRIEF-4.md and docs/OPERATOR-BRIEF-5 do not exist in this tree; the operator contract is docs/OPERATOR-BRIEF.md:18 and :85, listed in needs_citation, and the absent pages are recorded under missing_pages rather than invented.",
+  "tests/test_quality_carry_forward.py written to experiments/ptr-engine/tests/ (the ptr-engine suite location; no top-level tests/ dir exists).",
+  "The hint's 'NONE 0 of 3' reproduces as the counterfactual figure; the observed NONE count is 1/3 and is recorded separately so the two readings cannot be conflated."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Cite the record from the five named pages (docs/OPERATOR-BRIEF.md:18,:85, orchestration/STATUS.md:392,:394, docs/QUALITY-ERAS.md:19,:63,:64,:73, docs/GRID-SHAPE.md:61,:64). Re-run `python3 experiments/ptr-engine/tools/quality_carry_forward.py --check` as the drift gate; do not difference era B against era A on these numbers.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/quality_carry_forward.py",
+  "experiments/ptr-engine/tests/test_quality_carry_forward.py",
+  "experiments/ptr-engine/measure/QUALITY-CARRY-FORWARD.json",
+  "docs/QUALITY-CARRY-FORWARD.md",
+  "orchestration/units/QUALITY-CARRY-FORWARD.md",
+  "orchestration/handoffs/QUALITY-CARRY-FORWARD.json",
+  "orchestration/journals/QUALITY-CARRY-FORWARD.jsonl"
+ ],
+ "tool_calls": 21,
+ "bound": 24,
+ "offline": {"requests_sent": 0, "network_events": 0}
+}

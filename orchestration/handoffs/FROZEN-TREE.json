@@ -1,0 +1,53 @@
+{
+  "unit": "FROZEN-TREE",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/tools/frozen_tree.py",
+    "experiments/ptr-engine/longrun/tests/test_frozen_tree.py",
+    "docs/FROZEN-TREE.md",
+    "orchestration/units/FROZEN-TREE.md",
+    "orchestration/handoffs/FROZEN-TREE.json",
+    "orchestration/journals/FROZEN-TREE.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "7 tests red->green; demo snapshot_sha256 3776faed510c72501fb2abbaa20bb0e2b7951280b974f8ad11c0639da8e7db53, verify exit 0 (13 passed); mutation run exit 2",
+    "commands": [
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_frozen_tree.py -q  # red: ModuleNotFoundError: No module named 'frozen_tree'",
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_frozen_tree.py -q  # red 2: Extra items in the left set: 'timed_out' -> 1 failed, 6 passed",
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_frozen_tree.py -v  # 7 passed in 0.24s",
+      "python3 experiments/ptr-engine/tools/frozen_tree.py snapshot --dest /tmp/ft-demo experiments/ptr-engine/longrun/run_longrun.py experiments/ptr-engine/longrun/client.py experiments/ptr-engine/tools/fixture_coverage.py experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v6.json experiments/ptr-engine/tools/matrix_audit.py experiments/ptr-engine/tools/handoff_lint.py experiments/ptr-engine/longrun/tests/test_handoff_lint.py  # exit 0, 7 files, snapshot_sha256 3776faed...db53",
+      "python3 experiments/ptr-engine/tools/frozen_tree.py verify --json --snapshot /tmp/ft-demo -- python3 -m pytest experiments/ptr-engine/longrun/tests/test_handoff_lint.py -q -p no:cacheprovider  # exit 0, inputs_unchanged true, changed [], 13 passed in 0.02s",
+      "python3 experiments/ptr-engine/tools/frozen_tree.py verify --json --snapshot /tmp/ft-mut -- python3 -c \"open('experiments/ptr-engine/tools/handoff_lint.py','a').write('# mutated during run\\\\n')\"  # exit 2, inputs_unchanged false, changed [\"experiments/ptr-engine/tools/handoff_lint.py\"]",
+      "python3 experiments/ptr-engine/tools/frozen_tree.py snapshot --dest /tmp/ft-demo2 <same seven paths>  # re-snapshot later: identical snapshot_sha256 3776faed...db53 (live bytes unchanged)"
+    ]
+  },
+  "red_green": {
+    "red": [
+      "collection error: ModuleNotFoundError: No module named 'frozen_tree'",
+      "test_g_json_stdout_is_only_the_result_object FAILED — Extra items in the left set: 'timed_out' (result object must be exactly the eight contracted keys)"
+    ],
+    "green": "7 passed in 0.24s (tests a-g: reproduce digests+canonical sha; mutation fatal exit 2; failing command exit 1 with changed []; missing path exit 3 no dest; escaping symlink refused; sha stable across time / sensitive to one byte; --json stdout is only the result object)"
+  },
+  "blocker": "",
+  "next_unit_hint": "VERIFY-BATCH-1: snapshot its six inputs at run start (add --include-imports if it imports siblings), record snapshot_sha256 in its verdict handoff, and run commands as `verify --snapshot DIR -- ...`; a non-empty `changed` at settle means re-snapshot and re-verdict, never PASS.",
+  "write_paths": [
+    "experiments/ptr-engine/tools/frozen_tree.py",
+    "experiments/ptr-engine/longrun/tests/test_frozen_tree.py",
+    "docs/FROZEN-TREE.md",
+    "orchestration/units/FROZEN-TREE.md",
+    "orchestration/handoffs/FROZEN-TREE.json",
+    "orchestration/journals/FROZEN-TREE.jsonl"
+  ],
+  "assumptions": [
+    "Workspace root = os.getcwd() resolved at call time, overridable by root= / --root; a path outside it (including an absolute one) is refused.",
+    "snapshot_sha256 hashes only relpath+sha256 (not mtime_ns, not bytes), so equal bytes snapshotted at different times keep one identity and a verdict cannot be replayed against different bytes.",
+    "Atomicity strategy chosen: build in a sibling tempfile.mkdtemp and publish with one os.rename; on any exception the temp dir is removed, so a refused snapshot never leaves a partial dest (verified by tests d and e).",
+    "Timeout is encoded as exit_code 124 plus a stderr_tail note rather than an extra result key, keeping the result object exactly the eight contracted keys.",
+    "Demo dests live in /tmp (disposable); the six demonstrated files were only read and copied — a later re-snapshot reproduced the identical snapshot_sha256, confirming the live bytes did not move.",
+    "Only declared files are digested: a command that creates new files (e.g. __pycache__) does not trip inputs_unchanged, so the tool is a jurisdiction boundary, not a hermetic sandbox."
+  ],
+  "tool_calls": 22,
+  "bound": 26,
+  "requests": 0,
+  "git_invocations": 0
+}

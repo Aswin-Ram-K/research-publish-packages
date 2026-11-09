@@ -1,0 +1,140 @@
+{
+  "unit": "V-TREE-FREEZE",
+  "attacker": "independent (did not write the tool)",
+  "offline": true,
+  "requests": 0,
+  "tool": "experiments/ptr-engine/tools/tree_freeze.py",
+  "tool_sha256": "151deef9b3d3d4466b68b307ecdb06e0f3f261acd516ace0511968f8275ed11f",
+  "tool_size": 13753,
+  "scope_pins_observed_at_attack": [
+    {
+      "path": "experiments/ptr-engine/longrun/cell.py",
+      "sha256": "5a812a9861dd8a393078d2ec006dd8f3745213f17366fc26a5b8fc1532402cb9",
+      "size": 108169
+    },
+    {
+      "path": "experiments/ptr-engine/longrun/run_longrun.py",
+      "sha256": "9e8c30df9355e7bee243a15bf9ea67b23a20dd4c3d6ced6c9af1e53a6d76add1",
+      "size": 151435
+    },
+    {
+      "path": "experiments/ptr-engine/longrun/grade_v5.py",
+      "sha256": "056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+      "size": 44739
+    }
+  ],
+  "attacks": {
+    "1_real_move": {
+      "result": "pass",
+      "runs": 2,
+      "command": "python3 experiments/ptr-engine/tools/tree_freeze.py freeze --out /tmp/vtreefreeze/a1/f.json /tmp/vtreefreeze/a1/tree/a.txt /tmp/vtreefreeze/a1/tree/b.txt ; printf X >> .../a.txt ; python3 .../tree_freeze.py verify /tmp/vtreefreeze/a1/f.json",
+      "output": "/tmp/vtreefreeze/a1/tree/a.txt, b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060, d88a4f37bd582c1ec299844cf8e1eb715689d459c2f8f357c30752eb46affc82, moved | b.txt ... same | moved_or_deleted=1",
+      "rc": "13 both runs",
+      "note": "file named, both digests printed, not same"
+    },
+    "2_bytes_not_mtime": {
+      "result": "pass",
+      "runs": 2,
+      "touch": {
+        "output": "a.txt ... b6a98d9c..., b6a98d9c..., same (touched)",
+        "rc": 0
+      },
+      "inverted": {
+        "command": "one byte alpha->alphz, size 6 kept, os.utime(mtime_ns=recorded)",
+        "output": "a.txt, b6a98d9c..., 37c862e1..., moved",
+        "rc": 13,
+        "note": "mtime_ns and size identical to the freeze yet moved => the oracle hashes bytes, not mtime"
+      }
+    },
+    "3_phantom": {
+      "result": "pass",
+      "runs": 2,
+      "output": ".../a.txt, b6a98d9c..., <absent>, deleted | moved_or_deleted=1",
+      "rc": 13,
+      "note": "no traceback; never claims a match"
+    },
+    "3b_delete_during_wrap": {
+      "result": "DEFECT",
+      "runs": 2,
+      "command": "python3 .../tree_freeze.py --wrap /tmp/vtreefreeze/cw1/r.json /tmp/vtreefreeze/cw1/tree/a.txt -- python3 /tmp/vtreefreeze/cw1/del.py /tmp/vtreefreeze/cw1/tree/a.txt",
+      "output": "tree_freeze: refused -- refusing to freeze a path that does not exist: '/tmp/vtreefreeze/cw1/tree/a.txt' ...",
+      "rc": 2,
+      "note": "after=freeze(paths) REFUSES a file the command deleted; wrap exits 2 (usage) and writes NO record. A delete during a wrapped run is not classified moved_during_run/failed_and_moved at all."
+    },
+    "4_exit_13_vs_failure": {
+      "result": "pass-with-defect",
+      "runs": 2,
+      "moved": {
+        "rc": 13
+      },
+      "malformed_json": {
+        "rc": 2,
+        "output": "refused -- cannot read the freeze document ... Expecting value: line 1 column 1"
+      },
+      "structurally_invalid": {
+        "input": "{\"at\":\"x\",\"root\":\"/tmp\",\"tree_sha256\":\"deadbeef\"}",
+        "output": "KeyError: 'files' (traceback)",
+        "rc": 1,
+        "note": "a genuine verification failure exits 1, the same number as EXIT_CMD_FAILED"
+      },
+      "caller_rc_ne_0": {
+        "output": "moved rc=13 -> FAIL ; malformed rc=2 -> FAIL",
+        "note": "a caller testing only rc!=0 conflates them; no in-repo caller does this today -- grep for tree_freeze.py/EXIT_TREE_MOVED/--wrap outside tool+tests+docs finds none; the handoff's own next_unit_hint says wiring is future work"
+      }
+    },
+    "5_wrap_semantics": {
+      "result": "pass",
+      "runs": 2,
+      "a_pass": "verdict=pass exit_code=0 moved=0 rc=0",
+      "b_moved": "verdict=moved_during_run exit_code=0 moved=1 rc=13",
+      "c_failed": "verdict=failed exit_code=7 moved=0 rc=1",
+      "d_failed_and_moved": "verdict=failed_and_moved exit_code=7 moved=1 rc=1",
+      "note": "four verdicts reproduced deliberately, twice; process status collapses failed_and_moved onto 1 as the module docstring states"
+    },
+    "6_no_weakening": {
+      "result": "partial",
+      "baseline": "python3 -m pytest tests/test_tree_freeze.py tests/test_exit_codes.py -q -> 34 passed, 14 subtests passed",
+      "table_present": [
+        "experiments/ptr-engine/longrun/exit_codes.py:39 EXIT_TREE_MOVED = 13",
+        "exit_codes.py:213 EXIT_TABLE entry 'tree-moved'",
+        "exit_codes.py:74 EXTERNAL_CODES {13: tools/tree_freeze.py}"
+      ],
+      "mutants_in_/tmp_copy": {
+        "A_drop_EXIT_TABLE_13": "3 failed / 17 passed -- test_13_is_declared_as_tree_moved, test_the_excuse_is_what_balances_the_scan_both_ways, test_doc_table_matches_the_module_exactly; test_source_scan_equals_declared_table STILL PASSES",
+        "B_drop_EXTERNAL_CODES_13": "7 failed / 14 passed -- includes test_source_scan_equals_declared_table and test_red_green_extra_exit_code_is_caught (declared-but-never-raised)",
+        "C_drop_both": "4 failed / 16 passed -- scan-equality test STILL PASSES",
+        "D_cell_py_undeclared_sys_exit_17": "3 failed / 17 passed -- test_source_scan_equals_declared_table caught it"
+      },
+      "note": "removal of 13 turns the FILE red in every variant, but the set-equality scan test itself is green when the table entry is dropped (or both), because declared = EXIT_TABLE - EXTERNAL_CODES and raised never held 13. 'Removing 13 makes THE SCAN TEST red' is only true for dropping the excuse."
+    },
+    "7_scope": {
+      "result": "gap",
+      "runs": 2,
+      "new_file_after_freeze": "rc=0, all recorded rows same (new file invisible)",
+      "new_file_during_wrap": "verdict=pass, moved=[], tree_sha256_before == tree_sha256_after, while the new file exists on disk",
+      "outside_declared_set_edit": "rc=0",
+      "directory": "refused exit 2",
+      "symlink_retarget_different_bytes": "moved, rc 13",
+      "symlink_retarget_identical_bytes": "same (touched), rc 0",
+      "note": "a 'pass' / 'the tree did not move' can be true while a new file appeared; directories are refused, not covered; symlinks are followed (target bytes judged, link identity is not)"
+    }
+  },
+  "defects": [
+    {
+      "id": "D1",
+      "what": "--wrap cannot classify a file DELETED by the wrapped command: after-freeze refuses, exit 2, no record",
+      "severity": "high for the four-verdict claim's completeness"
+    },
+    {
+      "id": "D2",
+      "what": "verify() on parseable-but-malformed freeze doc raises KeyError -> exit 1, colliding with EXIT_CMD_FAILED",
+      "severity": "medium"
+    },
+    {
+      "id": "D3",
+      "what": "set-equality scan test is vacuous for an external code removed from EXIT_TABLE (other tests still catch it)",
+      "severity": "low"
+    }
+  ],
+  "verdict_row_command": "python3 -m pytest experiments/ptr-engine/longrun/tests/test_tree_freeze.py experiments/ptr-engine/longrun/tests/test_exit_codes.py -q"
+}

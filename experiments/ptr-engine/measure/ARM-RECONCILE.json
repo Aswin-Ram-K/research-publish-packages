@@ -1,0 +1,239 @@
+{
+ "unit": "V-ARM-RECONCILE",
+ "mode": "offline; 0 inference requests; no existing document edited",
+ "question": "Which of two mutually impossible claims about the same arm is true: pointer-stable ends at 217k prompt tokens (Claim A), or pointer-stable totals 104,468 prompt tokens over 48 turns (Claim B)?",
+ "verdict": "CLAIM_A_DEAD__CLAIM_B_SURVIVES",
+ "verdict_reason": "prompt_tokens is a per-request (cumulative-prefix) size. Summing it over turn rows reproduces Claim B's 104,468 exactly. Claim A's '217k' is the total of a DIFFERENT arm in a DIFFERENT grid (G7 V4-TOOLS: 216,951 over 68 rows) read as a per-request endpoint, and '1,867' matches no pointer-stable row anywhere. No arm in RUN-C-V2 exceeds 34,279 prompt tokens; the corpus-wide maximum is 51,216.",
+ "claims": {
+  "claim_A": {
+   "source": "board post #891 (ARM-INTEGRITY 2ae53b51 mid-run finding F0)",
+   "path": "orchestration board ws:78cead56-384a-4d9c-b974-02b454c6d3d5 seq 891",
+   "verbatim": "pointer-stable grows like a transcript. Prompts start at 1,867 tokens and reach 217k at turn 48, a slope of 1.21x per turn (r = 0.9799) ... code-wise the two differ only by a 9,000-token compaction span at run_longrun.py:436 (reset at 6,000) vs :441 (reset at 8,000) ... pointer-stable's p50 advantage is explained by 98.7 % prefix cache hit",
+   "adjudication": "refuted",
+   "status_note": "board seq 893 already retracts it ('Correction to #891 - I published a running card's mid-run claim as a settled finding'). ARM-INTEGRITY's handoff on disk (orchestration/handoffs/ARM-INTEGRITY.json, status partial) contains NONE of Claim A's numbers: it reports pointer slopes 2.72-4.85 tok/turn and max_prompt_tokens_any_grid 34279.",
+   "clauses": {
+    "starts_at_1867": "refuted - no row anywhere has prompt_tokens 1867. pointer-stable T1 in G4 is 967. Nearest on disk: 1864 (1 row), 1870 (13 rows), all G1 transcript-compact/grow T1.",
+    "reaches_217k_at_turn_48": "refuted - G4 pointer-stable turn 48 = 2197. 216,951 is the SUM of prompt_tokens over G7 (V4-TOOLS) pointer-stable's 68 rows: a column total, not a prompt size.",
+    "slope_1_21x_per_turn": "refuted - G4 pointer-stable 967->2197 over 47 intervals = 1.017614x/turn (4.4433 tok/turn). Also internally inconsistent: 1867->217000 implies 1.1065x/turn at n=48 and 1.2297x/turn at n=24, so 1.21x is only self-consistent at n~23 intervals, which no grid has.",
+    "r_0_9799": "refuted - G4 pointer-stable r = 0.3265 (OLS on turn index), log-linear r = 0.3113. No tested cumulative-series reconstruction returns 0.9799 (G1 compact cumsum 0.9466, G7 pointer cumsum 0.8918, G1T1+G7cumsum 0.8724).",
+    "code_436_441_6000_8000": "refuted - run_longrun.py:436 is 'value = int(raw)' and :441 is a CapUsageError line, both inside allocation_for(); there is no 6,000 constant in the file and no compaction reset at either line. The only 8000 is TOOL_READ_CAP_CHARS at run_longrun.py:209 (a tool-read cap); wall_tokens = 65536 comes from the fixture (G4 fixture 0a07db1b).",
+    "cache_98_7_percent": "unsupported - measured cached share for G4 pointer-stable is 0.871157 (91,008/104,468). 0.987 appears in no arm of G4 (grow 0.947952, compact 0.953361, lease 0.874927).",
+    "transcript_grow_0_85x_per_turn": "refuted - G4 transcript-grow is 1.061068x/turn (676.9636 tok/turn), 2114->34279; it never reaches ~620k (901,109 is a 48-turn SUM, mean 18,773.1/turn)."
+   }
+  },
+  "claim_B": {
+   "source": "LATENCY-REPORT.json grid G4 / RUN-C-V2",
+   "path": "experiments/ptr-engine/measure/LATENCY-REPORT.json",
+   "verbatim": "pointer-stable = 104,468 prompt tokens over 48 completed turns = 2,176.4 per turn; transcript-grow = 901,109 / 48 = 18,773.1; transcript-compact 3,867.0; lease-reopen 429.8",
+   "adjudication": "survives - every figure re-derives exactly from rows-longrun-c-2026-10-26.jsonl",
+   "recheck": {
+    "pointer_stable": [
+     104468,
+     2176.4167
+    ],
+    "transcript_grow": [
+     901109,
+     18773.1042
+    ],
+    "transcript_compact": [
+     185617,
+     3867.0208
+    ],
+    "lease_reopen": [
+     20628,
+     429.75
+    ]
+   }
+  }
+ },
+ "field_semantics": {
+  "field": "prompt_tokens",
+  "reading": "per REQUEST (the full prefix presented on that turn), cumulative across the conversation; the per-turn INCREMENT is the diff between consecutive rows, not the value itself",
+  "evidence": "pointer-stable G4 first six turn rows: [967, 1752, 2194, 2215, 2200, 2195] then asymptote ~2200; under a cumulative-prefix reading this is a stable prompt of ~2.2k tokens, under an increment reading turn 2 would cost 1752 tokens on top of 967",
+  "three_readings_pointer_stable_G4": {
+   "i_sum_over_turn_rows": 104468,
+   "ii_last_minus_first": 1230,
+   "iii_mean_per_turn": 2176.4167,
+   "reproduces_claim_B": "(i) sum over turn rows = 104,468 exactly; (iii) is that sum divided by 48 and matches 2,176.4"
+  }
+ },
+ "recomputed_per_arm": {
+  "grid": "G4 / RUN-C-V2",
+  "rows_file": "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl",
+  "rows_file_sha256": "aa7d6cfe9adedf9e408480f6b76022da840cad95f05dafc1ee0adb6faca9ae0c",
+  "rows_file_bytes": 769456,
+  "rows": 192,
+  "kinds_present": [
+   "turn"
+  ],
+  "turn_only_fit_identical_to_all_rows": true,
+  "arms": {
+   "pointer-stable": {
+    "n": 48,
+    "first": 967,
+    "last": 2197,
+    "total": 104468,
+    "mean": 2176.4167,
+    "slope_tok_per_turn": 4.4433,
+    "ratio_per_turn": 1.017614,
+    "ols_r": 0.326524,
+    "loglinear_r": 0.31126,
+    "cached_tokens_sum": 91008,
+    "cached_share": 0.871157,
+    "cached_null_rows": 0,
+    "cached_reported_true_rows": 47,
+    "max_prompt": 2249
+   },
+   "transcript-grow": {
+    "n": 48,
+    "first": 2114,
+    "last": 34279,
+    "total": 901109,
+    "mean": 18773.1042,
+    "slope_tok_per_turn": 676.9636,
+    "ratio_per_turn": 1.061068,
+    "ols_r": 0.998955,
+    "loglinear_r": 0.938252,
+    "cached_tokens_sum": 854208,
+    "cached_share": 0.947952,
+    "cached_null_rows": 0,
+    "cached_reported_true_rows": 46,
+    "max_prompt": 34279
+   },
+   "transcript-compact": {
+    "n": 48,
+    "first": 2114,
+    "last": 5640,
+    "total": 185617,
+    "mean": 3867.0208,
+    "slope_tok_per_turn": 74.9779,
+    "ratio_per_turn": 1.021098,
+    "ols_r": 0.999915,
+    "loglinear_r": 0.992345,
+    "cached_tokens_sum": 176960,
+    "cached_share": 0.953361,
+    "cached_null_rows": 0,
+    "cached_reported_true_rows": 47,
+    "max_prompt": 5640
+   },
+   "lease-reopen": {
+    "n": 48,
+    "first": 433,
+    "last": 422,
+    "total": 20628,
+    "mean": 429.75,
+    "slope_tok_per_turn": -0.0051,
+    "ratio_per_turn": 0.999453,
+    "ols_r": -0.007897,
+    "loglinear_r": -0.009569,
+    "cached_tokens_sum": 18048,
+    "cached_share": 0.874927,
+    "cached_null_rows": 0,
+    "cached_reported_true_rows": 47,
+    "max_prompt": 466
+   }
+  }
+ },
+ "trajectory_check": {
+  "arms_reaching_200k": [],
+  "largest_in_grid": 34279,
+  "largest_in_grid_where": "transcript-grow turn 48, rows-longrun-c-2026-10-26.jsonl",
+  "largest_in_corpus": 51216,
+  "largest_in_corpus_where": "experiments/ptr-engine/measure/rows-longrun-2026-10-26-policy.jsonl, arm transcript-grow, turn 14",
+  "origin_of_217k": "216,951 = SUM of prompt_tokens over the 68 pointer-stable rows of experiments/ptr-engine/measure/rows-longrun-v4-tools-2026-10-26.jsonl (G7 V4-TOOLS). No per-request value above 51,216 exists anywhere in the corpus.",
+  "origin_of_1867": "unmatched exactly; nearest 1,864 / 1,870, and 1,870 is T1 of transcript-compact and transcript-grow in G1 (rows-longrun-2026-10-26.jsonl). pointer-stable T1 values in the corpus: 723, 967, 1007, 2873, 3033, 3101, 3515, 3520.",
+  "conclusion": "'1,867 -> 217k' is a concatenation across grids AND across arms: a transcript arm's T1 prompt size from G1, and a pointer arm's 68-row cumulative SUM from G7. It is not any arm's trajectory."
+ },
+ "cache_share": {
+  "field": "cached_tokens (per row; 0 null rows in G4; cached_reported true on 46-47 of 48 rows per arm)",
+  "pointer_stable_share": 0.871157,
+  "transcript_grow_share": 0.947952,
+  "transcript_compact_share": 0.953361,
+  "lease_reopen_share": 0.874927,
+  "claim_A_0_987": "unverifiable from disk and unsupported: no arm in G4 and no rows file shows a 98.7 % cached share. The claim is also incoherent: 0.987 of a 2.1k-token prompt is 2,076 cached tokens; 0.987 of a 110k prompt is 108,570 - the rows support neither the 110k prompt nor the 0.987 share."
+ },
+ "label_verdicts": {
+  "pointer-stable": "supported as 'stable' - 967 -> 2197, span 1,230 tokens over 47 intervals, slope 4.4433 tok/turn, max 2,249. Unsupported as 'grows like a transcript'.",
+  "transcript-grow": "supported - 2114 -> 34279, slope 676.9636 tok/turn, 16.2x span, r 0.99896.",
+  "transcript-compact": "supported as sub-linear growth (1.021098x/turn, 74.9779 tok/turn, 2114 -> 5640) but unsupported as a DIGEST arm: 0 kind=='digest' rows and no eviction in these rows, so no compaction/digest mechanism is licensed.",
+  "lease-reopen": "unsupported as 'reopen' - lease == 1 on all 48 rows and lease_reopen_turns is absent from every fixture, so the arm never reopened; supported only as flat (mean 429.75, slope -0.0051)."
+ },
+ "two_fastest_arms_difference": {
+  "arms": [
+   "pointer-stable",
+   "transcript-compact"
+  ],
+  "quantity_1_mean_prompt_tokens": [
+   2176.4167,
+   3867.0208
+  ],
+  "quantity_2_cached_share": [
+   0.871157,
+   0.953361
+  ],
+  "ruling": "prompt-SIZE difference, not a cache-hit-rate difference. pointer-stable's prompts are 1.78x smaller (2,176.4 vs 3,867.0) while its cached SHARE is 8.2 points LOWER (0.8712 vs 0.9534). A lower cache fraction on a smaller prompt cannot produce the advantage, so Claim A's cache explanation is backwards as well as unmeasured."
+ },
+ "consequences": [
+  {
+   "artefact": "board post #891 (ws:78cead56, round 77, ARM-INTEGRITY F0)",
+   "action": "strike - retracted in #893 and its four numbers refuted here"
+  },
+  {
+   "artefact": "orchestration/handoffs/ARM-INTEGRITY.json",
+   "action": "keep - its slopes (2.72-4.85 tok/turn) and max_prompt_tokens_any_grid 34,279 AGREE with this reconciliation; only the board post's numbers were wrong"
+  },
+  {
+   "artefact": "RUN-A* precondition 10",
+   "action": "must change - a precondition assuming pointer-stable reaches 217k prompt tokens / grows 1.21x per turn is measured against an arm whose real span is 1,230 tokens (967->2197). (Precondition numbering is not in the files searched: experiments/ptr-engine/measure/PREREG-ARM-RUN.json carries no 'precondition' key.)"
+  },
+  {
+   "artefact": "PRICE-REPLICATION",
+   "action": "must change - any price/latency replication modelling pointer-stable as a 217k-token trajectory is ~50x too high on prompt volume; correct per-turn volume is 2,176.4 tokens (104,468 over 48 turns)"
+  },
+  {
+   "artefact": "any doc/manuscript sentence asserting 'pointer-stable grows like a transcript' or 'p50 advantage is 98.7% prefix cache'",
+   "action": "restate as: pointer-stable's prompt is stable at ~2.2k tokens, cached share 0.8712, and its advantage over transcript-compact is prompt size (2,176 vs 3,867 mean tokens), not cache rate"
+  },
+  {
+   "artefact": "LATENCY-REPORT.json G4 cells",
+   "action": "no change - its four prompt_tokens totals re-derive exactly; it is the surviving claim"
+  }
+ ],
+ "integrity": {
+  "pins_before": {
+   "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl": "aa7d6cfe9adedf9e408480f6b76022da840cad95f05dafc1ee0adb6faca9ae0c",
+   "experiments/ptr-engine/measure/rows-longrun-2026-10-26.jsonl": "bc61d38192d4e4316021ec8d3d0e21dcb8e6153f463260a0138da21969d0b21e",
+   "experiments/ptr-engine/measure/rows-longrun-v4-tools-2026-10-26.jsonl": "f11391aa2989949f904b8092074cb7b85b65dfe5b8c89431930fe921b28de77f",
+   "experiments/ptr-engine/measure/LATENCY-REPORT.json": "2d84d71345745faf0e5e61e56b535aea674eddf1940c5d5286b412ebb9446171",
+   "experiments/ptr-engine/longrun/run_longrun.py": "939c225c052319b91ef7df0e69678b85ae855fc9bb3fbf293441b7bafb99b1c3"
+  },
+  "pins_after": {
+   "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl": {
+    "sha256": "aa7d6cfe9adedf9e408480f6b76022da840cad95f05dafc1ee0adb6faca9ae0c",
+    "match": true,
+    "bytes": 769456
+   },
+   "experiments/ptr-engine/measure/rows-longrun-2026-10-26.jsonl": {
+    "sha256": "bc61d38192d4e4316021ec8d3d0e21dcb8e6153f463260a0138da21969d0b21e",
+    "match": true,
+    "bytes": 202251
+   },
+   "experiments/ptr-engine/measure/rows-longrun-v4-tools-2026-10-26.jsonl": {
+    "sha256": "f11391aa2989949f904b8092074cb7b85b65dfe5b8c89431930fe921b28de77f",
+    "match": true,
+    "bytes": 169988
+   },
+   "experiments/ptr-engine/measure/LATENCY-REPORT.json": {
+    "sha256": "2d84d71345745faf0e5e61e56b535aea674eddf1940c5d5286b412ebb9446171",
+    "match": true,
+    "bytes": 123851
+   },
+   "experiments/ptr-engine/longrun/run_longrun.py": {
+    "sha256": "939c225c052319b91ef7df0e69678b85ae855fc9bb3fbf293441b7bafb99b1c3",
+    "match": true,
+    "bytes": 133065
+   }
+  },
+  "midrun_rewrite": false
+ }
+}

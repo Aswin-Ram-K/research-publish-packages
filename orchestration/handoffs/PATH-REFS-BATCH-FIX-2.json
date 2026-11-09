@@ -1,0 +1,59 @@
+{
+ "unit": "PATH-REFS-BATCH-FIX-2",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/tools/path_refs_resolve.py",
+  "tests/test_path_refs_resolve.py",
+  "experiments/ptr-engine/measure/PATH-REFS-ROUND2.json",
+  "docs/PATH-REFS-ROUND2.md"
+ ],
+ "evidence": {
+  "decided": 2,
+  "undecidable": 119,
+  "applied_to_disk": 0,
+  "rule_histogram": {
+   "content": 2,
+   "dir": 0,
+   "owner": 0,
+   "none": 119
+  },
+  "guard_before": "census: ok=26370 wrong_dir=645 missing=266 ignored=273",
+  "guard_after": "census: ok=26764 wrong_dir=636 missing=266 ignored=273 / path-refs: 902 known (baselined), 0 new",
+  "tests": "PYTHONPATH=release/v0.1/src python3 -m pytest tests/test_path_refs_resolve.py -q -> 5 passed",
+  "mutation": "guard off -> the substitution lands (edited=1); guard on -> refused (failures=1)",
+  "artifact_sha256": {
+   "experiments/ptr-engine/tools/path_refs_resolve.py": "487dc1c5d534502a8b3ad944e6f69eb33fe08c9bbeca038d959cc8b4e709083c",
+   "tests/test_path_refs_resolve.py": "fa780016750a7ff0819e5b19f593ad2c2c43e7dcbb7890a2e02d40b892e36051",
+   "experiments/ptr-engine/measure/PATH-REFS-ROUND2.json": "849cf48727b638f51b93afcd11774229b312136bca06d23bf9a7abeb1b04ae2d",
+   "docs/PATH-REFS-ROUND2.md": "fb12dc460a1e149a5902a1d3f5a96582dfc2438225ef2c39255a8d484341a3d7"
+  },
+  "commands": [
+   "python3 experiments/ptr-engine/tools/path_refs.py --check",
+   "python3 experiments/ptr-engine/tools/path_refs_resolve.py --table",
+   "PYTHONPATH=release/v0.1/src python3 -m pytest tests/test_path_refs_resolve.py -q"
+  ],
+  "verdict": {
+   "recorded": "PASS",
+   "command": "python3 experiments/ptr-engine/tools/path_refs.py --check",
+   "exit": 0,
+   "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+   "note": "recorded before this handoff's final write, as the card requires"
+  }
+ },
+ "blocker": "",
+ "next_unit_hint": "Two decided rows live in other units' cards (orchestration/units/GRADE-V6-DERIVE.md:63 and HARNESS-GUARDS.md:51) and were not applied: those cards own them. The 86 citations whose every candidate is a copy-tree artefact are a CLASSIFIER defect, not a repair: they are more honestly `missing` than `wrong_dir`, and fixing that means a rule change in path_refs.py, not more substitution.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/path_refs_resolve.py",
+  "tests/test_path_refs_resolve.py",
+  "experiments/ptr-engine/measure/PATH-REFS-ROUND2.json",
+  "docs/PATH-REFS-ROUND2.md",
+  "orchestration/units/PATH-REFS-BATCH-FIX-2.md",
+  "orchestration/handoffs/PATH-REFS-BATCH-FIX-2.json",
+  "orchestration/journals/PATH-REFS-BATCH-FIX-2.jsonl"
+ ],
+ "assumptions": [
+  "in-scope set measured 121 at 13:33 against the card's 130: the scratch FINDINGS material and peers were deleted by concurrent units between the two scans, so the difference is drift, not work skipped",
+  "measure/PATH-REFS-ROUND2.json stores each citation as dir+base, never as one path-shaped string: that file is scanned by the guard, and emitting dead tokens there would add baseline keys",
+  "unit cards other than this one are outside the declared write paths, so the 2 decided rows there are recorded, not applied"
+ ]
+}

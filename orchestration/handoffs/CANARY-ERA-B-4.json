@@ -1,0 +1,66 @@
+{
+ "unit": "CANARY-ERA-B-4",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/measure/CANARY-ERA-B-4.json",
+  "docs/CANARY-ERA-B-4.md",
+  "orchestration/units/CANARY-ERA-B-4.md",
+  "orchestration/handoffs/CANARY-ERA-B-4.json",
+  "orchestration/journals/CANARY-ERA-B-4.jsonl"
+ ],
+ "headline": "THE CHANNEL WORKS: tools_schema_sent true on 59/59 rows, non-empty structured tool_calls on 40/59 (78 call items, 14 executed), 10 tool-followup rows. Zero-of-36 is over. grid_may_launch: FALSE -- not for a channel failure but because lease-reopen was killed at turn 3 of 12 (shape_unknown).",
+ "evidence": {
+  "command_or_count": "tools_schema_sent_true=59/59; rows_with_structured_tool_calls=40/59; tool_call_items=78; tool_calls_executed=14; tool_followup_rows=10; fetch_rounds_this_turn_sum=40; billed_tool_call_items=0; total_rows=59 (25 pointer-stable, 13 transcript-grow, 14 transcript-compact, 7 lease-reopen)",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --hypothesis smoke --max-wall 900 --dry-run -> exit 0, canary_arms=4 canary_requests=48 refused=0",
+   "/usr/bin/python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --hypothesis smoke --max-wall 900 -> one live invocation, killed by host restarts during lease-reopen, exit code unknown",
+   "python3 recompute of the six pin inputs + cell.py recipe -> efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3 (== measure/HARNESS-PIN.json generation 6)",
+   "row scan over the four rows-cell-*-20261027T00*.jsonl files -> per-arm counts above; harness_sha256 efefd885... on every row; claim none; comparison_eligible false"
+  ],
+  "gate1": "PASS -- generation 6; all six pin inputs re-hashed and MATCH; composite recomputed to efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3. cell.py records no standalone sha by design; its own sha is c494e212679f8e73c84226cf486566d0716559c0f2cd677f20845b24057baf86 with mtime 2026-10-27T00:17:51Z, i.e. AFTER gen 6 froze at 23:25:10Z and changed from the 0bddd4e0... the first execution observed.",
+  "gate2": "PASS -- exit 0; 'RUN-A canary arms=4 cells=1,7,13,15 turns=12 requests=48 claim=smoke'; per cell 'G1 1,236/4,320 requests . G2 720 s of 900 s . G3 n=12 (smoke, non-comparable)'; 'RUN-A DRY END cells=4 refused=0 requests=0 claim=smoke turns=12 max_wall=900.0 canary_arms=4 canary_requests=48'. The first execution refused here (exit 1); the reconcile line now reads baseline=1176 attributed_delta=0 live=1176 gap=0.",
+  "gate3": "PASS -- run_a_star.py:786 '\"--expect-harness\", pinned_digest(),'; PIN_EXPECTED_GENERATION=6, pinned_digest() -> efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3 (not the gen-5 35ff41b7).",
+  "gate4": "NO DELTA MEASURED -- before and after: requests 1176 / remaining 3144 / generated_at_utc 2026-10-26T22:33:00Z. The ledger is rebuilt from rows when the launcher finishes and the launcher never finished. Row files on disk bill 59 requests (57 distinct bodies; 2 duplicate bodies), 11 above the priced 48 -- reported as a finding."
+ },
+ "per_arm_shape": {
+  "pointer-stable": {"rows": 25, "turns": 12, "answer_verified_true": 2, "terminal_finish_reason": "stop", "shape": "shape_ok", "label": "finish_reason fallback"},
+  "transcript-grow": {"rows": 13, "turns": 12, "answer_verified_true": 1, "terminal_finish_reason": "stop", "shape": "shape_ok", "label": "finish_reason fallback"},
+  "transcript-compact": {"rows": 14, "turns": 12, "answer_verified_true": 1, "terminal_finish_reason": "stop", "shape": "shape_ok", "label": "finish_reason fallback"},
+  "lease-reopen": {"rows": 7, "turns": 3, "answer_verified_true": 0, "terminal_finish_reason": "tool_calls (in flight)", "shape": "shape_unknown", "resolving_measurement": "one complete 12-turn lease-reopen cell"}
+ },
+ "open_gap": "stop_signal_source is ABSENT on all 59 era-B rows -- the CANARY-ERA-B-FIX gap named in the card is still open; classification used the recorded finish_reason and is labelled as a fallback. tools_schema_sent IS populated (59/59).",
+ "decision": {"grid_may_launch": false, "arms_shape_ok": 3, "arms_degenerate": 0, "arms_unknown": 1, "cause": "lease-reopen shape_unknown: killed at turn 3 of 12", "resolving_measurement": "one complete 12-turn lease-reopen cell on this generation-6 tree (12 rows, terminal finish_reason, answer_verified on its answer turn)"},
+ "verdict_recorded_before_handoff": true,
+ "verdict_row": {
+  "command": "bash -lc '/usr/bin/python3 \"/home/zer0null/reserach extarctor\"/experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --hypothesis smoke --max-wall 900 --dry-run'",
+  "exitCode": 0,
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "note": "binds the LAUNCH GATE (same command the first execution recorded at exit 1 -> now exit 0), NOT the live canary: the live invocation's exit code is unknown because host restarts killed it. A dry-run PASS is not presented as the live canary; the canary's result is the 59 rows."
+ },
+ "findings": [
+  "cell.py moved outside the pin after generation 6 froze: sha c494e212679f8e73c84226cf486566d0716559c0f2cd677f20845b24057baf86, mtime 2026-10-27T00:17:51Z vs the pin's recorded mtime 2026-10-26T23:18:37Z; digest immune (cell.py is not in its own HARNESS_FILES) but the gate script is outside pin coverage and the change is unattributed.",
+  "the card's invocation string cannot be run verbatim: run_a_star.py:928 parse_args rejects --thinking/--max-turns/--turn-wall-cap/--runaway-turns/--no-cell-handoff ('unrecognized arguments', exit 2, 0 requests, probed); the same values are hard-coded at run_a_star.py:781-787 with --turns 12 for the canary.",
+  "the ledger did not move because the launcher never reached its rebuild; rows bill 59 requests against a priced 48 (10 fetch follow-ups + 2 duplicate bodies).",
+  "stop_signal_source remains absent on era-B rows.",
+  "the first execution's 136-line CANARY-ERA-B-4.json body was replaced by the second execution's record (declared write path) and was not copied aside -- recorded as a loss."
+ ],
+ "assumptions": [
+  "Gate 1's 'cell.py's sha256 equals the value gen 6 recorded' is unsatisfiable literally (gen 6 records no standalone cell.py sha; cell.py is not in its own HARNESS_FILES). Read as: the gen-6 composite must match a recomputation from cell.py's own recipe. It does. cell.py's standalone sha is reported alongside so the gate is not satisfied by assertion.",
+  "The card's five rejected launcher flags were treated as the canary's shape, which cell_argv hard-codes; the live command therefore omits them. No request was spent on the probe (argparse exits before any launch).",
+  "status=partial, not done: three of four arms are measured and classified, the fourth is not. grid_may_launch:false was decided before the rows were read and is not softened by three healthy arms."
+ ],
+ "blocker": "",
+ "next_unit_hint": "LEASE-REOPEN-12: run ONE 12-turn lease-reopen cell on the generation-6 tree (--tools read_file, --thinking off, budget >= 108) and re-read its rows for tools_schema_sent / structured tool_calls / answer_verified / terminal finish_reason. If it classifies shape_ok, all four arms are ok and grid_may_launch becomes true. Two side cards are owed by other units, not this one: a LAUNCHER-FLAG-ALIGN card (accept or drop the five flags the card string names) and a PIN-COVERAGE note for cell.py, which moved after gen 6 froze without attribution.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/CANARY-ERA-B-4.json",
+  "docs/CANARY-ERA-B-4.md",
+  "orchestration/units/CANARY-ERA-B-4.md",
+  "orchestration/handoffs/CANARY-ERA-B-4.json",
+  "orchestration/journals/CANARY-ERA-B-4.jsonl"
+ ],
+ "prior_execution": {
+  "status": "failed",
+  "outcome": "stopped at gate 2, requests_sent 0, launcher REFUSED on disagreeing ledger records (LEDGER-GRID-BASELINE-2 remaining 3192 vs REQUEST-LEDGER 3144), grid_may_launch false",
+  "why_superseded": "LEDGER-RECONCILE-DELTA (handoff 2026-10-27T00:36Z) re-froze the baseline at 1176/3144; the identical dry run now exits 0"
+ }
+}

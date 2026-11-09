@@ -1,0 +1,62 @@
+{
+ "unit": "SPAWN-RECORD-BIND",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/spawn_record.py",
+  "experiments/ptr-engine/longrun/tests/test_spawn_classification.py",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/SPAWN-RECORD-BIND.md",
+  "orchestration/journals/SPAWN-RECORD-BIND.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "pytest 18 passed (10 original kept + 8 new); 0 requests; cell.py sha unchanged b549e45e12beacbd11cd41a523087d2f6f327f608380528bc6b566c296937488 before AND after",
+  "commands": [
+   "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_spawn_classification.py -> 18 passed, exit 0",
+   "red->green: revert D2 guard -> test_d2_coverage_naming_only_0_and_7_is_refused FAILS 'a record covering only exits 0/7 validated OK: spawn_record: OK exit=4 spawns=1 runner_launch=0 coverage=per_exit_code'; revert D3 guard -> test_d3_duplicate_key_is_refused_by_name FAILS 'a duplicated key validated OK (last-wins rewrite)'; revert D4 guard -> test_d4_record_without_instrumentation_is_refused FAILS 'spawn_record: OK exit=4 spawns=1 runner_launch=0 coverage=exit'; restore -> 18 passed, spawn_record.py sha identical 8bb17349feae38f19f872de19d4e4702527740d1cb86542c45cd00f5e8ba4bca",
+   "python3 experiments/ptr-engine/longrun/spawn_record.py --validate <rec with per_exit_code {0,7}> --exit-code 4 -> exit 1 'missing refusal coverage: 2,3,4,8,12'",
+   "python3 experiments/ptr-engine/longrun/spawn_record.py --validate <dup counts.runner_launch> -> exit 1 \"duplicate key 'counts.runner_launch' at record.counts\"",
+   "python3 experiments/ptr-engine/longrun/spawn_record.py --validate <no instrumentation> -> exit 1 'no `instrumentation` declaration'",
+   "python3 experiments/ptr-engine/longrun/spawn_record.py --validate <real rec + trace with 2 execve> --observed-from-syscall trace.json -> exit 1 '2 spawn(s) outside the record' + names '/bin/sh -c /bin/true'",
+   "python3 experiments/ptr-engine/longrun/spawn_record.py --validate <real rec + matching trace> --observed-from-syscall trace.json -> exit 0"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "D5 remains open and is NOT fixed: bind the record to the tree (cell.py writes cell_sha + spawn_record_sha + argv; validate_refusal requires and compares them) before RUN-A* relies on the certificate. D6 also open: cell.py's refusal writer should publish `instrumentation` from SpawnRecord.as_dict(). Both need cell.py, which is pinned by TRANCH1-DRYRUN (07bd683a) - card them after that rehearsal settles.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/spawn_record.py",
+  "experiments/ptr-engine/longrun/tests/test_spawn_classification.py",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/SPAWN-RECORD-BIND.md",
+  "orchestration/handoffs/SPAWN-RECORD-BIND.json",
+  "orchestration/journals/SPAWN-RECORD-BIND.jsonl",
+  "/tmp/srb/**"
+ ],
+ "defects": {
+  "D2_coverage": "FIXED - aggregate coverage judged against {2,3,4,8,12}, missing exits named; --required-exits override; single-invocation record is not coverage",
+  "D3_duplicate_keys": "FIXED - strict_load/object_pairs_hook refuses by name at any depth, exit 1",
+  "D4_instrumentation": "FIXED - instrumentation {primitive,covers,excludes} declared by as_dict, enforced; --observed-from-syscall compares counts AND argv; doc claim narrowed to the measured sentence",
+  "D5_tree_binding": "RECORDED, NOT FIXED - 'Known gap D5 - the record is not tree-bound' in docs/GATE-CHAIN.md \u00a711 with the exact reproduction (same argv, permissive G1 in /tmp copy, exit 4 -> 12, historical record validates OK) and the one-line consequence",
+  "D6_refusal_doc_drops_instrumentation": "RECORDED - found by this unit; cell.py's refusal writer publishes a fixed key list so the on-disk refusal lacks `instrumentation`; complete_refusal_document() restores it; fix belongs in the pinned cell.py"
+ },
+ "tests": [
+  "test_d2_coverage_naming_only_0_and_7_is_refused",
+  "test_d2b_single_exit_coverage_is_not_coverage",
+  "test_d3_duplicate_key_is_refused_by_name",
+  "test_d3b_duplicate_at_root_is_refused",
+  "test_d4_record_without_instrumentation_is_refused",
+  "test_d4b_syscall_trace_exceeding_the_declaration_is_refused",
+  "test_d4c_real_record_with_matching_trace_is_accepted",
+  "test_d4d_strace_text_drops_the_traced_process_itself"
+ ],
+ "cell_sha_before": "b549e45e12beacbd11cd41a523087d2f6f327f608380528bc6b566c296937488",
+ "cell_sha_after": "b549e45e12beacbd11cd41a523087d2f6f327f608380528bc6b566c296937488",
+ "spawn_record_sha": "8bb17349feae38f19f872de19d4e4702527740d1cb86542c45cd00f5e8ba4bca",
+ "tree_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+ "requests": 0,
+ "verdict_row": {
+  "command": "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_spawn_classification.py",
+  "exitCode": 0,
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "result": "PASS"
+ }
+}

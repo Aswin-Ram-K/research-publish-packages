@@ -1,0 +1,87 @@
+{
+ "certified_sha256": "c29a9fb36e9e8f0e166583d56db00b2184fbc12a97b77b1a72ca9f612c1a9c59",
+ "harness_sha256": "1f7c67914e5b76680616f08c16708635060a81ab3932c20806e597a5343f3285",
+ "certified_at": "2026-10-26T19:10:00Z",
+ "claims": [
+  {
+   "id": "GATES-MESSAGE-CONSISTENCY",
+   "owner_card": "GATES-MESSAGE-CONSISTENCY",
+   "status": "holds",
+   "evidence": "cell.py:732-788 builds g2_allow and g2_refuse from the SAME numbers and selects with `elif verdict['ok']` (never a string); observed allow line: 'cell: 0/7 dry-run G2 allow computed=2880 s limit=3600 s (--max-wall) artefact=..PROJECTION.json sha256=75d02c73..'; observed refusal: 'G2 projection REFUSED: computed --max-wall=0 s | limit a positive ceiling (> 0 s) | ... there is no unlimited mode' (exit 8). test_gate_messages.py+tests/test_exit_codes.py -> 25 passed, 0 failed. computed/limit/exit unchanged: G2 still 8, G1 4, G3 12 (exit_codes.EXIT_TABLE)."
+  },
+  {
+   "id": "GATE-OPERAND-VALIDATION",
+   "owner_card": "GATE-OPERAND-VALIDATION",
+   "status": "holds",
+   "evidence": "direct end-to-end: `--max-wall 0` -> RC=8 'G2 projection REFUSED: computed --max-wall=0 s'; suite matrix tests/test_gate_operand_validation.py -> 38 passed, 1 failed: the 150+ row operand matrix (hostile 0/-1/-48/1e-9/1e308/inf/nan/'abc'/''/None) passes with zero spawns, but the six-named-bypass end-to-end case errors inside the TEST DOUBLE: 'TypeError: run_chain_cases.<locals>.counted() got an unexpected keyword argument purpose' (cell.py:2012 -> cell.py:363; the stub tools/gate_attack.py:544 is stale against _run(purpose=...)). That single case is NOT_TESTABLE from this harness; cell.py's operand enforcement itself was observed refusing (8) with runner_launch=0."
+  },
+  {
+   "id": "GATE-CHAIN-FIX",
+   "owner_card": "GATE-CHAIN-FIX",
+   "status": "holds",
+   "evidence": "absent --hypothesis -> RC=12 'cell: 3c/7 G3 prereg gate REFUSED(12) G3 prereg REFUSED: computed hypothesis=none declared'; explicit '--hypothesis none' -> RC=12 with the same sentence; '--hypothesis H2' admitted: dry-run 'claim=H2 comparison_eligible=True mode=hypothesis'; G3 code 12 is in exit_codes.EXIT_TABLE (codes [0..13]); the both-ways source scan is asserted by tests/test_exit_codes.py (passed) and cell.py:1439 carries 'computed': 'hypothesis=none declared'."
+  },
+  {
+   "id": "PREFLIGHT-SPAWN-DECLARE + SPAWN-RECORD-BIND + SPAWN-TREE-BIND",
+   "owner_card": "PREFLIGHT-SPAWN-DECLARE / SPAWN-RECORD-BIND / SPAWN-TREE-BIND",
+   "status": "holds",
+   "evidence": "refusing invocations observed: exit 2 (preflight: missing system_prompt; unknown arm), exit 8, exit 12 -- each printed 'spawns runner_launch=0 preflight_self_check=1 declared=1 undeclared=0 observed=None record=ok'. Refusal record /tmp/cert3/cell-transcript-grow-20261026T190404Z.refusal.json keys include argv, cell_sha256=c29a9fb36e9e.., spawn_record_sha256, tree_sha=f17663d1fed0..; stale-tree refusal is asserted by tests/test_spawn_classification.py (passed, 0 failed) but was not re-probed by a direct stale-tree injection here."
+  },
+  {
+   "id": "HARNESS-REPIN P2",
+   "owner_card": "HARNESS-REPIN",
+   "status": "holds",
+   "evidence": "`--dry-run` with a refusing gate: RC=0 and 'cell: EXIT 0 - dry run: 1 of 3 gate(s) would refuse; exit 0 means the PREVIEW ran, not that the gates allow ... nothing was sent'; with an allowing gate: '0 of 3 gate(s) would refuse'. The dry-run branch (cell.py:1956-2009) returns 0 before stage_run (cell.py:2057); it printed '0 requests sent, no endpoint contacted'. Contract documented in the branch comments and asserted by tests/test_gate_override.py (passed)."
+  },
+  {
+   "id": "WIRE-GATES",
+   "owner_card": "WIRE-GATES",
+   "status": "holds",
+   "evidence": "exit_codes.EXIT_TABLE codes = [0,1,2,3,4,5,6,7,8,9,10,11,12,13]; EXTERNAL_CODES = {13: 'experiments/ptr-engine/tools/tree_freeze.py'}; RUNNER_CODES = {2,3,4,5,6,7}. CORRECTION to the claim's parenthetical: exit 7 IS raised by cell.py -- Abort(7,'7/7 record') at cell.py:1757, 1766, 1815 and 2119 (stage_record + main's final record write); it is no longer a declared-but-unraised code. Both-ways scan asserted by tests/test_exit_codes.py (passed)."
+  },
+  {
+   "id": "EXIT-CODE-TABLE",
+   "owner_card": "EXIT-CODE-TABLE",
+   "status": "holds",
+   "evidence": "exit 1 is declared as EXIT_INTERNAL ('internal-error') with raise_site cell.py main() `except Exception` -> return 1, and was OBSERVED live: the stale-test-double probe printed 'cell: INTERNAL ERROR arm=transcript-grow fixture=...' then 'Traceback ... cell.py:2012 in main / cell.py:363 in stage_budget / TypeError' and returned 1. Every raised code observed (2,4,8,12,1) is declared; every declared code 0-12 has a cell.py raise site per the scan test, 13 is the documented external."
+  },
+  {
+   "id": "CELL-ONE-COMMAND",
+   "owner_card": "CELL-ONE-COMMAND",
+   "status": "holds",
+   "evidence": "stages observed in order in one invocation: '1/7 preflight', '2/7 harness', '3/7 budget' then '3a/7 G1 ledger gate', '3b/7 projection', '3c/7 G3 prereg gate', 'gates recorded', '4/7 run' ... '5/7 grade', '6/7 analyse', '7/7 record'. Manifest precedes the send: cell.py:2049 write_gate_manifest(...) then cell.py:2057 run = stage_run(...). SCOPE NOTE: `--request-allocation` is a RUNNER flag (run_longrun.py:468-478), not surfaced by cell.py (no request_allocation in cell.py) -- that element is not_testable within a cell.py certificate; the cell's own pre-send reservation is the G1 follow-up allowance (observed 'incl. follow-up allowance 5')."
+  }
+ ],
+ "suites": [
+  {
+   "name": "test_cell_gates,test_gate_override,test_exit_codes,test_spawn_classification,test_cell,test_claim_mode,test_tree_freeze (repo root)",
+   "passed": 123,
+   "failed": 0
+  },
+  {
+   "name": "same seven from experiments/ptr-engine/longrun",
+   "passed": 123,
+   "failed": 0
+  },
+  {
+   "name": "test_gate_messages,test_exit_codes",
+   "passed": 25,
+   "failed": 0
+  },
+  {
+   "name": "test_gate_operand_validation,test_gate_messages,test_gate_ledger,test_cap_gate",
+   "passed": 38,
+   "failed": 1,
+   "failure": "test_the_six_named_bypasses_now_refuse_with_zero_live_spawns -> 'F1: expected exit 8, got 1' caused by tools/gate_attack.py:544 stub `counted(argv, capture=True, label='')` missing the `purpose=` kwarg cell.py:363 now passes; a stale test double, not a cell.py behaviour change."
+  }
+ ],
+ "provenance": {
+  "attributable": false,
+  "reason": "untracked file, no prior baseline, written 18:54:16Z by no settled card"
+ },
+ "scope": "behaviour only - NOT provenance; a future change to this file needs a baseline snapshot first",
+ "reds_external": {
+  "test_verdict_ritual": "not run in this unit (not in the named suite set)",
+  "repo_root_files": "the two known pre-existing repo-root reds did not appear in any run here"
+ }
+}

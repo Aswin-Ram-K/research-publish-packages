@@ -1,0 +1,105 @@
+{
+  "unit": "VERDICT-DISPUTE",
+  "status": "done",
+  "overall": "fail",
+  "overall_note": "the two disputed closures are adjudicated and the deliverables are written; 'fail' records that claim 1's PASS does not survive as a gate-chain precondition - the card's own handoff is the true record",
+  "artifacts": [
+    "experiments/ptr-engine/measure/VERDICT-DISPUTE.json",
+    "experiments/ptr-engine/measure/VERDICT-DISPUTE.md",
+    "orchestration/units/VERDICT-DISPUTE.md",
+    "orchestration/handoffs/VERDICT-DISPUTE.json",
+    "orchestration/journals/VERDICT-DISPUTE.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "3 frozen commands re-run: V-GATE attack script -> exit 0 (failed_assertions [], 33 cases); p95-power-verify.sh -> exit 1 twice (only differing byte = method.analyze_stats_sha256_atimport); fixture_v7_audit.py -> exit 0 (agree 12 / disagree 0 / ambiguous 0)",
+    "commands": [
+      "git rev-parse HEAD -> f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+      "git status --porcelain | wc -l -> 345",
+      "sha256sum experiments/ptr-engine/longrun/cell.py experiments/ptr-engine/longrun/analyze_stats.py experiments/ptr-engine/tools/fixture_v7_audit.py experiments/ptr-engine/measure/p95-power-verify.sh orchestration/units/V-GATE-CHAIN-3.md",
+      "python3 -c 'exec(open(\"orchestration/units/V-GATE-CHAIN-3.md\").read().split(\"<!--ATTACK-SCRIPT-START-->\")[-1].split(\"<!--ATTACK-SCRIPT-END-->\")[0])' -> exit 0",
+      "bash experiments/ptr-engine/measure/p95-power-verify.sh -> exit 1, twice",
+      "python3 experiments/ptr-engine/measure/p95_power_gen.py <tmp> ; diff <tmp> experiments/ptr-engine/measure/P95-POWER.json -> 1 line: method.analyze_stats_sha256_atimport",
+      "git show HEAD:experiments/ptr-engine/longrun/analyze_stats.py -> fatal: path exists on disk, but not in 'HEAD'",
+      "python3 experiments/ptr-engine/tools/fixture_v7_audit.py -> exit 0"
+    ]
+  },
+  "tree": {
+    "head": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+    "porcelain_count": 345,
+    "sha256": {
+      "experiments/ptr-engine/longrun/cell.py": "fd4f2b01a6bfdeea425a92de428f770bf9f07fbe3bdc3b1d8cfd1f4a17ee2ec6",
+      "experiments/ptr-engine/longrun/analyze_stats.py": "0a9a786102ca870edb3ff714538a512e0ea59534e4ced2f3d012aec0e39b493b",
+      "experiments/ptr-engine/tools/fixture_v7_audit.py": "ae07f2da94b878f104aecbd36a2cb55c75434d38d09b33623cd6ddbe5f251f8f",
+      "experiments/ptr-engine/measure/p95-power-verify.sh": "e7a12ef473ff6a51b0e7d75042398a9401496e48e561c5b7e80efd706b3a18d8",
+      "orchestration/units/V-GATE-CHAIN-3.md": "6c3ddd6d1f6630001224177d13010e4cfd4e976bb733bbc4d31c4b5ceaf9afbb"
+    },
+    "tree_unchanged_mid_run": true
+  },
+  "adjudication": [
+    {
+      "claim": 1,
+      "card": "V-GATE-CHAIN-3",
+      "closure_verdict": "PASS f17663d1",
+      "recomputed_exit": 0,
+      "verdict": "PASS supportable only as 'the attack script ran green', NOT as 'the gate chain has no surviving hole'",
+      "winner": "the card's handoff (overall: fail)",
+      "why": "6 of the 26 assertions assert the surviving bypasses as the pass condition (B2_max_wall_1e308_allows exit==6 for F1; G_tiny_override_allows F2; H_artefact_zero_allows F3; D_turns0_H3_runs_full F4; D2_turns_neg_runs_full F5; I2b_cap_zero_passed_to_runner F8); G2's decision expression is a description string never compared to a computed expectation and none of the 11 DIRECT['G2_*'] results is asserted; G3 is untouched",
+      "smallest_assertion_that_would_have_caught_it": "assert by['B2_max_wall_1e308']['exit'] == 8 (script asserts == 6)"
+    },
+    {
+      "claim": 2,
+      "card": "P95-POWER-FROM-ROWS",
+      "closure_verdict": "FAIL exit-1 f17663d1",
+      "recomputed_exit": 1,
+      "stable": true,
+      "verdict": "supported",
+      "winner": "the card's PASS, on substance; the closure FAIL is provenance drift, not a broken power claim",
+      "why": "the only differing byte is method.analyze_stats_sha256_atimport (0a9a7861... vs committed 2c9756f3...); every computed number regenerates identically; the generator hashes analyze_stats.py at p95_power_gen.py:271 and sets analyze_stats_imported False at :272, so the file is never used in the computation; analyze_stats.py is untracked at HEAD, so the digest drifted without a commit",
+      "quoted_failing_assertion": "diff -q \"$OUT\" experiments/ptr-engine/measure/P95-POWER.json -> Files /tmp/p95-power-regen.YGO1t6.json and experiments/ptr-engine/measure/P95-POWER.json differ",
+      "classification": "tree-state dependent (not flaky: 2/2 identical exits; not fixture-dependent: generator exits 0)"
+    },
+    {
+      "claim": 3,
+      "card": "V-FIXTURE-V7",
+      "recomputed_exit": 0,
+      "verdict": "no dispute; confirmed"
+    }
+  ],
+  "downstream_artefacts": [
+    "orchestration/VERDICTS.md",
+    "experiments/ptr-engine/longrun/cell.py",
+    "experiments/ptr-engine/measure/BUDGET-SCHEDULE.md",
+    "experiments/ptr-engine/measure/P95-POWER.json",
+    "docs/P95-POWER.md",
+    "orchestration/handoffs/P95-POWER-FROM-ROWS.json",
+    "docs/GATE-CHAIN.md"
+  ],
+  "assumptions": [
+    "P95-POWER-FROM-ROWS's board post was taken as its claim of PASS; the platform reporting it as 'claims PASS' in the dispute was not re-read because the handoff's evidence string states the same exit-0 claim explicitly.",
+    "The three 'closed' verdicts were taken as given by the dispute; this unit re-derived only the exit codes, not the closure rows themselves."
+  ],
+  "not_reproduced": [
+    "the premise that the p95 verifier is flaky: exit 1 on both runs, same byte, same message"
+  ],
+  "overstated": [
+    "the V-GATE-CHAIN-3 closure PASS as a gate-chain precondition: the command's assertions encode the bypasses as expected behaviour, so a green run is compatible with six holes surviving",
+    "the reading of the p95 closure FAIL as evidence that A* sufficient broke: the failing byte is a digest of a file the generator never imports"
+  ],
+  "unverified": [
+    "whether b03377d6's environment hashed analyze_stats.py at 2c9756f3... (taken from the handoff's own recorded sha; the file has since changed and is untracked, so the historical value cannot be re-derived from git)",
+    "who or which unit edited analyze_stats.py between the card's run and now - not attributable offline, and not attempted"
+  ],
+  "tool_calls": 19,
+  "bound": 26,
+  "requests_spent": 0,
+  "edits_to_existing_documents": 0,
+  "blocker": "",
+  "next_unit_hint": "Do not spend the 792-request RUN-A* grid on the V-GATE closure. First a repair unit on cell.py's G1/G2/G3 operand validation with assertions derived from the requirement (max-wall finite and bounded, proj_turn positive-bounded across flag/p90/artefact, turns/reps positive integers, allowance >= 0, turn-wall-cap positive-bounded), and on the p95 side refresh P95-POWER.json's analyze_stats digest or stop gating on a field the generator never reads.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/VERDICT-DISPUTE.json",
+    "experiments/ptr-engine/measure/VERDICT-DISPUTE.md",
+    "orchestration/units/VERDICT-DISPUTE.md",
+    "orchestration/handoffs/VERDICT-DISPUTE.json",
+    "orchestration/journals/VERDICT-DISPUTE.jsonl"
+  ]
+}

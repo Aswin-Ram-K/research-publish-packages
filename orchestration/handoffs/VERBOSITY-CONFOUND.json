@@ -1,0 +1,57 @@
+{
+ "unit": "VERBOSITY-CONFOUND",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/VERBOSITY.json",
+  "docs/VERBOSITY.md",
+  "experiments/ptr-engine/longrun/tests/test_verbosity.py",
+  "orchestration/units/VERBOSITY-CONFOUND.md",
+  "orchestration/handoffs/VERBOSITY-CONFOUND.json",
+  "orchestration/journals/VERBOSITY-CONFOUND.log"
+ ],
+ "evidence": {
+  "command_or_count": "8 passed in 0.23s; 14 rows files hashed; 24 cells; 14 decomposition pairs; 10 within-file fits; VALIDATE_ERRORS []",
+  "commands": [
+   "ls -1 experiments/ptr-engine/measure/rows-*.jsonl | wc -l -> 14",
+   "python3 experiments/ptr-engine/longrun/tests/test_verbosity.py -> cells=24 p95_ok=0 refused=21 decomp=14 fits=10; VERDICT confound_immaterial",
+   "pytest experiments/ptr-engine/longrun/tests/test_verbosity.py -q -> 8 passed in 0.23s",
+   "sha256sum experiments/ptr-engine/measure/VERBOSITY.json -> 619421b13a1d2f2e93e607d9b2ea0704eda2f09e1d31ea358810b2b93cab1df8",
+   "sha256sum docs/VERBOSITY.md -> c449ffe2112dcf1d140555626c7ad0c6cbb873fe8215b27f498d89fd6c98d003",
+   "sha256sum experiments/ptr-engine/longrun/tests/test_verbosity.py -> 9f6aa0e984b6595d6a3af937a7b3a84d04bc222579f5f0abd825955eef23c165"
+  ],
+  "verdict": "confound_immaterial",
+  "headline_numbers": {
+   "focus": "rows-longrun-c-2026-10-26.jsonl (G4) / pointer-stable - transcript-grow",
+   "n": "47 vs 48",
+   "ttft_ratio_mean_logs": 0.3747,
+   "ttft_ratio_p50": 0.3463,
+   "completion_multiple": 0.1947,
+   "prompt_share_ln": -0.631609,
+   "completion_share_ln": -0.117871,
+   "residual_ln": -0.232112,
+   "gap_share_prompt_pct": 64.3,
+   "gap_share_completion_pct": 12.0,
+   "gap_share_residual_pct": 23.6,
+   "surviving_fraction": 0.866545,
+   "completion_only_upper_bound_surviving": 0.879333,
+   "p95": "refused everywhere: no per-(file,arm) cell reaches n=60; largest is 48"
+  },
+  "quality_comparability": "not comparable: G4 grow median 550 completion tok / 2050 answer chars vs compact 36 / 140 and pointer-stable 73 / 272 (14.6x answer-length spread inside one grid); ANSWER:-line rate is 1.00 for grow vs 0.66 pointer-stable in v3 and 1.00 vs 0.75 in v4, so an answer-production count tracks answer length both ways"
+ },
+ "blocker": "",
+ "assumptions": [
+  "G4 is rows-longrun-c-2026-10-26.jsonl: ARM-TREATMENTS.md:37 and ARM-RECONCILE.md:16 both name it 'G4 / RUN-C-V2 rows (192 rows, 4 arms x 48)'.",
+  "The generator lives inside experiments/ptr-engine/longrun/tests/test_verbosity.py because /tmp is per-call ephemeral in this sandbox and /tmp/vconf/build.py did not survive between bash calls; the declared write path is still honoured and the JSON records the generator's sha256.",
+  "p95 is refused for every cell because no per-(file,arm) completed-turn cell reaches the n>=60 floor; the verdict is therefore stated on mean-log and p50 TTFT with p90 as the reported tail."
+ ],
+ "next_unit_hint": "RUN-A* must consume VERBOSITY.json rather than re-derive: quote completion/answer-length distributions, b_prompt/b_completion with R2, and ANSWER:-line rate beside median answer length; do not publish a p95 below n=60. Open question this unit could not close: no field separates prefill compute from server queue-wait, so the 64% prompt-side share is a proxy, not measured prefill.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/VERBOSITY.json",
+  "docs/VERBOSITY.md",
+  "experiments/ptr-engine/longrun/tests/test_verbosity.py",
+  "orchestration/units/VERBOSITY-CONFOUND.md",
+  "orchestration/handoffs/VERBOSITY-CONFOUND.json",
+  "orchestration/journals/VERBOSITY-CONFOUND.log",
+  "/tmp/vconf/**"
+ ]
+}

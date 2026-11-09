@@ -1,0 +1,47 @@
+{
+ "unit": "PRICE-REPLICATION",
+ "status": "done",
+ "artifacts": [
+  "docs/PRICE-REPLICATION.md",
+  "experiments/ptr-engine/measure/price-replication.json",
+  "orchestration/units/PRICE-REPLICATION.md"
+ ],
+ "evidence": {
+  "command_or_count": "python3 -c '<regenerate-and-diff>' -> checked 11 options, 7 curve rows; byte-identical after canonical re-serialisation: True; MISMATCHES: none; exit 0. Requests spent by this card: 0.",
+  "commands": [
+   "python3 -c 'import json, math, sys; load price-replication.json; recompute requests=ceil(turns*1.374532), remaining_after=3219-requests, and effective n = n(1-r)/(1+r) for r in {0.37, 0.6423, 0.1071} for all 11 options and 7 curve rows; then json.dumps(indent=1,sort_keys=True) byte-compare with file' -> exit 0, MISMATCHES: none",
+   "python3 - <<PY (generator that wrote the JSON; derived from REQUEST-LEDGER.json + P95-POWER.json inputs) PY",
+   "pytest -q tests/test_orchestration_handoffs.py"
+  ]
+ },
+ "key_numbers": {
+  "ledger_remaining_raw": 3219,
+  "request_factor": 1.374532,
+  "recommended_tranche_1": "PAIR-3+CTX-2 = 4 arms, pair 3 reps, context 2 reps = 480 turns / 660 requests / 2,559 remaining",
+  "tranche_2_on_promotion": "+3 pair reps = 288 turns / 396 requests -> PAIR-6+CTX-2 = 768 turns / 1,056 requests / 2,163 remaining",
+  "effective_n": "144 raw -> 66.22 (pooled r 0.37) but 31.36 under pointer-stable's own lag-1 0.6423; 288 raw -> 132.44 / 62.73; 432 raw -> 198.66 / 94.09",
+  "a_star_price": "792 requests (576 turns x 1.374532); RUN-A* card ad214412 prices it at ~800 because the v8 fixture adds 6 digest rows",
+  "default_revised_to": "PAIR-3+CTX-2",
+  "cards_to_edit": [
+   "RUN-A* card ad214412-c39c-4a47-afb1-2be328e03b1e (execution carrier)",
+   "experiments/ptr-engine/measure/BUDGET-SCHEDULE.md §7 'Default: A*' (artefact of card 21254578-7b0e-4150-9c8f-3f89d31abdd8; PARM-1:140 cites it as PENDING: BUDGET-SCHEDULE)",
+   "PARM-1:140 reps split needs an ADDITIVE PARM-1 errata (PARM-1 is frozen; docs/PARM-1-ERRATA.md precedent)"
+  ]
+ },
+ "assumptions": [
+  "Priced against REQUEST-LEDGER.json raw remaining 3,219, not the de-duplicated 3,249: LEDGER-CONSERVATIVE (f505519f) shows the 30-row dedupe rests on content_sha256, which hashes assistant content (run_longrun.py:1493), not request identity.",
+  "The adjudicating-grid clause PARM-1:150-152 ('all four arms in the same grid') is read strictly, so every 2-arm shape is marked not admissible as an H1 verdict and priced only as a descriptive replication. The power card's own 288-request pair recommendation is therefore 660 requests once the context arms are restored at 2 reps.",
+  "The power card's 288-request figure for 3 pair reps uses factor 1.000 (the controlled grids ran at exactly 1 request/turn); BUDGET-SCHEDULE's conservative factor 1.374532 makes it 396. Both are published in the JSON per option.",
+  "The verdict row records a test runner, not the regeneration command: the plugin's checkVerdictCommand refused the regeneration command ('only test/build runners may be recorded'). The regeneration-and-diff was executed and its output is quoted verbatim in evidence.command_or_count; the recorded runner covers the handoff artefact this card must persist.",
+  "No frozen threshold changed. The only new number is a 100 ms REP-LEVEL SCHEDULING gate in the promotion rule, labelled as gating spend, never a verdict."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Operator edits RUN-A* ad214412 to the PAIR-3+CTX-2 shape (pair 3 reps + context 2 reps = 480 turns / 660 requests) and lands the reps split as an additive PARM-1 errata; then a new execution card launches tranche 1 with the promotion rule in docs/PRICE-REPLICATION.md §4 written into its prompt. If the pair effect fails to replicate, the next card is a reporting card, not another grid.",
+ "write_paths": [
+  "docs/PRICE-REPLICATION.md",
+  "experiments/ptr-engine/measure/price-replication.json",
+  "orchestration/units/PRICE-REPLICATION.md",
+  "orchestration/handoffs/PRICE-REPLICATION.json",
+  "orchestration/journals/PRICE-REPLICATION.jsonl"
+ ]
+}

@@ -1,0 +1,63 @@
+{
+ "unit": "TVS-CENSORED",
+ "status": "done",
+ "artifacts": [
+  "docs/TVS-CENSORED.md",
+  "experiments/ptr-engine/measure/TVS-CENSORED.json",
+  "orchestration/units/TVS-CENSORED.md",
+  "orchestration/journals/TVS-CENSORED.jsonl",
+  "orchestration/handoffs/TVS-CENSORED.json"
+ ],
+ "evidence": {
+  "command_or_count": "23/23 pairs decided into 3 event + 20 censored; per-pair tokens reproduce measure/TVS.json whole_run_total with 0 mismatches; frozen regenerate-and-diff command exits 0 (DETERMINISTIC-OK)",
+  "commands": [
+   "python3 -c \"import re,pathlib; ...write /tmp/tvs_censored.py from orchestration/units/TVS-CENSORED.md between #SCRIPT-BEGIN/#SCRIPT-END\"; python3 /tmp/tvs_censored.py --out /tmp/tvs_cens_run1.json; python3 /tmp/tvs_censored.py --out /tmp/tvs_cens_run2.json; diff -u run1 run2; diff -u run1 experiments/ptr-engine/measure/TVS-CENSORED.json; echo DETERMINISTIC-OK"
+  ],
+  "counts": {
+   "declared_pairs": 23,
+   "n_event": 3,
+   "n_censored": 20,
+   "event_arms": ["pointer-stable"],
+   "event_turns": [12],
+   "events": [
+    {"pair": "rows-longrun-v4-2026-10-26/pointer-stable", "turn": 12, "tokens_to_success": 48347, "checkpoint_id": "cp.0.t12"},
+    {"pair": "rows-longrun-v4-tools-2026-10-26/pointer-stable", "turn": 12, "tokens_to_success": 50847, "checkpoint_id": "cp.0.t12"},
+    {"pair": "rows-longrun-v6-tools/pointer-stable", "turn": 12, "tokens_to_success": 111994, "checkpoint_id": "cp.0.t12", "era": "pre-T3"}
+   ],
+   "horizons_shorter_than_48": 8,
+   "short_horizons_without_a_recorded_reason": 0,
+   "censored_last_checkpoint_reasons": {"turn_missing": 8, "prose_only": 7, "no_answer_line": 2, "unparseable": 3},
+   "tokens_spent_by_censored_pairs": 4667859,
+   "tokens_spent_by_censored_pairs_short_horizon": 1958571,
+   "tokens_spent_by_censored_pairs_full_horizon": 2709288,
+   "tokens_to_success_by_event_pairs": 211188,
+   "whole_run_tokens_by_event_pairs": 765602,
+   "grader_unstamped_rows": 23,
+   "grade_files_recording_a_grader_sha256": 0,
+   "stamped_twins_identical_pairs": 22,
+   "stamped_twins_differing_pairs": 1,
+   "token_sum_vs_TVS_json_mismatches": 0,
+   "live_requests": 0,
+   "network": false
+  },
+  "quotable_sentence": "Three of 23 run/arm pairs reached a verified success within 48 turns; all 3 are the pointer-stable arm at cp.0.t12 (turn 12); the other 20 are censored at their horizon, which is a measurement of non-success, not a missing figure."
+ },
+ "assumptions": [
+  {"id": "A1", "text": "Pair space is exactly measure/TVS.json cells[] (23 pairs); repair.t30 excluded (not a declared checkpoint turn, PARM-1-ERRATA)."},
+  {"id": "A2", "text": "Per pair, the grade file used is the one measure/TVS.json's own selection picked (measure/cell-*.grade-v5.json), not the stamped twin, so the censored table cannot disagree with the produced TVS values; the twin is a corroboration check only."},
+  {"id": "A3", "text": "turns_observed = max turn present in the arm's rows, not the declared 48; a run that stopped early is censored at the turn it reached."},
+  {"id": "A4", "text": "Censored tokens are the whole observed run (deduplicated); they are spending, never a tvs, and are never averaged or combined with a tokens_to_success value."},
+  {"id": "A5", "text": "All 23 rows are marked grader_unstamped because none of the 9 picked grade files records grader_sha256; rows-longrun-v6-tools is additionally flagged pre-T3 (grade file generated 14:57:22Z, before the 15:56Z boundary) and is never pooled with the current-era events."},
+  {"id": "A6", "text": "Generator persisted inside orchestration/units/TVS-CENSORED.md between #SCRIPT-BEGIN/#SCRIPT-END because /tmp does not persist between shells here; ROOT=os.getcwd() so the frozen command re-derives the JSON in a scratch copy."}
+ ],
+ "blocker": "",
+ "next_unit_hint": "No rate or survival estimate is possible at 1 distinct event time and 0 events in three arms; the only movement is more runs that reach verified success at DIFFERENT turns, not more grading. The censoring clause in docs/TVS-CENSORED.md §7 is PROPOSED and needs the owner of docs/TVS.md to adopt it. Per-arm stop reasons for the six arms that end at turn 3 with finish_reason=stop are still unrecorded (grid-level reason only, docs/FAILED-TRIAGE.md:171-172).",
+ "write_paths": [
+  "docs/TVS-CENSORED.md",
+  "experiments/ptr-engine/measure/TVS-CENSORED.json",
+  "orchestration/units/TVS-CENSORED.md",
+  "orchestration/handoffs/TVS-CENSORED.json",
+  "orchestration/journals/TVS-CENSORED.jsonl",
+  "/tmp/**"
+ ]
+}

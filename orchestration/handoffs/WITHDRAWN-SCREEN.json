@@ -1,0 +1,122 @@
+{
+ "unit": "WITHDRAWN-SCREEN",
+ "status": "done",
+ "artifacts": [
+  "docs/WITHDRAWN-SCREEN.md",
+  "experiments/ptr-engine/measure/WITHDRAWN-SCREEN.json",
+  "experiments/ptr-engine/tools/withdrawn_screen.py",
+  "experiments/ptr-engine/longrun/tests/test_withdrawn_screen.py",
+  "docs/LATENCY-REPORT.md",
+  "experiments/ptr-engine/measure/ARM-RECONCILE.md",
+  "orchestration/units/WITHDRAWN-SCREEN.md",
+  "orchestration/handoffs/WITHDRAWN-SCREEN.json",
+  "orchestration/journals/WITHDRAWN-SCREEN.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "131 markdown files scanned; 7 with hits; 2 corrected; 4 no_correction_needed (98.7 substring of p50 198.72/198.7); 1 real reported-only (docs/REQUEST-LEDGER.md:145); guard exit 0 on both corrected docs, exit 1 on a /tmp copy with the figure pasted back; 8 tests pass; 0 requests",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/withdrawn_screen.py --scan --write  # WROTE .../WITHDRAWN-SCREEN.json: 130 scanned",
+   "python3 experiments/ptr-engine/tools/withdrawn_screen.py --check  # exit 0, 'SCREEN CLEAN: 131 files scanned (>= 131 recorded), 1 reported-only offender(s), both corrected documents clean'",
+   "python3 experiments/ptr-engine/tools/withdrawn_index.py --check docs/LATENCY-REPORT.md  # exit 0 CLEAN",
+   "python3 experiments/ptr-engine/tools/withdrawn_index.py --check experiments/ptr-engine/measure/ARM-RECONCILE.md  # exit 0 CLEAN",
+   "python3 experiments/ptr-engine/tools/withdrawn_index.py --check /tmp/ws/paste-back.md  # exit 1: 'WITHDRAWN WI-004 line 120: 318.14' / 'FOUND 1 withdrawn claim(s)'",
+   "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_withdrawn_screen.py  # 8 passed"
+  ],
+  "counts": {
+   "scanned": 131,
+   "docs_md": 104,
+   "measure_md": 25,
+   "root_md": 2,
+   "files_with_hits": 7,
+   "corrected_documents": 2,
+   "corrections_applied": 3,
+   "artifact_annotations": 6,
+   "no_correction_needed_documents": 4,
+   "reported_only_real": 1,
+   "tests": 8,
+   "live_requests": 0
+  },
+  "corrected": [
+   {
+    "path": "docs/LATENCY-REPORT.md",
+    "line": 45,
+    "entry": "WI-004",
+    "before_sha256": "9f8bc6b1f2d293920da2735c27ab942fe017f2695e5b91388cbba31b8f94852a",
+    "after_sha256": "c54c2c247b279bced8fcfd501db140571aebd4f5ebb98fa8ae7a891c18b56f27",
+    "note": "the sentence '318.14 [235.00, 526.41] stands' is kept; a dated 'Correction (2026-10-26)' block appended after its paragraph naming WI-004, the n=51 < 60 floor and measure/LATENCY-REPORT.json p95_withheld"
+   },
+   {
+    "path": "experiments/ptr-engine/measure/ARM-RECONCILE.md",
+    "line": 9,
+    "entry": "WI-009",
+    "before_sha256": "98597326458b4f649a6fd3738e90446c60c8ed3c97189689be90ce6f98128a10",
+    "after_sha256": "f49398d02f46443fb6dcb98092a02f13be89cf17bff6b3b8e929ac6ef2b0af5f",
+    "note": "the 1,867 quote is kept; a dated correction block appended after the paragraph names 967 as the citable G4 turn-1 prompt size (measure/ARM-RECONCILE.json)"
+   },
+   {
+    "path": "experiments/ptr-engine/measure/ARM-RECONCILE.md",
+    "line": 104,
+    "entry": "WI-011",
+    "note": "visible retraction sentence appended inside the same bullet: measured cached share 0.871157, not 0.987"
+   }
+  ],
+  "no_correction_needed": [
+   {
+    "path": "docs/LATENCY-ERA-CENSUS.md",
+    "line": 123,
+    "entry": "WI-011",
+    "reason": "the 98.7 is part of the citable p50 198.7230 (n=51), not a cache share"
+   },
+   {
+    "path": "docs/ROW-MODEL.md",
+    "line": 111,
+    "entry": "WI-011",
+    "reason": "part of 198.72 [166.05, 206.66] n=51, G7's de-duplicated p50"
+   },
+   {
+    "path": "docs/TTFT-DEFINITION.md",
+    "line": 59,
+    "entry": "WI-011",
+    "reason": "part of the same 198.72 ms published record"
+   },
+   {
+    "path": "docs/VERBOSITY.md",
+    "line": 52,
+    "entry": "WI-011",
+    "reason": "part of the 198.7/201.6/251.7 completion-token statistics (n=47, refused)"
+   }
+  ],
+  "red_green": {
+   "green": "withdrawn_index.py --check exits 0 on docs/LATENCY-REPORT.md and measure/ARM-RECONCILE.md after the corrections",
+   "red": "the same ARM-RECONCILE copied to /tmp/ws/paste-back.md with '318.14 [235.00, 526.41] n=68' pasted back exits 1 'WITHDRAWN WI-004 line 120'; tests/test_withdrawn_screen.py::test_red_pasted_withdrawn_figure_trips pins it"
+  }
+ },
+ "findings": [
+  "The register's census named 7 firing documents; the scan reproduces 7 but the sets differ: docs/OPERATOR-BRIEF.md is now clean, docs/VERBOSITY.md (written after the census) now fires. Only two of the seven quote an actually withdrawn figure.",
+  "REGISTER DEFECT, loudest finding: WI-011's quote is the bare 3-char string '98.7', so the guard fires on every citable p50 in the 198.7 ms range (198.72, 198.7230, 198.74). It fired on a correct number in 4 documents and on 6 lines of docs/LATENCY-REPORT.md. Fix belongs to the register owner: narrow the quote to '98.7 % prefix' (already one of its markers), after which the six inline artifact notes and the four no_correction_needed rows become moot. Register not edited here.",
+  "The guard did NOT fire on the WI-004 'stands' remnant at docs/LATENCY-REPORT.md:45 even though it is the live inconsistency the register recorded - the 400-char window is satisfied by the 'WITHDRAWN' markers at :35/:90. So the corpus check alone would never have flagged it; the register's prose note is what identified it.",
+  "docs/REQUEST-LEDGER.md:145 remains the only real uncorrected hit (WI-002); the same file carries the withdrawal at :19 and :56, so a reader today is not misled - reported to card REQUEST-LEDGER, not edited.",
+  "All files in this repo are untracked (git status '??'), so the verdict sha f17663d1 is HEAD and the changed paths are uncommitted working-tree files.",
+  "Surface grew 130 -> 131 between runs (a docs/**/*.md page appeared while this card ran); the screen record was refreshed to 131 and --check treats additions as legal growth, only a drop below the recorded count fails."
+ ],
+ "assumptions": [
+  "The two 'documents the register already flagged' were read as docs/LATENCY-REPORT.md (WI-004 'stands' at :45, the register's own live-inconsistency note) and experiments/ptr-engine/measure/ARM-RECONCILE.md (the document that quotes WI-006/009/010/011/012/013 to refute them). No other document was edited.",
+  "WI-011 substring hits were annotated in docs/LATENCY-REPORT.md with inline HTML comments (rendered document unchanged) rather than visible prose, so the mechanical guard exits 0 on a correct number without cluttering a published latency table; this is disclosed in docs/WITHDRAWN-SCREEN.md 2.4."
+ ],
+ "blocker": "",
+ "next_unit_hint": "REGISTER OWNER (not this card): narrow WI-011's `quote` from '98.7' to '98.7 % prefix' in experiments/ptr-engine/measure/WITHDRAWN.json, then drop the six inline artifact comments in docs/LATENCY-REPORT.md and the four no_correction_needed rows. NEXT correction card: docs/REQUEST-LEDGER.md:145 (WI-002) - append the raw remainder 3,219 (cap 4,320 - 1,101 used) so the file stops restating 1,071/3,249 without a marker. Also worth a check: the 400-char guard window means a stale 'stands' sentence 400 chars from a WITHDRAWN marker passes - consider an opt-in --strict mode for the two published latency pages.",
+ "write_paths": [
+  "docs/LATENCY-REPORT.md",
+  "experiments/ptr-engine/measure/ARM-RECONCILE.md",
+  "docs/WITHDRAWN-SCREEN.md",
+  "experiments/ptr-engine/measure/WITHDRAWN-SCREEN.json",
+  "experiments/ptr-engine/tools/withdrawn_screen.py",
+  "experiments/ptr-engine/longrun/tests/test_withdrawn_screen.py",
+  "orchestration/units/WITHDRAWN-SCREEN.md",
+  "orchestration/handoffs/WITHDRAWN-SCREEN.json",
+  "orchestration/journals/WITHDRAWN-SCREEN.jsonl",
+  "/tmp/ws/paste-back.md"
+ ],
+ "tool_calls": 22,
+ "bound": 26
+}

@@ -1,0 +1,82 @@
+{
+ "unit": "TVS-DEFINE-AND-COMPUTE",
+ "status": "done",
+ "artifacts": [
+  "docs/TVS.md",
+  "docs/TVS-RESULTS.md",
+  "experiments/ptr-engine/tools/tokens_to_verified.py",
+  "experiments/ptr-engine/longrun/tests/test_tokens_to_verified.py",
+  "experiments/ptr-engine/measure/TVS.json",
+  "orchestration/units/TVS-DEFINE-AND-COMPUTE.md",
+  "orchestration/journals/TVS-DEFINE-AND-COMPUTE.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "zero inference requests; 7 tests passed; live red->green 3 failed/4 passed then 7 passed; TVS.json 23 pairs / 1 produced / 0 null / 22 not_produced",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/tokens_to_verified.py --rows experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl --grade experiments/ptr-engine/measure/cell-pointer-stable-20261026T145722Z.grade-v5.json --arm pointer-stable",
+   "python3 experiments/ptr-engine/tools/tokens_to_verified.py --all --json experiments/ptr-engine/measure/TVS.json",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_tokens_to_verified.py -q"
+  ],
+  "counts": {
+   "declared_run_arm_pairs": 23,
+   "pairs_with_grade_v5": 1,
+   "pairs_with_verified_success": 1,
+   "pairs_null": 0,
+   "pairs_not_produced": 22,
+   "tvs_tokens": 111994,
+   "tvs_turn": 12,
+   "tvs_prompt": 109780,
+   "tvs_completion": 2214,
+   "tvs_cached_share": 0.8523,
+   "duplicate_records_skipped": 11,
+   "tests_passed": 7
+  },
+  "live_requests": 0,
+  "network": false,
+  "contradiction": "LATENCY-REPORT's zero required a decidable verdict at all four declared checkpoints (docs/LATENCY-REPORT.md:363-368) and repair.t30 is judge-undecidable in 13/13 pairs; the same conjunction is the grade files' verified_success field (grade_v5.py:814), false in every arm. A checkpoint-level pass exists: cp.0.t12, turn 12, verdict pass under grade_v5 (cell-pointer-stable-20261026T145722Z.grade-v5.json, rows_file=rows-longrun-v6-tools.jsonl). The zero side was wrong for this metric."
+ },
+ "blocker": "",
+ "next_unit_hint": "Run grade_v5 offline (0 requests) over the 8 long-run rows files that have no grade_v5 output (rows-longrun-2026-10-26{,-fix,-policy}, -c, -v3, -v4, -v4-tools, -v5-tools) to convert 22 not_produced pairs into decided ones. H3 needs the fixture to carry the 12 declared checkpoint ids; that is a separate coverage card, not a repair.t30 decision.",
+ "write_paths": [
+  "docs/TVS.md",
+  "docs/TVS-RESULTS.md",
+  "experiments/ptr-engine/tools/tokens_to_verified.py",
+  "experiments/ptr-engine/longrun/tests/test_tokens_to_verified.py",
+  "experiments/ptr-engine/measure/TVS.json",
+  "orchestration/units/TVS-DEFINE-AND-COMPUTE.md",
+  "orchestration/handoffs/TVS-DEFINE-AND-COMPUTE.json",
+  "orchestration/journals/TVS-DEFINE-AND-COMPUTE.jsonl"
+ ],
+ "assumptions": [
+  {
+   "what": "instrument of record = grade_v5 only",
+   "why": "grade-v4 calls cp.2.t46 pass on the same rows where grade_v5 calls it fail/answer_not_contract; two instruments cannot both certify. Legacy passes reported in TVS.json.secondary_instrument_cells with certified=false."
+  },
+  {
+   "what": "an arm-level verified_success=false does not veto a checkpoint-level pass",
+   "why": "grade_v5.py:814 makes verified_success a conjunction over all cells; used as the TVS predicate it forces a zero denominator forever. TVS asks for the first success, not for a wholly clean arm."
+  },
+  {
+   "what": "repair.t30 dropped from TVS declared space",
+   "why": "grade_v5 emits no cell for it and no row-level check decides it; any check that made it pass would be a loosening (the 5/92 defect). Denominator 4->3 ids, H3 margin back to 2/12=16.7pp."
+  },
+  {
+   "what": "duplicate request records counted once",
+   "why": "rows-longrun-v6-tools turn 1 has two rows with identical ts 2026-10-26T13:16:13.529Z, identical content_sha256 and identical tokens; two billed requests cannot share a millisecond. 11 such records in v6, 17 in v4-tools, 2 in v5-tools; double counting inflates v6 TVS ~1.8x."
+  },
+  {
+   "what": "22 pairs not_produced, not null, not 0",
+   "why": "grade_v5 output exists for exactly one declared grid; re-grading was forbidden, so the others are reported unproduced with the reason."
+  },
+  {
+   "what": "demo cell-transcript-grow grade_v5 files out of scope",
+   "why": "their rows_file values are /tmp/cell-demo-rows.jsonl and .cell-demo/rows.jsonl - demo cells, not declared long-run grids."
+  },
+  {
+   "what": "null/no_verified_success occurs 0 times",
+   "why": "no grid reached grade_v5 with zero passes; the branch is pinned by a test only, and reported as 0 occurrences rather than as evidence of universal success."
+  }
+ ],
+ "tool_calls": 24,
+ "bound": 32
+}

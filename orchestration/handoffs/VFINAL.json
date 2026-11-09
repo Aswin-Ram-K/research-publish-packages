@@ -1,0 +1,67 @@
+{
+  "unit": "VFINAL",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/VFINAL.md",
+    "orchestration/handoffs/VFINAL.json"
+  ],
+  "evidence": {
+    "pytest_literal": "55 passed in 0.13s",
+    "pytest_per_file": {
+      "test_tx_sup.py": "21 passed in 0.09s",
+      "test_tx_agg.py": "5 passed in 0.02s",
+      "test_tx_hop.py": "18 passed in 0.09s",
+      "test_tx_abs.py": "11 passed in 0.04s"
+    },
+    "checker_default_lines": [
+      "tasks-v7/TX-SUP.v1.json: OK",
+      "tasks-v7/TX-AGG.v1.json: FAIL",
+      "tasks-v7/TX-HOP.v1.json: OK",
+      "tasks-v7/TX-ABS.v1.json: FAIL",
+      "files checked: 4",
+      "all four outcomes per file: False"
+    ],
+    "checker_error_counts": {
+      "TX-SUP": 0,
+      "TX-AGG": 48,
+      "TX-HOP": 0,
+      "TX-ABS": 36
+    },
+    "disabled_checks": {
+      "TX-ABS": [
+        "duplicate_expected",
+        "gradability",
+        "reachability"
+      ],
+      "TX-AGG": [
+        "reachability"
+      ]
+    },
+    "structure": {
+      "TX-SUP": "48 cps, buckets {2:12,6:12,20:12,32:12}, 48 unique turns, 48 distinct expected, runner identity OK",
+      "TX-AGG": "48 cps, buckets {2:12,6:12,20:12,32:12}, 48 unique turns, 48 distinct expected, runner identity OK",
+      "TX-HOP": "48 cps, buckets {2:12,6:12,20:12,32:12}, 48 unique turns, 48 distinct expected, runner identity OK",
+      "TX-ABS": "48 cps, buckets {2:12,6:12,20:12,32:12}, 48 unique turns, 37 distinct expected (36 NUM + NONE), runner identity OK"
+    },
+    "hop_row_position_distribution": "{0: 12, 1: 12, 2: 12, 3: 12}",
+    "hop_row_position_predictor": "chain%4 -> position: {1:{0:12},2:{1:12},3:{2:12},0:{3:12}} (perfect)",
+    "kind_invariants": {
+      "TX-SUP": "stale!=current 48/48; current=latest revision 48/48",
+      "TX-AGG": "4 aggregates per group (all/first2/last2/alt) recompute match 48/48; body count constant 2 per group (12/12)",
+      "TX-HOP": "join required 48/48 (key in A, expected not in A, expected+key+alt1 in B)",
+      "TX-ABS": "12 absent (3/bucket) + 36 answerable (9/bucket); absent subjects absent from all bodies/items/sp 12/12; answerable values in exactly one body 36/36"
+    },
+    "verdicts": {
+      "TX-SUP": "GO",
+      "TX-AGG": "GO",
+      "TX-HOP": "NO-GO",
+      "TX-ABS": "GO"
+    }
+  },
+  "blocker": "TX-HOP target-row position is perfectly predictable from chain index mod 4, so the join shortcut is not closed. AGG test coverage dropped from 17 to 5 (12 tests lost) but no fixture defect evidenced.",
+  "next_unit_hint": "Vary TX-HOP B-table row order independently of chain index; restore AGG extrapolability/constant-offset guard test; then re-run VFINAL.",
+  "write_paths": [
+    "orchestration/units/VFINAL.md",
+    "orchestration/handoffs/VFINAL.json"
+  ]
+}

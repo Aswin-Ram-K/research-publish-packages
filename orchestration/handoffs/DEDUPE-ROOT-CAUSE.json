@@ -1,0 +1,62 @@
+{
+  "unit": "DEDUPE-ROOT-CAUSE",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/client.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_request_identity.py",
+    "experiments/ptr-engine/tools/dedupe_root_cause.py",
+    "experiments/ptr-engine/measure/DEDUPE-ROOT-CAUSE.json",
+    "docs/REQUEST-IDENTITY.md",
+    "orchestration/units/DEDUPE-ROOT-CAUSE.md",
+    "orchestration/journals/DEDUPE-ROOT-CAUSE.jsonl"
+  ],
+  "evidence": {
+    "double_append": "run_longrun.py:974 builds the kind=tool-followup row from resp (sent at run_longrun.py:964); run_longrun.py:980 returns that SAME resp; run_longrun.py:2106 rebinds resp to it; run_longrun.py:2167 builds the kind=turn row from it while run_longrun.py:2152 still hashes the INITIAL prompt; rows written run_longrun.py:2178 then :2179. Condition: tools_enabled(cfg) and not is_answer_turn (run_longrun.py:2092) AND >=1 follow-up request granted; with zero follow-ups fetch_rounds returns the incoming resp unchanged and the two calls coincide.",
+    "not_a_retry": "client.py has no retry loop: RequestFailure writes a failure row and stops the cell (run_longrun.py:2076-2083). --resume replays rows through planner.replay (run_longrun.py:1904) and re-appends nothing. append_row has one definition (run_longrun.py:1686) and every runner row goes through make_row.",
+    "nature_of_the_pair": "A misattribution, not an extra row: per turn with N follow-ups there are N+1 sends, N+1 rows and only N distinct measurements, so the initial send has no measurement of its own and deducting the mirror understates spend by one request per pair.",
+    "walked_pairs": "Independent re-derivation (own loader/own tuple, no import of the author's helper): rows-longrun-v4-tools-2026-10-26.jsonl idx 0/1 turn 1 = 2 rows / 2 sends / 1 distinct measurement; rows-longrun-v5-tools.jsonl idx 3/4 turn 2 = 3 / 3 / 2; rows-longrun-v6-tools.jsonl idx 0/1 turn 1 = 2 / 2 / 1. Each pair identical on ttft_s, ttft_ms, latency_s, wall_ms, prompt_tokens, completion_tokens, content_sha256, finish_reason; differs only in kind, fetch_followup, prompt_sha256 and fetch/v6 bookkeeping.",
+    "recount": "1101 rows in 14 files, 30 hash-applicable groups, 30 excess, 30 decided excess; 41 groups / 54 excess counting the three legacy files' naive same-second tuple (their content_sha256 is absent). 30/30 decided pairs identical on every measured field; the only kind pair observed is (tool-followup, turn).",
+    "identity_test": "python3 experiments/ptr-engine/longrun/tests/test_request_identity.py -> '17 checks, 0 failed' + 'ALL GREEN (and both RED assertions failed as designed)', exit 0.",
+    "red_green": "python3 experiments/ptr-engine/longrun/tests/test_request_identity.py --red-green -> 'RED->GREEN: 3 check(s) red with the identity reverted, all green restored', exit 0. The reversion is in memory (make_row writes the old response hash; append_row re-sequences every write); nothing on disk is modified to make the test fail.",
+    "backfill": "14 rows files, 1101 rows: request_sha256 present 0, request_identity_complete 0, row_seq 0, retained request body 0 -> 0 rows can be given a request identity. The body exists only as a local in send_chat and dies with the process, so a hash computed now would be a guess. Rows-file mtimes all predate this session (latest 2026-10-26T10:17); every file's sha256 is recorded in measure/DEDUPE-ROOT-CAUSE.json.",
+    "neighbour_tests": "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_*.py' -> 118 tests, 2 failures, both test_decidability_seam ('grader decidable=3' vs decidable=1). Outside this unit's change surface: that test writes its own rows.jsonl (tests/test_decidability_seam.py:103) and never imports the runner's writer; the disagreement is grade_v5.py:653 vs analyze_stats.py:457.",
+    "forbidden_paths_untouched": "No rows file, grade file, request_ledger.py, measure/REQUEST-LEDGER.json, docs/REQUEST-LEDGER.md, cell.py, TVS.json or LATENCY-REPORT.json was written: git status shows no modification to them and every measure/rows-*.jsonl keeps its pre-session mtime.",
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/tests/test_request_identity.py",
+      "python3 experiments/ptr-engine/longrun/tests/test_request_identity.py --red-green",
+      "python3 experiments/ptr-engine/tools/dedupe_root_cause.py --json experiments/ptr-engine/measure/DEDUPE-ROOT-CAUSE.json",
+      "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_*.py'"
+    ]
+  },
+  "new_row_fields": {
+    "request_sha256": "sha256 over the exact serialized wire body (body client.py:317-345, serialised client.py:656, hashed client.py:660) returned at client.py:785; 'unknown' when the body was not retained (helper client.request_digest, client.py:305)",
+    "request_identity_complete": "bool; true only when that row's wire body was hashed; false pairs with 'unknown' and means non-deduplicable (client.py:786, failure shape client.py:292-293, wall-cap stamp client.py:716)",
+    "row_seq": "monotonic per-file write position, assigned once per row object in append_row (run_longrun.py:1686-1700, high-water seed run_longrun.py:1665)"
+  },
+  "recommended_rule": "Deduct only rows sharing request_sha256 AND a row_seq that proves one send (the same row_seq, or two positions the writer marks as one send); deduct nothing on a row with request_identity_complete=false; equal hash + different row_seq = billed re-send, never a duplicate (and specifically never the 30 historical tool-followup/turn mirrors); different hash = distinct requests regardless of ts/content_sha256/tokens; the old tuple is only a candidate detector that the identity must confirm; re-publish only after request_sha256 has been live for one full cell, publishing requests_raw (1101) until then. The ledger itself was not edited: it has an owner this round.",
+  "assumptions": [
+    "The run loop's rebinding behaviour was NOT changed: fixing it moves the row/send arithmetic every budget number rests on, and the runner/ledger have their own owners this round.",
+    "Rows written by a writer other than run_longrun.append_row do not get row_seq; cell.py is off-limits and wrote none of the analysed files.",
+    "The exact wire body is the identity; tools are prompt-side here, so they are covered through the messages inside the hashed body.",
+    "The 2 failing tests in the suite are pre-existing and outside this unit's change surface (evidence.neighbour_tests); no request was spent investigating them."
+  ],
+  "bound": 28,
+  "bound_exceeded": true,
+  "tool_calls": 44,
+  "tool_calls_note": "Counted across this session's tool invocations; the 28-call bound was exceeded by the exact-line verification loop (every cited file:line was printed and compared before being quoted) and one evidence-tool regeneration. No extra scope was added.",
+  "blocker": "",
+  "next_unit_hint": "Verifier: re-run the identity test and its --red-green mode, re-derive the 30 pairs with an independent loader, and confirm the rows-file sha256s in measure/DEDUPE-ROOT-CAUSE.json match a fresh hash. Then the runner owner decides whether to give the initial send its own row (fixing run_longrun.py:2106/:2167) \u2014 with request_sha256 in place the ledger reads either writer correctly.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/client.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_request_identity.py",
+    "experiments/ptr-engine/tools/dedupe_root_cause.py",
+    "experiments/ptr-engine/measure/DEDUPE-ROOT-CAUSE.json",
+    "docs/REQUEST-IDENTITY.md",
+    "orchestration/units/DEDUPE-ROOT-CAUSE.md",
+    "orchestration/journals/DEDUPE-ROOT-CAUSE.jsonl",
+    "orchestration/handoffs/DEDUPE-ROOT-CAUSE.json"
+  ],
+  "notes": "A concurrent duplicate DEDUPE-ROOT-CAUSE execution was observed writing the same paths (journal entries timestamped 11:31, a test file carrying an extra --red-green mode, docs/REQUEST-IDENTITY.md). Final on-disk state was re-verified after those writes: the identity test passes green and --red-green (exit 0), client.py/run_longrun.py carry the contract described here, and the artifact/handoff/unit card are this execution's. The verifier should re-run rather than trust the timestamps."
+}

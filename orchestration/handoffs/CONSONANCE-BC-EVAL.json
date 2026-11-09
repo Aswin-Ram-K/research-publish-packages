@@ -1,0 +1,35 @@
+{
+  "unit": "CONSONANCE-BC-EVAL",
+  "status": "done",
+  "artifacts": [
+    "research/next-candidates/consonance-bounded-context-evaluation.md",
+    "orchestration/units/CONSONANCE-BC-EVAL.md"
+  ],
+  "evidence": {
+    "command_or_count": "E1-E6 budgets: [60, 120, 40, 80, 60, 80] sum: 440 | fixture turns: {'01': 48, '02': 64, '03': 56, '04': 40, '05': 72, '06': 60} | available cells per horizon: {'10': 6, '30': 6, '60': 3} -> UNAVAILABLE at 60: ['01', '03', '04'] | turns per arm per rep: 420 | x4 one-request arms x3 reps: 5040 | with D at 2 req/turn: per rep 2100 x3: 6300 | ratio to 1729: 3.64 | E2 40-turn 3-arm 1 rep: 120 turn req + 3 checkpoint = 123 | 3 reps: 369 | +9 verify/arm/rep(12cp): 450 | E1 arithmetic: 4 controls x3 + 8 offsets x3 = 36 | grep -ni 'abstain|retrieval_miss|STALE|REVOKED|NOT_FOUND' score_longrun.py -> 0 matches | 505 lines in the protocol",
+    "commands": [
+      "python3 - <<'PY' ... re.findall(r'\\*\\*Budget\\.\\*\\*\\s*≤\\s*(\\d+)\\s*calls') on 'handoff from consonance/EXPERIMENTS.md'; json.load over experiments/ptr-engine/longrun/fixtures/LR-0*.json; arithmetic for horizons/arms/reps PY",
+      "grep -ni 'abstain\\|retrieval_miss\\|STALE\\|REVOKED\\|NOT_FOUND' experiments/ptr-engine/longrun/score_longrun.py",
+      "sed -n '40,60p' '/home/zer0null/research extractor/docs/STATE.md'",
+      "grep -n 'fork-break-cost\\|cache-forensics' '/home/zer0null/research extractor/orchestration/STATUS.md'",
+      "python3 -c 'json.load(tasks-v6/LR-01.v8.json) wall_tokens/wall_tokens_basis/wall_tokens_by_arm'",
+      "wc -l research/next-candidates/consonance-bounded-context-evaluation.md"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Owner decision required before any CON-E1/CON-E2 call: (a) fund CON-E2 at 369-450 calls (3 reps, 12-checkpoint fixture) against the 1,729 remaining, or (b) accept a 123-call one-rep descriptive probe stamped NON-ADJUDICABLE. Also required first: a fixture/grader fix that lets a contract-following log pass (RED before GREEN), a v9 wall priced from measured arm growth, and a score_longrun.py extension carrying retrieval_miss/abstained_correctly with its own red->green control.",
+  "write_paths": [
+    "research/next-candidates/consonance-bounded-context-evaluation.md",
+    "orchestration/units/CONSONANCE-BC-EVAL.md",
+    "orchestration/handoffs/CONSONANCE-BC-EVAL.json"
+  ],
+  "assumptions": [
+    "Addendum from Main received and applied: C64/MANUSCRIPT 8a padding evidence (P0 541.07 [501.68,581.51] prompt 12,336.00; P1 528.64 [521.19,536.13] prompt 2,326.13; P2 549.49 [542.17,556.80] prompt 2,421.03; P2-P1 +20.8429 [10.014,31.586], 70 pairs, ratio 1.039427; P2-P0 +6.5000 null) is in the prior-evidence table (P10) and in the binding constraint that no padding/residue rule appears anywhere in the protocol; workspace E1 fork-break-cost (195 requests, 228 rows, medians 5,132.75 vs 442.25, paired +4,774.25 [193.5,4,868.25], 15/18, p 0.0075; n=15 +4,839.5 [4,677.5,4,901.5] 15/15, p 6.1e-05) is prior evidence P11 for CON-E2 with its limits stated; C62 per-turn range (-927 to +5,473) is used to forbid arm-mean-only checkpoint reporting.",
+    "D priced at 2 requests/turn from BOUNDARY-PREREG's R-pointer 'fetch + answer' shape; a lower fetch rate only strengthens the UNFUNDED conclusion, so the conservative shape is used.",
+    "A checkpoint/digest is counted as a separate request from its turn (run_longrun.expected_digests treats digests as extra); if folded in, E2's 1-rep count falls by 3 and the 120<123 conclusion still holds at the design's own arms.",
+    "60-turn horizon on LR-02 (64) and LR-05 (72) means the first 60 turns; LR-01 (48), LR-03 (56), LR-04 (40) are UNAVAILABLE at 60 and are not imputed.",
+    "The quality path currently cannot say yes (PATH-CANNOT-SAY-YES, pos-full fails 7 checks); score_longrun.py has zero matches for abstain/retrieval_miss/STALE/REVOKED/NOT_FOUND, so the abstention outcomes in the worked hypothetical are specified as a required scorer extension, not claimed as existing behaviour.",
+    "SGLang :8012 null->0 is kept endpoint- and field-specific; vLLM :8014 null stays unknown; no schema-wide null->0 rule is stated."
+  ],
+  "addendum_received": true
+}

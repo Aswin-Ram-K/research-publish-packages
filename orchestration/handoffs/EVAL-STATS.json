@@ -1,0 +1,50 @@
+{
+  "unit": "EVAL-STATS",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/analyze_stats.py",
+    "experiments/ptr-engine/longrun/tests/test_analyze_stats.py",
+    "orchestration/units/EVAL-STATS.md",
+    "orchestration/handoffs/EVAL-STATS.json"
+  ],
+  "evidence": {
+    "tests": "python3 experiments/ptr-engine/longrun/tests/test_analyze_stats.py -> '8/8 passed'; python3 -m pytest .../tests/test_analyze_stats.py -q -> '8 passed in 0.11s'",
+    "red_green": "3 mutations of a module copy via ANALYZE_STATS_PATH each kill exactly one guard: (quantile tail-mass/min-n gate removed -> test_insufficient_samples_at_48_exact_message FAIL, 7/8); (render_estimate interval requirement removed -> test_render_estimate_refuses_bare FAIL, 7/8); (mcnemar b+c<6 gate removed -> test_mcnemar_exact_025_and_refusals FAIL, 7/8)",
+    "mcnemar_b3c0_p": 0.25,
+    "first_n_accepting_p95": 60,
+    "n48_rank_span": "43-48 = p89.6-p100.0 (reproduces docs/EXTERNAL-EVAL-PRACTICE.md)",
+    "cli_refusal_line": "ttft_p95  REFUSED at n=48  refusing p95 at n=48: the 95% order-statistic span is ranks 43-48 (p89.6-p100.0) and n*(1-q)=2.4 < 3; minimum n for p95 is 60",
+    "cli_estimate_line": "ttft_p95 n=70  1100.11ms [651.52, 1634.20]  (ttft dropped: 0 null, 0 unavailable)  order-stat span p91.4-p100.0",
+    "cli_mcnemar_line": "pair pointer-stable vs transcript-grow  McNemar exact: b=0 c=10 p=0.00195  (scored turns=70)",
+    "bare_print_refused": "render_estimate('ttft_p95', 482.73, None, None, 48) -> BareMetricError: ttft_p95: refusing to print the bare value 482.73 at n=48 - an interval is required",
+    "existing_bare_p95_untouched": "experiments/ptr-engine/longrun/analyze_longrun.py:307 computes \"p95\": round(pct(ttft, 0.95), 2) with no interval; analyze_longrun.py:368-369 prints it as p95=%s with n but no CI. Reported, not edited.",
+    "inference_requests": 0,
+    "tool_calls": 20,
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/tests/test_analyze_stats.py",
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_analyze_stats.py -q",
+      "ANALYZE_STATS_PATH=/tmp/evalstats-mut/m1.py python3 experiments/ptr-engine/longrun/tests/test_analyze_stats.py",
+      "ANALYZE_STATS_PATH=/tmp/evalstats-mut/m2.py python3 experiments/ptr-engine/longrun/tests/test_analyze_stats.py",
+      "ANALYZE_STATS_PATH=/tmp/evalstats-mut/m3.py python3 experiments/ptr-engine/longrun/tests/test_analyze_stats.py",
+      "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows /tmp/evalstats-demo.jsonl",
+      "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows /tmp/evalstats-short.jsonl",
+      "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows /tmp/evalstats-long.jsonl"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Wire analyze_stats.py into analyze_longrun.py's report path as a SEPARATE card: replace the bare p95 at analyze_longrun.py:307 / :368-369 with render_estimate(), group rows by (arm, max_tokens) before pooling, and add the paired McNemar line to the existing JSON output. No edits to analyze_longrun.py were made here, per the card.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/analyze_stats.py",
+    "experiments/ptr-engine/longrun/tests/test_analyze_stats.py",
+    "orchestration/units/EVAL-STATS.md",
+    "orchestration/handoffs/EVAL-STATS.json"
+  ],
+  "assumptions": [
+    "The card's 'Handoff as status: partial within 5 calls' was read as the early-bail escape clause, not as a required verdict: every deliverable completed inside the bound, so status is 'done'. Nothing was deferred except the deliberately-out-of-scope wiring step.",
+    "Two card clauses could not both hold in one return path, and were resolved explicitly: (1) refuse at b+c<6 AND return p=0.25 at b=3,c=0 -> mcnemar_p(b,c) is the public pure arithmetic (0.25) while mcnemar_exact refuses and attaches .b/.c/.p to the RefusedTest; (2) refuse only at n<20 AND require InsufficientSamples at n=48 -> added the documented tail-mass clause n*(1-q)>=3, so n=48 refuses for p95 and the first admissible p95 is n=60.",
+    "Accuracy denominator: a row with no boolean passed/ok/correct and no NUM answer with an expected value is UNDECIDABLE and leaves the denominator; at decidable=0 the CLI prints UNDECIDABLE rather than a ratio. This is a conservative default recorded here because the card did not define 'decidable'.",
+    "quantile_ci returns exactly the contracted (point, lo, hi, n) 4-tuple; the dropped count and rank span are reported through an optional stats dict argument (and the CLI prints them), so no caller has to unpack 5 values.",
+    "Test module honours ANALYZE_STATS_PATH so a mutated copy can be exercised for the red->green proof without editing the deliverable."
+  ],
+  "assumptions_note": "recorded per workspace AGENTS.md automated-session rule"
+}

@@ -1,0 +1,47 @@
+{
+ "unit": "ATTACK-GRADE-V5",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/ATTACK-GRADE-V5.md",
+  "experiments/ptr-engine/tools/attack_grade_v5.py",
+  "experiments/ptr-engine/measure/attack-grade-v5.json",
+  "orchestration/units/ATTACK-GRADE-V5.md",
+  "orchestration/handoffs/ATTACK-GRADE-V5.json"
+ ],
+ "evidence": {
+  "command_or_count": "python3 experiments/ptr-engine/tools/attack_grade_v5.py -> exit 1; FN 0/8, FP 3/22, probes 41, UNSATISFIED (defect-class): [10], attack classes: correct 1,2,3,4,6,9; limitation 5,7,8; defect 10; judge sha256 1216b2751496eb77ffecc2d503787eda459d1675ea2fc23f0291343f8eb14d15",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/attack_grade_v5.py",
+   "python3 -c \"import json;d=json.load(open('experiments/ptr-engine/measure/attack-grade-v5.json'));print(d['fn'],d['fn_denominator'],d['fp'],d['fp_denominator'],d['probe_count'])\"  # -> 0 8 3 22 41"
+  ],
+  "probes": 41,
+  "fn": 0,
+  "fn_denominator": 8,
+  "fp": 3,
+  "fp_denominator": 22,
+  "defect": "NUM truncates a decimal: 'ANSWER: 64.99' and 'ANSWER: NUM 64.999' grade as 64 and pass (INT_RE=(?<![\\w.])\\d+(?![\\w]) plus answer_slot_end only ending at a period followed by whitespace); a wrong NUM value can thus make verified_success true",
+  "limitations": [
+   "no NONE truth is declarable: derive_truth handles only NUM and CALL; a NONE checkpoint aborts with 'fixture_truth_mismatch: atk.none has no usable answer_spec'; the none_confirmed_absent_in_source pass branch is dead code",
+   "empty/absent/prose answers all land in verdict fail and are counted inside the 'decidable' field (missing-turn arm: decidable 3 of 3); no undecidable state exists",
+   "grade_rows grades a row's answer_kind/answer_value over its content, so TEXT immunity holds for text but not for a row whose parsed fields disagree; not reachable via the shipped runner (run_longrun.py:57 imports the same parser)"
+  ],
+  "no_repo_file_edited": "grade_v5.py, test_grade_v5.py, LR-01.v5.json, LR-01.v6.json, det_verify.py and all row/grade files were read/imported only; probes ran against a temp fixture whose sources are absolute paths into a temp tree"
+ },
+ "blocker": "",
+ "next_unit_hint": "If grade_v5 is to grade the operator comparison: repair the NUM decimal truncation (reject a body matching \\d+\\.\\d rather than truncating; a single character class added to INT_RE would also reject the tolerated 'ANSWER: 64.'), then rename/split 'decidable' and add an undecidable/missing verdict. The v6 re-derivation unit (GRADE-V6-DERIVE) should not assume NONE checkpoints are gradable.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/attack_grade_v5.py",
+  "experiments/ptr-engine/measure/ATTACK-GRADE-V5.md",
+  "experiments/ptr-engine/measure/attack-grade-v5.json",
+  "orchestration/units/ATTACK-GRADE-V5.md",
+  "orchestration/handoffs/ATTACK-GRADE-V5.json"
+ ],
+ "assumptions": [
+  "The card's literal CALL probes omit the CALL keyword and some '=' signs, i.e. are not one of the four contract forms; each CALL attack was run twice (card text fails on form, contract-form text is the value/callee test).",
+  "The 5-call partial handoff checkpoint was skipped because the complete result existed inside the same short window; the final handoff is 'done', not a false 'partial'.",
+  "P08 (same-line trailing prose after a correct CALL) is classed defensible, not a defect: the fixture system prompt requires exactly one line and nothing else."
+ ],
+ "tool_calls": 17,
+ "bound": 32,
+ "inference_requests": 0
+}

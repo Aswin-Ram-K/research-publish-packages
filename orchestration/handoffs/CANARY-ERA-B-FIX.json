@@ -1,0 +1,61 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/tools/tranche_canary.py",
+  "tests/test_tranche_canary.py",
+  "docs/TRANCHE-CANARY.md",
+  "experiments/ptr-engine/measure/CANARY-ERA-B-FIX.json",
+  "orchestration/units/CANARY-ERA-B-FIX.md",
+  "orchestration/journals/CANARY-ERA-B-FIX.jsonl"
+ ],
+ "assumptions": [
+  "storm threshold taken as midpoint of the observed gap (101 contained / 116,130 stormed) because the card requires a measured number, not a chosen one",
+  "era A gate wired to parseable_answers untouched; era B wired to answer_verified, never averaged",
+  "N=5 remains shape_unknown for all tools-on files; reported as a finding about the launch, not hidden"
+ ],
+ "blocker": "",
+ "bound": 24,
+ "evidence": {
+  "command_or_count": "25 passed in 0.02s (13 pre-existing + 12 new); era A control N=5 shape_degenerate turn 3 completion_ceiling; v6 shape_ok at N=12/N=48; v4/v5 shape_degenerate at N=48",
+  "commands": [
+   ".venv/bin/python -m pytest tests/test_tranche_canary.py -q   # 25 passed",
+   ".venv/bin/python experiments/ptr-engine/tools/tranche_canary.py --rows experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl --turns 5   # shape_degenerate exit=1 turn 3 completion_ceiling",
+   "replay matrix: rows-longrun-{v4-tools-2026-10-26,v5-tools,v6-tools}.jsonl at N in {2,5,8,12,48}  (0 requests)"
+  ],
+  "era_b_gateable": true,
+  "n5_is_blind_for_era_b": true,
+  "offline": {
+   "network_events": 0,
+   "requests_sent": 0
+  },
+  "red_green": [
+   {
+    "guard": "finish_reason fallback",
+    "reverted": "RED",
+    "test": "test_era_b_rows_read_finish_reason_and_answer_verified"
+   },
+   {
+    "guard": "answer_verified contract",
+    "reverted": "RED",
+    "test": "test_era_b_rows_read_finish_reason_and_answer_verified"
+   },
+   {
+    "guard": "tool_call_storm (STORM_MIN_CALLS)",
+    "reverted": "RED",
+    "test": "test_tool_call_storm_is_degenerate"
+   }
+  ]
+ },
+ "next_unit_hint": "Gate RUN-A-STAR-2's live canary at N=12 (first checkpoint), requiring shape_ok with answer_verified>=1 and stop_signal_source=finish_reason; shape_degenerate and shape_unknown both STOP. Do not gate era B at N=5. If a lighter gate is wanted, the instrument would have to observe a checkpoint answer earlier than T12, which this harness cannot supply.",
+ "status": "done",
+ "tool_calls": 20,
+ "unit": "CANARY-ERA-B-FIX",
+ "write_paths": [
+  "experiments/ptr-engine/tools/tranche_canary.py",
+  "tests/test_tranche_canary.py",
+  "docs/TRANCHE-CANARY.md",
+  "experiments/ptr-engine/measure/CANARY-ERA-B-FIX.json",
+  "orchestration/units/CANARY-ERA-B-FIX.md",
+  "orchestration/handoffs/CANARY-ERA-B-FIX.json",
+  "orchestration/journals/CANARY-ERA-B-FIX.jsonl"
+ ]
+}

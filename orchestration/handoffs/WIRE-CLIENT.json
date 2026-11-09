@@ -1,0 +1,49 @@
+{
+  "unit": "WIRE-CLIENT",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_wire_client.py",
+    "experiments/ptr-engine/longrun/tests/test_answer_contract.py",
+    "orchestration/units/WIRE-CLIENT.md",
+    "orchestration/handoffs/WIRE-CLIENT.json"
+  ],
+  "evidence": {
+    "deleted": "run_longrun.py:959-1137 (inline SSE loop + duplicated TTFT latch + duplicated RequestFailure/thinking_setting/thinking_kwargs/request_body/extract_usage)",
+    "replacement": "run_longrun.py:998-1006 def send_chat -> `return client.send_chat(cfg, messages)`; import client at run_longrun.py:62",
+    "runner_calls_client": "tests/test_wire_client.py case (a) 'run_longrun.send_chat calls client.send_chat exactly once' PASS (monkeypatched client.send_chat)",
+    "audit_test": "tests/test_wire_client.py case (b) 'no perf_counter/clock delta is assigned to a ttft variable' + 'no second SSE parse' PASS; RED proof fires on the deleted source",
+    "row_fields": "run_longrun.py:1186-1197 ttft_ms, ttft_source, first_token_kind, cached_tokens, cached_source, engine_metrics_before, engine_metrics_after, wall_ms, metrics_scrape",
+    "dry_run": "would_send_total=192 (pre and post identical); printed prompts+bodies sha ee367780684bb0cd both runs",
+    "tests": "test_wire_client 18/18 green rc0, --red 5/5 rc0; test_client_ttft 8/8; test_answer_contract 26/26 passed and --red 26/26 FAILED; test_grade_v5 rc0; test_analyze_stats 8/8; test_cell rc0; test_tool_channel2 rc0; test_tool_channel3 rc0",
+    "preexisting_failure": "tests/test_tool_channel.py rc1 AssertionError: 3 in assertion_f_followup_accounting; identical failure with this unit's row edits reverted in place, so not caused here",
+    "red_counter_fix": "tests/test_answer_contract.py main(): the summary line now prints len(failures)/total FAILED (was total-len(failures) labelled FAILED) and 26/26 passed on green",
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/tests/test_wire_client.py",
+      "python3 experiments/ptr-engine/longrun/tests/test_wire_client.py --red",
+      "python3 experiments/ptr-engine/longrun/tests/test_client_ttft.py",
+      "python3 experiments/ptr-engine/longrun/tests/test_answer_contract.py",
+      "python3 experiments/ptr-engine/longrun/tests/test_answer_contract.py --red",
+      "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json --dry-run --manifest-dir <tmp>"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Re-measure TTFT from rows written by this runner (ttft_ms + ttft_source now come from client.py) and do NOT reuse grow 838.85 / compact 224.08 / stable 356.12 / lease-reopen 201.78 ms. pre-existing: tests/test_tool_channel.py assertion_f_followup_accounting fails (rounds=3 vs TOOL_FETCH_ROUNDS_PER_ARM) independently of this unit.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/client.py",
+    "experiments/ptr-engine/longrun/tests/test_wire_client.py",
+    "experiments/ptr-engine/longrun/tests/test_answer_contract.py",
+    "orchestration/units/WIRE-CLIENT.md",
+    "orchestration/handoffs/WIRE-CLIENT.json"
+  ],
+  "tool_calls": 26,
+  "bound": 28,
+  "requests_sent": 0,
+  "assumptions": [
+    "cached_tokens on a row is the client's seam value; the legacy normalize_cached_tokens reading is preserved as cached_tokens_normalized instead of being overwritten",
+    "client.py needed no extension: it already exposes every field, the PTR_METRICS_SCRAPE precedence and the injection hooks the runner needs",
+    "two dry-run manifests (v4tools2-proof-off-before/after.json) were rewritten with a new created_utc as a side effect of running the pre-existing tests/test_tool_channel2.py; both were restored byte-for-byte from HEAD. The four modified manifests/dryrun-LR-01-*.json predate this unit (mtime 09:44, before its first command).",
+    "tests/test_tool_channel.py's failure was proved pre-existing by reverting this unit's row edits in place and observing the identical AssertionError: 3"
+  ]
+}

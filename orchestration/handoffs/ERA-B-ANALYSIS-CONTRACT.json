@@ -1,0 +1,77 @@
+{
+ "unit": "ERA-B-ANALYSIS-CONTRACT",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/run_grid_report.py",
+  "experiments/ptr-engine/tests/test_run_grid_report.py",
+  "experiments/ptr-engine/measure/GRID-REPORT-2.json",
+  "docs/GRID-REPORT-2.md",
+  "orchestration/units/ERA-B-ANALYSIS-CONTRACT.md",
+  "orchestration/handoffs/ERA-B-ANALYSIS-CONTRACT.json",
+  "orchestration/journals/ERA-B-ANALYSIS-CONTRACT.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "13 tests pass; emit exit 0 writes GRID-REPORT-2.json (0 grids, 5 refusals, tvs UNDEFINED, spend delta 0 vs baseline 1128) + docs/GRID-REPORT-2.md; 3 guards neutered red and restored; rows-cell-*.jsonl sha256 unchanged",
+  "commands": [
+   "python3 -m pytest experiments/ptr-engine/tests/test_run_grid_report.py -q  # 13 passed",
+   "python3 -m pytest experiments/ptr-engine/tests/test_run_grid_report.py -q -s -k red  # 3 red quotes printed, 3 passed",
+   "python3 experiments/ptr-engine/tools/run_grid_report.py --write  # exit 0; 'h1: {}', 'h2: not_adjudicable | h3: not_adjudicable | tvs: UNDEFINED', 'refusals: 5'",
+   "python3 -m pytest experiments/ptr-engine/tests/test_run_grid_report.py experiments/ptr-engine/tests/test_verify_tranche1.py -q  # 30 passed (no import collision)"
+  ],
+  "counts": {
+   "tests": 13,
+   "red_green_guards": 3,
+   "refusal_modes": 3,
+   "structural_refusals": 2,
+   "cells_on_disk": 2,
+   "cells_included": 0,
+   "grids_emitted": 0,
+   "refusals_recorded": 5,
+   "live_requests": 0
+  },
+  "contract_shape_check": "synthetic clean two-arm grid: grid keys/arm keys/h2/h3/spend/verbosity required sets all complete; p50 and p95 each {value,lo,hi,n}; verdict not_adjudicable_effective_n at n=60 r=0.0522 n_eff=54.04; verbosity precedes spend",
+  "red_green": {
+   "green": "python3 -m pytest .../test_run_grid_report.py -q -> 13 passed",
+   "red": [
+    "effective_n_verdict neutered -> assert 'adjudicable' == 'not_adjudicable_effective_n'",
+    "raw_floor_verdict neutered -> assert 'not_adjudicable_effective_n' == 'not_adjudicable_floor'",
+    "cell_inclusion neutered -> assert True is False"
+   ],
+   "restored": "each test re-asserts the green verdict after monkeypatch.undo()"
+  },
+  "rows_untouched": [
+   "rows-cell-pointer-stable-20261026T145758Z.jsonl sha256 5ac9dd992f5d8715696925f56c225024e172cb98b4b9a937a0ee63bd099e9800 rows 6 == baseline rows_inventory",
+   "rows-cell-pointer-stable-20261026T182535Z.jsonl sha256 46afc892480ae1dbe4b20d13fd4dacb983653a9f0a04b6a42a6283b3c55ca3b1 rows 27 == baseline rows_inventory"
+  ],
+  "verdict_row": "PASS f17663d1 (python3 experiments/ptr-engine/tools/run_grid_report.py --write, exit 0)"
+ },
+ "blocker": "",
+ "next_unit_hint": "RECONCILE 1,056 vs 1,016: price_expectation=1056 is card-declared and has no artefact; measure/GRID-PARAMS.json price.total=1016 (964 tranche + 48 canary + 4 warm-ups). Either the card's figure is a different quantity (name it) or GRID-PARAMS is stale. SECOND: `contract_adherence` has no column in grade_v5 -- the report carries the frozen placeholder string; if H3 must report a real number, the grader needs the column, which is a grader change, not an analyser change. THIRD: at 48 turns/cell a single cell can never clear n_eff>=60 (n >= 60(1+r)/(1-r)); a 3-rep arm (144) clears to r~0.41, so RUN-A-STAR-2's 2-rep arms (96) clear only to r~0.23 -- check the expected r before the ninth hour, not after.",
+ "assumptions": [
+  "`price_expectation: 1056` was emitted exactly as the card declares it, with the artefact's 1,016 printed beside it and matches_price_expectation:false, rather than substituting a number the card did not ask for.",
+  "The three refusal MODES are the card's floor/effective-n/undecidable-quality; the two extra STRUCTURAL refusals (absent usable_for, missing baseline) are additions the card's rules 4, 5 and test (g) require, and they stop the emission rather than becoming a verdict.",
+  "An all-refused run still EMITS the report (exit 0) with every cell named and refused, because a refusal is a first-class output; only 'no cell files at all' stops the emission (exit 2) and only a missing baseline exits 3.",
+  "`difference_sign` on each h2 per-arm row is sign(cached_inclusive - uncached) for THAT arm; the H2 limb signs (sign of C-A per limb) live in h2.comparison, where the both-limbs-neither-picked rule is applied by verify_tranche1.h2_compare, not by a local copy.",
+  "Grid identity is the four load-bearing provenance fields via same_provenance, so era A (tools_mode off) and era B (tools off -> on) can never merge; unknown-vs-unknown also refuses, which yields one grid per unknown-prov cell rather than a silent merge.",
+  "`--grade` was not supplied (no grade_v5 document exists for the grid), so H3 and TVS are refused by name rather than populated from synthetic or row-derived denominators."
+ ],
+ "write_paths": [
+  "experiments/ptr-engine/tools/run_grid_report.py",
+  "experiments/ptr-engine/tests/test_run_grid_report.py",
+  "experiments/ptr-engine/measure/GRID-REPORT-2.json",
+  "docs/GRID-REPORT-2.md",
+  "orchestration/units/ERA-B-ANALYSIS-CONTRACT.md",
+  "orchestration/handoffs/ERA-B-ANALYSIS-CONTRACT.json",
+  "orchestration/journals/ERA-B-ANALYSIS-CONTRACT.jsonl"
+ ],
+ "findings": [
+  "`analyze_stats` has NO `minimum` function (grep: only MIN_N=20 at analyze_stats.py:112 and min_n_for(0.95)=60 at :330). Reported as a finding; no second copy written.",
+  "`price_expectation: 1056` has no artefact anywhere in the workspace. measure/GRID-PARAMS.json price.total is 1,016. The two are emitted side by side with an explicit mismatch flag.",
+  "The effective-n floor is a RAW-n floor in disguise: n >= 60(1+r)/(1-r) = 66.3 at r=0.05, 73.3 at 0.10, 90.0 at 0.20, 111.4 at 0.30, 140.0 at 0.40. Measured on a 60-turn synthetic arm with r=0.0522: n_eff=54.04, i.e. a single 60-turn cell FAILS.",
+  "`contract_adherence` does not exist as a grade_v5 column; verify_tranche1.h3 emits the placeholder string 'pre-check column; not folded into accuracy'. The report carries it verbatim and labels it a placeholder in a sibling key.",
+  "Both rows-cell-*.jsonl currently on disk are stamped usable_for: [] in measure/GRID-CELL-SANITY.json, so the first real emit produces no grid and five refusals: the report is already in its refusal state before any grid cell exists.",
+  "The analyze_stats.py:749 include-on-absence trap is real and demonstrated in the test: select_usable_cells keeps an unstamped cell (excluded=False) while this consumer refuses it."
+ ],
+ "tool_calls": 38,
+ "bound": 60
+}

@@ -1,0 +1,36 @@
+{
+  "unit": "V-LEDGER-BASELINE",
+  "overall": "pass",
+  "verdict": "baseline_sound",
+  "checks": [
+    "row count recomputed independently over request_ledger.py:784's own glob (measure/rows-*.jsonl) with the ledger's documented costing rule: 15 files, 1,128 rows, 1,128 requests, 232 assumed_billed -- equals REQUEST-LEDGER.json requests 1128 and requests_raw 1128; 0 files differ; per-file rows/requests/sha256 identical on all 15",
+    "the 27 CONFIRMED: 1,101 (other 14 files, recomputed) + 27 = 1,128; rows-cell-pointer-stable-20261026T182535Z.jsonl lines 1-27 all kind=turn, sha256 46afc892480ae1dbe4b20d13fd4dacb983653a9f0a04b6a42a6283b3c55ca3b1, ts 2026-10-26T18:25:56.773Z -> 2026-10-26T18:31:25.300Z",
+    "dedup diagnostic confirmed: requests_deduplicated 1098, duplicate_excess 30, deduction_rule_sound false, diagnostic.deducted false; the CAP GATE spends against 1,128 (request_ledger.py:596 publishes requests_raw when deduct=false, :687 budget.spent=requests_published, cell.py:1255)",
+    "baseline-2 integrity 3/3: source ledger sha 6da0c1f19b7cd37203c9d99de5e5d8a9db879e002f389a2b525a776624c27806 recomputed == pinned; builder now reproduces requests 1128 / remaining 3192 / dedup 1098 / excess 30 / deducted false over 15 files; v1 LEDGER-GRID-BASELINE.json byte-unchanged at 6b6dff4473e5e1b9a20ab73b58dfb4a884d50dff019751058ebbd0188b307470",
+    "headroom 4320 - 1128 = 3192 confirmed; 16-cell price 1,056 = PAIR-6+CTX-2 (768 turns x 1.374532) per price-replication.json:38,461 -> 2,136 left; wired 10-cell package 1,016 (964+48+4) per GRID-PARAMS.json price -> 2,176 left; refusal string quoted: run_longrun.py:407-413 'CAP REFUSED at T{turn} ({kind}) - over the {limits}: spent={spent} would_spend={would} cap={cap} reserve={reserve} headroom={headroom} ... nothing sent' and cell.py:1283-1291 '... shortfall %s requests, so it must not send'",
+    "zero-spend asserted: newest rows-* file is the 27-row era-A cell, mtime 2026-10-26T18:31:25.298437Z vs last row ts 18:31:25.300Z (-2 ms, flush interval); nothing post-dates the 19:04:18Z baseline freeze"
+  ],
+  "blocker": "",
+  "not_reproduced": [],
+  "overstated": [],
+  "unverified": [
+    "the card's phrase '16-cell price 1,056' is not a grid artefact on disk: GRID-SHAPE.json records 10 cells / 724 requests and GRID-PARAMS.json (the current launcher record) prices the 10-cell package at 1,016. The 1,056 figure exists only as the PAIR-6+CTX-2 shape price in price-replication.json:38,461 / docs/PRICE-REPLICATION.md:175,215. The arithmetic holds (768 turns x 1.374532 = 1,055.7 -> 1,056; 3,192 - 1,056 = 2,136) but a launcher must not treat 1,056 as the wired grid price."
+  ],
+  "corrections": [
+    "cell.py:734 cited by the card is the projection gate's 'if not ok:'; the ledger-cap recompute that spends is cell.py:1255 (build_report call), with budget.spent set at request_ledger.py:596/687",
+    "run_longrun.py:518-541 is the EXIT reconcile (_gate_finish); the live cell-level refusal that prints spent=/would_spend=/cap=/reserve=/headroom= is run_longrun.py:407-413 (CapRefusal), plus the ledger accounting line request_ledger.py:745-747"
+  ],
+  "assumptions": [],
+  "reproduce": "bash -c \"PATH=.venv/bin:$PATH python -m pytest tests/test_ledger_delta.py tests/test_grid_resume.py -q\" (16 passed, exit 0) plus the offline recount in experiments/ptr-engine/measure/V-LEDGER-BASELINE.json :: check_1_row_count",
+  "containment": "no network, 0 requests, no live cell, no rebuild/re-pin; REQUEST-LEDGER.json, both baselines, every rows-* file, request_ledger.py, cell.py, run_longrun.py, analyze_stats.py, run_a_star.py, the pin, the params and all thresholds untouched",
+  "next_unit_hint": "the brake is safe to spend against 1,128 with 3,192 remaining; a grid launcher must read GRID-PARAMS.json for the wired 1,016 price and price 1,056 only if it deliberately promotes to PAIR-6+CTX-2",
+  "write_paths": [
+    "experiments/ptr-engine/measure/V-LEDGER-BASELINE.json",
+    "docs/V-LEDGER-BASELINE.md",
+    "orchestration/units/V-LEDGER-BASELINE.md",
+    "orchestration/handoffs/V-LEDGER-BASELINE.json",
+    "orchestration/journals/V-LEDGER-BASELINE.jsonl"
+  ],
+  "tool_calls": 14,
+  "bound": 48
+}

@@ -1,0 +1,59 @@
+{
+ "unit": "LAUNCH-CANARY-WALL",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "tests/test_launcher_dryrun_refusal.py",
+  "orchestration/units/LAUNCH-CANARY-WALL.md",
+  "orchestration/handoffs/LAUNCH-CANARY-WALL.json",
+  "orchestration/journals/LAUNCH-CANARY-WALL.jsonl"
+ ],
+ "evidence": {
+  "defect_g2_quoted": "cell: 0/7 dry-run G2 WOULD-REFUSE computed=720 s limit=600 s (--max-wall) artefact=experiments/ptr-engine/measure/PROJECTION.json ... turns=12 projected_requests=12 projected_wall~=720s (cap-per-turn 180s -> worst case 2160s) cap=600s projected-turn-wall=60.0s source=artefact-mode thinking=off",
+  "defect_rc_quoted_before": "RUN-A DRY END cells=4 refused=0 requests=0 claim=smoke turns=12 max_wall=600 canary_arms=4 canary_requests=48  (rc 0, while 4 G2 WOULD-REFUSE lines were printed)",
+  "defect_sites": [
+   "experiments/ptr-engine/tools/run_a_star.py:365 (pre-change a.max_wall = 600 if a.max_wall is None else a.max_wall)",
+   "experiments/ptr-engine/tools/run_a_star.py dry-run loop (pre-change bad += rec['rc'] != 0)",
+   "experiments/ptr-engine/longrun/cell.py:1964-1975 (dry run exits 0 by contract, so rc can never carry a refusal)"
+  ],
+  "fix_wall": "CANARY_MAX_WALL = 900 (floor 12 x 60.0 s = 720 s artefact-mode calibration + 25% headroom = 75 s/turn; grid default 2880 untouched; PROJECTION.json untouched)",
+  "canary_argv_new": "/usr/bin/python3 experiments/ptr-engine/longrun/cell.py --arm pointer-stable --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 12 --reps 1 --thinking off --max-wall 900 --turn-wall-cap 180 --runaway-turns 2 --budget 108 --hypothesis smoke --expect-harness fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac --no-cell-handoff --out-dir experiments/ptr-engine/measure --endpoint http://192.168.2.168:8012/v1",
+  "before_after_launcher_lines": {
+   "before": "bad += rec[\"rc\"] != 0",
+   "after": "bad += 1 if (rec[\"rc\"] != 0 or refused) else 0",
+   "exit_code": "1 (the launcher's documented dry-run failure code, return 0 if not bad else 1); 2 stays cell.py's preflight/G3 code (cell.py:14-15, exit_codes.EXIT_TABLE)"
+  },
+  "state1_canary_new900": "G2 allow 720 s of 900 s | RUN-A DRY END cells=4 refused=0 requests=0 claim=smoke turns=12 max_wall=900 canary_arms=4 canary_requests=48 | rc=0",
+  "state2_canary_old600": "G2 WOULD-REFUSE computed=720 s limit=600 s | RUN-A DRY END cells=4 refused=4 requests=0 claim=smoke turns=12 max_wall=600.0 canary_arms=4 canary_requests=48 | rc=1 (one refusal per arm; each cell line carries WOULD-REFUSE=1, single-cell vector gives refused=1)",
+  "state3_grid_argv": "identical before/after: sha256[:16]=ee7c2f9360179e3c both, diff /tmp/grid_before.txt /tmp/grid_after.txt empty, --max-wall 2880",
+  "state4_grid_would_refuse": "--cell 1 --max-wall 60 => G2 WOULD-REFUSE computed=2,880 s of 60 s | RUN-A DRY END cells=1 refused=1 requests=0 claim=H2 turns=48 max_wall=60.0 | rc=1",
+  "red": "one-line revert in a copy => RED rc=0 RUN-A DRY END cells=1 refused=0 requests=0 claim=H2 turns=48 max_wall=60.0 while its G2 line still says WOULD-REFUSE computed=2,880 s limit=60 s",
+  "green": "tests/test_launcher_dryrun_refusal.py 4 passed (would-refuse count+rc, allow 0/0, red->green revert, canary wall >= 720 & grid 2880 untouched)",
+  "requests_burned_by_a_blocked_canary": 0,
+  "offline": "all evidence is cell.py --dry-run / launcher --dry-run; 0 requests, 0 sockets, no runner",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --dry-run",
+   "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --max-wall 600 --dry-run",
+   "python3 experiments/ptr-engine/tools/run_a_star.py --cell 1 --max-wall 60 --dry-run",
+   "PYTHONPATH=src python3 -m pytest tests/test_launcher_dryrun_refusal.py -q"
+  ],
+  "verdict": "PASS f17663d1 PYTHONPATH=src python3 -m pytest tests/test_launcher_dryrun_refusal.py -q (4 passed)"
+ },
+ "blocker": "",
+ "next_unit_hint": "The canary now prices its own projection and a WOULD-REFUSE gate line blocks the launcher (rc 1). Re-run the live canary (LAUNCH-PIN-AND-CANARY's pinned state) to confirm G2 allow end-to-end; the grid argv is byte-identical so the grid launch needs no re-price.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "tests/test_launcher_dryrun_refusal.py",
+  "orchestration/units/LAUNCH-CANARY-WALL.md",
+  "orchestration/handoffs/LAUNCH-CANARY-WALL.json",
+  "orchestration/journals/LAUNCH-CANARY-WALL.jsonl"
+ ],
+ "assumptions": [
+  "CANARY_MAX_WALL=900 rather than the 720 floor: G2 allows at equality (proved: grid 2,880 of 2,880 = allow), but 900 keeps 25% headroom without touching the projection or the 60.0 s calibration.",
+  "The CANARY-GATE-DRYRUN handoff quoted the launcher END line as cells=1; the launcher's actual pre-change line says cells=4 (four canary arms), so the canary's refusal count is 4 and the single-cell vectors report refused=1.",
+  "run_a_star.py is untracked in git, so the 'before' grid argv was captured from the launcher's own cell_argv() before the edit and diffed against the post-edit output (empty diff).",
+  "tests/conftest.py imports resextract, so the suite needs PYTHONPATH=src."
+ ],
+ "tool_calls": 18,
+ "bound": 22
+}

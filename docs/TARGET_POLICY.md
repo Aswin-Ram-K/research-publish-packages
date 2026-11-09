@@ -70,7 +70,7 @@ Asserted (repo-relative, all confirmed to exist before being asserted):
 | `.lane-j-scratch/consonance-external-evidence-2026-10-07.md.txt` | 159,408 | yes |
 | `README.md` | 19,578 | yes |
 | `CITATION.cff` | 973 | yes (admitted; graphify classifies it unsupported, so `ingest` normalises it — a coverage concern, not an admission one) |
-| `docs/FINDINGS.md` | 27,401 | yes |
+| `research/tooling/FINDINGS.md` | 27,401 | yes |
 
 `policy_audit(target_root, policy)` reports, for each asserted path, whether it
 exists and whether it is admitted:
@@ -103,7 +103,7 @@ are pasted both in the test module docstring and in each guard test's docstring.
 * **`violations: []`** — every asserted path exists and is admitted.
 * all five `assert_present` results `ok: true`: monograph 83,832 B; evidence
   review 159,408 B; `README.md` 19,578 B; `CITATION.cff` 973 B;
-  `docs/FINDINGS.md` 27,401 B.
+  `research/tooling/FINDINGS.md` 27,401 B.
 * `.ci-trunk.txt` admitted, 281,253 B, `source=graphify_predicate`.
 * `.worktrees/` is recorded as **one** rejected directory entry
   (`source=noise_dir`, "never walked") because graphify prunes the whole subtree;

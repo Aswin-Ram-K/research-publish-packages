@@ -1,0 +1,98 @@
+{
+ "unit": "LAUNCH-PIN-AND-CANARY",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/HARNESS-PIN.json",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "tests/test_run_a_star_pin.py",
+  "orchestration/units/LAUNCH-PIN-AND-CANARY.md"
+ ],
+ "evidence": {
+  "harness_pin_gen4": "fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac",
+  "per_file_sha256": {
+   "run_longrun.py": "b20030386610c58bd278681c8c365935336960513787b8380892e276ba42965e",
+   "client.py": "5aa23bb5470b7e0909992b3f0947867953ba39204e5d03eff0f95c30e57ca7bb",
+   "grade_v5.py": "056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+   "analyze_stats.py": "30b07d4d61930e0cb863badd553d0e11e8c9bdcfdba7de5973abdbd675253c9a",
+   "tools/det_verify.py": "12ccc74ea31c3843021f1ae6fa771b458082f78393e2117cd86960fd221b6439",
+   "fixture": "0804b51575cce3454a1c628a9a2447a01856321e67ac3fd1ff8c9baa48467641"
+  },
+  "superseded_harness_sha256": "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871",
+  "cause": "analyze_stats.py 800c8f6c.. (82694 B) -> 30b07d4d.. (84560 B) at 2026-10-26T19:14:14Z, 5 min after gen 3 froze 19:09:18Z; card LATENCY-DEDUPE-FIX; other five inputs match gen 3.",
+  "argv_before": "python3 cell.py --arm pointer-stable --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 12 --reps 1 --thinking off --max-wall 600 --turn-wall-cap 180 --runaway-turns 2 --budget 108 --hypothesis H2 --no-cell-handoff --out-dir experiments/ptr-engine/measure --endpoint http://192.168.2.168:8012/v1",
+  "argv_after": "python3 cell.py --arm pointer-stable --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 12 --reps 1 --thinking off --max-wall 600 --turn-wall-cap 180 --runaway-turns 2 --budget 108 --hypothesis H2 --expect-harness fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac --no-cell-handoff --out-dir experiments/ptr-engine/measure --endpoint http://192.168.2.168:8012/v1",
+  "pin_states": {
+   "stale_gen3": {
+    "rc": 2,
+    "refusal": "cell: 2/7 harness REFUSED(2) harness changed mid-cell: --expect-harness 2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871 but the current digest is fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac (files: analyze_stats.py, client.py, fixture, grade_v5.py, run_longrun.py, tools/det_verify.py)"
+   },
+   "current_gen4": {
+    "rc": 0,
+    "gates": "G1 allow computed=1,142 requests limit=4,320; G2 WOULD-REFUSE computed=720 s limit=600 s; G3 allow n=12"
+   },
+   "no_digest": {
+    "rc": 0,
+    "allowed": true,
+    "reachable_from_launcher": false,
+    "why": "cell_argv is the only argv builder for grid and canary and always passes --expect-harness; only a hand-written cell.py invocation can omit it."
+   }
+  },
+  "canary_before": {
+   "arms": 1,
+   "requests": 12,
+   "quoted": "a.cell = a.cell or 1  # a canary is ONE arm, 12 turns"
+  },
+  "canary_after": {
+   "arms": 4,
+   "cells": [
+    1,
+    4,
+    7,
+    9
+   ],
+   "requests": 48,
+   "dry_line": "RUN-A DRY END cells=4 refused=0 requests=0 claim=smoke turns=12 max_wall=600 canary_arms=4 canary_requests=48",
+   "dry_arms": "DRY cell 1 pointer-stable / 4 transcript-grow / 7 transcript-compact / 9 lease-reopen, all rc=0, G3 'claim=none declared (smoke/plumbing)'"
+  },
+  "analyser_refusal_per_arm": {
+   "pointer-stable": "incomparable_claim pointer-stable: refusing a comparison that includes 1 cell row(s) which make no claim (claim_free): arm=(unlabelled). ...",
+   "transcript-grow": "incomparable_claim transcript-grow: refusing a comparison that includes 1 cell row(s) which make no claim (claim_free): arm=(unlabelled). ...",
+   "transcript-compact": "incomparable_claim transcript-compact: refusing a comparison that includes 1 cell row(s) which make no claim (claim_free): arm=(unlabelled). ...",
+   "lease-reopen": "incomparable_claim lease-reopen: refusing a comparison that includes 1 cell row(s) which make no claim (claim_free): arm=(unlabelled). ..."
+  },
+  "claim_stamp": "claim_mode_of('smoke') = {mode: smoke, claim: none, comparison_eligible: false} for all four arms; --hypothesis smoke rides every canary argv",
+  "consequence_one_arm": "with a one-arm canary, transcript-grow, transcript-compact and lease-reopen would reach the grid ungated; a turn-3 degeneration in any of them would be paid for across 48-turn cells and only surface after the 1,016-request grid was spent.",
+  "commands": [
+   "PYTHONPATH=src python3 -m pytest tests/test_run_a_star_pin.py -q -> 8 passed",
+   "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --cell 1 --dry-run -> canary_arms=4 canary_requests=48, 4 DRY cell lines rc=0",
+   "python3 cell.py ... --dry-run --expect-harness <gen3> -> rc 2; <gen4> -> rc 0; no flag -> rc 0"
+  ]
+ },
+ "known_drift": {
+  "file": "tests/test_run_a_star_claim.py",
+  "status": "2 failed / 6 passed",
+  "why": "its GRID_ARGV literal freezes the pre-wiring argv and does not carry --expect-harness",
+  "action": "needs a one-line follow-up card to add the flag to GRID_ARGV; this card's write paths forbid editing it"
+ },
+ "assumptions": [
+  "A canary is defined as one 12-turn cell per arm, so --cell no longer narrows --canary; the flag is accepted and ignored with a printed note. This is the only reading that yields 48 requests from the quoted command.",
+  "The gen-4 digest is authoritative as a launcher constant AND cross-checked against HARNESS-PIN.json generation 4; disagreement is fatal, so a stale record cannot silently pass.",
+  "The no-digest state was proven by removing the flag from the assembled argv (hand-written invocation); a launcher-produced argv always includes it."
+ ],
+ "blocker": "",
+ "next_unit_hint": "One-line card: add '--expect-harness <gen4>' to tests/test_run_a_star_claim.py GRID_ARGV (and its canary expectation) so the pre-existing suite returns green; then the launch can start pinned with a 48-request four-arm canary.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/HARNESS-PIN.json",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "tests/test_run_a_star_pin.py",
+  "orchestration/units/LAUNCH-PIN-AND-CANARY.md",
+  "orchestration/handoffs/LAUNCH-PIN-AND-CANARY.json",
+  "orchestration/journals/LAUNCH-PIN-AND-CANARY.jsonl"
+ ],
+ "offline": {
+  "requests_sent": 0,
+  "network_events": 0,
+  "live_cells": 0,
+  "method": "cell.py --dry-run only; the tools shim was written but never executed"
+ }
+}

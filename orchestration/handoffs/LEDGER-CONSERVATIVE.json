@@ -1,0 +1,84 @@
+{
+  "unit": "LEDGER-CONSERVATIVE",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/tools/request_ledger.py",
+    "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+    "docs/REQUEST-LEDGER.md",
+    "experiments/ptr-engine/tests/test_request_ledger_sound.py",
+    "experiments/ptr-engine/tests/test_request_ledger_dedup.py",
+    "orchestration/units/LEDGER-CONSERVATIVE.md",
+    "orchestration/handoffs/LEDGER-CONSERVATIVE.json",
+    "orchestration/journals/LEDGER-CONSERVATIVE.jsonl"
+  ],
+  "evidence": {
+    "published": "requests=1101 remaining=3219 remaining_deduplicated=3249 duplicate_excess=30",
+    "within_budget_line": "within budget: 1101 <= 4320 (3219 left; spent is the RAW count, de-duplicated diagnostic 1071 is NOT deducted)",
+    "diagnostic": {
+      "requests_deduplicated": 1071,
+      "deducted": false,
+      "per_file_excess": {
+        "rows-longrun-v6-tools.jsonl": 11,
+        "rows-longrun-v4-tools-2026-10-26.jsonl": 17,
+        "rows-longrun-v5-tools.jsonl": 2
+      },
+      "rows_named": 30,
+      "rows_deducted_false": 30
+    },
+    "gate_input": {
+      "file_lines": [
+        "experiments/ptr-engine/longrun/cell.py:721-722 (budget.cap / budget.reserve read from the artefact)",
+        "experiments/ptr-engine/longrun/cell.py:734 (spent RECOMPUTED via request_ledger.build_report)",
+        "experiments/ptr-engine/tools/request_ledger.py: budget.spent = requests_published"
+      ],
+      "was_conservative_before": false,
+      "what_it_read_before": "requests_deduplicated (de-duplicated) -- the gate WAS fed the deducted key",
+      "fix": "only the key build_report publishes changed; gate arithmetic and exit codes (0/4/3/5) untouched"
+    },
+    "soundness_census": "1101 rows; 869 carry content_sha256; 869/869 satisfy content_sha256 == sha256(content) -> response hash, not request identity",
+    "tests": {
+      "experiments/ptr-engine/tests/test_request_ledger_sound.py": "12 tests, OK",
+      "experiments/ptr-engine/tests/test_request_ledger_dedup.py": "8 tests, OK",
+      "experiments/ptr-engine/longrun/tests/test_request_ledger.py": "OK",
+      "experiments/ptr-engine/longrun/tests/test_cell_gates.py": "15 tests, OK (rerun)"
+    },
+    "red_green": "test_9: GUARD GREEN (requests == requests_raw) -> set request_ledger.DEDUCTION_RULE_SOUND = True -> ValueError('requires sound_rule_evidence') -> restore -> raw again",
+    "commands": [
+      "python3 experiments/ptr-engine/tools/request_ledger.py --cap 4320",
+      "python3 -m unittest discover -s experiments/ptr-engine/tests -p 'test_request_ledger_sound.py' -v",
+      "python3 -m unittest discover -s experiments/ptr-engine/tests -p 'test_request_ledger_dedup.py' -v",
+      "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_cell_gates.py'"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "DEDUPE-ROOT-CAUSE: give the writer a request-identity hash (canonical request bytes / attempt id) instead of the response hash; only then may deduction_permitted() be satisfied and the 1,071 deduction re-published. Until then the raw count stands.",
+  "assumptions": [
+    "The card's reason string cites run_longrun.py:1493 for the content_sha256 assignment; the line has drifted to run_longrun.py:1555. The published `reason` string is kept verbatim per the card, and `diagnostic.evidence_note` names the verified line and the 869/869 census.",
+    "The card said 'the 30 rows' -- they are named individually under diagnostic.rows with deducted:false and the reason, not merely counted.",
+    "test_request_ledger_dedup.py asserted the withdrawn publication (headline 1,071 / remaining 3,249 / gate spent 5); those assertions were updated to the conservative contract. Its duplicate-rule assertions (excess 3, dedup == rows-3, legacy not_applicable, mutant red-green) are unchanged and still pass.",
+    "cell.py was TRANSIENTLY rewritten by the pre-existing red->green harness in experiments/ptr-engine/longrun/tests/test_cell_gates.py (it mutates each gate in place and asserts byte-identical restoration: `self.assertEqual(fh.read(), source)`). No cell.py edit was authored by this unit; the file's content is unchanged, only its mtime moved. Flagged because the card forbids editing cell.py and a verifier should see the mtime."
+  ],
+  "consequences": {
+    "RUN-A*": {
+      "precondition": "remaining >= 900",
+      "now_sees": 3219,
+      "a_star_needs": 792,
+      "fits": true,
+      "spare_after": 2427,
+      "note": "feasibility unchanged; only the headroom claim moves by 30"
+    },
+    "wire-cap-gate": "spent_at_start is now the raw count, so the exit-9 reconcile (spent_after - spent_at_start == used_in_run) is exact even when the writer mirrors a request into two rows; the duplicate is still reported under diagnostic, simply not credited back."
+  },
+  "write_paths": [
+    "experiments/ptr-engine/tools/request_ledger.py",
+    "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+    "docs/REQUEST-LEDGER.md",
+    "experiments/ptr-engine/tests/test_request_ledger_sound.py",
+    "experiments/ptr-engine/tests/test_request_ledger_dedup.py",
+    "orchestration/units/LEDGER-CONSERVATIVE.md",
+    "orchestration/handoffs/LEDGER-CONSERVATIVE.json",
+    "orchestration/journals/LEDGER-CONSERVATIVE.jsonl"
+  ],
+  "tool_calls": 26,
+  "bound": 26
+}

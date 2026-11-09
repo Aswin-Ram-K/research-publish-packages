@@ -1,0 +1,51 @@
+{
+  "unit": "HARNESS-MAP-PREGRID",
+  "status": "done",
+  "pre_grid": true,
+  "artifacts": [
+    "docs/HARNESS-MAP-PREGRID.md",
+    "experiments/ptr-engine/measure/HARNESS-MAP-PREGRID.json",
+    "orchestration/units/HARNESS-MAP-PREGRID.md",
+    "orchestration/handoffs/HARNESS-MAP-PREGRID.json",
+    "orchestration/journals/HARNESS-MAP-PREGRID.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "13 stages, 0 unlocated; 6 closed / 7 narrowed / 1 open; verdict rate 2.6% -> 94.1%; answer not measurable yet",
+    "commands": [
+      "python3 -c \"structural index over cell.py, run_longrun.py, client.py, analyze_stats.py, grade_v5.py, tools/{run_a_star,verdict_scope,tree_freeze,request_ledger}.py\" -> 13 stage rows, 0 unlocated, 8 stale run_longrun.py refs in docs/HARNESS-MAP.md",
+      "python3 -c \"parse orchestration/handoffs/*.json\" -> 1158 files, 0 unparseable; 282 today; tool_calls median 21 (n=147, range 6-45, 0 zero); bound median 26 (n=141, range 14-60)",
+      "python3 -c \"parse measure/rows-cell-*.jsonl\" -> 6 rows / 6 turns / 1145.6 s / 1.00 req-turn; 27 rows / 27 turns / 346.9 s / 1.00 req-turn; both usable_for []",
+      "python3 -c \"reduce closure.jsonl + verdict.jsonl\" -> 1058 closures, 184 with a row; pre-ritual 1/38; post-ritual 159/169; 35 retroactive rows",
+      "git ls-files --error-unmatch <10 chain files> -> 8 untracked (only run_longrun.py and tools/det_verify.py tracked)",
+      "grep -c fixture_sha256 experiments/ptr-engine/longrun/grade_v5.py -> 0",
+      "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -p no:cacheprovider experiments/ptr-engine/tests/test_embedded_digests_match_pin.py -q -> 4 passed (frozen verdict command)"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "One gated, completed cell is the only thing that can turn 'not measurable yet' into cheaper/dearer: run cell.py end-to-end so measure/cell-<arm>-<stamp>.json + .gates.json + rows + grade exist, then compare card-rounds and requests against v1's 40 rounds / 863 requests. Also worth a card: every run_longrun.py line reference in docs/HARNESS-MAP.md is stale by 500-700 lines, and V3's cited proofs for #5/#6 no longer resolve at HEAD.",
+  "write_paths": [
+    "docs/HARNESS-MAP-PREGRID.md",
+    "experiments/ptr-engine/measure/HARNESS-MAP-PREGRID.json",
+    "orchestration/units/HARNESS-MAP-PREGRID.md",
+    "orchestration/handoffs/HARNESS-MAP-PREGRID.json",
+    "orchestration/journals/HARNESS-MAP-PREGRID.jsonl"
+  ],
+  "answer": "not measurable yet",
+  "missing_instrument": "one gated, completed cell (cell-<arm>-<stamp>.json + .gates.json + rows + grade); zero exist",
+  "tool_calls": 27,
+  "bound": 30,
+  "requests_sent": 0,
+  "verdict_row": {"action": "record", "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3", "exitCode": 0, "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -p no:cacheprovider experiments/ptr-engine/tests/test_embedded_digests_match_pin.py -q"},
+  "assumptions": [
+    "offline card scope = handoffs with mtime 2026-10-26 (only re-derivable boundary for 'this batch')",
+    "zero-request rounds reported as a proxy (280/282) because handoffs do not record request counts",
+    "verdict numerator joins closures to verdict rows by taskId (rows carry no closure id)",
+    "tests/test_orchestration_handoffs.py was not re-run to avoid writing caches; its recorded state (1 failed / 21 passed) is quoted as recorded, not re-derived"
+  ],
+  "not_reproduced": [],
+  "overstated": [],
+  "unverified": [
+    "the recorded '1 failed / 21 passed' state of tests/test_orchestration_handoffs.py (not run here)",
+    "the quoted count of foreign/never-run todo cards beyond the 2 foreign workspaces confirmed in the board summary - omitted rather than estimated"
+  ]
+}

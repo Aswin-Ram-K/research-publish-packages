@@ -1,0 +1,60 @@
+{
+ "unit": "CANARY-GATE-DRYRUN",
+ "status": "done",
+ "artifacts": [
+  "orchestration/units/CANARY-GATE-DRYRUN.md",
+  "orchestration/handoffs/CANARY-GATE-DRYRUN.json",
+  "orchestration/journals/CANARY-GATE-DRYRUN.jsonl",
+  "experiments/ptr-engine/measure/CANARY-DRYRUN.json"
+ ],
+ "evidence": {
+  "command_rehearsed": "/usr/bin/python3 experiments/ptr-engine/longrun/cell.py --arm pointer-stable --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 12 --reps 1 --thinking off --max-wall 600 --turn-wall-cap 180 --runaway-turns 2 --budget 108 --hypothesis smoke --no-cell-handoff --out-dir experiments/ptr-engine/measure --endpoint http://192.168.2.168:8012/v1 --dry-run",
+  "rc": 0,
+  "launcher_command": "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --cell 1 --dry-run",
+  "launcher_rc": 0,
+  "launcher_line": "RUN-A DRY END cells=1 refused=0 requests=0 claim=smoke turns=12 max_wall=600",
+  "g1_quoted": "G1 allow computed=1,142 requests limit=4,320 requests (cap 4,320 - reserve 0 - spent 1,128) artefact=experiments/ptr-engine/measure/REQUEST-LEDGER.json sha256=6da0c1f19b7cd37203c9d99de5e5d8a9db879e002f389a2b525a776624c27806",
+  "g1_with_fetch_allowance": "computed=1,188 requests (launcher adds --fetch-followup-allowance 2)",
+  "g2_quoted": "G2 WOULD-REFUSE computed=720 s limit=600 s (--max-wall) ... turns=12 projected_requests=12 projected_wall~=720s (cap-per-turn 180s -> worst case 2160s) cap=600s projected-turn-wall=60.0s source=artefact-mode thinking=off",
+  "g3_quoted": "G3 allow computed=claim=none declared (smoke/plumbing) limit=no claim is made, so no PARM-1 n threshold applies ... G3 n=12 (smoke, non-comparable)",
+  "g3_claim_quoted": "claim=none comparison_eligible=False mode=smoke resolver=claim_mode.resolve_claim (one resolution per invocation)",
+  "g3_allows_smoke": true,
+  "g3_refusal_text": null,
+  "g3_thresholds": {
+   "min_n": 0,
+   "basis": "a cell that declares claim=none makes no PARM-1 claim, so no n threshold applies; claim_mode.resolve_claim is the only resolver of that decision"
+  },
+  "final_line_quoted": "cell: EXIT 0 - dry run: 1 of 3 gate(s) would refuse; exit 0 means the PREVIEW ran, not that the gates allow: callers MUST parse this line or the WOULD-REFUSE verdict lines, never the exit code; nothing was sent",
+  "offline_cell_audit": "{\"socket_socket\": 0, \"socket_connect\": 0, \"getaddrinfo\": 0, \"spawn\": 0, \"fork\": 0, \"writes\": [], \"_rc\": 0}",
+  "offline_launcher_audit": "{\"socket_socket\": 0, \"socket_connect\": 0, \"getaddrinfo\": 0, \"spawn\": 1, \"_rc\": 0}",
+  "requests_sent": 0,
+  "sockets": 0,
+  "runner_launch": 0,
+  "spawns_cell_dry_run": 0,
+  "spawns_launcher": 1,
+  "manifest_written_by_dry_run": null,
+  "claim_landing": "resolve_claim('smoke') -> claim=none/comparison_eligible=False/mode=smoke (claim_mode.py:206); row stamp site run_longrun.py:1834-1836 writes claim_mode.CLAIM_NONE + comparison_eligible False when no cfg.claim; resolve_claim('H2') -> claim=H2/comparison_eligible=True",
+  "silence_still_refused": "resolve_claim(None) -> ClaimRefusal code 12 (text quotes the three accepted forms; silence is not a claim)",
+  "wall_arithmetic_n12": "G2 bills projected_requests x projected_turn_wall = 12 x 60.0 s = 720 s vs --max-wall 600 s -> over by 120 s; live path uses the same would_send_total 12, so it would Abort(8) at 3b/7 projection; minimum --max-wall that admits the canary is 720 s",
+  "commands": [
+   "/usr/bin/python3 experiments/ptr-engine/longrun/cell.py ... --hypothesis smoke ... --dry-run",
+   "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --cell 1 --dry-run",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_cell_gates.py experiments/ptr-engine/longrun/tests/test_claim_mode.py -q"
+  ],
+  "verdict": "PASS f17663d1 python3 -m pytest experiments/ptr-engine/longrun/tests/test_cell_gates.py experiments/ptr-engine/longrun/tests/test_claim_mode.py -q (36 passed, 7 subtests passed)"
+ },
+ "blocker": "LAUNCH BLOCKED BY G2 (projection), not G3: the canary's --max-wall 600 cannot price 12 turns x 60.0 s = 720 s, so the live cell would exit 8 at 3b/7 projection. G3 ADMITS smoke (claim=none, comparison_eligible=false, min_n=0) -- g3_allows_smoke=true, no refusal text exists. Both recovery surfaces lie green (cell.py dry run rc=0, launcher refused=0, ready_to_launch=true) because the dry run returns 0 even when a gate would refuse.",
+ "next_unit_hint": "JOURNALERR/LAUNCHER-FIX: raise --max-wall in run_a_star.py's canary default from 600 to >=720 (and in evidence.canary_argv) -- do NOT shrink the projection or the 60 s calibration. Also consider making the launcher's --dry-run treat a `WOULD-REFUSE` line as a refusal (refused=0 is currently computed from rc only), so a blocked canary cannot report green.",
+ "write_paths": [
+  "orchestration/units/CANARY-GATE-DRYRUN.md",
+  "orchestration/handoffs/CANARY-GATE-DRYRUN.json",
+  "orchestration/journals/CANARY-GATE-DRYRUN.jsonl",
+  "experiments/ptr-engine/measure/CANARY-DRYRUN.json"
+ ],
+ "assumptions": [
+  "The verdict row records the gate/claim test suites (only test/build runners are accepted as verdict commands); the dry-run evidence itself is quoted under evidence, not as the verdict command.",
+  "/tmp is per-call in this sandbox, so the audit-hook wrapper was recreated inside each bash call; the launcher's own logs and shim landed in tempdir, not in the workspace."
+ ],
+ "tool_calls": 15,
+ "bound": 18
+}

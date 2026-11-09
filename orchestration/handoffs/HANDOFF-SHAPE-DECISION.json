@@ -1,0 +1,55 @@
+{
+ "unit": "HANDOFF-SHAPE-DECISION",
+ "status": "done",
+ "artifacts": [
+  "tests/test_orchestration_handoffs.py",
+  "state/logs/U8.18/verifier_shape_baseline.json",
+  "docs/HANDOFF-SHAPE.md",
+  "orchestration/units/HANDOFF-SHAPE-DECISION.md",
+  "orchestration/handoffs/HANDOFF-SHAPE-DECISION.json"
+ ],
+ "evidence": {
+  "command_or_count": "18 passed, 1 warning in 2.56s (exit 0); the warning is the non-failing HANDOFF-SHAPE REPORT",
+  "commands": [
+   "PYTHONPATH=src python3 -m pytest tests/test_orchestration_handoffs.py -q -> 18 passed, 1 warning, exit 0",
+   "sha256sum state/logs/U8.18/verifier_shape_baseline.json -> c692935180293684401dd40ec19801eaebcd33435ea29973fa5fdf952343b780 (was 5f8bbd359fe922b55f7fc491ee7073742b52b5153d17bd5c52a690310154ae72)",
+   "sha256sum tests/test_orchestration_handoffs.py -> ff1b22f189bb79f990f128e2d0bf436231905e6b84a3c4fe67bd43858fb26bc4",
+   "corpus measurement: 1095 parseable handoffs, 10 carry BOTH 'overall' and the full 7-key unit contract; exactly 3 lack 'checks'"
+  ]
+ },
+ "decision": {
+  "VERDICT-DISPUTE.json": "verdict-role: adjudicated another card's PASS (overall:fail is a judgement, not a self-report); recorded gap ['checks'] in the pinned verifier baseline",
+  "VERDICT-REFUSAL-SEMANTICS.json": "verdict-role: triage and reopening of two cards (overall:PASS is a judgement); recorded gap ['checks'] in the pinned verifier baseline",
+  "RECORD-REFRESH.json": "unit-role: overall:PASS self-reports its own insertion work and 'checks' was never its key; no gap, deliberately NOT in the baseline",
+  "classifier": "UNCHANGED -- shape first, name second; not loosened further, not reverted (the 11 narrowed false positives were real)"
+ },
+ "baseline_edit": {
+  "file": "state/logs/U8.18/verifier_shape_baseline.json",
+  "diff_added": [
+   "gaps.VERDICT-DISPUTE.json = ['checks']",
+   "gaps.VERDICT-REFUSAL-SEMANTICS.json = ['checks']",
+   "decided_by note"
+  ],
+  "diff_removed": [],
+  "schema_limitation": "none: gaps is {handoff name: [missing keys]}, so a per-document missing-key list is expressible; no unrelated pin needed re-freezing",
+  "pin_edit_sites": 1,
+  "pin": "VERIFIER_BASELINE_SHA256 in tests/test_orchestration_handoffs.py, one occurrence, 5f8bbd35... -> c6929351..."
+ },
+ "report_output_today": "HANDOFF-SHAPE REPORT (non-failing, not an assertion): 10 handoff(s) carry BOTH 'overall' and the full 7-key unit contract -> RECORD-REFRESH.json missing=['checks'] role=unit; U10.json/V-INSTRUMENTS.json/V-SPAWN-ATTACK-2.json/V-XSTACK.json/V2W.json/V5.32.json/VERIFY-CLASSIFIER-FIX.json missing=none role=UNDECIDED; VERDICT-DISPUTE.json missing=['checks'] role=verdict; VERDICT-REFUSAL-SEMANTICS.json missing=['checks'] role=verdict",
+ "red_cases": {
+  "V-NEW-14TH-GAP.json": "{'V-NEW-14TH-GAP.json': ['write_paths']} -- reported by name (verifier shape, short a unit key)",
+  "VERDICT-NEW-NO-CHECKS.json": "{'VERDICT-NEW-NO-CHECKS.json': ['checks']} -- reported by name",
+  "VERDICT-NEW-BOTH-SHAPES.json": "gaps == {} (the classifier forgives `checks` -- the recorded defect) BUT the report names it role=UNDECIDED missing=['checks']; exit code unchanged, non-failing by design"
+ },
+ "is_missing_checks_now_a_recorded_gap": "yes for the two decided verdict-ROLE documents (named in the pinned baseline as ['checks'] and printed in every run); a NEW verdict-role document that carries the 7 unit keys is not silently passed either -- it appears in the report as role=UNDECIDED, a decision owed rather than a green tick.",
+ "blocker": "",
+ "next_unit_hint": "If a NEW both-shape handoff appears as role=UNDECIDED in the report, that is a decision owed: record its role in SHAPE_DECISIONS and, if verdict-role, add its ['checks'] to the pinned baseline with the pin updated in the same second edit. Never widen the classifier back to name-first.",
+ "write_paths": [
+  "tests/test_orchestration_handoffs.py",
+  "state/logs/U8.18/verifier_shape_baseline.json",
+  "docs/HANDOFF-SHAPE.md",
+  "orchestration/units/HANDOFF-SHAPE-DECISION.md",
+  "orchestration/handoffs/HANDOFF-SHAPE-DECISION.json",
+  "orchestration/journals/HANDOFF-SHAPE-DECISION.jsonl"
+ ]
+}

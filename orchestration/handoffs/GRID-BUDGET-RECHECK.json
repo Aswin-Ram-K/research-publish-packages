@@ -1,0 +1,57 @@
+{
+ "unit": "GRID-BUDGET-RECHECK",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/GRID-BUDGET-RECHECK.json",
+  "docs/GRID-BUDGET-RECHECK.md",
+  "orchestration/units/GRID-BUDGET-RECHECK.md",
+  "orchestration/handoffs/GRID-BUDGET-RECHECK.json",
+  "orchestration/journals/GRID-BUDGET-RECHECK.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "0 requests; audit-hook network events = 0 for all four dry runs; G1 reps1=1,154, reps3=1,258; 792 = 576 x 1.374532; gate cell price 53",
+  "no_network": "AUDIT_NETWORK_EVENTS=0 [] (socket.*/urllib./http.client) on reps 1 and 3, one-arm and four-arm invocations; cell prints '0 requests sent, no endpoint contacted'",
+  "g1_reps1": "G1 allow computed=1,154 requests limit=4,320 requests (cap 4,320 - reserve 0 - spent 1,101)",
+  "g1_reps3": "G1 allow computed=1,258 requests limit=4,320 requests (cap 4,320 - reserve 0 - spent 1,101); would cost turns=48 arms=1 reps=3 -> 144 requests (incl. follow-up allowance 13)",
+  "budget_schedule": "A* = 576 turns x 1.374532 = 791.73 -> 792; per rep 192 x 1.374532 = 263.91 -> 264",
+  "decomposition": "1,154 = 1,101 spent + 48 turns + 5 allowance; digests/warm-ups = 0 in G1 (runner-only: run_longrun.py:440 digests, :226 24 fetch rounds)",
+  "gate_enforced": "G1 compares projected = spent + would_spend to headroom 4,320 (cell.py:1167-1175); equivalently would_spend <= 3,219",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/cell.py --dry-run --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 48 --reps 1 --hypothesis H2 --arm transcript-grow --out-dir /tmp/gr-man",
+   "python3 experiments/ptr-engine/longrun/cell.py --dry-run --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 48 --reps 3 --hypothesis H2 --arm transcript-grow --out-dir /tmp/gr-man"
+  ]
+ },
+ "result": "PASS: three reps of the frozen grid cost 636 requests (12 cells x 53) and leave 2,583 of 3,219; H3 keeps 36 paired items.",
+ "reps_table": [
+  {
+   "reps": 1,
+   "new": 212,
+   "remaining": 3007
+  },
+  {
+   "reps": 2,
+   "new": 424,
+   "remaining": 2795
+  },
+  {
+   "reps": 3,
+   "new": 636,
+   "remaining": 2583
+  }
+ ],
+ "blocker": "",
+ "next_unit_hint": "RUN-A* may launch as designed (4 arms x 3 reps); if G1 ever prints a figure above 4,320, read it as cumulative spend, not as the cell price.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/GRID-BUDGET-RECHECK.json",
+  "docs/GRID-BUDGET-RECHECK.md",
+  "orchestration/units/GRID-BUDGET-RECHECK.md",
+  "orchestration/handoffs/GRID-BUDGET-RECHECK.json",
+  "orchestration/journals/GRID-BUDGET-RECHECK.jsonl"
+ ],
+ "assumptions": [
+  "--arm accepts exactly one runner arm (four-arm list is refused at stage 1/7 preflight), so the four-arm grid is priced as four cells per rep (run_longrun.py:2843); this is the only reading consistent with the launch path"
+ ],
+ "tool_calls": 15,
+ "bound": 18,
+ "requests": 0
+}

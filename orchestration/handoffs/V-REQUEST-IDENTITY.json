@@ -1,0 +1,45 @@
+{
+  "unit": "V-REQUEST-IDENTITY",
+  "overall": "pass",
+  "handoff_shape": "verifier-verdict",
+  "target": "DEDUPE-ROOT-CAUSE",
+  "checks": [
+    "recount(reproduced): own loader, no import of tools/dedupe_root_cause.py \u2014 14 files / 1101 rows; all 14 sha256 equal the pinned values in experiments/ptr-engine/measure/DEDUPE-ROOT-CAUSE.json; 30 hash-applicable groups / 30 excess; per-file excess v6-tools=11 v4-tools=17 v5-tools=2; all groups are size 2.",
+    "recount_legacy(reproduced as stated): 41 groups / 54 excess = 30 hash-applicable + the three legacy files' naive same-second groups (1/2/8 = 11) and excess (11/2/11 = 24). Applying the naive tuple to all 14 files instead gives 44 groups / 57 excess \u2014 the 41/54 figure is definition-dependent.",
+    "pairs(reproduced): 30/30 pairs byte-identical on all eight measured fields (ttft_s, ttft_ms, latency_s, wall_ms, prompt_tokens, completion_tokens, content_sha256, finish_reason); the only kind pair in the corpus is (tool-followup, turn); the three named pairs reproduce (v4-tools idx0/1 turn1, v5 idx3/4 turn2, v6 idx0/1 turn1) with identical ts and differing prompt_sha256 (3ffd73d9 -> ff82c059 on v6 T1).",
+    "uncaptured_mirrors(reproduced): 33 turns carry tool-followup rows; exactly 3 mirror pairs are missed by the tuple and each is 1 ms apart \u2014 v5 idx0/1 12:17:29.765Z/.766Z, v6 idx8/9 13:16:31.644Z/.645Z, v6 idx28/29 13:19:39.946Z/.947Z.",
+    "arithmetic(reproduced): every turn with >=2 follow-ups shows rows == sends and distinct measurements == sends-1: v6 T4 4/4/3, v6 T3 3/3/2, v6 T9/T10/T15/T16 4/4/3, v5 T2 3/3/2, v5 T3 22/22/21, v4-tools T30 5/5/4. No turn in the corpus contradicts the claim; the 22-row turn is the strongest form of it.",
+    "initial_send_measurement(reproduced): all 33 mirrors compared on ttft_s, ttft_ms, latency_s, wall_ms, ttft_server_s, client_elapsed_s \u2014 0 differing. wall_ms is non-null on 6 rows only (rows-cell-pointer-stable-20261026T145758Z idx0-5, a cell with no tool-followup rows); ttft_server_s (73 rows) and client_elapsed_s (25 rows) appear only on kind=None rows. No field anywhere carries the initial send's own latency.",
+    "identity_test(reproduced): python3 experiments/ptr-engine/longrun/tests/test_request_identity.py -> '17 checks, 0 failed' / ALL GREEN, exit 0.",
+    "red_green(reproduced, in memory): --red-green -> 3 RED checks, then all green, exit 0. sha256 of test_request_identity.py, client.py, run_longrun.py, dedupe_root_cause.py identical before and after (sha256sum -c OK); corpus re-hashed afterwards 14/14 at the pinned values, so nothing on disk was bent to make the red case bite.",
+    "rule_on_constructed_rows: C1 two genuine sends, identical body, row_seq 1/2 -> deduct 0 (correct); C2 one send with row_seq missing -> deduct 0 (correct, conservative); C3 request_identity_complete=false on one side -> deduct 0 (correct); C4 re-send after a failure row (unknown/false then a hashed row_seq 2) -> deduct 0 (correct); C5/C8 two rows sharing one row_seq -> deduct 1 (correct, one send recorded twice); C6 two billed sends in DIFFERENT files, same body, same per-file row_seq=1 -> deduct 1 with a global rule (WRONG), 0 with a per-file rule.",
+    "backfill(reproduced): 0 of 1101 rows carry request_sha256 / request_identity_complete / row_seq / a retained body; corpus has 100 distinct field names and none of them is an identity field.",
+    "neighbours(reported, not fixed): python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_*.py' -> Ran 125 tests, FAILED (failures=2), both test_decidability_seam (test_c_cell_exits_9_on_the_contradiction_and_0_with_override, test_d_consistent_cell_exits_0). Out of scope; unchanged."
+  ],
+  "not_reproduced": [],
+  "overstated": [
+    "docs/REQUEST-IDENTITY.md section 2 file:line table is stale against the tree on disk: measure/DEDUPE-ROOT-CAUSE.json pins run_longrun.py at sha256 0bc3b82468c83b203622c17539b3c6f69c21336ae95eb5ed20101252e7d8cfa2 but the current file is a2504face349e96cb3aea919bc11fbe5b5f231403306000d9067e1f202412509; the initial send is at :2054 (not :2045), the initial sent += 1 at :2059 (not :2082), tools_enabled(cfg) and not is_answer_turn at :2106 AND again at :2187 (the doc names one site, :2092), the fetch_rounds call at :2120 (not :2106), the turn-row make_row at :2199 (not :2167), the append pair at :2228-2229 (not :2178-2179). Shape unchanged, but not one cited line lands on its code \u2014 and with two 'tools_enabled and not is_answer_turn' sites the documented condition now needs re-derivation, not a lookup. client.py DOES match its pin (5aa23bb5...).",
+    "'41 groups / 54 excess' is quoted without its definition: reproduced only as 30 hash-applicable + the three legacy files' naive groups. Applied uniformly to all 14 files the naive tuple yields 44 groups / 57 excess, because the modern files also gain same-second collisions (v5 2->3, v6 11->13).",
+    "the recommended rule never states its FILE scope. row_seq is documented as per-file, but the ledger sums 14 files, so the rule as written can compare two different cells' rows; 54 distinct prompt_sha256 values already appear in more than one rows file, so an identical body across files is a live possibility rather than a hypothetical.",
+    "the neighbour-test count (118 tests) no longer matches this tree (125 tests); the two failures are the same ones."
+  ],
+  "unverified": [
+    "the zero-follow-up branch (fetch_rounds returns the incoming resp untouched, so no mirror) is a code-path claim; no live row contrasts a granted tool call with a refused one in the same turn, so it could not be measured on the corpus.",
+    "that the wire body is unreconstructable is an argument from the row schema (max_tokens/thinking absent, prompt_sha256 hashes one message), not an experiment; the '0 backfillable' measurement itself is reproduced."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Ledger owner: adopt the rule scoped per rows file \u2014 group by (file, request_sha256) and treat row_seq as per-file, never compare two cells' rows; deduct nothing when either side is request_identity_complete=false; keep all 1101 historical rows non-deductible and publish requests_raw until request_sha256 has been live for one full cell. Separately: refresh docs/REQUEST-IDENTITY.md section 2 against run_longrun.py sha a2504fa (or repin the harness digest in measure/DEDUPE-ROOT-CAUSE.json), and decide which of the two tools_enabled/not is_answer_turn sites (:2106, :2187) actually produces the mirror.",
+  "write_paths": [
+    "orchestration/units/V-REQUEST-IDENTITY.md",
+    "orchestration/handoffs/V-REQUEST-IDENTITY.json",
+    "orchestration/journals/V-REQUEST-IDENTITY.jsonl",
+    "/tmp/v-request-identity/**"
+  ],
+  "tool_calls": 27,
+  "bound": 28,
+  "red_green": "--red-green: 3 RED, all green restored, exit 0, disk unchanged",
+  "containment": "read-only on every rows file, every grade file, measure/*.json, dedupe_root_cause.py, client.py, run_longrun.py and the author's handoff; the constructed-row cases lived only inside single-call /tmp scratch (this host discards /tmp between bash calls), so nothing was persisted outside the three orchestration files.",
+  "assumptions": [
+    "VERDICT_COMMAND_NOTE: the recorded verdict command is the reproducible identity test; the larger recount/rule scripts ran from ephemeral /tmp scratch in single bash calls and are not re-runnable from that path on this host."
+  ]
+}

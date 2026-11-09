@@ -1,0 +1,80 @@
+{
+  "unit": "P95-POWER-FROM-ROWS",
+  "status": "done",
+  "artifacts": [
+    "docs/P95-POWER.md",
+    "experiments/ptr-engine/measure/P95-POWER.json",
+    "experiments/ptr-engine/measure/p95_power_gen.py",
+    "experiments/ptr-engine/measure/p95-power-verify.sh",
+    "orchestration/units/P95-POWER-FROM-ROWS.md",
+    "orchestration/handoffs/P95-POWER-FROM-ROWS.json",
+    "orchestration/journals/P95-POWER-FROM-ROWS.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "bash experiments/ptr-engine/measure/p95-power-verify.sh -> exit 0, 'P95-POWER.json regenerated identically'; 0 inference requests, 0 network calls; 14 rows files sha256-recorded and unchanged (rows_files_unchanged=true)",
+    "commands": [
+      "sha256sum experiments/ptr-engine/measure/rows-*.jsonl  (14 files, before and after; identical)",
+      "python3 experiments/ptr-engine/measure/p95_power_gen.py  (10 000-resample percentile bootstrap, 1000x200 paired resampling, seed 20261026)",
+      "diff -q <(gen to /tmp twice)  -> DETERMINISTIC; diff -q /tmp/p95_a.json P95-POWER.json -> MATCHES_COMMITTED",
+      "bash experiments/ptr-engine/measure/p95-power-verify.sh -> exit 0",
+      "sha256sum experiments/ptr-engine/longrun/analyze_stats.py -> 2c9756f3f6cf9c07174cda290a86cc506b0d608bd1c9a0dc6884540c966b2d1c (recorded at run time, module NOT imported)"
+    ]
+  },
+  "computed": {
+    "verdict": "A* sufficient",
+    "verdict_scope": "measured on rows-longrun-c (the 4 arms x 48 turns grid A* replicates); 2 of 3 grids holding the same two arms do NOT separate them at n=144",
+    "usable_n": {
+      "max_single_cell": 48,
+      "rows_longrun_c": {"pointer-stable": 47, "transcript-grow": 48, "transcript-compact": 48, "lease-reopen": 34},
+      "rows_longrun_v3": {"pointer-stable": 47, "transcript-grow": 48},
+      "rows_longrun_v4": {"pointer-stable": 40, "transcript-grow": 48},
+      "tools_pointer_stable": {"v4-tools": 47, "v5-tools": 47, "v6-tools": 48},
+      "no_usable": ["rows-longrun-2026-10-26.jsonl: 192 kind=turn rows, ttft_ms absent, 0 usable"]
+    },
+    "p95_interval_width_ms": {
+      "rows-longrun-c::pointer-stable": {"n60": 236.06, "n144": 186.83},
+      "rows-longrun-c::transcript-grow": {"n60": 155.16, "n144": 80.5},
+      "rows-longrun-v3::pointer-stable": {"n60": 224.48, "n144": 110.74},
+      "rows-longrun-v3::transcript-grow": {"n60": 294.91, "n144": 251.24},
+      "rows-longrun-v4::pointer-stable": {"n60": 352.83, "n144": 272.41},
+      "rows-longrun-v4::transcript-grow": {"n60": 576.15, "n144": 536.48},
+      "rows-longrun-v5-tools::pointer-stable": {"n60": 504.56, "n144": 291.03}
+    },
+    "paired_disjoint_pct": {
+      "rows-longrun-c": {"n48": 100.0, "n60": 100.0, "n144": 100.0},
+      "rows-longrun-v3": {"n48": 1.3, "n60": 2.7, "n144": 1.6},
+      "rows-longrun-v4": {"n48": 4.5, "n60": 5.8, "n144": 12.9, "n384": 19.1}
+    },
+    "observed_gaps": {
+      "rows-longrun-c": {"p50_gap_ms": 315.29, "p95_gap_ms": 529.99, "observed_ci_disjoint": true},
+      "rows-longrun-v3": {"p50_gap_ms": 32.39, "p95_gap_ms": -2.35, "observed_ci_disjoint": false},
+      "rows-longrun-v4": {"p50_gap_ms": 11.99, "p95_gap_ms": -57.65, "observed_ci_disjoint": false}
+    },
+    "autocorrelation": {
+      "median_lag1": 0.417,
+      "fisher_z_pooled_lag1": 0.37,
+      "n_sets": 13,
+      "implied_effective_n": {"48": 22.1, "60": 27.6, "144": 66.2, "384": 176.6}
+    }
+  },
+  "verdict_detail": "On the C grid the H1 pair separates at n=48 already (100 % disjoint at 48/60/144; observed p95 intervals disjoint with 254 ms margin), so 144 is not what buys the separation; effective n at raw 144 is only 66, clearing the H1 floor of 60 by 10 %. For the 12-32 ms p50 gap seen in v3/v4 the plan is underpowered at every n tested up to 384. Recommendation: spend on runs (reps), not turns, because lag-1 0.4-0.66 makes extra turns within a run ~1/3 as informative as a new run; 3x48-turn runs of the pair (288 requests) tests replication of the 315 ms effect more cheaply than 4 arms x 144.",
+  "blocker": "",
+  "next_unit_hint": "BUDGET-SCHEDULE should absorb: (1) no cell on disk exceeds 48 usable timings, so n=144 is an extrapolation everywhere; (2) the 315 ms p50 gap exists on rows-longrun-c only and is absent on v3/v4, so the budget's risk is replication, not p95 width; (3) if n>=60 effective is the real gate, only ~144 raw turns reach it. A follow-up unit could measure whether v3/v4 rows differ in arm definition (TURN-ROW-ATTRIBUTION) before spending 792 requests.",
+  "write_paths": [
+    "docs/P95-POWER.md",
+    "experiments/ptr-engine/measure/P95-POWER.json",
+    "experiments/ptr-engine/measure/p95_power_gen.py",
+    "experiments/ptr-engine/measure/p95-power-verify.sh",
+    "orchestration/units/P95-POWER-FROM-ROWS.md",
+    "orchestration/handoffs/P95-POWER-FROM-ROWS.json",
+    "orchestration/journals/P95-POWER-FROM-ROWS.jsonl"
+  ],
+  "assumptions": [
+    "Usable timing = kind=='turn' AND ttft_ms>0 AND timing_usable is not False; rows with timing_usable=False counted as dropped rather than silently included (worst case 14 of 192 in rows-longrun-c lease-reopen, 8 of 48 in v4 pointer-stable).",
+    "rows-longrun-2026-10-26.jsonl excluded (192 turn rows without ttft_ms); reconstructing ttft_s*1000 was refused as a different, unverified quantity.",
+    "Tool-grid distributions carry attribution_disputed and were never pooled with non-tools grids, so they inform neither the H1 pair nor the verdict.",
+    "Lag-1 is reported with its Fisher-z pooled value and effective n; the iid paired resampling in the power rows therefore overstates power for the high-lag arms, stated in the doc rather than modelled away."
+  ],
+  "tool_calls": 20,
+  "bound": 28
+}

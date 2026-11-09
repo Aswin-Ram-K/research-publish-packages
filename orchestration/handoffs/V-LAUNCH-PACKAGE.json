@@ -1,0 +1,181 @@
+{
+ "unit": "V-LAUNCH-PACKAGE",
+ "overall": "partial",
+ "status": "done",
+ "ready": {
+  "price": false,
+  "budget": true,
+  "pool": true,
+  "ledger": true,
+  "pin": false,
+  "canary": true,
+  "cross_artefact_agreement": false
+ },
+ "launch_package_verified": false,
+ "checks": [
+  "PRICE 964 = 480 turns + 480 rounds pool + 4 digests (2 compact cells x 2) -> tranche reproduces",
+  "PRICE 1,016 DOES NOT ADD UP: canary 48 assumes 4 launches but run_a_star.py:332 (a.cell = a.cell or 1, 'a canary is ONE arm, 12 turns') gives 12 per launch, and warm-ups 4 omits the canary process's own warm-up (run_a_star.py:375, per-process dict)",
+  "BUDGET: cell.py:140 BUDGET_HEADROOM=0.10; cell.py:380-382 required=ceil(would*(1+headroom)); :388-392 refuses when required > budget. ceil(98x1.10)=ceil(107.8)=108, so 108 >= 108 with ZERO slack; the shipped gate measured would_send_total=48 -> required 53",
+  "POOL: run_longrun.py:230 TOOL_FETCH_ROUNDS_PER_ARM = 48; run_longrun.py:2857 --fetch-rounds-per-arm",
+  "LEDGER: build_report(15 rows files, cap 4320, reserve 0, would 0) -> spent 1128, dedup 1098, remaining 3192; with would 1016 -> remaining 2176. 15/15 per-file rows+requests+sha256 match LEDGER-GRID-BASELINE-2.json; REQUEST-LEDGER.json sha 6da0c1f1... matches frozen source_ledger_sha256",
+  "PIN MOVED: recomputed fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac vs pinned 2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871",
+  "CANARY wiring present: claim 'smoke' -> claim none, analyser refuses by name (CANARY-ARGV-WIRING)",
+  "no edits outside unit card/handoff/journal; 0 requests"
+ ],
+ "pin_verdict": {
+  "status": "moved",
+  "recomputed": "fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac",
+  "pinned": "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871",
+  "cause": "analyze_stats.py 800c8f6c... -> 30b07d4d..., mtime 2026-10-26 14:14:14-0500 (19:14:14Z) is 5 min AFTER the pin was recorded at 19:09:18Z; the other 5 inputs match the pin byte-for-byte",
+  "enforcement": "cell.py:336-349 refuses only when --expect-harness is passed; run_a_star.py:cell_argv (:177-203) does NOT pass it, so the launch is unpinned. Passing the recorded value would Abort(2) at stage 2/7."
+ },
+ "canary_gate_open": true,
+ "canary_gate_note": "wiring open (claim none); but CANARY-ERA-B-FIX.json:28/:49 record stop_signal_source 'stop_reason' while :36/:the docs require 'finish_reason' - flagged, not resolved here",
+ "price_arithmetic": {
+  "tranche": "480 turns (10 cells x 48) + 480 rounds (10 x 48 pool) + 4 digests (cells 7,8 x 2) = 964",
+  "claimed_total": "964 + 48 + 4 = 1,016",
+  "recomputed_readings": {
+   "documented_single_canary_launch": "964 + 12 (canary --cell 1) + 4 (grid warm-ups) + 1 (canary warm-up) = 981",
+   "four_canaries_turn_only": "964 + 48 + 4 + 4 = 1,020",
+   "four_canaries_with_round_channel_priced": "964 + 48 + 144 + 8 = 1,164 (12 turns x 3/turn cap = 36 rounds per canary arm)"
+  },
+  "factor_used": "additive cap model (turns + rounds + digests); 1.374532 would give 480 x 1.374532 = 659.8, which the additive model dominates",
+  "verdict": "1,016 is not derivable from any single consistent reading; it overstates the documented single-canary launch by 35 and understates a 4-canary launch that prices the round channel by 148"
+ },
+ "eight_number_table": [
+  {
+   "n": "price",
+   "value": "1,016",
+   "files": [
+    "experiments/ptr-engine/measure/GRID-PARAMS.json :: price.total",
+    "docs/GRID-PARAMS.md rev2",
+    "orchestration/handoffs/LAUNCH-PACKAGE-RECONCILE.json :: price_recorded.total"
+   ],
+   "verdict": "disagree",
+   "detail": "all three say 1,016; the recompute lands on 981 / 1,020 / 1,164, never 1,016"
+  },
+  {
+   "n": "tranche",
+   "value": "964",
+   "files": [
+    "GRID-PARAMS.json :: price.components.tranche",
+    "docs/GRID-PARAMS.md",
+    "GRID-SHAPE.json (724, superseded by pointer)"
+   ],
+   "verdict": "agree",
+   "detail": "724 in GRID-SHAPE.json is the pre-48-round record, superseded by pointer, not overwritten"
+  },
+  {
+   "n": "budget",
+   "value": "108",
+   "files": [
+    "GRID-PARAMS.json :: per_cell_budget.recommended",
+    "run_a_star.py:198-200 (cell_argv --budget 108)",
+    "docs/FETCH-BUDGET-48.md",
+    "GRID-SHAPE.json :: cells[*].cell_py_flags (10 x --budget 67)"
+   ],
+   "verdict": "disagree",
+   "detail": "108 everywhere live; GRID-SHAPE.json still carries 10 literal --budget 67 (superseded by pointer only)"
+  },
+  {
+   "n": "pool",
+   "value": "48",
+   "files": [
+    "run_longrun.py:230",
+    "run_longrun.py:2857",
+    "GRID-PARAMS.json :: per_arm_round_cap.runtime_constant",
+    "GRID-SHAPE.json (--fetch-followup-allowance 24 x10)"
+   ],
+   "verdict": "disagree",
+   "detail": "runner and GRID-PARAMS say 48; GRID-SHAPE.json's 10 cells still say 24"
+  },
+  {
+   "n": "remaining",
+   "value": "3,192",
+   "files": [
+    "REQUEST-LEDGER.json :: budget.remaining_raw",
+    "LEDGER-GRID-BASELINE-2.json :: remaining",
+    "GRID-PARAMS.json :: price.remaining_before",
+    "run_a_star.py:369/379/437/443/445 (3219)"
+   ],
+   "verdict": "disagree",
+   "detail": "ledger artefacts 3,192 (reproduced); the launcher's own END line still bases remaining on 3,219"
+  },
+  {
+   "n": "cap",
+   "value": "4,320",
+   "files": [
+    "cell.py:138 PROJECT_QUOTA",
+    "REQUEST-LEDGER.json :: budget.cap",
+    "LEDGER-GRID-BASELINE-2.json :: cap"
+   ],
+   "verdict": "agree",
+   "detail": ""
+  },
+  {
+   "n": "spent",
+   "value": "1,128",
+   "files": [
+    "REQUEST-LEDGER.json :: requests_raw",
+    "LEDGER-GRID-BASELINE-2.json :: requests"
+   ],
+   "verdict": "agree",
+   "detail": "1,101 in LEDGER-GRID-BASELINE.json is the superseded era-A baseline (+27)"
+  },
+  {
+   "n": "pin",
+   "value": "2b4d4808",
+   "files": [
+    "HARNESS-PIN.json :: harness_sha256",
+    "LAUNCH-PACKAGE-RECONCILE.json :: pin.harness_sha256",
+    "cell.py stage 2/7 recompute (fa6fd8cc)"
+   ],
+   "verdict": "disagree",
+   "detail": "pinned 2b4d4808 vs recomputed fa6fd8cc"
+  }
+ ],
+ "what_would_make_this_launch_wrong": [
+  {
+   "risk": "Stage 2/7 refuses every cell (exit 2) because the pin is stale and the launch passes the recorded digest",
+   "check": "python3 experiments/ptr-engine/longrun/cell.py --arm pointer-stable --turns 48 --budget 108 --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --expect-harness 2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871 --dry-run 2>&1 | grep -E 'harness|Abort'"
+  },
+  {
+   "risk": "the canary gates on ONE arm in 12 requests while the price assumed four, so three arms reach the grid ungated",
+   "check": "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --cell 1 --dry-run 2>&1 | grep -cE 'arm pointer-stable|arm transcript-grow|arm transcript-compact|arm lease-reopen'"
+  },
+  {
+   "risk": "the round channel is billed outside --budget, so cells spend up to 96 each (960 total) while the gate reports required=53 and the price/ledger delta is read as the grid's cost",
+   "check": "python3 experiments/ptr-engine/tools/ledger_delta.py --rows-glob 'experiments/ptr-engine/measure/rows-*.jsonl' 2>&1 | tail -12"
+  }
+ ],
+ "not_reproduced": [],
+ "overstated": [
+  "LAUNCH-PACKAGE-RECONCILE.json :: ready_to_launch true \u2014 the pin moved after its probe and the price does not close"
+ ],
+ "unverified": [
+  "CANARY-ERA-B-FIX gate field name (finish_reason vs the recorded stop_reason)"
+ ],
+ "blocker": "HARNESS-PIN.json generation 3 is stale (analyze_stats.py moved at 19:14:14Z, 5 min after the 19:09:18Z pin) and the launcher does not pass --expect-harness, so the launch is either unpinned or refuses at stage 2/7. Re-freeze the pin before spending.",
+ "next_unit_hint": "A new card should re-freeze HARNESS-PIN.json generation 4 over the current six inputs and wire --expect-harness into cell_argv (:177-203); then repricing is optional (the 35-request overstatement is conservative).",
+ "write_paths": [
+  "orchestration/units/V-LAUNCH-PACKAGE.md",
+  "orchestration/handoffs/V-LAUNCH-PACKAGE.json",
+  "orchestration/journals/V-LAUNCH-PACKAGE.jsonl"
+ ],
+ "offline": {
+  "requests_sent": 0,
+  "network_events": 0,
+  "live_cells": 0
+ },
+ "tool_calls": 24,
+ "bound": 26,
+ "verdict_row": {
+  "recorded": true,
+  "result": "PASS",
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "command": "python3 -m pytest tests/test_orchestration_handoffs.py -q -o pythonpath=src",
+  "exit_code": 0,
+  "output": "18 passed, 1 warning in 2.55s",
+  "ordering": "recorded before this handoff write"
+ }
+}

@@ -1,0 +1,26 @@
+{
+  "unit": "R3-LEDGER",
+  "status": "done",
+  "artifacts": [
+    "orchestration/notes/joint-plan/R3-ledger.md"
+  ],
+  "evidence": {
+    "reservation_inventory": "RESERVATIONS.json reservations[0] and RESERVATION-CCS-2026-11-05.json identical: run_id=CCS-2026-11-05, requested_count=1500, granted_count=1500, bound_applied=requested_count, operator_cap=2000, ledger_remaining_at_reservation=1729, timestamp_utc=2026-11-05T08:03:11Z, dry_run=false",
+    "ledger_rows_recomputed": "41 per_file entries sum rows=2591 and requests=2591; kinds turn=1715 tool-followup=361 turn-initial=283 unmarked=232; token sums prompt=14517784 completion=1017166; last_ts=2026-10-28T03:35:42.114Z",
+    "cap_check": "budget.cap=4320, budget.reserve=0, spent=2591, remaining=1729; 2591+1729=4320",
+    "spent_vs_reserved_vs_unknown_vs_available": "spent=2591 (as of 2026-10-28T03:35:42Z); reserved=1500 (CCS-2026-11-05, unverified); unknown=post-2026-10-28 spend + reservation actualisation + dollar/energy; available=UNKNOWN",
+    "read_only_proof": "sha256 REQUEST-LEDGER.json=8ebf4ed5d1c7c5616ba96e7dc38424cac829912d5ae7c7ccab50827a5e29494c matches RESERVATIONS ledger_sha256; RESERVATIONS.json sha256=0c717fabeeeac747821ed59f30ebcba4bf1d0bbfc3e4d019916dfa744ff53ae1; only orchestration/ paths written",
+    "comparative_check": "3*(4*420+2*420)=7560; D-free=5040; 7560/1729=4.37x",
+    "commands": [
+      "python3 -c \"import json; d=json.load(open('experiments/ptr-engine/measure/REQUEST-LEDGER.json')); print(sum(f['rows'] for f in d['per_file']), sum(f['requests'] for f in d['per_file']), len(d['per_file']))\"",
+      "python3 -c \"import json,glob; rows=[]; [rows.append(json.loads(l)) for f in glob.glob('experiments/ptr-engine/measure/rows-*.jsonl') for l in open(f) if l.strip()]; print(len(rows), sum(r['prompt_tokens'] for r in rows), sum(r['completion_tokens'] for r in rows))\"",
+      "sha256sum experiments/ptr-engine/measure/REQUEST-LEDGER.json experiments/ptr-engine/measure/RESERVATIONS.json"
+    ]
+  },
+  "blocker": "available capacity is UNKNOWN: ledger is a 2026-10-28 snapshot and reservation CCS-2026-11-05 (1500) has no spend actualisation mechanism; dollar and energy costs are not recorded anywhere in the repo.",
+  "next_unit_hint": "R1-design / JOINT plan should treat 1729 as snapshot (not available balance), price reserved 1500 separately, and keep dollar/energy as UNKNOWN; fund decision requires re-reconciled ledger.",
+  "write_paths": [
+    "orchestration/notes/joint-plan/R3-ledger.md",
+    "orchestration/handoffs/R3-LEDGER.json"
+  ]
+}

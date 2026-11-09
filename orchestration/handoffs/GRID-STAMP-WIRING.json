@@ -1,0 +1,42 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "tests/test_grid_stamp_wiring.py",
+  "experiments/ptr-engine/measure/GRID-STAMP-WIRING.json",
+  "orchestration/units/GRID-STAMP-WIRING.md",
+  "orchestration/handoffs/GRID-STAMP-WIRING.json"
+ ],
+ "assumptions": [
+  "HARNESS-PIN.json showed generation 5 mid-card; per card instruction it was REPORTED, not re-pinned, and run_a_star's gen-4 constant was left byte-identical."
+ ],
+ "blocker": "",
+ "evidence": {
+  "command_or_count": "grep -n usable_for experiments/ptr-engine/tools/run_a_star.py -> 0 matches (pre-wiring); 10 tests passed",
+  "commands": [
+   "grep -n 'usable_for' experiments/ptr-engine/tools/run_a_star.py",
+   ".venv/bin/python experiments/ptr-engine/longrun/analyze_stats.py --rows /tmp/gsw/rows-stamped.jsonl /tmp/gsw/rows-unstamped.jsonl --manifest /tmp/gsw/man-stamped.json --manifest /tmp/gsw/man-unstamped.json --no-census",
+   "PYTHONPATH=src python3 -m pytest tests/test_grid_stamp_wiring.py -q"
+  ],
+  "red_green": "source guard True with 'rec[\"usable_for_stamp\"] = stamp_cell(rec)'; False when removed",
+  "refusal": "SystemExit 4: REFUSED to start cell 4: previous cell's manifest /tmp/gsw/cell-prev.json lacks the usable_for key ...",
+  "requests": 0,
+  "two_manifest_demo": "usable_for: [] -> 'usable_for EXCLUDED rows-stamped.jsonl ... NOT analysed'; missing key -> 'usable_for unstamped rows-unstamped.jsonl (included)'"
+ },
+ "next_unit_hint": "Add one line to docs/GRID-RUNBOOK.md: never launch cell.py by hand (a hand-launched cell carries no usable_for stamp and analyze_stats includes it as unstamped). Separately: HARNESS-PIN.json is generation 5 (HARNESS-PIN-GEN5) while run_a_star.HARNESS_PIN is gen 4 -- re-pin/align in its own card; tests/test_launch_contract_diff.py and launch are blocked by that mismatch, not by this wiring.",
+ "residual": {
+  "risk": "a cell launched by hand outside run_a_star.py still bypasses the stamp",
+  "runbook_edited": false,
+  "runbook_line_to_add": "Never launch cell.py by hand: a hand-launched cell carries no usable_for stamp and analyze_stats includes it as unstamped."
+ },
+ "status": "done",
+ "unit": "GRID-STAMP-WIRING",
+ "verdict_word": "not-stamped",
+ "write_paths": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "tests/test_grid_stamp_wiring.py",
+  "experiments/ptr-engine/measure/GRID-STAMP-WIRING.json",
+  "orchestration/units/GRID-STAMP-WIRING.md",
+  "orchestration/handoffs/GRID-STAMP-WIRING.json",
+  "orchestration/journals/GRID-STAMP-WIRING.jsonl"
+ ]
+}

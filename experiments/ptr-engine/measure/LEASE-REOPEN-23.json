@@ -1,0 +1,193 @@
+{
+ "argv": "/usr/bin/python3 experiments/ptr-engine/longrun/cell.py --arm lease-reopen --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 23 --reps 1 --thinking off --max-wall 1800 --turn-wall-cap 180 --runaway-turns 2 --budget 108 --hypothesis smoke --expect-harness efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3 --no-cell-handoff --out-dir experiments/ptr-engine/measure --endpoint http://192.168.2.168:8012/v1 --fetch-followup-allowance 12",
+ "arm": "lease-reopen",
+ "census": {
+  "billed_rounds": 43,
+  "channel_open_all_23_turns": true,
+  "fetch_budget_exhausted_rows": 0,
+  "fetch_budget_note": "no row carries a fetch-budget-exhausted marker; per-turn round caps appear only as per-call errors (per_turn_round_cap / turn_call_cap) on individual tool calls",
+  "field_note": "rows carry tools_schema_sent and structured tool_calls per row, but NOT the fields tool_call_items / tool_calls_executed; those two numbers are DERIVED here from len(tool_calls) and executed==True, and are labelled derived.",
+  "kinds": {
+   "tool-followup": 20,
+   "turn": 23,
+   "turn-initial": 13
+  },
+  "rows": 56,
+  "rows_with_nonempty_structured_tool_calls": 37,
+  "rows_with_tools_schema_sent": 56,
+  "stop_signal_source_present": 0,
+  "tool_call_items_derived": 119,
+  "tool_calls_executed_derived": 40,
+  "tool_followup_rows": 20,
+  "turn_rows": 23
+ },
+ "decision": {
+  "cap_caveat": "this cell spent 43 billed requests (23 turn + 20 tool-followup) plus 1 warm-up = 44 wire requests against the card's 40-request hard cap; --fetch-followup-allowance 12 is a G1 pricing term, not a runtime cap, and the runner still emitted 20 follow-up rows. Disclosed as request_cap_overrun by 4, not smoothed.",
+  "known_gaps": [
+   "stop_signal_source is populated on 0 of 56 rows of this cell (0 of 30 in LEASE-REOPEN-12): the CANARY-ERA-B-FIX gap is a run_longrun.py fix => gen 7. Not closable by this card.",
+   "measure/REQUEST-LEDGER.json is stale: built 2026-10-26T22:33:00Z, and the row files on disk have written 115 billed rows since (72 before this cell + 43 from it). The file's own remaining is static; the recompute is labelled in-memory."
+  ],
+  "lease_arm_usable_for_grid": true,
+  "rule_frozen_in_advance": "lease event visible at T23 AND shape_ok AND tool census non-zero => lease_arm_usable_for_grid true; otherwise false plus the single measurement that would make it true",
+  "why": "T23 turn row carries lease=2 (all other 22 turn rows lease=1), i.e. the declared lease step at exactly the declared turn; shape is shape_ok by the frozen rule; census is non-zero (23 turn rows with tools_schema_sent true, 43 billed rounds, 20 follow-up rows)."
+ },
+ "fixture_lease_reopen_turns": [
+  23,
+  40
+ ],
+ "gate1": {
+  "file": "experiments/ptr-engine/measure/HARNESS-PIN.json",
+  "files": {
+   "analyze_stats.py": "30b07d4d61930e0cb863badd553d0e11e8c9bdcfdba7de5973abdbd675253c9a",
+   "client.py": "9b12b2ea948b23f0f1600c4bcf4c8f6d72e17e900c046e555e7bc78d6630c0c6",
+   "fixture": "0804b51575cce3454a1c628a9a2447a01856321e67ac3fd1ff8c9baa48467641",
+   "grade_v5.py": "3d70ed1d43d2ab098eeeba4b50fa574273c71e9ff24af5adaa9e519d10c77940",
+   "run_longrun.py": "4f40dde188b4812031c01304b3bd07c9f5b64ecc268aa48bb46eb3aabf69a4ca",
+   "tools/det_verify.py": "12ccc74ea31c3843021f1ae6fa771b458082f78393e2117cd86960fd221b6439"
+  },
+  "generation": 6,
+  "is_efefd885": true,
+  "match": true,
+  "pin_digest": "efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3",
+  "recipe": "sha256 over 'name:sha256\\n' for sorted(names), names = cell.py HARNESS_FILES (cell.py:129-135) + fixture; recomputed here from cell.HARNESS_FILES and cell._sha256_file",
+  "recomputed": "efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3"
+ },
+ "gate2": {
+  "argv_has_expect_harness": true,
+  "dry_run_gate_lines": [
+   "G1 1,247/4,320 requests \u00b7 G2 1,380 s of 1,800 s \u00b7 G3 n=23 (smoke, non-comparable)"
+  ],
+  "dry_run_rc": 0,
+  "dry_run_with_max_wall_1800": "allow computed=1380 s limit=1800 s",
+  "dry_run_with_max_wall_900": "WOULD-REFUSE G2 computed=1380 s limit=900 s",
+  "note": "the card's --max-wall 900 came from the 12-turn canary floor (12 x 60 s = 720 s); 23 turns project 1,380 s, so max-wall was raised to 1,800 s (1,380 x 1.30) and the dry run re-run clean. cell_argv() itself was not edited."
+ },
+ "generated_at_utc": "2026-10-27T08:44:39Z",
+ "grade": {
+  "decidable": 10,
+  "fail": 7,
+  "line": "lease-reopen         acc=3/10 decidable=10(pass 3, fail 7) undecidable=0 missing=6 text=2 verified=False reasons=callee_mismatch,turn_missing,turn_missing,turn_missing,turn_missing,turn_missing,turn_missing",
+  "missing": 6,
+  "note": "verified=False is the grader's own cell-level flag (it needs a checkpoint/verify turn inside the window); the shape rule this card froze asks for answer_verified >= 1, which is met by 3 rows",
+  "pass": 3,
+  "text": 2,
+  "verified": false
+ },
+ "ledger_after": {
+  "delta_rows_since_build": 115,
+  "delta_this_cell": 43,
+  "file_remaining": 3144,
+  "file_requests": 1176,
+  "note": "REQUEST-LEDGER.json is forbidden to this card, so the file does not move (delta 0) and stays stale; the in-memory recompute is labelled as such",
+  "recomputed_remaining": 3029,
+  "recomputed_requests": 1291
+ },
+ "ledger_before": {
+  "file_generated_at_utc": "2026-10-26T22:33:00Z",
+  "file_remaining": 3144,
+  "file_requests": 1176,
+  "note": "72 rows written after the 22:33Z build by prior cards (not this one)",
+  "recomputed_remaining": 3072,
+  "recomputed_requests": 1248
+ },
+ "live": {
+  "dur_s": 167.5,
+  "new_files": [
+   "cell-lease-reopen-20261027T084049Z-p7-001.gates.json",
+   "cell-lease-reopen-20261027T084049Z.analysis.json",
+   "cell-lease-reopen-20261027T084049Z.grade-v5.json",
+   "cell-lease-reopen-20261027T084049Z.json",
+   "cell-lease-reopen-20261027T084049Z.md",
+   "rows-cell-lease-reopen-20261027T084049Z.jsonl",
+   "rows-cell-lease-reopen-20261027T084049Z.jsonl.claim.json"
+  ],
+  "rc": 0,
+  "rows_written": 56,
+  "stdout_tail": [
+   "cell: 4/7 run ok rows=56",
+   "cell: 5/7 grade ok verdicts=lease-reopen acc=3/10 decidable=10(pass 3, fail 7) undecidable=0 missing=6 text=2 verified=False",
+   "cell: EXIT 0 \u2014 cell lease-reopen 20261027T084049Z recorded"
+  ],
+  "turns_requested": 23,
+  "turns_truncated": true
+ },
+ "recorded_by": "LEASE-REOPEN-23 (one 23-turn lease-reopen cell, rep 1, gen-6 tree; driven through tools/run_a_star.py cell_argv()/run_cell() \u2014 launcher not edited)",
+ "rep": 1,
+ "request_accounting": {
+  "billed_requests": 43,
+  "card_cap": 40,
+  "overrun": 4,
+  "total_wire_requests": 44,
+  "warmup_requests": 1
+ },
+ "rows_file": "rows-cell-lease-reopen-20261027T084049Z.jsonl",
+ "rows_sha256": "e58c21f8366695915211d801cd7b9c6c475d923552080abba651843307aabb7e",
+ "schema": "lease-reopen-23/1",
+ "shape": {
+  "answer_verified_rows": 3,
+  "answer_verified_turns": [
+   14,
+   18,
+   20
+  ],
+  "cap_length_rows": [],
+  "degenerate_stop_turns": 0,
+  "final_turn": 23,
+  "final_turn_finish_reason": "tool_calls",
+  "shape": "shape_ok",
+  "why": "answer_verified >= 1 (3 rows: turns [14, 18, 20]); every turn row carries a recorded finish_reason and the final turn (T23) carries 'tool_calls'; no row is cap-length (max_tokens 4096 everywhere, no completion near it); degenerate stop turns 0. The final turn is 'tool_calls' because the cell was capped at --turns 23 by design (run.turns_truncated true), not because it completed or was truncated mid-answer."
+ },
+ "treatment": {
+  "distinguish": "the T23 row's lease rises 1->2 on the turn that the fixture declares; a growing prompt alone would not move `lease`, and prompt_sha256 changes on 22 of 23 turns for unrelated reasons (question text), so lease is the discriminator, not prefix growth",
+  "fire_turn": 23,
+  "fired": true,
+  "lease_1_turns": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22
+  ],
+  "lease_2_turns": [
+   23
+  ],
+  "marker": "lease > 1 on a turn row (fixture treatments.predicates['lease-reopen']; run_longrun.py:1273-1278, lease = 1 + count(walls <= t), lease_start = t)",
+  "preflight": "cell.py printed '[lease-reopen] first lease step at turn T23'; the row agrees with the preflight at the exact declared turn",
+  "t22_row": {
+   "finish_reason": "stop",
+   "lease": 1,
+   "prompt_sha256": "e76210e8439335ae253d0285089a15914818769485b5d9a82943eefc2844c2fa",
+   "turn": 22
+  },
+  "t23_initial_row": {
+   "lease": 2,
+   "turn": 23
+  },
+  "t23_row": {
+   "evicted": 0,
+   "finish_reason": "tool_calls",
+   "lease": 2,
+   "prompt_sha256": "14078d25bba110482e8e6d19db337899ed9f91f8afc6578eb9ddef7fb49dbd8d",
+   "prompt_tokens": 1229,
+   "turn": 23
+  }
+ },
+ "turns": 23
+}

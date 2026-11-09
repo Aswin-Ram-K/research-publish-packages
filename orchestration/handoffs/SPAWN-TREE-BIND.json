@@ -1,0 +1,58 @@
+{
+ "unit": "SPAWN-TREE-BIND",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/spawn_record.py",
+  "experiments/ptr-engine/longrun/tests/test_spawn_tree_binding.py",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/SPAWN-TREE-BIND.md",
+  "orchestration/journals/SPAWN-TREE-BIND.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "23 passed (18 existing unmodified + 5 new); 0 requests; TRANCH1-DRYRUN settled before the edit (cell.py sha b549e45e... at start)",
+  "commands": [
+   "python3 -m pytest -q tests/test_spawn_classification.py tests/test_spawn_tree_binding.py -> 23 passed, exit 0",
+   "red D5 (binding_failures call removed from validate_refusal) -> 2 failed: test_d5_historical_record_against_permissive_tree_is_refused 'the historical record certified a tree it does not describe (exit 0): spawn_record: OK exit=4' ; test_d5_record_without_binding_keys_is_refused 'a record naming no tree validated OK: spawn_record: OK exit=4' ; restored -> 5 passed",
+   "red D6 (cell.py writer back to fixed key list) -> 3 failed: test_d6_refusal_document_carries_instrumentation \"'instrumentation' not found in {...}\" ; test_d5_matching_tree_is_accepted 'the record does not name the cell.py that wrote it' ; test_d5_historical... 'tree binding mismatch (D5)' not found ; restored -> 5 passed, shas byte-identical",
+   "attack measured: permissive-G1 /tmp cell, same argv -> exit 12 (honest exit 4); historical record vs --cell-path <permissive> -> exit 1 'tree binding mismatch (D5): record cell_sha256=<honest> but <perm>=<sha> (cell_sha256)'"
+  ],
+  "tests": {
+   "test_d5_historical_record_against_permissive_tree_is_refused": 0,
+   "test_d5_record_without_binding_keys_is_refused": 0,
+   "test_d5_matching_tree_is_accepted": 0,
+   "test_d6_refusal_document_carries_instrumentation": 0,
+   "test_d5_unstamped_tree_is_labelled_not_invented": 0
+  }
+ },
+ "defects": {
+  "D5_tree_binding": "CLOSED - record carries cell_sha256/spawn_record_sha256/argv/tree_sha; validate_refusal requires them and compares the shas against --cell-path/--spawn-record-path (defaults = on-disk pair). Missing keys -> exit 1 'no tree binding (D5): record names neither cell_sha256 nor spawn_record_sha256'; mismatch -> exit 1 naming both shas and the field. tree_sha is read from .git as FILES (a git child would be an undeclared spawn in the record's own ledger); no commit -> literal 'unstamped'.",
+  "D6_refusal_doc_drops_instrumentation": "CLOSED - cell.py's refusal writer starts from SpawnRecord.as_dict() (spawns, counts, instrumentation, D5 binding) and adds the refusal's own facts; on-disk refusal validates with no repair helper. complete_refusal_document() retained for pre-fix documents only, and invents no binding."
+ },
+ "cell_sha_before": "b549e45e12beacbd11cd41a523087d2f6f327f608380528bc6b566c296937488",
+ "cell_sha_after": "e24e867b8fe9eec7d1344f5738d9f04022f9f5d0968fa0f575ab9c30e6edf013",
+ "spawn_record_sha_before": "8bb17349feae38f19f872de19d4e4702527740d1cb86542c45cd00f5e8ba4bca",
+ "spawn_record_sha_after": "eba1547168afd1bd73891ee752994e90da9c77a70f386d39a9ef7dc7de8fe07c",
+ "tree_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+ "can_certify_only_named_tree": "yes",
+ "blocker": "",
+ "next_unit_hint": "D5/D6 closed. RUN-A*'s precondition 2 may now rest on the certificate: a record certifies only the tree whose shas it carries, and the historical-record attack is refused exit 1. Residual for a future card (not a regression): the binding names cell.py + spawn_record.py, so a conductor WRAPPER that imports cell and monkeypatches a gate records the honest cell.py sha; if wrappers are ever admitted as run trees, bind the wrapper too (argv[0] is already recorded).",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/spawn_record.py",
+  "experiments/ptr-engine/longrun/tests/test_spawn_tree_binding.py",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/SPAWN-TREE-BIND.md",
+  "orchestration/handoffs/SPAWN-TREE-BIND.json",
+  "orchestration/journals/SPAWN-TREE-BIND.jsonl"
+ ],
+ "requests": 0,
+ "tool_calls": 22,
+ "bound": 30,
+ "verdict_row": {
+  "command": "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_spawn_classification.py experiments/ptr-engine/longrun/tests/test_spawn_tree_binding.py",
+  "exitCode": 0,
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "result": "PASS"
+ }
+}

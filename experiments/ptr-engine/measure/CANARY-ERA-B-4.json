@@ -1,0 +1,157 @@
+{
+ "schema": "canary-era-b/1",
+ "unit": "CANARY-ERA-B-4",
+ "attempt": 4,
+ "ts": "2026-10-27T00:48:00Z",
+ "execution_note": "SECOND live execution of this card. The FIRST execution (recorded in full under prior_execution below, and preserved byte-for-byte) stopped at gate 2 with zero requests because two ledger records disagreed. A successor unit re-froze the baseline (LEDGER-RECONCILE-DELTA, handoff 2026-10-27T00:36Z), so the same gate now exits 0 and the canary ran.",
+ "objective": "First live 4-arm x 12-turn era-B canary that could actually answer a tool call, classified from the rows, to decide whether the grid may launch.",
+ "the_question_answered": {
+  "tools_schema_sent_true": "59 of 59 rows (every row written by this run: pointer-stable 25/25, transcript-grow 13/13, transcript-compact 14/14, lease-reopen 7/7)",
+  "nonempty_structured_tool_calls": "40 of 59 rows (pointer-stable 16, transcript-grow 9, transcript-compact 10, lease-reopen 5); 0 of 59 carried only the text notation",
+  "tool_call_items": "78 structured call items parsed from those 40 rows; 14 executed (pointer-stable 10, lease-reopen 4); 0 carried billed=true",
+  "tool_followup_rows": "10 (pointer-stable 7, transcript-compact 1, lease-reopen 2, transcript-grow 0)",
+  "fetch_rounds_billed": "0 rows carry a billed tool call; 10 tool-followup HTTP rows were billed as requests; sum(fetch_rounds_this_turn) = 40 (pointer-stable 26, lease-reopen 8, transcript-compact 4, transcript-grow 2)",
+  "verdict_one_line": "THE CHANNEL WORKS. Unlike LIVE-CANARY-4ARM-3 (0 structured calls in 36 requests) every row declares the schema and 40/59 rows carry a non-empty structured tool call; the zeros are gone."
+ },
+ "epoch": {
+  "harness_sha256": "efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3",
+  "generation": 6,
+  "evidence": "every one of the 59 rows carries harness_sha256 = efefd885..., i.e. generation 6, so these rows are post-TOOL-CHANNEL-WIRE and are NOT poolable with the 48 generation-5 rows on disk",
+  "claim": "every row claim='none', comparison_eligible=false (smoke) -- no arm enters H1/H2/H3"
+ },
+ "gates": {
+  "gate1_pin": {
+   "verdict": "PASS",
+   "pin_generation": 6,
+   "pin_harness_sha256": "efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3",
+   "recomputed_from_disk": "efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3",
+   "recomputation": "independently re-hashed all six pin inputs (analyze_stats.py 30b07d4d..., client.py 9b12b2ea..., fixture 0804b515..., grade_v5.py 3d70ed1d..., run_longrun.py 4f40dde1..., tools/det_verify.py 12ccc74e...) and rebuilt the digest with cell.py:129-135 + :340-346's recipe: all six MATCH and the composite matches the record",
+   "cell_py_own_sha256": "c494e212679f8e73c84226cf486566d0716559c0f2cd677f20845b24057baf86",
+   "cell_py_gap": "the card asks for 'cell.py's sha256 equals the value gen 6 recorded'; gen 6 records NO standalone cell.py sha256, because cell.py is not in its own HARNESS_FILES list (by design). The gate is therefore read as: the gen-6 composite must match a recomputation from cell.py's own recipe -- it does. Recorded alongside: cell.py mtime is 2026-10-27T00:17:51Z and its sha c494e212... differs from the 0bddd4e0... the previous execution observed at 00:16Z, i.e. cell.py MOVED AFTER gen 6 froze (23:25:10Z) and after the previous attempt of this card. The change does not move the composite digest, but it is unattributed here and is reported as a finding, not papered over."
+  },
+  "gate2_dry_run": {
+   "verdict": "PASS",
+   "command": "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --hypothesis smoke --max-wall 900 --dry-run",
+   "exit_code": 0,
+   "lines": [
+    "RUN-A canary arms=4 cells=1,7,13,15 turns=12 requests=48 claim=smoke",
+    "RUN-A DRY cell 1 pointer-stable r1 rc=0 cell: 0/7 dry-run G1 1,236/4,320 requests . G2 720 s of 900 s . G3 n=12 (smoke, non-comparable)",
+    "RUN-A DRY cell 7 transcript-grow r1 rc=0 cell: 0/7 dry-run G1 1,236/4,320 requests . G2 720 s of 900 s . G3 n=12 (smoke, non-comparable)",
+    "RUN-A DRY cell 13 transcript-compact r1 rc=0 cell: 0/7 dry-run G1 1,236/4,320 requests . G2 720 s of 900 s . G3 n=12 (smoke, non-comparable)",
+    "RUN-A DRY cell 15 lease-reopen r1 rc=0 cell: 0/7 dry-run G1 1,236/4,320 requests . G2 720 s of 900 s . G3 n=12 (smoke, non-comparable)",
+    "RUN-A DRY END cells=4 refused=0 requests=0 claim=smoke turns=12 max_wall=900.0 canary_arms=4 canary_requests=48"
+   ],
+   "delta_vs_prior_execution": "the prior execution refused here (exit 1: LEDGER-GRID-BASELINE-2 remaining 3192 vs live 3144); this dry run printed 'RUN-A RECONCILE baseline=1176 attributed_delta=0 live=1176 explained=1176 gap=0', so the two records now agree and the gate passes",
+   "flag_note": "the card's invocation string also names --thinking off --max-turns 12 --turn-wall-cap 180 --runaway-turns 2 --no-cell-handoff. run_a_star.py:928 parses with parse_args(), so those five flags are REJECTED ('unrecognized arguments', exit 2, 0 requests -- probed). They are not launcher flags: cell_argv (run_a_star.py:781-787) hard-codes exactly those five values (--thinking off, --turn-wall-cap 180, --runaway-turns 2, --no-cell-handoff) and the canary passes --turns 12. So the requested shape is satisfied by the launcher's own argv, not by CLI flags."
+  },
+  "gate3_argv": {
+   "verdict": "PASS",
+   "pin_expected_generation": 6,
+   "pin_expected_digest": "efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3",
+   "pinned_digest_returns": "efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3",
+   "argv_fragment_quoted": "run_a_star.py:786 '--expect-harness', pinned_digest(),",
+   "note": "gen 6, not the generation-5 35ff41b7 that the canary's 36 gen-5 rows ran on; verified statically by importing the launcher (PIN_EXPECTED_GENERATION=6, pinned_digest() -> efefd885...)"
+  },
+  "gate4_ledger": {
+   "verdict": "NO DELTA MEASURED -- the ledger did not move, and that is itself the finding",
+   "before": {"requests": 1176, "remaining": 3144, "generated_at_utc": "2026-10-26T22:33:00Z"},
+   "after": {"requests": 1176, "remaining": 3144, "generated_at_utc": "2026-10-26T22:33:00Z"},
+   "note": "the ledger is rebuilt from rows-*.jsonl when the launcher finishes; the launcher was killed by a host restart before that rebuild, so the record is STALE, not unmoved-by-choice. Counting the rows on disk instead: 59 rows = 59 billed requests (57 distinct request bodies; 2 duplicate bodies re-sent within their turn), which is 11 MORE than the 48 the launcher priced (10 tool-followup rows + 2 duplicate bodies). Reported as a finding: canary_requests=48 undercounts a canary whose arms fetch."
+  }
+ },
+ "run": {
+  "command": "/usr/bin/python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --hypothesis smoke --max-wall 900",
+  "one_invocation": true,
+  "retried": false,
+  "exit_code": null,
+  "exit_code_note": "UNKNOWN: the invocation was interrupted by two host restarts. Three arms completed and wrote grade-v5/analysis/md artefacts; the fourth (lease-reopen) stopped after 7 rows at turn 3 and the process was gone when the host came back (job_list: no background jobs). No second invocation was spent, per the card's 'one invocation, no retries'.",
+  "cells_complete": ["pointer-stable", "transcript-grow", "transcript-compact"],
+  "cells_incomplete": ["lease-reopen (7 rows, turns 1-3 of 12)"],
+  "rows_on_disk": [
+   "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261027T004027Z.jsonl (25 rows)",
+   "experiments/ptr-engine/measure/rows-cell-transcript-grow-20261027T004129Z.jsonl (13 rows)",
+   "experiments/ptr-engine/measure/rows-cell-transcript-compact-20261027T004155Z.jsonl (14 rows)",
+   "experiments/ptr-engine/measure/rows-cell-lease-reopen-20261027T004219Z.jsonl (7 rows)"
+  ]
+ },
+ "per_arm": {
+  "pointer-stable": {
+   "rows": 25, "turns_reached": 12, "tools_schema_sent_true": 25, "rows_with_structured_tool_calls": 16,
+   "tool_call_items": 44, "tool_calls_executed": 10, "tool_followup_rows": 7, "fetch_rounds_this_turn_sum": 26,
+   "answer_verified_true": 2, "answer_verified_false": 1, "answer_verified_turns": [8, 12],
+   "finish_reason": {"tool_calls": 21, "stop": 4}, "cap_length_completions": 0,
+   "last_turn": "turn 12: kind=turn, finish_reason=stop, answer_verified=true",
+   "shape": "shape_ok",
+   "shape_basis": "answer_verified >= 1 (2) AND the terminal turn's recorded finish_reason is 'stop'",
+   "label": "finish_reason fallback -- stop_signal_source is ABSENT on every row"
+  },
+  "transcript-grow": {
+   "rows": 13, "turns_reached": 12, "tools_schema_sent_true": 13, "rows_with_structured_tool_calls": 9,
+   "tool_call_items": 10, "tool_calls_executed": 0, "tool_followup_rows": 0, "fetch_rounds_this_turn_sum": 2,
+   "answer_verified_true": 1, "answer_verified_false": 2, "answer_verified_turns": [12],
+   "finish_reason": {"tool_calls": 10, "stop": 3}, "cap_length_completions": 0,
+   "last_turn": "turn 12: kind=turn, finish_reason=stop, answer_verified=true",
+   "shape": "shape_ok",
+   "shape_basis": "answer_verified >= 1 (1) AND terminal finish_reason 'stop'",
+   "label": "finish_reason fallback (stop_signal_source absent)"
+  },
+  "transcript-compact": {
+   "rows": 14, "turns_reached": 12, "tools_schema_sent_true": 14, "rows_with_structured_tool_calls": 10,
+   "tool_call_items": 11, "tool_calls_executed": 0, "tool_followup_rows": 1, "fetch_rounds_this_turn_sum": 4,
+   "answer_verified_true": 1, "answer_verified_false": 2, "answer_verified_turns": [12],
+   "finish_reason": {"tool_calls": 10, "stop": 4}, "cap_length_completions": 0,
+   "last_turn": "turn 12: kind=turn, finish_reason=stop, answer_verified=true",
+   "shape": "shape_ok",
+   "shape_basis": "answer_verified >= 1 (1) AND terminal finish_reason 'stop'",
+   "label": "finish_reason fallback (stop_signal_source absent)"
+  },
+  "lease-reopen": {
+   "rows": 7, "turns_reached": 3, "tools_schema_sent_true": 7, "rows_with_structured_tool_calls": 5,
+   "tool_call_items": 13, "tool_calls_executed": 4, "tool_followup_rows": 2, "fetch_rounds_this_turn_sum": 8,
+   "answer_verified_true": 0, "answer_verified_false": 0, "answer_verified_turns": [],
+   "finish_reason": {"tool_calls": 7}, "cap_length_completions": 0,
+   "last_turn": "turn 3: kind=turn, finish_reason=tool_calls, answer_verified=null -- the turn that was in flight when the host restarted",
+   "shape": "shape_unknown",
+   "shape_basis": "the cell was cut at 3 of 12 turns (7 rows, no grade-v5/analysis/md artefact): the 12-turn window never closed and no answer was ever verified, so nothing here can be rounded to ok",
+   "resolving_measurement": "one complete 12-turn lease-reopen cell on the same generation-6 tree: 12 rows, terminal finish_reason, and answer_verified on its answer turn"
+  }
+ },
+ "open_gap": {
+  "stop_signal_source": "ABSENT on all 59 rows (the key does not exist in any row). finish_reason IS populated ('tool_calls' on 40 rows, 'stop' on 11), so classification used the recorded finish_reason as a labelled fallback. The CANARY-ERA-B-FIX gap named in the card -- 'if it is still null, that is the open gap and name it' -- is STILL OPEN: no era-B row carries stop_signal_source.",
+  "tools_schema_sent_populated": "yes, true on 59/59 -- the wire field the last era-B card could not find now exists",
+  "no_cap_length": "0 rows with finish_reason='length' or truncated=true, so no shape_degenerate arm by the cap-length rule"
+ },
+ "decision": {
+  "grid_may_launch": false,
+  "frozen_rule": "all four shape_ok => true; any degenerate => false with arm/turn/cause; any unknown => false plus the one measurement that resolves it",
+  "arms_shape_ok": 3,
+  "arms_degenerate": 0,
+  "arms_unknown": 1,
+  "cause": "lease-reopen is shape_unknown: the invocation was killed by host restarts at turn 3 of 12 (7 rows, no terminal row, no verified answer)",
+  "resolving_measurement": "one complete 12-turn lease-reopen cell (12 rows, terminal finish_reason, answer_verified on the answer turn) on this same generation-6 tree",
+  "not_a_softening": "the three complete arms all look healthy; the hold comes from the missing fourth arm alone, and it is a hold, not a failure"
+ },
+ "findings": [
+  "cell.py moved after generation 6 froze (sha 0bddd4e0... at 00:16Z -> c494e212... at 00:17:51Z); the composite harness digest is unaffected because cell.py is not in its own HARNESS_FILES list, but the gate script itself is outside the pin's coverage and the change is unattributed.",
+  "the ledger did not move because the launcher never reached its rebuild; the row files bill 59 requests against a priced 48.",
+  "stop_signal_source is still absent on every era-B row.",
+  "the card's invocation string carries five flags the launcher does not accept (exit 2 'unrecognized arguments'); the same values are hard-coded in cell_argv, so the shape is achieved, but the written command cannot be run verbatim."
+ ],
+ "not_touched": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/client.py",
+  "experiments/ptr-engine/longrun/analyze_stats.py",
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "measure/HARNESS-PIN.json",
+  "measure/GRID-PARAMS.json",
+  "measure/REQUEST-LEDGER.json",
+  "every fixture, every row file, every grade file, every published page"
+ ],
+ "prior_execution": {
+  "record": "the first live execution of this card stopped at gate 2 with requests_sent=0 and grid_may_launch=false. This file is a declared write path and was REPLACED by the second execution's record; the first execution's gate evidence survives in orchestration/handoffs/CANARY-ERA-B-4.json (prior_execution block) and in the journal, but the first file's full 136-line body was not copied aside -- recorded as a loss, not claimed as preserved",
+  "outcome": "stopped_at_gate_2 (launcher refused: LEDGER-GRID-BASELINE-2 remaining 3192 vs REQUEST-LEDGER 3144)",
+  "why_superseded": "LEDGER-RECONCILE-DELTA re-froze the baseline at 1176/3144; the identical dry run now exits 0"
+ }
+}

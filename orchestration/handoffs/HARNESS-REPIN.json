@@ -1,0 +1,83 @@
+{
+ "unit": "HARNESS-REPIN",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/measure/HARNESS-PIN.json",
+  "docs/HARNESS-PIN.md",
+  "orchestration/units/HARNESS-REPIN.md",
+  "orchestration/handoffs/HARNESS-REPIN.json",
+  "orchestration/journals/HARNESS-REPIN.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "pin written: harness_sha256=1f7c67914e5b76680616f08c16708635060a81ab3932c20806e597a5343f3285 (5 HARNESS_FILES + fixture, recipe cell.py:334-346); cell.py pinned separately c29a9fb3...; 3 harness files moved, 2 attributed to settled cards (RUNAWAY-POLICY -> run_longrun.py, ANALYSIS-CONSUMER-FIX -> analyze_stats.py), 1 unattributed (cell.py 18:54:16Z); 3 premise corrections (P1 cell.py:1882 / run_longrun.py:226, P2 cell.py:1956/2005/2009, P3 cells[*].cell_py_flags[8]); requests_sent=0, network_events=0",
+  "commands": [
+   "git --no-optional-locks rev-parse HEAD -> f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+   "git --no-optional-locks ls-files --error-unmatch cell.py analyze_stats.py run_longrun.py -> cell.py and analyze_stats.py untracked; run_longrun.py tracked",
+   "sha256 over HARNESS_FILES+fixture in cell.py order -> 1f7c67914e5b76680616f08c16708635060a81ab3932c20806e597a5343f3285",
+   "grep -n 'TOOL_FETCH_ROUNDS_PER_ARM\\s*=' run_longrun.py -> 226:TOOL_FETCH_ROUNDS_PER_ARM = 24",
+   "grep -n 'fetch-followup-allowance' cell.py run_a_star.py -> cell.py:954,1160,1882,1883,1986; run_a_star.py:201",
+   "sed -n '1956,2009p' cell.py -> elif args.dry_run: ... print WOULD-REFUSE ... return 0",
+   "python3 handoff scan (write_paths over 130 handoffs) -> the owning cards quoted in HARNESS-PIN.json#attribution",
+   "python3 bounded copy scan of manifests/, manifests/archive/, scratch/, audit/, state/logs/ -> 2406 .py files, 0 matches for e24e867b (no baseline for the cell.py diff)"
+  ],
+  "requests_sent": 0,
+  "network_events": 0,
+  "harness_sha256": "1f7c67914e5b76680616f08c16708635060a81ab3932c20806e597a5343f3285",
+  "supersedes": "c4541802",
+  "moved": {
+   "run_longrun.py": [
+    "29445320",
+    "0d581d1f"
+   ],
+   "cell.py": [
+    "e24e867b",
+    "c29a9fb3"
+   ],
+   "analyze_stats.py": [
+    "8b829ca4",
+    "800c8f6c"
+   ]
+  },
+  "unattributed": "cell.py 18:54:16Z (bytes re-emitted unchanged at 18:55:57Z)",
+  "verdict_row": {
+   "command": "python3 -m pytest experiments/ptr-engine/longrun/tests/test_runaway_policy.py experiments/ptr-engine/longrun/tests/test_gate_messages.py -q",
+   "exitCode": 0,
+   "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+   "result": "8 passed in 3.31s",
+   "ordering_note": "the verdict row was recorded AFTER this handoff file was first written (the handoff write and the verdict shared one turn); the ordering is disclosed here rather than back-dated. A second, refused verdict attempt (a 'cd ... && python3 -c' pin check) was rejected as command-not-allowed, which is why a test-runner command carries the row."
+  },
+  "pin_recheck_at_handoff_close": {
+   "at": "2026-10-26T19:01:45Z",
+   "recomputed": "1f7c67914e5b76680616f08c16708635060a81ab3932c20806e597a5343f3285",
+   "matches_written_pin": true,
+   "cell_py_sha256": "c29a9fb36e9e8f0e166583d56db00b2184fbc12a97b77b1a72ca9f612c1a9c59"
+  }
+ },
+ "bound": {
+  "limit": 20,
+  "tool_calls": 24,
+  "exceeded": true,
+  "count_breakdown": {
+   "productive": 19,
+   "failed_and_retried": 2,
+   "killed_unbounded_glob": 1,
+   "verdict_record": 1,
+   "final_repair": 1
+  },
+  "reason": "the tree moved three more times inside the window (cell.py 18:54:16Z and 18:55:57Z, analyze_stats.py 18:54:01Z and 18:55:52Z), each move forcing a re-hash; plus two heredoc errors (a HARNESS_FILES list that excludes cell.py, then a name-mapping bug in the digest re-check) and one unbounded recursive glob that had to be killed. No gate, threshold, number or code byte was changed to save calls."
+ },
+ "assumptions": [
+  "c4541802's recorded_at is not carried by any artefact read here (first mention: orchestration/handoffs/GRID-SHAPE-TOOLS.json); the pin records it as 'unknown' rather than inventing a date.",
+  "cell.py is pinned separately because cell.py's HARNESS_FILES deliberately excludes itself: the digest covers its inputs, and a digest cannot cover the program that computes it.",
+  "The 'item 2a' of the card is treated as a locator error, not as licence to edit GRID-SHAPE.json; the wrong claim is named at the key path where it actually lives."
+ ],
+ "blocker": "unattributed-change: cell.py written at 18:54:16Z (sha c29a9fb3...) with no settled card claiming it; no baseline copy of e24e867b exists in the tree and cell.py is untracked by git, so the hunk cannot be quoted byte-for-byte. Not reverted, not normalised.",
+ "next_unit_hint": "Do not launch a live cell against a moving tree. 1) Ask the owner of the 18:54:16Z cell.py write to claim it (a handoff naming cell.py as a write path). 2) Re-run the tools-on rehearsal and require harness_sha256 == 1f7c67914e5b76680616f08c16708635060a81ab3932c20806e597a5343f3285; anything else is `moved` again. 3) When pricing a fetch-cap change, edit TOOL_FETCH_ROUNDS_PER_ARM (run_longrun.py:226), not --fetch-followup-allowance, and expect G1 to move with it.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/HARNESS-PIN.json",
+  "docs/HARNESS-PIN.md",
+  "orchestration/units/HARNESS-REPIN.md",
+  "orchestration/handoffs/HARNESS-REPIN.json",
+  "orchestration/journals/HARNESS-REPIN.jsonl"
+ ]
+}

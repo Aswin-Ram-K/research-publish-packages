@@ -1,0 +1,53 @@
+{
+ "unit": "POOL-REPS-TOOL",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/pool_reps.py",
+  "experiments/ptr-engine/measure/pooled/README.md",
+  "tests/test_pool_reps.py",
+  "experiments/ptr-engine/longrun/analyze_stats.py",
+  "orchestration/units/POOL-REPS-TOOL.md",
+  "orchestration/handoffs/POOL-REPS-TOOL.json",
+  "orchestration/journals/POOL-REPS-TOOL.jsonl"
+ ],
+ "evidence": {
+  "pooled_n_and_p95": "n_turns=144 from 3x48-turn era-B cells; analyze_stats.quantile_ci(ttft_s, q=0.95) -> p95=0.3551s CI95=[0.3007, 0.3788] n=144 rank_span=(132,142); per-rep n=48 still refused: 'refusing p95 at n=48: the 95% order-statistic span is ranks 43-48 (p89.6-p100.0) and n*(1-q)=2.4 < 3; minimum n for p95 is 60'",
+  "manifest_fields": "derived=true, purpose='H1 pooled R-all', arm, n_turns, excluded_turns, created_at, pooling_rule, sources[{path,sha256,rep,arm,fixture_sha256,harness_sha256,model,tools_mode,turns_on_disk,turns_pooled}] -- all present and asserted in test_pool_three_reps_yields_n144",
+  "refusal_insufficient_reps_2": "REFUSED (insufficient_reps): 2 source file(s) supplied but --reps 3 requires 3: a 2-rep pool is not H1's n=144/arm (3 x 48 turns), and H3's exact McNemar needs b + c >= 6 discordant turns, while H1 needs n >= 60. Refusing rather than reading a smaller pool as if it were the frozen one.",
+  "refusal_insufficient_reps_1": "REFUSED (insufficient_reps): 1 source file(s) supplied but --reps 3 requires 3: a 1-rep pool is not H1's n=144/arm (3 x 48 turns), and H3's exact McNemar needs b + c >= 6 discordant turns, while H1 needs n >= 60. ...",
+  "refusal_incomparable_provenance": "REFUSED (incomparable_provenance): sources differ on harness_sha256: /tmp/pooldemo/alt/repH1.jsonl has 'aaaa-harness', /tmp/pooldemo/alt/repH2.jsonl has 'bbbb-harness' -- a pooled n is only meaningful when every rep ran the same fixture, harness, model and tools_mode; nothing is pooled across a provenance change",
+  "refusal_era_a": "REFUSED (era_a_excluded): /tmp/pooldemo/alt/eraA.jsonl is era A (rows carry `stop_reason` (engine field) or no era marker at all, which defaults to A); era B is never pooled with era A -- the two have different answer contracts and different row shapes",
+  "refusal_source_unusable": "REFUSED (source_unusable): /tmp/pooldemo/alt/dead.jsonl is stamped usable_for: [] (demo: excluded by name); an excluded cell is never pooled",
+  "refusal_rows_sha_mismatch": "REFUSED (rows_sha_mismatch): /tmp/pooldemo/alt/badsha.jsonl: manifest declares rows sha256 0000...0000 but the file on disk is 28853d5fafa74a2b8bc33c6115366a9df1b0f886d4ddfa35f35913fbeb7d0160",
+  "refusal_source_unreadable": "REFUSED (source_unreadable): /tmp/pooldemo/alt/missing.jsonl cannot be read: [Errno 2] No such file or directory: '/tmp/pooldemo/alt/missing.jsonl'",
+  "refusal_duplicate_source": "REFUSED (duplicate_source): /tmp/pooldemo/reps/rep1.jsonl was passed more than once: one cell cannot supply two reps",
+  "honesty_rule": "analyze_stats.py --rows <pooled> -> exit=1 'refused: pooled-pointer-stable-...jsonl is a DERIVED artefact (derived=true, purpose=H1 pooled R-all), not a measured cell; pass --pooled to analyse the pooled view explicitly'; with --pooled -> exit=0 'analyze_stats  rows=144  files=1'; glob measure/*.jsonl -> 16 files, pooled included? False; glob measure/rows-*.jsonl -> 15 files, pooled-* match? False; default out-dir=measure/pooled",
+  "red_green": "MUTATED minimum reps 3 -> 1 (pool signature + CLI default): tests/test_pool_reps.py::test_default_reps_is_three FAILED 'DID NOT RAISE PoolRefused' (1 failed); restored -> 15 passed",
+  "tests": "PYTHONPATH=src python3 -m pytest tests/test_pool_reps.py -q -> 15 passed; regression PYTHONPATH=src python3 -m pytest experiments/ptr-engine/longrun/tests/test_analysis_consumer.py -q -> 6 passed",
+  "requests": 0,
+  "commands": [
+   "PYTHONPATH=src python3 -m pytest tests/test_pool_reps.py -q",
+   "PYTHONPATH=src python3 -m pytest experiments/ptr-engine/longrun/tests/test_analysis_consumer.py -q",
+   "python3 experiments/ptr-engine/tools/pool_reps.py --arm pointer-stable --rows <rep1> <rep2> <rep3>",
+   "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows <pooled> --pooled"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "After tranche 1 writes 3 comparable era-B reps per arm, run pool_reps.py --arm <arm> --rows <rep1> <rep2> <rep3>; the pooled manifest's provenance_complete_on must read 3/3 and sources[].harness_sha256 must agree before any H1 number is quoted.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/pool_reps.py",
+  "experiments/ptr-engine/measure/pooled/",
+  "tests/test_pool_reps.py",
+  "experiments/ptr-engine/longrun/analyze_stats.py",
+  "orchestration/units/POOL-REPS-TOOL.md",
+  "orchestration/handoffs/POOL-REPS-TOOL.json",
+  "orchestration/journals/POOL-REPS-TOOL.jsonl"
+ ],
+ "assumptions": [
+  "Era is read from row shape per tranche_canary._shape_era (stop_reason => A; finish_reason/answer_verified => B; no marker => A, the canary's own conservative default), not from a fixture sha allow-list.",
+  "Provenance joins via manifest.rows_path; when a cell has no manifest provenance the field is recorded as a gap (provenance_gaps) rather than invented, and comparability compares only present values.",
+  "Demo reps under /tmp used a placeholder harness_sha256 ('DEMO-harness-v6tools') because the real v6-tools cell's joined manifest carries no provenance block; the demo proves mechanism and arithmetic, not a grid measurement."
+ ],
+ "analyze_stats_change": "added module function is_derived_rows(path) and the --pooled flag plus a four-line guard in main() before rows are loaded; no threshold, no quantile logic, no MIN_N/TAIL_MIN touched",
+ "tool_calls": 28
+}

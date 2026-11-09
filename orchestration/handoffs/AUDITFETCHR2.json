@@ -1,0 +1,96 @@
+{
+  "unit": "AUDITFETCHR2",
+  "status": "complete",
+  "target": "bounded-context-fetch TX-02 fetch-r1 vs fetch-r2 score collapse",
+  "recomputed_scores": {
+    "fetch-r1": "28/48",
+    "fetch-r2": "1/48",
+    "method": "score_longrun.py on the two row files; reported scores reproduce exactly"
+  },
+  "side_by_side": {
+    "fetch-r1": {
+      "rows": 110,
+      "distinct_turns": 88,
+      "checkpoint_turns": 48,
+      "score": "28/48",
+      "rows_with_tool_call_ids": 44,
+      "tool_followup_rows": 22,
+      "fetch_rows_total": 47,
+      "retrieval_outcomes": ["NOT_FOUND", "OK"],
+      "request_error": 0,
+      "stop_reason": {"stop": 87, "tool_calls": 23},
+      "failed_turns": 0,
+      "tools_mode": "on:fetch",
+      "tools_declared": true,
+      "tools_schema_sent": true,
+      "prompt_tokens_sum": 244800,
+      "cached_tokens_present": "108/110",
+      "wall_ms_sum": 76612.7,
+      "model": "occamy-1.0",
+      "engine": "sglang",
+      "endpoint": "http://192.168.2.168:8012/v1",
+      "fixture_sha256": "dd267a049a876a4fee9979fd8336488a180048e9a3db9d11d46446c6b8111662",
+      "task_id": "TX-02",
+      "run_manifest_sha256": "e35969de4f7d74729d95e08ae5c89ea1b7033526ff028a7313e46587f8137754",
+      "harness_sha256": "969d7846175c24d6f6fb3d4a2a5b2a8ae4f8ebc6ae9dfbf420db9b6c10ac563a",
+      "ts_range": ["2026-11-09T07:31:17.419Z", "2026-11-09T07:32:49.831Z"],
+      "answer_kind_checkpoint_final": {"NUM": 29, "NONE": 18, "TEXT": 1}
+    },
+    "fetch-r2": {
+      "rows": 114,
+      "distinct_turns": 88,
+      "checkpoint_turns": 48,
+      "score": "1/48",
+      "rows_with_tool_call_ids": 52,
+      "tool_followup_rows": 26,
+      "fetch_rows_total": 55,
+      "retrieval_outcomes": ["NOT_FOUND", "OK"],
+      "request_error": 0,
+      "stop_reason": {"stop": 88, "tool_calls": 26},
+      "failed_turns": 0,
+      "tools_mode": "on:fetch",
+      "tools_declared": true,
+      "tools_schema_sent": true,
+      "prompt_tokens_sum": 271122,
+      "cached_tokens_present": "111/114",
+      "wall_ms_sum": 118807.2,
+      "model": "occamy-1.0",
+      "engine": "sglang",
+      "endpoint": "http://192.168.2.168:8012/v1",
+      "fixture_sha256": "dd267a049a876a4fee9979fd8336488a180048e9a3db9d11d46446c6b8111662",
+      "task_id": "TX-02",
+      "run_manifest_sha256": "69090c0ea0dbbf78e005d5060aec4705f359b3aa426d9a13fbc47ece7bfe1494",
+      "harness_sha256": "969d7846175c24d6f6fb3d4a2a5b2a8ae4f8ebc6ae9dfbf420db9b6c10ac563a",
+      "ts_range": ["2026-11-09T07:33:29.305Z", "2026-11-09T07:37:28.013Z"],
+      "answer_kind_checkpoint_final": {"TEXT": 43, "NONE": 4, "NUM": 1}
+    }
+  },
+  "r2_checkpoint_classification": {
+    "total_checkpoints": 48,
+    "answered_correctly": 1,
+    "answered_wrongly": 43,
+    "abstained": 4,
+    "ungradeable": 0,
+    "never_asked": 0,
+    "by_distance": {
+      "2": {"answered_correctly": 0, "answered_wrongly": 12, "abstained": 0},
+      "8": {"answered_correctly": 0, "answered_wrongly": 11, "abstained": 1},
+      "20": {"answered_correctly": 0, "answered_wrongly": 10, "abstained": 2},
+      "32": {"answered_correctly": 1, "answered_wrongly": 10, "abstained": 1}
+    },
+    "note": "43 'wrong' = 35 checkpoints whose value was correct but emitted as ANSWER: TEXT instead of the contracted ANSWER: NUM, plus 8 checkpoints with a wrong value. 36/48 had answer_verified=true at value level."
+  },
+  "fetch_calls_issued_in_r2": true,
+  "code_path_not_reproduced": "No 'tool not advertised' path: r2 has 52 rows with tool_call_ids, 26 tool-followup rows, 55 total fetch_rows, and retrieval outcomes NOT_FOUND/OK. tools_mode=on:fetch, tools_declared=true, tools_schema_sent=true on every row in both runs.",
+  "root_cause": {
+    "classification": "(b) endpoint-side nondeterminism",
+    "evidence": [
+      "Row-level harness/config fields are identical across runs: same tools_mode, tools_declared, tools_schema_sent, model, engine, endpoint, fixture_sha256, task_id, thinking, stream, max_tokens, harness_sha256.",
+      "Turn 1 has identical prompt_sha256 and prompt_tokens (570) in both runs, but different output: r1 'ANSWER: TEXT Working turn 1.' vs r2 'ANSWER: TEXT VAL_A=2000, VAL_B=2001, VAL_C=2002, VAL_D=2003'.",
+      "r2 then answers checkpoints as ANSWER: TEXT VAL_*=... instead of the contracted ANSWER: NUM ..., so score_longrun records answer kind TEXT != expected NUM for 43/48 checkpoints.",
+      "No harness or fixture difference explains the collapse; fetch retrieval still returns OK/NOT_FOUND."
+    ],
+    "not": ["(a) harness/configuration difference", "(c) genuine model-capability difference"],
+    "separating_measurement": "Replay turn 1 (and, if it converges, the full r2 cell) on the same endpoint with temperature=0 and a fixed seed. If outputs still differ from r1, the endpoint is nondeterministic beyond sampling; if they match r1, the collapse was sampling noise."
+  }
+}

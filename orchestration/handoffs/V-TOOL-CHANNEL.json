@@ -1,0 +1,77 @@
+{
+  "unit": "V-TOOL-CHANNEL",
+  "overall": "partial",
+  "claim_under_test": "TOOL-CHANNEL-WIRE (execution dda84411, author PASS f17663d1)",
+  "first_line": "The wire is NOT silent: a tools-on structured read_file call is executed and its <tool_result> is the last user message of the next request, billed once.",
+  "confirmed": [
+    "attack1 byte neutrality: every tools-off shape (absent, '', 'none', None, False, 0, ['read_file'], 'write_file') serialises keys ['model','messages','temperature','max_tokens','stream','chat_template_kwargs'] with no tools/tool_choice and request_digest f0499dd1335cccb27db359bee8d29c02a0f3015ee8e734404f288fbff0e2f8da; the real send_chat wire body agrees; building the body then flipping cfg.tools cannot retrofit a tools key",
+    "attack1 tools-on: keys end ['tools','tool_choice'], function.name='read_file', parameters.required=['path','start_line','end_line'], tool_choice='auto', request_digest 3c0ff847d9689168b17ab8c50dbd754d7f67cc3f590f7b387ac74a32f2ee6561",
+    "attack1 red-green: patching client.tools_body_members to return the schema unconditionally makes the byte-neutrality guard fail (1 passed via pytest.raises) - the guard bites when the gate is reverted",
+    "attack2 one reply with BOTH message.tool_calls and a <tool_call> block in content bills exactly ONE follow-up: fake.messages=1, sent=2, rounds=1, turn_calls=1 record, billed_round=True",
+    "attack3 invalid JSON ('{not json') -> refusal error=malformed_tool_arguments reason=malformed_arguments_json:..., executed=False, billed=False, 0 follow-up sends, 0 rounds",
+    "attack3 missing path -> refusal reason=missing_path, 0 sends; unknown tool 'shell' -> refusal reason=unknown_tool, 0 sends",
+    "attack3 path outside root ('../../etc/passwd', '/etc/passwd', '~/.ssh/id_rsa', 'creds.env') -> executed=False, error=path_refused/path_not_found, next prompt gets '<tool_result error=.../>' with no file content; one round IS billed and one follow-up IS sent (design choice, not a fabricated fetch)",
+    "attack4 content_len=0 with no tool_calls and no finish chunk -> stop_reason='empty_response' on the response and the row, content='', content_tokens=0, content_sha256=e3b0c442..., calls_from_response=([],[]); same shape with finish_reason='stop' -> 'stop'",
+    "attack5 text-only reply '<tool_call>...{\"path\":...}' with no structured calls still parses: 1 call, 1 follow-up, billed_round=True",
+    "attack6 honest path: a response-stamped row follows the body - tools-off row tools_schema_sent=False, tools-on row True; client.py:847 stamps it from body.get('tools')",
+    "attack7 end-to-end at the fetch_rounds seam: follow-up prompt[-1].content starts '<tool_result for=\"read_file\" path=\"ptr_engine/resolve.py\" lines=\"66-110\" base=\"engine\">', contains the real line 66 of ptr_engine/resolve.py, ends with 'Use the tool result above...'; follow-up prompt[-2]={\"role\":\"assistant\",\"content\":\"\"}; record executed=True base='engine' lines_returned=45; row.prompt_sha256==sha256(block)",
+    "historical label quantification: across experiments/ptr-engine/**/*.jsonl, 48 rows carry tools_mode 'on:read_file' in 5 row files and 0 of them carries tools_schema_sent (none retrofitted); 27 tools-off rows"
+  ],
+  "not_reproduced": [
+    "could NOT make a tools-off body gain a tools key (any shape, aliasing, or mutate-after-build); byte identity held on every attempt",
+    "could NOT make a reply carrying both structured and text calls bill two rounds - it is one round",
+    "could NOT make invalid JSON / missing path / unknown tool crash the runner or buy a round",
+    "could NOT make an empty-content, no-tool-call turn vanish: it is recorded with an explicit stop_reason",
+    "could NOT make a text-only tool call stop working"
+  ],
+  "overstated": [
+    "start_line > end_line is NOT a recorded refusal: run_longrun._call_from_arguments silently swaps it to (66,110) and runs the read (executed=True, one round billed). The card requires a refusal; pinned by xfail(strict=True) test_attack3_reversed_range_should_be_a_recorded_refusal",
+    "rows cannot carry source='structured_tool_call': execute_tool_call rebuilds the record as {path,start_line,end_line,executed,truncated,...} and drops both 'source' and 'call_id', so the handoff's next_unit_hint promise of source='structured_tool_call' on rows is not achievable (verified 'source' not in turn_calls[0])",
+    "label honesty is false on three paths: (a) make_row(cfg tools-on, resp=None) sets tools_schema_sent=True with no request at all (run_longrun.py:2071-2072 falls back to the DECLARED flag, contradicting docs section 3's 'request body's own deterministic gate'); (b) TurnWallCap.as_response stamps tools_schema_sent from live cfg (client.py:298-299), so flipping cfg.tools after a tools-off body was built yields True with no tools on that wire; (c) provenance_for (run_longrun.py:1846) derives tools_schema_sent from the flag, so a dry run with --tools read_file claims True with zero requests",
+    "tool_choice: the cfg attribute is cfg.tool_choice (not tools_choice) and NO CLI flag sets it - 'required' is unreachable through the runner; the 'mode asks for it' wording is untestable in a live path"
+  ],
+  "unverified": [
+    "the full cell loop: the tool_result path was proven at the fetch_rounds seam, not through run_cell (no live cell is runnable - pin generation 5 is stale because client.py and run_longrun.py are HARNESS_FILES)",
+    "a server that validates the OpenAI tool protocol strictly: the follow-up does not echo assistant tool_calls and sends the result as a synthetic user message with a <tool_result> XML block, with no role:'tool'/tool_call_id (run_longrun.py:1105-1109); this engine's text-style usage is assumed, not proven live",
+    "per-row proof that historical on:read_file rows serialised no schema: rows do not retain request bodies; the claim rests on the pre-change digest f0499dd1... on one captured message set",
+    "mixed reply (invalid structured call + valid text call) fetches nothing because any structured entry suppresses the text parser; defensible but means text fallback is only preserved when there are ZERO structured calls"
+  ],
+  "checks": [
+    "bash -lc '/usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_tool_channel_attack.py -q' -> 22 passed, 1 xfailed in 0.53s (exit 0)",
+    "bash -lc '/usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_tool_channel_wire.py -q' -> 8 passed (author's suite still green, unmodified)",
+    "red-green: /usr/bin/python3 -m pytest /tmp/vwire/test_redgreen.py -q -> 1 passed (byte-neutrality guard fails when tools_body_members is made unconditional)",
+    "originals sha256 before == after: client.py 9b12b2ea..., run_longrun.py 4f40dde1..., cell.py a6446bfc..., run_a_star.py 4709cd6c..., analyze_stats.py 30b07d4d..., grade_v5.py 3d70ed1d..., HARNESS-PIN.json fc1b5685..., GRID-PARAMS.json 10596c54...",
+    "handoff guard: PYTHONPATH=src /usr/bin/python3 -m pytest tests/test_orchestration_handoffs.py -q -> 18 passed (this handoff is not in the shape warning list)",
+    "originals sha256 after: cell.py 0bddd4e0... is EXTERNAL (see containment); every other forbidden path unchanged"
+  ],
+  "verdict_row": "PASS f17663d1 bash -lc '/usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_tool_channel_attack.py -q' (execution 6c1e3e8b), recorded BEFORE this handoff",
+  "blocker": "",
+  "next_unit_hint": "Fix the three label paths before any stats unit consumes tools_schema_sent: make_row's resp=None fallback and client.TurnWallCap.as_response must read the request body's actual gate (not the live/declared flag), and provenance_for should stamp the manifest block as 'declared, not sent' (or omit it) on a dry run. Either implement source='structured_tool_call' inside execute_tool_call's record or drop that promise from TOOL-CHANNEL-WIRE's handoff. Decide deliberately whether start_line>end_line should refuse (card wording) or be a documented normalisation; today it silently swaps. The wire itself now works at the fetch seam, so after pin generation 6 the 4-arm canary can expect rows with tool_calls and billed_round=true - but do NOT pool pre-fix and post-fix tools-on rows (request_digest moved f0499dd1... -> 3c0ff847...).",
+  "write_paths": [
+    "experiments/ptr-engine/tests/test_tool_channel_attack.py",
+    "docs/V-TOOL-CHANNEL.md",
+    "orchestration/handoffs/V-TOOL-CHANNEL.json",
+    "orchestration/units/V-TOOL-CHANNEL.md",
+    "orchestration/journals/V-TOOL-CHANNEL.jsonl"
+  ],
+  "tool_calls": 26,
+  "bound": 30,
+  "model_requests": 0,
+  "network_calls": 0,
+  "containment": "no edit by this unit to client.py, run_longrun.py, cell.py, run_a_star.py, analyze_stats.py, grade_v5.py, HARNESS-PIN.json, GRID-PARAMS.json, any fixture, row, grade or published page; attack tests only read LR-01.v8.json and ptr_engine/resolve.py; mutations were in-memory or under /tmp. EXTERNAL CHANGE OBSERVED: cell.py was a6446bfc... at 19:12 and is 0bddd4e0... at 19:15 (mtime 19:14:55, content now equals git HEAD), changed by a concurrent gen-6 pin/launcher unit (HARNESS-PIN-GEN6.json / LAUNCHER-GEN6-WIRE.json appeared in the same window), not by this unit; client.py 9b12b2ea... and run_longrun.py 4f40dde1... are unchanged before and after and equal the author's recorded digs.",
+  "scope": "verification only; no production change made",
+  "corrections": [
+    "docs/TOOL-CHANNEL-WIRE.md section 3 says the failure-row fallback is 'the request body's own deterministic gate' - it is the declared flag, which is a different fact when no body exists",
+    "the handoff's next_unit_hint should not promise source='structured_tool_call' on rows until execute_tool_call preserves it",
+    "docs section 1's 'tool_choice appears when the mode asks' - no CLI mode exists; the attribute is cfg.tool_choice and only a caller can set it"
+  ],
+  "scope_note": "overall partial, not pass: the wire and the consumer work, but label honesty is overstated on three paths and one refusal the card demands is missing",
+  "externalChanges": {
+    "cell.py": {
+      "before": "a6446bfc3d12fdb3ded13c0ca1a7bfcb916edfe0ee8bfab2f3b4059ca5ca8452",
+      "after": "0bddd4e0dfdbe1185bdb9663963e4c668f10d0da99974577444c87fc24736ce4",
+      "mtime": "2026-10-26T19:14:55-05:00",
+      "cause": "concurrent gen-6 pin/launcher unit (HARNESS-PIN-GEN6, LAUNCHER-GEN6-WIRE), not this verifier"
+    }
+  }
+}

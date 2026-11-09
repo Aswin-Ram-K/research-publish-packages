@@ -1,0 +1,52 @@
+{
+  "unit": "TOOL-CHANNEL-WIRE",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/client.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/tests/test_tool_channel_wire.py",
+    "docs/TOOL-CHANNEL-WIRE.md",
+    "orchestration/units/TOOL-CHANNEL-WIRE.md",
+    "orchestration/handoffs/TOOL-CHANNEL-WIRE.json",
+    "orchestration/journals/TOOL-CHANNEL-WIRE.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "8 offline tests passed, 0 model requests, 0 network calls, 0 subprocess launches in the dry flow; engine suite -k 'not pin_matches_the_bytes_on_disk' = 10 failed / 326 passed / 1 deselected (all 10 pre-existing or pin-staleness, classified below)",
+    "verdict_row": "PASS f17663d1 bash -lc '/usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_tool_channel_wire.py -q' (execution dda84411)",
+    "test_output": "bash -lc '/usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_tool_channel_wire.py -q' -> 8 passed in 0.55s",
+    "tools_off_body": "keys ['model','messages','temperature','max_tokens','stream','chat_template_kwargs']; 'tools' absent; 'tool_choice' absent; request_digest f0499dd1335cccb27db359bee8d29c02a0f3015ee8e734404f288fbff0e2f8da == the digest captured BEFORE the change on the same message set; body is byte-identical to the legacy dict in test_tools_off_body_is_byte_identical",
+    "tools_on_body": "keys [...,'tools','tool_choice']; tools[0].function.name='read_file'; parameters.required=['path','start_line','end_line']; tool_choice='auto'; request_digest 3c0ff847d9689168b17ab8c50dbd754d7f67cc3f590f7b387ac74a32f2ee6561 (CHANGED, as expected)",
+    "structured_call_round": "fake probe-A reply (finish_reason='tool_calls', arguments {path: ptr_engine/resolve.py, start_line: 66, end_line: 110}) -> exactly 1 follow-up send, sent=2, rounds=1, followup row kind='tool-followup' billed_round=True send_index=1 tools_schema_sent=True, call record executed=True base='engine' lines_returned=45",
+    "malformed_arguments": "arguments '{not json' -> client record arguments_error='malformed_arguments_json: ...'; runner refusal {error:'malformed_tool_arguments', reason:'malformed_arguments_json: ...', executed:false, billed:false}; 0 follow-up sends, 0 rounds, refusal recorded in turn_calls",
+    "text_fallback": "text '<tool_call>read_file <tool_call>{\"path\": ...}' still parsed by parse_tool_calls via calls_from_response; 1 round, billed_round=True",
+    "empty_reply": "content_len=0 with no tool_calls and no finish chunk -> stop_reason='empty_response' on the response and on make_row's row, content_sha256 of ''; the same shape with finish_reason='stop' records stop_reason='stop' (never a dropped turn)",
+    "zero_network_proof": "test_flow_touches_no_socket_and_launches_no_subprocess patches urllib.request.urlopen, socket.socket and subprocess.Popen to raise; the whole send_chat + fetch_rounds flow still passes, so no socket and no subprocess is created",
+    "tools_mode_false_label": "every historical row whose tools_mode reads 'on:read_file' was a DECLARED label only: no tools member was ever serialised into any request body (pre-change tools-off and tools-on bodies were the same bytes, same digest f0499dd1...). Those rows are NOT retrofitted; the defect is recorded here and in docs/TOOL-CHANNEL-WIRE.md section 3",
+    "new_row_fields": "every row now carries tools_declared (the --tools switch) and tools_schema_sent (the wire fact for that request); client.provenance_block gained tools_schema_sent; TurnWallCap.as_response stamps both",
+    "provenance_moved": "every tools-on row's request_digest/request_sha256 changes from now on (f0499dd1... -> 3c0ff847... for the quoted body); tools-off rows are unchanged, established by the byte-identity proof",
+    "pre_existing_failures": [
+      "test_embedded_digests_match_pin.py::test_pin_matches_the_bytes_on_disk -> EXPECTED pin consequence: pin embeds harness_sha256 35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb, disk now efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3 (client.py=9b12b2ea..., run_longrun.py=4f40dde1... are HARNESS_FILES)",
+      "test_launcher_pin_and_cells.py 6 tests -> pre-existing: SystemExit REFUSED: ledger records disagree on `remaining`: {'baseline-2': 3192/3219, 'request-ledger': 3144} raised at tools/run_a_star.py:229; no tool-channel code involved",
+      "test_launch_contract_diff.py 3 tests -> pre-existing neighbour issue: tool exits 1; sibling assertion reports 'competing values: 108, 67 (108 at run_a_star.py:631; 67 at run_a_star.py:763)' where run_a_star.py:241 was expected",
+      "test_era_b_rehearsal_2.py::test_grader_sha_is_the_repaired_one_and_pin_is_stale -> pre-existing: pin_is_stale is False because current grade_v5.py sha 3d70ed1d... equals the pin's recorded value"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "PRECONDITION FOR ANY LIVE CELL: pin generation 5 is STALE because client.py and run_longrun.py are both HARNESS_FILES (pin embeds 35ff41b7..., tree measures efefd885...). Generate pin generation 6 first; this unit is forbidden to touch pins/cells/params/ledgers and did not. THEN the next card re-runs the 4-arm canary unchanged (--tools read_file) and must now see structured tool_calls: one fetch round per requested range, rows carrying tool_calls with source='structured_tool_call' and tools_schema_sent=true, and the follow-up row's billed_round=true. Do not pool any tools-on row from before this change with one after it: the request_digest moved deliberately. Still open from CANARY-ERA-B-3: launcher precondition 10 stops cell 15 (lease-reopen) and _shape_era() misgrades era-B rows; the launcher/run_a_star ledger disagreement above is the current blocker on those suites.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/client.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/tests/test_tool_channel_wire.py",
+    "docs/TOOL-CHANNEL-WIRE.md",
+    "orchestration/units/TOOL-CHANNEL-WIRE.md",
+    "orchestration/handoffs/TOOL-CHANNEL-WIRE.json",
+    "orchestration/journals/TOOL-CHANNEL-WIRE.jsonl"
+  ],
+  "assumptions": [
+    "tool_choice defaults to 'auto' (client.tools_choice(cfg)) because no card/flag specifies one; the root-cause probe proved 'auto' already produces the call, so no coercion is needed and none is added",
+    "the tool schema description is written for this card; the argument names/required set match execute_tool_call exactly (path, start_line, end_line)",
+    "streamed tool-call deltas are assembled by index as well as the non-stream shape, because run_longrun sets cfg.stream=True on smoke runs even though the probe used stream=false; the offline proof exercises the non-stream branch plus collect_stream's accumulator",
+    "a row with no response stamp falls back to the request body's deterministic gate for tools_schema_sent; no row is retrofitted"
+  ],
+  "files_modified_forbidden": []
+}

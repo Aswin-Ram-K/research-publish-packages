@@ -33,7 +33,7 @@ recomputed from the rows.
    (the numbers plus V6-vs-V5 and V6-vs-tools-OFF baselines). `status: done`.
 3. Re-ran all four acceptance commands offline — all exit 0; the regrade **reproduced byte-for-byte**
    (identical with `generated_at` stripped).
-4. Audited the unaudited `tests/test_tool_channel2.py` edit (mtime 08:18, sha256 `021a7be46fc5a7a8…`,
+4. Audited the unaudited `experiments/ptr-engine/longrun/tests/test_tool_channel2.py` edit (mtime 08:18, sha256 `021a7be46fc5a7a8…`,
    untracked in git). Classification: **neutral-but-unauthorised** — the single change (`:54-55`, a pinned
    range → unpinned `resolve.py L1-30`, rationale at `:49-53`) is forced by V6's per-call serve rule, and
    every guard assertion survives (`:261`, `:264`, `:265`, `:267`, `:268`). No assertion was weakened.

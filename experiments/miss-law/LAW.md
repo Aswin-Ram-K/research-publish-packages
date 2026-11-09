@@ -1,7 +1,7 @@
 # The append-cost law: how much of a re-sent prefix re-bills as a function of where the append lands
 
-**Unit:** MISS-LAW · **Evidence:** `experiments/miss-law/rows.jsonl` (764 rows, one row per request,
-fsynced per row: 753 at the aggregation run plus 11 position-control rows) · `law_fit.json` · **Sweep:** `run.py`, `grid2.py`, `agg.py`
+**Unit:** MISS-LAW · **Evidence:** `experiments/miss-law/rows.jsonl` (774 rows, one row per request,
+fsynced per row: 753 at the aggregation run plus 10 vllm residue rows, `rows.jsonl:754-763`, and 11 position-control rows — tail census in `experiments/miss-law/FIT-GAP-CENSUS.md`) · `law_fit.json` · **Sweep:** `run.py`, `grid2.py`, `agg.py`
 
 **Answer in one line.** For a prefix-cached chat server with cache block size `B`, appending `L`
 tokens to a prefix of `P1` tokens re-bills

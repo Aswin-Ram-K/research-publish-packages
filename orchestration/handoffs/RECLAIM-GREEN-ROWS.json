@@ -1,0 +1,49 @@
+{
+ "unit": "RECLAIM-GREEN-ROWS",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/measure/RECLAIM-GREEN-ROWS.json",
+  "docs/RECLAIM-GREEN-ROWS.md",
+  "orchestration/units/RECLAIM-GREEN-ROWS.md"
+ ],
+ "evidence": {
+  "sha_measured": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "row_recorded_count": 2,
+  "refused_count": 7,
+  "red_count": 1,
+  "green_today_count": 9,
+  "recorded_rows": [
+   "17a76d24-e915-4e51-ae6f-584718002eb7 [da4ba836-93ac-4ec4-a77f-6ac5bfca9444]: PASS f17663d1 python3 experiments/ptr-engine/tools/answer_degeneracy_check.py",
+   "3d65a93c-04db-496e-8b00-8d37f9a4d399 [3bed4bf4-b054-4b76-a68f-68814c6d5f16]: PASS f17663d1 python3 experiments/ptr-engine/tools/tests/test_anchor_classify.py"
+  ],
+  "refusals": [
+   "refused (command-not-allowed): verdict command \".venv/bin/python\" is not allowed: only test/build runners may be recorded (see checkVerdictCommand)  [R2-OPT-SIM, SIM-PROMOTE, R2-VLLM, C63-CELL, RUN-INSTRUMENT-FIX]",
+   "refused (command-not-allowed): verdict command \"const\" is not allowed: only test/build runners may be recorded (see checkVerdictCommand)  [ACCOUNT-INVENTORY, PROFILE-PACK: node -e split at ';']"
+  ],
+  "red_card": "PROBE-CP3-V6 exit 1: AssertionError: ({'before': '9624cb3e...', 'after': '5926b98e...'}, 'tools-off output drifted')",
+  "commands": [
+   "for each of the ten stored commands: /bin/sh -c '<stored command>' from the repo root -> exits {R2-OPT-SIM 0, SIM-PROMOTE 0, R2-VLLM 0, C63-CELL 0, RUN-INSTRUMENT-FIX 0, Q0-ANSWER-DEGENERACY 0, ACCOUNT-INVENTORY 0, PROFILE-PACK 0, R2.1-TIGHTEN 0, PROBE-CP3-V6 1}",
+   "task_board_get 3d65a93c-04db-496e-8b00-8d37f9a4d399 -> status \"failed\", latestExecution.endedAt 1793022590625 (settled) before the row was recorded",
+   "python3 -m pytest tests/test_orchestration_handoffs.py -q"
+  ],
+  "settlement_accepts_row": true,
+  "sha_mismatch_risk": "both recorded rows cite today's HEAD f17663d1, not the execution head sha, so a derived closure would still be FAIL sha-mismatch"
+ },
+ "answer": "Yes: the board records a verdict row on a settled execution. What refuses reclaim is the evidence allow-list (.venv/bin/python unlisted; node -e split at ';'), not settlement. Smallest mechanism: a fresh `reclaim` execution per card whose own settlement carries the row at its measured head sha — no policy change, no operator decision beyond authorising the cards; the allow-list alternative does need an operator decision.",
+ "assumptions": [
+  "The ten stored commands were run with /bin/sh -c exactly as stored; no command was normalised, edited, or substituted, and no sha was fabricated.",
+  "All ten commands were checked for run_longrun/cell.py --live/endpoint URLs and none spends a live request; zero inference requests were made.",
+  "Rows were offered with the census execution_id; refusals arrived before any ownership/settlement/sha check, so no execution_id semantics were exercised on the refused seven."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Create a `reclaim` execution per green card (prompt = its stored command, empty write scope) so the row lands on a settlement whose head sha is the tree the command ran against; separately, an operator decision on widening checkVerdictCommand to recognise a venv launcher (.venv/bin/python) and to split shell segments quote-aware would let the 7 refused cards be reclaimed without a re-run.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/RECLAIM-GREEN-ROWS.json",
+  "docs/RECLAIM-GREEN-ROWS.md",
+  "orchestration/units/RECLAIM-GREEN-ROWS.md",
+  "orchestration/handoffs/RECLAIM-GREEN-ROWS.json",
+  "orchestration/journals/RECLAIM-GREEN-ROWS.jsonl"
+ ],
+ "tool_calls": 20,
+ "bound": 26
+}

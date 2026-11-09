@@ -43,13 +43,34 @@ import json
 import os
 import re
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from math import ceil
+from typing import Optional, List
 
-ARMS = ("transcript-grow", "transcript-compact", "pointer-stable", "lease-reopen")
+# ANSWER-CONTRACT (v5): the parser is grade_v5's own function, imported - never a
+# second implementation. Same directory, stdlib only, no request, no model.
+_LONGRUN_HERE = os.path.dirname(os.path.abspath(__file__))
+if _LONGRUN_HERE not in sys.path:
+    sys.path.insert(0, _LONGRUN_HERE)
+from grade_v5 import parse_answer_contract  # noqa: E402
+import claim_mode  # noqa: E402  CLAIM-ROW-STAMP: the one claim resolver
+import arm_cd  # noqa: E402  arms C and D logic
+_PTR_ENGINE_ROOT = os.path.dirname(_LONGRUN_HERE)
+if _PTR_ENGINE_ROOT not in sys.path:
+    sys.path.insert(0, _PTR_ENGINE_ROOT)
+from ptr_engine.pointer_table import make_ref  # noqa: E402
+from ptr_engine.fetch_tool import extract_marker_refs  # noqa: E402
+
+# STREAMING (WIRE-CLIENT): the ONE streaming implementation. Imported as a module, not
+# as bare names, so the measured path provably calls client.send_chat and a test can
+# monkeypatch that exact function to prove the client is on the path.
+import client  # noqa: E402
+
+ARMS = ("transcript-grow", "transcript-compact", "pointer-stable", "lease-reopen", "masking-no-fetch", "bounded-context-fetch")
 DEFAULT_BASE_URL = "http://192.168.2.168:8012/v1"
 DEFAULT_MODEL = "occamy-1.0-NVFP4"
 DEFAULT_ENGINE = "sglang"
@@ -63,6 +84,8 @@ PREDICTIONS = {
                        "P2: A's tokens-to-verified-success >= 1.5x C's."),
     "lease-reopen": ("P3: D has the lowest p95 TTFT but loses t30/t60 accuracy unless the "
                      "<=400-token state line carries the turn-2 fact and the turn-24 correction."),
+    "masking-no-fetch": ("C: masking without fetch; masked bodies recoverable only via pointer."),
+    "bounded-context-fetch": ("D: bounded-recoverable with fetch; 2 requests per turn."),
 }
 
 
@@ -135,14 +158,155 @@ def load_fixture(path: str) -> dict:
             f"fixture {path} is a STUB (no items/turns). The real fixture tree is card "
             "2a6c4761's deliverable; use a constructed fixture with --fixture."
         )
-    for key in ("schema", "task_id", "N", "wall_tokens", "bytes_per_token", "system_prompt",
+    for key in ("schema", "task_id", "N", "bytes_per_token", "system_prompt",
                 "items", "turns"):
         if key not in doc:
             raise FixtureError(f"fixture {path} missing required key {key!r}")
-    if doc["schema"] != "consonance.longrun-fixture/1":
+    # WALL-KEY: the wall may be declared per arm instead of once at top level. A fixture
+    # that declares neither is unlaunchable; one that declares ONLY `wall_tokens_by_arm`
+    # is complete (the top-level key is a legacy/cross-arm hint, not a requirement).
+    if "wall_tokens" not in doc and not (isinstance(doc.get("wall_tokens_by_arm"), dict)
+                                        and doc["wall_tokens_by_arm"]):
+        raise FixtureError(f"fixture {path} declares neither 'wall_tokens' nor a non-empty "
+                           "'wall_tokens_by_arm' — no arm has a wall")
+
+    if doc["schema"] not in ("consonance.longrun-fixture/1", "consonance.longrun-fixture/2"):
         raise FixtureError(f"unsupported fixture schema {doc['schema']!r}")
     if not doc["items"] or not all({"id", "body"} <= set(it) for it in doc["items"]):
         raise FixtureError("fixture items must be non-empty {id, body} objects")
+
+    # v2 pointer-field validation (when present). v1 fixtures omit these.
+    documents = doc.get("documents", None)
+    if documents is not None:
+        if not isinstance(documents, list) or not documents:
+            raise FixtureError("fixture documents must be a non-empty list")
+        doc_map = {}
+        for d in documents:
+            if not isinstance(d, dict) or "doc_id" not in d:
+                raise FixtureError("fixture document missing doc_id")
+            did = d["doc_id"]
+            if did in doc_map:
+                raise FixtureError(f"duplicate document doc_id {did!r}")
+            doc_map[did] = d
+            scope = d.get("scope", "granted")
+            if scope not in ("granted", "ungranted"):
+                raise FixtureError(f"document {did!r} has invalid scope {scope!r}")
+            revoked = bool(d.get("revoked", False))
+            revoked_at = d.get("revoked_at_turn", None)
+            if revoked:
+                if not isinstance(revoked_at, int) or isinstance(revoked_at, bool):
+                    raise FixtureError(f"document {did!r} revoked but revoked_at_turn is not an int (turn {revoked_at!r})")
+            else:
+                if revoked_at is not None:
+                    raise FixtureError(f"document {did!r} revoked_at_turn set but revoked is false (turn {revoked_at!r})")
+            revs = d.get("revisions")
+            if not isinstance(revs, list) or not revs:
+                raise FixtureError(f"document {did!r} revisions must be a non-empty list")
+            seen_rev = set()
+            for r in revs:
+                if not isinstance(r, dict):
+                    raise FixtureError(f"document {did!r} revision entry not an object")
+                if "revision" not in r:
+                    raise FixtureError(f"document {did!r} revision missing 'revision'")
+                try:
+                    rnum = int(r["revision"])
+                except (TypeError, ValueError):
+                    raise FixtureError(f"document {did!r} revision {r['revision']!r} is not an int")
+                if rnum in seen_rev:
+                    raise FixtureError(f"document {did!r} duplicate revision {rnum}")
+                seen_rev.add(rnum)
+                if "live_from_turn" in r:
+                    try:
+                        int(r["live_from_turn"])
+                    except (TypeError, ValueError):
+                        raise FixtureError(f"document {did!r} revision {rnum} live_from_turn not an int")
+        # revision_schedule consistency
+        sched = doc.get("revision_schedule", None)
+        if isinstance(sched, list):
+            for entry in sched:
+                if not isinstance(entry, dict):
+                    raise FixtureError("revision_schedule entry not an object")
+                try:
+                    sturn = int(entry["turn"])
+                except (TypeError, ValueError):
+                    raise FixtureError(f"revision_schedule turn {entry.get('turn')!r} is not an int")
+                sdoc = entry.get("doc")
+                if sdoc not in doc_map:
+                    raise FixtureError(f"revision_schedule turn {sturn} references unknown doc {sdoc!r}")
+                new_rev = entry.get("new_revision", None)
+                ddoc = doc_map[sdoc]
+                if new_rev is None:
+                    # revoke turn must match document revoked_at_turn
+                    if not bool(ddoc.get("revoked", False)):
+                        raise FixtureError(f"revision_schedule turn {sturn} revokes {sdoc!r} but document is not revoked")
+                    if int(ddoc.get("revoked_at_turn")) != sturn:
+                        raise FixtureError(f"inconsistent revoke turn for document {sdoc!r}: revoked_at_turn={ddoc.get('revoked_at_turn')!r} vs schedule turn {sturn}")
+                else:
+                    try:
+                        nrev = int(new_rev)
+                    except (TypeError, ValueError):
+                        raise FixtureError(f"revision_schedule turn {sturn} new_revision {new_rev!r} is not an int")
+                    rev_obj = next((r for r in (ddoc.get("revisions") or []) if int(r.get("revision")) == nrev), None)
+                    if rev_obj is None:
+                        raise FixtureError(f"revision_schedule turn {sturn} references unknown revision {nrev} of {sdoc!r}")
+                    if "live_from_turn" in rev_obj and int(rev_obj["live_from_turn"]) != sturn:
+                        raise FixtureError(f"inconsistent revive turn for document {sdoc!r} revision {nrev}: live_from_turn={rev_obj.get('live_from_turn')!r} vs schedule turn {sturn}")
+        # fetch_scenarios expected_outcome consistency
+        scenarios = doc.get("fetch_scenarios", None)
+        if isinstance(scenarios, list):
+            for s in scenarios:
+                if not isinstance(s, dict):
+                    continue
+                ref = s.get("ref")
+                exp = s.get("expected_outcome")
+                if not isinstance(ref, str):
+                    continue
+                did = ref.split("@", 1)[0]
+                if did not in doc_map:
+                    if exp != "NOT_FOUND":
+                        raise FixtureError(f"fetch_scenarios ref {ref!r} expected_outcome {exp!r} inconsistent with document {did!r} (unknown)")
+                    continue
+                ddoc = doc_map[did]
+                scope = ddoc.get("scope", "granted")
+                revoked = bool(ddoc.get("revoked", False))
+                if scope != "granted":
+                    if exp != "SCOPE_UNGRANTED":
+                        raise FixtureError(f"fetch_scenarios ref {ref!r} expected_outcome {exp!r} inconsistent with document {did!r} scope {scope!r}")
+                elif revoked:
+                    if exp != "STALE_OR_REVOKED":
+                        raise FixtureError(f"fetch_scenarios ref {ref!r} expected_outcome {exp!r} inconsistent with document {did!r} revoked")
+                else:
+                    if exp not in ("OK", "STALE_OR_REVOKED"):
+                        raise FixtureError(f"fetch_scenarios ref {ref!r} expected_outcome {exp!r} inconsistent with document {did!r}")
+    # tool_outputs validation against documents
+    for turn in doc["turns"]:
+        tos = turn.get("tool_outputs", None)
+        if tos is None:
+            continue
+        if not isinstance(tos, list):
+            raise FixtureError(f"fixture turn {turn['turn']} tool_outputs is not a list")
+        if documents is None:
+            raise FixtureError(f"fixture turn {turn['turn']} has tool_outputs but no documents")
+        for to in tos:
+            if not isinstance(to, dict):
+                raise FixtureError(f"fixture turn {turn['turn']} tool_outputs entry not an object")
+            did = to.get("doc_id")
+            if did not in doc_map:
+                raise FixtureError(f"fixture turn {turn['turn']} tool_outputs references unknown doc_id {did!r}")
+            try:
+                rev = int(to.get("revision"))
+            except (TypeError, ValueError):
+                raise FixtureError(f"fixture turn {turn['turn']} tool_outputs revision {to.get('revision')!r} is not an int")
+            ddoc = doc_map[did]
+            revs = [int(r.get("revision")) for r in (ddoc.get("revisions") or []) if "revision" in r]
+            if rev not in revs:
+                raise FixtureError(f"fixture turn {turn['turn']} tool_outputs revision {rev} not in document {did!r} revisions {revs}")
+            if "body" in to:
+                rev_obj = next((r for r in (ddoc.get("revisions") or []) if int(r.get("revision")) == rev), None)
+                if rev_obj is not None and "value" in rev_obj and str(to.get("body")) != str(rev_obj.get("value")):
+                    raise FixtureError(f"fixture turn {turn['turn']} tool_outputs body != revision value for {did!r}@{rev}")
+            if "doc_id" not in to or "revision" not in to or "body" not in to:
+                raise FixtureError(f"fixture turn {turn['turn']} tool_outputs entry missing doc_id/revision/body")
     turns = sorted(doc["turns"], key=lambda t: int(t["turn"]))
     if [int(t["turn"]) for t in turns] != list(range(1, int(doc["N"]) + 1)):
         raise FixtureError("fixture turns must be numbered 1..N contiguously")
@@ -150,9 +314,51 @@ def load_fixture(path: str) -> dict:
         if not isinstance(t.get("question"), str) or not t["question"]:
             raise FixtureError(f"fixture turn {t['turn']} has no question")
     doc["turns"] = turns
+    try:
+        from ptr_engine.pointer_table import reset_bodies
+    except ImportError:
+        import sys as _sys
+        _sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from ptr_engine.pointer_table import reset_bodies
+    reset_bodies(doc.get("task_id"))
     doc["_path"] = os.path.abspath(path)
     doc["_sha256"] = sha256_bytes(raw)
     return doc
+
+
+def resolve_fixture_path(task: str) -> str | None:
+    """Resolve a fixture path for a task id, searching the longrun tree.
+
+    Returns the first candidate whose loaded ``task_id`` equals ``task``, or None.
+    Search order: the canonical fixtures dir, then any tasks-* tree.
+    """
+    import glob as _glob
+    here = os.path.dirname(os.path.abspath(__file__))
+    candidates: list[str] = []
+    # canonical flat fixture
+    flat = os.path.join(here, "fixtures", str(task) + ".json")
+    if os.path.exists(flat):
+        candidates.append(flat)
+    # any tasks-* tree
+    for pat in ("tasks-*/*.json", "tasks-*/*/*.json", "tasks-*/*/*/*.json"):
+        candidates.extend(sorted(_glob.glob(os.path.join(here, pat))))
+    # filter by basename-ish and task_id
+    matches = []
+    for c in candidates:
+        base = os.path.basename(c)
+        if str(task) not in base:
+            continue
+        try:
+            d = json.loads(open(c, encoding="utf-8").read())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(d, dict) and d.get("task_id") == task:
+            matches.append(c)
+    if not matches:
+        return None
+    # prefer the flat fixtures path, then shortest path
+    matches.sort(key=lambda x: (0 if "/fixtures/" in x else 1, len(x)))
+    return matches[0]
 
 
 def index_lines(fixture: dict) -> str:
@@ -173,6 +379,15 @@ def working_set_block(fixture: dict) -> str:
     return f"WORKING SET\nINDEX\n{index_lines(fixture)}\n{bodies}"
 
 
+def _turn_tool_outputs(turn: dict) -> list:
+    if not isinstance(turn, dict):
+        return []
+    tos = turn.get("tool_outputs")
+    if not isinstance(tos, list):
+        return []
+    return [to for to in tos if isinstance(to, dict)]
+
+
 def turn_user(t: int, turn: dict) -> str:
     text = ""
     note = turn.get("note")
@@ -181,8 +396,37 @@ def turn_user(t: int, turn: dict) -> str:
     return text + f"QUESTION (T{t}): {turn['question']}"
 
 
-def turn_block(t: int, turn: dict, answer: str) -> str:
-    return f"{turn_user(t, turn)}\nANSWER (T{t}): {answer}"
+def turn_block(t: int, turn: dict, answer: str, masked: bool = False,
+               mask: bool = False, markers: Optional[List[str]] = None) -> str:
+    """Render one turn. Tool-output bodies are part of the turn.
+
+    Unmasked: each declared tool_output body is rendered (so a transcript arm
+    sees the real tool output). Masked: each body is replaced in place by its
+    pointer marker (short form ``[MASKED <ref>]``); question and answer survive
+    verbatim and no body text remains.
+    """
+    masked = bool(masked or mask)
+    base = turn_user(t, turn)
+    tos = _turn_tool_outputs(turn)
+    out_lines = [base]
+    if tos:
+        out_lines.append("TOOL OUTPUTS:")
+        if markers is None:
+            markers = []
+            for to in tos:
+                did = to.get("doc_id")
+                rev = to.get("revision")
+                if rev is None:
+                    raise ValueError("tool_output missing required field: revision")
+                markers.append(f"[MASKED {make_ref(did, rev)}]")
+        for idx, to in enumerate(tos):
+            if masked:
+                m = markers[idx] if (isinstance(markers, list) and idx < len(markers)) else markers
+                out_lines.append(str(m))
+            else:
+                out_lines.append(f"TOOL_OUTPUT ({to.get('doc_id')}@{to.get('revision')}): {to.get('body')}")
+    out_lines.append(f"ANSWER (T{t}): {answer}")
+    return "\n".join(out_lines)
 
 
 # ------------------------------------------------------------------- tool channel
@@ -201,7 +445,11 @@ TOOL_CALLS_PER_TURN = 2
 # (PROBE-CP3-FETCH census: fetch_budget_exhausted 136).  The real bound is the card's
 # request budget; `budget` adds this cap on a --tools run only (--tools off is
 # untouched) and `requests_spent = turn requests + follow-ups actually spent`.
-TOOL_FETCH_ROUNDS_PER_ARM = 24
+# RUNNER-ROUNDS-48: the per-arm pool is PROVISIONING, not a behavioural bound.  v5 spent
+# all 24 rounds inside turn 3 (one recon burst) and starved the T46 checkpoint, so the
+# pool is one round per turn across the 48-turn cell (48) while the per-turn cap (3) is
+# what actually bounds an ambitious model.  Overridable: --fetch-rounds-per-arm.
+TOOL_FETCH_ROUNDS_PER_ARM = 48
 # (b) PROBE-CP3-V6: ONE TURN MUST NOT CONSUME THE CELL.  PROBE-CP3-V5 spent all 24 rounds
 # inside turn 3 (21 rounds in a single recon burst), which refused the T46 checkpoint read
 # host-side (`fetch_budget_exhausted`) with no <tool_result> and no follow-up.  At most
@@ -230,11 +478,21 @@ _SECRET_STEMS = ("credentials", "secrets", "secret", "keys", "clients")
 
 
 def tool_names(cfg) -> list[str]:
-    return [n.strip() for n in str(getattr(cfg, "tools", "") or "").split(",") if n.strip()]
+    """The run's declared tool list — one implementation, in the body-building client.
+
+    TOOL-CHANNEL-WIRE: ``client.tools_enabled`` gates the ``tools`` member on the wire, so
+    the runner's own gate must be the SAME predicate; two copies is how the label and the
+    wire drifted apart in the first place.
+    """
+    return client.tool_names(cfg)
 
 
 def tools_enabled(cfg) -> bool:
-    return "read_file" in tool_names(cfg)
+    return client.tools_enabled(cfg)
+
+
+def fetch_tools_enabled(cfg) -> bool:
+    return client.fetch_tools_enabled(cfg)
 
 
 def fetch_rounds_per_turn(cfg) -> int:
@@ -247,8 +505,329 @@ def fetch_rounds_per_turn(cfg) -> int:
     return val if val >= 0 else TOOL_FETCH_ROUNDS_PER_TURN
 
 
+def fetch_rounds_per_arm(cfg) -> int:
+    """(RUNNER-ROUNDS-48) The per-arm fetch-round pool in force: --fetch-rounds-per-arm.
+
+    Defaults to TOOL_FETCH_ROUNDS_PER_ARM (48).  One flag, one pool: this single value
+    prices the projection (`projected_requests`), caps the channel (`fetch_rounds`, the
+    `fetch_budget_exhausted` refusal) and is frozen in the manifest.  A non-positive
+    value never reaches here: `main()` refuses it by name before any request, so this
+    resolver only ever returns a positive integer.
+    """
+    val = getattr(cfg, "fetch_rounds_per_arm", None)
+    try:
+        val = int(val)
+    except (TypeError, ValueError):
+        val = TOOL_FETCH_ROUNDS_PER_ARM
+    return val if val > 0 else TOOL_FETCH_ROUNDS_PER_ARM
+
+
 class BudgetExhausted(RuntimeError):
     """A fetch follow-up would exceed the request budget."""
+
+
+# ------------------------------------------------------------- REQUEST CAP GATE
+# WIRE-CAP-GATE.  REQUEST-LEDGER owns the counting rule, and its `known_limit` was
+# honest: a gate that reads rows on disk sees a request only AFTER the writer recorded
+# it, so it buys detection, not prevention.  This class closes that hole with the
+# record -> gate -> send ordering the ledger's conductor_wiring asked for:
+#
+#   * rows are read from disk ONCE, at run start (that is where the money already spent
+#     lives); `spent_at_start` is that total;
+#   * from then on the authority is an IN-MEMORY count.  `acquire()` reserves the next
+#     request's slot BEFORE anything is sent, so the decision never depends on the row
+#     writer having flushed, and a run that would exceed the declared allocation or the
+#     global cap refuses here -- no socket, no row;
+#   * the counting rule itself is NOT re-implemented: request_ledger.build_report() is
+#     called, and its RULE is copied into the manifest so the two can be compared.
+#
+# Exit codes propagate unmodified out of run_cell -> main -> sys.exit: 4 (would exceed),
+# 3 (usage / no rows), 5 (unreadable row file, nothing counted).  9 is reserved for a
+# reconciliation divergence (a BUG: the run's count and the rows disagree).
+DEFAULT_CAP_PATTERN = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "measure", "rows-*.jsonl")
+CAP_GATE_SCHEMA = "consonance.longrun-cap-gate/1"
+EXIT_CAP_DIVERGENCE = 9
+# TREATMENTS: a launch whose treatment cannot fire inside the frozen horizon is refused
+# BEFORE the first request.  8 was unused by every other exit path (2 usage, 3 manifest,
+# 4 budget/turn failure, 5 rows unreadable, 6 runaway, 7 cell gate, 9 cap divergence).
+EXIT_TREATMENTS_UNREACHABLE = 3   # = exit 3 "the run did not start"; already in RUNNER_CODES
+HORIZON_TURNS = 48          # PARM-1 line 137 -- frozen; never a --flag, never raised
+DIGEST_MAX_TOKENS = 700     # the COMPRESS instruction's own ceiling (compact arm, build())
+
+
+class CapRefusal(RuntimeError):
+    """A request would exceed the run allocation or the global cap -- nothing sent."""
+
+    def __init__(self, message: str, gate=None):
+        super().__init__(message)
+        self.gate = gate
+
+
+class CapUsageError(RuntimeError):
+    """The gate cannot be constructed (bad flags) -- exit 3, the run does not start."""
+
+
+class CapRowsUnreadable(RuntimeError):
+    """A row file is unreadable, so the spent total is unknowable -- exit 5."""
+
+
+def load_request_ledger(path: str | None = None):
+    """Import the module that OWNS the counting rule.  Never a second copy of it."""
+    import importlib.util
+
+    target = (path or os.environ.get("REQUEST_LEDGER_TOOL")
+              or os.path.join(_LONGRUN_HERE, "..", "tools", "request_ledger.py"))
+    target = os.path.abspath(target)
+    spec = importlib.util.spec_from_file_location("ptr_request_ledger", target)
+    if spec is None or spec.loader is None:
+        raise CapUsageError(f"cannot import the request ledger at {target}")
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except OSError as exc:
+        raise CapUsageError(f"cannot import the request ledger at {target}: {exc}") from exc
+    return module
+
+
+class RequestCapGate:
+    """Per-request brake: one in-memory authority, decided before the send."""
+
+    def __init__(self, ledger, paths, cap: int, reserve: int, allocation,
+                 own_rows: str | None = None):
+        self.ledger = ledger
+        self.paths = list(dict.fromkeys(os.path.abspath(p) for p in paths))
+        # the run's OWN row file, added to the exit scan once the writer has created it
+        self.own_rows = os.path.abspath(own_rows) if own_rows else None
+        self.cap = int(cap)
+        self.reserve = int(reserve)
+        self.allocation = allocation
+        if self.cap < 0 or self.reserve < 0 or (allocation is not None and allocation < 0):
+            raise CapUsageError("--budget-cap, --budget-reserve and --request-allocation "
+                                "must all be >= 0")
+        if self.reserve > self.cap:
+            raise CapUsageError(f"--budget-reserve {self.reserve} exceeds --budget-cap "
+                                f"{self.cap} (no headroom exists)")
+        self.headroom = self.cap - self.reserve
+        self.spent_at_start = self._scan_total()
+        self.used_in_run = 0
+
+    # -- counting ----------------------------------------------------------------
+    def _scan_total(self) -> int:
+        try:
+            report = self.ledger.build_report(self.paths, self.cap, self.reserve, 0)
+        except self.ledger.RowsUnreadable as exc:
+            raise CapRowsUnreadable(str(exc)) from exc
+        return int(report["budget"]["spent"])
+
+    def acquire(self, turn: int, kind: str = "turn") -> int:
+        """Reserve one request slot BEFORE it is sent, or refuse (exit 4).
+
+        Raising here is the whole point: the caller has not called send_chat yet, so a
+        refusal writes no row and opens no socket.
+        """
+        would = self.used_in_run + 1
+        spent = self.spent_at_start + self.used_in_run
+        projected = spent + 1
+        over_cap = projected > self.headroom
+        over_alloc = self.allocation is not None and would > self.allocation
+        if over_cap or over_alloc:
+            limits = ", ".join(name for name, hit in
+                               (("global cap", over_cap), ("run allocation", over_alloc)) if hit)
+            over_by = (projected - self.headroom if over_cap
+                       else would - int(self.allocation))
+            raise CapRefusal(
+                f"CAP REFUSED at T{turn} ({kind}) — over the {limits}: "
+                f"spent={spent} would_spend={would} cap={self.cap} reserve={self.reserve} "
+                f"headroom={self.headroom} allocation={self.allocation} "
+                f"used_in_run={self.used_in_run} turn={turn} kind={kind} "
+                f"projected={projected} over_by={over_by} — nothing sent",
+                self)
+        self.used_in_run += 1
+        return would
+
+    # -- exit accounting ---------------------------------------------------------
+    def _exit_paths(self) -> list[str]:
+        paths = list(self.paths)
+        if self.own_rows and os.path.exists(self.own_rows) and self.own_rows not in paths:
+            paths.append(self.own_rows)
+        return paths
+
+    def reconcile(self) -> dict:
+        """Re-read the rows: the run's own count must equal what the disk now says."""
+        try:
+            report = self.ledger.build_report(self._exit_paths(), self.cap, self.reserve, 0)
+        except self.ledger.RowsUnreadable as exc:
+            raise CapRowsUnreadable(str(exc)) from exc
+        after = int(report["budget"]["spent"])
+        expected = self.spent_at_start + self.used_in_run
+        return {"spent_at_start": self.spent_at_start, "used_in_run": self.used_in_run,
+                "spent_after": after, "expected": expected, "delta": after - expected}
+
+    def manifest_block(self, reconciled: dict | None = None) -> dict:
+        return {
+            "schema": CAP_GATE_SCHEMA,
+            "ordering": "record->gate->send: the slot is reserved BEFORE the request is issued",
+            "counting_rule": getattr(self.ledger, "RULE", None),
+            "cap": self.cap,
+            "reserve": self.reserve,
+            "headroom": self.headroom,
+            "spent_at_start": self.spent_at_start,
+            "allocation": self.allocation,
+            # written before the first request (None) and again at exit (the count).
+            "used_in_run": None if reconciled is None else self.used_in_run,
+            "final_used_in_run": None if reconciled is None else self.used_in_run,
+            "running_count": self.used_in_run,
+            "reconcile": reconciled,
+            "counted_files": [os.path.basename(p) for p in self.paths],
+            "own_rows_file": os.path.basename(self.own_rows) if self.own_rows else None,
+        }
+
+
+def cell_turns(cfg, fixture: dict) -> int:
+    """THE cell's turn scope: the fixture's N, cut to `--max-turns` when one is declared.
+
+    ONE definition, read by every path that has to know how many turns the cell would
+    execute: `projected_requests` (the price), `run_cell` (the live loop) and `run_dry`
+    (the offline preview).  RUN-DRY-TURN-SCOPE: the preview used to loop
+    `range(1, int(fixture["N"]) + 1)` and count `int(fixture["N"])`, so a 12-turn cell was
+    priced at the fixture's 48 and the shortened cell could never be gated.  A second
+    `min()` inside the preview is the bug, not the fix: the preview is computed over
+    exactly the turns the run would execute.
+    """
+    n_turns = int(fixture["N"])
+    max_turns = int(getattr(cfg, "max_turns", 0) or 0)
+    if max_turns > 0:
+        n_turns = min(n_turns, max_turns)
+    return n_turns
+
+
+def projected_requests(cfg, fixture: dict, arm: str) -> int:
+    """The cell's request projection: turn requests + digests + the fetch-round pool."""
+    n_turns = cell_turns(cfg, fixture)
+    budget = n_turns + (expected_digests(fixture) if arm == "transcript-compact" else 0)
+    if tools_enabled(cfg):
+        budget += fetch_rounds_per_arm(cfg)
+    return budget
+
+
+def allocation_for(cfg, fixture: dict, arm: str):
+    """`--request-allocation N` or the string 'projection' (the default)."""
+    raw = getattr(cfg, "request_allocation", "projection")
+    if raw is None or (isinstance(raw, str) and raw.strip().lower() in ("", "projection")):
+        return projected_requests(cfg, fixture, arm)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        raise CapUsageError(f"--request-allocation must be a non-negative integer or "
+                            f"'projection', got {raw!r}") from None
+    if value < 0:
+        raise CapUsageError(f"--request-allocation must be >= 0, got {value}")
+    return value
+
+
+def build_cap_gate(cfg, fixture: dict, arm: str, rows_path: str) -> RequestCapGate:
+    import glob as globmod
+
+    ledger = load_request_ledger(getattr(cfg, "request_ledger_tool", None))
+    pattern = getattr(cfg, "budget_glob", None) or DEFAULT_CAP_PATTERN
+    paths = sorted(globmod.glob(pattern), key=lambda p: os.path.basename(p))
+    # The run's OWN row file is always in the scan, so the exit reconciliation compares
+    # this run's count against this run's rows even when they live outside the corpus.
+    # A file that does not exist yet holds zero rows (the writer creates it); it is not an
+    # "unreadable" file, which is what exit 5 is reserved for.
+    if os.path.exists(rows_path):
+        paths.append(rows_path)
+    cap = getattr(cfg, "budget_cap", None)
+    cap = int(ledger.DEFAULT_CAP if cap is None else cap)
+    return RequestCapGate(ledger, paths, cap,
+                          int(getattr(cfg, "budget_reserve", 0) or 0),
+                          allocation_for(cfg, fixture, arm), own_rows=rows_path)
+
+
+def _gate_finish(gate: RequestCapGate, manifest_path: str | None, manifest_sha: str | None,
+                 rows_path: str) -> tuple[dict, int]:
+    """Reconcile at exit, write the final counts into the run manifest, return (rec, rc)."""
+    try:
+        rec = gate.reconcile()
+    except CapRowsUnreadable as exc:
+        print(f"CAP GATE ROWS at exit: {exc}", file=sys.stderr)
+        return {"delta": None, "error": str(exc)}, 5
+    print(f"cap-gate: allocation={gate.allocation} cap={gate.cap} reserve={gate.reserve} "
+          f"spent_at_start={gate.spent_at_start} used_in_run={gate.used_in_run} "
+          f"spent_after={rec['spent_after']} delta={rec['delta']}", file=sys.stderr)
+    rc = 0
+    if manifest_path and os.path.exists(manifest_path):
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as fh:
+                doc = json.load(fh)
+            prior = ((doc.get("cap_gate") or {}).get("frozen_sha256"))
+            block = gate.manifest_block(reconciled=rec)
+            # The addendum names the bytes the ROWS were stamped with, so a later
+            # --resume can still verify the frozen manifest it started from.
+            block["frozen_sha256"] = prior or manifest_sha
+            doc["cap_gate"] = block
+            data, final_sha = write_manifest(manifest_path, doc)
+            print(f"cap-gate: final counts recorded in {manifest_path} "
+                  f"({len(data)} B) sha256={final_sha}", file=sys.stderr)
+        except (OSError, ValueError, TypeError) as exc:
+            print(f"CAP GATE MANIFEST: cannot record the final counts in {manifest_path}: "
+                  f"{type(exc).__name__}: {exc}", file=sys.stderr)
+            rc = EXIT_CAP_DIVERGENCE
+    if rec["delta"] > 0:
+        # A row no request bought: the ledger and the run disagree about MONEY.  This is a
+        # bug, not a rounding, and it fails the run.
+        print(f"CAP GATE RECONCILE DIVERGENCE (delta=+{rec['delta']}): the run counted "
+              f"{gate.used_in_run} request(s) but the rows gained "
+              f"{rec['spent_after'] - rec['spent_at_start']} (spent_at_start="
+              f"{rec['spent_at_start']} spent_after={rec['spent_after']} rows={rows_path}). "
+              f"A divergence is a bug, not a rounding error.", file=sys.stderr)
+        rc = EXIT_CAP_DIVERGENCE
+    elif rec["delta"] < 0:
+        # Requests that reached the wire whose rows could not be written before the run
+        # stopped (a refusal can land mid-turn).  That makes the ledger UNDERSTATE the
+        # spend, so the next gate check would see more headroom than exists: this is a
+        # refusal (exit 9), not a printout.  Anything else lets a run walk past the gate
+        # by dropping a row.
+        headroom_before = gate.cap - gate.reserve - rec["spent_at_start"]
+        headroom_after = gate.cap - gate.reserve - rec["spent_after"]
+        print(f"CAP GATE UNRECORDED (delta={rec['delta']}) — refusing, exit "
+              f"{EXIT_CAP_DIVERGENCE}: {-rec['delta']} request(s) reached the wire but "
+              f"their rows were not written before the run stopped "
+              f"(used_in_run={gate.used_in_run} rows_gained="
+              f"{rec['spent_after'] - rec['spent_at_start']} headroom_before="
+              f"{headroom_before} headroom_after={headroom_after} rows={rows_path}); "
+              f"rows were not persisted, so the ledger cannot be trusted for the next "
+              f"check — it would grant {-rec['delta']} request(s) beyond the true "
+              f"headroom.", file=sys.stderr)
+        rc = EXIT_CAP_DIVERGENCE
+    else:
+        print(f"cap-gate: reconciled — the run's count {gate.used_in_run} equals the rows "
+              f"gained {rec['spent_after'] - rec['spent_at_start']} (delta 0)", file=sys.stderr)
+    return rec, rc
+
+
+def _cap_stop(exc: CapRefusal, gate: RequestCapGate, manifest_path: str | None,
+              manifest_sha: str | None, rows_path: str) -> int:
+    """Exit 4 for a refusal, after recording the arithmetic and reconciling."""
+    print(str(exc), file=sys.stderr)
+    _rec, rc = _gate_finish(gate, manifest_path, manifest_sha, rows_path)
+    return 4 if rc == 0 else rc
+
+
+def _abort_stop(rc: int, gate: RequestCapGate, manifest_path: str | None,
+                manifest_sha: str | None, rows_path: str) -> int:
+    """Leave an ABORTED run through the gate: reconcile first, then return `rc`.
+
+    A runaway/abort still spent requests, so the unrecorded remainder has to be checked
+    before the process exits -- otherwise the refusal that ended the run is the LAST thing
+    anyone sees, and the next cell is granted headroom that does not exist.  A reconcile
+    failure OUTRANKS the abort (its code is returned instead): a run whose spend is
+    unrecorded must not be reported as merely runaway, and that failure is never swallowed
+    into the abort's own code.
+    """
+    _rec, cap_rc = _gate_finish(gate, manifest_path, manifest_sha, rows_path)
+    return rc if cap_rc == 0 else cap_rc
 
 
 def _decode_json_objects(text: str) -> list:
@@ -303,6 +882,82 @@ def parse_tool_calls(text: str) -> list[dict]:
         # serves it from the cache (`cached="true"`): one read, one billed request.
         calls.append(call)
     return calls
+
+
+def _call_from_arguments(call_id, name, arguments_json) -> tuple:
+    """``(call|None, refusal|None)`` for ONE structured tool call's arguments.
+
+    Never raises and never drops: an unusable call comes back as a RECORDED refusal so
+    the turn row says the model asked and the harness refused, with the reason.
+    """
+    refusal = {"tool": name, "call_id": call_id, "error": "malformed_tool_arguments",
+               "executed": False, "truncated": False, "billed": False}
+    if name == client.FETCH_TOOL_NAME:
+        if not isinstance(arguments_json, dict):
+            return None, dict(refusal, reason="arguments_not_an_object")
+        ref = arguments_json.get("ref")
+        if not isinstance(ref, str) or not ref.strip():
+            return None, dict(refusal, reason="missing_ref")
+        rng = arguments_json.get("range")
+        if isinstance(rng, dict):
+            rng = (rng.get("start"), rng.get("end"))
+        return ({"ref": ref.strip(), "range": rng,
+                 "source": "structured_tool_call", "call_id": call_id}, None)
+    if name != client.READ_FILE_TOOL_NAME:
+        return None, dict(refusal, reason="unknown_tool")
+    if not isinstance(arguments_json, dict):
+        return None, dict(refusal, reason="arguments_not_an_object")
+    path = arguments_json.get("path")
+    if not isinstance(path, str) or not path.strip():
+        return None, dict(refusal, reason="missing_path")
+    try:
+        start = int(arguments_json.get("start_line", arguments_json.get("start", 1)))
+        end = int(arguments_json.get("end_line", arguments_json.get("end", start)))
+    except (TypeError, ValueError):
+        return None, dict(refusal, reason="unparseable_range")
+    if start > end:
+        start, end = end, start
+    return ({"path": path.strip(), "start_line": max(1, start), "end_line": max(1, end),
+             "source": "structured_tool_call", "call_id": call_id}, None)
+
+
+def calls_from_response(resp) -> tuple[list[dict], list[dict]]:
+    """``(calls, refusals)`` for one model reply: STRUCTURED calls first, text second.
+
+    TOOL-CHANNEL-WIRE: a tools-on reply carries ``message.tool_calls`` and
+    ``content_len == 0`` (docs/TOOL-CHANNEL-ROOT-CAUSE.md §3, probe A), so the old text
+    scan at :func:`parse_tool_calls` can never see it.  Structured calls are therefore
+    consumed FIRST; the text parser runs only when the reply carries no structured call
+    at all, which keeps every historical text-shaped reply working unchanged.
+    """
+    resp = resp or {}
+    structured = resp.get("tool_calls") or []
+    if not structured:
+        return parse_tool_calls(resp.get("content") or ""), []
+    calls: list[dict] = []
+    refusals: list[dict] = []
+    for rec in structured:
+        if not isinstance(rec, dict):
+            refusals.append({"tool": None, "call_id": None,
+                             "error": "malformed_tool_arguments",
+                             "reason": "call_not_an_object",
+                             "executed": False, "truncated": False, "billed": False})
+            continue
+        name = rec.get("name")
+        if rec.get("arguments_error"):
+            refusals.append({"tool": name, "call_id": rec.get("id"),
+                             "error": "malformed_tool_arguments",
+                             "reason": rec["arguments_error"],
+                             "arguments": rec.get("arguments"),
+                             "executed": False, "truncated": False, "billed": False})
+            continue
+        call, refusal = _call_from_arguments(rec.get("id"), name, rec.get("arguments_json"))
+        if call is not None:
+            calls.append(call)
+        if refusal is not None:
+            refusal["arguments"] = rec.get("arguments")
+            refusals.append(refusal)
+    return calls, refusals
 
 
 def limit_calls(calls: list[dict], per_turn: int = TOOL_CALLS_PER_TURN):
@@ -568,12 +1223,12 @@ def followups_spent(rows: list[dict]) -> int:
 
 def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messages, resp,
                  sent, budget, rounds_used, served=None, pinned=None, per_turn_cap=None,
-                 may_request=None):
+                 may_request=None, gate=None):
     """Run the bounded read_file channel after one model turn.
 
     Bounds (PROBE-CP3-V6): <= TOOL_CALLS_PER_TURN (2) calls per turn, at most
     `per_turn_cap` fetch rounds per turn (0 = unbounded, the pre-V6 behaviour), and
-    <= TOOL_FETCH_ROUNDS_PER_ARM (24) BILLED rounds per arm.  One follow-up model request
+    <= fetch_rounds_per_arm(cfg) (default 48) BILLED rounds per arm.  One follow-up model request
     is bought per round, so `requests_sent = turn requests + follow-ups bought + digests`.
 
     (a) SERVE FROM THE PROMPT.  `pinned` is what the planner actually pinned into THIS
@@ -609,7 +1264,12 @@ def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messag
         served = {}
     pinned = list(pinned or [])
     content = resp.get("content") or ""
-    pending = parse_tool_calls(content)
+    # TOOL-CHANNEL-WIRE: structured tool_calls FIRST (a tools-on reply has content_len 0,
+    # so the text scan below would find nothing); the text parser is the fallback only.
+    # An unusable structured call is RECORDED on the row, never dropped and never a
+    # silent no-op: the cell simply bills nothing for it.
+    pending, refused_calls = calls_from_response(resp)
+    turn_calls.extend(refused_calls)
     rounds_this_turn = 0
     prompt_serves = 0
     while pending:
@@ -641,7 +1301,7 @@ def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messag
                     served_now += 1
                     turn_cache[key] = res
                     served[key] = res
-                elif rounds_used + fresh >= TOOL_FETCH_ROUNDS_PER_ARM:
+                elif rounds_used + fresh >= fetch_rounds_per_arm(cfg):
                     # The per-arm ROUND budget is spent.  This refusal is per CALL, not per
                     # turn: a range the prompt already carries still costs no round, so the
                     # T46 checkpoint read stays servable after the round budget is gone
@@ -686,6 +1346,10 @@ def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messag
         ]
         if sent >= budget:
             raise BudgetExhausted(f"fetch at T{t} would exceed the request budget of {budget}")
+        # WIRE-CAP-GATE: a follow-up is a REAL request and bills separately, so the brake
+        # must see it too.  Reserved (and possibly refused) BEFORE the send.
+        if gate is not None:
+            gate.acquire(t, "tool-followup")
         resp = send_chat(cfg, next_messages)
         sent += 1
         rounds_this_turn += 1
@@ -697,11 +1361,19 @@ def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messag
         content = resp.get("content") or ""
         followups.append(make_row(
             cfg, fixture, arm, rep, run_id, t, resp, content, "tool-followup", manifest_sha,
+            # ROW-ATTRIBUTION: the 0-based position of THIS request inside the turn --
+            # the initial send is send_index 0, the -th follow-up is send_index -.  A
+            # later analysis can therefore address one HTTP request by (turn, send_index)
+            # instead of guessing from row order.
             dict(extras, prompt_sha256=sha256_text(next_messages[-1]["content"]),
                  fetch_followup=True, tool_calls=round_calls,
                  billed_round=bool(fresh), prompt_served=int(served_now),
+                 send_index=int(rounds_this_turn),
                  fetch_rounds_cap_per_turn=cap)))
-        pending = parse_tool_calls(content)
+        # TOOL-CHANNEL-WIRE: the follow-up reply is read the same way (structured first,
+        # text fallback).  A malformed call here is recorded on the turn row too.
+        pending, refused_calls = calls_from_response(resp)
+        turn_calls.extend(refused_calls)
     return messages, resp, sent, rounds_used, turn_calls, followups
 
 
@@ -720,6 +1392,7 @@ class Planner:
         # B state
         self.digest: str | None = None
         self.raw: list[str] = []
+        self.arm_cd = arm_cd.ArmCDState(fixture=fixture) if arm in (arm_cd.ARM_C, arm_cd.ARM_D) else None
         # D state
         self.walls = list(fixture.get("lease_reopen_turns") or [])
         self.lease_state = ""
@@ -780,8 +1453,14 @@ class Planner:
                       for i in range(1, t) if i - 1 < len(self.answers)]
             current = turn_user(t, turn)
             evicted = 0
+            # FIFO over HISTORY, never over the pinned working set.  `parts[0]` is the
+            # fixture's pinned corpus; popping it (the pre-v8 `parts.pop(0)`) means the
+            # first eviction of any firing grow cell deletes the corpus the checkpoints are
+            # answered from, so the arm would measure amnesia, not eviction.  Index 0 is
+            # therefore pinned and the oldest HISTORY block goes first.  This cannot alter
+            # any row already on disk: `evicted > 0` on 0 rows of the pinned corpus.
             while len(parts) > 1 and est_tokens("\n\n".join(parts + [current]), self.bpt) > self.wall_tokens:
-                parts.pop(0)
+                parts.pop(1)
                 evicted += 1
             text = "\n\n".join(parts + [current])
             if est_tokens(text, self.bpt) > self.wall_bytes:
@@ -847,17 +1526,345 @@ class Planner:
             info["prompt"] = text
             return info
 
+        if arm in (arm_cd.ARM_C, arm_cd.ARM_D):
+            # C / D: masking of tool-output turns older than the window; D adds fetch.
+            state = self.arm_cd
+            masked_rows, masked_entry = state.mask_old_turns(t)
+            # checkpoint only on forecast for D
+            checkpoint_val = None
+            if arm == arm_cd.ARM_D:
+                # forecast: checkpoint when this turn is a declared checkpoint turn
+                if t in checkpoint_turns(self.fixture):
+                    checkpoint_val = next((c for c in (self.fixture.get("checkpoints") or [])
+                                          if int(c.get("turn", -1)) == int(t)), None)
+                    state.checkpoint_forecast = True
+                else:
+                    state.checkpoint_forecast = False
+            # prompt: transcript of recent turns with masked markers for old ones
+            parts = [working_set_block(self.fixture)]
+            for i in range(1, t):
+                if i in state.masked_turns:
+                    turn_i = self.fixture["turns"][i - 1] if (i - 1 < len(self.fixture.get("turns", []))) else None
+                    tos_i = _turn_tool_outputs(turn_i) if isinstance(turn_i, dict) else []
+                    # marker in place of body. Derive markers from the turn's own
+                    # tool_outputs so dedup across turns does not leave a body unmasked.
+                    markers = []
+                    for to in tos_i:
+                        did = to.get("doc_id")
+                        rev = to.get("revision")
+                        if rev is None:
+                            raise ValueError("tool_output missing required field: revision")
+                        markers.append(f"[MASKED {make_ref(did, rev)}]")
+                    if tos_i:
+                        # Mask prior answers on masked turns so an earlier checkpoint's
+                        # value cannot be copied without recovering the fact.
+                        parts.append(turn_block(i, self.fixture["turns"][i - 1], "",
+                                                masked=True, markers=markers))
+                    elif i - 1 < len(self.answers):
+                        parts.append(turn_block(i, self.fixture["turns"][i - 1], self.answers[i - 1]))
+                elif i - 1 < len(self.answers):
+                    parts.append(turn_block(i, self.fixture["turns"][i - 1], self.answers[i - 1]))
+            current = turn_user(t, turn)
+            # Render the current turn's tool outputs on their delivery turn (not only
+            # when replaying earlier turns), so bodies declared on T1 appear in T1.
+            tos_cur = _turn_tool_outputs(turn)
+            if tos_cur:
+                current = current + "\nTOOL OUTPUTS:\n" + "\n".join(
+                    "TOOL_OUTPUT (%s@%s): %s" % (to.get("doc_id"), to.get("revision"), to.get("body"))
+                    for to in tos_cur)
+            text = "\n\n".join(parts + [current])
+            info["masked_rows"] = masked_rows
+            info["masked_entry"] = masked_entry
+            info["checkpoint"] = checkpoint_val
+            info["prompt"] = text
+            return info
+
         raise ValueError(f"unknown arm {arm!r}")
 
 
+# ---------------------------------------------------------------- activation predicates (gate 0.6)
+# A cell failing its own predicate is INVALID-INSTRUMENT: computed from the stamp,
+# never by name.  The five context arms (A-E) and their declared predicates.
+ACTIVATION_PREDICATES = {
+    "A": "evicted_turns",
+    "B": "digest_rows",
+    "C": "masked_rows",
+    "D": "fetch_rows",
+    "E": "oracle_injections",
+}
+
+
+def _activation_counts(rows):
+    rows = list(rows or ())
+    return {
+        "evicted_turns": sum(1 for r in rows if (r.get("evicted") or 0) > 0
+                             or (r.get("evicted_turns") or 0) > 0),
+        "digest_rows": sum(1 for r in rows if r.get("kind") == "digest"
+                           or (r.get("digest_rows") or 0) > 0),
+        "masked_rows": sum(1 for r in rows if (r.get("masked_rows") or 0) > 0),
+        "fetch_rows": sum(1 for r in rows if (r.get("fetch_rows") or 0) > 0
+                          or (r.get("retrieval_attempts") or 0) > 0),
+        "retrieval_outcomes": [o for r in rows for o in (r.get("retrieval_outcomes") or [])],
+        "oracle_injections": sum(1 for r in rows if (r.get("oracle_injections") or 0) > 0),
+    }
+
+
+def activation_predicate(arm, rows) -> bool:
+    """Computed predicate for one arm. A failing cell is INVALID-INSTRUMENT."""
+    counts = _activation_counts(rows)
+    arm = str(arm or "").strip().upper()
+    # accept long names too
+    name = str(arm).lower()
+    if arm in ("A",) or "transcript" == name or "full-transcript" in name or "full_transcript" in name:
+        return counts["evicted_turns"] > 0
+    if arm in ("B",) or "compact" in name:
+        return counts["digest_rows"] > 0
+    if arm in ("C",) or "mask" in name:
+        return counts["masked_rows"] > 0
+    if arm in ("D",) or "bounded" in name or "recoverable" in name:
+        return counts["fetch_rows"] > 0 and len(counts["retrieval_outcomes"]) > 0
+    if arm in ("E",) or "oracle" in name:
+        return counts["oracle_injections"] > 0
+    # unknown arm: no predicate to pass -> not instrumented
+    return False
+
+
+def instrument_status(arm, rows) -> str:
+    return "INVALID-INSTRUMENT" if not activation_predicate(arm, rows) else "VALID"
+
+
+# aliases
+arm_activation_predicate = activation_predicate
+predicate_for_arm = activation_predicate
+activation_predicates = ACTIVATION_PREDICATES
+
+# ------------------------------------------------------------------------ treatments
+# A treatment that cannot fire inside the frozen horizon is not a treatment: the cell then
+# measures the control path and the arm label is a lie (measured: evicted>0 on 0 rows,
+# lease>1 on 0 rows, digest rows 0 of 576).  The three predicates are quoted from this file:
+#   grow    : evicted>0           (`while len(parts) > 1 and est_tokens(...) > wall_tokens`)
+#   compact : digest_at is not None (a bottom-of-window digest request; no digest row needed)
+#   reopen  : lease>1             (`t in self.walls`, self.walls = lease_reopen_turns)
+# Everything below is OFFLINE and derived from the fixture alone -- zero inference requests.
+
+def answer_padding_by_turn(fixture: dict) -> list[int]:
+    """Per-turn ceiling on what a LEGAL answer adds to the window, in tokens.
+
+    Taken from the fixture's own `answer_budget.words_per_turn_kind` (the declared per-kind
+    ceiling), never from a measured slope: the measured slope conflates the treatment with
+    answer verbosity (within grid G4 the grow cell's answers ran ~9x longer than the
+    compact cell's), so the declared budget is the only estimate comparable across arms.
+    """
+    budget = fixture.get("answer_budget") or {}
+    kinds = {str(k): int(v) for k, v in (budget.get("words_per_turn_kind") or {}).items()}
+    if not kinds:
+        kinds = {"work": 150, "checkpoint": 400, "verify": 400}
+    tpw = float(budget.get("tokens_per_word_assumed") or 1.35)
+    default = max(kinds.values())
+    return [int(ceil(kinds.get(str(turn.get("kind") or "work"), default) * tpw))
+            for turn in fixture["turns"]]
+
+
+def answer_padding_tokens(fixture: dict) -> int:
+    """The largest per-turn answer padding this fixture permits (the reported ceiling)."""
+    return max(answer_padding_by_turn(fixture) or [0])
+
+
+def wall_for_arm(fixture: dict, arm: str) -> int:
+    """The wall this arm runs at: a per-arm value when the fixture declares one.
+
+    One wall copied across arms measures verbosity as much as treatment, so a fixture may
+    declare `wall_tokens_by_arm` (fixture field, not a CLI default) naming the wall each
+    arm needs for its predicate to fire inside the horizon.
+    """
+    by_arm = fixture.get("wall_tokens_by_arm") or {}
+    if by_arm:
+        # A declared per-arm block is AUTHORITATIVE: an arm absent from it is a fixture
+        # defect, never an invitation to run at the top-level wall. That fallback is the
+        # trap this field closes — v8's top-level 3838 sits below its own first prompt
+        # (3848), so a fallback fires the wall at ~turn 2 and erases the contrast between
+        # transcript-grow and transcript-compact.
+        if arm not in by_arm:
+            raise FixtureError(
+                f"fixture declares 'wall_tokens_by_arm' but has no wall for arm {arm!r} "
+                f"(declared: {sorted(by_arm)}); refusing rather than falling back to "
+                f"wall_tokens={fixture.get('wall_tokens')!r}")
+        return int(by_arm[arm])
+    if "wall_tokens" not in fixture:
+        raise FixtureError(f"fixture declares no wall for arm {arm!r}: neither a "
+                           "'wall_tokens_by_arm' entry nor a top-level 'wall_tokens'")
+    return int(fixture["wall_tokens"])
+
+
+def fixture_for_arm(fixture: dict, arm: str) -> dict:
+    """The fixture as this arm must run it (per-arm wall substituted; same object if equal)."""
+    wall = wall_for_arm(fixture, arm)
+    if "wall_tokens" in fixture and wall == int(fixture["wall_tokens"]):
+        return fixture
+    fx = dict(fixture)
+    fx["wall_tokens"] = wall
+    return fx
+
+
+def _padding_answers(fixture: dict, n_turns: int) -> list[str]:
+    bpt = float(fixture["bytes_per_token"])
+    pads = (answer_padding_by_turn(fixture) + [answer_padding_tokens(fixture)] * n_turns)
+    return ["a" * max(1, int(pads[t - 1] * bpt)) for t in range(1, n_turns + 1)]
+
+
+def _digest_filler(fixture: dict) -> str:
+    return "d" * max(1, int(DIGEST_MAX_TOKENS * float(fixture["bytes_per_token"])))
+
+
+def _simulate(fixture: dict, arm: str, n_turns: int):
+    """Drive the REAL Planner offline with a LEGAL ceiling answer on every turn.
+
+    Yields (turn, info) for every turn and keeps the planner state the production cell
+    keeps: a digest replaces the window and drops the raw blocks to the last four.
+    """
+    fx = fixture_for_arm(fixture, arm)
+    planner = Planner(arm, fx, dry_run=True)
+    answers = _padding_answers(fx, n_turns)
+    for t in range(1, n_turns + 1):
+        info = planner.build(t)
+        if info.get("digest_request") is not None:
+            planner.digest = _digest_filler(fx)
+            planner.raw = planner.raw[-4:]
+        yield t, info
+        planner.record(t, answers[t - 1])
+
+
+def treatment_fire_turns(fixture: dict, arm: str, horizon: int = HORIZON_TURNS) -> dict:
+    """First turn on which each treatment fires, computed offline from the fixture.
+
+    `None` means "does not fire inside the horizon" and is a launch refusal, not a note.
+    Because the padding is the fixture's own MAXIMUM legal answer, the estimate is an
+    upper bound on the window and therefore a lower bound on the fire turn: conservative.
+    """
+    fx = fixture_for_arm(fixture, arm)
+    fires = {"grow": None, "wall": None, "lease": None, "prefix": None,
+             "prefix_first": None, "wall_tokens": int(fx["wall_tokens"]),
+             "answer_padding_tokens": answer_padding_tokens(fx), "horizon": int(horizon)}
+    for t, info in _simulate(fx, arm, int(horizon)):
+        if fires["grow"] is None and int(info.get("evicted") or 0) > 0:
+            fires["grow"] = t
+        if fires["wall"] is None and info.get("digest_request") is not None:
+            fires["wall"] = t
+        if fires["lease"] is None and int(info.get("lease") or 1) > 1:
+            fires["lease"] = t
+        prefix = info.get("prefix_sha256")
+        if prefix:
+            if fires["prefix_first"] is None:
+                fires["prefix_first"] = prefix
+            elif fires["prefix"] is None and prefix != fires["prefix_first"]:
+                fires["prefix"] = t
+    fires["fires"] = {k: fires[k] for k in ("grow", "wall", "lease", "prefix")}
+    fires["reasons"] = treatment_refusals(fx, arm, fires)
+    fires["ok"] = not fires["reasons"]
+    return fires
+
+
+def treatment_refusals(fixture: dict, arm: str, fires: dict) -> list[str]:
+    """Named reasons the launch must be refused (empty list == every treatment is live)."""
+    horizon = int(fires.get("horizon") or HORIZON_TURNS)
+    wall = int(fires.get("wall_tokens") or wall_for_arm(fixture, arm))
+    out: list[str] = []
+    if arm == "transcript-grow" and fires.get("grow") is None:
+        out.append(f"first FIFO truncation > {horizon} turns at wall_tokens={wall} "
+                   f"(grow never evicts: the prompt never exceeds the wall inside the horizon)")
+    if arm == "transcript-compact" and fires.get("wall") is None:
+        out.append(f"first wall > {horizon} turns at wall_tokens={wall} "
+                   f"(compact never requests a digest inside the horizon)")
+    if arm == "lease-reopen":
+        if not (fixture.get("lease_reopen_turns") or []):
+            out.append("missing fixture field 'lease_reopen_turns' — the lease can never "
+                       "step, so the reopen arm is the pointer arm with a different label")
+        elif fires.get("lease") is None:
+            out.append(f"first lease step > {horizon} turns (declared lease_reopen_turns="
+                       f"{fixture.get('lease_reopen_turns')} lie outside the horizon)")
+    if arm == "pointer-stable" and fires.get("prefix") is None:
+        out.append(f"the pinned prefix never changes inside {horizon} turns, so prefix "
+                   f"stability has nothing to be stable against")
+    return out
+
+
+def treatment_report(fixture: dict, arm: str, horizon: int = HORIZON_TURNS) -> list[str]:
+    """The three (four) facts a dry run must print before it may launch anything."""
+    fires = treatment_fire_turns(fixture, arm, horizon)
+    def _show(v):
+        return f"T{v}" if v is not None else f"> {horizon} (NEVER inside the horizon)"
+    lines = [f"  [{arm}] wall_tokens={fires['wall_tokens']} "
+             f"answer_padding={fires['answer_padding_tokens']} tok/turn "
+             f"horizon={horizon}",
+             f"  [{arm}] first FIFO truncation at turn {_show(fires['grow'])}",
+             f"  [{arm}] first wall at turn {_show(fires['wall'])}",
+             f"  [{arm}] first lease step at turn {_show(fires['lease'])}"
+             + ("" if arm == "lease-reopen" else f"  (declared {fixture.get('lease_reopen_turns')}"
+                f", no lease in this arm)"),
+             f"  [{arm}] first prefix change at turn {_show(fires['prefix'])}"
+             + ("" if arm == "pointer-stable" else "  (pointer-stable's own treatment)")]
+    for reason in fires["reasons"]:
+        lines.append(f"  [{arm}] TREATMENT UNREACHABLE: {reason}")
+    return lines
+
+
+def check_treatments(fixture: dict, arm: str, horizon: int = HORIZON_TURNS) -> tuple[int, list[str]]:
+    """Launch precondition: (0, lines) or (EXIT_TREATMENTS_UNREACHABLE, lines).
+
+    Exposed as a callable so `cell.py` (owned elsewhere) can call the SAME assertion; the
+    runner applies it in `--dry-run` AND at the top of `run_cell`, so no path reaches the
+    wire with a treatment that cannot fire.
+    """
+    if not fixture.get("treatments"):
+        # The contract is declared by the fixture (v8+).  The frozen v5/v6/v7 fixtures are
+        # evidence, not cells to relabel, so they are not retro-armed; every fixture that
+        # adopts `treatments` IS gated, and the red-case test proves it refuses.
+        return 0, [f"  [{arm}] treatments contract not declared by this fixture — not gated"]
+    fires = treatment_fire_turns(fixture, arm, horizon)
+    lines = treatment_report(fixture, arm, horizon)
+    return (0 if fires["ok"] else EXIT_TREATMENTS_UNREACHABLE), lines
+
+
 def expected_digests(fixture: dict) -> int:
-    """Declared digest budget for arm B: two walls (pre-registered turns 23 and 53)."""
-    return 2
+    """The digest-request CEILING for one transcript-compact cell, DERIVED from the fixture.
+
+    A function of the declared turns, `wall_tokens` (per arm) and the fixture's own
+    maximum legal answer — not the literal 2 that aborted a legal cell at exit 4 when a
+    third digest fired.  A fixture whose wall is never reached inside the horizon projects
+    0 digests and reserves 0 requests, so the projection and the dry run cannot disagree.
+    """
+    fx = fixture_for_arm(fixture, "transcript-compact")
+    digests = 0
+    for _t, info in _simulate(fx, "transcript-compact", int(fx["N"])):
+        if info.get("digest_request") is not None:
+            digests += 1
+    return digests
 
 
 # ----------------------------------------------------------------------- manifest
-def build_manifest(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str) -> dict:
+def build_manifest(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str,
+                   cap_gate: dict | None = None) -> dict:
+    if getattr(cfg, "dry_run", False):
+        _fingerprints = {
+            "model": {"id": UNSOURCEABLE, "revision_quantisation_digest": UNSOURCEABLE,
+                      "probe": "dry-run: network probe skipped"},
+            "tokenizer": {"files_hash": UNSOURCEABLE, "chat_template_hash": UNSOURCEABLE,
+                          "probe": "dry-run: network probe skipped"},
+            "renderer": {"content_digest": UNSOURCEABLE,
+                         "probe": "dry-run: network probe skipped"},
+            "engine": {"image_digest": UNSOURCEABLE, "exact_argv": UNSOURCEABLE,
+                       "probe": "dry-run: network probe skipped"},
+            "endpoints": [],
+            "completion_paths_touched": [],
+            "completion_paths_avoided": [],
+        }
+    else:
+        _fingerprints = probe_fingerprints(cfg)
     return {
+        # WIRE-CAP-GATE: the declared allocation and the run-start spend are frozen in the
+        # manifest BEFORE the first request; the running and final counts are added to this
+        # same block at exit by _gate_finish (additive; no existing key changes meaning).
+        **({"cap_gate": cap_gate} if cap_gate is not None else {}),
         "schema": "consonance.longrun-manifest/1",
         "run_id": run_id,
         "created_utc": iso(utc_now()),
@@ -866,24 +1873,35 @@ def build_manifest(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_pat
         # "auto" = the key is absent from the request body (byte-identical to pre-flag runs);
         # rows from different settings must never be pooled, so it is frozen here AND per row.
         "thinking": thinking_setting(cfg),
+        # WIRE-CLIENT: the effective /metrics-scrape value, resolved by the client's own
+        # precedence rule (CLI flag > PTR_METRICS_SCRAPE > default). Frozen here and
+        # stamped on every row, because rows scraped with the counters and rows without
+        # them must never be silently pooled.
+        "metrics_scrape": client.resolve_metrics_scrape(cfg),
         "arm": arm,
         "rep": rep,
+        "generation": getattr(cfg, "generation", "gen-7"),
         "N": int(fixture["N"]),
         "model": {
             "name": cfg.model,
             "endpoint": cfg.base_url.rstrip("/"),
             "engine": cfg.engine,
             "tokenizer": "server-reported (usage.prompt_tokens); no client tokenizer",
+            "id": _fingerprints["model"]["id"],
+            "revision_quantisation_digest": _fingerprints["model"]["revision_quantisation_digest"],
+            "probe": _fingerprints["model"]["probe"],
         },
         "renderer": {
             "api": "POST /chat/completions",
             "stream": bool(cfg.stream),
             "include_usage": bool(cfg.stream),
-            "temperature": 0,
+            "temperature": getattr(cfg, "temperature", 0),
+            "seed": getattr(cfg, "seed", 42),
             "max_tokens": int(cfg.max_tokens),
             "thinking": thinking_setting(cfg),
             "chat_template_kwargs": thinking_kwargs(thinking_setting(cfg)),
             "messages": "system + user; content is one user string per turn",
+            "module_content_digest": _fingerprints["renderer"]["content_digest"],
         },
         "engine_flags": {
             "ctx_window": int(fixture.get("window_tokens", 131072)),
@@ -892,6 +1910,9 @@ def build_manifest(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_pat
             "concurrency_B": 64,
             "source": "LONGRUN-PREREG §0/§2; RECORD.md C5 (cached = P1 - P1 mod 64)",
             "knowable": "ctx/cap/block from the prereg; server build flags are not exposed via /v1",
+            "image_digest": _fingerprints["engine"]["image_digest"],
+            "exact_argv": _fingerprints["engine"]["exact_argv"],
+            "probe": _fingerprints["engine"]["probe"],
         },
         "fixture": {
             "path": fixture["_path"],
@@ -907,21 +1928,28 @@ def build_manifest(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_pat
             if os.path.exists("experiments/ptr-engine/LONGRUN-PREREG.md") else None,
         },
         "prediction": PREDICTIONS[arm],
+        # ROW-PROVENANCE: the SAME nine-field block every row carries, published once per
+        # cell, so a later reader can read a cell's provenance from the manifest instead
+        # of re-deriving it row by row.  ``fixture_id`` is <task_id>.<fixture_version>,
+        # ``harness_sha256`` is the digest cell.py would freeze for this tree.
+        "provenance": provenance_for(cfg, fixture, arm),
+        "fingerprints": _fingerprints,
         "rows_path": rows_path,
         # FETCH-CHANNEL: present only on a --tools run, so a tools-off manifest keeps
         # the exact bytes it had before this flag existed.
         **({"tools": {"names": tool_names(cfg), "max_calls_per_turn": TOOL_CALLS_PER_TURN,
-                      "max_fetch_rounds_per_arm": TOOL_FETCH_ROUNDS_PER_ARM,
+                      "max_fetch_rounds_per_arm": fetch_rounds_per_arm(cfg),
                       # PROBE-CP3-V6 (b): a recon burst may not spend the cell.  Frozen here
                       # and stamped on every row as `fetch_rounds_cap_per_turn`.
                       "max_fetch_rounds_per_turn": fetch_rounds_per_turn(cfg),
+                      "fetch_policy": getattr(cfg, "fetch_policy", "strict"),
                       # PROBE-CP3-V6 (a): a range already inside the pinned prompt bodies is
                       # served from the prompt and bills no round.
                       "serve_from_prompt": bool(TOOL_SERVE_FROM_PROMPT),
                       # the follow-up REQUEST allowance (rounds + prompt serves share it),
                       # with one request reserved for every not-yet-reached declared
                       # checkpoint so no earlier burst can starve T12/T24/T46.
-                      "followup_request_pool": TOOL_FETCH_ROUNDS_PER_ARM,
+                      "followup_request_pool": fetch_rounds_per_arm(cfg),
                       "followup_reserve_per_checkpoint": True,
                       # durable spend: frozen at creation, and on --resume the counter is
                       # max(this, rounds derived from the cell's own rows)
@@ -950,184 +1978,44 @@ def write_manifest(path: str, doc: dict) -> tuple[bytes, str]:
 
 
 # ------------------------------------------------------------------- HTTP / usage
-class RequestFailure(RuntimeError):
-    def __init__(self, status, message):
-        super().__init__(message)
-        self.status = status
-
-
-def thinking_setting(cfg) -> str:
-    """The --thinking setting, tolerant of plain namespaces built without the flag."""
-    return str(getattr(cfg, "thinking", "auto") or "auto")
-
-
-def thinking_kwargs(thinking: str):
-    """chat_template_kwargs for one thinking setting.
-
-    'auto' -> None: the key is OMITTED entirely, so the request body stays byte-identical
-    to the pre-flag runner.  'on'/'off' -> the SGLang chat-template thinking switch.
-    Rows from different settings must never be pooled, so the setting is stamped on every
-    row and in the frozen manifest as well.
-    """
-    if thinking == "auto":
-        return None
-    if thinking == "on":
-        return {"enable_thinking": True}
-    if thinking == "off":
-        return {"enable_thinking": False}
-    raise ValueError(f"unknown thinking setting {thinking!r} (expected auto|on|off)")
-
-
-def request_body(cfg, messages: list[dict]) -> dict:
-    body = {
-        "model": cfg.model,
-        "messages": messages,
-        "temperature": 0,
-        "max_tokens": int(cfg.max_tokens),
-        "stream": bool(cfg.stream),
-    }
-    if cfg.stream:
-        body["stream_options"] = {"include_usage": True}
-    kwargs = thinking_kwargs(thinking_setting(cfg))
-    if kwargs is not None:
-        body["chat_template_kwargs"] = kwargs
-    return body
-
-
-
-
-
-def extract_usage(payload: dict, engine: str):
-    """Return (prompt_tokens, raw_cached, token_source) from an OpenAI-ish response."""
-    payload = payload or {}
-    usage = payload.get("usage") or {}
-    meta = payload.get("meta_info") or {}
-    prompt, src = None, []
-    if usage.get("prompt_tokens") is not None:
-        prompt = int(usage["prompt_tokens"])
-        src.append("usage.prompt_tokens")
-    elif meta.get("prompt_tokens") is not None:
-        prompt = int(meta["prompt_tokens"])
-        src.append("meta_info.prompt_tokens")
-    raw_cached = None
-    details = usage.get("prompt_tokens_details")
-    if isinstance(details, dict) and "cached_tokens" in details:
-        raw_cached = details.get("cached_tokens")
-        src.append("usage.prompt_tokens_details.cached_tokens")
-    elif "cached_tokens" in usage:
-        raw_cached = usage.get("cached_tokens")
-        src.append("usage.cached_tokens")
-    elif "cached_tokens" in meta:
-        raw_cached = meta.get("cached_tokens")
-        src.append("meta_info.cached_tokens")
-    return prompt, raw_cached, (";".join(src) or "absent")
+# ONE streaming implementation, and it lives in client.py.
+#
+# WIRE-CLIENT deleted the inline SSE loop that used to sit here (:1033-1137) together with
+# its latch on (piece_c or piece_r) -- a latched perf_counter delta guarded only by "ttft
+# is None", i.e. TTFT was never recorded for a first delta carrying only ``tool_calls``.
+# That latch was blind to a first delta carrying only ``tool_calls``, so a tool-call-first
+# turn recorded no TTFT at all; the survey found exactly that contaminating the p95
+# sample.  client.collect_stream latches on the first delta carrying content OR
+# reasoning_content OR tool_calls, and reports ``ttft_source``/``first_token_kind`` so a
+# null can never be mistaken for a wall-clock substitute.
+#
+# The names below are re-exported rather than re-implemented:
+#   * the tool-channel tests monkeypatch ``run_longrun.send_chat``, so the adapter keeps
+#     that single seam while performing no parsing, no timing and no scraping of its own;
+#   * request_body/thinking_* stay module names because the manifest and the dry-run
+#     preview hash request bodies through them (client.request_body is byte-identical:
+#     model, messages, temperature 0, max_tokens, stream, include_usage, chat_template_kwargs).
+#
+# A second copy is how this defect happened.  tests/test_wire_client.py carries a
+# source-level audit that fails if run_longrun.py ever grows its own perf_counter-delta
+# TTFT again.
+RequestFailure = client.RequestFailure
+thinking_setting = client.thinking_setting
+thinking_kwargs = client.thinking_kwargs
+request_body = client.request_body
+extract_usage = client.extract_usage
 
 
 def send_chat(cfg, messages: list[dict]) -> dict:
-    body = request_body(cfg, messages)
-    data = json.dumps(body).encode("utf-8")
-    url = cfg.base_url.rstrip("/") + "/chat/completions"
-    req = urllib.request.Request(
-        url, data=data,
-        headers={"Content-Type": "application/json",
-                 "Accept": "text/event-stream" if cfg.stream else "application/json"},
-    )
-    t0 = time.perf_counter()
-    try:
-        with urllib.request.urlopen(req, timeout=float(cfg.timeout)) as resp:
-            if not cfg.stream:
-                payload = json.loads(resp.read().decode("utf-8"))
-                latency = time.perf_counter() - t0
-                choice0 = (payload.get("choices") or [{}])[0]
-                message = choice0.get("message") or {}
-                content_raw = message.get("content") or ""
-                reasoning_raw = message.get("reasoning_content") or message.get("reasoning") or ""
-                finish_reason = choice0.get("finish_reason")
-                usage_payload = payload
-                ttft = None
-            else:
-                content_parts: list[str] = []
-                reasoning_parts: list[str] = []
-                usage_payload = None
-                ttft = None
-                finish_reason = None
-                for raw_line in resp:
-                    line = raw_line.decode("utf-8", "replace").strip()
-                    if not line.startswith("data:"):
-                        continue
-                    payload_raw = line[5:].strip()
-                    if payload_raw == "[DONE]":
-                        break
-                    try:
-                        chunk = json.loads(payload_raw)
-                    except json.JSONDecodeError:
-                        continue
-                    if chunk.get("usage"):
-                        usage_payload = chunk
-                    for choice in chunk.get("choices") or []:
-                        # occamy-1.0 is a reasoning model: its tokens arrive on
-                        # delta.reasoning_content first, then delta.content.  Reading only
-                        # delta.content recorded 99/192 empty turns in Stage 1 (LR01 defect).
-                        delta = choice.get("delta") or {}
-                        piece_c = delta.get("content")
-                        piece_r = delta.get("reasoning_content")
-                        if piece_r is None:
-                            piece_r = delta.get("reasoning")
-                        # TTFT = dispatch -> first token on EITHER channel.
-                        if (piece_c or piece_r) and ttft is None:
-                            ttft = time.perf_counter() - t0
-                        if piece_c:
-                            content_parts.append(piece_c)
-                        if piece_r:
-                            reasoning_parts.append(piece_r)
-                        if choice.get("finish_reason"):
-                            finish_reason = choice.get("finish_reason")
-                latency = time.perf_counter() - t0
-                content_raw = "".join(content_parts)
-                reasoning_raw = "".join(reasoning_parts)
+    """Send one request through the single streaming implementation (client.send_chat).
 
-    except urllib.error.HTTPError as exc:
-        try:
-            detail = exc.read()[:500].decode("utf-8", "replace")
-        except Exception:  # noqa: BLE001
-            detail = ""
-        raise RequestFailure(exc.code, f"HTTP {exc.code}: {detail}") from exc
-    except Exception as exc:  # noqa: BLE001 - recorded, never retried
-        raise RequestFailure(None, f"{type(exc).__name__}: {exc}") from exc
+    Deliberately a one-line delegation: every measured field on the returned dict —
+    ttft_ms, ttft_source, first_token_kind, cached_tokens, cached_source,
+    engine_metrics_before/_after, wall_ms — is produced by client.py and passed through
+    to the row unchanged by make_row().
+    """
+    return client.send_chat(cfg, messages)
 
-    # Answer-bearing text: the content channel when the model emitted one, else the
-    # reasoning channel (a reasoning model answers there when content is empty).
-    content_source = ("both" if (content_raw and reasoning_raw)
-                      else "content" if content_raw
-                      else "reasoning" if reasoning_raw
-                      else "none")
-    answer = content_raw if content_raw else reasoning_raw
-
-    prompt, raw_cached, token_source = extract_usage(usage_payload or {}, cfg.engine)
-    usage = (usage_payload or {}).get("usage") or {}
-    completion = int(usage["completion_tokens"]) if usage.get("completion_tokens") is not None else None
-    # Truncation: finish_reason=="length" is the authoritative signal; when the server
-    # omits finish_reason, a completion sitting exactly on the cap is truncated too.
-    cap = int(cfg.max_tokens)
-    truncated = bool(finish_reason == "length"
-                     or (finish_reason is None and completion is not None and completion >= cap))
-    return {
-        "content": answer,
-        "content_raw": content_raw,
-        "reasoning": reasoning_raw,
-        "content_source": content_source,
-        "finish_reason": finish_reason,
-        "truncated": truncated,
-        "max_tokens": cap,
-        "prompt_tokens": prompt,
-        "raw_cached": raw_cached,
-        "token_source": token_source,
-        "completion_tokens": completion,
-        "ttft_s": ttft,
-        "ttft_ms": round(ttft * 1000.0, 3) if ttft is not None else None,
-        "latency_s": latency,
-        "usage_missing": prompt is None,
-    }
 
 
 # ------------------------------------------------------------ reasoning policy
@@ -1162,9 +2050,9 @@ def count_channel_tokens(text: str, fallback_bpt: float = 4.0477) -> tuple[int, 
             import tiktoken  # type: ignore
             _TOKENIZER = tiktoken.get_encoding("cl100k_base")
             _TOKENIZER_METHOD = "tiktoken:cl100k_base"
-        except Exception:  # noqa: BLE001 - fall back, never fail a measurement
+        except (ImportError, OSError, RuntimeError, ValueError, AttributeError, TypeError, LookupError) as exc:
             _TOKENIZER = False
-            _TOKENIZER_METHOD = f"bytes/{fallback_bpt:g} (fixture bytes_per_token)"
+            _TOKENIZER_METHOD = f"bytes/{fallback_bpt:g} (fixture bytes_per_token) [{type(exc).__name__}]"
     if _TOKENIZER:
         return len(_TOKENIZER.encode(text, disallowed_special=())), _TOKENIZER_METHOD
     return int(ceil(len(text.encode("utf-8")) / float(fallback_bpt or 4.0))), _TOKENIZER_METHOD
@@ -1187,22 +2075,454 @@ def contains_expected(text: str, expected: str | None) -> bool:
     return _squash(expected) in _squash(text)
 
 
+# ------------------------------------------------------------------ answer contract
+# ANSWER-CONTRACT (v5): at a checkpoint turn the tools are OFF, the checkpoint
+# question is injected, and the reply is parsed into a VALUE (NUM / CALL / NONE /
+# TEXT) instead of being graded as prose. The contract text below is host-side
+# only: it names no source, no file and no expected value.
+CHECKPOINT_CONTRACT_LINE = (
+    "\n\nCHECKPOINT TURN.\n"
+    "Emit exactly one line and nothing else, in this contract:\n"
+    "  ANSWER: NUM <integer>\n"
+    "  ANSWER: CALL <callee>(<kw>=<value>, <kw>=<value>, ...)\n"
+    "  ANSWER: NONE\n"
+    "  ANSWER: TEXT <one line of prose>\n"
+    "For CALL, put the keyword arguments in alphabetical order and give each value as "
+    "the source text shows it. Anything written after that line is not read.")
+
+
+def checkpoint_turns(fixture: dict) -> list[int]:
+    """Turns that demand a contracted answer.
+
+    `fixture["checkpoint_turns"]` is authoritative when present (v5); older fixtures
+    declare only `checkpoints[].turn`, which is the same set - recognised either way.
+    """
+    declared = fixture.get("checkpoint_turns")
+    if declared:
+        return sorted(int(t) for t in declared)
+    return sorted(int(c.get("turn", -1)) for c in (fixture.get("checkpoints") or []))
+
+
+def checkpoint_prompt(fixture: dict, t: int, prompt: str, arm: str = None, fetch_policy: str = "strict") -> str:
+    """The turn prompt with the checkpoint question (if absent) and the contract line.
+
+    Host-side only: no request is made, no source is read, and only the checkpoint's
+    QUESTION is copied - never its expected value.
+    """
+    cp = next((c for c in (fixture.get("checkpoints") or [])
+               if int(c.get("turn", -1)) == int(t)), None)
+    question = (cp or {}).get("question") or ""
+    text = prompt
+    if question and _squash(question) not in _squash(prompt):
+        text = text + "\n\nCHECKPOINT QUESTION: " + question
+    # Idempotent: do not append the contract line a second time if it is already
+    # present (e.g. a prompt re-assembled through a tool-follow-up path).
+    _already = "CHECKPOINT TURN." in text
+    if arm == arm_cd.ARM_D:
+        _policy_line = ""
+        if (fetch_policy or "strict") == "instructed":
+            _policy_line = ("POLICY: A value that is not visible in the current context "
+                            "must be retrieved with the fetch tool before answering; "
+                            "answering from memory when the value is not in view is not "
+                            "acceptable.\n")
+        contract = (
+            "\n\nCHECKPOINT TURN.\n"
+            + _policy_line +
+            "Every fact you need may sit behind a marker of the form "
+            "`[MASKED <ref>]`, where `<ref>` is exactly `doc-<name>@r<revision>` "
+            "(for example `[MASKED doc-constants@r1]`).\n"
+            "Two protocols, kept separate:\n"
+            "(1) RETRIEVAL. When markers are present you MUST, in a single round, "
+            "issue one fetch call for EVERY ref that appears as a `[MASKED <ref>]` "
+            "marker, then answer from the returned bodies. Answering before fetching "
+            "every marker is a protocol violation and is recorded as "
+            "`retrieval_omitted`. Worked example (two calls in one round): "
+            "fetch(ref=\"doc-config@r1\") and fetch(ref=\"doc-constants@r1\").\n"
+            "(2) ANSWERING. While working a turn you MAY reply with a TOOL CALL "
+            "instead of an `ANSWER:` line. A tool call is NOT an answer and must "
+            "NOT carry the `ANSWER:` prefix. Use the structured shape the tool "
+            "schema expects, e.g. "
+            "{\"name\":\"fetch\",\"arguments\":{\"ref\":\"doc-config@r1\"}}. "
+            "One round may contain several such calls, e.g. three: "
+            "{\"name\":\"fetch\",\"arguments\":{\"ref\":\"doc-config@r1\"}}, "
+            "{\"name\":\"fetch\",\"arguments\":{\"ref\":\"doc-constants@r1\"}}, "
+            "{\"name\":\"fetch\",\"arguments\":{\"ref\":\"doc-errors@r1\"}}. "
+            "After the tool results come back, reply with the `ANSWER:` line.\n"
+            "`ANSWER: CALL <name>(...)` is reserved for an answer whose CONTENT is "
+            "a call; it is never used for retrieval.\n"
+            "Emit exactly one line and nothing else, in this contract (the answer "
+            "line comes after retrieval, never wrapped around a fetch):\n"
+            "  ANSWER: NUM <integer>\n"
+            "  ANSWER: CALL <callee>(<kw>=<value>, <kw>=<value>, ...)\n"
+            "  ANSWER: NONE\n"
+            "  ANSWER: TEXT <one line of prose>\n"
+            "For CALL, put the keyword arguments in alphabetical order and give each value as "
+            "the source text shows it. Anything written after that line is not read.")
+    elif arm == arm_cd.ARM_C:
+        contract = (
+            "\n\nCHECKPOINT TURN.\n"
+            "Retrieval is unavailable; answer from context or ANSWER: NONE.\n"
+            "Emit exactly one line and nothing else, in this contract:\n"
+            "  ANSWER: NUM <integer>\n"
+            "  ANSWER: CALL <callee>(<kw>=<value>, <kw>=<value>, ...)\n"
+            "  ANSWER: NONE\n"
+            "  ANSWER: TEXT <one line of prose>\n"
+            "For CALL, put the keyword arguments in alphabetical order and give each value as "
+            "the source text shows it. Anything written after that line is not read.")
+    else:
+        contract = CHECKPOINT_CONTRACT_LINE
+    if _already:
+        return text
+    return text + contract
+
+
+def protocol_violation(answer_raw) -> str | None:
+    """Detect a tool call masquerading as an answer line.
+
+    If an ``ANSWER:`` payload begins with ``CALL fetch(``, the model wrapped a
+    retrieval call inside the answer contract; that is recorded as
+    ``answer_wrapped_tool_call`` and counted separately from a genuine wrong
+    answer. Returns the violation label or None.
+    """
+    if not isinstance(answer_raw, str):
+        return None
+    payload = answer_raw.strip()
+    if payload.upper().startswith("ANSWER:"):
+        payload = payload[len("ANSWER:"):].strip()
+    if re.match(r"CALL\s+fetch\s*\(", payload, re.IGNORECASE):
+        return "answer_wrapped_tool_call"
+    if re.match(r"CALL\s*\(\s*fetch\b", payload, re.IGNORECASE):
+        return "answer_wrapped_tool_call"
+    return None
+
+
+def _is_text_call_row(row):
+    row = row or {}
+    content = row.get("content")
+    if content is None:
+        content = row.get("answer_raw")
+    try:
+        import arm_cd as _acd
+        calls = _acd.parse_text_call(content if content is not None else "")
+    except Exception:
+        calls = []
+    return bool(calls)
+
+
+def require_protocol_variant(row):
+    row = row or {}
+    if _is_text_call_row(row) and row.get("protocol_variant") != "text_call":
+        raise ValueError("missing protocol_variant on text-call row")
+    return True
+
+
+def refuse_if_missing_protocol_variant(row):
+    return require_protocol_variant(row)
+
+
+def assert_protocol_variant(row):
+    return require_protocol_variant(row)
+
+
+def check_protocol_variant(row):
+    return require_protocol_variant(row)
+
+
+def validate_protocol_variant(row):
+    return require_protocol_variant(row)
+
+
+# aliases
+refuse_missing_protocol_variant = require_protocol_variant
+
+
+def checkpoint_answer_fields(resp) -> dict:
+    """The five contracted row fields for one reply. Offline: parses text only."""
+    if resp is None:
+        return {"answer_turn": True, "answer_kind": None, "answer_value": None,
+                "answer_raw": None, "answer_parse_error": "no_response",
+                "protocol_violation": None}
+    parsed = parse_answer_contract(resp.get("content") or "")
+    raw = parsed["answer_raw"]
+    return {"answer_turn": True,
+            "answer_kind": parsed["answer_kind"],
+            "answer_value": parsed["answer_value"],
+            "answer_raw": raw,
+            "answer_parse_error": parsed["answer_parse_error"],
+            "protocol_violation": protocol_violation(raw)}
+
+
 # --------------------------------------------------------------------------- rows
+def stop_reason_for_row(resp, extra):
+    """The closed-vocabulary reason ONE row's request ended (RECORD-STOP-REASON).
+
+    Turn rows, follow-up rows and refused-follow-up rows all go through ``make_row``, so
+    this single derivation covers every row the runner writes.  The harness's runaway
+    abort marker on ``extra`` ("this turn is the one that tripped ``--runaway-turns``")
+    wins over the client's partial fold, because both the wall cap and the ceiling
+    signature reach the writer as a capped turn; only the run-ending one is a runaway.
+    Otherwise the client's own ``stop_reason`` is authoritative when it is in the
+    vocabulary; otherwise the harness error code on ``extra`` decides
+    (``turn_wall_cap``/``runaway_turn`` -> that code, anything else -> ``http_error``
+    when a status was recorded, else ``stream_error``).  Nothing is invented: a row that
+    carries neither is ``unknown``.
+    """
+    extra = extra or {}
+    if extra.get("runaway_abort"):
+        return client.STOP_REASON_RUNAWAY_TURN
+    if resp is not None:
+        reason = resp.get("stop_reason")
+        if reason in client.STOP_REASONS:
+            return reason
+    code = extra.get("error")
+    if isinstance(code, str) and code:
+        if code in (client.STOP_REASON_TURN_WALL_CAP, client.STOP_REASON_RUNAWAY_TURN):
+            return code
+        return (client.STOP_REASON_HTTP_ERROR if extra.get("http_status")
+                else client.STOP_REASON_STREAM_ERROR)
+    return client.STOP_REASON_UNKNOWN
+
+
+_HARNESS_SHA_CACHE: dict = {}
+_HARNESS_SHA_REASON: dict = {}
+
+
+def harness_sha256_now(fixture) -> str:
+    """The harness digest of THIS tree, frozen the same way cell.py freezes it.
+
+    ROW-PROVENANCE: a row that does not say which harness produced it cannot be told
+    apart from a row produced before a client/runner/grader change.  cell.py owns the
+    file list (``cell.HARNESS_FILES``) and is READ here, never copied and never edited;
+    the combine is cell.py's ``"<name>:<sha>\\n"`` over sorted names, with the fixture as
+    the sixth measurement input.  Anything that cannot be computed (cell.py unimportable,
+    a harness file missing) yields ``"unknown"``: a wrong digest is worse than a gap.
+    """
+    key = str((fixture or {}).get("_sha256") or "")
+    if key and key in _HARNESS_SHA_CACHE:
+        return _HARNESS_SHA_CACHE[key]
+    digest = client.PROVENANCE_UNKNOWN
+    try:
+        import cell as _cell  # noqa: E402 - read-only: the harness file list lives there
+        files = {}
+        for path, name in _cell.HARNESS_FILES:
+            if not os.path.exists(path):
+                raise OSError("harness file is missing: %s" % path)
+            files[name] = sha256_file(path)
+        files["fixture"] = fixture["_sha256"]
+        combined = hashlib.sha256()
+        for name in sorted(files):
+            combined.update(("%s:%s\n" % (name, files[name])).encode("utf-8"))
+        digest = combined.hexdigest()
+    except (ImportError, OSError, ValueError, TypeError, AttributeError, RuntimeError) as exc:
+        _HARNESS_SHA_REASON[key] = "%s: %s" % (type(exc).__name__, exc)
+    if key:
+        _HARNESS_SHA_CACHE[key] = digest
+    return digest
+
+
+def provenance_for(cfg, fixture, arm=None) -> dict:
+    """The provenance block for this run, from what the runner already holds.
+
+    Nothing is invented: every value is read from ``cfg``, from the loaded fixture, or
+    from the harness digest; whatever is genuinely absent becomes ``"unknown"`` and
+    ``provenance_complete`` goes false.
+    """
+    return client.provenance_block(
+        arm=arm,
+        model=getattr(cfg, "model", None),
+        endpoint=(str(getattr(cfg, "base_url", "") or "").rstrip("/") or None),
+        fixture_id=client.fixture_label(fixture),
+        fixture_sha256=(fixture or {}).get("_sha256"),
+        harness_sha256=harness_sha256_now(fixture),
+        max_tokens=getattr(cfg, "max_tokens", None),
+        thinking=thinking_setting(cfg),
+        tools_mode=client.tools_mode_label(tool_names(cfg)),
+        # TOOL-CHANNEL-WIRE: the wire fact that the label above never carried, until now.
+        tools_schema_sent=client.tools_enabled(cfg),
+    )
+
+
+
+# ---------------------------------------------------------------- fingerprints (gate 0.4)
+# UNSOURCEABLE is the only honest value for a field the server does not expose: it
+# names the probe that was attempted, so a gap is never mistaken for a measurement.
+UNSOURCEABLE = "UNSOURCEABLE"
+
+
+def _http_get_json(url: str, timeout: float = 2.0):
+    """Best-effort GET -> (parsed_json, error_string). Never raises."""
+    try:
+        import urllib.request
+        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=float(timeout)) as resp:
+            raw = resp.read().decode("utf-8", "replace")
+        try:
+            return json.loads(raw), None
+        except (json.JSONDecodeError, ValueError, TypeError, RecursionError) as exc:
+            return None, "unparseable: %s" % exc
+    except (urllib.error.URLError, OSError, TimeoutError, ValueError, TypeError, UnicodeDecodeError, RuntimeError) as exc:
+        return None, "%s: %s" % (type(exc).__name__, exc)
+
+
+def probe_fingerprints(cfg) -> dict:
+    """Probe what the endpoint exposes; record UNSOURCEABLE + probe where it does not.
+
+    No value is fabricated: a field the server does not expose stays UNSOURCEABLE
+    and carries the exact probe that was attempted. Offline-safe: every probe is
+    wrapped and never raises.
+    """
+    base = str(getattr(cfg, "base_url", "") or "").rstrip("/")
+    # model id + revision/quantisation digest
+    model_id = UNSOURCEABLE
+    model_digest = UNSOURCEABLE
+    model_probe = "GET %s/models" % base
+    data, err = _http_get_json(base + "/models", timeout=2.0)
+    if isinstance(data, dict):
+        entries = data.get("data") or data.get("models") or []
+        if entries and isinstance(entries[0], dict):
+            first = entries[0]
+            model_id = (first.get("id") or first.get("model") or first.get("name")
+                        or model_id)
+            model_digest = (first.get("revision") or first.get("digest")
+                            or first.get("quantization") or first.get("quantisation")
+                            or UNSOURCEABLE)
+            model_probe = "GET %s/models -> id=%r digest=%r" % (base, model_id, model_digest)
+        else:
+            model_probe = "GET %s/models -> %s" % (base, err or "no model entries")
+    else:
+        model_probe = "GET %s/models -> %s" % (base, err or "no response")
+    # tokenizer files hash + chat-template hash (rarely exposed)
+    tok_probe = "GET %s/model_info (tokenizer files / chat template not exposed)" % base
+    tok_files_hash = UNSOURCEABLE
+    chat_template_hash = UNSOURCEABLE
+    info, ierr = _http_get_json(base + "/model_info", timeout=2.0)
+    if isinstance(info, dict):
+        tok_files_hash = (info.get("tokenizer_files_hash") or info.get("tokenizer_hash")
+                          or UNSOURCEABLE)
+        chat_template_hash = (info.get("chat_template_hash") or info.get("chat_template")
+                              or UNSOURCEABLE)
+        tok_probe = "GET %s/model_info -> tokenizer_files_hash=%r chat_template_hash=%r" % (
+            base, tok_files_hash, chat_template_hash)
+    else:
+        tok_probe = "GET %s/model_info -> %s" % (base, ierr or "no response")
+    # renderer module content digest (local file, not a server value)
+    try:
+        renderer_digest = sha256_file(__file__)
+        renderer_probe = "sha256_file(%s)" % os.path.basename(__file__)
+    except (OSError, ValueError, TypeError, RuntimeError, AttributeError) as exc:
+        renderer_digest = UNSOURCEABLE
+        renderer_probe = "sha256_file(%s) -> %s" % (os.path.basename(__file__), exc)
+    # engine image digest + exact argv (not exposed via /v1)
+    engine_probe = ("GET %s/health (image digest / exact argv not exposed via /v1 or /health); "
+                    "no process inspection performed") % base
+    engine_image_digest = UNSOURCEABLE
+    engine_exact_argv = UNSOURCEABLE
+    health, herr = _http_get_json(base.replace("/v1", "") + "/health", timeout=2.0)
+    if isinstance(health, dict):
+        engine_image_digest = (health.get("image_digest") or health.get("image")
+                               or UNSOURCEABLE)
+        engine_exact_argv = (health.get("argv") or health.get("args") or UNSOURCEABLE)
+        if engine_image_digest != UNSOURCEABLE or engine_exact_argv != UNSOURCEABLE:
+            engine_probe = "GET %s/health -> image_digest=%r argv=%r" % (
+                base, engine_image_digest, engine_exact_argv)
+    return {
+        "model": {
+            "id": model_id,
+            "revision_quantisation_digest": model_digest,
+            "probe": model_probe,
+        },
+        "tokenizer": {
+            "files_hash": tok_files_hash,
+            "chat_template_hash": chat_template_hash,
+            "probe": tok_probe,
+        },
+        "renderer": {
+            "module": os.path.basename(__file__),
+            "content_digest": renderer_digest,
+            "probe": renderer_probe,
+        },
+        "engine": {
+            "image_digest": engine_image_digest,
+            "exact_argv": engine_exact_argv,
+            "probe": engine_probe,
+        },
+    }
+
+
+def assert_repeat_identity(run_id, rep, generation=None) -> bool:
+    """Repeat-identity guard: rep must be present and non-degenerate in run_id.
+
+    gen-7 runs assert hard. gen-6 and earlier are labelled LEGACY-NONCONFORMING and
+    are NOT checked here (the old path, with the deficit printed by the row-count
+    guard, is used for them) -- never silently skipped, always explicitly labelled.
+    """
+    gen = generation if generation is not None else "gen-7"
+    if gen not in ("gen-7", 7, "7"):
+        print("LEGACY-NONCONFORMING: repeat-identity guard skipped for generation=%r"
+              % (gen,), file=__import__("sys").stderr)
+        return True
+    if rep is None:
+        raise AssertionError("repeat-identity: rep is missing")
+    if not run_id or str(rep) not in str(run_id):
+        raise AssertionError(
+            "repeat-identity: rep=%r not present in run_id=%r" % (rep, run_id))
+    return True
+
+
+repeat_identity_guard = assert_repeat_identity
+
+
+def attribute_initial_send() -> bool:
+    """ROW-ATTRIBUTION (docs/ROW-MODEL.md): does the turn's INITIAL send get its own row?
+
+    ``True`` is the live contract: one row per HTTP request of a turn.  The test
+    ``tests/test_row_attribution.py`` sets this to ``False`` IN MEMORY to reproduce the
+    pre-fix writer (the rebinding at the old ``run_longrun.py:2106``) and prove the
+    assertions are red without the attribution.  No file on disk is edited for that.
+    """
+    return True
+
+
+def _scratch_rows(rows_path):
+    """True when a run targets a caller-managed scratch row file, not the corpus.
+
+    CLAIM-ROW-STAMP boundary: the analysis corpus must never be written by a run
+    that did not declare a claim. A row file under the OS temp dir is a
+    diagnostic (tests, smoke probes) -- it may run, stamped non-comparable --
+    while a corpus target without --claim-mode is refused with exit 12.
+    """
+    try:
+        root = os.path.realpath(tempfile.gettempdir())
+    except OSError:
+        return False
+    target = os.path.realpath(os.path.abspath(rows_path))
+    return target == root or target.startswith(root + os.sep)
+
+
 def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sha, extra):
+    assert_repeat_identity(run_id, rep, getattr(cfg, 'generation', 'gen-7'))
     if resp is None:
         # A failed turn has no measurement: null, never a measured zero.
-        cached, prompt, uncached = None, None, None
+        cached, cached_normalized, prompt, uncached = None, None, None, None
     else:
-        cached = normalize_cached_tokens(resp.get("raw_cached"), cfg.engine)
+        # The client's seam value is authoritative and is carried UNCHANGED: a measured
+        # 0 stays 0, an unattributed None stays null (never imputed). The legacy
+        # null-semantics reading is preserved beside it as ``cached_tokens_normalized``
+        # so rows written before the wiring keep a comparable column.
+        cached = resp.get("cached_tokens")
+        cached_normalized = normalize_cached_tokens(resp.get("raw_cached"), cfg.engine)
         prompt = resp.get("prompt_tokens")
         uncached = None if (prompt is None or cached is None) else int(prompt) - int(cached)
     expected, cp_question = checkpoint_expected(fixture, t)
+    # RECORD-STOP-REASON: WHY this ended, one closed-vocabulary word, and ``truncated``
+    # derived FROM it so the two can never disagree.  null only when no response exists.
+    stop_reason = stop_reason_for_row(resp, extra)
+    truncated = None if resp is None else client.truncated_for(stop_reason)
     if resp is None:
         # A failed request is a failed turn with no channel measurement.
         content_raw = reasoning_raw = ""
         r_tok = c_tok = None
         tok_method = None
-        truncated = None
         answer_source = "none"
         failed_turn = True
         expected_present = False
@@ -1213,7 +2533,6 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
         bpt = float(fixture.get("bytes_per_token") or 4.0477)
         c_tok, tok_method = count_channel_tokens(content_raw, bpt)
         r_tok, _ = count_channel_tokens(reasoning_raw, bpt)
-        truncated = bool(resp.get("truncated"))
         expected_present = bool(contains_expected(reasoning_raw, expected)) if expected else False
         content_has_expected = bool(contains_expected(content_raw, expected)) if expected else False
         if content_raw.strip():
@@ -1229,15 +2548,50 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
         failed_turn = bool(truncated and not (expected_present or content_has_expected))
         answer_verified = (bool(content_has_expected or expected_present)
                            if expected is not None else None)
+    # RECORD-STOP-REASON item 3: when a ceiling/empty/HTTP stop left NO usable content,
+    # the row carries the sha of whatever content it has (the EMPTY string's sha when
+    # there is none) and a completion count, so an empty generation is self-evident
+    # without cross-file arithmetic.  ``stop_evidence`` marks that reading.
+    no_usable_content = not ((content_raw or "").strip() or (reasoning_raw or "").strip())
+    stop_evidence = bool(no_usable_content and stop_reason in (
+        client.STOP_REASON_LENGTH, client.STOP_REASON_EMPTY, client.STOP_REASON_HTTP_ERROR))
+    if content is not None:
+        recorded_content = content
+    else:
+        recorded_content = "" if stop_evidence else None
+    completion_recorded = resp.get("completion_tokens") if resp else None
+    if stop_evidence and completion_recorded is None:
+        # no stream ever delivered a usage chunk: the count is what the CLIENT observed (0)
+        completion_recorded = 0
+    # CLAIM-ROW-STAMP: the claim decision reaches EVERY row literal built here --
+    # turn-initial, turn, tool-followup and failure rows alike. A cfg without a
+    # resolved claim (a direct make_row call) is stamped the conservative
+    # non-comparable shape, never a comparable one.
+    claim_fields = (claim_mode.row_fields(cfg.claim)
+                    if getattr(cfg, "claim", None)
+                    else {"claim": claim_mode.CLAIM_NONE,
+                          "comparison_eligible": False})
     row = {
-        "arm": arm, "task_id": fixture["task_id"], "rep": rep, "turn": t,
+        "arm": arm, **claim_fields, "task_id": fixture["task_id"],
+        "fixture_path": (fixture or {}).get("_path"), "rep": rep, "turn": t,
         "prompt_tokens": prompt,
         "cached_tokens": cached,
         "uncached_tokens": uncached,
         "ttft_s": round(resp["ttft_s"], 6) if resp and resp.get("ttft_s") is not None else None,
         "latency_s": round(resp["latency_s"], 6) if resp else None,
-        "completion_tokens": resp.get("completion_tokens") if resp else None,
-        "content_sha256": sha256_text(content) if content is not None else None,
+        "completion_tokens": completion_recorded,
+        "content_sha256": (sha256_text(recorded_content)
+                           if recorded_content is not None else None),
+        # REQUEST-IDENTITY (docs/REQUEST-IDENTITY.md): what was SENT, beside the hash of
+        # what came back.  ``request_sha256`` is the client's sha256 over the exact wire
+        # bytes; a response that was recorded twice from ONE send carries the same value
+        # on both rows.  A row whose body was not retained says ``unknown`` and false --
+        # never a guess.  Deliberately absent from every rows file written before this
+        # field existed; history is NOT backfilled.
+        "request_sha256": (resp.get("request_sha256")
+                           if resp and resp.get("request_sha256")
+                           else client.REQUEST_SHA_UNKNOWN),
+        "request_identity_complete": bool(resp and resp.get("request_identity_complete")),
         "content": content,
         "fixture_sha256": fixture["_sha256"],
         "run_manifest_sha256": manifest_sha,
@@ -1246,12 +2600,35 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
         # extras (analysis may use; never replace the contracted keys)
         # instrument-fix fields: TTFT per row, both channels, truncation provenance
         "ttft_ms": resp.get("ttft_ms") if resp else None,
+        # WIRE-CLIENT seam v1: carried from the client unchanged, exact names. A null
+        # ttft_ms with ttft_source="unavailable" must reach the row as null -- wall_ms is
+        # reported separately and is NEVER substituted for it.
+        "ttft_source": resp.get("ttft_source") if resp else None,
+        "first_token_kind": resp.get("first_token_kind") if resp else None,
+        "cached_source": resp.get("cached_source") if resp else None,
+        "cached_tokens_normalized": cached_normalized,
+        "engine_metrics_before": resp.get("engine_metrics_before") if resp else None,
+        "engine_metrics_after": resp.get("engine_metrics_after") if resp else None,
+        "wall_ms": resp.get("wall_ms") if resp else None,
+        "metrics_scrape": client.resolve_metrics_scrape(cfg),
         "content_source": resp.get("content_source") if resp else None,
         "reasoning": resp.get("reasoning") if resp else None,
         "reasoning_sha256": sha256_text(resp["reasoning"]) if resp and resp.get("reasoning") else None,
         "finish_reason": resp.get("finish_reason") if resp else None,
-        "truncated": bool(resp.get("truncated")) if resp else None,
-        "max_tokens": resp.get("max_tokens") if resp else int(cfg.max_tokens),
+        # RECORD-STOP-REASON: the closed vocabulary, the per-choice finish reasons, and the
+        # ceiling AS SENT on the request -- a 128-token cap stop is now readable here.
+        "finish_reasons": resp.get("finish_reasons") if resp else None,
+        "stop_reason": stop_reason,
+        "truncated": truncated,
+        # STOP-REASON-HOLES: rule 3 must be computable from the row ALONE.  The ceiling
+        # as sent wins; the configured cap is the only fallback, never None.
+        "max_tokens": (resp.get("max_tokens")
+                       if (resp is not None and resp.get("max_tokens") is not None)
+                       else int(cfg.max_tokens)),
+        "stop_evidence": stop_evidence,
+        "completion_tokens_source": (
+            "usage" if (resp is not None and resp.get("completion_tokens") is not None)
+            else ("client_observed" if stop_evidence else None)),
         # reasoning-policy fields: per-channel split, the verdict, and its provenance
         "reasoning_tokens": r_tok,
         "content_tokens": c_tok,
@@ -1269,14 +2646,85 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
         # thinking switch: rows from different settings must NEVER be pooled; a later
         # analysis must be able to read the setting from the row alone.
         "thinking": thinking_setting(cfg),
+        "temperature": getattr(cfg, "temperature", 0),
+        "seed": getattr(cfg, "seed", 42),
+        "fetch_policy": getattr(cfg, "fetch_policy", "strict"),
         "run_id": run_id, "engine": cfg.engine, "kind": kind,
+        "generation": getattr(cfg, "generation", "gen-7"),
         "is_checkpoint": bool(extra.get("is_checkpoint")), "checkpoint": extra.get("checkpoint"),
         "cached_reported": bool(resp and resp.get("raw_cached") is not None),
         "usage_missing": bool(resp and resp.get("usage_missing")),
         "lease": extra.get("lease"), "evicted": extra.get("evicted"),
+        # TREATMENTS: the turn a digest was requested on (null on every other row), written
+        # beside `evicted` so compaction is visible WITHOUT a `kind == "digest"` row.
+        "digest_at": extra.get("digest_at"),
+        "masked_rows": extra.get("masked_rows"),
+        "masked_entry": extra.get("masked_entry"),
+        "marker_refs": extra.get("marker_refs"),
+        "fetch_rows": extra.get("fetch_rows"),
+        "retrieval_attempt": extra.get("retrieval_attempt"),
+        "retrieval_outcomes": extra.get("retrieval_outcomes"),
+        "fetch_tokens": extra.get("fetch_tokens"),
+        "tokenizer_calls": extra.get("tokenizer_calls"),
+        "tokenizer_reused": extra.get("tokenizer_reused"),
+        "tokenizer_cache_hit": extra.get("tokenizer_cache_hit"),
+        "reused": extra.get("reused"),
+        "fetch_budget_tokens": extra.get("fetch_budget_tokens"),
+        "tool_call_id": extra.get("tool_call_id"),
+        "tool_call_ids": extra.get("tool_call_ids"),
+        "checkpoint": extra.get("checkpoint"),
         "prompt_sha256": extra.get("prompt_sha256"),
         "http_status": extra.get("http_status"), "error": extra.get("error"),
     }
+    # ANSWER-CONTRACT (v5): the five contracted fields are ALWAYS present, so a
+    # checkpoint cell is machine-decidable from the row alone (null on a non-answer turn).
+    # FIX1: every row carries the contracted answer fields, produced by the grader's
+    # own parser over the row's content (never re-derived, never trusted from extras).
+    _parsed_answer = parse_answer_contract(content if content is not None else "")
+    row["answer_turn"] = bool(extra.get("answer_turn"))
+    row["answer_kind"] = _parsed_answer["answer_kind"]
+    row["answer_value"] = _parsed_answer["answer_value"]
+    row["answer_raw"] = _parsed_answer["answer_raw"]
+    row["answer_parse_error"] = _parsed_answer["answer_parse_error"]
+    # PROTOCOL-VIOLATION (TOOLCALLFIX): an ANSWER: payload that wraps a fetch
+    # call is recorded distinctly and counted separately from a genuine wrong
+    # answer. Never masks a real policy result.
+    row["protocol_violation"] = protocol_violation(_parsed_answer["answer_raw"])
+    # (protocol_violation already overridden above when extra provides it)
+    row["protocol_violation"] = extra.get("protocol_violation") if extra.get("protocol_violation") is not None else row["protocol_violation"]
+    # TEXT-CALL-PROTOCOL: stamp the transport variant when a row carries a
+    # text-form fetch request, so the rows stay honest about how the call was framed.
+    _text_calls = None
+    try:
+        import arm_cd as _acd
+        _text_calls = _acd.parse_text_call(content if content is not None else "")
+    except Exception:
+        _text_calls = []
+    if _text_calls:
+        row["protocol_variant"] = extra.get("protocol_variant", "text_call")
+        row["ref_as_emitted"] = extra.get("ref_as_emitted", _text_calls[0].get("ref_as_emitted"))
+        row["ref_revision_normalised"] = extra.get("ref_revision_normalised", _text_calls[0].get("ref_revision_normalised"))
+    else:
+        row["protocol_variant"] = extra.get("protocol_variant")
+        row["ref_as_emitted"] = extra.get("ref_as_emitted")
+        row["ref_revision_normalised"] = extra.get("ref_revision_normalised")
+    # FIX2: retrieval omission is a recorded protocol violation for arm D on a
+    # marked turn where not every marker was fetched. Never set for arm C or
+    # when all markers are fetched. Boolean on every row.
+    row["retrieval_omitted"] = False
+    _marker_refs = extra.get("marker_refs") or []
+    _fetched_n = extra.get("fetch_rows")
+    if _fetched_n is None:
+        _fetched_n = 0
+    try:
+        _fetched_n = int(_fetched_n)
+    except (TypeError, ValueError):
+        _fetched_n = 0
+    if (str(arm) == arm_cd.ARM_D
+            and kind != "turn-initial"
+            and len(_marker_refs) > 0
+            and _fetched_n < len(_marker_refs)):
+        row["retrieval_omitted"] = True
     if extra.get("fetch_followup"):
         # FETCH-CHANNEL: a follow-up model request served a tool result (real request).
         row["fetch_followup"] = True
@@ -1287,13 +2735,85 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
         row["fetch_rounds_used"] = extra["fetch_rounds_used"]
     # PROBE-CP3-V6: the (b) cap and the (a) no-bill split, readable from the row alone.
     for key in ("fetch_rounds_cap_per_turn", "fetch_rounds_this_turn", "fetch_prompt_serves",
-                "billed_round", "prompt_served"):
+                "billed_round", "prompt_served",
+                # ROW-ATTRIBUTION: which HTTP request of the turn this row measured.
+                "send_index", "initial_send", "row_measurement_source",
+                "fetch_round_final", "final_round_billed", "final_round_prompt_served",
+                "next_request_kind"):
         if extra.get(key) is not None:
             row[key] = extra[key]
+    if extra.get("runaway_abort"):
+        # STOP-REASON-HOLES: this row is the one that tripped --runaway-turns and ended
+        # the cell; the harness event (`error`) stays the wall cap/signature that fired.
+        row["runaway_abort"] = True
+    # ROW-PROVENANCE: this row names what produced it -- arm, model, endpoint, fixture
+    # identity, the harness digest, the ceiling, the thinking switch and the tool mode --
+    # so a later analysis READS the era instead of inferring it from file mtimes.  An
+    # absent value is the string "unknown" plus provenance_complete=false, never null.
+    row.update(provenance_for(cfg, fixture, arm))
+    # TOOL-CHANNEL-WIRE: DECLARED vs ACTUALLY SENT, side by side on every row.
+    # `tools_declared` is the run's --tools switch; `tools_schema_sent` is the WIRE fact
+    # for THIS row's request, read from the response the client stamped.  A response with
+    # no stamp (a failure row) falls back to the request body's own deterministic gate.
+    sent = (resp or {}).get("tools_schema_sent") if isinstance(resp, dict) else None
+    row["tools_declared"] = bool(client.tools_enabled(cfg))
+    row["tools_schema_sent"] = (bool(sent) if sent is not None
+                                else bool(client.tools_enabled(cfg)))
+    # INTERIM MARKING: a checkpoint row that is not the final answer for its
+    # checkpoint id (a fetch follow-up, a turn-initial attempt, or a row that
+    # itself issues a fetch) is marked interim so the scorer grades it once.
+    _cp = row.get("checkpoint")
+    if (_cp is not None or extra.get("checkpoint") is not None
+            or row.get("fetch_followup") is True
+            or kind in ("turn-initial", "tool-followup")):
+        if kind in ("turn-initial", "tool-followup"):
+            row["interim"] = True
+            row["interim_reason"] = "fetch_followup"
+        else:
+            _content = (content or row.get("content") or "")
+            if "fetch(" in str(_content).lower() or "fetch " in str(_content).lower():
+                row["interim"] = True
+                row["interim_reason"] = "fetch_followup"
     return row
 
 
+#: Monotonic per-file position, seeded from the file's own last ``row_seq``.
+_ROW_SEQ: dict[str, int] = {}
+
+
+def _row_seq_high_water(path: str) -> int:
+    """Highest ``row_seq`` already in ``path`` (0 when the file is absent/unstamped)."""
+    key = os.path.abspath(path)
+    if key not in _ROW_SEQ:
+        high = 0
+        if os.path.exists(key):
+            with open(key, encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        seq = json.loads(line).get("row_seq")
+                    except json.JSONDecodeError:
+                        continue
+                    if isinstance(seq, int) and seq > high:
+                        high = seq
+        _ROW_SEQ[key] = high
+    return _ROW_SEQ[key]
+
+
 def append_row(path: str, row: dict) -> None:
+    # ROW-SEQ: one integer per WRITE POSITION in the file, assigned once per row object.
+    # A double append of one request is visible as two lines sharing ``request_sha256``
+    # AND ``row_seq``; a genuine re-send keeps the same request hash but is a NEW row and
+    # takes the next integer.
+    key = os.path.abspath(path)
+    if "row_seq" in row:
+        # The same row object written a second time: keep its seq (that is the evidence).
+        _ROW_SEQ[key] = max(_row_seq_high_water(path), int(row["row_seq"]))
+    else:
+        row["row_seq"] = _row_seq_high_water(path) + 1
+        _ROW_SEQ[key] = row["row_seq"]
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, ensure_ascii=False) + "\n")
         fh.flush()
@@ -1342,7 +2862,12 @@ def preview_body(cfg, planner: Planner, prompt: str) -> str:
 
 
 def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]]) -> int:
-    root = os.path.join("/tmp/longrun-previews", fixture["task_id"])
+    root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                       "state", "previews", fixture["task_id"])
+    import shutil as _shutil
+    if os.path.exists(root):
+        _shutil.rmtree(root)
+    os.makedirs(root, exist_ok=True)
     order: list[str] = []
     reps_by_arm: dict[str, int] = {}
     for arm, _rep in cells:
@@ -1353,13 +2878,43 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]]) -> int:
     previews: dict[str, list[str]] = {arm: [] for arm in order}
     counts: dict[str, dict] = {}
 
+    # TREATMENTS LAUNCH PRECONDITION — printed FIRST, before a single preview body is
+    # rendered, and fatal.  A dry run that reaches no hook is not a preview of a cell; it
+    # is the announcement that the cell would measure its control path for 48 turns.
+    print("TREATMENT REACHABILITY AT THE FROZEN HORIZON (offline, from the fixture)")
+    unreachable = 0
     for arm in order:
-        planner = Planner(arm, fixture, dry_run=True)
+        rc, lines = check_treatments(fixture, arm, HORIZON_TURNS)
+        for line in lines:
+            print(line)
+        unreachable = unreachable or rc
+    if unreachable:
+        print(f"\nLAUNCH REFUSED (exit {EXIT_TREATMENTS_UNREACHABLE}): a treatment cannot fire "
+              f"inside {HORIZON_TURNS} turns at this fixture's wall. Do not raise the horizon "
+              "(PARM-1 line 137) and do not raise the wall until it fits: change the fixture's "
+              "treatment inputs, or run an arm whose treatment does fire. No request was sent.",
+              file=sys.stderr)
+        return EXIT_TREATMENTS_UNREACHABLE
+    print()
+
+    # RUN-DRY-TURN-SCOPE: the preview loops over EXACTLY the turns the live cell would
+    # execute — `cell_turns`, the same one definition `run_cell` and `projected_requests`
+    # read.  It is not `fixture["N"]` and it is not a second `min()` here: a preview that
+    # prices 48 turns for a `--max-turns 12` cell gates a cell that cannot exist.
+    n_turns = cell_turns(cfg, fixture)
+
+    for arm in order:
+        fx = fixture_for_arm(fixture, arm)
+        planner = Planner(arm, fx, dry_run=True)
         c = {"reps": reps_by_arm[arm], "digest_requests": 0, "wall_turn": None,
              "trunc_turn": None, "post_wall": None}
         counts[arm] = c
-        for t in range(1, int(fixture["N"]) + 1):
+        for t in range(1, n_turns + 1):
             info = planner.build(t)
+            if t in checkpoint_turns(fixture):
+                # ANSWER-CONTRACT (v5): identical injection to run_cell, so the preview
+                # body is the body a checkpoint turn would really send.
+                info["prompt"] = checkpoint_prompt(fixture, t, info["prompt"], arm=planner.arm, fetch_policy=getattr(cfg, "fetch_policy", "strict"))
             body = preview_body(cfg, planner, info["prompt"])
             digest_body = None
             if info["digest_request"] is not None:
@@ -1395,19 +2950,22 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]]) -> int:
     total = 0
     for arm in order:
         c = counts[arm]
-        turns = int(fixture["N"]) * c["reps"]
+        turns = n_turns * c["reps"]
         extra = c["digest_requests"] * c["reps"]
         cell_total = turns + extra
         total += cell_total
-        assert turns == int(fixture["N"]) * c["reps"], "turn count must be N x reps"
-        print(f"  {arm:19s} turn_requests={turns} (N={fixture['N']} x reps={c['reps']})  "
+        assert turns == n_turns * c["reps"], "turn count must be the cell's turns x reps"
+        # Full cell (n_turns == fixture N): the line is byte-identical to before this unit.
+        scope = (f"N={fixture['N']} x reps={c['reps']}" if n_turns == int(fixture["N"])
+                 else f"N={fixture['N']} --max-turns={n_turns} x reps={c['reps']}")
+        print(f"  {arm:19s} turn_requests={turns} ({scope})  "
               f"digest_requests={extra}  cell_total={cell_total}")
     print(f"  would_send_total={total}")
     if tools_enabled(cfg):
         # Offline there is no model turn, so no <tool_call> can be parsed and no fetch
         # is possible: the cap below is the ceiling, not a predicted spend.
         print(f"  tool_channel={','.join(tool_names(cfg))} fetch_rounds_cap="
-              f"{TOOL_FETCH_ROUNDS_PER_ARM} (per arm) fetch_rounds_cap_per_turn="
+              f"{fetch_rounds_per_arm(cfg)} (per arm) fetch_rounds_cap_per_turn="
               f"{fetch_rounds_per_turn(cfg)} serve_from_prompt={bool(TOOL_SERVE_FROM_PROMPT)} "
               f"max_calls_per_turn={TOOL_CALLS_PER_TURN} "
               f"fetch_requests_in_this_preview=0 (no model turn offline)")
@@ -1443,21 +3001,60 @@ def self_test() -> int:
 
 # --------------------------------------------------------------------------- cell
 def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str) -> int:
+    assert_repeat_identity(run_id, rep, getattr(cfg, 'generation', 'gen-7'))
+    import copy as _copy
+    if arm == arm_cd.ARM_C:
+        cfg = _copy.copy(cfg)
+        cfg.tools = ""
+    # real launch too — a cell that would spend 48 requests on its control path refuses
+    # BEFORE the manifest is frozen and before any request is sent.
+    rc_t, lines = check_treatments(fixture, arm, HORIZON_TURNS)
+    for line in lines:
+        print(line)
+    if rc_t != 0:
+        print(f"LAUNCH REFUSED (exit {rc_t}): the {arm} treatment cannot fire inside "
+              f"{HORIZON_TURNS} turns at this fixture's wall; no request was sent.",
+              file=sys.stderr)
+        return rc_t
+    fixture = fixture_for_arm(fixture, arm)
     manifest_path = cfg.manifest_path or os.path.join(cfg.manifest_dir, run_id + ".json")
     rows = read_cell_rows(rows_path, run_id, fixture["task_id"], arm, rep) if cfg.resume else []
+    # WIRE-CAP-GATE: the gate exists BEFORE the frozen manifest is written, so the declared
+    # allocation and the run-start spend are part of the manifest the cell is stamped with.
+    try:
+        gate = build_cap_gate(cfg, fixture, arm, rows_path)
+    except CapUsageError as exc:
+        print(f"CAP GATE USAGE: {exc} — the run did not start, no request was sent",
+              file=sys.stderr)
+        return 3
+    except CapRowsUnreadable as exc:
+        print(f"CAP GATE ROWS: {exc}", file=sys.stderr)
+        print("CAP GATE ROWS: nothing counted — an unreadable row file makes the spent "
+              "total unknowable; no request was sent", file=sys.stderr)
+        return 5
     if cfg.resume and rows and os.path.exists(manifest_path):
         with open(manifest_path, "rb") as fh:
             data = fh.read()
         manifest_sha = sha256_bytes(data)
-        if rows[0].get("run_manifest_sha256") != manifest_sha:
+        # The cap-gate addendum written at exit names the sha the ROWS were stamped with,
+        # so a resume after that addendum is still verifying the same frozen manifest.
+        try:
+            frozen_sha = (((json.loads(data.decode("utf-8")) or {}).get("cap_gate") or {})
+                          .get("frozen_sha256"))
+        except (ValueError, AttributeError):
+            frozen_sha = None
+        stamped = rows[0].get("run_manifest_sha256")
+        if stamped != manifest_sha and stamped != frozen_sha:
             print(f"RESUME REFUSED: manifest {manifest_path} sha {manifest_sha} does not match the "
-                  f"rows ({rows[0].get('run_manifest_sha256')})", file=sys.stderr)
+                  f"rows ({stamped})", file=sys.stderr)
             return 5
         print(f"resume: reusing frozen manifest {manifest_path} sha256={manifest_sha}")
     else:
         try:
-            data, manifest_sha = write_manifest(manifest_path,
-                                                build_manifest(cfg, fixture, arm, rep, run_id, rows_path))
+            data, manifest_sha = write_manifest(
+                manifest_path,
+                build_manifest(cfg, fixture, arm, rep, run_id, rows_path,
+                               cap_gate=gate.manifest_block()))
         except OSError as exc:
             print(f"MANIFEST ABORT: cannot write {manifest_path}: {type(exc).__name__}: {exc}",
                   file=sys.stderr)
@@ -1465,6 +3062,9 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                   "frozen manifest, no result).", file=sys.stderr)
             return 3
         print(f"manifest: {manifest_path} ({len(data)} B) sha256={manifest_sha}")
+    print(f"cap-gate: allocation={gate.allocation} cap={gate.cap} reserve={gate.reserve} "
+          f"spent_at_start={gate.spent_at_start} headroom={gate.headroom} "
+          f"files={len(gate.paths)} (per-request brake armed before the first send)")
 
     planner = Planner(arm, fixture, dry_run=False)
     start = 1
@@ -1472,24 +3072,18 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
         start = resume_start(rows) + 1
         planner.replay(rows)
         print(f"resume: cell has turns 1..{start - 1}; continuing at {start}")
-    n_turns = int(fixture["N"])
-    max_turns = int(getattr(cfg, "max_turns", 0) or 0)
-    if max_turns > 0:
-        n_turns = min(n_turns, max_turns)
-    budget = n_turns + (expected_digests(fixture) if arm == "transcript-compact" else 0)
-    if tools_enabled(cfg):
-        # The tool channel authorises exactly the fetch rounds it is allowed to spend,
-        # so a fetch run's request count can legitimately exceed N.  With --tools off
-        # this branch does not run and `budget` is the same expression as before.
-        budget += TOOL_FETCH_ROUNDS_PER_ARM
+    n_turns = cell_turns(cfg, fixture)
+    # The cell's structural request projection.  It is ALSO the default allocation, so the
+    # in-memory brake and the old `sent >= budget` abort cannot disagree about the ceiling.
+    budget = projected_requests(cfg, fixture, arm)
     sent = 0
     fetch_rounds_used = 0
     fetch_cache: dict = {}
     # PROBE-CP3-V6 (b): the per-turn cap, and the follow-up REQUEST allowance that funds
     # every round (billed or prompt-served) without letting a burst starve the checkpoints.
     per_turn_cap = fetch_rounds_per_turn(cfg)
-    checkpoint_turns = [int(c.get("turn", -1)) for c in (fixture.get("checkpoints") or [])]
-    followup_pool = TOOL_FETCH_ROUNDS_PER_ARM
+    cp_turns = checkpoint_turns(fixture)
+    followup_pool = fetch_rounds_per_arm(cfg)
     followups_bought = followups_spent(rows) if tools_enabled(cfg) else 0
     if tools_enabled(cfg) and rows:
         # DURABLE ROUND COUNTING.  `--resume` used to reset this to 0, so a resumed arm
@@ -1507,8 +3101,62 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
             frozen = 0
         fetch_rounds_used = max(frozen, derived)
         print(f"resume: fetch rounds already spent={fetch_rounds_used}/"
-              f"{TOOL_FETCH_ROUNDS_PER_ARM} (manifest={frozen} derived_from_rows={derived}); "
+              f"{fetch_rounds_per_arm(cfg)} (manifest={frozen} derived_from_rows={derived}); "
               "--resume does not reset the counter")
+
+    wall_cap = float(getattr(cfg, "turn_wall_cap", 0) or 0)
+    runaway_turns = max(1, int(getattr(cfg, "runaway_turns", 2) or 2))
+    # RUNAWAY-POLICY (docs/RUNAWAY-POLICY.md): two DIFFERENT events are counted
+    # separately because they cost different things, and one former "runaway" is data.
+    #   wall_runaways      -- a turn whose stream --turn-wall-cap CLOSED (client.py:530
+    #                         raises TurnWallCap). This is the cost hazard the guard was
+    #                         built for: the 16,384-token / 475,873 ms turn of
+    #                         LIVE-SMOKE-CELL, now bounded per turn AND counted here.
+    #   ceiling_violations -- a response that finished ABOVE --max-tokens, i.e. a server
+    #                         that IGNORED the ceiling: unbounded tokens, no row-level
+    #                         bound. Counted against the same limit.
+    #   A `length` truncation AT the ceiling is NOT counted: it is bounded data
+    #                         (measured: 2 turns of 27 in cell 1 of RUN-A*).
+    wall_runaways = 0
+    wall_runaway_turns = []
+    ceiling_violations = 0
+    ceiling_violation_turns = []
+
+    def _runaway_detail():
+        return ("wall-time runaways %d/%d [%s]; ceiling violations %d/%d [%s]"
+                % (wall_runaways, runaway_turns,
+                   "; ".join(wall_runaway_turns) or "none",
+                   ceiling_violations, runaway_turns,
+                   "; ".join(ceiling_violation_turns) or "none"))
+
+    def _escalate(turn_no, exc, part, kind="turn"):
+        # ONE loud line: the turn, its wall time, its completion tokens and the cap.
+        print(f"RUNAWAY T{turn_no} ({kind}): wall={exc.wall_s:.1f}s "
+              f"completion_tokens={part.get('completion_tokens')} "
+              f"cap={wall_cap:.1f}s — stream CLOSED, turn ABORTED, row recorded "
+              f"error=turn_wall_cap truncated=true "
+              f"(wall-time runaways {wall_runaways}/{runaway_turns})",
+              file=sys.stderr)
+
+    def _ceiling_violation(row):
+        """Predicate 2, NARROWED BY RUNAWAY-POLICY: a response ABOVE the ceiling.
+
+        A `length` truncation AT the ceiling (`truncated` and completion_tokens ==
+        cfg.max_tokens) is DATA, not a runaway: the turn finished inside
+        --turn-wall-cap, spent exactly max_tokens, and the row records
+        ``stop_reason=length`` so a grader marks that answer wrong or absent. The other
+        47 turns are unaffected by it. Measured: 2 of 27 turns in cell 1 of RUN-A*.
+
+        What STILL counts is the server IGNORING the ceiling (completion_tokens >
+        cfg.max_tokens): unbounded tokens with no row-level bound on cost. See
+        docs/RUNAWAY-POLICY.md, option B.
+        """
+        comp = int(row.get("completion_tokens") or 0)
+        ceiling = int(cfg.max_tokens)
+        if comp > ceiling:
+            return ("completion_tokens %d EXCEEDED the max_tokens ceiling %d"
+                    % (comp, ceiling))
+        return None
 
     for t in range(start, n_turns + 1):
         info = planner.build(t)
@@ -1518,10 +3166,26 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
         # turn.get("checkpoint") left is_checkpoint False on every row (found here at T12).
         declared = next((c for c in fixture.get("checkpoints") or []
                          if int(c.get("turn", -1)) == int(t)), None)
+        is_answer_turn = int(t) in cp_turns
+        if is_answer_turn:
+            # ANSWER-CONTRACT (v5): the checkpoint question arrives now, and the turn
+            # itself says the tools are off. The injected text carries no expected value.
+            info["prompt_before_checkpoint"] = info["prompt"]
+            info["prompt"] = checkpoint_prompt(fixture, t, info["prompt"], arm=planner.arm, fetch_policy=getattr(cfg, "fetch_policy", "strict"))
         extras = {"is_checkpoint": bool(turn.get("checkpoint")) or turn.get("kind") == "checkpoint"
                   or declared is not None,
-                  "checkpoint": turn.get("checkpoint") or declared,
-                  "lease": info.get("lease"), "evicted": info.get("evicted")}
+                  "checkpoint": (info.get("checkpoint") if info.get("checkpoint") is not None
+                                 else (turn.get("checkpoint") or declared)),
+                  "answer_turn": is_answer_turn,
+                  "lease": info.get("lease"), "evicted": info.get("evicted"),
+                  "masked_rows": info.get("masked_rows"),
+                  "masked_entry": info.get("masked_entry"),
+                  "marker_refs": (extract_marker_refs(info.get("prompt_before_checkpoint", info.get("prompt")))
+                                  if arm == arm_cd.ARM_D else []),
+                  # TREATMENTS: compaction is visible on the TURN row it happened on; the
+                  # `kind == "digest"` rows stay exactly as they were (this adds, never
+                  # replaces), so a reader filtering turn rows can still see the wall.
+                  "digest_at": t if info["digest_request"] is not None else None}
         digest_attempts = 0
         while info["digest_request"] is not None and digest_attempts < 2:
             if sent >= budget:
@@ -1530,7 +3194,29 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                 return 4
             msg = info["digest_request"]
             try:
+                gate.acquire(t, "digest")
+            except CapRefusal as exc:
+                return _cap_stop(exc, gate, manifest_path, manifest_sha, rows_path)
+            try:
                 resp = send_chat(cfg, msg)
+            except client.TurnWallCap as exc:
+                sent += 1
+                part = exc.as_response(cfg)
+                wall_runaways += 1
+                wall_runaway_turns.append("T%d (digest, wall %.1fs > cap %.1fs)"
+                                          % (t, exc.wall_s, wall_cap))
+                append_row(rows_path, make_row(
+                    cfg, fixture, arm, rep, run_id, t, part, part["content"], "digest",
+                    manifest_sha,
+                    dict(extras, error="turn_wall_cap", prompt_sha256=sha256_text(
+                        msg[1]["content"]), turn_wall_cap_s=wall_cap,
+                         runaway_abort=True)))
+                _escalate(t, exc, part, "digest")
+                print(f"RUNAWAY ABORT after T{t}: a planning request ran past the wall "
+                      f"cap; {_runaway_detail()}; {t}/{n_turns} turns reached, partial "
+                      f"rows kept at {rows_path}", file=sys.stderr)
+                return _abort_stop(6, gate, manifest_path, manifest_sha,
+                                   rows_path)
             except RequestFailure as exc:
                 append_row(rows_path, make_row(
                     cfg, fixture, arm, rep, run_id, t, None, None, "digest", manifest_sha,
@@ -1553,13 +3239,51 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
             print(f"BUDGET ABORT at T{t}: {sent} requests already sent (budget {budget})",
                   file=sys.stderr)
             return 4
+        # WIRE-CAP-GATE: the per-request brake, immediately BEFORE the wire.  Not per-run:
+        # a run-level preflight cannot see the mid-run divergence (6 vs 130 on dbed0e9d).
+        try:
+            gate.acquire(t, "turn")
+        except CapRefusal as exc:
+            return _cap_stop(exc, gate, manifest_path, manifest_sha, rows_path)
         try:
             resp = send_chat(cfg, planner.messages(info["prompt"]))
+        except client.TurnWallCap as exc:
+            # TASK 2: past --turn-wall-cap the stream is closed by the client's context
+            # manager; the partial fold is recorded, the turn aborted, and the cell ends
+            # with exit 6 once --runaway-turns WALL-TIME runaways have been seen.
+            sent += 1
+            part = exc.as_response(cfg)
+            wall_runaways += 1
+            wall_runaway_turns.append("T%d (wall %.1fs > cap %.1fs)"
+                                      % (t, exc.wall_s, wall_cap))
+            fail_extra = dict(extras, error="turn_wall_cap",
+                              prompt_sha256=sha256_text(info["prompt"]),
+                              turn_wall_cap_s=wall_cap)
+            if wall_runaways >= runaway_turns:
+                # STOP-REASON-HOLES: the row that ENDS the run on --runaway-turns is a
+                # runaway abort; a capped turn that the run survives stays turn_wall_cap.
+                fail_extra["runaway_abort"] = True
+            if is_answer_turn:
+                fail_extra.update(checkpoint_answer_fields(None))
+            append_row(rows_path, make_row(
+                cfg, fixture, arm, rep, run_id, t, part, part["content"], "turn",
+                manifest_sha, fail_extra))
+            _escalate(t, exc, part)
+            if wall_runaways >= runaway_turns:
+                print(f"RUNAWAY ABORT after T{t}: {_runaway_detail()}; "
+                      f"{sent} request(s) sent, {t}/{n_turns} turns reached, partial "
+                      f"rows kept at {rows_path}", file=sys.stderr)
+                return _abort_stop(6, gate, manifest_path, manifest_sha,
+                                   rows_path)
+            continue
         except RequestFailure as exc:
+            fail_extra = dict(extras, http_status=exc.status, error=str(exc),
+                              prompt_sha256=sha256_text(info["prompt"]))
+            if is_answer_turn:
+                fail_extra.update(checkpoint_answer_fields(None))
             append_row(rows_path, make_row(
                 cfg, fixture, arm, rep, run_id, t, None, None, "turn", manifest_sha,
-                dict(extras, http_status=exc.status, error=str(exc),
-                     prompt_sha256=sha256_text(info["prompt"]))))
+                fail_extra))
             print(f"TURN FAILED T{t}: {exc} — cell stopped, failure row recorded", file=sys.stderr)
             return 4
         sent += 1
@@ -1572,14 +3296,132 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
         followup_rows: list[dict] = []
         rounds_this_turn = 0
         prompt_serves = 0
-        if tools_enabled(cfg):
+        # ROW-ATTRIBUTION (docs/ROW-MODEL.md): hold the INITIAL send's own response
+        # object.  `fetch_rounds` rebinds `resp` to the last follow-up, so without this
+        # reference the turn's first request would leave no measurement of its own --
+        # the defect DEDUPE-ROOT-CAUSE proved.  Never reassigned.
+        initial_resp = resp
+        _retrieval_stamp = {}
+        _d_fetch_done = False
+        if arm == arm_cd.ARM_D and (fetch_tools_enabled(cfg) or tools_enabled(cfg)):
+            _fetch_budget = arm_cd.resolve_fetch_budget(planner.arm_cd, fixture)
+            extras["fetch_budget_tokens"] = _fetch_budget
+            _calls = arm_cd.parse_fetch_calls_from_response(resp)
+            if _calls and any(c.get("text_call") or c.get("protocol_variant") == "text_call" for c in _calls):
+                _tc0 = next((c for c in _calls if c.get("text_call") or c.get("protocol_variant") == "text_call"), _calls[0])
+                extras["protocol_variant"] = "text_call"
+                extras["ref_as_emitted"] = _tc0.get("ref_as_emitted")
+                extras["ref_revision_normalised"] = _tc0.get("ref_revision_normalised")
+            if _calls:
+                _results, _attempt, _outcomes = arm_cd.service_fetches(
+                    planner.arm_cd, _calls, _fetch_budget, tokenizer=getattr(planner.arm_cd, "tokenizer", None))
+                extras["tool_call_id"] = (_results[0].tool_call_id if _results else None)
+                extras["tool_call_ids"] = [getattr(r, "tool_call_id", None) for r in _results]
+                _asst = {"role": "assistant", "content": resp.get("content") or ""}
+                _tc = resp.get("tool_calls") or []
+                if _tc:
+                    _asst["tool_calls"] = [
+                        {"id": c.get("id"), "type": c.get("type") or "function",
+                         "function": {"name": c.get("name"),
+                                      "arguments": c.get("arguments") or "{}"}}
+                        for c in _tc
+                    ]
+                _tool_msgs = [arm_cd.render_fetch_result(r) for r in _results]
+                _followup_msgs = planner.messages(info["prompt"]) + [_asst] + _tool_msgs
+                try:
+                    if sent >= budget:
+                        raise BudgetExhausted("fetch follow-up at T%d would exceed the request budget of %d" % (t, budget))
+                    if gate is not None:
+                        gate.acquire(t, "tool-followup")
+                    _resp2 = send_chat(cfg, _followup_msgs)
+                except BudgetExhausted as exc:
+                    append_row(rows_path, make_row(
+                        cfg, fixture, arm, rep, run_id, t, initial_resp,
+                        initial_resp.get("content") if initial_resp else None,
+                        "turn-initial", manifest_sha,
+                        dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+                             send_index=0, initial_send=True,
+                             row_measurement_source="turn-initial",
+                             next_request_kind="tool-followup", error="budget_exhausted")))
+                    print(f"BUDGET ABORT at T{t}: {exc}", file=sys.stderr)
+                    return 4
+                except CapRefusal as exc:
+                    append_row(rows_path, make_row(
+                        cfg, fixture, arm, rep, run_id, t, initial_resp,
+                        initial_resp.get("content") if initial_resp else None,
+                        "turn-initial", manifest_sha,
+                        dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+                             send_index=0, initial_send=True,
+                             row_measurement_source="turn-initial",
+                             next_request_kind="tool-followup")))
+                    return _cap_stop(exc, gate, manifest_path, manifest_sha, rows_path)
+                except RequestFailure as exc:
+                    append_row(rows_path, make_row(
+                        cfg, fixture, arm, rep, run_id, t, initial_resp,
+                        initial_resp.get("content") if initial_resp else None,
+                        "turn-initial", manifest_sha,
+                        dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+                             send_index=0, initial_send=True,
+                             row_measurement_source="turn-initial",
+                             next_request_kind="tool-followup")))
+                    append_row(rows_path, make_row(
+                        cfg, fixture, arm, rep, run_id, t, None, None, "tool-followup", manifest_sha,
+                        dict(extras, http_status=exc.status, error=str(exc),
+                             fetch_followup=True)))
+                    print(f"TURN FAILED (fetch follow-up) T{t}: {exc} — cell stopped", file=sys.stderr)
+                    return 4
+                except client.TurnWallCap as exc:
+                    sent += 1
+                    part = exc.as_response(cfg)
+                    wall_runaways += 1
+                    wall_runaway_turns.append("T%d (tool-followup, wall %.1fs > cap %.1fs)"
+                                              % (t, exc.wall_s, wall_cap))
+                    append_row(rows_path, make_row(
+                        cfg, fixture, arm, rep, run_id, t, initial_resp,
+                        initial_resp.get("content") if initial_resp else None,
+                        "turn-initial", manifest_sha,
+                        dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+                             send_index=0, initial_send=True,
+                             row_measurement_source="turn-initial",
+                             next_request_kind="tool-followup")))
+                    append_row(rows_path, make_row(
+                        cfg, fixture, arm, rep, run_id, t, part, part["content"],
+                        "tool-followup", manifest_sha,
+                        dict(extras, error="turn_wall_cap", fetch_followup=True,
+                             turn_wall_cap_s=wall_cap)))
+                    _escalate(t, exc, part, "tool-followup")
+                    if wall_runaways >= runaway_turns:
+                        return _abort_stop(6, gate, manifest_path, manifest_sha, rows_path)
+                    print(f"TURN FAILED (fetch follow-up wall) T{t}", file=sys.stderr)
+                    return 4
+                sent += 1
+                resp = _resp2
+                _retrieval_stamp = {
+                    "fetch_rows": len(_calls),
+                    "retrieval_attempt": _attempt,
+                    "retrieval_outcomes": _outcomes,
+                    "fetch_tokens": arm_cd.fetch_tokens_for(_results),
+                    "tokenizer_calls": arm_cd.tokenizer_calls(),
+                    "tokenizer_reused": any(getattr(r, "tokenizer_reused", False) for r in _results),
+                    "tokenizer_cache_hit": any(getattr(r, "tokenizer_cache_hit", False) for r in _results),
+                    "reused": any(getattr(r, "reused", False) for r in _results),
+                }
+                followup_rows.append(make_row(
+                    cfg, fixture, arm, rep, run_id, t, _resp2, _resp2.get("content"), "tool-followup", manifest_sha,
+                    dict(extras, prompt_sha256=sha256_text(_followup_msgs[-1]["content"]),
+                         fetch_followup=True, tool_calls=[{"ref": c.get("ref")} for c in _calls],
+                         send_index=1)))
+                _d_fetch_done = True
+        if tools_enabled(cfg) and not is_answer_turn and arm not in (arm_cd.ARM_C, arm_cd.ARM_D):
+            # ANSWER-CONTRACT (v5): tools are unavailable on a checkpoint turn, so no
+            # <tool_call> is executed and no follow-up request is bought.
             pinned = pinned_views(fixture, info["prompt"])
 
             def _may_request(_t=t):
                 # Pool of follow-up requests, minus one held back for every declared
                 # checkpoint this cell has not reached yet: a T3 recon burst may spend
                 # the slack, never T46's last request.
-                reserved = sum(1 for ct in checkpoint_turns if ct > _t)
+                reserved = sum(1 for ct in cp_turns if ct > _t)
                 return followups_bought + reserved < followup_pool
 
             try:
@@ -1587,15 +3429,69 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                  followup_rows) = fetch_rounds(
                     cfg, fixture, arm, rep, run_id, t, manifest_sha, extras,
                     planner.messages(info["prompt"]), resp, sent, budget, fetch_rounds_used,
-                    fetch_cache, pinned, per_turn_cap, _may_request)
+                    fetch_cache, pinned, per_turn_cap, _may_request, gate)
                 followups_bought += len(followup_rows)
                 rounds_this_turn = len(followup_rows)
                 prompt_serves = sum(1 for c in turn_calls
                                     if c.get("served_from") == "prompt")
+            except CapRefusal as exc:
+                # The refusal lands MID-turn: this turn's own request already reached the
+                # wire and is billed, so its row is written before the run stops — rows
+                # written stay equal to the requests legitimately made.
+                append_row(rows_path, make_row(
+                    cfg, fixture, arm, rep, run_id, t, resp, resp.get("content"), "turn",
+                    manifest_sha, dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+                                       cap_refused_mid_turn=True)))
+                for _f in followup_rows:
+                    append_row(rows_path, _f)
+                return _cap_stop(exc, gate, manifest_path, manifest_sha, rows_path)
             except BudgetExhausted as exc:
+                for _f in followup_rows:
+                    append_row(rows_path, _f)
                 print(f"BUDGET ABORT at T{t}: {exc}", file=sys.stderr)
                 return 4
+            except client.TurnWallCap as exc:
+                sent += 1
+                part = exc.as_response(cfg)
+                wall_runaways += 1
+                wall_runaway_turns.append("T%d (tool-followup, wall %.1fs > cap %.1fs)"
+                                          % (t, exc.wall_s, wall_cap))
+                # ROW-ATTRIBUTION: the turn's initial send already reached the wire and
+                # is measured on its own row ahead of the wall-capped follow-up's.
+                append_row(rows_path, make_row(
+                    cfg, fixture, arm, rep, run_id, t, initial_resp,
+                    initial_resp.get("content") if initial_resp else None,
+                    "turn-initial", manifest_sha,
+                    dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+                         send_index=0, initial_send=True,
+                         row_measurement_source="turn-initial",
+                         next_request_kind="tool-followup")))
+                append_row(rows_path, make_row(
+                    cfg, fixture, arm, rep, run_id, t, part, part["content"],
+                    "tool-followup", manifest_sha,
+                    dict(extras, error="turn_wall_cap", fetch_followup=True,
+                         turn_wall_cap_s=wall_cap,
+                         **({"runaway_abort": True}
+                            if wall_runaways >= runaway_turns else {}))))
+                _escalate(t, exc, part, "tool-followup")
+                if wall_runaways >= runaway_turns:
+                    print(f"RUNAWAY ABORT after T{t}: {_runaway_detail()}; "
+                          f"{t}/{n_turns} turns reached, partial rows kept at "
+                          f"{rows_path}", file=sys.stderr)
+                    return _abort_stop(6, gate, manifest_path, manifest_sha,
+                                       rows_path)
+                continue
             except RequestFailure as exc:
+                # ROW-ATTRIBUTION: the initial send is measured even when the follow-up
+                # that failed ended the cell; a failed follow-up has no measurement.
+                append_row(rows_path, make_row(
+                    cfg, fixture, arm, rep, run_id, t, initial_resp,
+                    initial_resp.get("content") if initial_resp else None,
+                    "turn-initial", manifest_sha,
+                    dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+                         send_index=0, initial_send=True,
+                         row_measurement_source="turn-initial",
+                         next_request_kind="tool-followup")))
                 append_row(rows_path, make_row(
                     cfg, fixture, arm, rep, run_id, t, None, None, "tool-followup", manifest_sha,
                     dict(extras, http_status=exc.status, error=str(exc),
@@ -1604,33 +3500,106 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                       "recorded", file=sys.stderr)
                 return 4
         row_extra = dict(extras, prompt_sha256=sha256_text(info["prompt"]))
-        if tools_enabled(cfg):
+        if _retrieval_stamp:
+            row_extra.update(_retrieval_stamp)
+        # ROW-ATTRIBUTION: ONE ROW PER SEND.  With k >= 1 follow-ups this turn made
+        # k+1 requests: the initial send (row_initial, below), follow-ups 1..k-1
+        # (their own ``kind="tool-followup"`` rows) and follow-up k, whose row IS this
+        # turn row.  The row count is unchanged from the pre-fix writer (k+1), but no
+        # two rows now share one measurement: the last follow-up is no longer written
+        row_extra["row_measurement_source"] = (
+            "tool-followup" if followup_rows else "turn-initial")
+        row_extra["send_index"] = int(rounds_this_turn) if tools_enabled(cfg) else 0
+        if attribute_initial_send() and followup_rows:
+            # This row stands in the last follow-up request's slot, so the durable
+            # markers that request carried ride here: fetch_rounds_spent counts
+            # ``fetch_followup`` rows, and resume must not lose the last round.
+            last = followup_rows[-1]
+            row_extra["fetch_followup"] = True
+            row_extra["fetch_round_final"] = True
+            row_extra["final_round_billed"] = last.get("billed_round")
+            row_extra["final_round_prompt_served"] = last.get("prompt_served")
+        if is_answer_turn:
+            row_extra.update(checkpoint_answer_fields(resp))
+        if tools_enabled(cfg) and not is_answer_turn:
             row_extra["tool_calls"] = turn_calls
             row_extra["fetch_rounds_used"] = fetch_rounds_used
             row_extra["fetch_rounds_this_turn"] = rounds_this_turn
             row_extra["fetch_prompt_serves"] = prompt_serves
             row_extra["fetch_rounds_cap_per_turn"] = per_turn_cap
+            suppressed = sum(1 for c in turn_calls if c.get("followup_suppressed"))
+            if suppressed:
+                # RECORD-STOP-REASON: a follow-up request the allowance refused writes no
+                # row of its own; the count rides the turn row, whose stop_reason is the
+                # response that ended the turn.
+                row_extra["fetch_suppressed"] = suppressed
         row = make_row(cfg, fixture, arm, rep, run_id, t, resp, resp["content"], "turn", manifest_sha,
                        row_extra)
-        for frow in followup_rows:
+        # STOP-REASON-HOLES: predicate 2 (the ceiling-consume signature) ends the cell on
+        # --runaway-turns.  The row that ends it is a runaway abort, not a plain length
+        # stop, so it is labelled before it is written (no historical row is touched).
+        signature = _ceiling_violation(row)
+        if signature and ceiling_violations + 1 >= runaway_turns:
+            row["stop_reason"] = client.STOP_REASON_RUNAWAY_TURN
+            row["truncated"] = client.truncated_for(row["stop_reason"])
+            row["runaway_abort"] = True
+        if attribute_initial_send() and followup_rows:
+            # ROW-ATTRIBUTION: the initial send's own row, written in wire order ahead
+            # of the follow-ups it triggered.  It is the ONLY row that measures the
+            # turn's own request; ``kind="turn-initial"`` never existed before, so no
+            # historical row is re-meant and no historical file is touched.
+            initial_extra = dict(
+                extras, prompt_sha256=sha256_text(info["prompt"]),
+                send_index=0, initial_send=True,
+                row_measurement_source="turn-initial",
+                fetch_rounds_this_turn=len(followup_rows),
+                next_request_kind="tool-followup")
+            if is_answer_turn:
+                initial_extra.update(checkpoint_answer_fields(initial_resp))
+            append_row(rows_path, make_row(
+                cfg, fixture, arm, rep, run_id, t, initial_resp,
+                initial_resp.get("content") if initial_resp else None,
+                "turn-initial", manifest_sha, initial_extra))
+        # follow-ups 1..k-1 get their own rows; follow-up k's row is the turn row below.
+        for frow in (followup_rows[:-1] if attribute_initial_send() else followup_rows):
             append_row(rows_path, frow)
         append_row(rows_path, row)
         planner.record(t, resp["content"])
+        # RUNAWAY-POLICY predicate 2: only a response ABOVE the ceiling counts. A
+        # `length` truncation AT the ceiling is data and falls straight through.
+        if signature:
+            ceiling_violations += 1
+            ceiling_violation_turns.append("T%d (%s)" % (t, signature))
+            print(f"RUNAWAY T{t}: {signature} — a server that ignored the max_tokens "
+                  f"ceiling (ceiling violations {ceiling_violations}/{runaway_turns})",
+                  file=sys.stderr)
+            if ceiling_violations >= runaway_turns:
+                print(f"RUNAWAY ABORT after T{t}: {_runaway_detail()}; {sent} request(s) "
+                      f"sent, {t}/{n_turns} turns reached, partial rows kept at "
+                      f"{rows_path}", file=sys.stderr)
+                return _abort_stop(6, gate, manifest_path, manifest_sha,
+                                   rows_path)
         print(f"  [T{t}] prompt={row['prompt_tokens']} cached={row['cached_tokens']} "
               f"ttft_ms={row['ttft_ms']} src={row['content_source']} "
-              f"finish={row['finish_reason']} truncated={row['truncated']} "
+              f"finish={row['finish_reason']} stop={row['stop_reason']} "
+              f"truncated={row['truncated']} "
               f"lat={row['latency_s']} comp={row['completion_tokens']}")
+        if is_answer_turn:
+            print(f"  [T{t}] answer_contract kind={row['answer_kind']} "
+                  f"value={row['answer_value']!r} error={row['answer_parse_error']}")
         if tools_enabled(cfg) and turn_calls:
             done = sum(1 for c in turn_calls if c.get("executed"))
             print(f"  [T{t}] tool_calls={len(turn_calls)} executed={done} "
                   f"fetch_followups={len(followup_rows)} fetch_rounds_used={fetch_rounds_used}"
-                  f"/{TOOL_FETCH_ROUNDS_PER_ARM} prompt_served={prompt_serves} "
+                  f"/{fetch_rounds_per_arm(cfg)} prompt_served={prompt_serves} "
                   f"rounds_this_turn={rounds_this_turn}/{per_turn_cap if per_turn_cap else 'inf'} "
                   f"requests_sent={sent} followups={followups_bought}/{followup_pool}")
     if tools_enabled(cfg):
         print(f"requests_sent={sent} (budget {budget}; fetch rounds "
-              f"{fetch_rounds_used}/{TOOL_FETCH_ROUNDS_PER_ARM})")
-    return 0
+              f"{fetch_rounds_used}/{fetch_rounds_per_arm(cfg)})")
+    # WIRE-CAP-GATE: reconcile the run's own count against the rows the next run will read.
+    _rec, cap_rc = _gate_finish(gate, manifest_path, manifest_sha, rows_path)
+    return cap_rc
 
 
 # ------------------------------------------------------------------------ summary
@@ -1692,6 +3661,8 @@ def summarise_rows(rows: list[dict]) -> dict:
         "content_source_counts": {str(k): v for k, v in sources.items() if v},
         "answer_source_counts": answers,
         "finish_reasons": _count(r.get("finish_reason") for r in rows),
+        # RECORD-STOP-REASON: the closed vocabulary, countable straight off the rows.
+        "stop_reasons": _count(r.get("stop_reason") for r in rows),
         "requests_spent": sum(1 for r in rows if r.get("error") is None),
         "failed_rows": sum(1 for r in rows if r.get("error") is not None),
         "failed_turns": sum(1 for r in rows if r.get("failed_turn")),
@@ -1759,12 +3730,16 @@ def report_run(rows_path: str, run_base: str, cfg, smoke: bool = False) -> int:
 
 
 # --------------------------------------------------------------------------- main
-def main(argv=None) -> int:
+def build_parser():
+    """The CLI. Exposed so a test builds a cfg WITHOUT re-deriving defaults."""
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--fixture", default="experiments/ptr-engine/longrun/fixtures/LR-01.json")
+    ap.add_argument("--fixture", default=None)
     ap.add_argument("--task", default=None)
     ap.add_argument("--arms", default=",".join(ARMS))
     ap.add_argument("--reps", type=int, default=1)
+    ap.add_argument("--generation", default="gen-7",
+                    help="recorded validity generation of this run; gen-7 asserts hard, "
+                         "gen-6 and earlier are labelled LEGACY-NONCONFORMING")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--manifest-dir", default="experiments/ptr-engine/longrun/manifests")
@@ -1779,25 +3754,59 @@ def main(argv=None) -> int:
     # key at all, so the body stays byte-identical to every run before this flag existed;
     # 'on'/'off' add {"enable_thinking": <bool>}.  The setting is frozen in the manifest and
     # stamped on every row, because rows from different settings must never be pooled.
-    ap.add_argument("--thinking", choices=("auto", "on", "off"), default="auto",
-                    help="chat-template thinking switch: auto (omit the key, today's payload), "
-                         "on (enable_thinking: true), off (enable_thinking: false)")
+    ap.add_argument("--temperature", type=float, default=None,
+                    help="greedy-decoding temperature; MUST be stated per run (default 0). "
+                         "A run without an explicit --temperature is refused at preflight.")
+    ap.add_argument("--seed", type=int, default=42,
+                    help="fixed seed recorded on every row (default 42)")
+    ap.add_argument("--thinking", choices=("auto", "on", "off"), default="off",
+                    help="HARNESS-GUARDS: cells default to thinking OFF; a run with "
+                         "thinking on must opt in explicitly, and every row records the "
+                         "effective setting")
+    # HARNESS-GUARDS. The live cell on 2026-10-26T145758Z spent 7m56s and 16,384
+    # completion tokens on one turn with nothing objecting; 16384 was the default that
+    # let it. The ceiling is now a finite 4096 by default (see client.DEFAULT_MAX_TOKENS)
+    # and `--turn-wall-cap` / `--runaway-turns` bound the turn and the run, not just one
+    # request. A cell that needs more opts in explicitly and records the values per row.
+    ap.add_argument("--max-tokens", type=int, default=4096,
+                    help="completion ceiling sent on EVERY request (default 4096)")
+    ap.add_argument("--turn-wall-cap", type=float, default=180.0,
+                    help="seconds one turn may run; past it the stream is CLOSED, the "
+                         "turn aborted, the row written with error='turn_wall_cap' and "
+                         "truncated=true (default 180)")
+    ap.add_argument("--runaway-turns", type=int, default=2,
+                    help="how many WALL-TIME runaways end the cell with exit 6. A "
+                         "wall-time runaway is a turn whose stream --turn-wall-cap "
+                         "CLOSED (client.py TurnWallCap). A `length` truncation AT "
+                         "--max-tokens is NOT a runaway and is never counted: it is "
+                         "bounded data recorded as stop_reason=length. A response ABOVE "
+                         "--max-tokens (a server that ignored the ceiling) counts "
+                         "against the same limit. See docs/RUNAWAY-POLICY.md "
+                         "(default 2)")
     # 16384 (was 128 -> 1024 -> 4096): Stage 1 (RUN-STAGE1-LR01) truncated 140/192 rows at
     # 128; at 1024 a measured 7/12 smoke rows still hit finish_reason="length"; at 4096 the
     # 4-row fix run still truncated transcript-grow T3 at 4096 completion tokens with
-    # completion on the reasoning channel only and no answer.  16384 is 4x that measured
-    # truncation ceiling and ~4.5x the largest CLEAN completion (3592 tok), so a reasoning
-    # preamble of the observed shape can finish; worst case ~455 s at the measured ~36 tok/s
-    # stays inside --timeout 900.  The cap is NOT the policy on its own: see
-    # _REASONING_POLICY (reasoning-only rows are marked, truncated-without-value rows are
-    # failed turns), and it stays configurable via --max-tokens.
-    ap.add_argument("--max-tokens", type=int, default=16384)
+    # completion on the reasoning channel only and no answer.  HARNESS-GUARDS reverses the
+    # drift: 4096 is the DEFAULT again because an unbounded ceiling is the runaway. A cell
+    # that needs a larger ceiling opts in via --max-tokens, and the value it used is on
+    # every row; the cap is NOT the policy on its own: see _REASONING_POLICY (reasoning-only
+    # rows are marked, truncated-without-value rows are failed turns), and
+    # `--turn-wall-cap` / `--runaway-turns` bound the turn and the run.
     ap.add_argument("--max-turns", type=int, default=0,
                     help="stop each cell after this many turns (0 = the fixture's N)")
     ap.add_argument("--smoke", action="store_true",
                     help="4 arms x 3 turns = 12 requests; per-row table with reasoning/content "
                          "token split and answer_source; non-zero exit if any row has "
                          "answer_source == 'none'")
+    ap.add_argument("--claim-mode", default=None, dest="claim_mode",
+                    metavar="smoke|plumbing|H1|H2|H3",
+                    help="CLAIM-ROW-STAMP: the claim this run declares. `smoke` and "
+                         "`plumbing` declare claim=none (rows are NOT "
+                         "comparison_eligible); H1|H2|H3 declare a PARM-1 claim. The "
+                         "spelling is resolved by claim_mode.resolve_claim ONCE and "
+                         "stamped on EVERY row via make_row. There is NO default: an "
+                         "absent flag is refused with exit 12 and the module's own "
+                         "sentence -- silence is not a claim")
     ap.add_argument("--timeout", type=float, default=900.0)
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--resume", action="store_true")
@@ -1812,10 +3821,59 @@ def main(argv=None) -> int:
     ap.add_argument("--fetch-rounds-per-turn", type=int, default=TOOL_FETCH_ROUNDS_PER_TURN,
                     metavar="N",
                     help="max fetch rounds bought in one turn (default 3; 0 = unbounded)")
+    # RUNNER-ROUNDS-48: the per-ARM pool, settable beside the per-turn cap.  The value
+    # prices the projection, caps the channel and is frozen in the manifest; a
+    # non-positive value is refused by name in main() (never a silent fallback).
+    ap.add_argument("--fetch-rounds-per-arm", type=int, default=TOOL_FETCH_ROUNDS_PER_ARM,
+                    metavar="N",
+                    help="fetch-round pool per arm (default 48; a positive integer)")
+    # WIRE-CLIENT: --metrics-scrape / --no-metrics-scrape. Registered by the client so
+    # the flag and the client's precedence rule (PTR_METRICS_SCRAPE) can never drift.
+    client.add_metrics_scrape_argument(ap)
     ap.add_argument("--tools", default="", metavar="LIST",
                     help="comma-separated tool channel(s) to enable (default: none / off); "
                          "supported: read_file")
-    cfg = ap.parse_args(argv)
+    ap.add_argument("--fetch-policy", choices=("strict", "instructed"), default="strict",
+                    dest="fetch_policy",
+                    help="FETCH-POLICY: 'strict' (default, reproducible) or 'instructed' "
+                         "(checkpoint instruction states a not-in-view value must be "
+                         "fetched before answering; answering from memory is not "
+                         "acceptable). Recorded as fetch_policy on every row.")
+    # WIRE-CAP-GATE.  A declared per-run request allocation, enforced PER REQUEST inside
+    # the turn loop immediately before the send (the ledger's conductor_wiring): 'projection'
+    # (the default) is the cell's structural request count (turns + digests + fetch pool); an
+    # integer is an explicit budget.  Either way the global cap (spent rows + this run) is
+    # enforced too, from an in-memory count, so a refusal happens BEFORE the wire.
+    ap.add_argument("--request-allocation", default="projection", metavar="N|projection",
+                    help="requests this run may send: an integer, or 'projection' for the "
+                         "cell's structural request count (default: projection)")
+    ap.add_argument("--budget-cap", type=int, default=None,
+                    help="global request cap for all recorded runs (default: the ledger's, 4320)")
+    ap.add_argument("--budget-reserve", type=int, default=0,
+                    help="unspendable part of --budget-cap (default 0)")
+    ap.add_argument("--budget-glob", default=None,
+                    help="row files the cap gate counts at run start (default: "
+                         "experiments/ptr-engine/measure/rows-*.jsonl); the run's own row file "
+                         "is always included")
+    return ap
+
+
+def main(argv=None) -> int:
+    cfg = build_parser().parse_args(argv)
+
+    # TEMPZERO: temperature must be stated per run, never inherited silently.
+    if cfg.temperature is None:
+        print("--temperature must be stated explicitly (got None); refusing run",
+              file=sys.stderr)
+        return 2
+
+    # RUNNER-ROUNDS-48: the pool is priced and capped by the same number, so zero or a
+    # negative value is a launch error with a name, not a silent fallback to 48.
+    if cfg.fetch_rounds_per_arm is None or int(cfg.fetch_rounds_per_arm) <= 0:
+        print(f"--fetch-rounds-per-arm must be a positive integer "
+              f"(got {cfg.fetch_rounds_per_arm!r}); 0 and negative values are refused",
+              file=sys.stderr)
+        return 2
 
     if cfg.self_test:
         return self_test()
@@ -1835,6 +3893,27 @@ def main(argv=None) -> int:
     if bad:
         print(f"unknown arm(s): {bad}; known: {list(ARMS)}", file=sys.stderr)
         return 2
+    # FIXTURE/TASK GUARD: never silently default to LR-01.
+    if cfg.fixture is None and cfg.task is None:
+        print("no selector: neither --task nor --fixture given", file=sys.stderr)
+        return 2
+    if cfg.fixture is None and cfg.task is not None:
+        resolved = resolve_fixture_path(cfg.task)
+        if resolved is None:
+            print(f"cannot resolve fixture for task {cfg.task}", file=sys.stderr)
+            return 2
+        cfg.fixture = resolved
+    # task/fixture id cross-check BEFORE validation, so a mismatch is reported by id even
+    # when the fixture is a stub or otherwise unlaunchable.
+    if cfg.task and cfg.fixture:
+        try:
+            _raw = json.loads(open(cfg.fixture, encoding="utf-8").read())
+            _fid = _raw.get("task_id") if isinstance(_raw, dict) else None
+        except (OSError, json.JSONDecodeError):
+            _fid = None
+        if _fid is not None and cfg.task != _fid:
+            print(f"task {cfg.task} != fixture task_id {_fid}", file=sys.stderr)
+            return 2
     try:
         fixture = load_fixture(cfg.fixture)
     except FixtureError as exc:
@@ -1847,12 +3926,22 @@ def main(argv=None) -> int:
     rows_path = cfg.rows or f"experiments/ptr-engine/measure/rows-longrun-{date}.jsonl"
     run_base = cfg.run_id or f"longrun-{date}T{utc_now().strftime('%H%M%S')}Z"
     cells = [(arm, rep) for arm in arms for rep in range(1, int(cfg.reps) + 1)]
+    # WALL-KEY PREFLIGHT: resolve every requested arm's wall BEFORE a manifest is frozen or
+    # a body is rendered, so a fixture that declares `wall_tokens_by_arm` but omits an arm
+    # refuses here (exit 2) instead of running that arm at the top-level wall.
+    try:
+        for _arm, _rep in cells:
+            wall_for_arm(fixture, _arm)
+    except FixtureError as exc:
+        print(f"FIXTURE ERROR: {exc}", file=sys.stderr)
+        return 2
 
     if cfg.dry_run:
         for arm, rep in cells:
             rid = f"dryrun-{fixture['task_id']}-{arm}-r{rep}"
             mid = cfg.manifest_path or os.path.join(cfg.manifest_dir, rid + ".json")
-            doc = build_manifest(cfg, fixture, arm, rep, rid, rows_path)
+            # the manifest freezes the wall the CELL runs at: per arm, never the top-level
+            doc = build_manifest(cfg, fixture_for_arm(fixture, arm), arm, rep, rid, rows_path)
             try:
                 data, msha = write_manifest(mid, doc)
             except OSError as exc:
@@ -1864,11 +3953,32 @@ def main(argv=None) -> int:
             print(f"manifest[{arm} r{rep}]: {mid} ({len(data)} B) sha256={msha}")
         print(f"\nDRY-RUN task={fixture['task_id']} N={fixture['N']} fixture={fixture['_path']} "
               f"sha256={fixture['_sha256']}")
-        print("(offline: zero requests; exact request bodies under /tmp/longrun-previews/)")
+        print("(offline: zero requests; exact request bodies under state/previews/)")
         print("\nFIRST THREE REQUEST BODIES PER ARM")
         return run_dry(cfg, fixture, cells)
 
+    # CLAIM-ROW-STAMP: ONE parse of the claim decision, BEFORE the first row is
+    # written and before any request. The resolved record is threaded on cfg and
+    # read by make_row -> claim_mode.row_fields(), so every row (turn-initial, turn,
+    # tool-followup, refusal, failure) carries the same claim. No second parser.
+    try:
+        cfg.claim = claim_mode.resolve_claim(cfg.claim_mode)
+    except claim_mode.ClaimRefusal as exc:
+        if _scratch_rows(rows_path):
+            # A caller-managed row target under the OS temp dir is a diagnostic,
+            # not the analysis corpus: it may run, stamped non-comparable.
+            cfg.claim = claim_mode.ClaimRecord(claim_mode.MODE_SMOKE,
+                                               claim_mode.CLAIM_NONE, False)
+            print("CLAIM: no --claim-mode and rows=%s is outside the analysis "
+                  "corpus; stamping claim=none (non-comparable)" % rows_path,
+                  file=sys.stderr)
+        else:
+            print("%s" % (exc,), file=sys.stderr)
+            print("CLAIM REFUSED (exit %d): no row was written and no request was "
+                  "sent" % exc.code, file=sys.stderr)
+            return exc.code
     print(f"rows: {rows_path}  run_id base: {run_base}")
+    print(f"FIXTURE: {fixture['_path']}  task_id={fixture['task_id']}  sha256={fixture['_sha256']}")
     for arm, rep in cells:
         rid = f"{run_base}-{arm}-r{rep}"
         rc = run_cell(cfg, fixture, arm, rep, rid, rows_path)

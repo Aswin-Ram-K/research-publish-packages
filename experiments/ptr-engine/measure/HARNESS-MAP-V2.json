@@ -1,0 +1,106 @@
+{
+ "unit": "HARNESS-MAP-V2",
+ "generated_at": "2026-10-26T10:50:00-05:00",
+ "method": "derived from source raise sites (grep + read) and from orchestration/journals/*.jsonl + orchestration/handoffs/*.json; zero inference requests, no network, no git",
+ "supersedes": "docs/HARNESS-MAP.md (42410 B, HARNESS-MAP 500a9255) -- read-only, cited not edited",
+ "exit_codes": {
+  "0": {"meaning": "ok", "verified_raise_sites": ["experiments/ptr-engine/longrun/cell.py:803", "experiments/ptr-engine/tools/request_ledger.py:380", "experiments/ptr-engine/tools/frozen_tree.py:427", "experiments/ptr-engine/tools/matrix_audit.py:631"]},
+  "1": {"meaning": "UNDECLARED: tool-level failure (missing artifact / strict-missing cell / cmd failed / lint red)", "declared": false, "verified_raise_sites": ["experiments/ptr-engine/tools/unit_journal.py:174", "experiments/ptr-engine/tools/frozen_tree.py:54", "experiments/ptr-engine/tools/frozen_tree.py:364", "experiments/ptr-engine/tools/matrix_audit.py:630", "experiments/ptr-engine/tools/handoff_lint.py:381"]},
+  "2": {"meaning": "frozen-snapshot mutated, and (overloaded) preflight refusal / usage", "verified_raise_sites": ["experiments/ptr-engine/tools/frozen_tree.py:363", "experiments/ptr-engine/tools/frozen_tree.py:451", "experiments/ptr-engine/longrun/cell.py:146", "experiments/ptr-engine/longrun/cell.py:238", "experiments/ptr-engine/tools/handoff_lint.py:400", "experiments/ptr-engine/tools/stop_reason_audit.py:478", "experiments/ptr-engine/longrun/run_longrun.py:1983", "experiments/ptr-engine/tools/unit_journal.py:30"]},
+  "3": {"meaning": "usage/preflight AND budget-in-cell AND manifest-write", "verified_raise_sites": ["experiments/ptr-engine/tools/request_ledger.py:322", "experiments/ptr-engine/tools/frozen_tree.py:401", "experiments/ptr-engine/longrun/cell.py:251", "experiments/ptr-engine/longrun/cell.py:282", "experiments/ptr-engine/longrun/run_longrun.py:2009"]},
+  "4": {"meaning": "budget would be exceeded", "verified_raise_sites": ["experiments/ptr-engine/tools/request_ledger.py:373", "experiments/ptr-engine/longrun/cell.py:434", "experiments/ptr-engine/longrun/run_longrun.py:1576"]},
+  "5": {"meaning": "unreadable row file / row-manifest lineage mismatch / grade stage failure", "verified_raise_sites": ["experiments/ptr-engine/tools/request_ledger.py:341", "experiments/ptr-engine/longrun/run_longrun.py:1465", "experiments/ptr-engine/longrun/cell.py:449"]},
+  "6": {"meaning": "runaway turn, and (overloaded) analyser refusal", "verified_raise_sites": ["experiments/ptr-engine/longrun/run_longrun.py:1592", "experiments/ptr-engine/longrun/run_longrun.py:1637", "experiments/ptr-engine/longrun/run_longrun.py:1740", "experiments/ptr-engine/longrun/run_longrun.py:1847", "experiments/ptr-engine/longrun/cell.py:472"]},
+  "7": {"meaning": "consistency/record", "verified_raise_sites": ["experiments/ptr-engine/longrun/run_longrun.py:1874", "experiments/ptr-engine/longrun/run_longrun.py:1880"], "declared_but_unraised_in": "experiments/ptr-engine/longrun/cell.py:22 (record stage); grep -c 'Abort(7' cell.py == 0"},
+  "8": {"meaning": "projection over --max-wall", "verified_raise_sites": ["experiments/ptr-engine/longrun/cell.py:402"], "single_site": true},
+  "9": {"meaning": "grader/analyser disagreement", "verified_raise_sites": ["experiments/ptr-engine/longrun/cell.py:559"], "single_site": true},
+  "11": {"meaning": "extraneous cell", "verified_raise_sites": ["experiments/ptr-engine/tools/matrix_audit.py:627"], "single_site": true}
+ },
+ "exit_code_findings": {
+  "declared_but_unraised": ["7"],
+  "declared_but_unraised_count": 1,
+  "undeclared_but_raised": ["1"],
+  "overloaded": {"2": ["snapshot mutation", "preflight", "usage"], "3": ["budget", "usage", "manifest write"], "5": ["row file", "resume lineage", "grade stage"], "6": ["runaway", "analyser refusal"]},
+  "codes_raised_total": 11,
+  "codes_in_declared_set": [0, 2, 3, 4, 5, 6, 7, 8, 9, 11]
+ },
+ "stages": [
+  {"n": 1, "stage": "preflight", "file_function": "experiments/ptr-engine/longrun/cell.py:141 stage_preflight", "reads": ["fixture json (cell.py:122 _load_fixture)", "runner arm list (cell.py:127 _runner_arms)", "grade_v5 truth derivation"], "writes": [], "exit": 2, "gate": "fixture gradable; answer contract present in system prompt; truth derivable per checkpoint"},
+  {"n": 2, "stage": "harness freeze", "file_function": "experiments/ptr-engine/longrun/cell.py:223 stage_harness", "reads": ["HARNESS_FILES digests (cell.py:60-72)", "fixture digest"], "writes": [], "exit": 2, "gate": "--expect-harness must equal the combined digest of run_longrun/client/grade_v5/analyze_stats/det_verify/fixture"},
+  {"n": 3, "stage": "budget", "file_function": "experiments/ptr-engine/longrun/cell.py:248 stage_budget", "reads": ["runner --dry-run would_send_total", "rows on disk"], "writes": [], "exit": 3, "gate": "would_send_total + 10% headroom <= --budget"},
+  {"n": 4, "stage": "projection", "file_function": "experiments/ptr-engine/longrun/cell.py:356 stage_projection (turn_walls_from_rows :304, _p90 :291)", "reads": ["measured latency rows"], "writes": [], "exit": 8, "gate": "projected_requests x projected_turn_wall(p90) <= --max-wall; never preempts a budget refusal (cell.py:372)"},
+  {"n": 5, "stage": "cell send loop", "file_function": "experiments/ptr-engine/longrun/cell.py:411 stage_run -> experiments/ptr-engine/longrun/run_longrun.py:1455 run_cell", "reads": ["frozen manifest", "fixture", "messages"], "writes": ["experiments/ptr-engine/measure/rows-*.jsonl (one row per request)"], "exit": 4, "gate": "budget; resume manifest lineage (run_longrun.py:1465 -> 5); runaway count (-> 6)"},
+  {"n": 6, "stage": "tool channel", "file_function": "experiments/ptr-engine/longrun/client.py:474 collect_stream + client.py:139 derive_stop_reason", "reads": ["response stream"], "writes": ["row fields stop_reason / truncated (client.py:175 truncated_for)"], "exit": 6, "gate": "closed stop_reason vocabulary; a cap stop is derived from completion_tokens>=max_tokens, never guessed"},
+  {"n": 7, "stage": "grading", "file_function": "experiments/ptr-engine/longrun/cell.py:440 stage_grade -> grade_v5.py", "reads": ["rows", "fixture"], "writes": ["measure/cell-<arm>-<stamp>.grade-v5.json"], "exit": 5, "gate": "verdict derived from content; integer-only NUM"},
+  {"n": 8, "stage": "analysis", "file_function": "experiments/ptr-engine/longrun/cell.py:463 stage_analyse -> analyze_stats.py", "reads": ["rows", "grade json"], "writes": ["measure/cell-<arm>-<stamp>.analysis.json"], "exit": 6, "gate": "a number or an explicit refusal (never a silent substitution)"},
+  {"n": 9, "stage": "consistency seam", "file_function": "experiments/ptr-engine/longrun/cell.py:539 stage_consistency", "reads": ["grade doc arms.decidable", "analysis populations.graded_n"], "writes": [], "exit": 9, "gate": "grader decidable>0 iff analyser graded_n>0; --allow-inconsistent records the override"},
+  {"n": 10, "stage": "record", "file_function": "experiments/ptr-engine/longrun/cell.py:566 stage_record", "reads": ["frames, record, analysis, grade, budget, harness, run"], "writes": ["measure/cell-<arm>-<stamp>.json", "measure/cell-<arm>-<stamp>.md"], "exit": null, "gate": "none -- GAP: declared exit 7 at cell.py:22, never raised; an OSError here surfaces as interpreter exit 1"},
+  {"n": 11, "stage": "handoff emission", "file_function": "experiments/ptr-engine/longrun/cell.py:621 write_handoff", "reads": ["args"], "writes": ["orchestration/handoffs/<UNIT>.json"], "exit": null, "gate": "none -- GAP: the conductor writes a handoff without invoking tools/handoff_lint.py"},
+  {"n": 12, "stage": "matrix audit", "file_function": "experiments/ptr-engine/tools/matrix_audit.py:600-632 main", "reads": ["rows dir", "fixture / manifests / registry"], "writes": ["--out json"], "exit": 11, "gate": "every row cell must be in the declared cell space; --strict missing -> 1"},
+  {"n": 13, "stage": "journal", "file_function": "experiments/ptr-engine/tools/unit_journal.py:60-180", "reads": ["card paths"], "writes": ["orchestration/journals/<UNIT>.jsonl (append-only, fsync)"], "exit": 2, "gate": "artifact existence (EXIT_MISSING_ARTIFACT=1); usage 2 (collides with snapshot mutation)"},
+  {"n": 14, "stage": "handoff lint", "file_function": "experiments/ptr-engine/tools/handoff_lint.py:163 lint_doc", "reads": ["orchestration/handoffs/*.json"], "writes": [], "exit": 1, "gate": "unit/verifier shape, artifacts exist, evidence non-empty; status:recovered requires a recovery block (handoff_lint.py:209-232)"},
+  {"n": 15, "stage": "frozen tree", "file_function": "experiments/ptr-engine/tools/frozen_tree.py:401-460 main / :363 verdict_exit_code", "reads": ["snapshot json", "live file digests"], "writes": ["snapshot json (snapshot subcommand only)"], "exit": 2, "gate": "relpath+sha256 identity of every input unchanged (exit 3 usage, 1 command failed)"},
+  {"n": 16, "stage": "request ledger", "file_function": "experiments/ptr-engine/tools/request_ledger.py:322-380 main", "reads": ["row files"], "writes": ["ledger json/text"], "exit": 4, "gate": "one currency (requests); 5 unreadable rows, 3 usage"}
+ ],
+ "batch_measurement": {
+  "scope": "cards that ran in this session: 20 (18 with a journal, 2 handoff-only: DECIDABILITY-SEAM, HARNESS-GUARDS)",
+  "cards": 20,
+  "requests_per_card": 0,
+  "live_requests": 0,
+  "zero_request_rounds": 20,
+  "rounds": 20,
+  "requests_method": "no handoff in the batch records a live send; every journal header/card states OFFLINE and the unit tags forbid inference; request_ledger counts 1101 historical rows, none of them this batch",
+  "tool_calls": {"recorded_total": 116, "cards_reporting": 6, "cards_not_measured": 14, "reason": "handoff.tool_calls absent in 14 of 20 handoffs",
+   "per_card": {"ATTACK-GRADE-V5": 17, "FROZEN-TREE": 22, "MATRIX-DECLARED-SPACE": 26, "PUBLISHED-NUMBER-AUDIT": 13, "STOP-REASON-AUDIT": 25, "UNIT-JOURNAL": 13},
+   "bounds_same_cards": {"ATTACK-GRADE-V5": 32, "FROZEN-TREE": 26, "MATRIX-DECLARED-SPACE": 28, "PUBLISHED-NUMBER-AUDIT": 26, "STOP-REASON-AUDIT": 28, "UNIT-JOURNAL": 26},
+   "bound_utilisation": 0.699},
+  "wall": {"cards_measurable": 15, "cards_not_measured": 5, "sum_span_s": 6473, "median_span_s": 317, "max_span_s": 1380, "reason_not_measured": "journal with a single timestamp or no journal; spans overlap so the sum is not elapsed session time"},
+  "most_calls_stage": {"stage": "audit / verification stages (matrix audit, stop-reason audit), not the send loop", "evidence": "MATRIX-DECLARED-SPACE 26/28, STOP-REASON-AUDIT 25/28; stage_run (cell.py:411) sent 0 requests this batch", "caveat": "per-call stage attribution is not recorded anywhere; this is card-level, not call-level"},
+  "old_map": {"rounds": 40, "live_requests": 863, "zero_request_rounds": 31, "source": "docs/HARNESS-MAP.md:1-8, docs/HARNESS-MAP.md:76-125"},
+  "delta": {"rounds": "-20 (20 vs 40; different unit of work -- guards batch vs one graded cell)", "live_requests": "-863 (0 vs 863)", "zero_request_rounds": "+22.5 pp (20/20 = 100% vs 31/40 = 77.5%)", "requests_per_round": "21.6 -> 0"}
+ },
+ "command_census": {"evidence_commands_total": 71, "verification_shaped": 54, "change_shaped": 4, "both": 2, "neither": 11, "verification_fraction": 0.761,
+  "method": "regex classification of handoff.evidence.commands (pytest|test_|sha256|grep|diff|verify|audit|lint|frozen_tree vs edit|write|apply|patch|create)", "limit": "summarised commands, not every tool call; no per-call log exists"},
+ "fourteen": {
+  "closed": [5, 6, 8, 11, 12, 14],
+  "narrowed": [1, 4, 7, 9, 10],
+  "open": [2, 13],
+  "superseded": [3],
+  "detail": {
+   "1": {"state": "narrowed", "by": "GRADE-V6-DERIVE (content-derived verdicts), GRADE-V5-REPAIR (12/12 gradeable, integer-only NUM)", "remains": "fixture still ships prose prompts; the contract is derived after the fact, not enforced at send time"},
+   "2": {"state": "open", "by": null, "remains": "no unit this batch versioned fixtures; the declared cell space is audited (exit 11) but fixture generations are still unversioned inputs"},
+   "3": {"state": "superseded", "by": "MATRIX-DECLARED-SPACE (declared-space audit, extraneous_cell exit 11)", "remains": "absences are now counted against a declaration (matrix_audit.py:629 --strict -> 1) instead of being silent"},
+   "4": {"state": "narrowed", "by": "RECORD-STOP-REASON (closed vocabulary), STOP-REASON-AUDIT (causes enumerated)", "remains": "the model still is not told why a tool call was refused"},
+   "5": {"state": "closed", "by": "REQUEST-LEDGER (14 files / 1101 rows / 1101 requests, 232 assumed_billed; 16/16 tests, mutant run 6 failures)", "remains": ""},
+   "6": {"state": "closed", "by": "FROZEN-TREE (snapshot_sha256, exit 2 on mutation; 7 tests red->green) + cell.py:223 stage_harness", "remains": ""},
+   "7": {"state": "narrowed", "by": "run_longrun.py:1465 refuses --resume on a manifest digest mismatch (exit 5); cell.py:223 freezes the harness per cell", "remains": "a grader invoked outside cell.py still accepts rows from any fixture"},
+   "8": {"state": "closed", "by": "HANDOFF-RECOVERY (16 E_STUB -> 8 recovered, lint exit 0), LINT-RECOVERED-STATUS (recovered status, 20 tests)", "remains": ""},
+   "9": {"state": "narrowed", "by": "DECIDABILITY-SEAM (exit 9), GRADE-V5-REPAIR", "remains": "undecidable checks still grade as null; the seam catches disagreement, it does not make them decidable"},
+   "10": {"state": "narrowed", "by": "HARNESS-GUARDS (test_guards 6/6 green with red halves; test_cell 7 OK; test_client_ttft 8/8; test_wire_client 18/18) and the PYTHONPATH half -- the guard now runs: 12 passed, 1 failed", "remains": "test_no_new_contract_key_gaps still fails on the same three v1-named verifier-shape handoffs (V2-RUNTIME.json, V3-FIXTURE.json, V3-PILOT.json missing overall/checks)"},
+   "11": {"state": "closed", "by": "HARNESS-GUARDS (max_tokens default 4096 at run_longrun.py:1933-1937, thinking off, --turn-wall-cap, --runaway-turns exit 6) + PROJECTION-CALIBRATION (p50 129.1 s / p90 427.7 s thinking-auto vs p50 2.9 s pooled thinking-off)", "remains": ""},
+   "12": {"state": "closed", "by": "DECIDABILITY-SEAM (exit 9) + GRADE-V6-DERIVE", "remains": ""},
+   "13": {"state": "open", "by": null, "remains": "no regrade tool exists in experiments/ptr-engine/tools (directory listed; no regrade*.py)"},
+   "14": {"state": "closed", "by": "PREREG-ARM-RUN (frozen decision rule, sha256(rule body) == rule_sha256 21cb8551..., 12 cp ids agree)", "remains": ""}
+  }
+ },
+ "new_inefficiencies": [
+  {"n": 1, "what": "a verifier that reads live files serialises every author", "fix": "FROZEN-TREE: snapshot_sha256 over relpath+sha256, verify subcommand, exit 2 on mutation (7 tests red->green)", "artefact": "docs/FROZEN-TREE.md"},
+  {"n": 2, "what": "a linter status assumed exempt from every check", "verdict": "NOT exempt -- handoff_lint.py:209-232 requires evidence plus a recovery block for status:recovered, and treats it as a stub candidate", "remaining_gap": "tests/test_orchestration_handoffs.py baselines do not exercise a recovered record; the exemption claim is narrative, not code", "artefact": "docs/HANDOFF-LINT.md"},
+  {"n": 3, "what": "a published accuracy over the wrong denominator", "fix": "integer-only NUM + gradeable-count derivation (GRADE-V5-REPAIR); declared-space denominator (matrix_audit declarations)", "artefact": "docs/PUBLISHED-NUMBERS.md", "evidence_quality": "handoff reports no command_or_count; count not_measured"},
+  {"n": 4, "what": "an audit whose declared space came from its own data", "fix": "MATRIX-DECLARED-SPACE: declared space printed as a formula, extraneous_cell exit 11", "artefact": "docs/MATRIX-DECLARED-SPACE.md"},
+  {"n": 5, "what": "a row schema that cannot distinguish a cap stop from a refusal", "fix": "client.py:139 derive_stop_reason closed vocabulary + truncated_for; STOP-REASON-AUDIT census (1101 rows, 172 empty-with-tokens, 147 unrecorded_empty_content)", "artefact": "docs/STOP-REASON.md"}
+ ],
+ "new_top5": [
+  {"rank": 1, "item": "verification overhead exceeds the change itself", "evidence": "54 of 71 recorded evidence commands are verification-shaped (76.1%), 4 change-shaped; 116 recorded tool calls for ~4 mutating commands"},
+  {"rank": 2, "item": "the row schema still cannot say why a turn ended for 147 of 1101 historical rows", "evidence": "STOP-REASON-AUDIT causes {unrecorded_empty_content: 147, no_answer_text_field: 27, zero_tokens_no_content: 12}"},
+  {"rank": 3, "item": "the journal cannot report the cost it exists to report", "evidence": "two schemas in one batch ({t,step,kind} vs {ts,event}); 5 of 20 cards have no wall time, 14 of 20 no tool_calls"},
+  {"rank": 4, "item": "handoff completeness is not checked by the thing that writes handoffs", "evidence": "cell.py:621 write_handoff does not call handoff_lint.py; 14 of 20 batch handoffs omit tool_calls"},
+  {"rank": 5, "item": "the record stage has a declared exit code and no code path", "evidence": "cell.py:22 declares 7; grep -c 'Abort(7' cell.py == 0"}
+ ],
+ "gaps": [
+  "stage_record (cell.py:566): no gate, no exit code; declared 7 is unraised",
+  "write_handoff (cell.py:621): writes a handoff without linting it",
+  "unit_journal.py:30 EXIT_USAGE=2 collides with exit 2 = frozen-snapshot mutated",
+  "exit 1 is raised by four tools and appears in no declared set"
+ ]
+}

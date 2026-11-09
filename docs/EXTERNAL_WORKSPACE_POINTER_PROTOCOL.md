@@ -62,7 +62,7 @@ A pointer resolves in this order, and the order is normative:
 
 **Correction of record.** The first implementation's `resolve()` reached `manifest_path.parent /
 path` for `cursor` and `external` whenever no own root was passed, producing
-`orchestration/units/orchestration/cursors/r2-opt-sim.json`; and `report.json` was generated
+`orchestration/cursors/r2-opt-sim.json`; and `report.json` was generated
 without an own root, so the cursor was reported `MISSING` even though
 `orchestration/cursors/r2-opt-sim.json` exists. The file's existence was never in doubt — only
 the resolution order. Rule 2 is both the fix and the specification: an own-rooted workspace path
@@ -173,7 +173,7 @@ its own row count and is corrected here; the row count is what the model reads.
 ## 9. Verification
 
 ```bash
-cd "/home/zer0null/reserach extarctor"
+cd "/home/zer0null/research extractor"
 
 # pointer statuses for the manifest (3 OK / 2 MISSING expected)
 .venv/bin/python -c "import sys,json;sys.path.insert(0,'scratch/r2-opt-sim');import cost_model as cm;from pathlib import Path;r=cm.check_pointers(Path('orchestration/units/R2-OPT-SIM.md'),{'own':str(cm.ROOT)});print(json.dumps(r.to_json(),indent=1))"

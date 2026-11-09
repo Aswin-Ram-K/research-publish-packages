@@ -1,0 +1,131 @@
+{
+ "unit": "LATENCY-UNDER-DISPUTE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/LATENCY-REPORT.json",
+  "docs/LATENCY-REPORT.md",
+  "experiments/ptr-engine/tools/latency_report.py",
+  "experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py",
+  "orchestration/units/LATENCY-UNDER-DISPUTE.md",
+  "orchestration/journals/LATENCY-UNDER-DISPUTE.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "zero inference requests, zero network; analyze_stats.py invoked 10 times offline (one --rows call per grid) on de-duplicated rows in a temp dir; report regenerated deterministically (two runs, sha256 2d84d71345745faf0e5e61e56b535aea674eddf1940c5d5286b412ebb9446171 both times); floor-policy test green exit 0, red exit 1; test_latency_dedup.py still exit 0",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/latency_report.py --report <prior report> --out experiments/ptr-engine/measure/LATENCY-REPORT.json",
+   "python3 experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py",
+   "LATENCY_FLOOR_POLICY=off python3 experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py  # must fail (red)",
+   "python3 experiments/ptr-engine/longrun/tests/test_latency_dedup.py  # still green"
+  ],
+  "counts": {
+   "cells": 24,
+   "p95_published": 2,
+   "p95_withheld": 1,
+   "p50_cells": 12,
+   "p50_bitexact": 9,
+   "p50_moved": 3,
+   "g4_arms": 4,
+   "g4_n_raw_per_arm": 48,
+   "g4_n_dedup_per_arm": 48,
+   "g4_excess": 0,
+   "arms_with_a_p95": 1,
+   "pairs_with_p95": 0,
+   "any_inter_arm_comparison": false,
+   "live_requests": 0,
+   "network": false
+  },
+  "p95_after": [
+   {
+    "grid": "G8",
+    "arm": "pointer-stable",
+    "n_raw": 72,
+    "n_dedup": 70,
+    "p95": 397.41134999999986,
+    "lo": 273.83869999999996,
+    "hi": 659.703,
+    "verdict": "published"
+   },
+   {
+    "grid": "G9",
+    "arm": "pointer-stable",
+    "n_raw": 72,
+    "n_dedup": 61,
+    "p95": 429.696,
+    "lo": 318.804,
+    "hi": 477.058,
+    "verdict": "published"
+   }
+  ],
+  "p95_withheld": [
+   {
+    "grid": "G7",
+    "arm": "pointer-stable",
+    "n_raw": 68,
+    "n_dedup": 51,
+    "old": {
+     "point": 318.143,
+     "lo": 235.00144999999998,
+     "hi": 526.405,
+     "n": 68
+    },
+    "refusal": "refusing p95 at n=51: the 95% order-statistic span is ranks 46-51 (p90.2-p100.0) and n*(1-q)=2.6 < 3; minimum n for p95 is 60",
+    "verdict": "withdrawn on two independent grounds: both-count floor (51 < 60) and rule R disputed"
+   }
+  ],
+  "red_green": {
+   "green": "python3 experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py -> exit 0; PASS a_withheld 'withheld by the both-count floor policy: n_dedup=51 below 60 (n_raw=68, n_dedup=51)'; PASS d_artefact 'G7 68/51 withheld; G8 72/70 and G9 72/61 published, all labelled'; PASS f_operator '2 p95 in 1 arm, 2 single-arm grids, 0 p95 pairs'",
+   "red": "LATENCY_FLOOR_POLICY=off python3 experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py -> exit 1; AssertionError: G7 (n_raw=68, n_dedup=51) was PUBLISHED at tests/test_latency_floor_policy.py:74",
+   "restored": "re-run without the env var -> exit 0; test_latency_dedup.py still exit 0"
+  },
+  "integrity": {
+   "rows_files_modified": 0,
+   "grade_files_modified": 0,
+   "report_sha256": "2d84d71345745faf0e5e61e56b535aea674eddf1940c5d5286b412ebb9446171",
+   "protected_not_touched": [
+    "TVS.json",
+    "measure/REQUEST-LEDGER.json",
+    "request_ledger.py",
+    "analyze_stats.py",
+    "client.py",
+    "run_longrun.py",
+    "cell.py",
+    "every rows file",
+    "every grade file"
+   ],
+   "concurrent_writes_note": "protected-file mtimes moved INSIDE this unit's window under a concurrent unit, not under this one: run_longrun.py 11:14:04, measure/REQUEST-LEDGER.json 11:14:36, tools/request_ledger.py 11:16:04. This unit's write set is exactly the 7 artefact paths below; it opened no ledger, TVS, grade, rows, client, cell or run_longrun file for writing. analyze_stats.py (10:32:41) and every rows file were untouched during the run, and the report regenerated to the same sha256 twice, so the recompute is not affected by the concurrent ledger work.",
+   "this_unit_wrote": [
+    "experiments/ptr-engine/measure/LATENCY-REPORT.json (11:17:24)",
+    "docs/LATENCY-REPORT.md (11:19:11)",
+    "experiments/ptr-engine/tools/latency_report.py (11:17:23)",
+    "experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py (11:18:17)",
+    "orchestration/units/LATENCY-UNDER-DISPUTE.md",
+    "orchestration/handoffs/LATENCY-UNDER-DISPUTE.json",
+    "orchestration/journals/LATENCY-UNDER-DISPUTE.jsonl"
+   ]
+  }
+ },
+ "blocker": "",
+ "next_unit_hint": "Two readings of G7 remain open and the policy withholds it under both. To settle it, DEDUPE-ROOT-CAUSE needs a request_sha256 on future rows or a writer-level double-append proof (run_longrun.py:1969-2066, 965-975); only then does G7 acquire a defensible n (51 or 68) and, if 68, a publishable p95 under both counts. No arm comparison exists or can exist from these grids: every p95-bearing grid is single-arm.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/LATENCY-REPORT.json",
+  "docs/LATENCY-REPORT.md",
+  "experiments/ptr-engine/tools/latency_report.py",
+  "experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py",
+  "orchestration/units/LATENCY-UNDER-DISPUTE.md",
+  "orchestration/handoffs/LATENCY-UNDER-DISPUTE.json",
+  "orchestration/journals/LATENCY-UNDER-DISPUTE.jsonl"
+ ],
+ "assumptions": [
+  {
+   "what": "n_raw for a cell is the cell's raw row count on disk (G7 68, G8 72, G9 72), n_dedup the analyser's taken n on de-duplicated rows (51/70/61)",
+   "why": "the card names exactly these pairs; both are read from rows and the analyser, never restated by hand"
+  },
+  {
+   "what": "the 3 p50 values that moved were reported, not suppressed, despite the card saying p50s are unchanged by rule R",
+   "why": "measurement: de-duplication changes the sample, so G7/G8/G9 p50 moved by 3.5/1.5/10.6 ms. The card's claim holds for the 9 p50 cells on zero-excess files and for the whole G4 table (48 raw = 48 de-duplicated, 0 removed); claiming otherwise for the 3 would be false"
+  }
+ ],
+ "tool_calls": 32,
+ "bound": 26,
+ "bound_exceeded": "yes - 32 calls against a 26-call bound; the overrun is one aborted doc-patch run (an exact-string match failed and the script asserted before writing), one report-generation run that fixed a lost-published-value bug in the withdrawal record, and three verification/finalisation passes (one of which caught the concurrent-unit mtime drift). Recorded rather than hidden."
+}

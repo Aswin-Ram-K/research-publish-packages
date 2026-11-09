@@ -1,0 +1,82 @@
+{
+ "unit": "HARNESS-PIN-GEN6",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/measure/HARNESS-PIN.json",
+  "experiments/ptr-engine/measure/PIN-GEN6-ATTRIBUTION.json",
+  "docs/HARNESS-PIN.md",
+  "orchestration/units/HARNESS-PIN-GEN6.md",
+  "orchestration/journals/HARNESS-PIN-GEN6.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "digest efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3 recomputed twice from cell.py's own HARNESS_FILES + recipe (identical); guard: phase 5 checks below; verdict PASS f17663d1",
+  "digest_generation_5": "35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb",
+  "digest_generation_6": "efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3",
+  "per_file": {
+   "analyze_stats.py": "30b07d4d61930e0cb863badd553d0e11e8c9bdcfdba7de5973abdbd675253c9a",
+   "client.py": "9b12b2ea948b23f0f1600c4bcf4c8f6d72e17e900c046e555e7bc78d6630c0c6",
+   "fixture": "0804b51575cce3454a1c628a9a2447a01856321e67ac3fd1ff8c9baa48467641",
+   "grade_v5.py": "3d70ed1d43d2ab098eeeba4b50fa574273c71e9ff24af5adaa9e519d10c77940",
+   "run_longrun.py": "4f40dde188b4812031c01304b3bd07c9f5b64ecc268aa48bb46eb3aabf69a4ca",
+   "tools/det_verify.py": "12ccc74ea31c3843021f1ae6fa771b458082f78393e2117cd86960fd221b6439"
+  },
+  "movers": [
+   "experiments/ptr-engine/longrun/client.py 5aa23bb5\u2026 -> 9b12b2ea\u2026 (mtime 2026-10-26T23:16:33Z)",
+   "experiments/ptr-engine/longrun/run_longrun.py 30dfa9e9\u2026 -> 4f40dde1\u2026 (mtime 2026-10-26T23:17:47Z)"
+  ],
+  "attribution": "both movers -> TOOL-CHANNEL-WIRE (execution dda84411, PASS f17663d1, status done). write_paths name both files; mtimes fall after gen 5's freeze (2026-10-26T20:05:00Z) and before that card's handoff write (2026-10-26T23:21:44Z); the claimed surfaces are present in the bytes (client.py:386-387 tools/tool_choice gated on tools_enabled, tools_schema_sent at client.py:299/847/948; run_longrun.py:690-702 structured tool_calls consumed before the text parser, used at :1030-1032 and :1136).",
+  "check_default": "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check -> exit 1; 'DISAGREES harness_pin_digest efefd88\u2026 | 35ff41b7\u2026' with reason naming the LAUNCHER-GEN5-WIRE-removed grep in run_a_star.py and 'pinned inputs whose bytes moved: none'; remaining disagreements: harness_pin_digest, price_total, price_remaining_after, ledger_spent, ledger_remaining, floor_n60",
+  "check_pin5": "--check --pin-generation 5 -> exit 13: 'moved input: experiments/ptr-engine/longrun/client.py 5aa23bb5\u2026 -> 9b12b2ea\u2026', 'moved input: experiments/ptr-engine/longrun/run_longrun.py 30dfa9e9\u2026 -> 4f40dde1\u2026', 'moved digests: scope=35ff41b7\u2026 live=efefd885\u2026'",
+  "check_pin6": "--check --pin-generation 6 -> no MOVED line (the tree matches the new record); exit 1 only because of the non-pin rows",
+  "check_tampered_copy": "copy under /tmp/gen6-tamper with one byte changed in client.py (READ_FILE_TOOL_SCHEMA -> READ_FILZ_...) -> --check --root /tmp/gen6-tamper exit 1: 'DISAGREES harness_pin_digest efefd885... | 83ddd7156ea9a0f67bff66f47ef8a9101795a2d714ea633f837037705f965b02 | 35ff41b7...', pin drift ['experiments/ptr-engine/longrun/client.py']",
+  "verdict_row": "PASS f17663d1 pytest -q experiments/ptr-engine/tests/test_embedded_digests_match_pin.py::test_pin_matches_the_bytes_on_disk -> 1 passed",
+  "epoch_generation_5_covers": "the canary's 36 rows ran on 35ff41b7\u2026 and must stay labelled generation 5.",
+  "epoch_not_comparable": "post-generation-6 tools-on request digests (the body gained a 'tools' key; TOOL-CHANNEL-WIRE measured 3c0ff847\u2026 after the change); tools-off digests unchanged (f0499dd1335cccb27db359bee8d29c02a0f3015ee8e734404f288fbff0e2f8da).",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check",
+   "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check --pin-generation 5",
+   "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check --pin-generation 6",
+   "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check --root /tmp/gen6-tamper",
+   "/usr/bin/pytest -q experiments/ptr-engine/tests/test_embedded_digests_match_pin.py::test_pin_matches_the_bytes_on_disk"
+  ]
+ },
+ "findings": [
+  {
+   "id": "F1",
+   "finding": "the card's hypothesis that run_longrun.py 'may also carry RUN-DRY-TURN-SCOPE's turn-scope change' is false for this delta: that change is already inside generation 5's run_longrun.py (b2003038 -> 30dfa9e9, named in generation 5's own cause; its handoff mtime 2026-10-26T19:56:44Z predates the gen-5 freeze). The whole 30dfa9e9 -> 4f40dde1 delta is TOOL-CHANNEL-WIRE.",
+   "action": "recorded, not smoothed"
+  },
+  {
+   "id": "F2",
+   "finding": "default --check cannot exit 0 from this card's write paths. Offenders: (a) GRID-PARAMS.json still holds harness_pin.harness_sha256 = 35ff41b7\u2026; (b) launch_contract_diff.py's harness_pin_digest row still greps '^HARNESS_PIN = \"\u2026\"' in run_a_star.py, a constant LAUNCHER-GEN5-WIRE replaced with an import-time PIN_EXPECTED_* pair, so the row reports 'regex not found'; (c) five rows (price_total, price_remaining_after, ledger_spent, ledger_remaining, floor_n60) were already DISAGREES before this card wrote anything.",
+   "action": "named with owners in the handoff and the doc; the pin itself is not weakened to hide them"
+  },
+  {
+   "id": "F3",
+   "finding": "the first pin write carried ABSOLUTE per-file paths (cell.HARNESS_FILES holds absolute paths), which made launch_contract_diff --root <copy> silently read the live tree and report a tampered copy as clean.",
+   "action": "fixed before delivery: paths are now workspace-relative, so a --root copy is judged on its own bytes; the digest is unchanged. Lesson: never copy cell.HARNESS_FILES' paths into the record without relpath-ing them."
+  },
+  {
+   "id": "F4",
+   "finding": "docs/HARNESS-PIN.md's page header still names generation 2's digest (1f7c6791\u2026) and was not updated for generations 3-5.",
+   "action": "not rewritten (append-only); the gen-6 section states it and directs the reader to the newest section"
+  }
+ ],
+ "blocker": "run_a_star.py:52-53 still expects generation 5 (PIN_EXPECTED_GENERATION = 5 / PIN_EXPECTED_DIGEST = 35ff41b7\u2026): every grid/canary launch from this tree is refused until a successor card advances BOTH to generation 6 (this card may not edit run_a_star.py).",
+ "next_unit_hint": "LAUNCHER-GEN6-WIRE: advance run_a_star.py's PIN_EXPECTED_GENERATION/DIGEST to 6/efefd885\u2026, then a PIN-DOC-DIGEST card to move docs/GRID-RUNBOOK.md's digest lines and GRID-PARAMS.json's harness_pin block to 6, and to retarget launch_contract_diff.py's stale '^HARNESS_PIN =' probe at PIN_EXPECTED_DIGEST. Only then can the default --check reach 0 and a live canary run.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/HARNESS-PIN.json",
+  "experiments/ptr-engine/measure/PIN-GEN6-ATTRIBUTION.json",
+  "docs/HARNESS-PIN.md",
+  "orchestration/units/HARNESS-PIN-GEN6.md",
+  "orchestration/handoffs/HARNESS-PIN-GEN6.json",
+  "orchestration/journals/HARNESS-PIN-GEN6.jsonl"
+ ],
+ "tool_calls": 32,
+ "bound": 25,
+ "offline": {
+  "requests_sent": 0,
+  "network_events": 0,
+  "live_cells": 0
+ }
+}

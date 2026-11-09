@@ -1,0 +1,56 @@
+{
+ "unit": "LATENCY-FIGURE-HONESTY",
+ "status": "done",
+ "artifacts": [
+  "docs/RUNAWAY-POLICY.md",
+  "docs/ANALYSIS-PATH.md",
+  "docs/ANALYSIS-CONSUMER.md",
+  "docs/LATENCY-REPORT.md",
+  "docs/LATENCY-FALLBACK.md",
+  "experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py",
+  "orchestration/units/LATENCY-FIGURE-HONESTY.md",
+  "orchestration/handoffs/LATENCY-FIGURE-HONESTY.json",
+  "orchestration/journals/LATENCY-FIGURE-HONESTY.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "3/3 published figures recomputed from the sha-pinned rows file; latency floor test green at 6/6 cases; 1 new doc; 4 additive dated blocks inserted",
+  "rows_file_sha256": "46afc892480ae1dbe4b20d13fd4dacb983653a9f0a04b6a42a6283b3c55ca3b1",
+  "figure_1_RUNAWAY": "docs/RUNAWAY-POLICY.md:34 ttft_ms_p50 141.58 -> REPRODUCES: 27 rows, 27 selected, fallback_rows 27, explicit_initial_rows 0, 27 non-null ttft_ms, quantile_ci(0.50)=(141.58, 131.354, 166.378, 27)",
+  "figure_2_ANALYSIS_PATH": "docs/ANALYSIS-PATH.md:33 ttft_p50 n=27 141.58ms [131.35, 166.38] -> REPRODUCES to printed precision; caveat notes the current CLI now refuses the cell (usable_for EXCLUDED, 'no usable cells')",
+  "figure_3_ANALYSIS_CONSUMER": "docs/ANALYSIS-CONSUMER.md:100 '27 -> 25' -> 27 and 25 reproduce (27 selected; 25 = 27 - 2 truncated = stop_reason 'stop' count), but ALL 27 rows carry ttft_ms, so the column headed 'rows with ttft' overstates exclusions by 2",
+  "test_repin": "case_d OLD: p.get('point') is not None and p['n'] == n_dedup (G8 70, G9 61). RECOMPUTED: G8 selector 48 turns / 48 non-null ttft / 1 truncated -> n_turn_dedup 46 -> ttft_used 45; G9 ttft_used 37. NEW: p['n'] == ttft_used (45, 37), point None, refused 'n=45'/'n=37' with 'minimum n for p95 is 60', both-count gate still publishable at 72/70 and 72/61",
+  "test_repin_extra_drifts": "case_d second drift: OLD 'not withdrawn' in withdrawal_basis -> NOW 'both counts clear the floor: n_raw=72, n_dedup=70 (floor 60)'; case_e OLD 12 p50 cells / 9 bitexact -> RECOMPUTED 11 cells with a p50 point (11 of 24) and 8 bitexact + 3 moved = 11; case_f OLD cells_with_p95 2 / arms ['pointer-stable'] -> RECOMPUTED 0 published p95, 2 refused (cells_with_p95_raw), arms [] ",
+  "artefact_vs_recomputation": "AGREED on the numbers the artefact prints (p95.n 45/37 == ttft_used 45/37; 11 p50 points counted independently == inventory 11). DISAGREED with the census note '47 raw turns' for G8: recomputed 48 raw turns by the selector, 47 is the untruncated count (48 - 1). Also: turn de-duplication to 46 is not reproducible by content_sha256 distinctness alone (43 distinct), so the 48->46->45 reduction is the report tool's own step, not re-derived here.",
+  "census_facts_used": "TURN-CENSUS-60: 0 of 15 files / 0 of 15 arm-by-file rows reach 60 usable turns, corpus max 48; 48*0.05=2.4<TAIL_MIN=3; GRID-CELL-SANITY stamps both cells usable_for: [] (27-row cell: 'cell in progress: 27/48 turns on disk')",
+  "withdrawn_screen": "docs/ANALYSIS-PATH.md, docs/ANALYSIS-CONSUMER.md, docs/LATENCY-REPORT.md, docs/LATENCY-FALLBACK.md: 0 findings strict and non-strict. docs/RUNAWAY-POLICY.md: 2 WI-014 findings, IDENTICAL with and without this unit's inserted block (verified by stripping the block to /tmp/rp_pre.md) -> pre-existing, caused by the file being new since the frozen baseline, not by this unit",
+  "preexisting_suite_failures": "python3 -m pytest experiments/ptr-engine/longrun/tests experiments/ptr-engine/tests -q -> 13 failed, 824 passed. The 13 are outside this unit's write paths (test_verbosity, test_verdict_ritual, test_withdrawn_screen baseline, test_wire_client offline socket, STOP-REASON.json stale, 'rows file missing from corpus', W_PARTIAL_NO_COMMAND); the re-pinned file itself is green",
+  "commands": [
+   "python3 -c \"...turn_latency_rows + quantile_ci on measure/rows-cell-pointer-stable-20261026T182535Z.jsonl...\" # (141.58, 131.354, 166.378, 27)",
+   "python3 analyze_stats.py --rows ../measure/rows-cell-pointer-stable-20261026T182535Z.jsonl  # exit 0, now REFUSES: usable_for EXCLUDED, no usable cells",
+   "python3 experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py  # exit 0, 6/6 PASS",
+   "LATENCY_FLOOR_POLICY=off python3 experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py  # exit 1 (red-green preserved)",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests experiments/ptr-engine/tests -q  # 13 failed, 824 passed"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "The per-cell p95 cannot exist in this corpus (0 cells reach 60 usable turns; max 48). The only admissible p95 is the pooled R-all reading at n=144 (3 reps x 48 turns), and that artefact does not exist on disk. Next real latency work is a grid that writes >1 rep per arm, plus an era-B writer that emits kind='turn-initial' so a non-fallback figure can be produced at all; every figure now on disk is forward-only fallback. Open finding for a fresh unit: the report tool's turn de-duplication (48 -> 46) is not reproducible from content_sha256 distinctness (43), and the pre-existing 13 pytest failures in longrun/tests sit outside this unit's write paths.",
+ "write_paths": [
+  "docs/RUNAWAY-POLICY.md",
+  "docs/ANALYSIS-PATH.md",
+  "docs/ANALYSIS-CONSUMER.md",
+  "docs/LATENCY-REPORT.md",
+  "docs/LATENCY-FALLBACK.md",
+  "experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py",
+  "orchestration/units/LATENCY-FIGURE-HONESTY.md",
+  "orchestration/handoffs/LATENCY-FIGURE-HONESTY.json",
+  "orchestration/journals/LATENCY-FIGURE-HONESTY.jsonl"
+ ],
+ "assumptions": [
+  "The 'sites' are the lines the census named (RUNAWAY-POLICY.md:34, ANALYSIS-PATH.md:33, ANALYSIS-CONSUMER.md:100); each dated block was inserted at the nearest stable heading AFTER the figure so the original sentence and table row are untouched.",
+  "The LATENCY-REPORT.md change is exactly one inserted line, per the card.",
+  "Re-pinning the test by recomputation required touching two further moved cases (e, f) beyond the card's named case_d, because the same artefact drift broke them; each is recorded with old expectation, recomputed value and new expectation, and none was silently adopted.",
+  "Tool calls: the 26-call bound was exceeded by 4 (30 total) because the artefact drift broke cases e and f after case_d was fixed, and one call was needed to prove the withdrawn-screen WI-014 finding pre-existed this unit's edit."
+ ],
+ "tool_calls": 30,
+ "bound": 26
+}

@@ -1,0 +1,2119 @@
+{
+ "unit": "GRADE-V5-T4-DECORATION",
+ "date": "2026-10-26",
+ "offline": true,
+ "requests_spent": 0,
+ "network": "none - no socket, no requests/httpx import, no live cell, cell.py untouched",
+ "grader": {
+  "path": "experiments/ptr-engine/longrun/grade_v5.py",
+  "sha256_before": "056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+  "sha256_after": "3d70ed1d43d2ab098eeeba4b50fa574273c71e9ff24af5adaa9e519d10c77940",
+  "grader_version": "5.1",
+  "rule": "ANSWER-CONTRACT v1 (forced one-line answer, value graded against AST truth)"
+ },
+ "fixture": {
+  "path": "experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json",
+  "sha256": "0804b51575cce3454a1c628a9a2447a01856321e67ac3fd1ff8c9baa48467641"
+ },
+ "parser_lines_quoted": {
+  "CALL_RE": "68: CALL_RE = re.compile(r\"^([A-Za-z_][\\w.]*)\\s*\\((.*)\\)\\s*$\", re.S)",
+  "NUM_HEAD_RE": "71: NUM_HEAD_RE = re.compile(r\"^\\d+\\b\")",
+  "_parse_call": "157-159: m = CALL_RE.match((text or \"\").strip()) / if not m: return None, \"call_not_parsable\"",
+  "NONE_branch": "217-220: if head == \"NONE\": if rest: out[\"answer_parse_error\"] = \"trailing_after_none\"; return out",
+  "NUM_why_it_already_passed": "105 + 112-113 (_integral_numeral): 'A sentence-final period (`64.`) is punctuation, not a fraction.' / if re.match(r\"^\\.\\d\", tail): return None  -> tail '.' alone is not `.<digit>`, so `64.` asserts 64",
+  "body_split": "214-215 (pre-repair): head = body.split(None, 1)[0].upper() -> for `NONE .` head is 'NONE' with rest '.' ... and for `NONE <just>` head is 'NONE' with a non-empty rest",
+  "grade_cell": "587-692: verdict derives from parsed only; NONE 617-647, NUM 653-665, CALL 667-692, TEXT 612-615"
+ },
+ "defect": {
+  "measurement": "measure/ERA-B-GRADE-REHEARSAL.json (64 correct rows, 50 pass / 14 not, 11 card-required; 9 negative controls, 0 passing)",
+  "e2": "CALL + provenance parenthetical 0/4: answer_not_contract:call_arg_not_kwarg:) (resolve.py:163 / kwarg_value_mismatch:block_size / kwarg_value_mismatch:code",
+  "b_on_call": "4 fail: answer_not_contract:call_not_parsable",
+  "b_on_none": "3 undecidable: unparseable",
+  "f": "0/3 fail: answer_not_contract:trailing_after_none",
+  "why_it_is_an_artefact": "every rejected row asserts the SAME value as a passing row; only decoration differs, and NUM already tolerated the same trailing period"
+ },
+ "rules": [
+  {
+   "id": "a",
+   "what": "strip ONE trailing sentence-final '.' (not '..'; '?!' never matched because only '.' is stripped), on EVERY kind",
+   "where": "grade_v5._strip_decoration, called once from parse_answer_contract before the head split / kind branches",
+   "guard": "nothing beyond the period is removed; the value is re-read below by the unchanged kind branches"
+  },
+  {
+   "id": "b",
+   "what": "strip a balanced trailing '(...)' or a trailing citation token after a COMPLETE answer",
+   "grammar": "citations come from the imported dv.citation_spans (mirrored, not re-invented); a parenthetical must be whitespace-separated so the call's own ')' is never mistaken for decoration",
+   "guard": "_complete_prefix: the remainder must still be a complete answer of the SAME kind (CALL must still _parse_call cleanly, NUM must still carry an asserted numeral, TEXT non-empty, NONE bare) - decoration never re-kinds"
+  },
+  {
+   "id": "c",
+   "what": "allow a short trailing justification after NONE introduced by \u2014 / - / ; / ( ; the answer stays a denial",
+   "guard": "the payload must carry no value: no numeral, no dotted name, no callable '(', no snake_case code token (citations removed first). `NONE \u2014 actually ledger.record_refusal` stays trailing_after_none"
+  }
+ ],
+ "recording": "every removed fragment is kept in cell['decoration_stripped'] (and in parsed detail['decoration_stripped'] / detail['body_after_decoration']), so a reader sees that the grader DISCARDED something",
+ "matrix_after": {
+  "correct_rows": 64,
+  "passing": 64,
+  "not_passing": 0,
+  "nonpassing_rows": [],
+  "shape_summary": {
+   "a_canonical": {
+    "rows": 12,
+    "pass": 12,
+    "fail": 0,
+    "undecidable": 0,
+    "other": 0
+   },
+   "b_trailing_period": {
+    "rows": 12,
+    "pass": 12,
+    "fail": 0,
+    "undecidable": 0,
+    "other": 0
+   },
+   "c_two_line": {
+    "rows": 12,
+    "pass": 12,
+    "fail": 0,
+    "undecidable": 0,
+    "other": 0
+   },
+   "d_tool_narration": {
+    "rows": 12,
+    "pass": 12,
+    "fail": 0,
+    "undecidable": 0,
+    "other": 0
+   },
+   "e1_kwargs_reordered": {
+    "rows": 4,
+    "pass": 4,
+    "fail": 0,
+    "undecidable": 0,
+    "other": 0
+   },
+   "e2_reordered_plus_provenance": {
+    "rows": 4,
+    "pass": 4,
+    "fail": 0,
+    "undecidable": 0,
+    "other": 0
+   },
+   "g_num_with_citation": {
+    "rows": 5,
+    "pass": 5,
+    "fail": 0,
+    "undecidable": 0,
+    "other": 0
+   },
+   "f_none_with_justification": {
+    "rows": 3,
+    "pass": 3,
+    "fail": 0,
+    "undecidable": 0,
+    "other": 0
+   }
+  },
+  "rows": [
+   {
+    "answer_id": "cp.0.t06.a_canonical",
+    "checkpoint": "cp.0.t06",
+    "kind": "CALL",
+    "shape": "a_canonical",
+    "card_shape": "a",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.record_resolution(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=presented)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_resolution(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=presented)",
+    "asserted": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "block_size",
+      "bytes_appended",
+      "entry_text",
+      "scope",
+      "serialized_ref"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "bytes_appended",
+      "block_size",
+      "entry_text"
+     ]
+    }
+   },
+   {
+    "answer_id": "cp.0.t06.b_trailing_period",
+    "checkpoint": "cp.0.t06",
+    "kind": "CALL",
+    "shape": "b_trailing_period",
+    "card_shape": "b",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.record_resolution(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=presented).",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_resolution(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=presented).",
+    "asserted": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "block_size",
+      "bytes_appended",
+      "entry_text",
+      "scope",
+      "serialized_ref"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "bytes_appended",
+      "block_size",
+      "entry_text"
+     ]
+    }
+   },
+   {
+    "answer_id": "cp.0.t06.c_two_line",
+    "checkpoint": "cp.0.t06",
+    "kind": "CALL",
+    "shape": "c_two_line",
+    "card_shape": "c",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.record_resolution(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=presented)\nCall site at resolve.py:159.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_resolution(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=presented)",
+    "asserted": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "block_size",
+      "bytes_appended",
+      "entry_text",
+      "scope",
+      "serialized_ref"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "bytes_appended",
+      "block_size",
+      "entry_text"
+     ]
+    }
+   },
+   {
+    "answer_id": "cp.0.t06.d_tool_narration",
+    "checkpoint": "cp.0.t06",
+    "kind": "CALL",
+    "shape": "d_tool_narration",
+    "card_shape": "d",
+    "required_by_card": true,
+    "answer": "Read `resolve.py:36-110`.\nANSWER: CALL ledger.record_resolution(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=presented)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_resolution(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=presented)",
+    "asserted": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "block_size",
+      "bytes_appended",
+      "entry_text",
+      "scope",
+      "serialized_ref"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "bytes_appended",
+      "block_size",
+      "entry_text"
+     ]
+    }
+   },
+   {
+    "answer_id": "cp.0.t06.e1_kwargs_reordered",
+    "checkpoint": "cp.0.t06",
+    "kind": "CALL",
+    "shape": "e1_kwargs_reordered",
+    "card_shape": "e",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.record_resolution(serialized_ref=presented, scope=scope.name, entry_text=entry.text, bytes_appended=len(presented.encode('utf-8')), block_size=scope.block())",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_resolution(serialized_ref=presented, scope=scope.name, entry_text=entry.text, bytes_appended=len(presented.encode('utf-8')), block_size=scope.block())",
+    "asserted": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "serialized_ref",
+      "scope",
+      "entry_text",
+      "bytes_appended",
+      "block_size"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "bytes_appended",
+      "block_size",
+      "entry_text"
+     ]
+    }
+   },
+   {
+    "answer_id": "cp.0.t06.e2_reordered_plus_provenance",
+    "checkpoint": "cp.0.t06",
+    "kind": "CALL",
+    "shape": "e2_reordered_plus_provenance",
+    "card_shape": "e",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.record_resolution(serialized_ref=presented, scope=scope.name, entry_text=entry.text, bytes_appended=len(presented.encode('utf-8')), block_size=scope.block()) (resolve.py:159)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_resolution(serialized_ref=presented, scope=scope.name, entry_text=entry.text, bytes_appended=len(presented.encode('utf-8')), block_size=scope.block()) (resolve.py:159)",
+    "asserted": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "serialized_ref",
+      "scope",
+      "entry_text",
+      "bytes_appended",
+      "block_size"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "bytes_appended",
+      "block_size",
+      "entry_text"
+     ]
+    }
+   },
+   {
+    "answer_id": "cp.1.t08.a_canonical",
+    "checkpoint": "cp.1.t08",
+    "kind": "CALL",
+    "shape": "a_canonical",
+    "card_shape": "a",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL scope.block()",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL scope.block()",
+    "asserted": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    }
+   },
+   {
+    "answer_id": "cp.1.t08.b_trailing_period",
+    "checkpoint": "cp.1.t08",
+    "kind": "CALL",
+    "shape": "b_trailing_period",
+    "card_shape": "b",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL scope.block().",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL scope.block().",
+    "asserted": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    }
+   },
+   {
+    "answer_id": "cp.1.t08.c_two_line",
+    "checkpoint": "cp.1.t08",
+    "kind": "CALL",
+    "shape": "c_two_line",
+    "card_shape": "c",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL scope.block()\nCall site at resolve.py:163.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL scope.block()",
+    "asserted": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    }
+   },
+   {
+    "answer_id": "cp.1.t08.d_tool_narration",
+    "checkpoint": "cp.1.t08",
+    "kind": "CALL",
+    "shape": "d_tool_narration",
+    "card_shape": "d",
+    "required_by_card": true,
+    "answer": "Read `resolve.py:36-110`.\nANSWER: CALL scope.block()",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL scope.block()",
+    "asserted": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    }
+   },
+   {
+    "answer_id": "cp.1.t08.e1_kwargs_reordered",
+    "checkpoint": "cp.1.t08",
+    "kind": "CALL",
+    "shape": "e1_kwargs_reordered",
+    "card_shape": "e",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL scope.block()",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL scope.block()",
+    "asserted": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    }
+   },
+   {
+    "answer_id": "cp.1.t08.e2_reordered_plus_provenance",
+    "checkpoint": "cp.1.t08",
+    "kind": "CALL",
+    "shape": "e2_reordered_plus_provenance",
+    "card_shape": "e",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL scope.block() (resolve.py:163)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL scope.block() (resolve.py:163)",
+    "asserted": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    }
+   },
+   {
+    "answer_id": "cp.2.t12.a_canonical",
+    "checkpoint": "cp.2.t12",
+    "kind": "NUM",
+    "shape": "a_canonical",
+    "card_shape": "a",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 64",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 64",
+    "asserted": 64,
+    "expected": 64
+   },
+   {
+    "answer_id": "cp.2.t12.b_trailing_period",
+    "checkpoint": "cp.2.t12",
+    "kind": "NUM",
+    "shape": "b_trailing_period",
+    "card_shape": "b",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 64.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 64.",
+    "asserted": 64,
+    "expected": 64
+   },
+   {
+    "answer_id": "cp.2.t12.c_two_line",
+    "checkpoint": "cp.2.t12",
+    "kind": "NUM",
+    "shape": "c_two_line",
+    "card_shape": "c",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 64\nRead from resolve.py:39.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 64",
+    "asserted": 64,
+    "expected": 64
+   },
+   {
+    "answer_id": "cp.2.t12.d_tool_narration",
+    "checkpoint": "cp.2.t12",
+    "kind": "NUM",
+    "shape": "d_tool_narration",
+    "card_shape": "d",
+    "required_by_card": true,
+    "answer": "Read `resolve.py:36-110`.\nANSWER: NUM 64",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 64",
+    "asserted": 64,
+    "expected": 64
+   },
+   {
+    "answer_id": "cp.2.t12.g_num_with_citation",
+    "checkpoint": "cp.2.t12",
+    "kind": "NUM",
+    "shape": "g_num_with_citation",
+    "card_shape": "g",
+    "required_by_card": false,
+    "answer": "ANSWER: NUM 64 (resolve.py:39)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 64 (resolve.py:39)",
+    "asserted": 64,
+    "expected": 64
+   },
+   {
+    "answer_id": "cp.3.t14.a_canonical",
+    "checkpoint": "cp.3.t14",
+    "kind": "NONE",
+    "shape": "a_canonical",
+    "card_shape": "a",
+    "required_by_card": true,
+    "answer": "ANSWER: NONE",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.3.t14.b_trailing_period",
+    "checkpoint": "cp.3.t14",
+    "kind": "NONE",
+    "shape": "b_trailing_period",
+    "card_shape": "b",
+    "required_by_card": true,
+    "answer": "ANSWER: NONE.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE.",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.3.t14.c_two_line",
+    "checkpoint": "cp.3.t14",
+    "kind": "NONE",
+    "shape": "c_two_line",
+    "card_shape": "c",
+    "required_by_card": true,
+    "answer": "ANSWER: NONE\nThe named attribute is not called inside that function.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.3.t14.d_tool_narration",
+    "checkpoint": "cp.3.t14",
+    "kind": "NONE",
+    "shape": "d_tool_narration",
+    "card_shape": "d",
+    "required_by_card": true,
+    "answer": "Read `resolve.py:36-110`.\nANSWER: NONE",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.3.t14.f_none_with_justification",
+    "checkpoint": "cp.3.t14",
+    "kind": "NONE",
+    "shape": "f_none_with_justification",
+    "card_shape": "f",
+    "required_by_card": false,
+    "answer": "ANSWER: NONE \u2014 the source defines no such call",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE \u2014 the source defines no such call",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.4.t18.a_canonical",
+    "checkpoint": "cp.4.t18",
+    "kind": "NUM",
+    "shape": "a_canonical",
+    "card_shape": "a",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 6",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 6",
+    "asserted": 6,
+    "expected": 6
+   },
+   {
+    "answer_id": "cp.4.t18.b_trailing_period",
+    "checkpoint": "cp.4.t18",
+    "kind": "NUM",
+    "shape": "b_trailing_period",
+    "card_shape": "b",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 6.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 6.",
+    "asserted": 6,
+    "expected": 6
+   },
+   {
+    "answer_id": "cp.4.t18.c_two_line",
+    "checkpoint": "cp.4.t18",
+    "kind": "NUM",
+    "shape": "c_two_line",
+    "card_shape": "c",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 6\nRead from errors.py:176-211.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 6",
+    "asserted": 6,
+    "expected": 6
+   },
+   {
+    "answer_id": "cp.4.t18.d_tool_narration",
+    "checkpoint": "cp.4.t18",
+    "kind": "NUM",
+    "shape": "d_tool_narration",
+    "card_shape": "d",
+    "required_by_card": true,
+    "answer": "Read `resolve.py:36-110`.\nANSWER: NUM 6",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 6",
+    "asserted": 6,
+    "expected": 6
+   },
+   {
+    "answer_id": "cp.4.t18.g_num_with_citation",
+    "checkpoint": "cp.4.t18",
+    "kind": "NUM",
+    "shape": "g_num_with_citation",
+    "card_shape": "g",
+    "required_by_card": false,
+    "answer": "ANSWER: NUM 6 (errors.py:176-211)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 6 (errors.py:176-211)",
+    "asserted": 6,
+    "expected": 6
+   },
+   {
+    "answer_id": "cp.5.t20.a_canonical",
+    "checkpoint": "cp.5.t20",
+    "kind": "NONE",
+    "shape": "a_canonical",
+    "card_shape": "a",
+    "required_by_card": true,
+    "answer": "ANSWER: NONE",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.5.t20.b_trailing_period",
+    "checkpoint": "cp.5.t20",
+    "kind": "NONE",
+    "shape": "b_trailing_period",
+    "card_shape": "b",
+    "required_by_card": true,
+    "answer": "ANSWER: NONE.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE.",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.5.t20.c_two_line",
+    "checkpoint": "cp.5.t20",
+    "kind": "NONE",
+    "shape": "c_two_line",
+    "card_shape": "c",
+    "required_by_card": true,
+    "answer": "ANSWER: NONE\nThe named attribute is not called inside that function.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.5.t20.d_tool_narration",
+    "checkpoint": "cp.5.t20",
+    "kind": "NONE",
+    "shape": "d_tool_narration",
+    "card_shape": "d",
+    "required_by_card": true,
+    "answer": "Read `resolve.py:36-110`.\nANSWER: NONE",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.5.t20.f_none_with_justification",
+    "checkpoint": "cp.5.t20",
+    "kind": "NONE",
+    "shape": "f_none_with_justification",
+    "card_shape": "f",
+    "required_by_card": false,
+    "answer": "ANSWER: NONE \u2014 the source defines no such call",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE \u2014 the source defines no such call",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.6.t24.a_canonical",
+    "checkpoint": "cp.6.t24",
+    "kind": "NUM",
+    "shape": "a_canonical",
+    "card_shape": "a",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 31",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 31",
+    "asserted": 31,
+    "expected": 31
+   },
+   {
+    "answer_id": "cp.6.t24.b_trailing_period",
+    "checkpoint": "cp.6.t24",
+    "kind": "NUM",
+    "shape": "b_trailing_period",
+    "card_shape": "b",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 31.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 31.",
+    "asserted": 31,
+    "expected": 31
+   },
+   {
+    "answer_id": "cp.6.t24.c_two_line",
+    "checkpoint": "cp.6.t24",
+    "kind": "NUM",
+    "shape": "c_two_line",
+    "card_shape": "c",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 31\nRead from errors.py:15-247.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 31",
+    "asserted": 31,
+    "expected": 31
+   },
+   {
+    "answer_id": "cp.6.t24.d_tool_narration",
+    "checkpoint": "cp.6.t24",
+    "kind": "NUM",
+    "shape": "d_tool_narration",
+    "card_shape": "d",
+    "required_by_card": true,
+    "answer": "Read `resolve.py:36-110`.\nANSWER: NUM 31",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 31",
+    "asserted": 31,
+    "expected": 31
+   },
+   {
+    "answer_id": "cp.6.t24.g_num_with_citation",
+    "checkpoint": "cp.6.t24",
+    "kind": "NUM",
+    "shape": "g_num_with_citation",
+    "card_shape": "g",
+    "required_by_card": false,
+    "answer": "ANSWER: NUM 31 (errors.py:15-247)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 31 (errors.py:15-247)",
+    "asserted": 31,
+    "expected": 31
+   },
+   {
+    "answer_id": "cp.7.t26.a_canonical",
+    "checkpoint": "cp.7.t26",
+    "kind": "NUM",
+    "shape": "a_canonical",
+    "card_shape": "a",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 5",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 5",
+    "asserted": 5,
+    "expected": 5
+   },
+   {
+    "answer_id": "cp.7.t26.b_trailing_period",
+    "checkpoint": "cp.7.t26",
+    "kind": "NUM",
+    "shape": "b_trailing_period",
+    "card_shape": "b",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 5.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 5.",
+    "asserted": 5,
+    "expected": 5
+   },
+   {
+    "answer_id": "cp.7.t26.c_two_line",
+    "checkpoint": "cp.7.t26",
+    "kind": "NUM",
+    "shape": "c_two_line",
+    "card_shape": "c",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 5\nRead from errors.py:217-247.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 5",
+    "asserted": 5,
+    "expected": 5
+   },
+   {
+    "answer_id": "cp.7.t26.d_tool_narration",
+    "checkpoint": "cp.7.t26",
+    "kind": "NUM",
+    "shape": "d_tool_narration",
+    "card_shape": "d",
+    "required_by_card": true,
+    "answer": "Read `resolve.py:36-110`.\nANSWER: NUM 5",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 5",
+    "asserted": 5,
+    "expected": 5
+   },
+   {
+    "answer_id": "cp.7.t26.g_num_with_citation",
+    "checkpoint": "cp.7.t26",
+    "kind": "NUM",
+    "shape": "g_num_with_citation",
+    "card_shape": "g",
+    "required_by_card": false,
+    "answer": "ANSWER: NUM 5 (errors.py:217-247)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 5 (errors.py:217-247)",
+    "asserted": 5,
+    "expected": 5
+   },
+   {
+    "answer_id": "cp.8.t32.a_canonical",
+    "checkpoint": "cp.8.t32",
+    "kind": "NUM",
+    "shape": "a_canonical",
+    "card_shape": "a",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 2",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 2",
+    "asserted": 2,
+    "expected": 2
+   },
+   {
+    "answer_id": "cp.8.t32.b_trailing_period",
+    "checkpoint": "cp.8.t32",
+    "kind": "NUM",
+    "shape": "b_trailing_period",
+    "card_shape": "b",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 2.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 2.",
+    "asserted": 2,
+    "expected": 2
+   },
+   {
+    "answer_id": "cp.8.t32.c_two_line",
+    "checkpoint": "cp.8.t32",
+    "kind": "NUM",
+    "shape": "c_two_line",
+    "card_shape": "c",
+    "required_by_card": true,
+    "answer": "ANSWER: NUM 2\nRead from errors.py:36-42.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 2",
+    "asserted": 2,
+    "expected": 2
+   },
+   {
+    "answer_id": "cp.8.t32.d_tool_narration",
+    "checkpoint": "cp.8.t32",
+    "kind": "NUM",
+    "shape": "d_tool_narration",
+    "card_shape": "d",
+    "required_by_card": true,
+    "answer": "Read `resolve.py:36-110`.\nANSWER: NUM 2",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 2",
+    "asserted": 2,
+    "expected": 2
+   },
+   {
+    "answer_id": "cp.8.t32.g_num_with_citation",
+    "checkpoint": "cp.8.t32",
+    "kind": "NUM",
+    "shape": "g_num_with_citation",
+    "card_shape": "g",
+    "required_by_card": false,
+    "answer": "ANSWER: NUM 2 (errors.py:36-42)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "num_equal",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 2 (errors.py:36-42)",
+    "asserted": 2,
+    "expected": 2
+   },
+   {
+    "answer_id": "cp.9.t36.a_canonical",
+    "checkpoint": "cp.9.t36",
+    "kind": "CALL",
+    "shape": "a_canonical",
+    "card_shape": "a",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.resolved_count()",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.resolved_count()",
+    "asserted": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    }
+   },
+   {
+    "answer_id": "cp.9.t36.b_trailing_period",
+    "checkpoint": "cp.9.t36",
+    "kind": "CALL",
+    "shape": "b_trailing_period",
+    "card_shape": "b",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.resolved_count().",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.resolved_count().",
+    "asserted": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    }
+   },
+   {
+    "answer_id": "cp.9.t36.c_two_line",
+    "checkpoint": "cp.9.t36",
+    "kind": "CALL",
+    "shape": "c_two_line",
+    "card_shape": "c",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.resolved_count()\nCall site at resolve.py:141.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.resolved_count()",
+    "asserted": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    }
+   },
+   {
+    "answer_id": "cp.9.t36.d_tool_narration",
+    "checkpoint": "cp.9.t36",
+    "kind": "CALL",
+    "shape": "d_tool_narration",
+    "card_shape": "d",
+    "required_by_card": true,
+    "answer": "Read `resolve.py:36-110`.\nANSWER: CALL ledger.resolved_count()",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.resolved_count()",
+    "asserted": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    }
+   },
+   {
+    "answer_id": "cp.9.t36.e1_kwargs_reordered",
+    "checkpoint": "cp.9.t36",
+    "kind": "CALL",
+    "shape": "e1_kwargs_reordered",
+    "card_shape": "e",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.resolved_count()",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.resolved_count()",
+    "asserted": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    }
+   },
+   {
+    "answer_id": "cp.9.t36.e2_reordered_plus_provenance",
+    "checkpoint": "cp.9.t36",
+    "kind": "CALL",
+    "shape": "e2_reordered_plus_provenance",
+    "card_shape": "e",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.resolved_count() (resolve.py:141)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.resolved_count() (resolve.py:141)",
+    "asserted": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    }
+   },
+   {
+    "answer_id": "cp.10.t42.a_canonical",
+    "checkpoint": "cp.10.t42",
+    "kind": "NONE",
+    "shape": "a_canonical",
+    "card_shape": "a",
+    "required_by_card": true,
+    "answer": "ANSWER: NONE",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.10.t42.b_trailing_period",
+    "checkpoint": "cp.10.t42",
+    "kind": "NONE",
+    "shape": "b_trailing_period",
+    "card_shape": "b",
+    "required_by_card": true,
+    "answer": "ANSWER: NONE.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE.",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.10.t42.c_two_line",
+    "checkpoint": "cp.10.t42",
+    "kind": "NONE",
+    "shape": "c_two_line",
+    "card_shape": "c",
+    "required_by_card": true,
+    "answer": "ANSWER: NONE\nThe named attribute is not called inside that function.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.10.t42.d_tool_narration",
+    "checkpoint": "cp.10.t42",
+    "kind": "NONE",
+    "shape": "d_tool_narration",
+    "card_shape": "d",
+    "required_by_card": true,
+    "answer": "Read `resolve.py:36-110`.\nANSWER: NONE",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.10.t42.f_none_with_justification",
+    "checkpoint": "cp.10.t42",
+    "kind": "NONE",
+    "shape": "f_none_with_justification",
+    "card_shape": "f",
+    "required_by_card": false,
+    "answer": "ANSWER: NONE \u2014 the source defines no such call",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "none_confirmed_absent_in_source",
+    "answer_kind": "NONE",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NONE \u2014 the source defines no such call",
+    "asserted": null,
+    "expected": "NONE"
+   },
+   {
+    "answer_id": "cp.11.t46.a_canonical",
+    "checkpoint": "cp.11.t46",
+    "kind": "CALL",
+    "shape": "a_canonical",
+    "card_shape": "a",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.record_refusal(code=error.code, scope=scope_name, serialized_ref=text)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_refusal(code=error.code, scope=scope_name, serialized_ref=text)",
+    "asserted": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "code",
+      "scope",
+      "serialized_ref"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "code"
+     ]
+    }
+   },
+   {
+    "answer_id": "cp.11.t46.b_trailing_period",
+    "checkpoint": "cp.11.t46",
+    "kind": "CALL",
+    "shape": "b_trailing_period",
+    "card_shape": "b",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.record_refusal(code=error.code, scope=scope_name, serialized_ref=text).",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_refusal(code=error.code, scope=scope_name, serialized_ref=text).",
+    "asserted": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "code",
+      "scope",
+      "serialized_ref"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "code"
+     ]
+    }
+   },
+   {
+    "answer_id": "cp.11.t46.c_two_line",
+    "checkpoint": "cp.11.t46",
+    "kind": "CALL",
+    "shape": "c_two_line",
+    "card_shape": "c",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.record_refusal(code=error.code, scope=scope_name, serialized_ref=text)\nCall site at resolve.py:69.",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_refusal(code=error.code, scope=scope_name, serialized_ref=text)",
+    "asserted": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "code",
+      "scope",
+      "serialized_ref"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "code"
+     ]
+    }
+   },
+   {
+    "answer_id": "cp.11.t46.d_tool_narration",
+    "checkpoint": "cp.11.t46",
+    "kind": "CALL",
+    "shape": "d_tool_narration",
+    "card_shape": "d",
+    "required_by_card": true,
+    "answer": "Read `resolve.py:36-110`.\nANSWER: CALL ledger.record_refusal(code=error.code, scope=scope_name, serialized_ref=text)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_refusal(code=error.code, scope=scope_name, serialized_ref=text)",
+    "asserted": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "code",
+      "scope",
+      "serialized_ref"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "code"
+     ]
+    }
+   },
+   {
+    "answer_id": "cp.11.t46.e1_kwargs_reordered",
+    "checkpoint": "cp.11.t46",
+    "kind": "CALL",
+    "shape": "e1_kwargs_reordered",
+    "card_shape": "e",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.record_refusal(serialized_ref=text, scope=scope_name, code=error.code)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_refusal(serialized_ref=text, scope=scope_name, code=error.code)",
+    "asserted": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "serialized_ref",
+      "scope",
+      "code"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "code"
+     ]
+    }
+   },
+   {
+    "answer_id": "cp.11.t46.e2_reordered_plus_provenance",
+    "checkpoint": "cp.11.t46",
+    "kind": "CALL",
+    "shape": "e2_reordered_plus_provenance",
+    "card_shape": "e",
+    "required_by_card": true,
+    "answer": "ANSWER: CALL ledger.record_refusal(serialized_ref=text, scope=scope_name, code=error.code) (resolve.py:69)",
+    "expectation": "pass",
+    "verdict": "pass",
+    "reason": "call_equal",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_refusal(serialized_ref=text, scope=scope_name, code=error.code) (resolve.py:69)",
+    "asserted": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "serialized_ref",
+      "scope",
+      "code"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "code"
+     ]
+    }
+   }
+  ]
+ },
+ "before_after": {
+  "correct_rows_before_passing": 50,
+  "correct_rows_before_not_passing": 14,
+  "required_by_card_before_not_passing": 11,
+  "correct_rows_after_passing": 64,
+  "correct_rows_after_not_passing": 0,
+  "verdict_before": "contract_rejects_correct_era_b_answer",
+  "verdict_after": "contract_accepts_era_b_correct_answers"
+ },
+ "controls_after": {
+  "count": 9,
+  "passed": 0,
+  "passing_names": [],
+  "rows": [
+   {
+    "control": "num_wrong_value",
+    "checkpoint": "cp.2.t12",
+    "answer": "ANSWER: NUM 32",
+    "expect": "fail",
+    "why": "a wrong number",
+    "verdict": "fail",
+    "reason": "num_mismatch",
+    "answer_kind": "NUM",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: NUM 32",
+    "asserted": 32,
+    "expected": 64,
+    "passed": false
+   },
+   {
+    "control": "callee_wrong",
+    "checkpoint": "cp.0.t06",
+    "answer": "ANSWER: CALL ledger.record_resolved(scope=scope.name, serialized_ref=presented, bytes_appended=len(presented.encode('utf-8')), block_size=scope.block(), entry_text=entry.text)",
+    "expect": "fail",
+    "why": "a wrong callee",
+    "verdict": "fail",
+    "reason": "callee_mismatch",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_resolved(scope=scope.name, serialized_ref=presented, bytes_appended=len(presented.encode('utf-8')), block_size=scope.block(), entry_text=entry.text)",
+    "asserted": {
+     "callee": "ledger.record_resolved",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "bytes_appended",
+      "block_size",
+      "entry_text"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "bytes_appended",
+      "block_size",
+      "entry_text"
+     ]
+    },
+    "passed": false
+   },
+   {
+    "control": "kwarg_wrong_value",
+    "checkpoint": "cp.0.t06",
+    "answer": "ANSWER: CALL ledger.record_resolution(scope=scope.name, serialized_ref=presented, bytes_appended=len(presented.encode('utf-8')), block_size=64, entry_text=entry.text)",
+    "expect": "fail",
+    "why": "a wrong keyword value",
+    "verdict": "fail",
+    "reason": "kwarg_value_mismatch:block_size",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_resolution(scope=scope.name, serialized_ref=presented, bytes_appended=len(presented.encode('utf-8')), block_size=64, entry_text=entry.text)",
+    "asserted": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "64",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "bytes_appended",
+      "block_size",
+      "entry_text"
+     ]
+    },
+    "expected": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "bytes_appended",
+      "block_size",
+      "entry_text"
+     ]
+    },
+    "passed": false
+   },
+   {
+    "control": "truncated_no_value_call",
+    "checkpoint": "cp.0.t06",
+    "answer": "ANSWER: CALL ledger.record_resolution(scope=scope.name",
+    "expect": "fail",
+    "why": "truncated answer with no value",
+    "verdict": "fail",
+    "reason": "answer_not_contract:call_not_parsable",
+    "answer_kind": null,
+    "answer_parse_error": "call_not_parsable",
+    "answer_raw": "ANSWER: CALL ledger.record_resolution(scope=scope.name",
+    "asserted": null,
+    "expected": {
+     "callee": "ledger.record_resolution",
+     "kwargs": {
+      "block_size": "scope.block()",
+      "bytes_appended": "len(presented.encode('utf-8'))",
+      "entry_text": "entry.text",
+      "scope": "scope.name",
+      "serialized_ref": "presented"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "bytes_appended",
+      "block_size",
+      "entry_text"
+     ]
+    },
+    "passed": false
+   },
+   {
+    "control": "truncated_no_value_num",
+    "checkpoint": "cp.2.t12",
+    "answer": "ANSWER: NUM",
+    "expect": "not-pass",
+    "why": "truncated answer with no value (empty_num)",
+    "verdict": "undecidable",
+    "reason": "empty_num",
+    "answer_kind": null,
+    "answer_parse_error": "empty_num",
+    "answer_raw": "ANSWER: NUM",
+    "asserted": null,
+    "expected": 64,
+    "passed": false
+   },
+   {
+    "control": "prose_wrong_value_no_answer_line",
+    "checkpoint": "cp.2.t12",
+    "answer": "The default per-turn resolve budget is 32 refs.",
+    "expect": "not-pass",
+    "why": "prose asserting a wrong value, no ANSWER: line",
+    "verdict": "undecidable",
+    "reason": "prose_only",
+    "answer_kind": null,
+    "answer_parse_error": "prose_only",
+    "answer_raw": null,
+    "asserted": null,
+    "expected": 64,
+    "passed": false
+   },
+   {
+    "control": "none_named_call",
+    "checkpoint": "cp.3.t14",
+    "answer": "ANSWER: CALL ledger.record_refusal(scope=scope_name, serialized_ref=text, code=error.code)",
+    "expect": "fail",
+    "why": "a NONE item answered by naming a call",
+    "verdict": "fail",
+    "reason": "kind_mismatch:NONE_expected",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.record_refusal(scope=scope_name, serialized_ref=text, code=error.code)",
+    "asserted": {
+     "callee": "ledger.record_refusal",
+     "kwargs": {
+      "code": "error.code",
+      "scope": "scope_name",
+      "serialized_ref": "text"
+     },
+     "kwargs_as_written": [
+      "scope",
+      "serialized_ref",
+      "code"
+     ]
+    },
+    "expected": "NONE",
+    "passed": false
+   },
+   {
+    "control": "none_named_call",
+    "checkpoint": "cp.5.t20",
+    "answer": "ANSWER: CALL ledger.resolved_count()",
+    "expect": "fail",
+    "why": "a NONE item answered by naming a call",
+    "verdict": "fail",
+    "reason": "kind_mismatch:NONE_expected",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL ledger.resolved_count()",
+    "asserted": {
+     "callee": "ledger.resolved_count",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": "NONE",
+    "passed": false
+   },
+   {
+    "control": "none_named_call",
+    "checkpoint": "cp.10.t42",
+    "answer": "ANSWER: CALL scope.block()",
+    "expect": "fail",
+    "why": "a NONE item answered by naming a call",
+    "verdict": "fail",
+    "reason": "kind_mismatch:NONE_expected",
+    "answer_kind": "CALL",
+    "answer_parse_error": null,
+    "answer_raw": "ANSWER: CALL scope.block()",
+    "asserted": {
+     "callee": "scope.block",
+     "kwargs": {},
+     "kwargs_as_written": []
+    },
+    "expected": "NONE",
+    "passed": false
+   }
+  ]
+ },
+ "red_cases": [
+  {
+   "red_id": "call_wrong_value_with_provenance",
+   "rule": "(b) trailing parenthetical must not hide a wrong kwarg value",
+   "checkpoint": "cp.0.t06",
+   "answer": "ANSWER: CALL ledger.record_resolution(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=text) (resolve.py:163)",
+   "expect_verdict": "fail",
+   "expect_reason": "kwarg_value_mismatch:serialized_ref",
+   "verdict": "fail",
+   "reason": "kwarg_value_mismatch:serialized_ref",
+   "answer_kind": "CALL",
+   "answer_parse_error": null,
+   "answer_raw": "ANSWER: CALL ledger.record_resolution(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=text) (resolve.py:163)",
+   "asserted": {
+    "callee": "ledger.record_resolution",
+    "kwargs": {
+     "block_size": "scope.block()",
+     "bytes_appended": "len(presented.encode('utf-8'))",
+     "entry_text": "entry.text",
+     "scope": "scope.name",
+     "serialized_ref": "text"
+    },
+    "kwargs_as_written": [
+     "block_size",
+     "bytes_appended",
+     "entry_text",
+     "scope",
+     "serialized_ref"
+    ]
+   },
+   "expected": {
+    "callee": "ledger.record_resolution",
+    "kwargs": {
+     "block_size": "scope.block()",
+     "bytes_appended": "len(presented.encode('utf-8'))",
+     "entry_text": "entry.text",
+     "scope": "scope.name",
+     "serialized_ref": "presented"
+    },
+    "kwargs_as_written": [
+     "scope",
+     "serialized_ref",
+     "bytes_appended",
+     "block_size",
+     "entry_text"
+    ]
+   },
+   "decoration_stripped": [
+    "(resolve.py:163)"
+   ],
+   "still_red": true
+  },
+  {
+   "red_id": "num_wrong_value_with_period",
+   "rule": "(a) a stripped period must not turn 32 into 64",
+   "checkpoint": "cp.2.t12",
+   "answer": "ANSWER: NUM 32.",
+   "expect_verdict": "fail",
+   "expect_reason": "num_mismatch",
+   "verdict": "fail",
+   "reason": "num_mismatch",
+   "answer_kind": "NUM",
+   "answer_parse_error": null,
+   "answer_raw": "ANSWER: NUM 32.",
+   "asserted": 32,
+   "expected": 64,
+   "decoration_stripped": [
+    "."
+   ],
+   "still_red": true
+  },
+  {
+   "red_id": "call_wrong_callee_with_period",
+   "rule": "(a) a stripped period must not launder a wrong callee",
+   "checkpoint": "cp.0.t06",
+   "answer": "ANSWER: CALL ledger.record_resolved(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=presented).",
+   "expect_verdict": "fail",
+   "expect_reason": "callee_mismatch",
+   "verdict": "fail",
+   "reason": "callee_mismatch",
+   "answer_kind": "CALL",
+   "answer_parse_error": null,
+   "answer_raw": "ANSWER: CALL ledger.record_resolved(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=presented).",
+   "asserted": {
+    "callee": "ledger.record_resolved",
+    "kwargs": {
+     "block_size": "scope.block()",
+     "bytes_appended": "len(presented.encode('utf-8'))",
+     "entry_text": "entry.text",
+     "scope": "scope.name",
+     "serialized_ref": "presented"
+    },
+    "kwargs_as_written": [
+     "block_size",
+     "bytes_appended",
+     "entry_text",
+     "scope",
+     "serialized_ref"
+    ]
+   },
+   "expected": {
+    "callee": "ledger.record_resolution",
+    "kwargs": {
+     "block_size": "scope.block()",
+     "bytes_appended": "len(presented.encode('utf-8'))",
+     "entry_text": "entry.text",
+     "scope": "scope.name",
+     "serialized_ref": "presented"
+    },
+    "kwargs_as_written": [
+     "scope",
+     "serialized_ref",
+     "bytes_appended",
+     "block_size",
+     "entry_text"
+    ]
+   },
+   "decoration_stripped": [
+    "."
+   ],
+   "still_red": true
+  },
+  {
+   "red_id": "none_justification_naming_a_call",
+   "rule": "(c) a justification that NAMES a call is a contradicted denial",
+   "checkpoint": "cp.3.t14",
+   "answer": "ANSWER: NONE \u2014 actually ledger.record_refusal",
+   "expect_verdict": "fail",
+   "expect_reason": "answer_not_contract:trailing_after_none",
+   "verdict": "fail",
+   "reason": "answer_not_contract:trailing_after_none",
+   "answer_kind": null,
+   "answer_parse_error": "trailing_after_none",
+   "answer_raw": "ANSWER: NONE \u2014 actually ledger.record_refusal",
+   "asserted": null,
+   "expected": "NONE",
+   "decoration_stripped": [],
+   "still_red": true
+  },
+  {
+   "red_id": "num_not_integer",
+   "rule": "(a) only ONE trailing period is punctuation; 64.5 is a fraction",
+   "checkpoint": "cp.2.t12",
+   "answer": "ANSWER: NUM 64.5",
+   "expect_verdict": "fail",
+   "expect_reason": "num_not_integer:64.5",
+   "verdict": "fail",
+   "reason": "num_not_integer:64.5",
+   "answer_kind": "NUM",
+   "answer_parse_error": null,
+   "answer_raw": "ANSWER: NUM 64.5",
+   "asserted": null,
+   "expected": 64,
+   "decoration_stripped": [],
+   "still_red": true
+  },
+  {
+   "red_id": "citation_is_the_whole_answer",
+   "rule": "(b) stripping may never empty the answer: a bare citation is no value",
+   "checkpoint": "cp.2.t12",
+   "answer": "ANSWER: (resolve.py:163)",
+   "expect_verdict": "undecidable",
+   "expect_reason": "unparseable",
+   "verdict": "undecidable",
+   "reason": "unparseable",
+   "answer_kind": null,
+   "answer_parse_error": "unparseable",
+   "answer_raw": "ANSWER: (resolve.py:163)",
+   "asserted": null,
+   "expected": 64,
+   "decoration_stripped": [],
+   "still_red": true
+  }
+ ],
+ "red_cases_all_still_red": true,
+ "invariants_held": {
+  "thresholds_touched": 0,
+  "kind_branches_touched": 0,
+  "decidable_fail_semantics_touched": false,
+  "non_answer_rule_untouched": [
+   "empty_answer",
+   "empty_num",
+   "empty_text",
+   "no_answer_line",
+   "prose_only",
+   "unparseable"
+  ],
+  "turn_missing_rule_untouched": "grade_rows still emits fail/turn_missing for an absent row (untouched code path)",
+  "exit_codes_untouched": "grade_v5.main returns 0/3 exactly as before (stamp refusal unchanged)",
+  "files_not_edited": [
+   "experiments/ptr-engine/longrun/cell.py",
+   "experiments/ptr-engine/longrun/run_longrun.py",
+   "experiments/ptr-engine/longrun/analyze_stats.py",
+   "HARNESS-PIN.json",
+   "GRID-PARAMS.json",
+   "measure/ERA-B-GRADE-REHEARSAL.json",
+   "any fixture / threshold / published page"
+  ]
+ },
+ "era_a_redrive": {
+  "status": "rederived",
+  "grade_file": "experiments/ptr-engine/measure/cell-pointer-stable-20261026T145722Z.grade-v5.json",
+  "rows_file": "experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl",
+  "fixture_file": "experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json",
+  "rows": 72,
+  "baseline": "reconstructed",
+  "baseline_sha256": "056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+  "tmp_copy": "/tmp/grade_v5_prefix_T4.py",
+  "stored_accuracy": {
+   "pointer-stable": "1/3"
+  },
+  "pristine_rederive_accuracy": {
+   "pointer-stable": "1/1"
+  },
+  "repaired_rederive_accuracy": {
+   "pointer-stable": "1/1"
+  },
+  "pristine_vs_repaired_deltas": [],
+  "delta_count": 0,
+  "stored_vs_repaired_accuracy_changed": true,
+  "note": "stored file was written by an unpinned grader (grader_sha256 null, reasons without a suffix); stored-vs-rederive drift is pre-existing version drift, NOT this repair. Only pristine-vs-repaired is this repair."
+ },
+ "known_consequence": {
+  "tests/test_era_b_grade_rehearsal.py": "still asserts the PRE-repair rejections (b-on-CALL/b-on-NONE/e2/f and the 'contract_rejects_correct_era_b_answer' verdict). It is outside this card's write paths and was NOT edited, so those four assertions now fail by design. Updating them (and regenerating measure/ERA-B-GRADE-REHEARSAL.json) is a separate decision for the owner of the rehearsal artefact; this card reports the new matrix in measure/GRADE-V5-T4-MATRIX.json instead."
+ },
+ "harness_pin": "the combined harness digest moved (grade_v5.py sha256 changed), so the pin in HARNESS-PIN.json is now stale; it must be regenerated AFTER this card and BUDGET-STAGE-MAX-TURNS have both landed - one regeneration, not two.",
+ "verdict": "repair_holds"
+}

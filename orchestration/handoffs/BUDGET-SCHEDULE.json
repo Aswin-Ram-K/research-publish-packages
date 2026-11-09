@@ -1,0 +1,73 @@
+{
+ "unit": "BUDGET-SCHEDULE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/BUDGET-SCHEDULE.md",
+  "experiments/ptr-engine/measure/budget-schedule.json",
+  "orchestration/units/BUDGET-SCHEDULE.md",
+  "orchestration/handoffs/BUDGET-SCHEDULE.json",
+  "orchestration/journals/BUDGET-SCHEDULE.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "0 inference requests, 0 network calls, 0 artefact edits; ledger factor 1101/801=1.374532; prices A 990 req / 5.5-7.62 h off, A* 792 / 4.40-6.10 h off, B 330 / 1.83-2.54 h off, C 264 / 1.47-2.03 h off; recommended A* leaves 2427",
+  "commands": [
+   "grep -c '\"kind\": \"turn\"' experiments/ptr-engine/measure/rows-*.jsonl  (kind histogram: turn 801, tool-followup 68, unmarked 232)",
+   "python3 -c 'json.load(open(\"experiments/ptr-engine/measure/budget-schedule.json\"))'  -> valid, 4 schedules",
+   "cat experiments/ptr-engine/measure/REQUEST-LEDGER.json experiments/ptr-engine/measure/PROJECTION.json orchestration/handoffs/REQUEST-LEDGER.json orchestration/handoffs/PROJECTION-CALIBRATION.json",
+   "sed -n '1,60p;89,170p' docs/PREREG-ARM-RUN.md"
+  ]
+ },
+ "computed": {
+  "factor": 1.374532,
+  "schedules": {
+   "A": {"turns": 720, "requests": 990, "remaining_after": 2229, "wall_off_mean_h": 5.5, "wall_off_p90_h": 7.62, "wall_policy60_h": 12.0},
+   "A*": {"turns": 576, "requests": 792, "remaining_after": 2427, "wall_off_mean_h": 4.4, "wall_off_p90_h": 6.096, "wall_policy60_h": 9.6},
+   "B": {"turns": 240, "requests": 330, "remaining_after": 2889, "wall_off_mean_h": 1.833, "wall_off_p90_h": 2.54, "wall_policy60_h": 4.0},
+   "C": {"turns": 192, "requests": 264, "remaining_after": 2955, "wall_off_mean_h": 1.467, "wall_off_p90_h": 2.032, "wall_policy60_h": 3.2}
+  },
+  "evaluability": {
+   "A": {"H1": "evaluable", "H2": "evaluable", "H3": "evaluable", "caveat": "not runnable as frozen: PARM-1 line 137 fixes 48 turns/arm"},
+   "A*": {"H1": "evaluable (144 raw/arm, 84 exclusions of headroom)", "H2": "evaluable", "H3": "evaluable (36 paired items)"},
+   "B": {"H1": "knife-edge (n=60 exactly, zero exclusions tolerated; 1 rep = non-replicable)", "H2": "evaluable", "H3": "margin only, no variance/SE (12 pairs)"},
+   "C": {"H1": "not evaluable at n=48 (refused by name)", "H2": "evaluable", "H3": "not evaluable (3 v2 checkpoint ids; b+c<=3<6)"}
+  },
+  "discordant_pairs": {"A": 36, "A*": 36, "B": 12, "C": 3, "b_plus_c_ge_6": {"A": true, "A*": true, "B": "only at a 50% flip rate", "C": false}},
+  "fundable_ceiling": {"turns": 2341, "requests": 3218, "reps_per_arm_n48": 12, "reps_per_arm_n60": 9, "independent_3rep_grids": 4}
+ },
+ "recommendation": {
+  "schedule": "A* — 4 arms x 48 turns x 3 reps, 792 requests, 4.4 h off mean (6.1 h p90, 9.6 h at the 60 s policy), 2427 remaining",
+  "stop_rule": [
+   "stop if requests_remaining < requests_for_next_cell (192 turns = 264 requests)",
+   "stop if any turn wall_ms/1000 > 180 (--turn-wall-cap); excluded turn counted; <60 usable timings => H1 refused verbatim",
+   "stop if ATTACK or V-GATE-CHAIN reports a defect after the run starts",
+   "stop if after rep 1 H3 vetos (b+c>=6 and exact two-sided p<0.05 with C worse, or C loses >2/12) — saves 528 requests",
+   "stop if either arm's decidable < 8 of 12 (H3 unadjudicable per PARM-1 line 113)"
+  ],
+  "operator_decision": {"question": "A* on the frozen 48-turn grid vs extend LR-01.v6.json to 60 turns and re-freeze PARM-1", "default": "A* (no re-freeze)"}
+ },
+ "cannot_fund": [
+  "a 20-rep/arm power grid at N=48: 5278 requests, short by 2059",
+  "a fifth independent 4-arm x 48-turn x 3-rep grid: needs 3960, 3219 remain",
+  "a paired quantile test for H1 at any budget: analyze_stats.py has none (PARM-1 lines 38-40)",
+  "between-rep quality variance on any 1-rep schedule (B, C)",
+  "thinking-on H1 adjudication: A* is 30.5 h mean / 109.2 h p90 on/auto, and PARM-1 line 151 excludes it"
+ ],
+ "assumptions": [
+  "The card's 60-turn shape for A and B conflicts with PARM-1 line 137 (Turns per arm = 48, fixture N=48). Both were priced; A* (48 turns x 3 reps) is the frozen-compatible reading and the recommendation, because the card forbids re-opening PARM-1.",
+  "The per-turn request factor is derived from the ledger corpus (1101 requests / 801 turn rows) as the card instructs, not from the controlled cells' 1.000 req/turn; the conservative factor is used for every price.",
+  "Wall is computed as turns x per-turn percentile, not requests x wall, because tool-follow-up rows belong to the same model turn. All headline wall figures assume the adjudicating grid's thinking=off policy.",
+  "The early-partial handoff step was not needed: the whole card completed inside its 28-call bound (journal written before any analysis artefact)."
+ ],
+ "partial_remainder": "",
+ "row_files_written": 0,
+ "artefact_edits": 0,
+ "blocker": "",
+ "next_unit_hint": "WIRE-CAP-GATE first (pre-send per-turn call to run_longrun.py, prove zero rows written on a would-exceed fixture), then RUN-A* as 12 arm x rep cells of 48 turns with --max-wall >= 2880 (60 s policy) or >= 20530 (measured live p90), reporting H1 on analyze_stats.quantile_ci only.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/BUDGET-SCHEDULE.md",
+  "experiments/ptr-engine/measure/budget-schedule.json",
+  "orchestration/units/BUDGET-SCHEDULE.md",
+  "orchestration/handoffs/BUDGET-SCHEDULE.json",
+  "orchestration/journals/BUDGET-SCHEDULE.jsonl"
+ ]
+}

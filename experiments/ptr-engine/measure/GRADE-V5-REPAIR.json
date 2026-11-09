@@ -1,0 +1,51 @@
+{
+ "unit": "GRADE-V5-REPAIR",
+ "generated_at": "2026-10-26T10:52:00-05:00",
+ "rule": "grade_v5 v5.1 - ANSWER-CONTRACT v1, integer-only NUM, content-derived verdicts, undecidable non-answers",
+ "gate": {"unit": "GRADE-V6-DERIVE", "handoff": "orchestration/handoffs/GRADE-V6-DERIVE.json", "status_at_start": "done"},
+ "inference_requests": 0,
+ "defects_closed": [
+  {"id": "T1", "defect": "NUM truncated decimals: ANSWER: 64.99 / NUM 64.999 graded 64 -> pass",
+   "repair": "grade_v5.py:_integral_numeral + parse_answer_contract NUM branch: only an exact decimal integer is an integer assertion; a fractional part, radix prefix or unit suffix yields answer_invalid=num_not_integer and verdict fail, with the rejected numeral in reason and detail",
+   "where_documented": "grade_v5.py:_integral_numeral docstring and docs/GRADE-V5-REPAIR.md"},
+  {"id": "T2", "defect": "grade_rows preferred a row's answer_kind/answer_value over its content, so a prose row claiming num_equal/64 graded pass",
+   "repair": "grade_v5.py:_parsed_from_row parses content ALWAYS and raises RowFieldDisagreement naming both sides when the row fields disagree; grade_rows surfaces it as verdict=fail reason=row_fields_disagree_with_content with row_field_conflict={row,content,error}",
+   "where_documented": "grade_v5.py:_parsed_from_row docstring and docs/GRADE-V5-REPAIR.md"},
+  {"id": "T3", "defect": "empty/absent answers landed in fail and therefore in the decidable denominator",
+   "repair": "NON_ANSWER_ERRORS -> verdict undecidable with its reason; arm summary reports decidable = passed + failed and prints undecidable/missing beside the accuracy",
+   "where_documented": "grade_v5.py:NON_ANSWER_ERRORS and docs/GRADE-V5-REPAIR.md"}],
+ "attack_41_probes": {
+  "tool": "experiments/ptr-engine/tools/attack_grade_v5.py",
+  "before": {"FN": "0/8", "FP": "3/22", "exit": 1, "fp_probes": ["P12", "P37", "P38"],
+             "mandatory": {"7": "LIMITATION UNSATISFIED", "8": "LIMITATION UNSATISFIED", "10": "DEFECT UNSATISFIED"},
+             "unsatisfied_defect_class": ["10"]},
+  "after": {"FN": "0/8", "FP": "1/22", "exit": 0, "fp_probes": ["P12"],
+            "mandatory": {"7": "LIMITATION UNSATISFIED (tool predicate self-contradictory)", "8": "LIMITATION SATISFIED", "10": "DEFECT SATISFIED"},
+            "unsatisfied_defect_class": []},
+  "residual_fp_explanation": "P12 is expect=fail while its own note says the fixture elides scope and the answer may write a literal ...; the fixture's elided_kwargs rule (v5 contract, unchanged) passes it. The probe expectation is wrong, not the grader - it was not tuned.",
+  "residual_unsatisfied_T7": "T7's predicate requires passed==0 in the missing_turn arm (it has two correct turns) and computes undecided with a[decidable] != a[decidable], which is always False; it also treats turn_missing as decidable, which the omission rule requires. Unsatisfiable by construction, not a grader defect."},
+ "tests": {
+  "file": "experiments/ptr-engine/longrun/tests/test_grade_v5_repair.py",
+  "red": {"how": "GRADE_V5_MODULE=<pre-repair copy with 4 reverts of the repair>", "result": "10 failed, 8 passed"},
+  "green": {"result": "18 passed"},
+  "derive_12": {"file": "experiments/ptr-engine/longrun/tests/test_grade_v6_derive.py", "result": "14 passed; 12/12 items derive; all 12 correct answers pass (accuracy 12/12)"},
+  "suite_side_effects": {
+   "command": "python3 -m pytest experiments/ptr-engine/longrun/tests/ -q",
+   "result": "131 passed, 4 failed",
+   "failures": [
+    {"test": "test_decidability_seam.py::test_c", "cause": "EXPECTED: the seam's contradiction detector fires because analyze_stats.py:457 still counts non-answers as decidable (grader decidable=1 vs analyser graded_n=3)"},
+    {"test": "test_decidability_seam.py::test_d", "cause": "the test asserts grader decidable=3 and '1/3 (pass 1, fail 2, undecidable 0)' - the old denominator this card orders replaced; the test file is outside this unit's write paths"},
+    {"test": "test_guards.py::test_guards_all", "cause": "not attributable: does not import grade_v5; offline-socket assertion in a projection harness"},
+    {"test": "test_projection_calibration.py::test_projection_calibration_all", "cause": "not attributable: the file did not exist at the gate check and does not import grade_v5"}]}},
+ "assumptions": [
+  "The four non-answer forms are undecidable: no ANSWER line with empty content -> no_answer_line; no ANSWER line with prose -> prose_only; ANSWER: with an empty body -> empty_answer (empty TEXT -> empty_text, empty NUM -> empty_num); an ANSWER body in no contract form with no leading numeral -> unparseable.",
+  "A well-formed contract attempt with a wrong value stays a decidable fail (ANSWER: 65, NUM 0x40, 640, wrong CALL, two ANSWER lines) - the repair must not launder wrong answers into undecidable.",
+  "turn_missing stays a decidable fail: the omission rule (16/16) is preserved.",
+  "RowFieldDisagreement raises for direct callers and is caught per cell in grade_rows as a fail naming both sides, so one spoofed row cannot pass and cannot abort an arm.",
+  "verified_success now also requires zero undecidable cells."],
+ "cross_unit_conflict": {
+  "analyze_stats.py": "graded_n (line ~457) counts non-answers as decidable; needs decidable = pass + fail. Outside this unit's write paths.",
+  "test_decidability_seam.py": "lines 163/190 assert grade decidable=3 / '1/3 (pass 1, fail 2, undecidable 0)' - the superseded denominator. Outside this unit's write paths.",
+  "score_longrun.py": "carries the answer_spec truth mirror only (verdicts are not graded there); untouched and outside this unit's write paths."},
+ "trust_answer": "Yes for the arm comparison on verdicts: they are content-derived, non-answers cannot enter the denominator, and no row can grade itself. One integration caveat: until analyze_stats.py counts decidable the same way (pass + fail), the DECIDABILITY-SEAM gate refuses to certify a percentage rather than printing a wrong one."
+}

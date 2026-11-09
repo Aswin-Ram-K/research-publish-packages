@@ -1,0 +1,152 @@
+{
+ "unit": "GRID-2-FINAL",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/grid2_final_report.py",
+  "experiments/ptr-engine/tests/test_grid2_final.py",
+  "experiments/ptr-engine/measure/GRID-2-FINAL.json",
+  "docs/GRID-2-FINAL.md",
+  "orchestration/units/GRID-2-FINAL.md",
+  "orchestration/journals/GRID-2-FINAL.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "census 16 cells -> 6 usable (pointer-stable 4, lease-reopen 2), 10 excluded (8 stamp [], 2 ABSENT); 1270 request rows = ledger delta; H1 frozen p50 156.151 [146.306,291.926] n=48 r=0.2949 n_eff=26.14 and 198.395 [130.843,270.899] n=48 r=-0.1188 n_eff=60.95, p95 refused at n=48; 288 turn rows -> 96 analysed; TVS UNDEFINED; 21 tests pass; 0 requests, 0 cells",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/grid2_final_report.py",
+   "python3 -m pytest experiments/ptr-engine/tests/test_grid2_final.py -q",
+   "bash -lc '<report + pytest + json-equality>' (frozen verdict command)"
+  ],
+  "counts": {
+   "cells_censused": 16,
+   "usable": 6,
+   "excluded_by_stamp": 8,
+   "absent_no_manifest": 2,
+   "request_rows": 1270,
+   "requests_sent": 0,
+   "cells_run": 0,
+   "h1_n_used": {
+    "pointer-stable": 48,
+    "lease-reopen": 48
+   },
+   "h1_n_eff": {
+    "pointer-stable": 26.14,
+    "lease-reopen": 60.95
+   },
+   "turns_on_disk_usable": 288,
+   "turns_analysed": 96,
+   "dropped_duplicate": 192,
+   "tests": 21,
+   "verdicts": {
+    "h1": "not_adjudicable_floor",
+    "h2": "not_adjudicable",
+    "h3": "not_adjudicable",
+    "tvs": "UNDEFINED"
+   }
+  },
+  "h1": {
+   "pointer-stable": {
+    "p50": 156.151,
+    "ci": [
+     146.306,
+     291.926
+    ],
+    "n": 48,
+    "r_lag1": 0.2949,
+    "n_eff": 26.14,
+    "p95": "refused: minimum n for p95 is 60"
+   },
+   "lease-reopen": {
+    "p50": 198.395,
+    "ci": [
+     130.843,
+     270.899
+    ],
+    "n": 48,
+    "r_lag1": -0.1188,
+    "n_eff": 60.95,
+    "p95": "refused: minimum n for p95 is 60"
+   },
+   "binding_arm": "pointer-stable",
+   "sensitivity_rep_preserving": {
+    "pointer-stable": {
+     "n": 192,
+     "n_eff": 125.23
+    },
+    "lease-reopen": {
+     "n": 96,
+     "n_eff": 103.49
+    }
+   }
+  },
+  "h2": {
+   "pointer-stable": {
+    "cached_inclusive": 5395.09,
+    "uncached": 355.62,
+    "sign": 1,
+    "n": 364
+   },
+   "lease-reopen": {
+    "cached_inclusive": 1497.85,
+    "uncached": 332.28,
+    "sign": 1,
+    "n": 184
+   },
+   "pair": "not_adjudicable: transcript-grow has 0 usable cells"
+  },
+  "h3": {
+   "x_12": "x/12",
+   "x_9": "x/9",
+   "answered_ratio": "answered_ratio",
+   "contract_adherence": "pre-check column; not folded into accuracy",
+   "grid_recorded_placeholder": {
+    "x_12": 0,
+    "x_9": 0,
+    "answered_ratio": 0.0
+   }
+  },
+  "tvs": {
+   "value": "UNDEFINED",
+   "n_verified_success": 0
+  },
+  "price": {
+   "remaining": 1729,
+   "asserted_per_cell": 162,
+   "pair_only_asserted": 1944,
+   "pair_only_short": 215,
+   "full_asserted": 2592,
+   "full_short": 863,
+   "measured_marginal_per_cell": 79.4,
+   "full_marginal": 1270,
+   "max_observed_cell": 96,
+   "full_at_max": 1536,
+   "binding": "instrument, not budget"
+  },
+  "verdict_row": {
+   "record": ".scratch/grid2/VERDICT-REC-F.json",
+   "verdict": "pass",
+   "exit_code": 0,
+   "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+   "frozen_command_rerun": "report + 21 tests + json equality"
+  },
+  "findings": [
+   "F-COLLAPSE: rep=1 in every cell makes per_arm_series merge replicates (288->96, dropped_duplicate=192); each arm's interval is one stitched pseudo-rep and p95 is refused because of the merge, not the data",
+   "F-PRICE: the 162/cell asserted price divides total ledger spend (2591) by 16 and charges the grid its 1321-request baseline; the measured marginal price is 79.4/cell, so the 16-cell re-run fits inside 1729 and the 'budget-bound' conclusion does not survive",
+   "F-ABSENT: an absent stamp is usable to analyze_stats.select_usable_cells (:749) and would have admitted the two exit-4 cells; the census excludes them by name"
+  ]
+ },
+ "blocker": "H1 remains not adjudicable: the gen-6 treatments never fired (8 cells stamped []) and the frozen selector merges replicates; neither is repairable inside this cycle's forbidden-file set",
+ "next_unit_hint": "pin/generation decision for a gen-7 fixture with a reachable wall AND a rep-identity fix in the row writer (or a cell-qualified selector key), then re-run 6 cells/arm; re-baseline the ledger first so the price line is marginal, not total",
+ "write_paths": [
+  "experiments/ptr-engine/tools/grid2_final_report.py",
+  "experiments/ptr-engine/tests/test_grid2_final.py",
+  "experiments/ptr-engine/measure/GRID-2-FINAL.json",
+  "docs/GRID-2-FINAL.md",
+  "orchestration/units/GRID-2-FINAL.md",
+  "orchestration/handoffs/GRID-2-FINAL.json",
+  "orchestration/journals/GRID-2-FINAL.jsonl"
+ ],
+ "assumptions": [
+  "H3 is reported as the frozen placeholder verbatim, not recomputed: grade_v5 carries no contract-adherence column and no admissible emitter for the x/12 gate exists in this tree",
+  "the rep-preserving series is printed as a labelled sensitivity only; the H1 verdict uses the frozen series"
+ ]
+}

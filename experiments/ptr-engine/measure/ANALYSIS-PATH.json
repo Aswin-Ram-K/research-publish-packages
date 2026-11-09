@@ -1,0 +1,98 @@
+{
+  "unit": "ANALYSIS-PATH-DRYRUN",
+  "generated_at": "2026-10-26T14:00:00-05:00",
+  "requests_spent": 0,
+  "question": "rehearse the post-grid analysis path offline on rows already on disk",
+  "instrument_note": "there is no experiments/ptr-engine/longrun/analyze.py; the analysis instrument is longrun/analyze_stats.py",
+  "inputs": {
+    "era_a_rows": {"path": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl", "sha256": "46afc892480ae1dbe4b20d13fd4dacb983653a9f0a04b6a42a6283b3c55ca3b1", "rows": 27, "cell_state": "in_progress", "usable_for": []},
+    "era_b_standin_rows": {"path": "experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl", "sha256": "1e78d75f259afbe0406643825941a65b4773b4342b847698005ad5908b3e531e", "rows": 72, "kinds": {"turn": 48, "tool-followup": 24}},
+    "era_b_standin_rows_v5": {"path": "experiments/ptr-engine/measure/rows-longrun-v5-tools.jsonl", "sha256": "586b66f27939bd05e09d8b48dad745a5fa268c3f31103695746df3e3f8443cb5"},
+    "multi_arm_standin": {"path": "experiments/ptr-engine/measure/rows-longrun-2026-10-26.jsonl", "rows": 192, "arms": ["transcript-grow", "transcript-compact", "pointer-stable", "lease-reopen"]},
+    "instruments": {
+      "analyze_stats.py": "8b829ca41db677a8d6f32f1516a5355df67fc2164804ee1f9cba86439a573f97",
+      "tokens_to_verified.py": "d4cca36ca6d9f20f2622655947fc0cfc77877c26dad149a5b7656276abc5ac4d",
+      "verify_tranche1.py": "0cf96b0371d921cf5d794870ab3ca47565f9d239ba460f246868a853982de315",
+      "TVS.json": "70be4028f202fda811114e8a0c20de55188cba0c4826e68309e77c54fbbc241d",
+      "GRID-CELL-SANITY.json": "46dd6d215ad2c62ba3569feb7b1edef46ab620c875a7f76f364b41bda85cfca5",
+      "GRID-SHAPE.json": "02cb793306d9fe4d88b996b9d9eb79721a39588eca132f79a101838f79947043",
+      "v8_fixture": "0804b51575cce3454a1c628a9a2447a01856321e67ac3fd1ff8c9baa48467641"
+    }
+  },
+  "items": [
+    {
+      "item": 1,
+      "name": "row_selection_turn_latency_rows",
+      "verdict": "ok",
+      "evidence": "v6-tools 72 rows -> 48 selected, dropped_followup=24, mode=fallback-turn, zero tool-followup rows in the selection; multi-arm rows-longrun-2026-10-26.jsonl 192 -> 192 with n per arm {transcript-grow:48, transcript-compact:48, pointer-stable:48, lease-reopen:48}",
+      "command": "python3 - <<'PY' (import longrun/analyze_stats.turn_latency_rows over both files) PY",
+      "caveat": "no on-disk file carries both multiple arms and tool-followup rows: follow-up exclusion proven on a single-arm tools-on file, per-arm counting on a 4-arm tools-off file; the compound case is unproven until the grid's own tools-on cells exist"
+    },
+    {
+      "item": 2,
+      "name": "p95_refusal_at_n48",
+      "verdict": "refuses_as_designed",
+      "evidence": "refusing p95 at n=48: the 95% order-statistic span is ranks 43-48 (p89.6-p100.0) and n*(1-q)=2.4 < 3; minimum n for p95 is 60",
+      "forced_case": {"note": "two reps of the tools-on stand-in pooled IN MEMORY, exercise only, no rows file written", "p95_ms": 355.11, "interval_ms": [252.48, 416.60], "n": 96, "rank_span": [88, 96], "rank_span_pct": [91.7, 100.0]},
+      "thresholds_untouched": {"MIN_N": 20, "TAIL_MIN": 3, "LEVEL": 0.95, "min_n_for_p95": 60}
+    },
+    {
+      "item": 3,
+      "name": "provenance_refusal",
+      "verdict": "refuses_as_designed",
+      "evidence": "incomparable_provenance eraA-vs-eraB: ... differs on fixture_sha256, model, tools_mode -- fixture_sha256 ('0804b51575cc...' vs '5bf5f6393946...'), model ('occamy-1.0-NVFP4' vs 'unknown'), tools_mode ('off' vs 'unknown'). No interval and no verdict is computed.",
+      "differing_fields": ["fixture_sha256", "model", "tools_mode"],
+      "statistic_cannot_route_around": "compare(statistic='quantile') raised IncomparableProvenance before looking at the statistic",
+      "caveat": "the stand-in rows carry model=unknown/tools_mode=unknown, so the refusal fired on three fields; the fixture_sha256 limb the era caveat depends on is proven, its isolation is not"
+    },
+    {
+      "item": 4,
+      "name": "usable_for_exclusion",
+      "verdict": "gap",
+      "evidence": "usable_for appears in no analyser: only producer is tests/test_grid_cell_sanity.py:499, only readers are that test's assertions (:535-536) and docs/GRID-CELL-SANITY.md. analyze_stats.py computed ttft_p50 n=27 141.58ms [131.35,166.38] and accuracy=1/4 on rows-cell-pointer-stable-20261026T182535Z.jsonl, the cell GRID-CELL-SANITY lists in must_not_enter_analysis (usable_for: [], cell_state: in_progress), exit 0",
+      "consumed_by": "nothing at analysis time",
+      "smallest_repair": "(a) cell writer stamps usable_for/usable_reason into longrun/manifests/<cell>.json; (b) analyze_stats.main() reads that manifest and prints+skips a cell with usable_for==[] unless --include-unusable. ~15 lines, no threshold moved. Sidecar read of GRID-CELL-SANITY.json is cheaper but couples analysis to a test artefact."
+    },
+    {
+      "item": 5,
+      "name": "tvs_and_censoring",
+      "verdict": "gap",
+      "evidence_ok_censoring": "rows-longrun-v4-tools -> tvs.turn=12, tokens=50847, prompt=49850, completion=997, requests_counted=12, cached_share=0.8807; rows-longrun-v3 -> tvs=null, reason='no_verified_success' (censoring statement, never a mean; TVS_CENSOR_AS_ZERO=False)",
+      "evidence_gap": "tokens_to_verified.py accepted a grade whose own rows_file is measure/rows-longrun-v4-tools-2026-10-26.jsonl while --rows was rows-longrun-v6-tools.jsonl and returned tvs.tokens=111994, requests_counted=20 beside only code_state.mid_cell_code_change=true -- no provenance refusal",
+      "per_arm_counts": {"exercised_arms": 2, "events": 1, "censored": 1, "note": "one arm per file; tokens_to_verified reports event/censored at grid level, verify_tranche1.tvs_for_arm is the per-arm censor record and was not exercised here"},
+      "smallest_repair": "in tokens_to_verified.py compare os.path.basename(grade['rows_file']) to os.path.basename(args.rows) and refuse with a named reason unless --allow-foreign-grade; verify_tranche1.py:240-264 already builds that map"
+    },
+    {
+      "item": 6,
+      "name": "h3_twelve_ids_three_none",
+      "verdict": "ok",
+      "evidence": "synthetic in-memory 12-id grade (labelled exercise): x_of_12=8, x_of_9_substantive=6, none_passes=2, checkpoint_loss=3, mcnemar={discordant:6, floor:6, b:3, c:3, p:1.0, licensed:true}; below floor: 'refusing McNemar: only 2 discordant pairs, below the frozen floor of 6'; direct mcnemar_exact b=1,c=3 -> 'only 4 discordant pairs (b=1, c=3), and b+c < 6; the exact two-sided p is 0.62500 and the smallest attainable p at 4 discordant pairs is 0.12500'",
+      "denominators": {"x_of_12": 8, "x_of_9_substantive": 6, "declared_n": 12, "none_ids": ["cp.3.t14", "cp.5.t20", "cp.10.t42"]},
+      "real_grade_warning": "on the era-B stand-in rows grade_v5 returns 11 of 12 checkpoints undecidable (prose_only/unparseable), decidable=1 < H3_MIN_DECIDABLE=8, so the real H3 is not_adjudicable today"
+    },
+    {
+      "item": 7,
+      "name": "one_command_path",
+      "verdict": "gap",
+      "evidence": "python3 experiments/ptr-engine/longrun/grade_v5.py --rows .../rows-longrun-v6-tools.jsonl --fixture .../tasks-v6/LR-01.v8.json exits 0 from the repo root and exits 1 from experiments/ptr-engine with FileNotFoundError: [Errno 2] No such file or directory: 'experiments/ptr-engine/ptr_engine/resolve.py'",
+      "steps": [
+        {"step": "cell run", "runnable": "yes", "detail": "GRID-SHAPE.json cells[].command, dry_run_gates report 0 requests"},
+        {"step": "grade_v5 per cell", "runnable": "yes from repo root only", "detail": "exit 0 at repo root, exit 1 elsewhere"},
+        {"step": "sanity writer", "runnable": "yes", "detail": "pytest tests/test_grid_cell_sanity.py rewrites GRID-CELL-SANITY.json"},
+        {"step": "analyze_stats", "runnable": "yes but does not exclude usable_for==[] cells", "detail": "exit 0 on the excluded era A cell"},
+        {"step": "verify_tranche1 --check/--out", "runnable": "not exercised within bound", "detail": "not run here"},
+        {"step": "tokens_to_verified per cell", "runnable": "yes but no rows/grade identity check", "detail": "exit 0 on both exercises"}
+      ],
+      "smallest_repair": "resolve fixture src_path against the repository root (Path(__file__).resolve().parents[2]) where grade_v5._tree_for receives it (2-3 lines), or make 'run from the repo root' a hard precondition of the runbook"
+    }
+  ],
+  "gap_count": 3,
+  "gap_repairs": {
+    "usable_for_has_no_consumer": "manifest field + a skip-by-name branch in analyze_stats.main()",
+    "tvs_trusts_foreign_grade": "basename(grade['rows_file']) vs basename(args.rows) refusal in tokens_to_verified.py",
+    "grade_v5_cwd_sensitive": "resolve src_path against the repo root, or pin cwd in the runbook"
+  },
+  "first_failure_if_grid_finished_tonight": "grade_v5.py fails first with FileNotFoundError on experiments/ptr-engine/ptr_engine/resolve.py if the re-run starts anywhere but the repo root; started correctly, the first substantive failure is the grade itself -- 11 of 12 checkpoints undecidable on era-B-shaped rows, decidable=1 < H3_MIN_DECIDABLE=8, H3 not_adjudicable",
+  "not_exercised": ["verify_tranche1.py --check/--out", "tokens_to_verified.py --all", "H2 cache limbs"],
+  "write_paths": ["docs/ANALYSIS-PATH.md", "experiments/ptr-engine/measure/ANALYSIS-PATH.json", "orchestration/units/ANALYSIS-PATH-DRYRUN.md", "orchestration/handoffs/ANALYSIS-PATH-DRYRUN.json", "orchestration/journals/ANALYSIS-PATH-DRYRUN.jsonl"]
+}

@@ -1,0 +1,100 @@
+{
+ "unit": "TVS-ROWS-IDENTITY",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/tokens_to_verified.py",
+  "tests/test_tokens_to_verified.py",
+  "experiments/ptr-engine/measure/TVS.json",
+  "orchestration/units/TVS-ROWS-IDENTITY.md",
+  "orchestration/journals/TVS-ROWS-IDENTITY.jsonl"
+ ],
+ "evidence": {
+  "identity_before": {
+   "tool_load_rows": "experiments/ptr-engine/tools/tokens_to_verified.py:57-68 hashed nothing; only open()+json.loads per line",
+   "hardcoded_pin": "experiments/ptr-engine/tools/tokens_to_verified.py:30-35 INSTRUMENT.sha256 = 6893d559... (literal)",
+   "record_fields_before": "experiments/ptr-engine/tools/tokens_to_verified.py:187-197 -> grid,arm,declared_space,pass_turns,tvs,reason,duplicate_records_skipped,rows_in_file,requests_distinct,whole_run_total,code_state (no path/digest/size)",
+   "tvs_json_before": "measure/TVS.json cells 19/20/22 carried the same key set; scan found 'rows_sha256' nowhere in the file",
+   "docs_claim": "docs/TVS.md:5-7 claims only the grader sha 6893d559... and points at TVS.json; claims NO rows-file identity",
+   "pin_drift": "grader file sha256 now 056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772 != declared pin 6893d559...3077"
+  },
+  "stamp_fields": [
+   "rows_file",
+   "rows_sha256",
+   "rows_size",
+   "computed_at",
+   "grader_sha256"
+  ],
+  "green_reproduction": [
+   {
+    "grid": "rows-longrun-v4-2026-10-26",
+    "stored_tokens": 48347,
+    "recomputed_tokens": 48347,
+    "turn": 12,
+    "rows_sha256": "999f298dac8b8356...",
+    "rows_size": 299143,
+    "match": true
+   },
+   {
+    "grid": "rows-longrun-v4-tools-2026-10-26",
+    "stored_tokens": 50847,
+    "recomputed_tokens": 50847,
+    "turn": 12,
+    "rows_sha256": "f11391aa2989949f...",
+    "rows_size": 169988,
+    "match": true
+   },
+   {
+    "grid": "rows-longrun-v6-tools",
+    "stored_tokens": 111994,
+    "recomputed_tokens": 111994,
+    "turn": 12,
+    "rows_sha256": "1e78d75f259afbe0...",
+    "rows_size": 225648,
+    "match": true
+   }
+  ],
+  "red_rows_sha_mismatch": "REFUSED rows_sha_mismatch: /tmp/tvs-rows-tampered.jsonl (expected sha256 1e78d75f259afbe0406643825941a65b4773b4342b847698005ad5908b3e531e, actual sha256 67ff2a1c28c5a22812b914edb47f76b0a7f5c993e0dd451489252768e6d06e56) -- exit 2, tvs null, no figure",
+  "red_rows_missing": "REFUSED rows_missing: /tmp/tvs-rows-gone.jsonl (no such file) -- exit 2, tvs null, no figure",
+  "restamp": {
+   "records_stamped": 26,
+   "numeric_drift": 0,
+   "keys_lost": 0,
+   "restamped_at": "2026-10-26T18:58:30Z",
+   "method": "additive; five fields per record + same five in each tvs block; restamped_at + restamp_method + reproductions + grader_pin_check at top level"
+  },
+  "tests": "PYTHONPATH=src python3 -m pytest tests/test_tokens_to_verified.py -q -> 9 passed in 0.38s",
+  "verdict": "PASS exit 0 sha f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/tokens_to_verified.py --rows experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl --grade experiments/ptr-engine/measure/cell-pointer-stable-20261026T145722Z.grade-v5.json --arm pointer-stable --expect-rows-sha256 1e78d75f259afbe0406643825941a65b4773b4342b847698005ad5908b3e531e",
+   "python3 experiments/ptr-engine/tools/tokens_to_verified.py --rows /tmp/tvs-rows-gone.jsonl --grade experiments/ptr-engine/measure/cell-pointer-stable-20261026T145722Z.grade-v5.json --arm pointer-stable",
+   "PYTHONPATH=src python3 -m pytest tests/test_tokens_to_verified.py -q"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "grader_sha256 is null for all three figures: their grade_v5 documents carry no stamp and the grader file's current sha (056eb6...) no longer matches the declared pin (6893d5...). Byte-tracing is done; grader-tracing needs a REGRADE/stamp unit, not another restamp. Also: docs/TVS.md:139 still says grade_v5 output exists for exactly one declared grid, while v4 and v4-tools do have cell-*.grade-v5.json documents -- docs page is out of this unit's write scope.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/tokens_to_verified.py",
+  "tests/test_tokens_to_verified.py",
+  "experiments/ptr-engine/measure/TVS.json",
+  "orchestration/units/TVS-ROWS-IDENTITY.md",
+  "orchestration/handoffs/TVS-ROWS-IDENTITY.json",
+  "orchestration/journals/TVS-ROWS-IDENTITY.jsonl"
+ ],
+ "assumptions": [
+  "grader_sha256 is left null where the grade document is unstamped rather than filled with the current grader file's sha: the current bytes are not the bytes that graded these runs, and re-grading was outside this unit.",
+  "computed_at on historical records is the restamp time, because no original read time was ever recorded; restamp_method states this.",
+  "test path is root tests/ as the card declared, run with PYTHONPATH=src because tests/conftest.py imports resextract."
+ ],
+ "not_touched": [
+  "experiments/ptr-engine/cell.py",
+  "experiments/ptr-engine/run_longrun.py",
+  "experiments/ptr-engine/tools/analyze_stats.py",
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "any rows-*.jsonl",
+  "docs/",
+  "PARM-1*",
+  "GRID-*.json"
+ ],
+ "tool_calls": 18,
+ "bound": 18
+}

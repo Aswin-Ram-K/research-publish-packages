@@ -1,0 +1,81 @@
+{
+  "unit": "V-CONSONANCE-BC-EVAL",
+  "status": "done",
+  "overall": "partial",
+  "verdict": "Structural verification passes (12 of 13 acceptance criteria fully met; 59/59 invariant checks). One material arithmetic defect: the comparative request total understates a D-at-2-requests arm (6,300 stated vs 7,560 derived); the UNFUNDED conclusion survives and strengthens. Two minor template defects. No live call, no run, no authorization found.",
+  "target": "research/next-candidates/consonance-bounded-context-evaluation.md",
+  "integrity": {
+    "sha256_start": "1632c29feae310566a5f320c59ec6bee6b25625135b48719a088029844da12d9",
+    "sha256_end": "1632c29feae310566a5f320c59ec6bee6b25625135b48719a088029844da12d9",
+    "mtime": "2026-11-03 16:19:20.179106174 -0600",
+    "bytes": 43187,
+    "lines": 505,
+    "unchanged": true
+  },
+  "checks": [
+    "1 PASS integrity: full 505-line read; sha256 identical at start and end (1632c29f...); mtime unchanged (2026-11-03 16:19:20.179 -0600); 43,187 B.",
+    "2 PASS status: §0 'PROSPECTIVE PROTOCOL - no experiment has run, no model call, no live request, no authorization'; E1/E2 envelopes marked DRAFT; four freeze conditions stated (run.json before first call, owner approval, live-ledger reconciliation, real fingerprint digests). Live-claim grep matched only the status line, §3.7's 'does not certify', and BOUNDARY-PREREG's 'not executed'.",
+    "3 PASS E1: question/hypothesis/falsifier preserved verbatim from handoff EXPERIMENTS.md; 4 controls x 3 = 12 + 8 offsets x 3 = 24 = 36 <= 60 (24 held); each control has an explicit opposite direction; stop rule on identical/never-sent red twice and on two same-direction monotonicity violations; draft run.json carries schema run/1, fixture_sha, engine_image_digest, engine_flags, budgets.max_calls 60, and a controls object with exactly the contract's four keys. NOTE: the four fingerprints are frozen in §3.3/freeze condition 4 and carried on call rows, not in run.json (the contract's run/1 defines no fingerprint fields); EXPERIMENTS.md's numeric control thresholds are not restated.",
+    "4 PASS-WITH-DEFECT E2: arms A append / B one checkpoint (~70% of 40 turns, t~28) / C periodic (t20,t40), each with positive and negative control and a request budget; checkpoint form named (rewrite vs fork, fork ~11.6x median per P11); P11 labelled workspace E1, explicitly 'not CON-E1'; 120+3=123, 369, +81=450 all reproduce; both options stated with arithmetic and (b)@450 recommended; 'neither option is approved by this document'. DEFECT: draft max_calls '150 per arm' for option (b) cannot finance arm C (153).",
+    "5 FAIL ON ONE NUMBER comparative: five arms with controls, request shapes and shared fixture/fingerprint requirements; NOT_FOUND/STALE_OR_REVOKED/SCOPE_UNGRANTED controls; oracle labelled upper-bound diagnostic; 420, 5,040, 1,729 and UNFUNDED all correct; 60-turn cell is LR-02/05/06 with LR-01/03/04 UNAVAILABLE. But '6,300 with D at 2 req/turn' does not follow: 5,040 already covers A,B,C,E, so D at 2 req/turn adds 2 x 420 x 3 = 2,520, total 7,560 (ratio 4.37x, not 3.64x). The protocol's own pilot line (30x4+60 = 180) applies D at 2 correctly, so §6.3 is a slip.",
+    "6 PASS fixtures: LR-01..06 read directly - turns 48/64/56/40/72/60; 3 checkpoints each; 3 negative constraints each; every checkpoint has a singular 'source' field (multi-source count 0); sources carry id/path/pointer/revision/sha256 and no status field. Protocol records multi-hop and stale/revoked as MISSING -> UNAVAILABLE / NOT_OBSERVED, never success.",
+    "7 PASS null semantics: R5 (general null=unknown, :8012 null=0 endpoint+field-specific, :8014 unknown, never a schema rule) repeated in E1 run.json notes, §7 call row, §8.7, and void item 13.",
+    "8 PASS worked hypothetical: D records retrieval_attempt outcome STALE_OR_REVOKED, verified_success:false, abstained_correctly:true, tokens_to_verified_success:null ('undefined, not zero'); E must abstain when the fact is outside its budget and a parametric answer is INVALID-INSTRUMENT; a D that answers 64 with verified_success:true is named a protocol failure; scorer grep returns 0 matches, KINDS = artifact/fact/constraint/repair, extension named a Stage-0 prerequisite with its own red->green control.",
+    "9 PASS stats: paired task-level differences, method+n named, UNDEFINED/UNAVAILABLE/NOT_OBSERVED/INVALID-INSTRUMENT/UNFUNDED first-class, p95 refused below min_n_for(0.95)=60 (helper verified to return 60), no tail from <=9 samples, derived != measured, no re-pinning, generation labels.",
+    "10 PASS BOUNDARY-PREREG separation: file is REGISTERED 2026-10-26T01:22-0500, 696 scheduled (stage 216/300/180), ceiling 810, four named arms; protocol says not executed, not approved, not E1/E2, never pooled, and grounds D's 2 req/turn in R-pointer. v9 wall and gen-7 prerequisites are stated as prerequisites (v8 wall explicitly 'not measured').",
+    "11 PASS red->green: /tmp/check_protocol.py passes 59/59 on the protocol (EXIT=0); on /tmp/protocol-mutant.md with one invariant altered (450 -> 440) it fails with 'AssertionError: e2_arithmetic :: 369/440' (EXIT=1); protocol re-run EXIT=0.",
+    "12 PASS no live calls: unit handoff commands are 6 read-only python/json/grep/sed invocations (0 with curl/http/run_longrun); no file under experiments/, measure/, docs/ modified after the protocol's 16:19:30 mtime except the two sibling artifacts; no .jsonl/.ndjson/rows file modified 2026-11-03; protocol names endpoints only as :8012/:8014 labels, no URL.",
+    "13 PASS handoff written: orchestration/handoffs/V-CONSONANCE-BC-EVAL.json."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Return to the CONSONANCE-BC-EVAL author for two arithmetic edits before any owner budget request: (1) §6.3 total 6,300 -> 7,560 and 3.64x -> 4.37x (UNFUNDED unchanged; '5,040 even if D were free' unchanged); (2) E2 draft per-arm caps A 147 / B 150 / C 153 instead of '150 per arm'. Optional polish: restate the EXPERIMENTS.md control thresholds, and give A/E an explicit 'no directional falsifier' note with E's parametric-recall violation moved into the arm table. After the edits the protocol is ready to be frozen/approved; this review authorizes no run.",
+  "write_paths": [
+    "orchestration/handoffs/V-CONSONANCE-BC-EVAL.json",
+    "/tmp/check_protocol.py",
+    "/tmp/protocol-mutant.md"
+  ],
+  "not_reproduced": [
+    "Acceptance item 3's literal 'draft run.json with four fingerprints': the draft run.json carries the contract's §3 fields (git_sha, fixture_sha, engine_image_digest, engine_flags, hardware, quantization) and the four fingerprints live in §3.3, freeze condition 4 and every call row. Adding them to run.json would invent fields the INTERFACE_CONTRACT run/1 schema does not define; the requirement is satisfied in substance, not literally.",
+    "Acceptance item 5's expected '6,300 with D at 2 req/turn': not reproducible from the protocol's own arms. 5,040 covers A,B,C,E only; D at 2 req/turn adds 2 x 420 x 3 = 2,520 for a total of 7,560."
+  ],
+  "overstated": [
+    "'(5 arms x 420 x 3) = 6,300' is presented as the total with D at two requests per turn; it is the total with all five arms at one request per turn, so it understates the design's own request shape by 1,260 (20%)."
+  ],
+  "unverified": [
+    "P7 stdev 3.227761582: recompute.py C53 passes 18/18 for the mean, CI and totals, but prints no per-fan-out stdev; from the eight listed 6-decimal ratios the sample stdev is 3.227761559 (agrees to 8 significant figures; exact digits not re-derived).",
+    "§3.2 'grade_v5 grades 8 of 12' and the v5 36 -> v6 144 (+108) checkpoint delta were not independently recomputed; only the 12-checkpoint count in LR-01.v6/v8 was confirmed.",
+    "§3.2's growth basis 38.532-684.362 tok/turn was read as a quotation; only wall_tokens 3838, wall_tokens_by_arm 10616 and checkpoint count 12 were confirmed in tasks-v6/LR-01.v8.json."
+  ],
+  "corrections": [
+    "§6.3: 6,300 -> 7,560 (+1,260 = D's second request/turn, 2 x 420 x 3); ratio 3.64x -> 4.37x (7,560/1,729 = 4.3725). UNFUNDED and the 2.92x 'even if D were free' figure are unchanged.",
+    "§5 draft run.json option (b) max_calls: '150 per arm' -> A 147, B 150, C 153 (3 reps x (40 turns + checkpoints) + 9 verify/arm/rep, total 450). A 150 cap on C would trip §3.6's mid-cell cap rule and mark the cell INVALID-INSTRUMENT.",
+    "§4: restate the EXPERIMENTS.md control thresholds (identical hit >= 0.9 of P; never-sent 0; append reuse >= P - k; mismatched tokenizer no reuse) so 'green' is defined, and name the mismatched-tokenizer control in the E1 notes as the protocol's own sentence about extra controls requires.",
+    "§5/§6 falsifier column: mark A (baseline) and E (upper-bound diagnostic) as 'no directional falsifier' rather than a bare em dash, and move E's parametric-recall violation (INVALID-INSTRUMENT) from §7 into the arm table.",
+    "§5 arm C: state whether the t40 checkpoint (last turn of a 40-turn fixture) counts; it has zero post-checkpoint turns, so it cannot repay by construction and will pull C's aggregate."
+  ],
+  "defects": [
+    "MATERIAL §6.3 comparative total: 6,300 stated, 7,560 derived with D at 2 requests/turn (delta 1,260; 4.37x vs 3.64x). Conclusion UNFUNDED unaffected.",
+    "MINOR §5 draft run.json max_calls for option (b): 150 per arm cannot finance arm C (153); per-arm caps are A 147 / B 150 / C 153.",
+    "MINOR §4 control thresholds absent, so 'identical control is green' is undefined between 0 and 0.9 of P; the mismatched-tokenizer control has no contract key and is not declared in the draft notes.",
+    "MINOR §6 table: A and E have no falsifier cell; E's violation condition appears only in §7.",
+    "NOTE §5 arm C schedules a checkpoint at t40 of a 40-turn fixture (zero repayment window); the protocol does not say whether it counts."
+  ],
+  "evidence": [
+    "sha256 1632c29feae310566a5f320c59ec6bee6b25625135b48719a088029844da12d9 unchanged start->end; mtime 2026-11-03 16:19:20.179106174 -0600; 43,187 B; 505 lines.",
+    "checker: 'PASS 59/59 invariants' EXIT=0; mutant (450->440): 'AssertionError: e2_arithmetic :: 369/440' EXIT=1; protocol re-run EXIT=0.",
+    "arithmetic: 420 = 6x10+6x30+3x60; 4x420x3 = 5,040; 2x420x3 = 2,520; 5,040+2,520 = 7,560; 7,560/1,729 = 4.3725; pilot 30x4+60 = 180.",
+    "fixtures: LR-01..06 turns 48/64/56/40/72/60, checkpoints 3 each, negative_constraints 3 each, multi-source checkpoints 0, source keys id/path/pointer/revision/sha256 (no status).",
+    "grep -ci 'abstain|retrieval_miss|STALE|REVOKED|NOT_FOUND' experiments/ptr-engine/longrun/score_longrun.py = 0; KINDS at line 58 = (artifact, fact, constraint, repair).",
+    "min_n_for(0.95) = 60 (experiments/ptr-engine/longrun/analyze_stats.py:330); min_n_for(0.90) = 31.",
+    "BOUNDARY-PREREG.md line 2 REGISTERED 2026-10-26T01:22-0500; lines 105-106: 696 scheduled (216/300/180), ceiling 810.",
+    "ledger: REQUEST-LEDGER.json requests 2591, remaining 1729; docs/STATE.md line 65 '2,591 / 4,320 => 1,729 remaining'.",
+    "no files modified after 2026-11-03 16:19:30 outside orchestration/units/CONSONANCE-BC-EVAL.md and orchestration/handoffs/CONSONANCE-BC-EVAL.json; no jsonl/ndjson/rows file touched 2026-11-03; handoff commands 6, request-making 0."
+  ],
+  "artifacts": [
+    "orchestration/handoffs/V-CONSONANCE-BC-EVAL.json",
+    "/tmp/check_protocol.py",
+    "/tmp/protocol-mutant.md"
+  ],
+  "tool_calls": 37,
+  "bound": 60
+}

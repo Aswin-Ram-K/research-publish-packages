@@ -1,0 +1,92 @@
+{
+  "unit": "HARNESS-MAP-V3",
+  "generated_at": "2026-10-26T11:24:00-05:00",
+  "mode": {"live_requests": 0, "network": false, "read_only_measurements": true},
+  "supersedes": ["docs/HARNESS-MAP-V2.md", "docs/HARNESS-MAP.md"],
+  "batch_boundary": {
+    "newer_than": "orchestration/handoffs/HARNESS-MAP-V2.json",
+    "mtime": "2026-10-26 10:50:28.666837051 -0500",
+    "handoffs": 25,
+    "journals": 24,
+    "docs_md": 15,
+    "measure_json": 17,
+    "unit_cards": 27,
+    "handoff_only_cards": ["GATE-OVERRIDE-FIX"]
+  },
+  "inventory": {"handoffs_json": 998, "unit_cards": 921, "row_files": 14, "journals_on_disk": 44},
+  "stages": [
+    {"n": 1, "stage": "preflight/gates", "owner": "experiments/ptr-engine/longrun/cell.py:141 stage_preflight; :223 stage_harness; :248 stage_budget; :356 stage_projection", "exit_codes": {"G1_ledger": 4, "G2_projection": 8, "G3_prereg": 12, "preflight": 2}, "command": "python3 experiments/ptr-engine/longrun/cell.py check --task LR-01 --arm pointer-stable", "cost": "0 requests; 0 cell-*.gates.json newer than the v2 handoff", "evidence": "docs/GATE-CHAIN.md:15-18; find experiments/ptr-engine/measure -name '*.gates.json' -newer orchestration/handoffs/HARNESS-MAP-V2.json -> 0"},
+    {"n": 2, "stage": "fixture", "owner": "experiments/ptr-engine/longrun/tasks-v6/LR-01.v7.json; contract presence enforced at cell.py:270-277", "command": "python3 -m pytest experiments/ptr-engine/longrun/tests/test_checkpoint_items_v2.py -q", "cost": "0 requests; 12/12 checkpoint items decidable; 9 tests; 24/24 synthetic probes", "evidence": "orchestration/handoffs/CHECKPOINT-ITEMS-V2.json"},
+    {"n": 3, "stage": "runner", "owner": "experiments/ptr-engine/longrun/run_longrun.py:1455 run_cell; :1576 budget; :1465 resume lineage", "command": "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture ... --arms pointer-stable --rows experiments/ptr-engine/measure/rows-*.jsonl", "cost": "1 row = 1 request; 0 live rows this batch; v2 measured 367.3 s / 72 rows", "evidence": "0 rows-*.jsonl newer than orchestration/handoffs/HARNESS-MAP-V2.json; docs/HARNESS-MAP-V2.md:27"},
+    {"n": 4, "stage": "tool channel", "owner": "experiments/ptr-engine/longrun/run_longrun.py:938 (refusal written to the row only); experiments/ptr-engine/longrun/client.py:105-116 STOP_REASONS (10)", "command": "stage 3 with --tools read_file", "cost": "cap refusal recorded, never injected into <tool_result>; 0 requests this batch", "evidence": "orchestration/handoffs/STOP-REASON-HOLES.json (10/10 inducible)"},
+    {"n": 5, "stage": "row schema", "owner": "experiments/ptr-engine/longrun/run_longrun.py:1647 make_row; :1199 build_manifest; experiments/ptr-engine/tools/row_provenance.py", "command": "python3 experiments/ptr-engine/tools/row_provenance.py", "cost": "9 provenance fields; 1/14 row files FULL, 13 PARTIAL; harness_sha256 missing from 13/14", "evidence": "experiments/ptr-engine/measure/ROW-PROVENANCE.json:cost"},
+    {"n": 6, "stage": "grade", "owner": "experiments/ptr-engine/longrun/grade_v5.py sha256 6893d559518168e3ba4fc4a9f5d7642d213d61e2e3c3d0b0a8f01e3379af3077; experiments/ptr-engine/tools/regrade.py; tokens_to_verified.py", "command": "python3 experiments/ptr-engine/tools/regrade.py --check", "cost": "9 grids regraded x3, 9/9 byte-identical; 8/9 existing grade-v5 files identical, 1 differs in 22 paths; 8 tests", "evidence": "orchestration/handoffs/REGRADE-ONE-COMMAND.json"},
+    {"n": 7, "stage": "analyse", "owner": "experiments/ptr-engine/longrun/analyze_stats.py; experiments/ptr-engine/measure/PROJECTION.json", "command": "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows ... --grade ...", "cost": "p50 2.9 s thinking-off vs 218.2 s thinking-auto; p90 38.1 s vs 682.7 s", "evidence": "experiments/ptr-engine/measure/PROJECTION.json:defaults"},
+    {"n": 8, "stage": "record", "owner": "experiments/ptr-engine/longrun/cell.py stage_record (EXIT_UNWRITABLE=7, experiments/ptr-engine/longrun/exit_codes.py:32)", "command": "python3 experiments/ptr-engine/longrun/cell.py record ...", "cost": "0 completed cell records this batch; 8 new cell-*.json are all *.grade-v5.json from REGRADE-ONE-COMMAND", "evidence": "find experiments/ptr-engine/measure -name 'cell-*.json' -newer orchestration/handoffs/HARNESS-MAP-V2.json"},
+    {"n": 9, "stage": "handoff", "owner": "tools/handoff_lint.py; tests/test_orchestration_handoffs.py", "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m pytest tests/test_orchestration_handoffs.py -q -p no:cacheprovider", "cost": "1 failed, 21 passed in 2.54 s; 4 gap files", "evidence": "gap files: V2-RUNTIME.json, V3-FIXTURE.json, V3-PILOT.json, VERDICT-RITUAL.json (tests/test_orchestration_handoffs.py:356)"},
+    {"n": 10, "stage": "verdict", "owner": "orchestration/VERDICT-RITUAL.md; experiments/ptr-engine/tools/verdict_payload.py; ~/.dsh/storages/orchestration/closure.jsonl", "command": "python3 experiments/ptr-engine/tools/verdict_payload.py --task <id> --execution <id> --command '<cmd>'", "cost": "9 verdict rows ever; 4 verified closures of 897", "evidence": "~/.dsh/storages/orchestration/verdict.jsonl (9 lines); closure.jsonl (897 unique)"}
+  ],
+  "exit_codes": {"declared": [0,1,2,3,4,5,6,7,8,9,10,11,12], "count": 13, "source": "experiments/ptr-engine/longrun/exit_codes.py:25-37", "v2_count": 11},
+  "stop_reasons": {"members": 10, "source": "experiments/ptr-engine/longrun/client.py:105-116", "producers": "10/10 inducible per orchestration/handoffs/STOP-REASON-HOLES.json"},
+  "batch_measurement": {
+    "cards": 25,
+    "journals": 24,
+    "live_requests": 0,
+    "requests_basis": "no rows-*.jsonl newer than orchestration/handoffs/HARNESS-MAP-V2.json; 14 row files on disk",
+    "zero_request_rounds": "25/25",
+    "wall_clock": {"measurable_cards": 18, "unmeasurable_cards": 7, "sum_s": 11049, "median_s": 237, "min_s": 0, "max_s": 2220, "max_card": "REGRADE-ONE-COMMAND", "source": "orchestration/journals/*.jsonl first/last ISO timestamp"},
+    "tool_calls": {"cards_recording": 2, "cards_total": 25, "total": 41, "per_card": {"TVS-REGRADE": 15, "V-DUPLICATE-RULE": 26}},
+    "evidence_commands": {"total": 97, "handoffs_with_commands_key": 21, "verification_shaped": 62, "verification_fraction": 0.639, "change_shaped": 3, "change_fraction": 0.031, "neither": 32, "v2": {"total": 71, "verification_shaped": 54, "verification_fraction": 0.761, "change_shaped": 4}},
+    "tokens_per_verified_success": {"tokens": 111994, "produced_pairs": 1, "declared_pairs": 23, "not_produced": 22, "source": "experiments/ptr-engine/measure/TVS.json:denominator"},
+    "completed_cells": 0,
+    "completed_cells_basis": "0 cell-*.gates.json newer than the v2 handoff"
+  },
+  "fourteen": {
+    "closed": [1, 5, 6, 8, 11, 12, 13, 14],
+    "narrowed": [3, 4, 7, 9, 10],
+    "open": [2],
+    "superseded": [],
+    "v2": {"closed": [5, 6, 8, 11, 12, 14], "narrowed": [1, 4, 7, 9, 10], "open": [2, 13], "superseded": [3]},
+    "detail": {
+      "1": {"state": "closed", "by": "cell.py:270-277 preflight exit 2 when the contract is absent from the system prompt; run_longrun.py:1343-1388 contract line + parse; tests/test_answer_contract.py"},
+      "2": {"state": "open", "why": "7th fixture generation authored this batch (tasks-v6/LR-01.v7.json, CHECKPOINT-ITEMS-V2); no fixture-version pool rule"},
+      "3": {"state": "narrowed", "by": "CHECKPOINT-ITEMS-V2 (12/12 decidable, 9 tests)", "remaining": "historical 36/92 empty checkpoint cells untouched"},
+      "4": {"state": "narrowed", "by": "STOP-REASON-HOLES (10/10 reasons inducible)", "remaining": "run_longrun.py:938 records the refusal in the row only; the model is never told"},
+      "5": {"state": "closed", "by": "LEDGER-CONSERVATIVE (raw 1101 <= 4320; de-duplicated 1071 explicitly not deducted); cell.py:721-734 recomputes spend"},
+      "6": {"state": "closed", "by": "cell.py:223 harness digest; run_longrun.py:1465 resume refusal"},
+      "7": {"state": "narrowed", "by": "regrade.py --check asserts grader_sha256 (red->green)", "remaining": "19 historical grade files carry no current grader sha; grade_v5.py alone still does not assert the row fixture_sha256"},
+      "8": {"state": "closed", "by": "HANDOFF-RECOVERY (16 stubs -> 8 recovered, lint exit 0)"},
+      "9": {"state": "narrowed", "remaining": "repair.t30 judge-undecidable in 13/13 pairs (TVS-DEFINE-AND-COMPUTE); verified_success false everywhere"},
+      "10": {"state": "narrowed", "by": "PYTHONPATH half fixed; measured 1 failed / 21 passed in 2.54 s", "remaining": "4 gap files, now including VERDICT-RITUAL.json"},
+      "11": {"state": "closed", "by": "PROJECTION-MODE mode-aware defaults (p50 2.9 s off vs 218.2 s auto); mode-blind override refused exit 8"},
+      "12": {"state": "closed", "by": "DECIDABILITY-SEAM exit 9 + TVS single headline"},
+      "13": {"state": "closed", "by": "tools/regrade.py (449 lines), docs/REGRADE.md, 9/9 bit-identical, 8 tests, --as-of determinism"},
+      "14": {"state": "closed", "by": "G3 exit 12 refuses a cell that declares no hypothesis (docs/GATE-CHAIN.md:95)"}
+    }
+  },
+  "new_waste": [
+    {"rank": 1, "what": "verdict ritual written but not adopted", "count": "45 of 46 batch closures FAIL no-verdict; 0 of 7 closures after 11:13:05 verified", "owner": "VERDICT-RITUAL (page only, no enforcement)"},
+    {"rank": 2, "what": "verification overhead remains two-thirds of recorded commands", "count": "62 of 97 verification-shaped, 3 change-shaped", "owner": "HARNESS-MAP-V3"},
+    {"rank": 3, "what": "a card that delivered nothing, holding a live gate bypass open", "count": "1 card, 3 unwritten fixes, 1 surviving bypass (--projected-turn-wall -1, live spawn observed twice)", "owner": "GATE-OVERRIDE-FIX (status partial, artifacts [])"},
+    {"rank": 4, "what": "instruments disagree about how many experiments succeeded", "count": "TVS 22 of 23 pairs not_produced vs repair.t30 undecidable 13/13", "owner": "TVS-DEFINE-AND-COMPUTE / LATENCY-REPORT-2"},
+    {"rank": 5, "what": "journal cannot report the cost it exists to report", "count": "23 of 25 cards without tool_calls; 7 of 25 without a wall span; 2+ schemas", "owner": "UNIT-JOURNAL"},
+    {"rank": 6, "what": "handoff guard gained a new red item instead of losing three", "count": "4 gap files (V2-RUNTIME, V3-FIXTURE, V3-PILOT, VERDICT-RITUAL)", "owner": "VERDICT-RITUAL / tests/test_orchestration_handoffs.py:356"},
+    {"rank": 7, "what": "documents grew faster than the artefacts they describe", "count": "15 docs/*.md and 17 measure/*.json for 25 cards and 0 completed cells", "owner": "no single owner"}
+  ],
+  "verdict_rate": {
+    "denominator": "closures (~/.dsh/storages/orchestration/closure.jsonl)",
+    "all_time": {"closures": 897, "verified": 4, "rate": 0.0045},
+    "before_ritual_1030_1112": {"closures": 39, "verified": 0, "rate": 0.0},
+    "batch_window_1030_now": {"closures": 46, "verified": 1, "rate": 0.0217},
+    "after_ritual_111305_now": {"closures": 7, "verified": 0, "rate": 0.0},
+    "verdict_rows_on_disk": 9,
+    "rows_missing_at_key": 1
+  },
+  "answer": {
+    "question": "did building an experiment get cheaper?",
+    "verdict": "not_measurable_yet",
+    "missing_instrument": "one cell run end-to-end through experiments/ptr-engine/longrun/cell.py emitting cell-<arm>-<stamp>.json and .gates.json; zero such records exist (0 *.gates.json newer than the v2 handoff)",
+    "proxy": "111,994 tokens per verified success over 23 declared run/arm pairs, 22 never produced (experiments/ptr-engine/measure/TVS.json)",
+    "process_cost_did_not_fall": "25 cards, 0 requests, median 237 s per card, 2/25 cards recording tool calls, 62% of commands verification-shaped"
+  }
+}

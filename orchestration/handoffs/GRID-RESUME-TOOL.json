@@ -1,0 +1,48 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/tools/grid_resume.py",
+  "tests/test_grid_resume.py",
+  "orchestration/units/GRID-RESUME-TOOL.md",
+  "orchestration/handoffs/GRID-RESUME-TOOL.json",
+  "orchestration/journals/GRID-RESUME-TOOL.jsonl"
+ ],
+ "assumptions": [
+  "done_turns=48 and canary_turns=12 are CLI-overridable defaults; no frozen threshold/runner file edited",
+  "cells own files by the rows' own rep field, so a rep-1 file is not multiplied across reps",
+  "per-cell token figures labelled spent (sum prompt_tokens on disk) and projected48 (48x last row), a projection not a price",
+  "next-cell price 108 from GRID-PARAMS.json per_cell_budget (fallback 108); --budget explicitly NOT treated as a request ceiling"
+ ],
+ "blocker": "",
+ "bound": 24,
+ "evidence": {
+  "commands": [
+   "python3 experiments/ptr-engine/tools/grid_resume.py",
+   "python3 experiments/ptr-engine/tools/grid_resume.py --measure-dir /tmp/gr-proof/measure --root /tmp/gr-proof --no-ledger",
+   "PYTHONPATH=src:. python3 -m pytest tests/test_grid_resume.py -q",
+   "sha256sum experiments/ptr-engine/measure/rows-*.jsonl"
+  ],
+  "corpus_run": "next_cell=pointer-stable r1; canary_next=pointer-stable; pointer-stable r1 state=partial (2 files); pointer-stable r2/r3 + all 7 other era B cells state=absent",
+  "era_a_file": "rows-cell-pointer-stable-20261026T182535Z.jsonl file_state=era_a_excluded turns=27/48 tools_mode=off in 27/27, stamp GRID-CELL-SANITY.json + ANALYSIS-PATH.json usable_for=[]",
+  "ledger": "spent_now 1128; remaining_now 3192; delta 0; baseline_sha 3b79f4766abc8479a7a963f9e04063837928d09d48d2435e91f488b3c6d3ae0d; verdict OK; next cell price 108 fits=True",
+  "partial_file": "rows-cell-pointer-stable-20261026T145758Z.jsonl file_state=partial turns=6/48 ttft=6 fixture_sha256=967cef03 (pre-run)",
+  "read_only": "sha256 of 15/15 measure/rows-*.jsonl identical before and after full run (diff empty)",
+  "red_green": "DONE_TURNS 48->47: 5 failed, 2 passed; restored 48: 7 passed",
+  "tmp_state_machine": "48-turn file_state=done turns=48/48 ttft=48; 47-turn file_state=partial turns=47/48; 20-turn with stop_reason=runaway_turn at 19 file_state=abandoned"
+ },
+ "next_unit_hint": "RUN-A-STAR-2's resumer should call grid_resume.py, skip done cells, launch a fresh cell at next_cell (never append to partial), and re-check ledger delta + price fit before each launch; canary gate N=12 precedes cells (canary_next=pointer-stable, 0 canary rows today).",
+ "offline": {
+  "network_events": 0,
+  "requests_sent": 0,
+  "sockets": 0
+ },
+ "status": "done",
+ "tool_calls": 22,
+ "unit": "GRID-RESUME-TOOL",
+ "write_paths": [
+  "experiments/ptr-engine/tools/grid_resume.py",
+  "tests/test_grid_resume.py",
+  "orchestration/units/GRID-RESUME-TOOL.md",
+  "orchestration/handoffs/GRID-RESUME-TOOL.json",
+  "orchestration/journals/GRID-RESUME-TOOL.jsonl"
+ ]
+}

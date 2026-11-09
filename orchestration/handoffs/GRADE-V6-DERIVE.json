@@ -1,0 +1,56 @@
+{
+ "unit": "GRADE-V6-DERIVE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "experiments/ptr-engine/longrun/score_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_grade_v6_derive.py",
+  "docs/GRADE-V6-DERIVE.md",
+  "orchestration/units/GRADE-V6-DERIVE.md",
+  "orchestration/handoffs/GRADE-V6-DERIVE.json",
+  "orchestration/journals/GRADE-V6-DERIVE.jsonl"
+ ],
+ "evidence": {
+  "split": "8/12 before (matches the unit exactly), 12/12 after",
+  "before": "cp.5.t14/cp.7.t20/cp.11.t42 -> SystemExit: fixture_truth_mismatch: <id> has no usable answer_spec; cp.10.t36 -> KeyError: 'function'",
+  "derived_truths": {
+   "cp.3.t06": "CALL ledger.record_resolution(scope=scope.name, serialized_ref=presented, bytes_appended=len(presented.encode('utf-8')), block_size=scope.block(), entry_text=entry.text) @ resolve.py:159",
+   "cp.4.t08": "CALL scope.block() @ resolve.py:163",
+   "cp.0.t12": "NUM 64 @ resolve.py:39",
+   "cp.5.t14": "NONE (record_refusal absent inside resolve)",
+   "cp.6.t18": "NUM 6 @ errors.py:176-211",
+   "cp.7.t20": "NONE (resolved_count absent inside _refuse)",
+   "cp.1.t24": "NUM 31 @ errors.py:15-247",
+   "cp.8.t26": "NUM 5 @ errors.py:217-247",
+   "cp.9.t32": "NUM 2 @ errors.py:36-42",
+   "cp.10.t36": "CALL ledger.resolved_count() @ resolve.py:141 (call_at_line)",
+   "cp.11.t42": "NONE (block absent inside _refuse)",
+   "cp.2.t46": "CALL ledger.record_refusal(scope=scope_name, serialized_ref=text, code=error.code) @ resolve.py:69"
+  },
+  "commands": [
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_grade_v6_derive.py -q -> 14 passed in 0.05s",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_grade_v5.py tests/test_answer_contract.py tests/test_decidability_seam.py -q -> 4 passed in 0.62s",
+   "red/green probe -> RED 'all-12: SystemExit cp.5.t14 has no usable answer_spec', 'call_at_line red: KeyError: function' | GREEN '12/12 derived, 12/12 grade pass', 'call_present=True verdict=fail reason=none_contradicted_by_source: record_refusal() IS called inside _refuse', \"SystemExit: fixture_truth_mismatch: item cp.10.t36: answer_spec kind 'CALL', rule 'call_at_line' finds no call named 'ledger.resolved_count' at .../resolve.py:69\""
+  ],
+  "refusal_shape": "fixture_truth_mismatch: item <id>: answer_spec kind '<KIND>', rule '<rule>': <detail> (fix the answer_spec at <file>)",
+  "none_fail_reason": "none_contradicted_by_source: <attr>() IS called inside <function> at <callee>:L<n>",
+  "call_at_line_refusal": "fixture_truth_mismatch: item <id>: answer_spec kind 'CALL', rule 'call_at_line' finds no call named '<callee>' at <file>:<line>; fix the answer_spec line or the cited source <file>",
+  "mirror": "score_longrun.mirror_answer_contract (stage 3b) grades all 12 via grade_v5 as acc.derive.<id>; no-op on fixtures without answer_spec; proven in test_mirror_grades_all_12_not_just_three"
+ },
+ "assumptions": [
+  "call_at_line takes the callee name from derive['callee'] when declared, else from the checkpoint's documented `expected` string; the fixture carries no callee key, so the documented string supplies it.",
+  "For a NONE spec, the documented `expected` string is recorded (documented_agrees) but never overrides the AST truth, because the card requires the derived truth to win.",
+  "tests/test_cell.py::test_f_analysis_refusal fails pre-existing with InsufficientSamples wilson_ci n=0 at stage 6/7 analyse; derive_truth runs only in preflight (stage 1/7), cell.py is outside the write paths, so it was left untouched."
+ ],
+ "blocker": "",
+ "next_unit_hint": "The v6 fixture can now be graded end to end. Any future answer_spec kind must go through _spec_error / _derive_one so it can never degrade to a bare KeyError; the mirror in score_longrun.py is the only acceptance path that reads answer_spec truth.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "experiments/ptr-engine/longrun/score_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_grade_v6_derive.py",
+  "docs/GRADE-V6-DERIVE.md",
+  "orchestration/units/GRADE-V6-DERIVE.md",
+  "orchestration/handoffs/GRADE-V6-DERIVE.json",
+  "orchestration/journals/GRADE-V6-DERIVE.jsonl"
+ ]
+}

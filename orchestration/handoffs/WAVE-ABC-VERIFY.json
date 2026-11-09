@@ -1,0 +1,45 @@
+{
+  "unit": "WAVE-ABC-VERIFY",
+  "overall": "partial",
+  "checks": [
+    "ttft assignments inventoried with guards: client.py:305 (init), :321 (guarded `kind is not None and ttft is None`), :393 (init), :410 (guarded `if not cfg.stream:`), :417 (guarded `else:` streamed); run_longrun.py:1054/1059 (init), :1085 (guarded `if (piece_c or piece_r) and ttft is None`); no perf_counter delta feeds ttft outside a first-token branch; `wall = clock()-t0` at client.py:330/401 is reported as wall_ms only",
+    "REAL GAP: run_longrun.py does not import client (grep for 'import client'/'client.send_chat' empty), so the executed harness still uses the old tool-call-blind latch at run_longrun.py:1084-1085; the fixed latch is dead code for measured rows",
+    "hostile fake streams (own chunks, /tmp/wabc): tool_calls-first -> 200.0ms kind=tool_call; content '' then 'x' -> latched 350.0ms kind=content; usage+[DONE] only -> ttft_ms=None ttft_source=unavailable wall_ms=2500000.0; reasoning_content -> 275.5ms kind=reasoning; tool_calls with empty id AND empty arguments -> COUNTS (333.0ms, kind=tool_call, list truthiness at client.py:287); tool_calls:[] -> None",
+    "request_body carries stream_options={'include_usage': True} (client.py:127)",
+    "contract forms 1-11: NUM 64 pass; '64.' pass; ' 064' pass; '64 (resolve.py:39)' pass; card's literal reordered CALL fails kwarg_value_mismatch:code (values code/serialized_ref not source error.code/text); same reorder with correct values passes and reports kwargs_as_written=[code,scope,serialized_ref]; wrong callee ledger.add fails callee_mismatch; two ANSWER lines -> multiple_answer_lines/answer_not_contract; TEXT -> verdict 'text' never pass; trailing sentence -> pass; bare '64' -> no_answer_line; NUM 063 -> num_mismatch",
+    "reordered-kwargs decision: grade_v5.py:374-376 and _parse_call (grade_v5.py:117) sort kwargs, report kwargs_as_written, do not grade order; code agrees with the stated decision (both orders pass when value text matches)",
+    "source mutation: /tmp/wabc/src resolve.py DEFAULT_MAX_REFS=99 + PtrError->BoomError; with documented strings unchanged derive_truth raises 'cp.0.t12 documents 64 but the AST derives 99'; with them updated -> expected 99 and 30 (from 31). Truth follows source, not fixture",
+    "stats: wilson_ci(0,3)=(0.0,0.0,0.5614970317550454), wilson_ci(3,3)=(1.0,0.4385029682449546,1.0); quantile_ci refuses n=48 with ranks 43-48 p89.6-p100.0 and n*(1-q)=2.4<3, refuses n=59, accepts n=60 (56.05,51.2,59.0,60); mcnemar_p(3,0)=0.25; mcnemar_exact refuses b=3,c=0 with attached p=0.25, refuses b=2,c=1 with p=1.0, returns (6,0,0.03125) at 6 discordant; ttft_values([100,None,200])=([100.0,200.0],1,0) null dropped and counted; pre-v5 rows analyse without raising",
+    "git status --porcelain = 19 entries, all under the three cards' declared paths plus concurrent PUSH-TO-REMOTE/PUSH-TO-REMOTE-2 unit files; status restricted to tasks-v4/tasks/tasks-v2/det_verify.py/grade_v3.py/grade_v4.py/analyze_longrun.py/measure is empty; run_longrun.py diff 96 insertions, no hunk near the ttft latch",
+    "v5 invariants: system_prompt 2376 chars carries all four ANSWER forms; 64/31/error.code/serialized_ref/scope_name/record_refusal/DEFAULT_MAX_REFS absent from system_prompt and every turn question ('Ptr' present only as the pattern the question must name); TEXT grades verdict 'text' and grade_v5.py:438 counts only 'pass'; parse errors set answer_parse_error and grade fail/answer_not_contract (grade_v5.py:336-337, run_longrun.py:1349)",
+    "test counts reproduced: test_client_ttft 8/8, test_answer_contract 26/26, test_grade_v5 16/16, test_analyze_stats 8/8; --red grade 8/16 FAILED"
+  ],
+  "not_reproduced": [
+    "test_answer_contract.py --red prints '0/26 assertions FAILED' while the header says 26/26 fail: the counter line is contradictory (26 RED cases are visibly printed), so the quoted '0/26' is the mislabelled number, not a vacuous guard",
+    "HARNESS-FIX-CLIENT's 'TTFT latched on the first delta carrying content/reasoning_content/tool_calls' is reproduced only inside client.py; no measured row can come from it until run_longrun.py calls client.send_chat"
+  ],
+  "overstated": [
+    "'no wall-clock fallback anywhere' is true, but the companion claim that the harness's TTFT is fixed is overstated: run_longrun.py:1084-1085 (old latch, blind to tool_calls-only first deltas) is still the only code path that produces rows; client.py is unwired",
+    "ANSWER-CONTRACT's '--red killing 26/26' is true in substance but its quoted '0/26' comes from a mislabelled counter line"
+  ],
+  "unverified": [
+    "/metrics snapshot opt-in (--no-metrics-scrape, PTR_METRICS_SCRAPE precedence) was not re-tested independently; only the author's 8/8 suite exercises it",
+    "contract token-cost claim (32 vs 63 tokens) was not re-tokenized",
+    "no live/network arm was run: everything is offline fakes, as required"
+  ],
+  "unauthorised": [],
+  "blocker": "",
+  "next_unit_hint": "Wire client.send_chat into run_longrun.py (replace the inline stream loop at :1053-1090), add --metrics-scrape, pass ttft_source/first_token_kind/cached_source/wall_ms through make_row, then re-measure TTFT; do not reuse grow 838.85 / compact 224.08 / stable 356.12 / lease-reopen 201.78 ms. Also fix the --red counter label in test_answer_contract.py, which prints '0/26 assertions FAILED' while 26/26 fail.",
+  "write_paths": [
+    "orchestration/units/WAVE-ABC-VERIFY.md",
+    "orchestration/handoffs/WAVE-ABC-VERIFY.json",
+    "experiments/ptr-engine/measure/WAVE-ABC-VERIFY.md"
+  ],
+  "tool_calls": 22,
+  "bound": 34,
+  "requests_sent": 0,
+  "assumptions": [
+    "/tmp is per-invocation in this sandbox, so each hostile test was created and executed inside a single shell call; nothing persists under /tmp/wabc",
+    "files changed by the concurrent PUSH-TO-REMOTE/PUSH-TO-REMOTE-2 card are reported as out-of-wave, not as this wave's unauthorised writes"
+  ]
+}

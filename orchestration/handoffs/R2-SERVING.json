@@ -1,0 +1,33 @@
+{
+  "unit": "R2-SERVING",
+  "status": "done",
+  "artifacts": [
+    "orchestration/notes/joint-plan/R2-serving.md"
+  ],
+  "evidence": {
+    "live_serving_process": "PID 9738 (container 5a0ed0108a6c) argv 'python -u /app/server.py '; openjev rerank, Qwen3_5ForSequenceClassification, /models/qwen3.5-4b-nli-v2, 127.0.0.1:8088, torch 2.9.1+rocm7.1.1, transformers 5.15.0",
+    "nvidia_smi": "FAILED: NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. (no NVIDIA GPU; lspci shows AMD Radeon RX 9070 03:00.0 and Granite Ridge iGPU)",
+    "rocm_smi_gpu0": "VRAM total 17095983104 B used 10965823488 B; GPU% 4, VRAM% 8; PID 9738 python uses 9421869056 B",
+    "rocm_smi_gpu1": "VRAM total 536870912 B used 16814080 B (iGPU)",
+    "ports": "ss shows 127.0.0.1:8088 LISTEN; no 8012/8014/8017; no SGLang/vLLM process",
+    "metadata_get": "curl -s http://127.0.0.1:8088/health -> ok:true device cuda:0 dtype bfloat16 (metadata GET, not inference, 0 completion requests)",
+    "historical_O1_O4": "all marked HISTORICAL MEASUREMENT; none launchable today (containers absent); O1-O4 flags recorded verbatim from BEST-CONFIG.md",
+    "no_perturbation": "no start/stop/restart/reload/reconfigure; no inference request; nvidia-smi read-only"
+  },
+  "commands": [
+    "ps -eo pid,ppid,etime,cmd",
+    "ss -ltnp",
+    "nvidia-smi",
+    "rocm-smi; rocm-smi --showmeminfo vram; rocm-smi --showpids",
+    "lspci | grep -iE nvidia|vga|3d|display",
+    "docker inspect/top/exec 5a0ed0108a6c",
+    "curl -s http://127.0.0.1:8088/health",
+    "read /proc/9738/cmdline and cgroup"
+  ],
+  "blocker": null,
+  "next_unit_hint": "R3 ledger / R1 design can proceed; SGLang/vLLM O1-O4 remain UNAVAILABLE and must be priced separately if funded.",
+  "write_paths": [
+    "orchestration/notes/joint-plan/R2-serving.md",
+    "orchestration/handoffs/R2-SERVING.json"
+  ]
+}

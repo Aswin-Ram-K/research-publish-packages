@@ -1,0 +1,67 @@
+{
+  "unit": "STACK8014",
+  "status": "partial",
+  "preflight": {
+    "model": "qwen3.5-9b",
+    "max_model_len": 32768,
+    "max_prompt_tokens_est": 758,
+    "max_prompt_bytes": 3101,
+    "turn_of_max": 48,
+    "verdict": "fits",
+    "fixture_sha256": "44a1b4356536a0a55757ed2a4c90f5ef7f9d0541836007dc195a50ab3db2ec21"
+  },
+  "runs": [
+    {
+      "condition": "masking-no-fetch",
+      "masking": "on",
+      "rows": 48,
+      "truncated": 0,
+      "score": "0/12",
+      "rows_file": "experiments/ptr-engine/measure/rows-stack8014-masking-no-fetch-maskon-tx01-20261109.jsonl"
+    },
+    {
+      "condition": "masking-no-fetch",
+      "masking": "off",
+      "knob": "arm_cd.WINDOW_TURNS patched to 100 via PYTHONPATH sitecustomize",
+      "rows": 48,
+      "truncated": 0,
+      "score": "8/12",
+      "rows_file": "experiments/ptr-engine/measure/rows-stack8014-masking-no-fetch-maskoff-tx01-20261109.jsonl"
+    },
+    {
+      "condition": "bounded-context-fetch",
+      "masking": "on",
+      "tools": "read_file",
+      "rows": 1,
+      "truncated": 0,
+      "score": "0/12",
+      "rows_file": "experiments/ptr-engine/measure/rows-stack8014-bounded-context-fetch-tx01-20261109.jsonl",
+      "failure": "HTTP 400: auto tool choice requires --enable-auto-tool-choice and --tool-call-parser"
+    }
+  ],
+  "comparison": {
+    "masking_destroys_fact": "held on both stacks (8012 0/12, 8014 0/12)",
+    "masking_off_recovers": "8012 12/12 vs 8014 8/12; qwen3.5-9b compliance differs (codes as NUM, quoted sha256)",
+    "fetch_recovers": "8012 12/12; 8014 blocked (vLLM tool support missing)"
+  },
+  "accounting": {
+    "requests_total": 97,
+    "per_run": [48, 48, 1],
+    "task_id": "TX-01",
+    "fixture_sha256": "44a1b4356536a0a55757ed2a4c90f5ef7f9d0541836007dc195a50ab3db2ec21",
+    "disagreements": "none"
+  },
+  "evidence": [
+    "experiments/ptr-engine/measure/rows-stack8014-masking-no-fetch-maskon-tx01-20261109.jsonl",
+    "experiments/ptr-engine/measure/rows-stack8014-masking-no-fetch-maskoff-tx01-20261109.jsonl",
+    "experiments/ptr-engine/measure/rows-stack8014-bounded-context-fetch-tx01-20261109.jsonl"
+  ],
+  "blocker": "bounded-context-fetch cannot run on 8014: vLLM 0.27.1 rejects tool schemas with HTTP 400 (auto tool choice requires --enable-auto-tool-choice and --tool-call-parser). No service change made; fetch-recovery untested on this stack.",
+  "write_paths": [
+    "orchestration/units/STACK8014.md",
+    "orchestration/handoffs/STACK8014.json",
+    "experiments/ptr-engine/measure/rows-stack8014-masking-no-fetch-maskon-tx01-20261109.jsonl",
+    "experiments/ptr-engine/measure/rows-stack8014-masking-no-fetch-maskoff-tx01-20261109.jsonl",
+    "experiments/ptr-engine/measure/rows-stack8014-bounded-context-fetch-tx01-20261109.jsonl"
+  ]
+}

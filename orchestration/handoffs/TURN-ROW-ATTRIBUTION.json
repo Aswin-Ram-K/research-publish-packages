@@ -1,0 +1,73 @@
+{
+ "unit": "TURN-ROW-ATTRIBUTION",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_row_attribution.py",
+  "experiments/ptr-engine/tools/row_attribution_audit.py",
+  "experiments/ptr-engine/measure/ROW-ATTRIBUTION.json",
+  "docs/ROW-MODEL.md",
+  "orchestration/units/TURN-ROW-ATTRIBUTION.md",
+  "orchestration/journals/TURN-ROW-ATTRIBUTION.jsonl"
+ ],
+ "evidence": {
+  "defect_reverified": "run_longrun.py:974-982 built the tool-followup row from the resp sent at :964 and returned that SAME object; the caller consumed it at :2106 and built the kind=turn row from it at :2167 while hashing the initial prompt at :2152. Condition tools_enabled(cfg) and not is_answer_turn plus >=1 granted follow-up.",
+  "test_command": "python3 experiments/ptr-engine/longrun/tests/test_row_attribution.py --red-green",
+  "test_output": "ok k=0 / ok k=1 / ok k=2 / ok k=3; RED (attribution reverted in memory): 3 rows / 3 sends / 2 distinct measurements - the initial send has no row; 4 green case(s), 0 failure(s) -> EXIT=0",
+  "audit_command": "python3 experiments/ptr-engine/tools/row_attribution_audit.py --check",
+  "audit_output": "G7 turn=48 mirrors=17 genuine=31 followups=20 ATTRIBUTION_DISPUTED; G8 turn=48 mirrors=3 genuine=45 followups=24 ATTRIBUTION_DISPUTED; G9 turn=48 mirrors=13 genuine=35 followups=24 ATTRIBUTION_DISPUTED; G1-G6,G10 mirrors=0; rows files sha256 unchanged: yes; EXIT=0",
+  "rows_files_sha256_unchanged": true,
+  "rows_file_sha256": {
+   "rows-cell-pointer-stable-20261026T145758Z.jsonl": "5ac9dd992f5d8715696925f56c225024e172cb98b4b9a937a0ee63bd099e9800",
+   "rows-longrun-2026-10-26-fix.jsonl": "9d4ad90ce34cb781c04e9f73fba50ffb47d5b35d6d1491389d22a49044516405",
+   "rows-longrun-2026-10-26-policy.jsonl": "9b1097234bf8d2464a4d24ec48cf0cccc1ecd64bd853815fc6643b1ad3da3368",
+   "rows-longrun-2026-10-26.jsonl": "bc61d38192d4e4316021ec8d3d0e21dcb8e6153f463260a0138da21969d0b21e",
+   "rows-longrun-c-2026-10-26.jsonl": "aa7d6cfe9adedf9e408480f6b76022da840cad95f05dafc1ee0adb6faca9ae0c",
+   "rows-longrun-v3-2026-10-26.jsonl": "80d85fe0e977af164a5ffeca8b2f95350c6614d2112455c3ace93765530ff921",
+   "rows-longrun-v4-2026-10-26.jsonl": "999f298dac8b83569c4059946e7789b76ec485b24a5c9a39d6c1616f0501c28e",
+   "rows-longrun-v4-tools-2026-10-26.jsonl": "f11391aa2989949f904b8092074cb7b85b65dfe5b8c89431930fe921b28de77f",
+   "rows-longrun-v5-tools.jsonl": "586b66f27939bd05e09d8b48dad745a5fa268c3f31103695746df3e3f8443cb5",
+   "rows-longrun-v6-tools.jsonl": "1e78d75f259afbe0406643825941a65b4773b4342b847698005ad5908b3e531e"
+  },
+  "suite": "10 failed, 284 passed, 1 warning, 26 subtests passed in 11.09s",
+  "suite_failures": [
+   "FAILED experiments/ptr-engine/longrun/tests/test_cap_gate.py::CapGateTest::test_c_followup_counts_as_a_second_unit",
+   "FAILED experiments/ptr-engine/longrun/tests/test_guards.py::test_guards_all",
+   "FAILED experiments/ptr-engine/longrun/tests/test_projection_calibration.py::test_projection_calibration_all",
+   "FAILED experiments/ptr-engine/longrun/tests/test_regrade.py::test_a_grade_records_grader_sha256",
+   "FAILED experiments/ptr-engine/longrun/tests/test_regrade.py::test_b_check_in_sync_prints_identical_and_exits_0",
+   "FAILED experiments/ptr-engine/longrun/tests/test_regrade.py::test_c_check_one_mutated_field_exits_1_and_names_path",
+   "FAILED experiments/ptr-engine/longrun/tests/test_regrade.py::test_d_as_of_makes_two_runs_byte_identical",
+   "FAILED experiments/ptr-engine/longrun/tests/test_regrade.py::test_e_refused_overwrite_exits_4",
+   "FAILED experiments/ptr-engine/longrun/tests/test_regrade.py::test_f_red_green_recorded_grader_sha",
+   "FAILED experiments/ptr-engine/longrun/tests/test_regrade.py::test_h_unreadable_rows_exits_2"
+  ],
+  "neighbour_reds_not_mine": [
+   "experiments/ptr-engine/longrun/tests/test_tool_channel.py:201 assertion_f_followup_accounting: rounds==3 (per-turn cap) vs TOOL_FETCH_ROUNDS_PER_ARM; reproduces on the pristine HEAD run_longrun.py - PRE-EXISTING, not touched",
+   "experiments/ptr-engine/longrun/tests/test_tool_channel2.py:294 assertion_e_tools_off_identical: dry-run filtered stdout drifted by +61 bytes/prompt (baseline frozen before a prompt-building change); unrelated to row writing - PRE-EXISTING, not touched",
+   "experiments/ptr-engine/longrun/tests/test_regrade.py:57 (and b,d,e,h): 'grader sha256 mismatch' - the frozen grader sha no longer matches grade_v5.py changed this round; PRE-EXISTING/other-card",
+   "experiments/ptr-engine/longrun/tests/test_guards.py::test_guards_all and test_projection_calibration.py::test_projection_calibration_all - frozen-baseline drift, same era, not touched",
+   "experiments/ptr-engine/longrun/tests/test_decidability_seam.py and grade_v5.py:653 vs analyze_stats.py:457 - named in the card as out of scope"
+  ],
+  "tests_my_change_invalidates_literally": [
+   "experiments/ptr-engine/longrun/tests/test_cap_gate.py:205 asserts 'tool-followup' in [r['kind'] for r in rows] for a one-follow-up turn; under one-row-per-send that turn is ['turn-initial','turn']. Its INTENT (2 requests = 2 rows, both billed: calls==2, len(rows)==2) still passes on the line above. The file is NOT in this unit's write paths, so it was reported, not edited."
+  ],
+  "red_green": "red is produced IN MEMORY: run_longrun.attribute_initial_send = lambda: False restores the pre-fix writer; the test then asserts 3 rows / 3 sends / 2 distinct measurements and no turn-initial row. No file on disk is edited for the red."
+ },
+ "blocker": "",
+ "next_unit_hint": "A future analysis/latency unit must read kind=turn-initial for the turn's own request and count requests by distinct request_sha256; G7/G8/G9 p50+p95 are marked attribution_disputed in measure/ROW-ATTRIBUTION.json and docs/ROW-MODEL.md section 4.1 - recomputing or withdrawing them is the latency-report owner's call. An owner of tests/test_cap_gate.py:205 must update its literal kind expectation to the one-row-per-send contract.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_row_attribution.py",
+  "experiments/ptr-engine/tools/row_attribution_audit.py",
+  "experiments/ptr-engine/measure/ROW-ATTRIBUTION.json",
+  "docs/ROW-MODEL.md",
+  "orchestration/units/TURN-ROW-ATTRIBUTION.md",
+  "orchestration/handoffs/TURN-ROW-ATTRIBUTION.json",
+  "orchestration/journals/TURN-ROW-ATTRIBUTION.jsonl"
+ ],
+ "assumptions": [
+  "No human answerer (automated tag): the k=0,1,2,3 sweep and the 'both p50 and p95 disputed' reading were chosen as the most conservative defensible defaults.",
+  "Offline: zero inference requests; every send in the test is a canned function and socket.socket raises for the whole run."
+ ]
+}

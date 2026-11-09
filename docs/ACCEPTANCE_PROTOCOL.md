@@ -688,11 +688,11 @@ curl -sS -m 5 -o /dev/null -w '%{http_code}\n' http://192.168.2.168:8012/v1/mode
 ### G2 — the semantic pass over the smallest corpus that exercises the docs path
 
 ```bash
-stdbuf -oL -eL /home/zer0null/reserach\ extarctor/.venv/bin/graphify extract \
-  '/home/zer0null/reserach extarctor/state/staging/duval' \
+stdbuf -oL -eL /home/zer0null/research\ extractor/.venv/bin/graphify extract \
+  '/home/zer0null/research extractor/state/staging/duval' \
   --backend openai --model occamy-1.0 \
   --max-concurrency 1 --token-budget 1500 --api-timeout 300 \
-  --out '/home/zer0null/reserach extarctor/state/kg/semantic/duval'
+  --out '/home/zer0null/research extractor/state/kg/semantic/duval'
 ```
 
 - This is U1.5's **exact persisted argv** (`handoffs/U1.5.json` `live.semantic.command`).

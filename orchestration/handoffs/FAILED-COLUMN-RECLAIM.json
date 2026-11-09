@@ -1,0 +1,60 @@
+{
+ "unit": "FAILED-COLUMN-RECLAIM",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/FAILED-COLUMN-RECLAIM.json",
+  "docs/FAILED-COLUMN.md",
+  "experiments/ptr-engine/tools/failed_column.py",
+  "experiments/ptr-engine/longrun/tests/test_failed_column.py",
+  "orchestration/units/FAILED-COLUMN-RECLAIM.md"
+ ],
+ "evidence": {
+  "counts": {
+   "finished_once_and_still_green": 9,
+   "finished_once_but_red_today": 1,
+   "not_runnable": 29,
+   "no_artifacts": 60,
+   "superseded": 5,
+   "total": 104,
+   "in_scope": 99
+  },
+  "green_cards": [
+   "R2-OPT-SIM",
+   "SIM-PROMOTE",
+   "R2-VLLM",
+   "C63-CELL",
+   "RUN-INSTRUMENT-FIX",
+   "Q0-ANSWER-DEGENERACY",
+   "ACCOUNT-INVENTORY",
+   "PROFILE-PACK",
+   "R2.1-TIGHTEN"
+  ],
+  "red_card": "PROBE-CP3-V6 exit 1: AssertionError tools-off output drifted",
+  "arithmetic": "104 = 96 never_had_a_row + 5 superseded + 2 verified_fail(exit 0) + 1 refusal(124); in scope 99 (the card's 94 subtracted the 5 superseded twice)",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/failed_column.py --check -> RECLAIM OK 104 cards: {\"finished_once_and_still_green\": 9, \"finished_once_but_red_today\": 1, \"no_artifacts\": 60, \"not_runnable\": 29, \"superseded\": 5}; in scope 99 (exit 0)",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_failed_column.py -q -> 5 passed",
+   "red->green: fabricated green card with command /bin/false -> check exit 1 naming FAB; with the green re-run monkeypatched away -> check exit 0 (the re-run is the guard)"
+  ],
+  "row_count": 104
+ },
+ "assumptions": [
+  "A handoff's declared artefacts are `artifacts` + `write_paths` minus handoff/journal bookkeeping; `write_paths` is included because several units declare deliverables only there.",
+  "Command selection is stated in docs/FAILED-COLUMN.md: normalise, drop network/container, mutating, measurement-writing, inspection-only and placeholder commands, then rank pytest/test_ > --check/verify/audit > other. The chosen string is stored verbatim per row.",
+  "No board mutation: no task_board_manage, no orchestration_verdict for another card; record_a_row is a recommendation only.",
+  "exit 124 is recorded as not_runnable (STRAND-MERGE-2) and recommended for EXIT_TABLE as a refusing code; exit_codes.py was not edited."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Record the nine green rows from their stored commands (free), then bound the STRAND-MERGE-2 suite so its exit is a verdict; add 124 to EXIT_TABLE as REFUSING. 24 not_runnable cards need a handoff acceptance command, not a re-run.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/FAILED-COLUMN-RECLAIM.json",
+  "docs/FAILED-COLUMN.md",
+  "experiments/ptr-engine/tools/failed_column.py",
+  "experiments/ptr-engine/longrun/tests/test_failed_column.py",
+  "orchestration/units/FAILED-COLUMN-RECLAIM.md",
+  "orchestration/handoffs/FAILED-COLUMN-RECLAIM.json",
+  "orchestration/journals/FAILED-COLUMN-RECLAIM.jsonl"
+ ],
+ "tool_calls": 31,
+ "bound": 34
+}

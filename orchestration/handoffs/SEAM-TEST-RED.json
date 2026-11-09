@@ -1,0 +1,45 @@
+{
+  "unit": "SEAM-TEST-RED",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/grade_v5.py",
+    "experiments/ptr-engine/longrun/analyze_stats.py",
+    "experiments/ptr-engine/longrun/tests/test_decidability_seam.py",
+    "orchestration/units/SEAM-TEST-RED.md",
+    "orchestration/journals/SEAM-TEST-RED.jsonl"
+  ],
+  "evidence": {
+    "settled_decision": "DECIDABILITY-SEAM (handoff + docs/DECIDABILITY-SEAM.md:23) made grade_v5 the authoritative numerator/denominator and the analyser the wrong side; it is SILENT on which function owns the number. Adopted ownership: grade_v5.decidable_population(cells) is the only owner; every consumer calls it.",
+    "definition": "decidable = pass + fail over the grader's checkpoint cells; fail INCLUDES reason==turn_missing (contract: tests/test_grade_v5_repair.py:160-166, measure/ATTACK-GRADE-V5-2.json T3); text and undecidable are outside; a cell with no verdict at all (pass: null) is undecidable.",
+    "drift_found": "analyze_stats.accuracy_from_grade kept a private copy of the rule that EXCLUDED turn_missing from failed, so on any arm with unanswered checkpoints its denominator was smaller than the grade document's for the same cells (matrix arm: grader decidable=19 vs analyser pass+fail-missing=8).",
+    "suite_before": "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_*.py' -> Ran 125 tests, FAILED (failures=2): test_decidability_seam.test_c_cell_exits_9_on_the_contradiction_and_0_with_override, test_decidability_seam.test_d_consistent_cell_exits_0",
+    "suite_after": "Ran 126 tests, FAILED (failures=1): test_cap_gate.CapGateTest.test_c_followup_counts_as_a_second_unit (tests/test_cap_gate.py:205, 'tool-followup' not in ['turn-initial','turn']) -- EXTERNAL: test_cap_gate imports neither analyze_stats nor grade_v5 and cell.py mtime moved 11:33:19->11:33:43 during this unit (run_longrun.py 11:32:30), i.e. a concurrent card is writing the cap-gate path.",
+    "seam_test": "python3 experiments/ptr-engine/longrun/tests/test_decidability_seam.py -> Ran 5 tests, OK",
+    "red_green": "RED (analyser private copy restored): test_b AssertionError \"'accuracy = 1/3 (pass 1, fail 2, undecidable 2, missing 1)' not found\" -- got 'accuracy = 1/2 (pass 1, fail 1, undecidable 2, missing 1)'; test_e AssertionError 2 != 3 -> FAILED (failures=2). GREEN (shared helper restored): 5/5 OK.",
+    "grader_output_unchanged": "grade_v5's emitted numbers are identical before/after (the helper reproduces pass + len(fail) exactly); only a new arm key decidable_source was added. tests/test_grade_v5.py and tests/test_grade_v5_repair.py stay green.",
+    "blast_radius_measured": "0 hits for a 'decidable' field in experiments/ptr-engine/measure/LATENCY-REPORT.json, experiments/ptr-engine/measure/MATRIX-*.json, experiments/ptr-engine/measure/TVS.json, docs/OPERATOR-BRIEF.md -- those four named files carry no such figure. The analyser-derived block is embedded in measure/cell-*.analysis.json, measure/cell-*.json (populations) and measure/cell-*.md transcripts; there the denominator grows by the number of turn_missing cells. No published file was edited.",
+    "commands": [
+      "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_*.py'",
+      "python3 experiments/ptr-engine/longrun/tests/test_decidability_seam.py",
+      "python3 experiments/ptr-engine/longrun/cell.py --arm pointer-stable --fixture experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json --offline experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl --out-dir /tmp/seamprobe --no-cell-handoff"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "FOLLOW-UP (not done here): recompute the analyser-derived accuracy blocks of the existing cell records (measure/cell-*.analysis.json, measure/cell-*.json populations, measure/cell-*.md transcripts) under the shared rule -- any arm with turn_missing>0 now has a larger decidable denominator, so its accuracy falls; publish the delta rather than editing historical records. SECOND: the concurrent cap-gate writer (cell.py mtime 11:33:43, run_longrun.py 11:32:30) leaves tests/test_cap_gate.py:205 red ('tool-followup' not among the row kinds produced) -- that belongs to WIRE-CAP-GATE/its successor, not to this unit. THIRD: docs/DECIDABILITY-SEAM.md still states decidable=3 and 'accuracy = 1/3'; T3 superseded those numbers (real v6 run now reports 1/1 over 3 cells: 1 pass, 2 undecidable) -- the doc needs a superseded-by line.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/grade_v5.py",
+    "experiments/ptr-engine/longrun/analyze_stats.py",
+    "experiments/ptr-engine/longrun/tests/test_decidability_seam.py",
+    "orchestration/units/SEAM-TEST-RED.md",
+    "orchestration/handoffs/SEAM-TEST-RED.json",
+    "orchestration/journals/SEAM-TEST-RED.jsonl"
+  ],
+  "assumptions": [
+    "The card's path experiments/ptr-engine/tools/analyze_stats.py does not exist; the analyser is experiments/ptr-engine/longrun/analyze_stats.py and that is the file edited.",
+    "Repair T3's rule (non-answers undecidable, turn_missing a decidable fail) was NOT re-litigated: it is contracted by tests/test_grade_v5_repair.py and recorded in measure/ATTACK-GRADE-V5-2.json, so the analyser was corrected to it rather than the grader to the analyser.",
+    "cell.py is NOT in this unit's write paths, so the consistency gate keeps comparing grader 'decidable' with analyser 'graded_n' and refuses only when one is zero (cell.py:1156-1179). The two quantities are now explicitly different by name (decidable vs cells graded); unifying the gate's comparison pair needs a write path this unit does not own.",
+    "Ownership check: orchestration/handoffs/WIRE-PROVENANCE-INTO-STATS.json status=done at read time, so analyze_stats.py was not owned by a live unit when this session started."
+  ],
+  "tool_calls": 34,
+  "requests": 0
+}

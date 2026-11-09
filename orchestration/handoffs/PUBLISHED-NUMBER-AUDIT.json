@@ -1,0 +1,55 @@
+{
+  "unit": "PUBLISHED-NUMBER-AUDIT",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/PUBLISHED-NUMBERS.json",
+    "docs/PUBLISHED-NUMBERS.md",
+    "orchestration/units/PUBLISHED-NUMBER-AUDIT.md",
+    "orchestration/handoffs/PUBLISHED-NUMBER-AUDIT.json",
+    "orchestration/journals/PUBLISHED-NUMBER-AUDIT.jsonl"
+  ],
+  "evidence": {
+    "documents_scanned": 112,
+    "claims_registered": 37,
+    "wrong_denominator": 6,
+    "undetermined": 1,
+    "checked": 30,
+    "documents_publishing_wrong_denominator": 5,
+    "wilson95_on_wrong_numbers_published_lines": 4,
+    "wilson95_on_wrong_numbers_distinct_intervals": 2,
+    "runs_affected": 3,
+    "inference_requests": 0,
+    "historical_files_edited": 0,
+    "commands": [
+      "grep -rn -E 'wilson|accuracy|n=[0-9]+' experiments/ptr-engine/measure docs papers/context-cache",
+      "grep -rn -E 'accuracy\\s+[0-9]+/[0-9]+' --include=*.md docs experiments papers orchestration",
+      "grep -rn 'wilson95' --include=*.md .",
+      "grep -n '\"accuracy\"' experiments/ptr-engine/measure/cell-*.json",
+      "python3 -c json.load grade-v5 arms[arm].checkpoint_accuracy for the three cell runs",
+      "python3 -c json.load(experiments/ptr-engine/measure/PUBLISHED-NUMBERS.json) -> 37 entries, 6/30/1 by status, 5 offending files"
+    ],
+    "defensible_numbers_cited": [
+      "cell-transcript-grow-20261026T144452Z.grade-v5.json -> arms['transcript-grow'].checkpoint_accuracy = '3/3' (decidable 3, passed 3)",
+      "cell-transcript-grow-20261026T144540Z.grade-v5.json -> arms['transcript-grow'].checkpoint_accuracy = '3/3' (decidable 3, passed 3)",
+      "cell-pointer-stable-20261026T145722Z.grade-v5.json -> arms['pointer-stable'].checkpoint_accuracy = '1/3' (decidable 3, failing cp.1.t24, cp.2.t46 answer_not_contract)"
+    ]
+  },
+  "summary_line": "112 documents scanned; 37 claims registered; 6 wrong_denominator + 1 undetermined; 4 published lines carry a wilson95 interval on a wrong number (2 distinct); worst = measure/cell-transcript-grow-20261026T144452Z.md:36 ('accuracy 55/64 wilson95 n=64 0.8594 [0.7538, 0.9242]') whose run grades 3/3.",
+  "blocker": "",
+  "assumptions": [
+    "A claim whose n is absent from the line but recoverable from a cited source (e.g. COMPILATION.md:50 -> CLAIMS.md:94) is registered `checked`, not `undetermined`; only HOST-SCOUT-1.md:41 had no recoverable denominator and is the single `undetermined` row.",
+    "Papers whose rows ARE the graded population (MCQ 190-case accuracy, 71/73 locator audit, per-K encoder accuracies) are registered `checked` and kept out of the wrong-denominator count, because the row population is the population of interest for those instruments.",
+    "docs/DECIDABILITY-SEAM.md:105 is `checked` rather than an offender: it reprints 55/64 inside an audit that names it the row population and withholds it at :110-114.",
+    "The JSON twins (cell-transcript-grow-2026...json:36) are counted as separate offending documents because a machine consumer cannot see the denominator kind; their embedded output string at :48 repeats the same interval and is noted, not counted twice."
+  ],
+  "next_unit_hint": "History was not edited by rule. Two follow-ups need a card: (1) policy call on adding additive sibling fields (`accuracy_checkpoint`, `accuracy_denominator`) to the two transcript-grow cell JSONs, which currently expose a bare \"accuracy\": \"55/64\" to any script; (2) implement the recommended guard - emit `denominator=<kind> n=<int>` from experiments/ptr-engine/longrun/analyze_stats.py (accuracy_from_grade, :431-463; graded_n :457) and add tests/test_published_numbers.py to fail any published accuracy line lacking both, treating denominator=row/turn as an error. Note docs/DECIDABILITY-SEAM.md:57-60 also still describes the pointer-stable run as UNDECIDABLE, which this register supersedes with 1/3 from that run's grade JSON - a correction note, not a rewrite.",
+  "write_paths": [
+    "docs/PUBLISHED-NUMBERS.md",
+    "experiments/ptr-engine/measure/PUBLISHED-NUMBERS.json",
+    "orchestration/units/PUBLISHED-NUMBER-AUDIT.md",
+    "orchestration/handoffs/PUBLISHED-NUMBER-AUDIT.json",
+    "orchestration/journals/PUBLISHED-NUMBER-AUDIT.jsonl"
+  ],
+  "tool_calls": 13,
+  "bound": 26
+}

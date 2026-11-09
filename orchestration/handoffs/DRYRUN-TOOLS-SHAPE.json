@@ -1,0 +1,57 @@
+{
+ "artifacts": [
+  "docs/DRYRUN-TOOLS-SHAPE.md",
+  "experiments/ptr-engine/measure/DRYRUN-TOOLS-SHAPE.json",
+  "orchestration/units/DRYRUN-TOOLS-SHAPE.md",
+  "orchestration/journals/DRYRUN-TOOLS-SHAPE.jsonl"
+ ],
+ "assumptions": [
+  {
+   "key": "bound",
+   "value": "27 of 26",
+   "why": "two tool calls failed outright (a write-tool path invisible to the shell, a patch call after /tmp was re-provisioned) and the rehearsal script had to be re-emitted inline; no extra measurement was taken beyond the ten cells, the shim launch, the gate probes, the canary and the audit"
+  },
+  {
+   "key": "sha for the verdict row",
+   "value": "git HEAD f17663d1",
+   "why": "the card names no head sha; HEAD is the only tree identity available to a unit that may not commit"
+  }
+ ],
+ "blocker": "harness_sha256 does not match the recorded c4541802: run_longrun.py (mtime 18:45:18Z) and cell.py (18:46:09Z) changed on disk during this unit's window. This unit made no edits to either file; the pin must be re-recorded by a unit allowed to touch run_longrun.py, and the grid re-priced/re-labelled before any live cell.",
+ "bound": 26,
+ "evidence": {
+  "command_or_count": "10/10 cells rc=0, 0 of 3 gates would refuse, G1 1,173/4,320 (spent 1,101 + would_spend 72), G2 2,880 s of 2,880 s, G3 n=48>=1 for H2 and refused for H1@48, design_cap_tokens=10616 on all four arms, runner argv ends --tools read_file, runner prints tool_channel=read_file fetch_rounds_cap=24, 0 network events, canary --help rc=0 and dry classify n=2 -> shape_unknown; harness_sha256 b45177379e99a05da385a956d90c12cd392322a3ec1471f3a2ce80120d5fe452 != recorded c4541802",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/run_a_star.py --cell N --tools read_file --dry-run --budget 67 --hypothesis H2 --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json  (N=1..10) -> rc=0, 'RUN-A DRY END cells=1 refused=0 requests=0'",
+   "python3 <shim> --dry-run --fixture .../LR-01.v8.json --arms pointer-stable --reps 1 --rows /tmp/rows-probe.jsonl --turn-wall-cap 180.0 --runaway-turns 2 --thinking off --base-url http://192.168.2.168:8012/v1 --claim-mode H2 -> 'tool_channel=read_file fetch_rounds_cap=24 (per arm)' ; observed argv ends ['--tools','read_file']",
+   "python3 -c 'sitecustomize audit hook over the ten driver runs + shim launch' -> 0 network events",
+   "python3 experiments/ptr-engine/tools/tranche_canary.py --help -> rc=0 ; classify(stopped cell rows, n=2) -> shape_unknown/no_parseable_answer/exit_code 2 ; rows sha256 before == after",
+   "sha256 of HARNESS_FILES + fixture -> combined b45177379e99a05da385a956d90c12cd392322a3ec1471f3a2ce80120d5fe452 ; pins_before of TRANCH1-DRYRUN-2 moved: run_longrun.py 29445320->0d581d1f, cell.py e24e867b->c29a9fb3"
+  ],
+  "network_events": 0,
+  "requests_sent": 0,
+  "requests_spent": 0
+ },
+ "first_broken": "harness_matches_c4541802",
+ "next_unit_hint": "Do not launch. 1) A unit with write access to the harness must establish whether the 18:45Z run_longrun.py change is intended (git diff 1295+/224- vs HEAD f17663d1, uncommitted; cell.py is UNTRACKED), then re-record the pin and re-freeze harness_sha256 in GRID-SHAPE.json (c4541802 -> b4517737...). 2) Re-run this same rehearsal against the settled tree; everything except the pin already passes, so it costs ten dry runs. 3) Correct the premise in GRID-SHAPE.json item 2a: --fetch-followup-allowance is a cell.py G1 flag, never a runner flag; the runner's 24 comes from TOOL_FETCH_ROUNDS_PER_ARM. 4) cell.py --dry-run never launches the runner (cell.py:2009), so any future 'dry-run proves the shim' claim must launch the shim itself.",
+ "not_reproduced": [],
+ "overstated": [],
+ "premise_corrections": [
+  "--fetch-followup-allowance is a cell.py flag only (G1 accounting); run_longrun.py has no such argument, so it must NOT appear in the runner argv. The runner's structural pool is TOOL_FETCH_ROUNDS_PER_ARM=24, hardcoded (run_longrun.py:2228), which is exactly what cell.py prices.",
+  "cell.py --dry-run returns at cell.py:2009 BEFORE stage_run, so a dry run never launches the runner and can never exercise the CELL_RUNNER_PATH shim. The shim had to be executed directly against run_longrun.py --dry-run to observe its argv."
+ ],
+ "status": "done",
+ "tool_calls": 27,
+ "unit": "DRYRUN-TOOLS-SHAPE",
+ "unverified": [
+  "the cause of the 18:45Z run_longrun.py / cell.py change: not investigated beyond mtimes, git status and diffstat; this unit did not write either file"
+ ],
+ "verdict": "no_go",
+ "write_paths": [
+  "experiments/ptr-engine/measure/DRYRUN-TOOLS-SHAPE.json",
+  "docs/DRYRUN-TOOLS-SHAPE.md",
+  "orchestration/units/DRYRUN-TOOLS-SHAPE.md",
+  "orchestration/handoffs/DRYRUN-TOOLS-SHAPE.json",
+  "orchestration/journals/DRYRUN-TOOLS-SHAPE.jsonl"
+ ]
+}

@@ -10,7 +10,8 @@ Exit 0 = every assertion below held.  The five required assertions:
   (c) an identical duplicate call in one turn executes once and bills once
       (`calls_billed == 1`), the second result carrying cached="true"
   (d) `--resume` with existing follow-up rows does NOT reset the round counter
-      (24 spent -> the next call is refused `fetch_budget_exhausted`)
+      (48 spent -> the next call is refused `fetch_budget_exhausted`)
+      [RUNNER-ROUNDS-48: pool raised 24 -> 48; this test encoded the old provisioning]
   (e) `--tools` off is byte-identical to the pre-fix runner (stdout sha unchanged)
 
 Zero requests, no network: socket.socket raises for the whole run, send_chat is a
@@ -50,7 +51,7 @@ DUPLICATED_TURN = OBSERVED_TURN + "\n" + OBSERVED_TURN
 # already pins is served for zero rounds, so the round-budget refusal must be proven with a
 # range the prompt does NOT carry.  L1-30 of resolve.py lies outside the pinned body (the
 # pointer arm pins L36-110), so (d) still proves exactly what it proved in V5: a resumed
-# cell whose round counter reads 24/24 buys no further fetch and sends no follow-up.
+# cell whose round counter reads 48/48 buys no further fetch and sends no follow-up.
 UNPINNED_TURN = ('<tool_call>read_file {"path": "ptr_engine/resolve.py", '
                  '"start_line": 1, "end_line": 30}')
 
@@ -230,15 +231,18 @@ def assertion_d_resume_counter():
     doc = R.build_manifest(cfg, fixture, arm, rep, run_id, rows_path)
     data, msha = R.write_manifest(manifest_path, doc)
     frozen = json.loads(open(manifest_path, encoding="utf-8").read())["tools"]["fetch_rounds_used"]
-    # 24 follow-up rows already spent in this cell, all on the turn already recorded
+    # RUNNER-ROUNDS-48: 48 follow-up rows already spent (was 24 before the pool was
+    # raised to one round per turn across a 48-turn cell -- card RUNNER-ROUNDS-48).
     rows = [{"run_id": run_id, "task_id": fixture["task_id"], "arm": arm, "rep": rep,
              "turn": 1, "kind": "tool-followup", "fetch_followup": True, "content": "x",
              "run_manifest_sha256": msha} for _ in range(R.TOOL_FETCH_ROUNDS_PER_ARM)]
     with open(rows_path, "w", encoding="utf-8") as fh:
         fh.write("\n".join(json.dumps(r) for r in rows) + "\n")
     derived = R.fetch_rounds_spent(rows)
-    assert derived == R.TOOL_FETCH_ROUNDS_PER_ARM == 24, derived
-    assert max(frozen, derived) == 24, (frozen, derived)
+    # RUNNER-ROUNDS-48: new provisioning value (was 24).  A failing 24 here encoded the
+    # old pool size, not a behaviour change.
+    assert derived == R.TOOL_FETCH_ROUNDS_PER_ARM == 48, derived
+    assert max(frozen, derived) == 48, (frozen, derived)  # RUNNER-ROUNDS-48: was 24
     sent_box = {"n": 0}
 
     def fake_send_chat(cfg, messages):
@@ -256,18 +260,18 @@ def assertion_d_resume_counter():
         sys.stdout = old_stdout
     out = buf.getvalue()
     assert rc == 0, (rc, out[-400:])
-    assert "fetch rounds already spent=24/24" in out, out[-600:]
-    assert "derived_from_rows=24" in out, out[-600:]
+    assert "fetch rounds already spent=48/48" in out, out[-600:]  # RUNNER-ROUNDS-48
+    assert "derived_from_rows=48" in out, out[-600:]  # RUNNER-ROUNDS-48
     assert sent_box["n"] == 1, sent_box  # only the T2 turn request; the fetch bought nothing
     written = [json.loads(line) for line in open(rows_path, encoding="utf-8")]
     t2 = [r for r in written if r.get("turn") == 2 and r.get("kind") == "turn"]
     assert len(t2) == 1, [r.get("kind") for r in written]
-    assert t2[0]["fetch_rounds_used"] == 24, t2[0]["fetch_rounds_used"]
+    assert t2[0]["fetch_rounds_used"] == 48, t2[0]["fetch_rounds_used"]  # RUNNER-ROUNDS-48
     errs = [c.get("error") for c in t2[0]["tool_calls"]]
     assert errs == ["fetch_budget_exhausted"], errs
     assert not any(r.get("fetch_followup") for r in written if r.get("turn") == 2)
     print(f"  (d) resume counter: manifest_counter={frozen} derived_from_rows={derived} "
-          f"-> used={max(frozen, derived)}/24; T2 tool_calls error={errs[0]} "
+          f"-> used={max(frozen, derived)}/48; T2 tool_calls error={errs[0]} "
           f"followup_requests_after_resume=0 requests_sent={sent_box['n']} "
           f"row_fetch_rounds_used={t2[0]['fetch_rounds_used']}")
     return derived

@@ -1,0 +1,56 @@
+{
+ "unit": "BUDGET-STAGE-MAX-TURNS",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_budget_turn_scope.py",
+  "orchestration/units/BUDGET-STAGE-MAX-TURNS.md",
+  "orchestration/handoffs/BUDGET-STAGE-MAX-TURNS.json",
+  "orchestration/journals/BUDGET-STAGE-MAX-TURNS.jsonl"
+ ],
+ "evidence": {
+  "harness_sha256_after": "a3fa2ee0e771a010cc8c2ca28d2e253a005fc69cb1f2d425ae91a9155a5e970a",
+  "harness_sha256_before": "a3fa2ee0e771a010cc8c2ca28d2e253a005fc69cb1f2d425ae91a9155a5e970a",
+  "harness_digest_note": "UNCHANGED, against the card's expectation: cell.py is not in its own HARNESS_FILES list (cell.py:130-136 = run_longrun.py, client.py, grade_v5.py, analyze_stats.py, tools/det_verify.py + fixture; measure/HARNESS-PIN.json's own digest_recipe says 'cell.py is NOT in its own list'). The pin in measure/HARNESS-PIN.json is gen-4 fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac and IS stale, but by another card's edit to grade_v5.py (current 3d70ed1d43d2ab09, pinned 056eb605e2baf5c9); the other five inputs are byte-identical to the pin. The pin was NOT edited; it was already stale on entry and needs regeneration by its owner before the next launch.",
+  "runner_dry_run_without_max_turns": "would_send_total=48 (turn_requests=48 (N=48 x reps=1))",
+  "runner_dry_run_with_max_turns_12": "would_send_total=48 -- MEASURED: the runner's dry run IGNORES --max-turns; run_dry loops range(1, int(fixture[\"N\"]) + 1) at run_longrun.py:2079 and the REQUEST COUNTS block prints int(fixture[\"N\"]) at run_longrun.py:2121-2127. cfg.max_turns is read only at :458 (projected_requests) and :2236 (run_cell).",
+  "proof_a_turns12_price": "cell: 3/7 budget REFUSED(3) would_send_total=12 +10% headroom = 14 exceeds --budget 1 ... ; and with --budget 60 --max-wall 900: cell: 3b/7 projection ok turns=12 projected_requests=12 projected_wall~=720s (cap-per-turn 180s -> worst case 2160s) cap=900s ...",
+  "proof_b_turns48_argv_identical": "diff of the budget argv before/after --turns 48: DIFF EMPTY; --max-turns occurrences after=0 before=0; would_send_total=48 both runs",
+  "proof_c_turns24_price": "cell: 3/7 budget REFUSED(3) would_send_total=24 +10% headroom = 27 exceeds --budget 1 ...",
+  "proof_d_canary_dry_run": "LITERAL command BLOCKED: run_a_star.py --canary --dry-run --tools read_file -> 4x 'DRY cell N <arm> r1 rc=2 no gate line', 'DRY END cells=4 refused=4 requests=0 ...', because 'cell: 2/7 harness REFUSED(2) harness changed mid-cell: --expect-harness fa6fd8cc...970a' (stale pin). Same four cells with only --expect-harness dropped: 'cell: 0/7 dry-run G2 allow computed=720 s limit=900 s (--max-wall)', 'cell: EXIT 0 - dry run: 0 of 3 gate(s) would refuse', would cost 12 requests / ~720 s; refused=0 for all four arms (pointer-stable, transcript-grow, transcript-compact, lease-reopen). No --dry-run-less call, no endpoint contact.",
+  "proof_e_red_green": "BEFORE (two hunks removed in a /tmp copy of the tree): 'cell: 3/7 budget ok would_send_total=48 +10%=53 <= budget=60', 'cell: 3b/7 projection turns=12 projected_requests=48 projected_wall~=2880s ... cap=900s', 'cell: 3b/7 projection REFUSED(8) G2 projection REFUSED: computed 2880 s | limit 900 s (--max-wall)', 'cell: EXIT 8 - refused at stage 3b/7 projection'. AFTER (identical command): would_send_total=12, '3b/7 projection ok ... projected_wall~=720s ... cap=900s', budget argv ends '--max-turns 12' and run argv ends '--max-turns 12 --claim-mode smoke'.",
+  "guard_green": "python3 experiments/ptr-engine/longrun/tests/test_budget_turn_scope.py -> 'Ran 3 tests in 0.782s' / 'OK'",
+  "guard_red": "mutant /tmp copy with the stage_budget forward removed, CELL_UNDER_TEST=<mutant cell.py>: 'AssertionError: None != \\'12\\' : the budget stage and the run stage disagree about turn scoping at --turns 12: dry=None live=\\'12\\'' (also at --turns 24) -> 'FAILED (failures=3)'",
+  "regression_subset": "66 passed, 30 subtests passed (test_cell, test_cell_gates, test_gate_operand_validation, test_gate_override, test_gate_messages, test_exit_codes, test_budget_turn_scope)",
+  "regression_full_suite": "full longrun suite: 602 passed, 14 failed, 30 subtests passed -- all 14 are corpus/artefact guards unrelated to cell.py (test_regrade_stamp fails on the same grade_v5.py digest move that staled the pin; test_journal_lint on other units' missing journals; test_handoff_lint on W_NO_COMMANDS vs W_NO_COMMAND; test_withdrawn_screen, test_verbosity, test_stop_reason, test_guards, test_projection_calibration, test_verdict_ritual)",
+  "commands": [
+   "cd experiments/ptr-engine/longrun && python3 run_longrun.py --dry-run --fixture tasks-v6/LR-01.v8.json --arms pointer-stable --reps 1",
+   "cd experiments/ptr-engine/longrun && python3 run_longrun.py --dry-run --fixture tasks-v6/LR-01.v8.json --arms pointer-stable --reps 1 --max-turns 12",
+   "python3 experiments/ptr-engine/longrun/cell.py --arm pointer-stable --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 12 --reps 1 --budget 1 --hypothesis smoke --out-dir /tmp/bst-out",
+   "python3 experiments/ptr-engine/longrun/cell.py --arm pointer-stable --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 12 --reps 1 --budget 60 --max-wall 900 --hypothesis smoke --out-dir /tmp/o1 --no-cell-handoff   (with CELL_RUNNER_PATH=/tmp/stub.py, an argv-recording stub)",
+   "python3 experiments/ptr-engine/longrun/tests/test_budget_turn_scope.py",
+   "CELL_UNDER_TEST=/tmp/mutroot/experiments/ptr-engine/longrun/cell.py python3 experiments/ptr-engine/longrun/tests/test_budget_turn_scope.py",
+   "python3 experiments/ptr-engine/tools/run_a_star.py --canary --dry-run --tools read_file",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests -q"
+  ]
+ },
+ "premise_corrections": [
+  "Forwarding --max-turns alone CANNOT fix the budget price: the runner's dry run never reads cfg.max_turns (run_longrun.py:2079, :2121-2127). Forwarding was implemented for argv parity, but the ticket needed one scoping line inside stage_budget as well -- still stage_budget only, no runner change.",
+  "Editing cell.py does NOT change the harness digest (cell.py is not in HARNESS_FILES). harness_sha256_before == harness_sha256_after == a3fa2ee0...; the pin is stale from a grade_v5.py move by another card, not 'by design' of this unit."
+ ],
+ "assumptions": [
+  "The scoping line reads the runner's own per-arm 'N=' line so that a future runner that honours --max-turns turns the subtraction into a no-op (priced_n == n_turns) rather than a double discount.",
+  "Digest requests and tool follow-up allowances are deliberately NOT scaled down: over-pricing is safe, under-pricing a commit is not. Only turns that provably will not run are removed.",
+  "The G2 end-to-end allow/refuse evidence uses an argv-recording stub runner (as tests/test_cell_gates.py does) so no live runner could ever be reached; the price proofs use the real runner with --budget 1, which aborts at stage 3/7 before any request.",
+  "The dry-run manifests under experiments/ptr-engine/longrun/manifests/dryrun-*.json are rewritten by any `--dry-run` invocation (created_utc + frozen fields). They were already modified in the working tree on entry (their diffs carry earlier cards' design_cap_tokens/dry_run changes); this unit did not hand-edit them."
+ ],
+ "blocker": "Proof (d) as literally specified (run_a_star.py --canary --dry-run) refuses 4/4 at cell.py stage 2/7 because measure/HARNESS-PIN.json gen-4 (fa6fd8cc...) is stale: grade_v5.py is 3d70ed1d... but the pin records 056eb605... -- a move owned by another card, after this unit's files. The pin must be regenerated by its owner; this unit is forbidden to edit it, so the literal launcher command cannot go green here. The same four canary cells, with only --expect-harness omitted, are refused=0 at 12 turns / 720 s of 900 s.",
+ "next_unit_hint": "Regenerate measure/HARNESS-PIN.json over the current HARNESS_FILES (grade_v5.py has moved since gen 4), then re-run 'run_a_star.py --canary --dry-run --tools read_file' expecting refused=0, and only then the 4-arm 12-turn live canary. Optional follow-up for the runner's owner: make run_dry honour cfg.max_turns (loop bound at run_longrun.py:2079 and the REQUEST COUNTS block at :2121-2127), after which stage_budget's priced_n line becomes a no-op by construction.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_budget_turn_scope.py",
+  "orchestration/units/BUDGET-STAGE-MAX-TURNS.md",
+  "orchestration/handoffs/BUDGET-STAGE-MAX-TURNS.json",
+  "orchestration/journals/BUDGET-STAGE-MAX-TURNS.jsonl"
+ ]
+}

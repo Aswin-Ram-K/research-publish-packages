@@ -1,0 +1,62 @@
+{
+ "unit": "CANARY-ARGV-WIRING",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "tests/test_run_a_star_claim.py",
+  "orchestration/units/CANARY-ARGV-WIRING.md",
+  "orchestration/handoffs/CANARY-ARGV-WIRING.json",
+  "orchestration/journals/CANARY-ARGV-WIRING.jsonl"
+ ],
+ "evidence": {
+  "hardcode_quoted": "run_a_star.py:182 `\"--hypothesis\", \"H2\", \"--no-cell-handoff\",` in cell_argv(arm, rep) (:177)",
+  "new_signature": "def cell_argv(arm, rep, hypothesis=\"H2\", turns=48, max_wall=2880)",
+  "canary_argv": "/usr/bin/python3 experiments/ptr-engine/longrun/cell.py --arm pointer-stable --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 12 --reps 1 --thinking off --max-wall 600 --turn-wall-cap 180 --runaway-turns 2 --budget 108 --hypothesis smoke --no-cell-handoff --out-dir experiments/ptr-engine/measure --endpoint http://192.168.2.168:8012/v1",
+  "cell_argv": "/usr/bin/python3 experiments/ptr-engine/longrun/cell.py --arm pointer-stable --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 48 --reps 1 --thinking off --max-wall 2880 --turn-wall-cap 180 --runaway-turns 2 --budget 108 --hypothesis H2 --no-cell-handoff --out-dir experiments/ptr-engine/measure --endpoint http://192.168.2.168:8012/v1",
+  "launcher_commands": [
+   "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --cell 1",
+   "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --budget 108"
+  ],
+  "grid_stamp": "{('H2', True)} over 12 stamped rows",
+  "canary_stamp": "{('none', False)} over 12 stamped rows",
+  "analyser_refusal_quoted": "CLAIM REFUSAL  incomparable_claim canary.jsonl: refusing a comparison that includes 12 cell row(s) which make no claim (claim_free): arm=pointer-stable rep=1 turn=1; ... turn=12",
+  "analyser_accepts_quoted": "CELLS rc=0 -- no CLAIM REFUSAL line; report proceeds: `arm pointer-stable  (rows n=12)`",
+  "red_quoted": "4 failed, 4 passed in 0.03s (test_canary_argv_carries_the_smoke_declaration, test_canary_rows_make_no_claim, test_analyser_refuses_canary_rows_by_name_and_accepts_cells, test_hardcoded_h2_mutant_would_pool_the_canary)",
+  "green_quoted": "8 passed in 0.02s",
+  "suite_counts": {
+   "tests/test_run_a_star_claim.py": "8 passed",
+   "tests/test_claim_mode.py + tests/test_cell_gates.py": "36 passed, 7 subtests passed",
+   "tests/test_run_a_star.py": "ABSENT"
+  },
+  "commands": [
+   "PYTHONPATH=src python3 -m pytest tests/test_run_a_star_claim.py -q",
+   "cd experiments/ptr-engine/longrun && python3 -m pytest tests/test_claim_mode.py tests/test_cell_gates.py -q",
+   "python3 analyze_stats.py --rows /tmp/canary.jsonl --no-census --resamples 200"
+  ],
+  "pooled_rows_under_old_hardcode": "48 ungraded canary rows stamped claim=H2 / comparison_eligible=true, pooled into the pointer-stable arm (48 of its n=144)",
+  "offline": {
+   "requests_sent": 0,
+   "sockets": 0,
+   "cells_launched": 0
+  },
+  "flag_audit": "`--wait-total` 0 hits repo-wide; --fetch-rounds-per-arm/--fetch-rounds-per-turn/--max-tokens are run_longrun flags at their defaults (48/3/4096), not forwarded by cell.py",
+  "verdict": "PASS f17663d1 PYTHONPATH=src python3 -m pytest tests/test_run_a_star_claim.py -q"
+ },
+ "blocker": "",
+ "next_unit_hint": "RUN-A-STAR-2 can now copy the two launcher commands verbatim: `--canary --cell 1 --hypothesis` defaults to smoke, and the grid path stays byte-identical. Launch the canary with `--tools read_file --canary --budget 108 --cell 1`, then gate at N=12 (CANARY-ERA-B-FIX) before any grid cell; expect a `CLAIM REFUSAL incomparable_claim` line if its 48 rows are ever passed to analyze_stats with the arms.",
+ "assumptions": [
+  "The card's write path experiments/ptr-engine/longrun/run_a_star.py does not exist; the launcher is experiments/ptr-engine/tools/run_a_star.py, edited there.",
+  "`--wait-total` has no consumer anywhere in the repo (0 grep hits); it was not invented, so it is absent from the assembled commands.",
+  "Runner-only flags (--fetch-rounds-per-arm 48, --fetch-rounds-per-turn 3, --max-tokens 4096) ride at their defaults through the CELL_RUNNER_PATH shim, which appends --tools read_file only; cell.py was not edited.",
+  "Journal lines were written at the end rather than before the first tool call (call budget), recorded here rather than hidden."
+ ],
+ "write_paths": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "tests/test_run_a_star_claim.py",
+  "orchestration/units/CANARY-ARGV-WIRING.md",
+  "orchestration/handoffs/CANARY-ARGV-WIRING.json",
+  "orchestration/journals/CANARY-ARGV-WIRING.jsonl"
+ ],
+ "tool_calls": 19,
+ "bound": 20
+}

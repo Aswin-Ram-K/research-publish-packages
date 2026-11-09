@@ -1,0 +1,113 @@
+{
+ "unit": "REQUEST-LEDGER-2",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/request_ledger.py",
+  "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+  "experiments/ptr-engine/tests/test_request_ledger_dedup.py",
+  "docs/REQUEST-LEDGER.md",
+  "orchestration/units/REQUEST-LEDGER-2.md",
+  "orchestration/journals/REQUEST-LEDGER-2.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "raw 1101 -> deduplicated 1071 (excess 30), remaining 3219 -> 3249; 8 dedup tests OK, 16 legacy tests OK; 0 inference requests, no network",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/request_ledger.py --write experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+   "python3 -m unittest discover -s experiments/ptr-engine/tests -p 'test_request_ledger_dedup.py' -v",
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_request_ledger.py' -v"
+  ],
+  "counts": {
+   "requests_raw": 1101,
+   "requests_deduplicated": 1071,
+   "duplicate_excess": 30,
+   "remaining_raw": 3219,
+   "remaining": 3249,
+   "files_deduped": 11,
+   "files_not_applicable": 3,
+   "per_file_excess": {
+    "rows-longrun-v6-tools.jsonl": 11,
+    "rows-longrun-v4-tools-2026-10-26.jsonl": 17,
+    "rows-longrun-v5-tools.jsonl": 2
+   },
+   "tests_new": 8,
+   "tests_legacy": 16,
+   "red_failures": 6,
+   "tool_calls": 20,
+   "bound": 26,
+   "live_requests": 0,
+   "network": false
+  },
+  "red_green": "mutant with 'dedupe_applied = True' -> 'dedupe_applied = False': FAIL test_1_three_duplicate_groups_excess_three (AssertionError: 0 != 3 : 3 duplicate groups), 6 failures total; line restored, 8/8 OK"
+ },
+ "markers": {
+  "billed": {
+   "rows": 0,
+   "can_change_count": false,
+   "verdict": "dead code (0 rows)"
+  },
+  "followup_suppressed": {
+   "rows": 0,
+   "nested": 31,
+   "can_change_count": false,
+   "verdict": "dead at row level; nested only in tool_calls[]"
+  },
+  "served_from": {
+   "rows": 0,
+   "nested": 37,
+   "can_change_count": false,
+   "verdict": "dead at row level; nested only in tool_calls[]"
+  },
+  "billed_round": {
+   "rows": 24,
+   "values": {
+    "true": 20,
+    "false": 4
+   },
+   "can_change_count": false,
+   "verdict": "fetch-round accounting, not billing"
+  },
+  "fetch_followup": {
+   "rows": 68,
+   "values": {
+    "true": 68
+   },
+   "can_change_count": false,
+   "verdict": "marks a real follow-up request"
+  },
+  "prompt_served": {
+   "rows": 24,
+   "values": {
+    "1": 4,
+    "0": 20
+   },
+   "can_change_count": false,
+   "verdict": "cache-accounting counter"
+  },
+  "is_checkpoint": "not a billing marker (genuine calls)"
+ },
+ "blocker": "",
+ "next_unit_hint": "LATENCY-REPORT's G7/V4-TOOLS pointer-stable p95 now has n=51 (below the n>=60 floor) and G9/V6-TOOLS n=61; that remains a publish decision for a separate unit. The cap gate (run_longrun.py) now spends against the de-duplicated figure, so a future duplicate mirror surfaces as delta<0 'CAP GATE UNRECORDED' instead of inflating the budget -- worth one verifier check.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/request_ledger.py",
+  "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+  "experiments/ptr-engine/tests/test_request_ledger_dedup.py",
+  "docs/REQUEST-LEDGER.md",
+  "orchestration/units/REQUEST-LEDGER-2.md",
+  "orchestration/handoffs/REQUEST-LEDGER-2.json",
+  "orchestration/journals/REQUEST-LEDGER-2.jsonl"
+ ],
+ "assumptions": [
+  {
+   "what": "files_deduped=11 / files_not_applicable=3, not the card's 9/5",
+   "why": "a direct schema census shows 11 files carrying content_sha256 and a millisecond ts and 3 legacy files (rows-baseline, rows-equalinfo, rows-live). The card's split is contradicted by the corpus; publishing 9/5 would require naming two decidable files as legacy. The published arithmetic (30 excess, 1,071 dedup) is identical under either split because every excess row is in a decidable file. The report carries dedup_decision.count_discrepancy naming both."
+  },
+  {
+   "what": "budget.spent is the de-duplicated count (1,071); budget.spent_raw keeps 1,101",
+   "why": "the card requires exit 4 to print the de-duplicated spend and say so; keeping spent_raw alongside means no reader loses the raw figure. Downstream cap-gate reconcile therefore also runs on the de-duplicated count, which is documented in docs/REQUEST-LEDGER.md."
+  },
+  {
+   "what": "the three named markers stay implemented even though 0 corpus rows carry them",
+   "why": "a future writer may emit them and a fixture must still be able to exercise the branch; the report marks each as dead code rather than deleting the branch and pretending the corpus exercises it."
+  }
+ ]
+}

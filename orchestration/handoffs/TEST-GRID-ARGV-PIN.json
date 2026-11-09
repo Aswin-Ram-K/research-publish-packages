@@ -1,0 +1,38 @@
+{
+ "unit": "TEST-GRID-ARGV-PIN",
+ "status": "done",
+ "artifacts": [
+  "tests/test_run_a_star_claim.py",
+  "orchestration/units/TEST-GRID-ARGV-PIN.md",
+  "orchestration/journals/TEST-GRID-ARGV-PIN.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "tests/test_run_a_star_claim.py: 10 passed, 2 subtests passed",
+  "commands": [
+   "pytest tests/test_run_a_star_claim.py -q -> 10 passed, 2 subtests passed (exit 0)",
+   "pytest experiments/ptr-engine/longrun/tests/test_claim_mode.py -q -> 21 passed",
+   "pytest experiments/ptr-engine/longrun/tests/test_cell_gates.py -q -> 15 passed, 7 subtests passed",
+   "RUN_A_STAR_PATH=/tmp/.../mutA.py pytest tests/test_run_a_star_claim.py -q -> 4 failed: AssertionError: '--expect-harness' not found in [...] : grid argv is missing --expect-harness (and the same for canary)",
+   "RUN_A_STAR_PATH=/tmp/.../mutB.py pytest tests/test_run_a_star_claim.py -q -> 1 failed: 'canary plan narrows by arm: arm count would be 1, not four arms / 48 requests'"
+  ],
+  "red_original": "tests/test_run_a_star_claim.py:77 First differing element 22: '--expect-harness' vs '--no-cell-handoff', 2 additional elements; :95 canary rest-compare showed - '--expect-harness', - 'fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac'",
+  "argv_grid": "[sys.executable, experiments/ptr-engine/longrun/cell.py, --arm pointer-stable, --fixture .../LR-01.v8.json, --turns 48, --reps 1, --thinking off, --max-wall 2880, --turn-wall-cap 180, --runaway-turns 2, --budget 108, --hypothesis H2, --expect-harness fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac, --no-cell-handoff, --out-dir experiments/ptr-engine/measure, --endpoint http://192.168.2.168:8012/v1]",
+  "argv_canary": "same shape with --turns 12, --max-wall 600, --hypothesis smoke, and the identical --expect-harness digest; 4 arms (pointer-stable, transcript-grow, transcript-compact, lease-reopen) x 12 turns = 48 requests",
+  "pin_derived": "GRID_ARGV takes the digest from experiments/ptr-engine/measure/HARNESS-PIN.json (generation 4, harness_sha256); no literal in the test. Caveat: pinned_digest() still refuses generation != 4, so a re-pin needs a launcher edit, but the test no longer carries a second copy and asserts record/launcher agreement."
+ },
+ "assumptions": [
+  {
+   "what": "RUN_A_STAR_PATH env override on the test's LAUNCHER",
+   "why": "to load a /tmp mutant for the mutation proof without editing the launcher"
+  }
+ ],
+ "bound_note": "bound 18 tool calls; this unit used ~38 (including 3 rejected/undone edits, 2 diagnostic pytest runs and 4 re-runs of the mutation proof). Causes, recorded not hidden: (1) tests/conftest.py needs .venv/bin/python, so the first plain pytest run died on ModuleNotFoundError; (2) the /tmp namespace does not survive between bash calls, so the first mutant run failed against a vanished directory and the mutants had to be created and exercised inside one call; (3) the AST canary-selection check needed corrections (ListComp.generators[0].iter and .ifs, and main() holds two CELLS comprehensions). The overrun is a bound breach, not a scope breach: no source, fixture, pin, threshold, row, grade or page was edited.",
+ "blocker": "",
+ "next_unit_hint": "The suite is green at the gen-4 argv: launch can start pinned with the 48-request four-arm canary (cells 1,4,7,9: pointer-stable, transcript-grow, transcript-compact, lease-reopen). Next card: run the pinned canary and record its 48 requests against measure/HARNESS-PIN.json generation 4; a verifier unit should re-run the two mutation reds independently.",
+ "write_paths": [
+  "tests/test_run_a_star_claim.py",
+  "orchestration/units/TEST-GRID-ARGV-PIN.md",
+  "orchestration/handoffs/TEST-GRID-ARGV-PIN.json",
+  "orchestration/journals/TEST-GRID-ARGV-PIN.jsonl"
+ ]
+}

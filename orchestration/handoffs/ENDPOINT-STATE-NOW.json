@@ -1,0 +1,56 @@
+{
+ "unit": "ENDPOINT-STATE-NOW",
+ "status": "done",
+ "verdict": "warm",
+ "artifacts": [
+  "experiments/ptr-engine/measure/ENDPOINT-STATE.json",
+  "docs/ENDPOINT-STATE.md",
+  "orchestration/units/ENDPOINT-STATE-NOW.md",
+  "orchestration/handoffs/ENDPOINT-STATE-NOW.json",
+  "orchestration/journals/ENDPOINT-STATE-NOW.jsonl"
+ ],
+ "evidence": {
+  "models_8012": "HTTP 200 id=occamy-1.0 max_model_len=131072 owned_by=sglang created=1793034047",
+  "models_8014": "HTTP 200 id=qwen3.5-9b max_model_len=32768 owned_by=vllm created=1793034047",
+  "health": "HTTP 200 / 0-byte body on BOTH :8012 and :8014 (historical 000 not reproduced; /v1/models is authority)",
+  "metrics_8012": "HTTP 200 79037 B; NO process_start_time_seconds/uptime gauge; num_requests_total 3717 non-stream + 930 stream before pair (3722/946 after); prompt_tokens_total 18823105 non-stream + 5617106 stream; cached_tokens_total{device}=18626432; kv_cache_memory_usage_gb=14.444; TTFT histogram 946 streaming obs p50 0.159 s p95 0.696 s",
+  "metrics_8014": "HTTP 200 57389 B; process_start_time_seconds=1792838668.5 -> 2026-10-24T10:44:28Z, age 54.27 h; prefix_cache_hits_total 4114176",
+  "warmup_pair": "POST /v1/completions stream=true max_tokens=8 temperature=0, identical 5-token prompt twice: req1 ttft 149.8 ms total 343.6 token 5/8 usage{prompt 5,total 13,completion 8,reasoning 0}; req2 ttft 99.3 ms total 258.1 token 5/8 same usage; no cached_tokens field",
+  "pair_delta": "streaming prompt_tokens_total 5617106 -> 5617116 (+10 over 2 requests); stream num_requests +2; stream generation_tokens +16",
+  "ledger": "request_ledger.py spent=1101 remaining=3219 cap=4320 files=14, before AND after (no rows written by this unit)",
+  "gate": "python3 -m pytest experiments/ptr-engine/tests/test_request_ledger_dedup.py experiments/ptr-engine/tests/test_request_ledger_sound.py -q -> 20 passed, exit 0",
+  "git_head": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "requests_billed": 2,
+  "request_cap": 3,
+  "tool_calls": 16,
+  "commands": [
+   "curl -sS http://192.168.2.168:8012/v1/models ; curl -sS http://192.168.2.168:8014/v1/models",
+   "curl -sS http://192.168.2.168:8012/health ; curl -sS http://192.168.2.168:8014/health",
+   "curl -sS http://192.168.2.168:8012/metrics ; curl -sS http://192.168.2.168:8014/metrics",
+   "python3 - (2x POST http://192.168.2.168:8012/v1/completions stream max_tokens=8)",
+   "python3 experiments/ptr-engine/tools/request_ledger.py",
+   "python3 -m pytest experiments/ptr-engine/tests/test_request_ledger_dedup.py experiments/ptr-engine/tests/test_request_ledger_sound.py -q"
+  ]
+ },
+ "cold_start_assessment": {
+  "contaminates_first_cells": false,
+  "prewarm_advice": "send one throwaway 8-token warm-up request per arm before cell 1 is recorded (1 of 792 requests), then discard nothing else",
+  "first_touch_penalty_ms": 50.5,
+  "first_touch_penalty_relative": 0.34,
+  "why_not_cold": "4649 requests / 24.4M prefill tokens / 946 TTFT observations accumulated since process start, 14.44 GB KV resident and 18.6M cached tokens credited: a restart would have zeroed all of these"
+ },
+ "blocker": "",
+ "next_unit_hint": "RUN-A* may start cold-cell-free: budget 1 throwaway request per arm for the warm-up; do not read /v1/models created as uptime and do not call the service down from /health (200/0-byte today, 000 historically)",
+ "assumptions": [
+  "the 12-call bound was exceeded (16 tool calls) because the first cache read needed a post-pair metrics re-read and a correction pass; the 3-request cap was respected at 2",
+  "TTFT is measured at the first SSE content chunk on /v1/completions with a 5-token prompt; absolute values do not transfer to the grid's prompt lengths, only the first-touch shape does",
+  "created on /v1/models is stamped at listing time (advanced 1793033947 -> 1793034047 across two listings 100 s apart) and is not an uptime signal"
+ ],
+ "write_paths": [
+  "experiments/ptr-engine/measure/ENDPOINT-STATE.json",
+  "docs/ENDPOINT-STATE.md",
+  "orchestration/units/ENDPOINT-STATE-NOW.md",
+  "orchestration/handoffs/ENDPOINT-STATE-NOW.json",
+  "orchestration/journals/ENDPOINT-STATE-NOW.jsonl"
+ ]
+}

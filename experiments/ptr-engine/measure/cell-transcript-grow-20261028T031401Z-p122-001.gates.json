@@ -1,0 +1,146 @@
+{
+ "arm": "transcript-grow",
+ "artefact_digests": {
+  "experiments/ptr-engine/measure/PREREG-ARM-RUN.json": "696de5100315889172d4424de1c60a9699c17bc5d3a736226cc3171987bf56d6",
+  "experiments/ptr-engine/measure/PROJECTION.json": "75d02c735da66156f6d7b13554d9cdd2da8b2d99df5d7032ea2e761feca3925c",
+  "experiments/ptr-engine/measure/REQUEST-LEDGER.json": "3f879fa424105319cf87b6f571ac88424ccad9d394e052ac65a00c359fe2968a"
+ },
+ "counted_by": "experiments/ptr-engine/tools/request_ledger.py",
+ "generated_at": "2026-10-28T03:14:01+00:00",
+ "hypothesis": {
+  "claim": "H2",
+  "comparison_eligible": true,
+  "mode": "hypothesis",
+  "n": 48,
+  "name": "H2",
+  "rule_id": "PARM-1",
+  "rule_sha256": "21cb85511b78dc4046f0f8f1449b68a7de2fd8bd8f659985efd63c9651398ec8",
+  "source": "flag:--hypothesis (hypothesis)",
+  "thresholds": {
+   "basis": "a per-turn ratio needs at least one completed turn per arm",
+   "claim": "within the same grid, pointer-stable carries fewer total prompt tokens per completed turn than transcript-grow",
+   "materiality_margin": "C per-turn total <= 0.95 x A (5% reduction) on prompt_tokens AND < 1.00 x on uncached",
+   "min_n": 1,
+   "unit_of_account": "prompt_tokens summed over non-excluded completed turns, divided by that same count; not wall time, not request count (identical by construction), not completion tokens as primary"
+  }
+ },
+ "note": "verdicts were taken BEFORE the runner was invoked; each digest pins the artefact the limit came from",
+ "projection_override": null,
+ "stamp": "20261028T031401Z",
+ "unit": "WIRE-GATES",
+ "verdicts": [
+  {
+   "arms": 1,
+   "artefact": "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+   "artefact_sha256": "3f879fa424105319cf87b6f571ac88424ccad9d394e052ac65a00c359fe2968a",
+   "cap": 4320,
+   "computed": "1,417 requests",
+   "consequence": "G1 admits: this cell's own 96 requests (would_spend: 48 turn(s) x 1 arm(s) x 1 rep(s) = 48 requests, plus a 48-request fetch follow-up allowance, ceil(48 turns x 68/801) unless --fetch-followup-allowance overrides it) are added to the 1,321 requests already spent, so cumulative spend after this cell (projected) is 1,417 requests against a limit of 4,320 requests (cap 4,320 - reserve 0): the cell fits, leaving 2,903 requests of headroom after it, of which 2,999 were unspent before it",
+   "counting_tool": "experiments/ptr-engine/tools/request_ledger.py",
+   "fetch_followup_allowance": 48,
+   "flag": "--turns / --reps / --fetch-followup-allowance (or a larger cap in the ledger)",
+   "gate": "G1",
+   "headroom": 4320,
+   "limit": "4,320 requests (cap 4,320 - reserve 0 - spent 1,321)",
+   "ok": true,
+   "projected": 1417,
+   "remaining": 2903,
+   "reserve": 0,
+   "short": "G1 1,417/4,320 requests",
+   "spent": 1321,
+   "turns_total": 48,
+   "what": "ledger-cap",
+   "would_spend": 96
+  },
+  {
+   "all_in_estimate_s": 5760,
+   "artefact": "experiments/ptr-engine/measure/PROJECTION.json",
+   "artefact_sha256": "75d02c735da66156f6d7b13554d9cdd2da8b2d99df5d7032ea2e761feca3925c",
+   "computed": "2880 s",
+   "consequence": "G2 admits: projected wall 2880 s = 48 requests to send (48 turn(s) x 1 rep(s)) x 60.0 s calibrated per-turn wall for thinking off (source artefact-mode), within the 2880 s allowed by --max-wall by 0 s of slack. The worst case priced at the 180 s per-turn abort is 8640 s; that abort still kills any live turn that reaches it. Beside that fitted estimate stands the HARD CEILING turns x --turn-wall-cap = 8640 s: policy arithmetic, not a measurement",
+   "fitted_estimate_s": 2880,
+   "flag": "--thinking / --projected-from p90 / --max-wall",
+   "gate": "G2",
+   "hard_ceiling_basis": "turns x --turn-wall-cap (policy, not a measurement)",
+   "hard_ceiling_s": 8640,
+   "limit": "2880 s (--max-wall)",
+   "line": "turns=48 projected_requests=48 projected_wall~=2880s (cap-per-turn 180s -> worst case 8640s) cap=2880s projected-turn-wall=60.0s source=artefact-mode thinking=off",
+   "max_wall_s": 2880.0,
+   "ok": true,
+   "projected_from_file": null,
+   "projected_requests": 48,
+   "projected_turn_wall_s": 60.0,
+   "projected_turn_wall_source": "artefact-mode",
+   "projected_wall_s": 2880,
+   "projection": "projected_requests x projected_turn_wall(thinking mode)",
+   "projection_override": null,
+   "projection_price": {
+    "all_in_estimate_s": 5760,
+    "fitted_estimate_s": 2880,
+    "hard_ceiling_basis": "turns x --turn-wall-cap (policy, not a measurement)",
+    "hard_ceiling_s": 8640,
+    "line": "fitted estimate 2880 s = turns 48 x 60.0 s/turn [source experiments/ptr-engine/measure/PROJECTION.json:defaults.projected_turn_wall_s_by_mode['off']] = 2880 s + runner-priced extras 0 x 60.0 s/turn [source runner --dry-run would_send_total 48 - turns x reps 48] = 0 s; fetch follow-up allowance ceil(48 x 68/801) = 48 x 60.0 s/turn [source FETCH_FOLLOWUP_RATIO in cell.py, reserved by G1] = 2880 s -> all-in estimate 5760 s; HARD CEILING 8640 s = turns 48 x --turn-wall-cap 180 s [policy bound, not a measurement: the runner aborts any turn that reaches it]",
+    "per_turn_source": "experiments/ptr-engine/measure/PROJECTION.json:defaults.projected_turn_wall_s_by_mode['off']",
+    "per_turn_wall_s": 60.0,
+    "reps": 1,
+    "terms": [
+     {
+      "requests": 48,
+      "seconds": 2880,
+      "source": "experiments/ptr-engine/measure/PROJECTION.json:defaults.projected_turn_wall_s_by_mode['off']",
+      "term": "turns"
+     },
+     {
+      "requests": 0,
+      "seconds": 0,
+      "source": "runner --dry-run would_send_total 48 - turns x reps 48",
+      "term": "runner-priced extras (digests/warm-ups)"
+     },
+     {
+      "requests": 48,
+      "seconds": 2880,
+      "source": "FETCH_FOLLOWUP_RATIO (cell.py) / --fetch-followup-allowance",
+      "term": "fetch follow-up allowance"
+     }
+    ],
+    "thinking_mode": "off",
+    "turn_requests": 48,
+    "turns": 48
+   },
+   "reps": 1,
+   "short": "G2 2,880 s of 2,880 s",
+   "thinking_mode": "off",
+   "turn_wall_cap_s": 180.0,
+   "turns": 48,
+   "what": "projection",
+   "worst_case_wall_s": 8640
+  },
+  {
+   "artefact": "experiments/ptr-engine/measure/PREREG-ARM-RUN.json",
+   "artefact_sha256": "696de5100315889172d4424de1c60a9699c17bc5d3a736226cc3171987bf56d6",
+   "claim": "H2",
+   "comparison_eligible": true,
+   "computed": "n=48",
+   "consequence": "PARM-1's H2 needs at least 1 completed turn per arm; this cell would have n=48",
+   "flag": "--hypothesis / --turns / --reps",
+   "gate": "G3",
+   "hypothesis": "H2",
+   "hypothesis_source": "flag:--hypothesis (hypothesis)",
+   "limit": "n >= 1",
+   "mode": "hypothesis",
+   "n": 48,
+   "ok": true,
+   "rule_id": "PARM-1",
+   "rule_sha256": "21cb85511b78dc4046f0f8f1449b68a7de2fd8bd8f659985efd63c9651398ec8",
+   "short": "G3 n=48 \u2265 1",
+   "thresholds": {
+    "basis": "a per-turn ratio needs at least one completed turn per arm",
+    "claim": "within the same grid, pointer-stable carries fewer total prompt tokens per completed turn than transcript-grow",
+    "materiality_margin": "C per-turn total <= 0.95 x A (5% reduction) on prompt_tokens AND < 1.00 x on uncached",
+    "min_n": 1,
+    "unit_of_account": "prompt_tokens summed over non-excluded completed turns, divided by that same count; not wall time, not request count (identical by construction), not completion tokens as primary"
+   },
+   "what": "prereg"
+  }
+ ]
+}

@@ -1,0 +1,171 @@
+{
+  "unit": "RUNAWAY-POLICY",
+  "measured_event": {
+    "rows_path": "scratch/uregen1/ws/experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl",
+    "rows_sha256": "46afc892480ae1dbe4b20d13fd4dacb983653a9f0a04b6a42a6283b3c55ca3b1",
+    "rows_total": 27,
+    "turn_rows": 27,
+    "stop_reason_counts": {
+      "stop": 25,
+      "length": 1,
+      "runaway_turn": 1
+    },
+    "cap_length_turns": [
+      {
+        "turn": 3,
+        "completion_tokens": 4096,
+        "max_tokens": 4096,
+        "wall_ms": 114838.846,
+        "stop_reason": "length"
+      },
+      {
+        "turn": 27,
+        "completion_tokens": 4096,
+        "max_tokens": 4096,
+        "wall_ms": 115331.241,
+        "stop_reason": "runaway_turn"
+      }
+    ],
+    "wall_ms_max": 115331.241,
+    "wall_ms_p50": 2454,
+    "wall_ms_p90": 16425,
+    "turns_over_180s": 0,
+    "ttft_ms_p50": 141.58,
+    "grid_action": {
+      "stop_rule": "stop_rule_7",
+      "rc": 6,
+      "message": "cell: 4/7 run REFUSED(6) run_longrun.py exited 6 (one or more runaway turns ended the cell)",
+      "new_requests": 27,
+      "remaining": 3192
+    },
+    "note": "canonical copy; the lineage copies under scratch/uverbuild1/red/... are copy-tree artefacts, not a second measurement"
+  },
+  "what_increments_the_counter_today": {
+    "wall_time": {
+      "file": "experiments/ptr-engine/longrun/run_longrun.py",
+      "lines": [
+        2364,
+        2446,
+        2317
+      ],
+      "predicate": "client.TurnWallCap raised when a stream crosses --turn-wall-cap (client.py:530-537)",
+      "note": "the digest path (:2317) aborts on the FIRST wall cap regardless of the threshold; turn (:2364) and tool-followup (:2446) abort at --runaway-turns"
+    },
+    "cap_length": {
+      "file": "experiments/ptr-engine/longrun/run_longrun.py",
+      "lines": [
+        2528,
+        2558
+      ],
+      "old_predicate": "_runaway_signature: truncated and completion_tokens >= max_tokens, OR completion_tokens > max_tokens",
+      "note": "this is what aborted cell 1 at T27 \u2014 and both turns that tripped it were 4,096-token length truncations"
+    }
+  },
+  "abort_effect_on_rows": {
+    "rows_kept": true,
+    "deleted": false,
+    "message_states": [
+      "partial rows kept at <rows_path>",
+      "<t>/<n_turns> turns reached (added by RUNAWAY-POLICY)"
+    ],
+    "labelling": "the ended row carries error=turn_wall_cap and runaway_abort=true, and stop_reason=runaway_turn; the cell record carries exit 6, rows_written and turns_requested"
+  },
+  "rates": {
+    "cap_length_rate_per_turn": 0.074074,
+    "expected_cap_hits_per_48_turn_cell": 3.556
+  },
+  "options": {
+    "A_keep_counter": {
+      "threshold": 2,
+      "abort_prob_per_48_turn_cell": 0.8796,
+      "cell_completion_rate": 0.1204,
+      "p_ten_cells_all_complete": 6.38e-10,
+      "implied_cost": "~88% of 48-turn cells abort; a ten-cell tranche completes with probability ~6e-10"
+    },
+    "B_separate_events": {
+      "wall_runaways_observed": "0/27 turns",
+      "threshold": 2,
+      "abort_prob_per_cell_point_estimate": 0.0,
+      "abort_prob_if_wall_rate_were_1_in_27": 0.5349,
+      "abort_prob_rule_of_three_95pct_upper": 0.9755,
+      "abort_prob_exponential_tail_fit_p90_16.4s": 1.36e-19,
+      "cap_length_turns_counted": false,
+      "replacement_bounds": [
+        {
+          "bound": "per-turn --turn-wall-cap 180 s",
+          "site": "client.py:530-537 raises TurnWallCap; run_longrun.py:2364 and :2446 count it"
+        },
+        {
+          "bound": "per-cell --max-wall 2880 s via G2",
+          "site": "cell.py:737 admitted = max_wall>0 and projected<=max_wall; cell.py:756; enforced at cell.py:2028 _enforce(...,8); worst-case turn priced at cap_turn, cell.py:727"
+        },
+        {
+          "bound": "per-cell --request-allocation against the ledger",
+          "site": "run_longrun.py gate.acquire immediately before the wire (:2280 digest, :2357 turn); CapRefusal -> _cap_stop"
+        },
+        {
+          "bound": "spawn/gate chain",
+          "site": "cell.py:1600 SPAWNS.record(argv=..., gate_record=...); G1/G2/G3 on every live path, cell.py:2021/2028/2031"
+        },
+        {
+          "bound": "a server that ignores the max_tokens ceiling",
+          "site": "run_longrun.py _ceiling_violation: completion_tokens > max_tokens counts against the same --runaway-turns limit"
+        }
+      ]
+    },
+    "C_raise_threshold": {
+      "thresholds": {
+        "4": {
+          "abort_prob_per_48_turn_cell": 0.4799,
+          "cell_completion_rate": 0.5201,
+          "p_ten_cells_all_complete": 0.00145
+        },
+        "5": {
+          "abort_prob_per_48_turn_cell": 0.2817,
+          "cell_completion_rate": 0.7183,
+          "p_ten_cells_all_complete": 0.0366
+        },
+        "6": {
+          "abort_prob_per_48_turn_cell": 0.1421,
+          "cell_completion_rate": 0.8579,
+          "p_ten_cells_all_complete": 0.216
+        },
+        "7": {
+          "abort_prob_per_48_turn_cell": 0.0621,
+          "cell_completion_rate": 0.9379,
+          "p_ten_cells_all_complete": 0.527
+        },
+        "8": {
+          "abort_prob_per_48_turn_cell": 0.0237,
+          "cell_completion_rate": 0.9763,
+          "p_ten_cells_all_complete": 0.787
+        },
+        "10": {
+          "abort_prob_per_48_turn_cell": 0.0024,
+          "cell_completion_rate": 0.9976,
+          "p_ten_cells_all_complete": 0.976
+        }
+      }
+    }
+  },
+  "decision": {
+    "option": "B",
+    "reason": "the counter must fire on the event whose cost the guard bounds. A length truncation is bounded data \u2014 one answer, exactly max_tokens, finished inside the wall cap \u2014 while the wall runaway is the measured cost hazard. B re-tethers the counter to a bound enforced in code (client.py:530-537) instead of raising a number until the cells stop aborting.",
+    "runner_sha256": "0d581d1f2ef90b1c3667c5cffcbe2088c60e6892188d4f643248a06b2fd32eb3"
+  },
+  "tests": {
+    "file": "experiments/ptr-engine/longrun/tests/test_runaway_policy.py",
+    "green": "3 passed in 2.23s",
+    "red_a": {
+      "mutation": "old predicate: a truncated turn AT max_tokens counts",
+      "result": "1 failed, 2 passed",
+      "failure": "assert 6 == 0 \u2014 cell aborted at T1, 1/4 turns reached (the measured event reproduced)"
+    },
+    "red_b": {
+      "mutation": "wall_runaways += 0 (no wall-time abort)",
+      "result": "2 failed, 1 passed",
+      "failure": "assert 0 == 6 \u2014 both the wall-abort test and the historical-hazard test lose their bound"
+    }
+  },
+  "exit_code": "6 = EXIT_RUNAWAY, already in exit_codes.EXIT_TABLE; no new code, exit_codes.py untouched"
+}

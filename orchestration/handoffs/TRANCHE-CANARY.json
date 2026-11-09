@@ -1,0 +1,44 @@
+{
+  "unit": "TRANCHE-CANARY",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/tools/tranche_canary.py",
+    "tests/test_tranche_canary.py",
+    "docs/TRANCHE-CANARY.md",
+    "experiments/ptr-engine/measure/TRANCHE-CANARY.json",
+    "orchestration/units/TRANCHE-CANARY.md",
+    "orchestration/journals/TRANCHE-CANARY.jsonl"
+  ],
+  "evidence": {
+    "tests": "13 passed in 0.02s",
+    "replay_n5": "shape_degenerate exit=1 turn=3 completion_tokens=4096 max_tokens=4096 wall_ms=114838.846 stop_reason=length",
+    "replay_n2": "shape_unknown exit=2 n=2 turns_observed=2 trigger=no_parseable_answer; cap hit at T3 is outside the window",
+    "rows_read_only": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl (27 rows, unmodified)",
+    "requests_spent": "0 (offline replay only; no live cell, no network, no sockets)",
+    "verdict": "PASS f17663d1 python -m pytest tests/test_tranche_canary.py -q",
+    "commands": [
+      "python3 experiments/ptr-engine/tools/tranche_canary.py --rows experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl --turns 5",
+      "python3 experiments/ptr-engine/tools/tranche_canary.py --rows experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl --turns 2 --json",
+      "python3 -m pytest tests/test_tranche_canary.py -q",
+      "python3 experiments/ptr-engine/longrun/exit_codes.py"
+    ]
+  },
+  "verdict_function": "shape_ok when no turn in the window hit the completion ceiling, no stop_reason is runaway_turn/turn_wall_cap, and the arm's contract produced a parseable answer; shape_degenerate when a cap-length completion appears in the window; else shape_unknown, never rounded to ok.",
+  "cost_arithmetic": "4 arms x 5 turns = 20 requests (24 with warm-ups) against a tranche of ~= 720 (2.8%); on the stopped cell a canary aborting at its first cap hit would have spent 3 requests, the N=5 window 5, and the cell without one spent 28 and returned 0 usable cells.",
+  "assumptions": {
+    "measure_path": "the card's write path `measure/TRANCHE-CANARY.json` resolves to experiments/ptr-engine/measure/TRANCHE-CANARY.json: the experiment's measure root is experiments/ptr-engine/measure and no workspace-root measure/ exists",
+    "usage_error_exit": "bad argv exits 3 (could not run), not argparse's default 2, because 2 is the canary's shape_unknown verdict; documented in the tool and docs/TRANCHE-CANARY.md",
+    "n_default": "N=5 is the default window: it reaches past the earliest observed cap (T3) with two turns of margin"
+  },
+  "blocker": "",
+  "next_unit_hint": "Before arming the tranche, run the canary per arm (live, N=5, 20-24 requests charged to REQUEST-LEDGER.json); a shape_degenerate arm goes to a human-or-card decision on prompt/channel before any tranche turn is spent, and any shape_unknown must not be treated as a pass.",
+  "write_paths": [
+    "experiments/ptr-engine/tools/tranche_canary.py",
+    "tests/test_tranche_canary.py",
+    "docs/TRANCHE-CANARY.md",
+    "experiments/ptr-engine/measure/TRANCHE-CANARY.json",
+    "orchestration/units/TRANCHE-CANARY.md",
+    "orchestration/handoffs/TRANCHE-CANARY.json",
+    "orchestration/journals/TRANCHE-CANARY.jsonl"
+  ]
+}

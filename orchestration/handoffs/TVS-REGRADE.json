@@ -1,0 +1,139 @@
+{
+ "unit": "TVS-REGRADE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/cell-longrun-base-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-fix-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-policy-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-c-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-v3-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-v4-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-v4-tools-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-v5-tools-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/TVS.json",
+  "docs/TVS-RESULTS.md",
+  "experiments/ptr-engine/measure/DUPLICATE-ROWS.md",
+  "orchestration/units/TVS-REGRADE.md",
+  "orchestration/journals/TVS-REGRADE.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "8 grade_v5 runs offline (0 requests, 0 network); 23/23 pairs decided, 3/23 TVS produced; 30 duplicate rows out of 1,101 -> 1,071",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/grade_v5.py --rows measure/<each of 8 long-run rows files>.jsonl --fixture longrun/tasks-v5/runtime-v5/LR-01.v5.json --out measure/cell-<gridtag>-20261026T1556Z.grade-v5.json",
+   "python3 experiments/ptr-engine/tools/tokens_to_verified.py --all --json measure/TVS.json"
+  ],
+  "counts": {
+   "grade_runs": 8,
+   "grade_runs_max": 8,
+   "rows_files_graded": 8,
+   "grade_exceptions": 0,
+   "declared_run_arm_pairs": 23,
+   "pairs_with_grade_v5_output": 23,
+   "pairs_with_verified_success": 3,
+   "pairs_null_no_verified_success": 20,
+   "pairs_not_produced": 0,
+   "judge_sha256": "6893d559518168e3ba4fc4a9f5d7642d213d61e2e3c3d0b0a8f01e3379af3077",
+   "fixture_used": "experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json",
+   "tvs_smallest": {"grid": "rows-longrun-v4-2026-10-26", "arm": "pointer-stable", "tokens": 48347, "turn": 12, "cached_share": 0.8573},
+   "tvs_largest": {"grid": "rows-longrun-v6-tools", "arm": "pointer-stable", "tokens": 111994, "turn": 12, "cached_share": 0.8523},
+   "tvs_middle": {"grid": "rows-longrun-v4-tools-2026-10-26", "arm": "pointer-stable", "tokens": 50847, "turn": 12, "cached_share": 0.8807},
+   "all_produced_at_checkpoint": "cp.0.t12 (turn 12)",
+   "live_requests": 0,
+   "network": false
+  }
+ },
+ "duplicate_rows": {
+  "rule": "identical (ts, content_sha256, prompt_tokens, completion_tokens) within one file; first occurrence kept",
+  "rule_applicability": "decidable only on the 9 rows files carrying content_sha256 and a millisecond ts; the 5 legacy-schema files have no content_sha256 and a second-resolution ts_utc, where the literal tuple over-merges demonstrably distinct requests (different rep, different latency_s)",
+  "cannot_distinguish": [
+   "a genuine double-send with identical prompt and completion (improbable: two calls cannot share a client-measured ttft_s/latency_s and the same millisecond ts)",
+   "a retried or resumed request (it would carry a new ts, so the rule does not catch it by design)",
+   "near-duplicates with a different content_sha256 (none found)"
+  ],
+  "rows_files_examined": 14,
+  "rows_total": 1101,
+  "groups_total": 41,
+  "excess_total": 54,
+  "decided_groups": 30,
+  "dedup_requests": 1071,
+  "excess_defensible": 30,
+  "per_file": [
+   {"file": "rows-longrun-v6-tools.jsonl", "rows": 72, "groups": 11, "excess": 11, "dedup": 61, "rule_status": "decided"},
+   {"file": "rows-longrun-v4-tools-2026-10-26.jsonl", "rows": 68, "groups": 17, "excess": 17, "dedup": 51, "rule_status": "decided"},
+   {"file": "rows-longrun-v5-tools.jsonl", "rows": 72, "groups": 2, "excess": 2, "dedup": 70, "rule_status": "decided"},
+   {"file": "rows-longrun-2026-10-26.jsonl", "rows": 192, "groups": 0, "excess": 0, "dedup": 192, "rule_status": "decided"},
+   {"file": "rows-longrun-c-2026-10-26.jsonl", "rows": 192, "groups": 0, "excess": 0, "dedup": 192, "rule_status": "decided"},
+   {"file": "rows-longrun-v3-2026-10-26.jsonl", "rows": 96, "groups": 0, "excess": 0, "dedup": 96, "rule_status": "decided"},
+   {"file": "rows-longrun-v4-2026-10-26.jsonl", "rows": 96, "groups": 0, "excess": 0, "dedup": 96, "rule_status": "decided"},
+   {"file": "rows-longrun-2026-10-26-fix.jsonl", "rows": 29, "groups": 0, "excess": 0, "dedup": 29, "rule_status": "decided"},
+   {"file": "rows-longrun-2026-10-26-policy.jsonl", "rows": 40, "groups": 0, "excess": 0, "dedup": 40, "rule_status": "decided"},
+   {"file": "rows-baseline-2026-10-26.jsonl", "rows": 105, "groups": 1, "excess": 11, "defensible_excess": 0, "dedup": 105, "rule_status": "rule_not_applicable_no_content_sha256"},
+   {"file": "rows-equalinfo-2026-10-26.jsonl", "rows": 100, "groups": 2, "excess": 2, "defensible_excess": 0, "dedup": 100, "rule_status": "rule_not_applicable_no_content_sha256"},
+   {"file": "rows-live-2026-10-26.jsonl", "rows": 27, "groups": 8, "excess": 11, "defensible_excess": 0, "dedup": 27, "rule_status": "rule_not_applicable_no_content_sha256"},
+   {"file": "rows-cell-pointer-stable-20261026T145758Z.jsonl", "rows": 6, "groups": 0, "excess": 0, "dedup": 6, "rule_status": "decided"},
+   {"file": "rows-pilot-thinking-2026-10-26.jsonl", "rows": 6, "groups": 0, "excess": 0, "dedup": 6, "rule_status": "decided"}
+  ],
+  "ledger_impact": {
+   "raw_requests": 1101,
+   "dedup_requests": 1071,
+   "budget_cap": 4320,
+   "remaining_raw": 3219,
+   "remaining_dedup": 3249,
+   "assumed_billed_raw": 232,
+   "assumed_billed_dedup": 232,
+   "marker_mismatch": "ledger excludes 'billed:false'/'followup_suppressed'/'served_from:prompt' but rows carry 'billed_round:false'/'fetch_followup:true'/'prompt_served:1'; all 68 kind=tool-followup rows are counted as billed requests, of which 30 are duplicate mirrors and 4 (v6) are self-marked billed_round:false",
+   "published_numbers_change": true
+  },
+  "latency_impact": {
+   "p95_min_n": 60,
+   "cells_examined": 24,
+   "would_dedup_change_n": ["G7 pointer-stable V4-TOOLS 68 -> 51", "G8 pointer-stable V5-TOOLS 72 -> 70", "G9 pointer-stable V6-TOOLS 72 -> 61"],
+   "crosses_threshold_downward": ["G7 pointer-stable V4-TOOLS (68 >= 60 -> 51 < 60)"],
+   "named_duplicate_inflated_cell": "G7 / V4-TOOLS / pointer-stable",
+   "fragile_after_dedup": "G9 / V6-TOOLS / pointer-stable at n=61, one sample above the floor",
+   "cells_gaining_n": []
+  },
+  "cause": {
+   "verdict": "writer bug",
+   "not": "harness artefact / resumed-run re-record",
+   "evidence": [
+    "all 30 decided pairs are exactly (kind=tool-followup, kind=turn) pairs: 11/11 v6, 17/17 v4-tools, 2/2 v5-tools",
+    "both copies share identical ts (ms), ttft_s and latency_s to six decimals - one measurement, not two round-trips",
+    "copies differ only in bookkeeping fields (kind, prompt_sha256, fetch_followup, fetch_rounds_this_turn, and in v6 prompt_served/billed_round/fetch_prompt_serves), with identical content_sha256, content and token counts",
+    "4 of 24 v6 tool-followup rows carry billed_round:false, i.e. the writer itself marked them unbilled while the ledger counts them as requests"
+   ],
+   "rows_inspected": [
+    "rows-longrun-v6-tools.jsonl indices 0,1 (ts=2026-10-26T13:16:13.529Z, turn 1, 3520+288, content_sha256 eb879145...d0138a, ttft_s 0.192567, latency_s 8.057474)",
+    "rows-longrun-v4-tools-2026-10-26.jsonl indices 0,1 (ts=2026-10-26T11:55:35.461Z, turn 1, 3033+71, content_sha256 5d956fe4...603583d, ttft_s 0.526405, latency_s 2.872481)",
+    "rows-longrun-v5-tools.jsonl indices 3,4 (ts=2026-10-26T12:17:49.893Z, turn 2, 5614+441, content_sha256 4aa24cfd...def80e9, ttft_s 0.454734, latency_s 12.742209)",
+    "legacy groups in rows-baseline (indices 48-59), rows-equalinfo (7,11), rows-live (0,2) inspected and shown to be distinct requests"
+   ]
+  },
+  "tvs_inflation_measured": {"v6_window_raw": 155955, "v6_window_dedup": 111994, "ratio": 1.393, "prior_estimate": 1.8, "note": "the prior unit's ~1.8x is not reproduced; measured 1.39x at the TVS window, 1.20x whole-run"},
+  "published_by_this_unit": "measure/DUPLICATE-ROWS.md only; REQUEST-LEDGER.json and LATENCY-REPORT.json untouched by instruction"
+ },
+ "blocker": "",
+ "next_unit_hint": "Two follow-ups, both needing a publish decision this unit could not make: (1) re-publish REQUEST-LEDGER as 1,071 requests / remaining 3,249 after reconciling the exclusion-marker names (billed_round/fetch_followup/prompt_served vs the rule's billed/followup_suppressed/served_from); (2) re-derive LATENCY-REPORT's G7 V4-TOOLS pointer-stable p95 at n=51 (below the n>=60 floor, so refuse or flag) and G9 at n=61. Separately, TVS coverage: all 3 produced pairs are cp.0.t12/turn 12 on pointer-stable, so grading the 12-checkpoint coverage fixture LR-01.v6.json as a declared-space change is what would let a first success be cp.1.t24 or cp.2.t46.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/cell-longrun-base-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-fix-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-policy-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-c-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-v3-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-v4-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-v4-tools-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/cell-longrun-v5-tools-20261026T1556Z.grade-v5.json",
+  "experiments/ptr-engine/measure/TVS.json",
+  "docs/TVS-RESULTS.md",
+  "experiments/ptr-engine/measure/DUPLICATE-ROWS.md",
+  "orchestration/units/TVS-REGRADE.md",
+  "orchestration/handoffs/TVS-REGRADE.json",
+  "orchestration/journals/TVS-REGRADE.jsonl"
+ ],
+ "assumptions": [
+  {"what": "all 8 gradings use fixture LR-01.v5.json (3 checkpoints)", "why": "it is the fixture the one pre-existing grade_v5 output used, so all 23 pairs share one declared space; LR-01.v6.json carries 12 checkpoints and would change the declared space mid-metric. Recorded as a coverage gap, not patched."},
+  {"what": "grade files named cell-<gridtag>-<stamp>.grade-v5.json instead of cell-<arm>-<stamp>", "why": "grade_v5 emits one file per rows file covering all arms; a single-arm name would be false for the 7 multi-arm grids, and tokens_to_verified.py maps these files by rows_file so nothing depends on the name."},
+  {"what": "duplicate rule counted as decided only on files carrying content_sha256 and millisecond ts", "why": "on the 5 legacy-schema files the literal tuple over-merges rows that differ in rep and latency_s; reporting 54 excess without that boundary would publish 24 fabricated duplicates."},
+  {"what": "no ledger or latency report edited; corrected figures published in DUPLICATE-ROWS.md", "why": "card forbids editing REQUEST-LEDGER.json / LATENCY-REPORT.json; the marker-name reconciliation is a publish decision, not arithmetic."}
+ ]
+}

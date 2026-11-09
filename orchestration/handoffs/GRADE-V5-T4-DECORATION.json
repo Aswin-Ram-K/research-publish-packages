@@ -1,0 +1,76 @@
+{
+ "unit": "GRADE-V5-T4-DECORATION",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "experiments/ptr-engine/tests/test_grade_v5_decoration.py",
+  "experiments/ptr-engine/measure/GRADE-V5-T4-MATRIX.json",
+  "orchestration/units/GRADE-V5-T4-DECORATION.md",
+  "orchestration/journals/GRADE-V5-T4-DECORATION.jsonl"
+ ],
+ "evidence": {
+  "grader_sha256_before": "056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+  "grader_sha256_after": "3d70ed1d43d2ab098eeeba4b50fa574273c71e9ff24af5adaa9e519d10c77940",
+  "test_sha256": "9643f175fb129ace2b20433bd29b3217c82d89b1278361ec6b04787ae1367f99",
+  "parser_lines_quoted": [
+   "grade_v5.py:68 CALL_RE = re.compile(r\"^([A-Za-z_][\\w.]*)\\s*\\((.*)\\)\\s*$\", re.S) - the CALL form is anchored on '\\)\\s*$', so a trailing period is not parsable: `_parse_call` returns 'call_not_parsable' (157-159)",
+   "grade_v5.py:217-220 NONE: `if head == \"NONE\": if rest: out[\"answer_parse_error\"] = \"trailing_after_none\"` - and the head is the WHOLE first token, so `NONE.`/`NONE \u2014 x` never equals 'NONE'",
+   "grade_v5.py:105 + 112-113 (num branch) `_integral_numeral`: 'A sentence-final period (`64.`) is punctuation, not a fraction.' / `if re.match(r\"^\\.\\d\", tail): return None` - tail '.' is not `.<digit>`, so `NUM 64.` already asserted 64: the SAME punctuation was a pass on NUM and a rejection on CALL/NONE",
+   "grade_v5.py:587-692 grade_cell: NONE 617-647, NUM 653-665, CALL 667-692, TEXT 612-615 - verdict derives from parsed only"
+  ],
+  "rules": {
+   "a": "strip ONE trailing '.' (not '..'; '?!' never matched) on every kind",
+   "b": "strip a balanced trailing '(...)' (whitespace-separated, so the call's own ')' is never decoration) or a trailing citation from the IMPORTED dv.citation_spans, only while the remainder is still a complete answer of the SAME kind (_complete_prefix)",
+   "c": "NONE + '\u2014'/'-'/';'/'(' justification stays a denial UNLESS the payload carries a value (numeral, dotted name, callable '(', snake_case token; citations removed first)",
+   "where": "one pass, grade_v5._strip_decoration, called once from parse_answer_contract before the head split / kind branches; every removed fragment recorded in cell['decoration_stripped']"
+  },
+  "corpus_before": "64 correct rows: 50 pass / 14 not (11 card-required): a 12/12, c 12/12, d 12/12, e1 4/4, g 5/5; e2 0/4, b-on-CALL 4 fail, b-on-NONE 3 undecidable, f 0/3",
+  "corpus_after": "64/64 pass - a 12/12, b 12/12, c 12/12, d 12/12, e1 4/4, e2 4/4, f 3/3, g 5/5",
+  "controls_after": "9 negative controls, 0 passed: num_mismatch, callee_mismatch, kwarg_value_mismatch:block_size, call_not_parsable, empty_num (undecidable), prose_only (undecidable), kind_mismatch:NONE_expected x3 - unchanged",
+  "red_cases": [
+   "call_wrong_value_with_provenance -> fail / kwarg_value_mismatch:serialized_ref (stripped ['(resolve.py:163)'])",
+   "num_wrong_value_with_period `NUM 32.` -> fail / num_mismatch (stripped ['.'])",
+   "call_wrong_callee_with_period -> fail / callee_mismatch (stripped ['.'])",
+   "none_justification_naming_a_call `NONE \u2014 actually ledger.record_refusal` -> fail / answer_not_contract:trailing_after_none (stripped [])",
+   "num_not_integer `NUM 64.5` -> fail / num_not_integer:64.5 (stripped [])",
+   "citation_is_the_whole_answer `ANSWER: (resolve.py:163)` -> undecidable / unparseable (stripped [])"
+  ],
+  "era_a_rederivation": {
+   "grade_file": "experiments/ptr-engine/measure/cell-pointer-stable-20261026T145722Z.grade-v5.json",
+   "rows_file": "experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl",
+   "rows": 72,
+   "baseline": "pristine grader reconstructed byte-for-byte (sha 056eb605\u2026, verified) since /tmp does not persist between calls",
+   "pristine_vs_repaired_deltas": "NONE (0 of 3 cells changed); both re-derivations give pointer-stable 1/1",
+   "stored_vs_rederive": "stored 1/3 -> re-derived 1/1 is PRE-EXISTING version drift (stored file has grader_sha256 null and suffix-less reasons), not this repair",
+   "rows_attributable_to_a_decoration_strip": []
+  },
+  "harness_pin": "the combined harness digest moved, and the pin must be regenerated after this card and BUDGET-STAGE-MAX-TURNS have both landed: recomputed with the pristine grader the six-file digest is fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac (== the stored pin), with the repaired grader a3fa2ee0e771a010cc8c2ca28d2e253a005fc69cb1f2d425ae91a9155a5e970a - so the movement is attributable to grade_v5.py and nothing else",
+  "invariants": "thresholds 0, kind branches 0, NON_ANSWER_ERRORS unchanged, decidable/fail semantics unchanged, turn_missing unchanged, exit codes 0/3 unchanged; cell.py, run_longrun.py, analyze_stats.py, HARNESS-PIN.json, GRID-PARAMS.json, fixtures, thresholds and published pages untouched; measure/ERA-B-GRADE-REHEARSAL.json not rewritten",
+  "side_effects_reported_not_taken": [
+   "tests/test_era_b_grade_rehearsal.py: 5 tests now fail - it pins the pre-repair grader sha and asserts the pre-repair rejections. Outside this card's write paths; regenerating measure/ERA-B-GRADE-REHEARSAL.json + that file is a SEPARATE decision for its owner",
+   "tests/test_run_a_star_pin.py: the 2 pin tests fail on the moved digest (attributable, expected); its 3 CanaryArms KeyError('would_refuse') failures are run_a_star.py canary-record drift, not this card",
+   "tests/test_launch_contract_diff.py: anchors 'handed to cell.py (default 67)' vs run_a_star.py's 108 - pre-existing, BUDGET-STAGE-MAX-TURNS territory"
+  ],
+  "commands": [
+   "python3 experiments/ptr-engine/tests/test_grade_v5_decoration.py -> wrote experiments/ptr-engine/measure/GRADE-V5-T4-MATRIX.json; 64/64 pass, 0/9 controls, 6/6 red, verdict repair_holds",
+   "PYTHONPATH=src python3 -m pytest -q experiments/ptr-engine/tests/test_grade_v5_decoration.py -> 10 passed in 0.06s (exit 0)"
+  ],
+  "requests_spent": 0,
+  "offline": true
+ },
+ "blocker": "",
+ "next_unit_hint": "A separate card must reconcile the rehearsal with this repair: regenerate measure/ERA-B-GRADE-REHEARSAL.json and update tests/test_era_b_grade_rehearsal.py (it still pins grader sha 056eb605 and asserts the four pre-repair rejections). Do NOT regenerate HARNESS-PIN.json until BUDGET-STAGE-MAX-TURNS has landed too - one regeneration, not two.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "experiments/ptr-engine/tests/test_grade_v5_decoration.py",
+  "orchestration/units/GRADE-V5-T4-DECORATION.md",
+  "orchestration/handoffs/GRADE-V5-T4-DECORATION.json",
+  "orchestration/journals/GRADE-V5-T4-DECORATION.jsonl",
+  "experiments/ptr-engine/measure/GRADE-V5-T4-MATRIX.json"
+ ],
+ "assumptions": [
+  "rule (b) requires the trailing parenthetical to be whitespace-separated and the remainder to still parse as the same kind - chosen because 'f(...)'s own ')' is balanced and a naive strip would delete the answer",
+  "rule (c) refuses a justification whose payload carries a numeral, dotted name, callable '(' or snake_case token - the conservative reading that keeps the card's red case red; a NONE justification that only cites provenance is accepted",
+  "the era-A A/B baseline was reconstructed in-process (reversing this repair's three insertions) because /tmp does not survive between invocations here; the reconstruction is verified by sha256 == 056eb605\u2026"
+ ]
+}

@@ -1,0 +1,55 @@
+{
+  "unit": "V-CAPGATE-DEDUP",
+  "overall": "partial",
+  "checks": [
+    "P1 SOURCE (read-only): the gate compares `budget.spent` from request_ledger.build_report() against `headroom = cap - reserve` (cap default 4320, reserve default 0). acquire() computes projected = spent_at_start + used_in_run + 1 and refuses with `CAP REFUSED ... over the global cap` when projected > headroom (exit 4, nothing sent); reconcile() computes delta = spent_after - (spent_at_start + used_in_run), where delta>0 -> `CAP GATE RECONCILE DIVERGENCE` and exit 9 (EXIT_CAP_DIVERGENCE), delta==0 -> `cap-gate: reconciled - the run's count N equals the rows gained N (delta 0)` and rc unchanged, delta<0 -> `CAP GATE UNRECORDED` and rc LEFT AT 0.",
+    "THE CLAIM IS REFUTED AS STATED: request_ledger.DEDUCTION_RULE_SOUND is False (tools/request_ledger.py:155) and deduction_permitted() refuses to deduct without a request_identity_hash, so build_report publishes requests = requests_raw = 1101, not 1,071. REQUEST-LEDGER-2 assumption[1] ('budget.spent is the de-duplicated count (1,071)') does not hold of the shipped code; the ledger reversed it under V-DUPLICATE-RULE. The de-duplicated 1,071 is present but only under `diagnostic`, `deducted: false`.",
+    "P2 delta<0 REPRODUCED, but as a WARNING: with the deduction enabled (a /tmp shim wrapping the real module, deduction_rule_sound=True + evidence) and one unseen duplicate mirror row added to a /tmp copy of the corpus, the gate printed `CAP GATE UNRECORDED (delta=-1): 1 request(s) reached the wire but their rows were not written before the run stopped (used_in_run=1 rows_gained=0); the next run's disk read under-counts by that many - reported, never silent` and returned rc=0. It does NOT refuse. Command: python3 experiments/ptr-engine/tools/capgate_dedup_attack.py (probe P2c).",
+    "P2 AS SHIPPED the same duplicate is COUNTED, not deducted: +1 unseen duplicate row -> `cap-gate: reconciled - the run's count 1 equals the rows gained 1 (delta 0)` rc=0; +2 duplicate rows -> `CAP GATE RECONCILE DIVERGENCE (delta=+1): ... A divergence is a bug, not a rounding error.` rc=9. So an inflating mirror cannot pass silently today.",
+    "P3 BOUNDARY: with the raw ledger, spent_at_start=1101, cap=1103 (= spent + planned 2), 2 requests acquired and reconcile printed `cap-gate: reconciled - the run's count 2 equals the rows gained 2 (delta 0)` rc=0 - `==` is ALLOWED. One request over (planned 3 against the same cap) refused at T3: `CAP REFUSED at T3 (turn) - over the global cap: spent=1103 would_spend=3 cap=1103 reserve=0 headroom=1103 allocation=3 used_in_run=2 turn=3 kind=turn projected=1104 over_by=1 - nothing sent`, exit 4.",
+    "P3b THE COUNT THE GATE ACTUALLY USED: cap=1101 leaves 30 requests of room for the de-duplicated reading and zero for the raw one. As shipped the gate used RAW: `CAP REFUSED at T1 (turn) - over the global cap: spent=1101 would_spend=1 cap=1101 ... projected=1102 over_by=1 - nothing sent`. With the deduction shim it used DEDUP: spent_at_start=1071, believed_unspent=30, 30/30 acquired. The two counts are 30 apart and the test discriminates.",
+    "P4 UNSAFE DIRECTION - NOT reachable as shipped: cap=1101 with rows billing 1101 and a ledger publishing 1071. As shipped spent_at_start=1101, believed_unspent=0, 0/30 acquired, exit 4 (refuses - safe by 30 requests of over-count). Under the shim (deduction ON) it LAUNCHED all 30 with `believed_unspent=30` while the engine bills 1101, and the exit reconciliation then printed delta=0 rc=0, i.e. the under-count would be wholly invisible. That is the latent seam assumption[1] describes; it is gated behind a flag AND a request_identity_hash evidence key that does not exist today, so it is not live.",
+    "DRY-RUN GAP: `--dry-run` never constructs the gate. python3 experiments/ptr-engine/longrun/run_longrun.py --dry-run --fixture <1-turn> --budget-cap 1 --arms transcript-grow --reps 1 exited 0 against 1,101 already spent; against cap=1 the gate would have refused with exit 4. A '1-turn cell dry run' therefore cannot preview the brake at all - build_cap_gate() is only called inside run_cell (longrun/run_longrun.py:2155).",
+    "P5 TODAY ledger and gate agree on ONE number: measure/REQUEST-LEDGER.json budget = spent 1101, spent_raw 1101, spent_deduplicated 1071, remaining 3219; the gate's own reconcile over the same 14 files / 1101 rows printed spent_at_start=1101, spent_after=1101, delta=0, so ledger and gate both print 1101 (raw). No unearned headroom exists today.",
+    "CONTAINMENT: repo files run_longrun.py, tools/request_ledger.py, all measure/rows-*.jsonl and measure/REQUEST-LEDGER.json were only read; all mutation was in /tmp/capgate-dedup-mirror; zero sockets, zero inference requests; the only repo writes are the three artefacts named in write_paths."
+  ],
+  "not_reproduced": [
+    "the claim that the cap gate spends against 1,071: it spends against 1,101 (raw). The delta<0 branch is unreachable on the shipped ledger because no deduction is applied, so the handoff's predicted 'a future duplicate mirror surfaces as delta<0 CAP GATE UNRECORDED instead of inflating the budget' is NOT what happens today: a duplicate mirror INFLATES the count (delta 0 for one, delta +1 -> exit 9 for two) and is never deducted.",
+    "any refusal on delta<0: the gate prints CAP GATE UNRECORDED and returns 0; no exit code changes, so a run that under-counts its own spend still reports success."
+  ],
+  "overstated": [
+    "REQUEST-LEDGER-2 assumption[1] ('budget.spent is the de-duplicated count (1,071) ... Downstream cap-gate reconcile therefore also runs on the de-duplicated count') - false of the shipped ledger; the deduction was reversed and spend is the conservative raw 1,101.",
+    "The next_unit_hint's premise that the gate 'now spends against the de-duplicated figure' - it does not; the seam it warns about is latent behind DEDUCTION_RULE_SOUND + a request_identity_hash, not live."
+  ],
+  "unverified": [
+    "whether a duplicate can ever be a RETRIED request at the wire - no live request was made (card forbids it), so the billing semantics of a merged tuple remain unmeasured; the ledger's own reason (content_sha256 hashes assistant content, 869/869) is accepted as evidence rather than re-derived here.",
+    "the real-engine bill for a 30-request overrun: the unsafe-direction probe shows the gate would launch, but no request was sent, so the money consequence is arithmetic (30 x unit price), not measured."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Two things remain open, both cheap: (1) make delta<0 fail closed (rc=9 or 4) instead of rc=0 - today CAP GATE UNRECORDED is a warning, so a run whose own rows under-counts still exits success and the next run's disk read silently inherits the under-count; (2) make --dry-run construct the gate (or print the cap arithmetic) so a preview can expose the brake, since build_cap_gate() is only reached in run_cell (longrun/run_longrun.py:2155). Until (1) lands, RUN-A* is safe only because the ledger over-counts by 30; if DEDUCTION_RULE_SOUND ever flips with evidence, the 30-request unearned headroom becomes live on the same commit.",
+  "write_paths": [
+    "orchestration/handoffs/V-CAPGATE-DEDUP.json",
+    "orchestration/units/V-CAPGATE-DEDUP.md",
+    "orchestration/journals/V-CAPGATE-DEDUP.jsonl",
+    "experiments/ptr-engine/measure/CAPGATE-DEDUP-ATTACK.md",
+    "experiments/ptr-engine/tools/capgate_dedup_attack.py"
+  ],
+  "tool_calls": 31,
+  "bound": 24,
+  "tool_calls_used": 31,
+  "bound_overrun": "7 calls over the 24-call bound: the first harness run measured the duplicate-mirror baseline AFTER the mirror was appended (delta -1 in both worlds, non-discriminating), and the dry-run probe first hit a STUB fixture (LR-01 has no items) and needed a constructed fixture before the gate path could be observed. Both were re-run to get honest arithmetic; no probe was skipped or softened, and the bound breach is recorded rather than repaired by trimming evidence.",
+  "live_requests": 0,
+  "network": false,
+  "containment": "read-only on run_longrun.py, tools/request_ledger.py, measure/rows-*.jsonl and measure/REQUEST-LEDGER.json; all mutation under /tmp/capgate-dedup-mirror",
+  "evidence": {
+    "command": "python3 experiments/ptr-engine/tools/capgate_dedup_attack.py",
+    "exit_code": 0,
+    "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+    "ledger": "measure/REQUEST-LEDGER.json sha256 2f60b831a8439a9b... budget spent=1101 spent_raw=1101 spent_deduplicated=1071 remaining=3219",
+    "corpus": "14 rows-*.jsonl files, 1101 rows total"
+  },
+  "assumptions": [
+    "The 'claimed world' (gate spends 1,071) was simulated with a /tmp shim that wraps the real request_ledger.build_report and passes deduction_rule_sound=True with a placeholder request_identity_hash, because the repo's ledger forbids the deduction. This is the only way to reach the delta<0 branch without editing a repo file, and every probe that uses it is labelled 'claimed world'.",
+    "Synthetic rows (kind=turn, unique ts/content_sha256/token pairs) were appended to a /tmp own-rows mirror only so that the exit reconciliation reflects the requests the drive actually acquired; they represent the writer, not extra spend."
+  ]
+}

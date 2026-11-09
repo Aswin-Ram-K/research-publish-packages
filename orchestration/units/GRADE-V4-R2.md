@@ -7,7 +7,7 @@
 - **Hard bound:** ≤28 tool calls, zero network requests, automated (never ask_user_question).
 - **Read-only:** `grade_v3.py`, `grade_v2.py`, `score_longrun.py`, `analyze_longrun.py`, fixtures,
   rows, existing grade files, `ANCHOR-PREREG.md`, `tools/anchor_prereg_check.py`.
-- **Write paths:** exactly the five listed by the card (grade_v4.py, tests/test_grade_v4.py,
+- **Write paths:** exactly the five listed by the card (grade_v4.py, experiments/ptr-engine/longrun/tests/test_grade_v4.py,
   measure/*.grade-v4.json, this card, orchestration/handoffs/GRADE-V4-R2.json).
 - **Acceptance:** realized flips ≤3 of 39; C-grid `not_applicable` and inert; four test exits recorded;
   one red exit with the classifier stubbed to always-CODE-SYMBOL.
@@ -74,7 +74,7 @@ does not reproduce the prereg's "would flip ≤2" count for that grid — that c
 
 ## Guard
 
-`tests/test_grade_v4.py` green exit 0 (4/4 assertions); `--stub-code` red exit 1 (assertion 1
+`experiments/ptr-engine/longrun/tests/test_grade_v4.py` green exit 0 (4/4 assertions); `--stub-code` red exit 1 (assertion 1
 fails when the occurrence-context classifier is stubbed to always CODE-SYMBOL = R1).
 
 ## R2 rule, as implemented

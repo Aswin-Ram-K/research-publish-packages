@@ -1,0 +1,72 @@
+{
+  "unit": "COLD-START-PROBE",
+  "date": "2026-10-26",
+  "requests": 0,
+  "spawns": 0,
+  "dispatched_nothing": true,
+  "record_age": {
+    "VERDICTS_mtime": "2026-10-26T12:34:22-05:00",
+    "STATUS_mtime": "2026-10-26T12:34:22-05:00",
+    "board_last_post_seq": 971,
+    "board_reply_count": 397,
+    "board_read_note": "orchestration_board read with limit/since returns from the beginning of the thread and truncates; newest seq retrieved by search was #971, so board_last_post_seq is a lower bound, not a verified head"
+  },
+  "answers": [
+    {
+      "question": "The objective, in one sentence, and its current verdict word for the operator's thesis; which hypothesis is not adjudicable and why.",
+      "answer": "Objective: minimise p95 TTFT and tokens-to-verified-success over long runs at equal-or-better verified quality on occamy-1.0/SGLang :8012. There is NO verdict word for the thesis; the only recorded aggregate is the batch table (134 rows: PASS 15, FAIL 11, partial 34, author-report 73, pending 1). H1 is not adjudicable at the pinned launch shape (per-cell n=48 < 60 -> G3 exit 12; pooled n=144/96 passes G3 and is refused by G2 at 8,640/5,760 s vs 2,880 s). H3 is not adjudicable below 8 decidable of 12 checkpoints.",
+      "source": "orchestration/STATUS.md:380-384; orchestration/VERDICTS.md:4024-4028; orchestration/handoffs/TRANCH1-DRYRUN.json; docs/GATE-CHAIN.md §5; docs/PARM-1-ERRATA.md:154",
+      "status": "silent",
+      "notes": "The objective is answered; the verdict word is absent. Read as: no thesis-level verdict exists, only per-hypothesis refusals. Do not read the batch aggregate as the thesis' verdict."
+    },
+    {
+      "question": "The spend: requests used, of what cap, remaining, with artefact path and field names; does a de-duplicated figure exist and is it deducted?",
+      "answer": "1,101 used of 4,320 cap, 3,219 remaining. Fields requests_raw=1101, remaining_raw=3219, requests=1101, remaining=3219 (budget.cap/spent/remaining as cited by PRICE-REPLICATION). A de-duplicated figure exists: requests_deduplicated=1071, remaining_deduplicated=3249, duplicate_excess=30; it is NOT deducted (deduction_rule_sound=false, deduction.applied=false) because the rule hashes assistant content, not the request.",
+      "source": "experiments/ptr-engine/measure/REQUEST-LEDGER.json (requests_raw, remaining_raw, requests_deduplicated, remaining_deduplicated, duplicate_excess, deduction.applied, deduction_rule_sound, publishes); docs/PRICE-REPLICATION.md:32-35",
+      "status": "answered",
+      "notes": "Print 1,101 / 3,219 only; WI-001 and WI-002 retire the alternatives."
+    },
+    {
+      "question": "The three holds, each with the card that would clear it: (a) 660-request tranche, (b) a live cell through the conductor, (c) publication.",
+      "answer": "(a) Gate pincer: G3 refuses H1 at n=48 for every 48-turn cell; the pooled shape that clears n>=60 is refused by G2 (8,640/5,760 s > 2,880 s). Carrier is RUN-A* ad214412-c39c-4a47-afb1-2be328e03b1e; the launch decision is card-level. (b) V-SPAWN-ATTACK-2 partial: the spawn record is not tree-bound (D5) and the refusal doc drops instrumentation (D6); D2/D3/D4 fixed by SPAWN-RECORD-BIND. (c) STATUS blocker chain link 1 is not discharged: VERDICT-DISPUTE found the gate-chain closure PASS rested on 26 assertions, 6 of which encoded the bypass as a pass condition, and the card's overall was fail (WI-008); link 2 V-STAMP-NEUTRAL partial; link 3 v8 provenance; plus 3 [CITATION NEEDED] markers needing a unit with network.",
+      "source": "orchestration/handoffs/TRANCH1-DRYRUN.json (g3_refusal_verbatim, pooled_probes); orchestration/handoffs/V-SPAWN-ATTACK-2.json (gate_precondition); docs/GATE-CHAIN.md §11 (D5, D6); orchestration/STATUS.md:399-405",
+      "status": "silent",
+      "notes": "Mechanisms answered; the record names NO clearing card ids for any of the three (a) successor launch-shape card, (b) spawn tree-binding card, (c) gate-chain soundness + network citation cards. SPWN-RECORD-BIND.next_unit_hint describes (b) but no card exists."
+    },
+    {
+      "question": "Which numbers are withdrawn, and how a reader checks a figure before citing it (tool and exit codes).",
+      "answer": "15 entries WI-001..WI-015: withdrawn 9 (001,004,005,006,009,010,011,012,013), superseded 6 (002,003,007,008,014,015); WI-004 has no replacement; 002/004/005 carry a recorded discrepancy. Check with python3 experiments/ptr-engine/tools/withdrawn_index.py --check <file>: exit 1 = a withdrawn claim is quoted without its correction, exit 0 = clean. --self-test opens every decided_by path and superseded_by artefact.",
+      "source": "experiments/ptr-engine/measure/WITHDRAWN.json (entries, how_to_use, counts); experiments/ptr-engine/tools/withdrawn_index.py:129; orchestration/VERDICTS.md:4181-4205",
+      "status": "answered",
+      "notes": "Quote rule from the register: 'never' = do not repeat the number in any new document; 'only with the correction attached' = only beside its correction, instrument and sha."
+    },
+    {
+      "question": "The next dispatchable card: id, price, preconditions — quoted from the card.",
+      "answer": "No card is dispatchable. Next in queue: RUN-A* ad214412-c39c-4a47-afb1-2be328e03b1e. Price in PRICE-REPLICATION: '4 arms, pair at 3 reps, context at 2 reps = 480 turns / 660 requests (10 cells of 48 turns; 2,559 remain)'. Its own text: 'its title, description, hard cap (900) and conditional-launch tags all encode 4 arms x 48 turns x 3 reps = 12 cells / ~792 requests'. Preconditions: G1 allows (1,101 + 48 + 5 = 1,154, marginal 53/cell), G2 allows at exactly 2,880 s, G3 REFUSES with exit 12.",
+      "source": "docs/PRICE-REPLICATION.md:170, :219-221; orchestration/handoffs/TRANCH1-DRYRUN.json (blocker, evidence.g1, evidence.g2, g3_refusal_verbatim)",
+      "status": "contradictory",
+      "notes": "A says the card is 660 requests / 10 cells (PRICE-REPLICATION §5), B says the card itself still encodes 792 requests / 12 cells and hard cap 900 (PRICE-REPLICATION §7 item 1). Neither version can launch: G3 exit 12."
+    },
+    {
+      "question": "The frozen thresholds that may never be lowered to make an outcome readable, and where they live.",
+      "answer": "48 turns per arm (N=48); reps >= 2; the four-arm clause (all four arms in the same grid with identical fixture_sha256 and reasoning policy); TAIL_MIN = 3; p95 minimum n = 60; H3 unadjudicable below 8 of 12; the 2/12 margin; McNemar b+c >= 6 at p<0.05; the 180 s live turn wall. The 100 ms gate is a scheduling predicate, not an adjudication threshold.",
+      "source": "docs/PREREG-ARM-RUN.md:37,:113,:137,:142,:150-152; docs/PARM-1-ERRATA.md:223-230 (thresholds_unchanged); docs/GATE-CHAIN.md §5; docs/EXIT-CODES.md code 12; docs/PRICE-REPLICATION.md §4 and §8",
+      "status": "answered",
+      "notes": "PARM-1 is FROZEN: changes land as additive errata (docs/PARM-1-ERRATA.md), never as an edit to docs/PREREG-ARM-RUN.md."
+    },
+    {
+      "question": "Any path named in the record that does not exist.",
+      "answer": "docs/BUDGET-SCHEDULE.md does not exist, though it is cited by docs/PRICE-REPLICATION.md:222, by experiments/ptr-engine/measure/price-replication.json (:35, :39, :115, :119, :393) and by orchestration/handoffs/PRICE-REPLICATION.json:27. The artefact is experiments/ptr-engine/measure/BUDGET-SCHEDULE.md. A second candidate, docs/PARM-1-ERRATA.json, is also absent but is cited only as a snippet, not as a path.",
+      "source": "docs/PRICE-REPLICATION.md:222; experiments/ptr-engine/measure/price-replication.json; orchestration/handoffs/PRICE-REPLICATION.json:27; filesystem check",
+      "status": "answered",
+      "notes": "Reported, not repaired. The phantom is batch-produced: PRICE-REPLICATION is this batch's card and it is the artefact that names the wrong directory."
+    },
+    {
+      "question": "What a verdict row is, why most closed cards lack one, and what the gate does when it is missing.",
+      "answer": "A verdict row is {command, exitCode, sha} recorded for one card via orchestration_verdict; it proves one command exited with the recorded status against a named commit and nothing more. Of 134 rows only 1 is complete: 11 lack sha, 64 lack exit and sha, 58 lack all three — rows are machine-extracted from handoffs and most handoffs recorded a prose outcome rather than a command. When it is missing the row is a report, not a verdict, and the gate never saw it; tests/test_verdict_ritual.py fails on any new closure settled with no verdict row, and a settle with nothing recorded derives no-verdict.",
+      "source": "orchestration/VERDICTS.md:4166-4173, :4216-4233; orchestration/handoffs/WIRE-TREE-FREEZE-INTO-VERDICTS.json (known_gap_observed); orchestration/handoffs/FAILED-COLUMN-RECLAIM.json",
+      "status": "answered",
+      "notes": "The sweeper's own shipped command is tests/test_verdict_ritual.py::LiveLedgerTest::test_no_new_unverdicted_closure_since_the_baseline."
+    }
+  ]
+}

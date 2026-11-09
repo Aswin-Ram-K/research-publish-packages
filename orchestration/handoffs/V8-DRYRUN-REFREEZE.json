@@ -1,0 +1,42 @@
+{
+ "unit": "V8-DRYRUN-REFREEZE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/V8-DRYRUN-REFREEZE.json",
+  "experiments/ptr-engine/longrun/tests/test_manifest_cap_consistency.py",
+  "docs/V8-DRYRUN-REFREEZE.md",
+  "experiments/ptr-engine/longrun/manifests/archive/pre-wallkey/",
+  "experiments/ptr-engine/longrun/manifests/dryrun-LR-01-transcript-grow-r1.json",
+  "experiments/ptr-engine/longrun/manifests/dryrun-LR-01-transcript-compact-r1.json",
+  "experiments/ptr-engine/longrun/manifests/dryrun-LR-01-pointer-stable-r1.json",
+  "experiments/ptr-engine/longrun/manifests/dryrun-LR-01-lease-reopen-r1.json"
+ ],
+ "evidence": {
+  "old_caps": "3838,3838,3838,65536",
+  "new_caps": "10616 x4",
+  "gates": "G1 allow 1,154/4,320 \u00b7 G2 allow 2,880/3,600 s \u00b7 G3 allow n=48>=1",
+  "no_network": "audit-hook network events = 0; unshare -n unavailable (EPERM)",
+  "guard_red_green": "2 passed -> 1 failed/1 passed with archived stale manifest reinstated -> 2 passed",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/cell.py --dry-run --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 48 --reps 1 --hypothesis H2 --arm transcript-grow",
+   "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --arms transcript-grow,transcript-compact,pointer-stable,lease-reopen --reps 1 --dry-run --manifest-dir experiments/ptr-engine/longrun/manifests",
+   "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_manifest_cap_consistency.py"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Before the 800-request grid opens, re-run this re-freeze whenever step 2 of the recipe changes; the guard now fails any future dry run that reinstates 3838.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/manifests/",
+  "experiments/ptr-engine/measure/V8-DRYRUN-REFREEZE.json",
+  "experiments/ptr-engine/longrun/tests/test_manifest_cap_consistency.py",
+  "docs/V8-DRYRUN-REFREEZE.md",
+  "orchestration/units/V8-DRYRUN-REFREEZE.md"
+ ],
+ "assumptions": [
+  "unshare -n is not permitted in this container, so the no-network assertion uses a sys.addaudithook over socket.* instead",
+  "the fourth pre-freeze manifest (transcript-grow, cap 65536, sha fc44cb20 == /tmp/red.json) was treated as in-scope because it names LR-01.v8, and archived rather than deleted"
+ ],
+ "external_changes": [
+  "manifests/v4tools2-proof-off-{before,after}.json and several untracked manifests were already dirty in the worktree; this unit did not touch them"
+ ]
+}

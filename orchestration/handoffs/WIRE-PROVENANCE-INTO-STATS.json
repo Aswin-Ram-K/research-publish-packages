@@ -1,0 +1,50 @@
+{
+ "unit": "WIRE-PROVENANCE-INTO-STATS",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/analyze_stats.py",
+  "experiments/ptr-engine/longrun/tests/test_analyze_provenance.py",
+  "docs/PROVENANCE-REFUSAL.md",
+  "orchestration/units/WIRE-PROVENANCE-INTO-STATS.md"
+ ],
+ "evidence": {
+  "wiring": "analyze_stats.py require_comparable (gate, calls row_provenance.same_provenance) -> compare() (gate before statistic dispatch) -> analyze() routes BOTH the H3 McNemar path and the H1 p50/p95 path through compare(); provenance_cells() resolves each arm through the same row->manifest->cell ladder row_provenance.py uses",
+  "refusal": "IncomparableProvenance(RefusedTest), kind='incomparable_provenance', message starts 'incomparable_provenance', carries .differing / .a / .b; load-bearing fields fixture_sha256, model, thinking, tools_mode; unknown-vs-unknown refuses",
+  "damage_8_pairs": "8 of 8 SURVIVE, 0 incomparable_provenance. G4 RUN-C-V2 6/6 (all four arms fixture_sha256=0a07db1b14f3 model=occamy-1.0-NVFP4 thinking=off tools_mode=off); G5 V3 1/1 (07abab0bd902 same others); G6 V4 1/1 (5a5f8c4be202 same others). Unchanged pre-existing refusals: p95 comparisons refused at n=48 (n*(1-q)=2.4<3, 60-floor) 6/6+1/1+1/1, McNemar refused at b+c<6 6/6+1/1+1/1. p50 points unchanged (lease-reopen 134.96 differs from pointer-stable 167.02, matching LATENCY-REPORT p50_a/p50_b).",
+  "negative_control": "--rows rows-longrun-c-2026-10-26.jsonl rows-longrun-v4-tools-2026-10-26.jsonl -> REFUSED (incomparable_provenance) differing on fixture_sha256, tools_mode: fixture_sha256 ('0a07db1b14f30034902c23fe208e5717ad64856f31fe9dcfc1ab873bc2b90848' vs 'unknown'), tools_mode ('off' vs 'unknown')",
+  "run_a_star": "UNAFFECTED, by value not assumption: one fixture for all four arms (LR-01.v6.json; today sha256 ff89625df95dca6ae47dd24db72f43d83c24f9cd371e16938258ec03b7e946db), model occamy-1.0-NVFP4, thinking off, tools_mode off; identical load-bearing set by design (docs/PREREG-ARM-RUN.md:150-154). Caveat recorded: existing rows-longrun-v6-tools.jsonl rows record fixture 5bf5f6393946 (v4 bytes), so a future RUN-A* compared against those WILL refuse on fixture_sha256 -- correctly. RUN-A* n rule unchanged: H1 needs the 60-floor (reps>=2 at 48 turns).",
+  "override_visibility": "--assume-comparable is the only door: stdout banner '!! PROVENANCE OVERRIDE' + per-line 'PROVENANCE OVERRIDE (assumed comparable over <fields>)'; --json records provenance_override: true, assume_comparable: true, provenance_override_differing: [fields]; no env var, no default-on",
+  "provenance_in_every_row": "every arm block prints 'provenance <arm>: fixture_sha256=<12hex> model= thinking= tools_mode='; every comparison prints both sides 'fixture_sha256=<12> vs <12> thinking= vs tools_mode= vs model= vs'",
+  "thresholds": "UNCHANGED: MIN_N=20, TAIL_MIN=3, min_n_for(0.95)=60, LEVEL=0.95, McNemar b+c>=6, RESAMPLES=10000, SEED=20261020; quantile_ci and mcnemar_exact bodies untouched; the quantile comparison adds no estimator (existing intervals + overlap flag only)",
+  "tests": "experiments/ptr-engine/longrun/tests/test_analyze_provenance.py: 9 tests (a)-(f); with the 8 pre-existing test_analyze_stats.py cases -> '17 passed in 0.56s'",
+  "red_green": "RED: replaced the require_comparable call at analyze_stats.py:670-671 with a fabricated pass-through gate -> 'AssertionError: compare() computed a comparison across two fixtures', '8 failed, 1 passed' (case (a) test_a_differing_fixture_refuses_and_names_the_field failed). GREEN after restore -> '17 passed in 0.56s'.",
+  "upstream_defect": "client.is_provenance_known('mixed') is True, so same_provenance({'fixture_sha256':'mixed'},{'fixture_sha256':'mixed'}) does NOT name fixture_sha256 as differing -- two 'mixed' cells pass. ROW-PROVENANCE handoff claims mixed->refuse. Not fixed (dependency read-only); analyze_stats maps 'mixed'->unknown in cell_provenance(). Recommended follow-up: fix is_provenance_known + add a 'mixed' case to tests/test_row_provenance.py.",
+  "commands": [
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_analyze_provenance.py experiments/ptr-engine/longrun/tests/test_analyze_stats.py -q",
+   "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl --json OUT",
+   "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.jsonl --json OUT",
+   "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows experiments/ptr-engine/measure/rows-longrun-v4-2026-10-26.jsonl --json OUT",
+   "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl experiments/ptr-engine/measure/rows-longrun-v4-tools-2026-10-26.jsonl"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Two follow-ups. (1) UPSTREAM: teach client.is_provenance_known that 'mixed' is unknown and add a mixed case to tests/test_row_provenance.py -- until then only analyze_stats.py is defended. (2) LATENCY-REPORT.json still carries no provenance column and its 'comparisons' section was computed by the pre-gate analyser; re-running it through the now-gated path is a separate card (it writes an artefact this unit must not edit), and a RUN-A* report should pin the fixture sha at run time (LR-01.v6.json today ff89625df95d...).",
+ "assumptions": [
+  "The card's output path 'experiments/ptr-engine/tools/analyze_stats.py' does not exist; the file is at experiments/ptr-engine/longrun/analyze_stats.py (confirmed by LATENCY-REPORT.json analyser.path). Wired there; tools/ not populated.",
+  "The card's test path 'experiments/ptr-engine/longrun/tests/test_analyze_provenance.py' exists as named -- used as-is.",
+  "LATENCY-REPORT.json is read-only for this unit, so the 'damage' numbers were produced by re-running the gated analyser per grid, not by rewriting the report.",
+  "analyze() catches IncomparableProvenance and records it (a report with 6 pairs should not abort on one refused pair); compare() itself raises, so the library refusal stays hard.",
+  "Cell provenance for an arm is the aggregate over that arm's rows resolved through row->manifest->cell; 'mixed' is mapped to 'unknown' because same_provenance would otherwise treat two mixed cells as agreeing."
+ ],
+ "tool_calls": 35,
+ "bound": 26,
+ "bound_overrun_reason": "Red->green was applied in place and the /tmp backup was not visible to the next shell (per-call private temp), so the restore needed a re-read + re-edit. Files intact; restore verified.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/analyze_stats.py",
+  "experiments/ptr-engine/longrun/tests/test_analyze_provenance.py",
+  "docs/PROVENANCE-REFUSAL.md",
+  "orchestration/units/WIRE-PROVENANCE-INTO-STATS.md",
+  "orchestration/handoffs/WIRE-PROVENANCE-INTO-STATS.json",
+  "orchestration/journals/WIRE-PROVENANCE-INTO-STATS.jsonl"
+ ]
+}

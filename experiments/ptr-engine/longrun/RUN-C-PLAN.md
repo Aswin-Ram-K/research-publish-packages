@@ -10,7 +10,7 @@
 curl -s -m 10 http://192.168.2.168:8012/v1/models | head -c 400
 
 # 1.2 the cell — one process, four arms, run id longrun-c-2026-10-26
-cd "/home/zer0null/reserach extarctor"
+cd "/home/zer0null/research extractor"
 python3 experiments/ptr-engine/longrun/run_longrun.py \
   --fixture experiments/ptr-engine/longrun/runtime/LR-01.json \
   --arms transcript-grow,transcript-compact,pointer-stable,lease-reopen \

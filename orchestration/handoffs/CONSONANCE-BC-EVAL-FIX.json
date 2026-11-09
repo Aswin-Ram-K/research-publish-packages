@@ -1,0 +1,42 @@
+{
+  "unit": "CONSONANCE-BC-EVAL-FIX",
+  "status": "done",
+  "target": "research/next-candidates/consonance-bounded-context-evaluation.md",
+  "trigger": "orchestration/handoffs/V-CONSONANCE-BC-EVAL.json (1 material + 4 minor defects)",
+  "integrity": {
+    "sha256_before": "1632c29feae310566a5f320c59ec6bee6b25625135b48719a088029844da12d9",
+    "sha256_after": "e53d8856a97691cc30b21bb94b1348a6fc96656b7921289b01f20da6e268ebf7",
+    "lines_after": 517,
+    "bytes_after": 44691
+  },
+  "corrections": [
+    "§6.3 material: '5 arms x 420 x 3 = 6,300' replaced by 5,040 (A,B,C,E) + 2 x 420 x 3 = 2,520 (D at 2 req/turn) = 7,560; ratio 7,560/1,729 = 4.37x. Prose '~3.6x' -> '~4.4x (4.37x)'; owner decision '>=6,300' -> '>=7,560'. UNFUNDED unchanged; '5,040 even if D were free' 2.92x unchanged.",
+    "§5 draft run.json option (b): max_calls '150 per arm' -> {\"A\":147,\"B\":150,\"C\":153}; added the per-rep derivation (A 49 / B 50 / C 51 per rep) and the 450 total; option (a) 123 untouched.",
+    "§4: restated EXPERIMENTS.md thresholds (identical >= 0.9 of P; append >= P - k; never-sent 0; mismatched-tokenizer 0) and the rule that a control without an explicit threshold is not green; mismatched-tokenizer control declared in the E1 run.json notes (controls object keeps exactly four keys).",
+    "§5/§6 falsifier cells: A -> 'none (baseline; cannot falsify itself)' in both tables; E -> 'none (upper-bound diagnostic; not deployable)' with parametric-recall violation (INVALID-INSTRUMENT) moved into E's negative control cell.",
+    "§5 arm C: t40 checkpoint stated to have zero post-checkpoint repayment turns on a 40-turn fixture and is excluded from the repayment window; falsifier text unchanged."
+  ],
+  "evidence": [
+    "grep -n '6,300\\|3\\.64\\|3\\.6×' protocol -> no matches (returned 'none').",
+    "grep -n '7,560\\|4\\.37' -> 368: total = 5,040 + 2,520 = 7,560; 369: = >=7,560; 372: ratio = 7,560 / 1,729 = 4.37×; 376: ~4.4× (4.37×); 384: owner 'fund the comparative at >=7,560 requests'.",
+    "arithmetic: print(2*420*3) = 2520; print(5040+2520) = 7560; print(round(7560/1729,4)) = 4.3725; 3*(49+50+51) = 450 (A 147 / B 150 / C 153).",
+    "invariants: UNFUNDED count 3; 'repay' lines 9; ':8012 null = 0' lines 3; 'MISSING' lines 2; HYP-ABSENT-01 lines 2; INVALID-INSTRUMENT lines 7; fence count 10 (even).",
+    "sha256 after e53d8856a97691cc30b21bb94b1348a6fc96656b7921289b01f20da6e268ebf7; 517 lines; 44,691 B (was 505 lines / 43,187 B).",
+    "no live call, no curl, no run_longrun, no target-repo write, no write outside the three declared paths."
+  ],
+  "blocker": "",
+  "residual": "orchestration/units/CONSONANCE-BC-EVAL.md finding 4 still quotes pre-fix '6,300 (3.64×)'; outside this unit's write paths, left untouched, superseded by the protocol.",
+  "next_unit_hint": "Re-verify the two arithmetic sites and the per-arm caps, then freeze/approve: the protocol is internally consistent at 7,560 / 4.37x and 147/150/153. This fix authorizes no run; the owner decision (i) 7,560, (ii) 185-call pilot, (iii) neither is still open.",
+  "artifacts": [
+    "research/next-candidates/consonance-bounded-context-evaluation.md",
+    "orchestration/units/CONSONANCE-BC-EVAL-FIX.md",
+    "orchestration/handoffs/CONSONANCE-BC-EVAL-FIX.json"
+  ],
+  "write_paths": [
+    "research/next-candidates/consonance-bounded-context-evaluation.md",
+    "orchestration/units/CONSONANCE-BC-EVAL-FIX.md",
+    "orchestration/handoffs/CONSONANCE-BC-EVAL-FIX.json"
+  ],
+  "tool_calls": 21,
+  "bound": 25
+}

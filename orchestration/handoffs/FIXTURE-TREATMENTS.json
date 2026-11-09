@@ -1,0 +1,56 @@
+{
+ "unit": "FIXTURE-TREATMENTS",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_treatments_fire.py",
+  "docs/TREATMENTS.md",
+  "experiments/ptr-engine/measure/FIXTURE-TREATMENTS.json",
+  "orchestration/units/FIXTURE-TREATMENTS.md"
+ ],
+ "evidence": {
+  "dry_run_turns_per_arm": "transcript-grow first FIFO truncation T21 | transcript-compact first wall T21 | lease-reopen first lease step T23 | pointer-stable first prefix change T2 (all <= 48)",
+  "expected_digests": "derived: 2 at wall 10616, 0 at 65536; the literal `return 2` is gone from expected_digests()",
+  "row_marker": "digest_at written beside evicted on the turn row; kind==digest rows unchanged",
+  "refusals": [
+   "first FIFO truncation > 48 turns at wall_tokens=65536 (grow never evicts ...)",
+   "missing fixture field 'lease_reopen_turns' - the lease can never step, so the reopen arm is the pointer arm with a different label",
+   "frozen v7 inputs under the declared contract: TREATMENT UNREACHABLE for all three arms"
+  ],
+  "v7_byte_identical": "sha256 42b4df007352d9397778d9e2b50b1b64ef451190e54ea2c6d1992f9f77bd8392 before and after",
+  "tests": "test_treatments_fire.py 9/9 passed; test_exit_codes, test_projection_calibration, test_arm_treatments, test_cell 31 passed",
+  "price": "792 baseline; 800 per firing grid (576 + 2x3 digests x 1.374532); four grids 3,200 vs 3,219 remaining = 19 slack",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/tests/test_treatments_fire.py",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_exit_codes.py experiments/ptr-engine/longrun/tests/test_projection_calibration.py experiments/ptr-engine/longrun/tests/test_arm_treatments.py experiments/ptr-engine/longrun/tests/test_cell.py -q"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "(1) 3838 is below v8's own first prompt (3848): if the grid must run at a single wall, the fixture needs a wall above 3848 or the corpus must shrink - decide, do not copy. (2) The precondition is armed by the fixture's `treatments` block, so frozen v5/v6/v7 cells stay ungated by design; GATE-OPERAND-VALIDATION should call check_treatments() from cell.py. (3) The grow FIFO order fix (parts[0] pinned) changed treatment semantics; a re-run at the old wall would not have evicted at all, so no prior row is invalidated, but the fix should be noted in the prereg. (4) Verbosity still confounds magnitude: enforce the answer budget before comparing cost",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_treatments_fire.py",
+  "docs/TREATMENTS.md",
+  "experiments/ptr-engine/measure/FIXTURE-TREATMENTS.json",
+  "orchestration/units/FIXTURE-TREATMENTS.md",
+  "orchestration/handoffs/FIXTURE-TREATMENTS.json",
+  "orchestration/journals/FIXTURE-TREATMENTS.jsonl"
+ ],
+ "tool_calls": 29,
+ "bound": 30,
+ "requests": 0,
+ "assumptions": [
+  {
+   "what": "wall used by the growth arms",
+   "value": 10616,
+   "why": "3838 is below v8's own prompt_T1 3848, so it fires at T2 and compacts a transcript that never fit; per-arm field per the card's item 3"
+  },
+  {
+   "what": "refusal exit code",
+   "value": 3,
+   "why": "a named code already in exit_codes.RUNNER_CODES ('the run did not start'); exit_codes.py is outside this unit's write paths"
+  }
+ ]
+}

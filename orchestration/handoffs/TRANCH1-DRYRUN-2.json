@@ -1,0 +1,114 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/measure/TRANCH1-DRYRUN-2.json",
+  "experiments/ptr-engine/measure/dryrun2-t2-pointer-stable-r1.json",
+  "experiments/ptr-engine/measure/dryrun2-t2-pointer-stable-r2.json",
+  "experiments/ptr-engine/measure/dryrun2-t2-pointer-stable-r3.json",
+  "experiments/ptr-engine/measure/dryrun2-t2-transcript-grow-r1.json",
+  "experiments/ptr-engine/measure/dryrun2-t2-transcript-grow-r2.json",
+  "experiments/ptr-engine/measure/dryrun2-t2-transcript-grow-r3.json",
+  "experiments/ptr-engine/measure/dryrun2-t2-transcript-compact-r1.json",
+  "experiments/ptr-engine/measure/dryrun2-t2-transcript-compact-r2.json",
+  "experiments/ptr-engine/measure/dryrun2-t2-lease-reopen-r1.json",
+  "experiments/ptr-engine/measure/dryrun2-t2-lease-reopen-r2.json",
+  "docs/TRANCH1-DRYRUN-2.md",
+  "experiments/ptr-engine/tools/tranch1_dryrun.py",
+  "experiments/ptr-engine/longrun/tests/test_tranch1_dryrun.py",
+  "orchestration/units/TRANCH1-DRYRUN-2.md",
+  "orchestration/handoffs/TRANCH1-DRYRUN-2.json",
+  "orchestration/journals/TRANCH1-DRYRUN-2.jsonl"
+ ],
+ "assumptions": [
+  "One invocation = one cell = 48 turns at --reps 1; the rep label indexes the cell, it is never passed as --reps (the first run of the emitter wrongly did, and was corrected before the artefacts were cut).",
+  "The per-arm 8-token warm-up is a request the runner's own allocation makes before each arm's first cell; it is not a cell.py flag and is not in G1's arithmetic, so it is declared (1 per arm, 4 total, +4 requests) rather than silently dropped.",
+  "The launch command keeps --no-cell-handoff (the tranche owns one handoff); dropping --dry-run is the only difference from the rehearsed argv.",
+  "Pooled probes are evidence about a shape that is NOT launched; they are recorded under /tmp and their G1 figures (1258/1206 cumulative) are hypothetical, not spent."
+ ],
+ "blocker": "",
+ "bound": {
+  "exceeded": true,
+  "limit": 28,
+  "reason": "tool extension + three correction rounds on launch-command emission; not a gate or threshold change",
+  "tool_calls": 40
+ },
+ "evidence": {
+  "all_ten_allowed": true,
+  "commands": [
+   "python3 experiments/ptr-engine/tools/tranch1_dryrun.py   # all_ten_allowed=True, H1 in launch artefacts=0, stamped",
+   "python3 experiments/ptr-engine/tools/tranch1_dryrun.py --check   # exit 0, PASS 10/10",
+   "python3 experiments/ptr-engine/tools/tranch1_dryrun.py --check --hypothesis H1   # exit 1, 10 G3 refusals",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_tranch1_dryrun.py -q   # 7 passed",
+   "sha256sum experiments/ptr-engine/longrun/cell.py   # before and after both e24e867b..."
+  ],
+  "design_cap_tokens": [
+   10616
+  ],
+  "g2_2880": {
+   "decision": "allow",
+   "ratio": 1.0
+  },
+  "g2_2881": {
+   "decision": "refused",
+   "projected_wall_s": 2881,
+   "verbatim": "projected wall 2881s = 48 request(s) x calibrated per-turn wall 60.0s for thinking off (flag) exceeds the allowed 2880s: this cell would spend its whole budget waiting on runaway turns"
+  },
+  "g3_h1_n48_verbatim": "PARM-1 admits H1 (p95 TTFT, q=0.95) only at n >= 60 completed turns; this cell would have n=48, so its own n cannot support the claim it would state",
+  "g3_h1_pooled_n144": {
+   "decision": "allow",
+   "n": 144
+  },
+  "g3_h2_n48": "allow",
+  "h1_occurrences_in_launch_artefacts": 0,
+  "h1_scan_scope": {
+   "launch_commands": 10,
+   "manifests": 10
+  },
+  "pins": {
+   "cell_py_after": "e24e867b8fe9eec7d1344f5738d9f04022f9f5d0968fa0f575ab9c30e6edf013",
+   "cell_py_before": "e24e867b8fe9eec7d1344f5738d9f04022f9f5d0968fa0f575ab9c30e6edf013",
+   "moved": [],
+   "stamp": "stamped"
+  },
+  "price": {
+   "breakdown": "48 turns + ceil(48 x 68/801) = 5 follow-up allowance",
+   "cells": 10,
+   "g1_displayed_per_cell": 1154,
+   "g1_is_cumulative": "the 1154 per-cell figure is CUMULATIVE (spent + turns + allowance), not a marginal forecast: the tranche's new spend is 530 requests",
+   "ledger": {
+    "cap": 4320,
+    "remaining_after": 2685,
+    "remaining_before": 3219,
+    "spent": 1101,
+    "spent_after_cells": 1631,
+    "spent_after_warmups": 1635
+   },
+   "requests_per_cell": 53,
+   "total_new_requests": 530,
+   "total_with_warmup": 534,
+   "warmup_requests": 4
+  },
+  "tests": "7 passed (includes the H1-check exit-1 / H2-check exit-0 claim guard and the 3,838 trap red case)",
+  "treatments": {
+   "compact_wall_turn": 21,
+   "grow_evict_turn": 21,
+   "lease_step_turn": 23,
+   "pointer_prefix_turn": 2
+  },
+  "zero_network": true,
+  "zero_spawns": true
+ },
+ "head_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+ "next_unit_hint": "RUN-A* can launch the ten cells as rehearsed: one `cell.py` invocation per cell, `--hypothesis H2 --reps 1 --max-wall 2880`, fixture v8; H1 is computed post-hoc from the pooled rows (n=144 pair / 96 context) by analyze_stats.turn_latency_rows + quantile_ci, and the stop rule is overlap or a p50 gap < 100 ms => not adjudicable at this budget.",
+ "status": "done",
+ "unit": "TRANCH1-DRYRUN-2",
+ "write_paths": [
+  "experiments/ptr-engine/measure/TRANCH1-DRYRUN-2.json",
+  "experiments/ptr-engine/measure/dryrun2-*",
+  "docs/TRANCH1-DRYRUN-2.md",
+  "experiments/ptr-engine/tools/tranch1_dryrun.py",
+  "experiments/ptr-engine/longrun/tests/test_tranch1_dryrun.py",
+  "orchestration/units/TRANCH1-DRYRUN-2.md",
+  "orchestration/handoffs/TRANCH1-DRYRUN-2.json",
+  "orchestration/journals/TRANCH1-DRYRUN-2.jsonl"
+ ]
+}

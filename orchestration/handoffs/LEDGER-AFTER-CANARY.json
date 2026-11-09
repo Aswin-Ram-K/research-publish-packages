@@ -1,0 +1,49 @@
+{
+  "unit": "LEDGER-AFTER-CANARY",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+    "experiments/ptr-engine/measure/LEDGER-AFTER-CANARY.json",
+    "docs/LEDGER-AFTER-CANARY.md",
+    "orchestration/units/LEDGER-AFTER-CANARY.md",
+    "experiments/ptr-engine/tests/test_request_ledger_sound.py",
+    "experiments/ptr-engine/tests/test_request_ledger_dedup.py"
+  ],
+  "evidence": {
+    "rebuild": "requests_raw=1176 requests=1176 requests_deduplicated=1146 duplicate_excess=30 remaining=3144 remaining_raw=3144 files=19 rows=1176",
+    "delta": "48 = 4 files x 12 rows (three canary arms 36 + rows-cell-pointer-stable-20261026T204258Z 12, written 20:43:11.557Z, manifest created 20:42:58.636Z)",
+    "delta_tool": "/usr/bin/python3 experiments/ptr-engine/tools/ledger_delta.py --baseline experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-2.json -> spent_before 1128 spent_now 1176 delta 48 remaining_now 3144 requests_raw_now 1176, rows_guard 4 new, deficit none, verdict OK, exit 0",
+    "determinism": "builder twice -> byte-identical sha256 eadc56f6166d6987ed607f741d31431d373d1207797312b687b971533beee4f4",
+    "tests": "/usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_request_ledger_sound.py experiments/ptr-engine/tests/test_request_ledger_dedup.py experiments/ptr-engine/longrun/tests/test_cell_gates.py -q -> 35 passed, 7 subtests passed, exit 0",
+    "verdict_row": "PASS f17663d1 bash -lc '/usr/bin/python3 -m pytest experiments/ptr-engine/longrun/tests/test_cell_gates.py -q' exit 0",
+    "gate_reading": "experiments/ptr-engine/longrun/cell.py:1255 report = ledger.build_report(_ledger_row_paths(doc), facts['cap'], facts['reserve'], would_spend); row paths from the artefact `files` list at cell.py:1200-1213; spent read from the fresh report at cell.py:1260-1261",
+    "commands": [
+      "/usr/bin/python3 experiments/ptr-engine/tools/request_ledger.py --glob 'measure/rows-*.jsonl' --cap 4320 --reserve 0 --would-spend 0",
+      "/usr/bin/python3 experiments/ptr-engine/tools/ledger_delta.py --baseline experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-2.json",
+      "/usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_request_ledger_sound.py experiments/ptr-engine/tests/test_request_ledger_dedup.py experiments/ptr-engine/longrun/tests/test_cell_gates.py -q"
+    ],
+    "artefact_sha256": {
+      "experiments/ptr-engine/measure/REQUEST-LEDGER.json": "63e3a15631d63e4ee1fd7e8acc905262f5bb4f1680749f723e1877c3d34f5716",
+      "experiments/ptr-engine/measure/LEDGER-AFTER-CANARY.json": "1226fd9792d5c94b6160a097722d97f06765c3072d3288b925e79bae744176ec",
+      "docs/LEDGER-AFTER-CANARY.md": "f13c1b45d39da52c3c3ef00ebf830e16b34e92f692b2961f30083dcf48d4871f"
+    }
+  },
+  "blocker": "",
+  "next_unit_hint": "G1 counts only row files NAMED in the artefact's `files` list, so a snapshot that is merely old silently hides new rows from the gate too. Either rebuild the artefact before every launch (cheap, deterministic) or change G1 to glob measure/rows-*.jsonl instead of trusting `files`; the canary under-reporting by 12 shows a delta measured at time T is stale by T+3min.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+    "experiments/ptr-engine/measure/LEDGER-AFTER-CANARY.json",
+    "docs/LEDGER-AFTER-CANARY.md",
+    "orchestration/units/LEDGER-AFTER-CANARY.md",
+    "experiments/ptr-engine/tests/test_request_ledger_sound.py",
+    "experiments/ptr-engine/tests/test_request_ledger_dedup.py",
+    "orchestration/handoffs/LEDGER-AFTER-CANARY.json",
+    "orchestration/journals/LEDGER-AFTER-CANARY.jsonl"
+  ],
+  "assumptions": [
+    "Card expected delta 36; measured 48. The card's own instruction ('if a fourth file appeared, report it instead of assuming') is followed: the fourth file is reported, the 36 is not forced.",
+    "The card's 25-call bound was exceeded (~40) because the fourth file and the stale test pins each needed separate probe/repair passes. Recorded rather than hidden.",
+    "Test pins in test_request_ledger_sound.py / test_request_ledger_dedup.py were superseded with a dated comment rather than deleted or left red; the pinned invariant (published spend is RAW, dedup never deducted) is unchanged.",
+    "Snapshot timestamp 2026-10-26T22:33:00Z is the wall clock at rebuild (samples: 2026-10-26T17:30:22-05:00 = 22:30Z)."
+  ]
+}

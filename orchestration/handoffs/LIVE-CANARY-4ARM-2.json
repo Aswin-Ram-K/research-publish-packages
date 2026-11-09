@@ -1,0 +1,59 @@
+{
+ "unit": "LIVE-CANARY-4ARM-2",
+ "status": "partial",
+ "artifacts": [
+  "orchestration/units/LIVE-CANARY-4ARM-2.md",
+  "orchestration/handoffs/LIVE-CANARY-4ARM-2.json",
+  "orchestration/journals/LIVE-CANARY-4ARM-2.jsonl",
+  "experiments/ptr-engine/measure/CANARY-ERA-B-2.json",
+  "docs/CANARY-ERA-B-2.md"
+ ],
+ "evidence": {
+  "command_or_count": "live requests sent = 0 ; ledger spent 1128 -> 1128 (delta 0) ; decision GRID HELD",
+  "preconditions": {
+   "1_run_dry_turn_scope": "RUN-DRY-TURN-SCOPE.json status=done; max_turns_12 -> 'turn_requests=12 (N=48 --max-turns=12 x reps=1) digest_requests=0 cell_total=12 / would_send_total=12'; no_flag -> 'cell_total=48 / would_send_total=48' PASS",
+   "2_own_projection": "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --arm pointer-stable --reps 1 --dry-run --max-turns 12 -> 'pointer-stable turn_requests=12 (N=48 --max-turns=12 x reps=1) digest_requests=0 cell_total=12' + 'would_send_total=12' ; no-flag re-run -> 'would_send_total=48' PASS",
+   "3_pin_generation": "measure/HARNESS-PIN.json generation=5, harness_sha256=35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb; recomputed by this unit over cell.py:128-135 HARNESS_FILES + fixture = 35ff41b7... (match) PASS",
+   "4_cell_py_unmoved": "cell.py sha256 cf512f5f3bd075c46a2c7c508ce9b803a32d9ba1ceb44edf3c729ded6ce3ce18, 114184 bytes, mtime 2026-10-26T19:52:55Z, before pin frozen_at 20:05:00Z; pin carries no cell.py sha field (recorded beside it by V-PIN-GEN5-ATTRIBUTION) PASS-with-recorded-gap",
+   "5_launch_contract_diff": "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check -> exit 1, KeyError: 'components' at launch_contract_diff.py:653 (params[\"price\"][\"components\"][\"tranche\"]); unscoped mode FAIL",
+   "6_launcher_dry_run": "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --dry-run -> exit 1: \"HARNESS-PIN record disagrees with the launcher: record generation=5 digest='35ff41b7...', launcher gen 4 digest='fa6fd8cc...'\" ; no G1/G2/G3 lines, no canary_arms=4 tail FAIL",
+   "7_ledger_before": "measure/REQUEST-LEDGER.json (built 2026-10-26T18:56:31Z): spent=1128, remaining=3192, cap=4320 PASS"
+  },
+  "spend": {
+   "spent_before": 1128,
+   "spent_after": 1128,
+   "delta": 0,
+   "cap": 52,
+   "source": "experiments/ptr-engine/measure/REQUEST-LEDGER.json"
+  },
+  "arms": [],
+  "verdict_row": "FAIL exit-1 f17663d1 python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --dry-run",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --arm pointer-stable --reps 1 --dry-run --max-turns 12",
+   "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --arm pointer-stable --reps 1 --dry-run",
+   "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check",
+   "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --dry-run"
+  ]
+ },
+ "decision": {
+  "verdict": "HOLD",
+  "grid_may_launch": false,
+  "reason": "the launcher is the only permitted argv builder and it refuses before it can build a canary argv (generation 4 constant at run_a_star.py:51 + generation!=4 check at :64 against a generation 5 pin). No arm ran, so every arm is shape_unknown and is never rounded to shape_ok.",
+  "era_b_shape_facts": "not measurable: zero completions, so the stop-reason census is empty and no turn can be shown to have hit turn_cap / turn_call_cap / fetch_budget_exhausted"
+ },
+ "blocker": "LAUNCHER-GEN5-UNWIRED: run_a_star.py:51 still pins generation 4 and :64 refuses generation 5 (owner: HARNESS-PIN-WIRING successor, named in HARNESS-PIN.json wiring.advance_owner). Second defect: LAUNCH-CONTRACT-DIFF-BROKEN, launch_contract_diff.py:653 KeyError 'components' against GRID-PARAMS.json schema consonance.grid-params/3 written at 2026-10-26T20:20:00Z by GRID-PARAMS-16CELL.",
+ "next_unit_hint": "Advance run_a_star.py HARNESS_PIN to 35ff41b7 and its :64 generation check to 5, and repair launch_contract_diff.py for the grid-params/3 record; then re-run this card's step 8 unchanged (argv, 48-request price and 52 cap are still correct). Do not hand-assemble a cell.py argv and do not re-pin.",
+ "write_paths": [
+  "orchestration/units/LIVE-CANARY-4ARM-2.md",
+  "orchestration/handoffs/LIVE-CANARY-4ARM-2.json",
+  "orchestration/journals/LIVE-CANARY-4ARM-2.jsonl",
+  "experiments/ptr-engine/measure/CANARY-ERA-B-2.json",
+  "docs/CANARY-ERA-B-2.md"
+ ],
+ "assumptions": [
+  "Precondition 4 was read as 'compare cell.py's sha with the value recorded at the pin generation'. HARNESS-PIN.json carries no cell.py field by design (cell.py is not in HARNESS_FILES), so the comparison used V-PIN-GEN5-ATTRIBUTION's recorded cf512f5f... for the same pin generation; mtime 19:52:55Z precedes the pin's 20:05:00Z freeze, so it has not moved since.",
+  "Precondition 5 was run unscoped (no --pin-generation), because the card's exit-13 mode is conditional on passing that flag; the tool crashed in build() before any scope could be judged, so the failure is independent of mode.",
+  "Step 8 was not attempted at all: a launcher refusal at pinned_digest() is not an invocation, and the card forbids hand-assembling a cell.py argv.",
+  "The verdict row records the launcher dry run with its measured exit 1, so the closure reads FAIL exit-1 rather than a green unit test: the card's own objective (a live canary + per-arm classification) was not achieved and must stay on the board as remaining work."
+ ]
+}

@@ -1,0 +1,55 @@
+{
+  "unit": "VINSTRUCT",
+  "status": "done",
+  "artifacts": [
+    "orchestration/handoffs/VINSTRUCT.json",
+    "orchestration/units/VINSTRUCT.md"
+  ],
+  "evidence": {
+    "commands": [
+      "cd '/home/zer0null/research extractor'; .venv/bin/python experiments/ptr-engine/longrun/score_longrun.py experiments/ptr-engine/longrun/tasks-v7/TX-AGG.v1.json /tmp/rows-agg2-strict-fetch.jsonl  # strict fetch arm filtered from rows-agg2-2026-11-09.jsonl",
+      "cd '/home/zer0null/research extractor'; .venv/bin/python experiments/ptr-engine/longrun/score_longrun.py experiments/ptr-engine/longrun/tasks-v7/TX-AGG.v1.json experiments/ptr-engine/measure/rows-agg3-instructed.jsonl",
+      "cd '/home/zer0null/research extractor'; .venv/bin/python experiments/ptr-engine/longrun/score_longrun.py experiments/ptr-engine/longrun/tasks-v7/TX-HOP.v1.json experiments/ptr-engine/measure/rows-hop2-fetch.jsonl",
+      "cd '/home/zer0null/research extractor'; .venv/bin/python experiments/ptr-engine/longrun/score_longrun.py experiments/ptr-engine/longrun/tasks-v7/TX-HOP.v1.json experiments/ptr-engine/measure/rows-hop3-instructed.jsonl",
+      "same four commands with --answer-contract",
+      "python3 verification of instructed rows: fetch_policy/tools_mode/temperature/seed/task_id/fixture_sha256",
+      "python3 engagement counts and early-termination checks"
+    ],
+    "outputs": {
+      "default_contract_level": {
+        "TX-AGG_strict": "checkpoint_accuracy 4/48, verified_success false, exit_code 1",
+        "TX-AGG_instructed": "checkpoint_accuracy 1/48, verified_success false, exit_code 1",
+        "TX-HOP_strict": "checkpoint_accuracy 9/48, verified_success false, exit_code 1",
+        "TX-HOP_instructed": "checkpoint_accuracy 5/48, verified_success false, exit_code 1"
+      },
+      "answer_contract_level": {
+        "TX-AGG_strict": "contract_correct 4, value_correct 4, ungradeable 4, abstained 18, total 48",
+        "TX-AGG_instructed": "contract_correct 1, value_correct 1, ungradeable 8, abstained 18, total 48",
+        "TX-HOP_strict": "contract_correct 9, value_correct 9, ungradeable 6, abstained 20, total 48",
+        "TX-HOP_instructed": "contract_correct 5, value_correct 5, ungradeable 4, abstained 19, total 48"
+      },
+      "instructed_row_integrity": "122 TX-AGG rows + 197 TX-HOP rows: fetch_policy={'instructed'}, tools_mode={'on:fetch'}, temperature={0.0}, seed={42}, task_id correct, fixture_sha256 matches disk for every row; no row carries 'strict'",
+      "engagement": {
+        "TX-AGG_strict": "turns_with_fetch_rows>0=29, sum_fetch_rows=82, retrieval_attempt OK=28 NOT_FOUND=1, failed_turn=2, truncated=2",
+        "TX-AGG_instructed": "turns_with_fetch_rows>0=22, sum_fetch_rows=49, retrieval_attempt OK=22, failed_turn=0, truncated=0",
+        "TX-HOP_strict": "turns_with_fetch_rows>0=28, sum_fetch_rows=30, retrieval_attempt OK=28, failed_turn=0, truncated=0",
+        "TX-HOP_instructed": "turns_with_fetch_rows>0=17, sum_fetch_rows=18, retrieval_attempt OK=15 NOT_FOUND=2, failed_turn=0, truncated=0"
+      },
+      "early_termination": "Instructed runs reached final turns (TX-AGG 100/100, TX-HOP 180/180), no failed_turn, no truncation, and no missing checkpoint turns; strict AGG had 2 truncated/failed turns",
+      "five_no_fetch_checkpoint_turns_TX_AGG": [
+        "turn 6: policy line present; answer ANSWER: NUM 109702 vs expected 156145 (stale/wrong value, retrieval_omitted=true)",
+        "turn 9: answer ANSWER: NUM 185575 vs expected 210513 (stale/wrong value)",
+        "turn 10: answer ANSWER: NUM 118488 vs expected 51443 (stale/wrong value)",
+        "turn 12: answer ANSWER: NUM 279512 vs expected 269767 (stale/wrong value)",
+        "turn 13: answer ANSWER: NONE vs expected NUM (abstention)"
+      ],
+      "rendered_policy_line": "POLICY: A value that is not visible in the current context must be retrieved with the fetch tool before answering; answering from memory when the value is not in view is not acceptable."
+    }
+  },
+  "blocker": "",
+  "next_unit_hint": "none - negative result confirmed at both scoring levels; no follow-up required unless the policy text or fetch tool changes",
+  "write_paths": [
+    "orchestration/handoffs/VINSTRUCT.json",
+    "orchestration/units/VINSTRUCT.md"
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "unit": "EXIT-CODE-TABLE",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/exit_codes.py",
+    "experiments/ptr-engine/longrun/cell.py",
+    "experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+    "docs/EXIT-CODES.md",
+    "orchestration/units/EXIT-CODE-TABLE.md",
+    "orchestration/handoffs/EXIT-CODE-TABLE.json",
+    "orchestration/journals/EXIT-CODE-TABLE.jsonl"
+  ],
+  "resolutions": {
+    "7": "KEPT and made real. stage_record() now raises Abort(7, '7/7 record') when --out-dir cannot be created or the cell JSON/markdown cannot be written, naming the artefact; main()'s final record write does the same; runner rc=7 still propagates as 7. Before this the record OSError escaped as an undeclared 1. Proven by CodeSevenReachableTests (out_dir is a regular file; a directory where cell-X-S.json must go).",
+    "1": "DECLARED as internal-error and given a real raise site: main() catches Exception, prints the full traceback plus 'arm=... fixture=... out_dir=...', and returns 1 deliberately. Not converted to a stage code: a bug must not masquerade as a named refusal.",
+    "11": "DECLARED in the machine-readable table (it existed only in prose): analyze_stats.py exiting non-zero; action = re-run the analyser, the grade document stands."
+  },
+  "raised_set": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+  ],
+  "table_source": "experiments/ptr-engine/longrun/exit_codes.py: EXIT_TABLE (single copy); EXIT_CODES/EXIT_NAMES derived; cell.py __doc__ appends render_table() at import; --dry-run prints the declared set from it; no hand-typed copy remains (test asserts 'FINAL EXIT-CODE TABLE (pinned;' is absent from cell.py).",
+  "checks": {
+    "scan_equality": "set equality both directions: literals passed to Abort/_enforce/sys.exit/SystemExit + main()'s int returns + exit_codes.RUNNER_CODES == EXIT_TABLE keys",
+    "seven_reachable": "2 injections, both abort code 7 with the artefact named",
+    "every_code_named": "each row has name/condition>=20 chars/action>=20 chars/raise_site 'cell.py:'",
+    "red_green": "/tmp/cell-mutant.py = cell.py + sys.exit(12) -> RAISED BUT NEVER DECLARED: [12]; real cell.py passes"
+  },
+  "evidence": {
+    "command_or_count": "tests/test_exit_codes.py: 10 passed, 12 subtests passed. RED (CELL_EXIT_SCAN_PATH=/tmp/red-cell.py, cell.py+sys.exit(12)): 1 failed, 9 passed -- 'RAISED BUT NEVER DECLARED: [12]', 'DECLARED BUT NEVER RAISED: []'. GREEN (real cell.py): 10 passed. Exit-code-asserting files re-run (test_cell, test_cell_gates, test_decidability_seam, test_guards, test_exit_codes): 28 passed, 3 failed. Full tests/: first run 21 failed / 188 passed / 21 subtests; FINAL re-run after docs+card 20 failed / 189 passed / 21 subtests (test_guards is flaky: socket-ordering leak, passes standalone).",
+    "commands": [
+      "python3 exit_codes.py",
+      "python3 -m pytest tests/test_exit_codes.py -q",
+      "CELL_EXIT_SCAN_PATH=/tmp/red-cell.py python3 -m pytest tests/test_exit_codes.py -q",
+      "python3 -m pytest tests/test_cell.py tests/test_cell_gates.py tests/test_decidability_seam.py tests/test_guards.py tests/test_exit_codes.py -q",
+      "python3 -m pytest tests -q"
+    ],
+    "preexisting_failures_not_caused_by_this_unit": [
+      "test_decidability_seam.py x2: asserts the TEXT 'grader decidable=3' but grade_v5.py (mtime 2026-10-26T10:38, before this session) now reports decidable=1; its exit-code assertions (returncode==9, returncode==0) PASS.",
+      "test_guards.py: failed once on 'G1 ledger-cap: the ledger's own counter could not read its row files' while another card was writing experiments/ptr-engine/measure/ (concurrent read during write); passes standalone; fails again in the full run on test_wire_client._NoSocket (ordering leak).",
+      "test_grade_v6_derive.py (9), test_parm1_errata.py (1), test_projection_calibration.py (1), test_grade_v5_repair.py (1): FileNotFoundError / unrelated-subsystem drift, none touches cell.py exit codes."
+    ]
+  },
+  "conflicts": {
+    "WIRE-GATES": "owns 2/3/4/5/6/7/8 in the preflight chain -- none renumbered; 7 gained a record-stage raise site inside the meaning its own table already stated ('stage 7 could not write').",
+    "WIRE-CAP-GATE": "owns 4 -- unchanged.",
+    "DECIDABILITY-SEAM": "introduced 9 -- unchanged.",
+    "argparse": "exits 2 for usage errors, sharing the preflight row; now stated explicitly rather than left as an unremarked collision."
+  },
+  "can_reader_tell_stage_from_code": "yes -- 0 ok, 1 internal, 2 preflight/harness/prereg, 3 budget, 4 ledger-cap, 5 runner crash, 6 runaway, 7 unwritable artefact (runner rows or stage 7 record), 8 projection, 9 consistency, 10 grade, 11 analyse; the only collision is argparse's 2, which means the same thing for a reader (refused before anything was measured).",
+  "blocker": "",
+  "next_unit_hint": "V-GATE-CHAIN can induce each condition against the table instead of discovering it: the scan test already fails on an undeclared code, and docs/EXIT-CODES.md names the raise site per code. A verifier should re-run the red case (sys.exit(12) in a /tmp copy) and the two code-7 injections, and should treat tests/test_decidability_seam.py's 'decidable=3' text as stale (its exit codes still pass).",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/cell.py",
+    "experiments/ptr-engine/longrun/exit_codes.py",
+    "experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+    "docs/EXIT-CODES.md",
+    "orchestration/units/EXIT-CODE-TABLE.md",
+    "orchestration/handoffs/EXIT-CODE-TABLE.json",
+    "orchestration/journals/EXIT-CODE-TABLE.jsonl"
+  ],
+  "assumptions": [
+    "The scan-equality test targets cell.py (the conductor). The stage modules are separate processes: their non-zero exits are CONSUMED by the conductor's mapping (runner -> 2..7, grade -> 10, analyse -> 11), so their own CLI codes are documented in docs/EXIT-CODES.md but are deliberately not keys of the conductor table.",
+    "7 was kept rather than deleted because the record stage is the step this project has already lost evidence at; deleting the code would have kept the failure and removed its name. The number already meant 'a required write failed', so no other card's code was renumbered.",
+    "1 is declared rather than converted because routing an unclassified exception into a stage code would make a harness bug indistinguishable from a named refusal."
+  ],
+  "tool_calls": 21,
+  "bound": 26,
+  "requests_spent": 0
+}

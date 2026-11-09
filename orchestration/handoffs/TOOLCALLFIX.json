@@ -1,0 +1,65 @@
+{
+  "unit": "TOOLCALLFIX",
+  "status": "done",
+  "instruction_text": "CHECKPOINT TURN.\nEvery fact you need may sit behind a marker of the form `[MASKED <ref>]`, where `<ref>` is exactly `doc-<name>@r<revision>` (for example `[MASKED doc-constants@r1]`).\nTwo protocols, kept separate:\n(1) RETRIEVAL. When markers are present you MUST, in a single round, issue one fetch call for EVERY ref that appears as a `[MASKED <ref>]` marker, then answer from the returned bodies. Answering before fetching every marker is a protocol violation and is recorded as `retrieval_omitted`. Worked example (two calls in one round): fetch(ref=\"doc-config@r1\") and fetch(ref=\"doc-constants@r1\").\n(2) ANSWERING. While working a turn you MAY reply with a TOOL CALL instead of an `ANSWER:` line. A tool call is NOT an answer and must NOT carry the `ANSWER:` prefix. Use the structured shape the tool schema expects, e.g. {\"name\":\"fetch\",\"arguments\":{\"ref\":\"doc-config@r1\"}}. One round may contain several such calls, e.g. three: {\"name\":\"fetch\",\"arguments\":{\"ref\":\"doc-config@r1\"}}, {\"name\":\"fetch\",\"arguments\":{\"ref\":\"doc-constants@r1\"}}, {\"name\":\"fetch\",\"arguments\":{\"ref\":\"doc-errors@r1\"}}. After the tool results come back, reply with the `ANSWER:` line.\n`ANSWER: CALL <name>(...)` is reserved for an answer whose CONTENT is a call; it is never used for retrieval.\nEmit exactly one line and nothing else, in this contract (the answer line comes after retrieval, never wrapped around a fetch):\n  ANSWER: NUM <integer>\n  ANSWER: CALL <callee>(<kw>=<value>, <kw>=<value>, ...)\n  ANSWER: NONE\n  ANSWER: TEXT <one line of prose>\nFor CALL, put the keyword arguments in alphabetical order and give each value as the source text shows it. Anything written after that line is not read.",
+  "violation_guard": "row['protocol_violation'] = 'answer_wrapped_tool_call' when an ANSWER: payload begins with 'CALL fetch('; counted separately from a genuine wrong answer. Helper run_longrun.protocol_violation() and checkpoint_answer_fields() expose the same field.",
+  "requests_sent": 27,
+  "cap_before": 2840,
+  "cap_after": 2867,
+  "rows_written": 27,
+  "turn20": {
+    "stop_reason_initial": "tool_calls",
+    "tool_call_issued": true,
+    "fetch_rows": 3,
+    "marker_refs": [
+      "doc-config@r1",
+      "doc-errors@r1",
+      "doc-constants@r1"
+    ],
+    "retrieval_outcomes": [
+      "OK",
+      "OK",
+      "OK"
+    ],
+    "final_stop_reason": "stop",
+    "answer_raw": "ANSWER: NUM 3",
+    "answer_kind": "NUM",
+    "expected": "3",
+    "matches_expected": true
+  },
+  "turn22": {
+    "stop_reason_initial": "tool_calls",
+    "tool_call_issued": true,
+    "fetch_rows": 3,
+    "marker_refs": [
+      "doc-config@r1",
+      "doc-errors@r1",
+      "doc-constants@r1"
+    ],
+    "retrieval_outcomes": [
+      "OK",
+      "OK",
+      "OK"
+    ],
+    "final_stop_reason": "stop",
+    "answer_raw": "ANSWER: NUM 30",
+    "answer_kind": "NUM",
+    "expected": "30",
+    "matches_expected": true
+  },
+  "evidence": [
+    "rows file: experiments/ptr-engine/measure/rows-toolcallfix-d-20261109T064028Z.jsonl",
+    "fixture_sha256: 44a1b4356536a0a55757ed2a4c90f5ef7f9d0541836007dc195a50ab3db2ec21",
+    "task_id: TX-01 on all 27 rows",
+    "finish_reason tool_calls=3 at T20/T22/T24; fetch_rows=3 each; retrieval_outcomes all OK",
+    "cap advanced 2840 -> 2867 (delta 27, reconciled)"
+  ],
+  "blocker": null,
+  "next_unit_hint": "Extend corrected D-arm wording to full 48-turn TX-01 run and re-score checkpoints; compare against C arm.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/measure/rows-toolcallfix-d-20261109T064028Z.jsonl",
+    "orchestration/units/TOOLCALLFIX.md",
+    "orchestration/handoffs/TOOLCALLFIX.json"
+  ]
+}

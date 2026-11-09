@@ -1,0 +1,107 @@
+{
+  "unit": "VDIST48",
+  "status": "done",
+  "verdict": "fail",
+  "target": "experiments/ptr-engine/longrun/tasks-v7/TX-02.v1.json",
+  "blocking_defect": {
+    "summary": "48 checkpoints share only 22 unique checkpoint turns; the runner asks only the first checkpoint question per turn, so 26 checkpoints are never prompted.",
+    "checkpoint_count": 48,
+    "unique_checkpoint_turns": 22,
+    "unasked_checkpoint_count": 26,
+    "duplicate_turn_counts": {"9": 2, "12": 2, "15": 2, "18": 2, "21": 3, "24": 3, "27": 3, "30": 3, "33": 4, "36": 4, "39": 3, "42": 3, "45": 2, "48": 2, "51": 2, "54": 2},
+    "runner_evidence": "run_longrun.py:2059 checkpoint_expected and run_longrun.py:2104 checkpoint_prompt both use next(cp for cp in checkpoints if cp['turn'] == t); score_longrun.py:846 then grades all 48 checkpoints against that single per-turn answer.",
+    "t9_example": {
+      "checkpoints": [
+        ["cp.TX-02.f01.d8", "2001", "What is VAL_B of doc-fact-01?"],
+        ["cp.TX-02.f03.d2", "2008", "What is VAL_A of doc-fact-03?"]
+      ],
+      "checkpoint_expected_9": ["2001", "What is VAL_B of doc-fact-01?"],
+      "injected_question": "What is VAL_B of doc-fact-01?",
+      "second_question_present": false
+    },
+    "unasked_ids": [
+      "cp.TX-02.f03.d2", "cp.TX-02.f04.d2", "cp.TX-02.f05.d2", "cp.TX-02.f05.d8", "cp.TX-02.f05.d20",
+      "cp.TX-02.f06.d2", "cp.TX-02.f06.d8", "cp.TX-02.f06.d20", "cp.TX-02.f07.d2", "cp.TX-02.f07.d8",
+      "cp.TX-02.f07.d20", "cp.TX-02.f08.d2", "cp.TX-02.f08.d8", "cp.TX-02.f08.d20", "cp.TX-02.f09.d2",
+      "cp.TX-02.f09.d8", "cp.TX-02.f09.d20", "cp.TX-02.f10.d2", "cp.TX-02.f10.d8", "cp.TX-02.f10.d20",
+      "cp.TX-02.f11.d2", "cp.TX-02.f11.d8", "cp.TX-02.f11.d20", "cp.TX-02.f12.d2", "cp.TX-02.f12.d8",
+      "cp.TX-02.f12.d20"
+    ],
+    "test_gap": "test_tx02_distance.py counts 48 checkpoints but never asserts one checkpoint per turn; check_pointer_fixtures.py has no unique-turn check. The existing v6 coverage test does assert len(set(turns)) == 12."
+  },
+  "additional_checker_gaps": [
+    "check_pointer_fixtures.py accepts ANSWER: TEXT 2000 for an integer expected value; it compares only the parsed value, not the answer kind against the expected type.",
+    "check_pointer_fixtures.py does not verify that checkpoints[].question is the turn's injected question or that each checkpoint turn is unique."
+  ],
+  "activation_risk": {
+    "wall_tokens": 4312,
+    "max_prompt_est_tokens_placeholder_answers": 2165,
+    "max_prompt_est_tokens_short_answers": 1566,
+    "note": "If this fixture is intended for all five arms, transcript-grow/compact do not reach wall_tokens and their treatments do not activate. This is separate from the 32768 endpoint-window question."
+  },
+  "checks": {
+    "1_counts": {
+      "result": "pass",
+      "checkpoint_count": 48,
+      "distance_counts": {"2": 12, "8": 12, "20": 12, "32": 12},
+      "measured_distance_mismatches": []
+    },
+    "2_uniqueness": {
+      "result": "pass",
+      "distinct_expected": 48,
+      "collisions": {}
+    },
+    "3_leak": {
+      "result": "pass",
+      "leaks": [],
+      "per_value": "all 48 expected values absent from system prompt, items bodies, all turn questions, and all other turns' tool_output bodies"
+    },
+    "4_gradability": {
+      "result": "pass",
+      "issues": [],
+      "kind_counts": {"NUM": 48},
+      "answer_form_exact_mismatches": 0,
+      "expected_values_with_whitespace": []
+    },
+    "5_masking_reach": {
+      "result": "pass",
+      "checkpoint": "cp.TX-02.f01.d32",
+      "checkpoint_turn": 33,
+      "introduction_turn": 1,
+      "masked_rows": 10,
+      "actual_arm_prompt_check": "Planner('masking-no-fetch').build(33) estimated 1010 tokens; expected value 2003 absent; one [MASKED doc-fact-01@r1] marker present",
+      "rendered_fragment": "QUESTION (T1): Work turn 1.\nTOOL OUTPUTS:\n[MASKED doc-fact-01@r1]\nANSWER (T1): ",
+      "fact_survives_unmasked": false
+    },
+    "6_load": {
+      "result": "pass",
+      "loaded_turn_count": 72,
+      "loaded_checkpoint_count": 48
+    },
+    "7_red_green_duplicate_guard": {
+      "result": "pass",
+      "disabled": "CPF.validate(fx, disabled={'duplicate_expected'}) == []",
+      "restored": "CPF.validate(fx) != []"
+    },
+    "8_budget": {
+      "result": "pass",
+      "first_checkpoint_turn": 3,
+      "first_checkpoint_est_tokens": 296,
+      "last_checkpoint_turn": 66,
+      "last_checkpoint_est_tokens_transcript_grow": 2115,
+      "max_prompt_est_tokens": 2165,
+      "endpoint_window_tokens": 32768,
+      "binds": false
+    },
+    "9_pytest": {
+      "result": "pass",
+      "command": "/home/zer0null/research extractor/.venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_tx02_distance.py -q",
+      "output": "..........                                                               [100%]\n10 passed in 0.04s"
+    }
+  },
+  "not_reproduced": [],
+  "notes": [
+    "Token estimate uses the fixture's bytes_per_token=4.0914 estimator and placeholder dry-run answers; actual short answers reduce the maximum to 1566 tokens.",
+    "No HTTP requests, service changes, fixture/checker/test modifications, or budget changes were made."
+  ]
+}

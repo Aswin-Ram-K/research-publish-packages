@@ -1,0 +1,46 @@
+{
+ "unit": "DECIDABILITY-SEAM",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/analyze_stats.py",
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_decidability_seam.py",
+  "docs/DECIDABILITY-SEAM.md",
+  "orchestration/units/DECIDABILITY-SEAM.md"
+ ],
+ "evidence": {
+  "seam_grader": "grade_v5.py:608-622 _parsed_from_row parses content when answer_kind is null; grade_v5.py:630 by_turn collapses to one row per turn; grade_v5.py:653 \"decidable\": len(arm_cells) = 3",
+  "seam_analyser_prefix": "analyze_stats.py:415 required row answer_kind == 'NUM' (all 72 v6 rows have answer_kind null); analyze_stats.py:547-549 printed UNDECIDABLE over a 72-row denominator including 24 tool-followup rows",
+  "row_evidence": "rows-longrun-v6-tools.jsonl n=72: answer_kind null x72, answer_value null x72, answer_source content x72, kind turn x48 / tool-followup x24, is_checkpoint True x5 over 3 distinct turns (12/24/46)",
+  "new_printed_line": "timing_n = 72 (rows with a usable ttft_ms) | graded_n = 3 (checkpoint cells graded by grade_v5) | accuracy = 1/3 (pass 1, fail 2, undecidable 0, missing 0) | accuracy wilson95 n=3 0.3333 [0.0615, 0.7923]",
+  "exit_9_message": "cell: 7 consistency REFUSED(9) authoritative facts disagree — grader decidable=3 (grade_v5.py:653) vs analyser graded_n=0 (analyze_stats.py:457)",
+  "override": "--allow-inconsistent -> exit 0, cell record consistency.override = true, contradictory = true",
+  "red_green": "RED (gate call removed, probe then restored): AssertionError: 0 != 9 -> FAILED (failures=1). GREEN: test_decidability_seam.py 4/4 OK; test_cell.py 7/7 OK; test_analyze_stats.py 8/8 OK",
+  "published_wrong_population": "measure/cell-transcript-grow-20261026T144452Z.md:36 and ...T144540Z.md:36 print 'accuracy 55/64 wilson95 n=64 0.8594 [0.7538, 0.9242]' while the same runs' grade-v5 JSON gives checkpoint_accuracy 3/3 (decidable 3). 55/64 is the row population, not the checkpoint population -> withheld as accuracy evidence; historical records not rewritten.",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl (pre-fix red: 'accuracy UNDECIDABLE (n=0 decidable turns; 72 rows carry no decidable outcome)')",
+   "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl --grade experiments/ptr-engine/measure/cell-pointer-stable-20261026T145722Z.grade-v5.json",
+   "python3 experiments/ptr-engine/longrun/tests/test_decidability_seam.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_cell.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_analyze_stats.py"
+  ],
+  "exit_codes": "2-8 unchanged; 9 added for the consistency gate"
+ },
+ "blocker": "",
+ "next_unit_hint": "Re-run the live cell offline through the new gate to stamp a fresh record with consistency.ok (the existing cell-pointer-stable-20261026T145722Z record keeps its old analysis and is not rewritten). Optionally a follow-up unit should decide the disposition of the two transcript-grow cells whose published 55/64 accuracy is over the row population.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/analyze_stats.py",
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_decidability_seam.py",
+  "docs/DECIDABILITY-SEAM.md",
+  "orchestration/units/DECIDABILITY-SEAM.md",
+  "orchestration/handoffs/DECIDABILITY-SEAM.json"
+ ],
+ "assumptions": [
+  "Regression cell uses tasks-v5/runtime-v5/LR-01.v5.json (the fixture the live cell recorded); LR-01.v6.json is refused at preflight because cp.5.t14 has no usable answer_spec — pre-existing, out of scope.",
+  "grade_v5.py was modified by another session at 10:32 during this unit; GRADE_DECIDABLE_SRC points at grade_v5.py:653 as measured after that change and must be re-checked if grade_v5.py moves again.",
+  "Fix placed in analyze_stats.py, not grade_v5.py: the analyser was the wrong side (row key null on every row; denominator counted follow-up duplicates)."
+ ],
+ "tool_calls": 27,
+ "requests": 0
+}

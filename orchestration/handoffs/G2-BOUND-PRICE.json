@@ -1,0 +1,56 @@
+{
+  "unit": "G2-BOUND-PRICE",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/cell.py",
+    "experiments/ptr-engine/longrun/tests/test_projection_calibration.py",
+    "experiments/ptr-engine/longrun/tests/test_gate_override.py",
+    "docs/GATE-CHAIN.md",
+    "orchestration/units/G2-BOUND-PRICE.md",
+    "orchestration/handoffs/G2-BOUND-PRICE.json",
+    "orchestration/journals/G2-BOUND-PRICE.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "5/5 new tests green, exit 0; G2 suite 70 passed + 7 subtests, exit 0; 0 inference requests; cell.py a6446bfc3d12fdb3ded13c0ca1a7bfcb916edfe0ee8bfab2f3b4059ca5ca8452 -> c494e212679f8e73c84226cf486566d0716559c0f2cd677f20845b24057baf86",
+    "commands": [
+      "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_projection_calibration.py experiments/ptr-engine/longrun/tests/test_gate_override.py experiments/ptr-engine/longrun/tests/test_gate_messages.py experiments/ptr-engine/longrun/tests/test_projection_modes.py experiments/ptr-engine/longrun/tests/test_guards.py experiments/ptr-engine/longrun/tests/test_cell_gates.py experiments/ptr-engine/longrun/tests/test_gate_operand_validation.py experiments/ptr-engine/longrun/tests/test_tranch1_dryrun.py experiments/ptr-engine/longrun/tests/test_gate_ledger.py"
+    ],
+    "tests": {
+      "test_projection_prints_terms_with_sources": "PASS exit 0 (RED on pre-change cell.py: 'turns 12 x 60.0 s/turn' absent; old line 'cell: 3b/7 projection turns=12 projected_requests=12 projected_wall~=720s ... source=artefact-mode')",
+      "test_ceiling_is_printed_and_differs_from_estimate": "PASS exit 0 (RED before: no 'HARD CEILING' in the old one-number line)",
+      "test_thinking_off_keeps_60s_per_turn": "PASS exit 0 (RED before: price terms absent; a 30 s mutant fails 'turns 12 x 60.0 s/turn')",
+      "test_hostile_values_still_refuse_exit_8": "PASS exit 0 (green before and after by design: 0/-1/1e-9/nan/inf exit 8, zero runner spawns; 'abc' exits 2, the settled non-numeric usage code)",
+      "test_boundary_is_exact": "PASS exit 0 (green before and after by design: projected 60 == max-wall 60 admitted; max-wall 59 refused exit 8)"
+    },
+    "cell_shas": {
+      "before": "a6446bfc3d12fdb3ded13c0ca1a7bfcb916edfe0ee8bfab2f3b4059ca5ca8452",
+      "after": "c494e212679f8e73c84226cf486566d0716559c0f2cd677f20845b24057baf86"
+    },
+    "new_message_shape_48_turns_cap60": "cell: 3b/7 projection PRICE fitted estimate 2880 s = turns 48 x 60.0 s/turn [source experiments/ptr-engine/measure/PROJECTION.json:defaults.projected_turn_wall_s_by_mode['absent']] = 2880 s + runner-priced extras 0 x 60.0 s/turn [source runner --dry-run would_send_total 48 - turns x reps 48] = 0 s; fetch follow-up allowance ceil(48 x 68/801) = 5 x 60.0 s/turn [source FETCH_FOLLOWUP_RATIO in cell.py, reserved by G1] = 300 s -> all-in estimate 3180 s; HARD CEILING 2880 s = turns 48 x --turn-wall-cap 60 s [policy bound, not a measurement: the runner aborts any turn that reaches it]",
+    "ceiling_vs_estimate_48_turns": "cap 60 -> HARD CEILING 2880 s beside fitted estimate 2880 s, labels bound to their own arithmetic; cap 180 (default) -> HARD CEILING 8640 s vs fitted 2880 s; all-in (with the 5 x 60 s allowance) 3180 s",
+    "refusal_shows_policy_and_bound": "yes"
+  },
+  "decisions": {
+    "compared_figure_unchanged": "G2 still compares projected_requests x calibrated per-turn wall. Folding the follow-up allowance into the compared number would project 48 turns at 3,180 s and refuse RUN-A*'s settled 2,880 s wall; GATE-LEDGER recorded that turns x --turn-wall-cap (48 x 180 = 8,640 s) 'would refuse the 2,880 s ceiling, i.e. adopting it forbids the grid'.",
+    "allowance_printed_not_folded": "ceil(turns x reps x 68/801) is printed with its own seconds (48 turns -> 5, 300 s, all-in 3,180 s) so G2-D6 is visible; it is not added to the compared figure because G1 already reserves it and a measured per-turn wall already spans the follow-ups a turn makes.",
+    "one_source_of_68_801": "No second literal exists: FETCH_FOLLOWUP_RATIO is declared once in cell.py:158 and projection_price() calls G1's own fetch_followup_allowance(); arithmetic untouched.",
+    "refusals_unchanged": "projected > max_wall -> exit 8 with the five facts; non-positive --projected-turn-wall / p90 <= 0 -> exit 8; unmapped mode -> exit 8; no calibrated number lowered (off stays 60.0 s/turn); --max-wall never raised for a caller."
+  },
+  "assumptions": [
+    "A non-numeric --projected-turn-wall ('abc') exits 2, not the 8 the card asks for: the settled class repair (experiments/ptr-engine/tools/gate_attack.py expected_exit) maps a non-numeric G2 operand to argparse's usage code 2, and test_gate_operand_validation pins it. The card's invariant (refused, never reaches the runner) holds; the code is recorded rather than renumbered."
+  ],
+  "tool_calls": 55,
+  "bound": 26,
+  "bound_overrun": "declared 26, measured ~55: the allowance/policy decision needed reading GATE-LEDGER's artefact, the pinned suites and the operand-validation table before any edit, and the red->green swap cost one call. Recorded, not hidden.",
+  "blocker": "",
+  "next_unit_hint": "For the grid: a 48-turn cell at --turn-wall-cap 180 now PRINTS an 8,640 s hard ceiling beside its 2,880 s fitted estimate; the gate still admits at --max-wall 2880 and still refuses at 2880 for a fitted 2,881 s. RUN-A* needs no change. A future card may choose to compare the all-in estimate (3,180 s at 48 turns) instead of the fitted one - that would be a policy change requiring --max-wall 3180 for the grid, and is deliberately NOT applied here.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/cell.py",
+    "experiments/ptr-engine/longrun/tests/test_gate_override.py",
+    "experiments/ptr-engine/longrun/tests/test_projection_calibration.py",
+    "docs/GATE-CHAIN.md",
+    "orchestration/units/G2-BOUND-PRICE.md",
+    "orchestration/handoffs/G2-BOUND-PRICE.json",
+    "orchestration/journals/G2-BOUND-PRICE.jsonl"
+  ]
+}

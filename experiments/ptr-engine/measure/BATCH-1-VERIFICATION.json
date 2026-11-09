@@ -1,0 +1,85 @@
+{
+ "batch": "VERIFY-BATCH-1",
+ "generated": "2026-10-26",
+ "verifier": "VERIFY-BATCH-1 (not an author of any unit)",
+ "inference_requests": 0,
+ "units": {
+  "HARNESS-GUARDS": {
+   "verdict": "pass",
+   "reproduced": [
+    "6/6 GREEN exit 0",
+    "max_tokens=4096 captured on the wire",
+    "preflight exit 8 with runner never entered",
+    "aborted cell rows intact (6 rows, sha 5ac9dd99...)"
+   ],
+   "red_green": {
+    "a": "RED when max_tokens removed from request_body",
+    "b": "RED when wall-cap check disabled",
+    "c": "RED with (a)",
+    "d": "RED via --max-wall 0 (runner entered, exit 5)",
+    "e": "RED when DEFAULT_THINKING='auto'"
+   },
+   "attacks": {
+    "A": "aborts at 2.002s for a 2.0s cap on a 100ms/token stream; a no-chunk stream is bound only by --timeout",
+    "B": "4095 tokens + normal stop -> truncated=False, no trip; 4096 tokens with no usage chunk -> truncated=False (hole)"
+   },
+   "defects": [
+    "truncated needs a usage chunk; 4096 emitted deltas without usage is not flagged"
+   ]
+  },
+  "CHECKPOINT-COVERAGE": {
+   "verdict": "pass",
+   "reproduced": [
+    "12/12 truths re-derived by independent AST",
+    "kinds NUM 5 CALL 4 NONE 3",
+    "all <=40 cl100k tokens (max 29)",
+    "v5 sha256 967cef03... unchanged",
+    "8/8 tests",
+    "3 author mutants exit 1",
+    "+108 request cost"
+   ],
+   "attacks": {
+    "C": "checkpoint range shifted one line -> answerable NO, exit 1 (PASS); sources[] working-set pin shifted -> still YES exit 0 (gap)"
+   },
+   "defects": [
+    "answerable_from_pinned_range ignores sources[].pointer",
+    "kind/rule mismatch (NUM over call_inside_function) passes exit 0",
+    "missing derive.file -> uncaught FileNotFoundError traceback (exit 1) with a doubled path"
+   ]
+  },
+  "MATRIX-HONESTY": {
+   "verdict": "pass",
+   "reproduced": [
+    "92 declared cells re-derived independently",
+    "5/38/29/7/0/0/13 states",
+    "5/43 overall",
+    "0/3 and 1/3 and 2/3 lines",
+    "11 tests",
+    "no rows/grade file modified"
+   ],
+   "attacks": {
+    "D": "ghost arm silently admitted as declared (8 cells, exit 0); undeclared checkpoint id silently dropped"
+   },
+   "defects": [
+    "no extraneous-cell detection: arms are harvested from the rows (matrix_audit.py:122)",
+    "verifier overwrote measure/MATRIX-COVERAGE.json with its own attack --out and restored it via the author's command"
+   ]
+  },
+  "HANDOFF-LINT": {
+   "verdict": "pass",
+   "reproduced": [
+    "13 tests",
+    "every code count identical",
+    "954 scanned == 954 on disk",
+    "0 of 960 handoffs changed by a run"
+   ],
+   "attacks": {
+    "E": "0-byte artifact refused (E_ARTIFACT_ABSENT + E_DONE_NO_ARTIFACTS); directory artifact refused; verifier without 'checks' -> E_MISSING_KEY"
+   },
+   "defects": [
+    "existing-but-empty file is reported as 'absent' (mislabel, not a miss)"
+   ]
+  }
+ },
+ "most_dont_trust": "MATRIX-HONESTY's 92-cell declared space: derived from the rows, so an extraneous cell cannot be detected."
+}

@@ -1,0 +1,60 @@
+{
+ "unit": "V-CAPGATE-REFUSE",
+ "overall": "partial",
+ "checks": [
+  "derived from source: delta = spent_after - (spent_at_start + used_in_run), run_longrun.py:410-413; branch order manifest->delta>0->delta<0->else, _gate_finish run_longrun.py:480-540; exit via run_cell return cap_rc run_longrun.py:2585-2588, main() sys.exit run_longrun.py:2914",
+  "own fixtures: (b1) last row deleted delta=-1 exit 9; (b2) all rows deleted delta=-3 exit 9; (b3) rows file never created delta=-2 exit 9 \u2014 all print CAP GATE UNRECORDED",
+  "(a) last line truncated mid-JSON exits 5 'CAP GATE ROWS at exit: unparseable row' (CapRowsUnreadable is caught before delta is computed) \u2014 a refusal, but not 9/UNRECORDED",
+  "(c) -0.0 -> exit 0 (correct, -0.0==0); -1 -> 9; -0.5 -> 9; -1.5 -> 9",
+  "message names delta, used_in_run vs rows_gained, headroom_before/after, rows path and the consequence; emitted on stderr, not stdout",
+  "safe direction: delta==0 -> 0; delta>0 -> 9 CAP GATE RECONCILE DIVERGENCE; pre-send projected>headroom -> exit 4 instrumented: 4 transport calls, 4 rows for 4 granted slots, 0 rows and 0 transport for the refused request",
+  "cell.py:1568 code = rc if rc in _RUNNER_CODES else EXIT_RUNNER_CRASH with _RUNNER_CODES={2,3,4,5,6,7}: a runner rc 9 raises Abort(5,'4/7 run','run_longrun.py exited 9 (unmapped runner failure)') \u2014 exit 9 does NOT propagate unmodified",
+  "exit table: EXIT_TABLE[9].name = inconsistent (cell.py stage_consistency), docs/EXIT-CODES.md:55 same; exit_codes.RUNNER_MAPPED_TO_CRASH[9] states the runner's 9 'must NOT be propagated as 9'",
+  "tests/test_exit_codes.py: 20 tests OK \u2014 the source scan still balances",
+  "own red->green: sed the /tmp copy 'elif rec[\"delta\"] < 0:' -> 'elif False:' makes b1/b2/b3, -1, -0.5, -1.5 all exit 0 and print a false 'reconciled'; restoring pristine source returns 9",
+  "sha256 run_longrun.py 29445320c205bfe8c5d52ba150054cdbb4a915f598f0f56588e1b174a9069a61 and cell.py e24e867b8fe9eec7d1344f5738d9f04022f9f5d0968fa0f575ab9c30e6edf013 identical before and after every probe"
+ ],
+ "blocker": "",
+ "next_unit_hint": "the unrecorded refusal is sound at the runner but does not survive the caller. A follow-up card should either declare a distinct exit code for it (and teach RUNNER_MAPPED_TO_CRASH) or have cell.py stage_run propagate it as its own code instead of EXIT_RUNNER_CRASH; also close the runaway exits (run_cell returns 6 at run_longrun.py:2327,2382,2469,2565) that skip _gate_finish",
+ "write_paths": [
+  "docs/V-CAPGATE-REFUSE.md",
+  "experiments/ptr-engine/measure/V-CAPGATE-REFUSE.json",
+  "orchestration/units/V-CAPGATE-REFUSE.md",
+  "orchestration/handoffs/V-CAPGATE-REFUSE.json",
+  "orchestration/journals/V-CAPGATE-REFUSE.jsonl"
+ ],
+ "not_reproduced": [
+  "truncated-last-line rows file exits 9 with UNRECORDED (observed exit 5 CAP GATE ROWS)",
+  "UNRECORDED printed to stdout (it is stderr)"
+ ],
+ "overstated": [
+  "author handoff: 'cell.py propagates exit 9 unmodified' \u2014 cell.py:1568 remaps 9 to 5, deliberately, per exit_codes.RUNNER_MAPPED_TO_CRASH[9]",
+  "author handoff: 'only diagnostics transport' \u2014 a reader who sees 5 is told to look for a crash"
+ ],
+ "unverified": [
+  "pre-send exit 4 through a real cell CLI invocation (gate + _cap_stop exercised directly)",
+  "a full live cell run reaching the end-of-run reconcile"
+ ],
+ "red_green": {
+  "mutation": "elif rec[\"delta\"] < 0: -> elif False:  (on /tmp copy only)",
+  "red": "all delta<0 shapes exit 0 and print 'cap-gate: reconciled \u2014 the run's count 2 equals the rows gained 1 (delta 0)'",
+  "green": "pristine source: b1 9, b2 9, b3 9, -1 9, -0.5 9, -1.5 9"
+ },
+ "containment": "no workspace source file was edited; every mutation lived under /tmp/vcap; no rows, grade, ledger or spawn_record file touched",
+ "scope": "read-only verification of the CAPGATE-UNRECORDED-REFUSE behaviour; offline, zero inference requests",
+ "tool_calls": 24,
+ "bound": 26,
+ "live_requests": 0,
+ "network": false,
+ "evidence": {
+  "command_or_count": "probe on pristine source: 3/3 deleted-row shapes exit 9; truncated 5; -0.0 0; delta==0 0; delta>0 9; pre-send 4 with 4/4 transport+rows; cell remap 9->5; test_exit_codes 20 OK",
+  "commands": [
+   "python3 /tmp/vcap/probe.py /home/zer0null/reserach extarctor/experiments/ptr-engine/longrun/run_longrun.py -> b_last_row_deleted rc=9 delta=-1 'CAP GATE UNRECORDED (delta=-1) \u2014 refusing, exit 9'; b_all_rows_deleted rc=9 delta=-3; b_rows_file_absent rc=9 delta=-2; a_truncated rc=5 'CAP GATE ROWS at exit: ... unparseable row'; c_delta_values {'-0.0':0,'-1':9,'-0.5':9,'-1.5':9,'0':0,'+1':9}; d_delta_zero rc=0; d_delta_positive rc=9 'CAP GATE RECONCILE DIVERGENCE'",
+   "sed 's/    elif rec\\[\"delta\"\\] < 0:/    elif False:  # MUTANT/' run_longrun.py > /tmp/vcap/mut/run_longrun.py && python3 /tmp/vcap/probe.py /tmp/vcap/mut/run_longrun.py -> RED b_last_row_deleted rc=0 delta=-1 'cap-gate: reconciled \u2014 the run's count 2 equals the rows gained 1 (delta 0)'; b_all_rows_deleted rc=0; b_rows_file_absent rc=0; then pristine re-run -> GREEN b1/b2/b3 = 9",
+   "python3 /tmp/vcap/presend.py -> {'rc': 4, 'refused_at_turn': 5, 'granted': 4, 'transport_calls': 4, 'rows_written': 4, 'rows_file_exists': True, 'refusal_text': 'CAP REFUSED at T5 (turn) \u2014 over the global cap: ... projected=6 over_by=1 \u2014 nothing sent'}",
+   "python3 /tmp/vcap/cellprop.py -> {'abort_code': 5, 'abort_stage': '4/7 run', 'abort_message': 'run_longrun.py exited 9 (unmapped runner failure) \u2014 rows kept at ...', '9 in cell._RUNNER_CODES': False, 'cell._RUNNER_CODES': [2,3,4,5,6,7], 'EXIT_TABLE[9].name': 'inconsistent'}",
+   "python3 experiments/ptr-engine/longrun/tests/test_exit_codes.py -> 'Ran 20 tests in 0.185s OK'",
+   "sha256sum run_longrun.py cell.py before and after -> 29445320c205bfe8c5d52ba150054cdbb4a915f598f0f56588e1b174a9069a61 / e24e867b8fe9eec7d1344f5738d9f04022f9f5d0968fa0f575ab9c30e6edf013 (unchanged)"
+  ]
+ }
+}

@@ -1,0 +1,100 @@
+{
+ "unit": "COLD-START-SCORE",
+ "date": "2026-10-26",
+ "scored_unit": "COLD-START-PROBE",
+ "probe_deliverables": [
+  "experiments/ptr-engine/measure/COLD-START-PROBE.json",
+  "docs/COLD-START-PROBE.md"
+ ],
+ "method": "Rubric frozen before the probe ran; every item decided from the settling artefact, never from the probe's own status field. Halves count 0.5.",
+ "score": {
+  "points": 4.5,
+  "of": 8,
+  "correct": 3,
+  "half": 3,
+  "wrong": 1,
+  "gap_honest": 0,
+  "gap_dishonest": 1
+ },
+ "items": [
+  {
+   "item": 1,
+   "name": "Objective + verdict",
+   "probe_answer_excerpt": "There is NO verdict word for the thesis; the only recorded aggregate is the batch table (134 rows...). H1 is not adjudicable at the pinned launch shape... H3 is not adjudicable below 8 decidable of 12.",
+   "rubric_truth": "Objective correct, but the thesis verdict word IS recorded: overall 'not adjudicable', missing measurement = one four-arm grid with >=60 usable timings per arm; H1 (no grid with both arms at n>=60), H2 (sign unstable across grids), H3 (undecidable below 8/12) are all not adjudicable.",
+   "source_that_settles_it": "experiments/ptr-engine/measure/OPERATOR-BRIEF.json (verdict.overall='not adjudicable', verdict.missing_measurement); experiments/ptr-engine/measure/P95-POWER.json (per_grid_summary: 2 of 3 grids do NOT separate the pair; largest_n_set note 'n_max_usable 48'); board thread",
+   "mark": "GAP_DISHONEST",
+   "why": "Probe wrote status 'silent' and asserted no thesis verdict exists, and omitted H2 entirely. The record states the verdict word and its missing measurement in OPERATOR-BRIEF.json, and P95-POWER.json shows exactly H2's sign instability (2 of 3 grids fail to replicate; p50 32.39/11.99 ms, p95 -2.35/-57.65 ms). A gap was written where the record is clear: that is the finding this card exists to catch."
+  },
+  {
+   "item": 2,
+   "name": "Spend",
+   "probe_answer_excerpt": "1,101 used of 4,320 cap, 3,219 remaining. requests_raw=1101... requests_deduplicated=1071, remaining_deduplicated=3249, duplicate_excess=30; it is NOT deducted (deduction_rule_sound=false, deduction.applied=false).",
+   "rubric_truth": "requests 1101 / cap 4320 / remaining 3219; duplicate_excess 30; deduction_rule_sound false; diagnostic.deducted false; diagnostic.requests_deduplicated 1071; diagnostic.remaining_deduplicated 3249. Deducted = no.",
+   "source_that_settles_it": "experiments/ptr-engine/measure/REQUEST-LEDGER.json (requests_raw, requests, remaining_raw, remaining, duplicate_excess, deduction_rule_sound, deduction.applied, diagnostic.deducted, diagnostic.requests_deduplicated, diagnostic.remaining_deduplicated, budget.cap)",
+   "mark": "CORRECT",
+   "why": "Every figure and the 'not deducted' ruling match the artefact; the dedup figures are correctly labelled diagnostic, not budget. Field spelling differs slightly (deduction.applied for diagnostic.deducted) but both keys exist and the value is the same."
+  },
+  {
+   "item": 3,
+   "name": "Three holds",
+   "probe_answer_excerpt": "(a) Gate pincer... Carrier is RUN-A*... (b) V-SPAWN-ATTACK-2 partial: the spawn record is not tree-bound (D5)... (c) STATUS blocker chain link 1 is not discharged... the record names NO clearing card ids for any of the three.",
+   "rubric_truth": "(a) 660-request tranche held on the refusal-gate record: a PASS row from SPAWN-RECORD-BIND (8e9df08d), per-exit coverage of {2,3,4,8,12}, and a record regenerated in the same session as cell 1 because D5 stays open; (b) a live cell likewise, plus TRANCH1-DRYRUN's ten-cell rehearsal; (c) publication held by the operator (no answerer approval; COMPILATION.md stays a living index).",
+   "source_that_settles_it": "task_board_get ad214412 (description: 'Held on: PASS row from SPAWN-TREE-BIND (D5/D6), TRANCH1-DRYRUN-2 pass'; prompt preconditions 2,3); docs/GATE-CHAIN.md \u00a711 (D5,D6); board thread on publication",
+   "mark": "HALF",
+   "why": "Right mechanism (D5 open, refusal record sound only with per-exit coverage) and right carrier, but it names no hold with the clearing card, misses the same-session regeneration and the ten-cell rehearsal, and gets (c) wrong: publication is held by the operator, not by the gate-chain blocker chain. Rubric's HALF case ('gate chain pass without the spawn record') is close; the spawn record is named, the cards are not."
+  },
+  {
+   "item": 4,
+   "name": "Withdrawals",
+   "probe_answer_excerpt": "15 entries WI-001..WI-015: withdrawn 9 ... superseded 6 ... Check with python3 experiments/ptr-engine/tools/withdrawn_index.py --check <file>: exit 1 = a withdrawn claim is quoted without its correction, exit 0 = clean.",
+   "rubric_truth": "measure/WITHDRAWN.json + docs/WITHDRAWN.md, 15 entries; withdrawn_index.py --check -> exit 0 CLEAN / exit 1 cited; notably p95 318.14 n=68, 55/64 wilson95, ~466 requests, 1,071-as-budget, the 217k prompt trajectory. Any two named + the tool is CORRECT.",
+   "source_that_settles_it": "experiments/ptr-engine/measure/WITHDRAWN.json (WI-001 ~466; WI-004 p95 318.14 n=68; WI-006 217k; WI-003/WI-015 55/64 wilson95; WI-002 1,071/3,249); experiments/ptr-engine/tools/withdrawn_index.py (exit 0/1)",
+   "mark": "HALF",
+   "why": "The register, its 15 entries and the tool with both exit codes are right, but none of the five salient withdrawn figures is named, so a reader cannot tell which numbers to avoid. Rubric requires any two plus the tool."
+  },
+  {
+   "item": 5,
+   "name": "Next dispatchable card + price + preconditions",
+   "probe_answer_excerpt": "No card is dispatchable. Next in queue: RUN-A* ad214412... Price in PRICE-REPLICATION: '480 turns / 660 requests (10 cells of 48 turns...)'. Its own text: '4 arms x 48 turns x 3 reps = 12 cells / ~792 requests'. Preconditions: G1 allows..., G2 allows..., G3 REFUSES.",
+   "rubric_truth": "Accept RUN-A* (or V-CAPGATE-DEDUP, RECLAIM-GREEN-ROWS, V-TRANCHE-1, LIVE-SMOKE-8) if quoted preconditions match the card. RUN-A* price is 10 cells / 480 turns / ~660 requests; 792 is the superseded frozen-compatibility figure.",
+   "source_that_settles_it": "task_board_get ad214412-c39c-4a47-afb1-2be328e03b1e (title and prompt: 10 cells x 48 = 480 turns, ~660 requests; 'Held on: PASS row from SPAWN-TREE-BIND (D5/D6), TRANCH1-DRYRUN-2 pass'); docs/PRICE-REPLICATION.md:170, :219-221 (\u00a77 records the card's OLD text, superseded on the board at #960)",
+   "mark": "WRONG",
+   "why": "It recycles PRICE-REPLICATION \u00a77's description of the card before the board edit, asserts the card itself still encodes 792/12 cells/900 cap, and calls the price contradictory. The current card encodes 660 requests / 10 cells; 792 is the superseded figure the rubric explicitly rules WRONG. The quoted preconditions (G1/G2/G3 arithmetic) are also not the card's posted holds (SPAWN-TREE-BIND PASS, per-exit coverage, TRANCH1-DRYRUN-2)."
+  },
+  {
+   "item": 6,
+   "name": "Frozen thresholds",
+   "probe_answer_excerpt": "48 turns per arm (N=48); reps >= 2; the four-arm clause; TAIL_MIN = 3; p95 minimum n = 60; H3 unadjudicable below 8 of 12; the 2/12 margin; McNemar b+c >= 6 at p<0.05; the 180 s live turn wall.",
+   "rubric_truth": "n>=60 for p95, LEVEL 0.95, bootstrap seed 20261020, McNemar b+c>=6 at p<0.05, H3 margin 2 of 12, H2 bounds 0.95x/1.00x; any four with docs/PARM-1.md (or PARM-1-ERRATA) as source.",
+   "source_that_settles_it": "docs/PARM-1-ERRATA.md:223-230 (thresholds_unchanged); docs/PREREG-ARM-RUN.md:37,:113,:137,:142,:150-152; docs/PARM-1.md",
+   "mark": "CORRECT",
+   "why": "At least four required thresholds are exact (n>=60, McNemar b+c>=6 p<0.05, H3 2/12 margin, H3 below 8/12) and the source is the frozen PARM-1 + its additive errata. LEVEL 0.95, seed 20261020 and the H2 bounds are omitted but the rubric asks for any four."
+  },
+  {
+   "item": 7,
+   "name": "Phantom path",
+   "probe_answer_excerpt": "docs/BUDGET-SCHEDULE.md does not exist, though it is cited by docs/PRICE-REPLICATION.md:222... The artefact is experiments/ptr-engine/measure/BUDGET-SCHEDULE.md.",
+   "rubric_truth": "experiments/ptr-engine/tools/verdict_with_freeze.py does not exist (real wrapper tools/tree_freeze.py --wrap/--verdict-row); naming that phantom is CORRECT; finding another real missing path and reporting it is CORRECT too.",
+   "source_that_settles_it": "filesystem (docs/BUDGET-SCHEDULE.md ABSENT; experiments/ptr-engine/measure/BUDGET-SCHEDULE.md present) plus docs/PRICE-REPLICATION.md:222 and orchestration/handoffs/PRICE-REPLICATION.json:27; experiments/ptr-engine/tools/verdict_with_freeze.py ABSENT",
+   "mark": "CORRECT",
+   "why": "A real cited-but-missing path, found and reported without repair, with the correct existing artefact named. It missed the rubric's own phantom (verdict_with_freeze.py) but the rubric explicitly accepts another real missing path."
+  },
+  {
+   "item": 8,
+   "name": "Verdict row",
+   "probe_answer_excerpt": "Of 134 rows only 1 is complete: 11 lack sha, 64 lack exit and sha, 58 lack all three... When it is missing the row is a report, not a verdict, and the gate never saw it... a settle with nothing recorded derives no-verdict.",
+   "rubric_truth": "A row {command, exitCode, sha} recorded via orchestration_verdict bound to the execution head sha; most closed cards lack one because the ritual was adopted after they ran (0.99% / 4 of 897); missing row => gate derives FAIL no-verdict no-sha regardless of delivered work.",
+   "source_that_settles_it": "orchestration/VERDICTS.md:4166-4173, :4216-4233; the orchestration_verdict contract; measured adoption 4/897 = 0.99%",
+   "mark": "HALF",
+   "why": "Mechanism and the 'report, not a verdict' ruling are right, but it never writes the derived verdict word FAIL and gives a row-completeness count (1 of 134) rather than the adoption figure (4 of 897 closures), and its cause is 'handoffs recorded prose', not the ritual being adopted after most cards ran. Right answer with the decisive consequence unstated."
+  }
+ ],
+ "requests": 0,
+ "spawns": 0,
+ "repaired_nothing": true,
+ "record_sufficient_for_successor": false,
+ "record_missing_fact": "No first-read file states the thesis verdict in one line: 'not adjudicable' (overall), missing measurement = one four-arm grid with >=60 usable timings per arm. STATUS.md carries per-hypothesis mechanisms and the batch aggregate, so a fresh session reads the aggregate as the verdict or reports silence.",
+ "most_likely_fresh_error": "Declaring that no thesis verdict exists (or reading the 134-row batch table as the thesis verdict) when OPERATOR-BRIEF.json records overall 'not adjudicable' and P95-POWER.json records H2's sign instability across the three grids.",
+ "smallest_edit_that_would_prevent_it": "Add one line to the objective section of orchestration/STATUS.md, the file a successor reads first: 'Operator thesis: not adjudicable on H1, H2 and H3; missing measurement = one four-arm grid with >=60 usable timings per arm. Do not read the batch aggregate as its verdict.' Report only - not made."
+}

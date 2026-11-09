@@ -1,0 +1,31 @@
+{
+ "unit": "LATENCY-FLOOR-TEST-REPIN",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py",
+  "orchestration/units/LATENCY-FLOOR-TEST-REPIN.md"
+ ],
+ "evidence": {
+  "floor_test": "7/7 cases PASS, exit 0 (a,b,c,d,e,f,g)",
+  "failing_assertion": "test_latency_floor_policy.py:148 assert p[\"n\"] == NEW_N[gid] == c[\"ttft_used\"] -> AssertionError ('G8', {'n': 47, 'refused': 'refusing p95 at n=47: ... minimum n for p95 is 60', 'stats': {}}, 47)",
+  "artefact_cells": "G8 72/70 n_turn 48 n_turn_dedup 48 ttft_used 47 p95.n 47 refused; G9 72/61 n_turn 48 n_turn_dedup 48 ttft_used 48 p95.n 48 refused; p95_inventory cells_with_p95 0",
+  "why_moved": "LATENCY-DEDUPE-FIX: LATENCY-DEDUPE-FIX.json report_numbers 'G8 n_turn_dedup 46->48, ttft_used 45->47 ... G9 37->48, 37->48'",
+  "mutation_a": "analyser copy /tmp with n*(1-q)<TAIL_MIN removed -> AssertionError: the analyser produced a p95 at n=59, below the floor 60",
+  "mutation_b": "report copy /tmp G8 p95.n=ttft_used=65 with refusal -> AssertionError: G8: CONTRADICTION - n=65 clears the floor 60 but the cell carries a refusal instead of a p95",
+  "regression": "16 passed, 1 failed: test_accuracy_recomputed.py:30 test_recomputed_record_regenerates_byte_identically (byte-identity of an accuracy record; untouched by this card)",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py",
+   "PYTHONPATH=src:. python3 -m pytest -q -p no:cacheprovider tests/test_turn_dedup.py tests/test_grid_cell_sanity.py experiments/ptr-engine/measure/test_accuracy_recomputed.py",
+   "LATENCY_ANALYZER_PATH=/tmp/analyze_stats_mut45.py python3 experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py",
+   "LATENCY_REPORT_JSON=/tmp/LATENCY-REPORT-mut65.json python3 experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Test now derives expected n from the report's ttft_used at run time, so further LATENCY-DEDUPE-FIX/LATENCY-REDERIVE movement needs no re-pin. Two independent leftovers for a new card, not fixed here: (1) test_accuracy_recomputed.py:30 test_recomputed_record_regenerates_byte_identically FAILS (pre-existing, unrelated to latency) - owner should confirm whether the accuracy record or the test is stale; (2) latency_report.py:672-674 labels `cells_with_p95_raw` after points in the PRIOR artefact, which reads as 'refusals' and misled the previous pin's comment - consider renaming it or documenting it on the page.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py",
+  "orchestration/units/LATENCY-FLOOR-TEST-REPIN.md",
+  "orchestration/handoffs/LATENCY-FLOOR-TEST-REPIN.json",
+  "orchestration/journals/LATENCY-FLOOR-TEST-REPIN.jsonl"
+ ]
+}

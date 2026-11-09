@@ -1,0 +1,54 @@
+{
+ "unit": "V-SPAWN-DECLARE",
+ "overall": "partial",
+ "checks": [
+  "attack1_table_reproduced: exit {2,3,4,8,12} -> runner_launch=0, declared preflight 0/1/1/1/1, own Popen oracle 0/1/1/1/1, twice",
+  "attack2_oracle_not_vacuous: bare child 2 spawns counted; mutant unrecorded spawn oracle=2 vs declared=1",
+  "attack3a_purpose_other_rejected: 'undeclared spawn (purpose=other) on a refusing invocation: <argv>'",
+  "attack3b_launch_row_rejected: 'runner_launch with no gate record' + 'runner_launch=1 on a refusing invocation (must be 0)'",
+  "attack3c_declaration_block_deleted_ACCEPTED: validate_refusal -> {ok: True, failures: []} (findings)",
+  "attack4_no_launch_on_refusal: turns=0/reps=0/request-allocation=0/missing fixture/unwritable out-dir/turns=100000 -> runner marker never written, runner_launch 0 where a record exists",
+  "attack5_doc_code_agree: docs/GATE-CHAIN.md:336-353 names runner_launch, preflight_self_check, purpose==other, gate record, {2,3,4,8,12}, 0 at exit 2 else 1",
+  "attack6_primitives: only subprocess.run (2 sites); no os.system/exec*/fork/multiprocessing/threading; recording only at explicit callsites",
+  "pytest -q experiments/ptr-engine/longrun/tests/test_spawn_classification.py -> 3 passed (sha f17663d1)"
+ ],
+ "blocker": "",
+ "next_unit_hint": "harden validate_refusal: it must reject a published record with no spawns/declaration block (an empty or truncated record currently returns ok=True); make the oracle equivalence the acceptance criterion, not the record's own validation.ok",
+ "write_paths": [
+  "orchestration/units/V-SPAWN-DECLARE.md",
+  "orchestration/handoffs/V-SPAWN-DECLARE.json",
+  "orchestration/journals/V-SPAWN-DECLARE.log",
+  "experiments/ptr-engine/measure/SPAWN-DECLARE-ATTACK.json",
+  "/tmp/vspawn"
+ ],
+ "not_reproduced": [],
+ "overstated": [
+  "an undeclared spawn is a failure: true only via the test's declared==oracle comparison; validate_refusal() alone returns ok=True for a record whose spawns were stripped",
+  "a refusal publishes its spawns: false when the out-dir is unwritable (exit 12 wrote no refusal record) and for argparse usage errors (--request-allocation 0 -> exit 2, no record)"
+ ],
+ "unverified": [
+  "unwritable --out-dir could not be tested as a successful refusal-then-write path: the write itself is what fails, so the record's absence is expected, not diagnostic",
+  "spawns raised inside a third-party library or via os.system/exec/fork are not exercised here (no such callsite exists in cell.py today)"
+ ],
+ "tool_calls": 21,
+ "bound": 24,
+ "containment": "no write outside the four allowed workspace paths and /tmp; audited files unmodified (only read)",
+ "scope": "PREFLIGHT-SPAWN-DECLARE record schema, validator, refusal table, doc rule, spawn primitives",
+ "red_green": "attack3c is the red: reverting any hardening of validate_refusal leaves a deleted declaration block accepted (ok=True) while the oracle test still passes",
+ "corrections": [
+  "my first unwritable-out-dir attempt refused at G3 for an unrelated reason; re-run kept as-is because the missing record is the intended observation"
+ ],
+ "tree_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+ "verdict_row": {
+  "command": "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_spawn_classification.py",
+  "exitCode": 0,
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "result": "PASS"
+ },
+ "gate_precondition": "met on this tree for runner_launch==0 at every refusal, provided the oracle test is the gate rather than the record's own validation.ok",
+ "artifacts": [
+  "experiments/ptr-engine/measure/SPAWN-DECLARE-ATTACK.json",
+  "orchestration/units/V-SPAWN-DECLARE.md",
+  "orchestration/journals/V-SPAWN-DECLARE.log"
+ ]
+}

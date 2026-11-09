@@ -1,0 +1,51 @@
+{
+  "unit": "ARM-INTEGRITY",
+  "generated_at": "2026-10-26T16:45:00Z",
+  "mode": "offline (zero inference requests), read-only",
+  "probe": {"path": "/tmp/arm_integrity_probe.py", "command": "python3 /tmp/arm_integrity_probe.py", "exit": 0, "result": "PROBE PASS"},
+  "sources_sha256": {
+    "experiments/ptr-engine/longrun/run_longrun.py": "939c225c052319b91ef7df0e69678b85ae855fc9bb3fbf293441b7bafb99b1c3",
+    "experiments/ptr-engine/longrun/client.py": "5aa23bb5470b7e0909992b3f0947867953ba39204e5d03eff0f95c30e57ca7bb",
+    "experiments/ptr-engine/longrun/analyze_stats.py": "2c9756f3f6cf9c07174cda290a86cc506b0d608bd1c9a0dc6884540c966b2d1c",
+    "experiments/ptr-engine/longrun/cell.py": "fd4f2b01a6bfdeea425a92de428f770bf9f07fbe3bdc3b1d8cfd1f4a17ee2ec6"
+  },
+  "rows_read": {"files": 7, "rows": 788},
+  "mechanism": {
+    "transcript-grow": {"code": "run_longrun.py:1057-1074", "prompt": "working_set + one turn_block per prior turn + question; FIFO pop(0) at wall_tokens", "carried": "full history", "dropped": "oldest turn blocks once cap crossed"},
+    "transcript-compact": {"code": "run_longrun.py:1076-1092", "prompt": "same replay; at wall a <=700-token digest request replaces older turns, last 4 raw (digest built :1086, raw[-4:] :1089)", "carried": "digest + last 4 turns", "dropped": "everything older than 4 turns at a wall"},
+    "pointer-stable": {"code": "run_longrun.py:1094-1110", "prompt": "INDEX + index_lines + bodies of items[:min(t+1,N)] + 3-line state tail + question (prefix_sha256 :1098)", "carried": "append-only index prefix + pinned bodies", "dropped": "all prior answers except 3 truncated lines"},
+    "lease-reopen": {"code": "run_longrun.py:1112-1128", "prompt": "INDEX + index_lines + host-distilled <=1800-byte lease state (_distill :1026) + question; lease++ at each wall (walls from fixture lease_reopen_turns, :1004)", "carried": "index lines + distilled state", "dropped": "answers outside this lease"}
+  },
+  "pair_verdicts": {
+    "grow_x_compact": {"verdict": "distinct-in-code-only", "why": "only designed difference is at the wall; evicted>0 in 0/192 grow rows, kind=digest in 0/788 rows; prompts byte-identical T1-T6 (stage1, 6 shared prompt_sha256) and T1 (G4)", "field_that_should_show_it": "kind=\"digest\" row at each wall (runner writes/reads it, run_longrun.py:1045) and evicted>0"},
+    "grow_x_pointer": {"verdict": "distinct", "why": "slope 38.79-676.96 vs 4.07-4.85 tok/turn; 0 shared prompt_sha256"},
+    "grow_x_lease": {"verdict": "distinct", "why": "growing replay (1870-34279 tok) vs flat index-only (178-434 tok, slope -0.01)"},
+    "compact_x_pointer": {"verdict": "distinct", "why": "digest-replay construction vs append-only index prefix; 0 shared prompt_sha256"},
+    "compact_x_lease": {"verdict": "distinct", "why": "growing digest-replay vs flat index-only"},
+    "pointer_x_lease": {"verdict": "distinct", "why": "pointer pins item bodies + 3-turn tail (G4 T1 967 vs lease T1 433); lease pins index lines only"}
+  },
+  "signature": {
+    "transcript-grow": {"expected": "monotone growth; evicted>0 past wall", "observed": "growth present; evicted>0 = 0/192", "missing": "cap branch unexercised"},
+    "transcript-compact": {"expected": "kind=digest row at each wall; sawtooth growth", "observed": "kind=digest = 0/788; monotone growth; identical to grow below wall", "missing": "compaction never fired"},
+    "pointer-stable": {"expected": "small T1, plateau bounded by items=4, fetch rounds + pinned_lines in tool grids", "observed": "T1 723-3520, plateau ~T7, slope 2.72-4.85; fetch_rounds_used 1..24 (v5) / 0..20 (v6); 37 pinned_lines in v6 tool_calls; 0 shared prompt_sha256", "missing": "none"},
+    "lease-reopen": {"expected": "lease increments at walls, prompt resets at T23/T53", "observed": "lease==1 on 96/96 rows; flat 178-434 tok", "missing": "reopen never fired: lease_reopen_turns absent in all 7 fixtures"}
+  },
+  "slopes_tokens_per_turn": {
+    "rows-longrun-2026-10-26.jsonl": {"transcript-grow": [38.79, 48, 1870, 3681], "transcript-compact": [119.88, 48, 1870, 7124], "pointer-stable": [4.07, 48, 723, 1898], "lease-reopen": [-0.01, 48, 189, 178]},
+    "rows-longrun-c-2026-10-26.jsonl": {"transcript-grow": [676.96, 48, 2114, 34279], "transcript-compact": [74.98, 48, 2114, 5640], "pointer-stable": [4.44, 48, 967, 2197], "lease-reopen": [-0.01, 48, 433, 422]},
+    "rows-longrun-v3-2026-10-26.jsonl": {"transcript-grow": [60.89, 48, 2154, 5006], "pointer-stable": [4.68, 48, 1007, 2245]},
+    "rows-longrun-v4-2026-10-26.jsonl": {"transcript-grow": [61.01, 48, 4020, 6887], "pointer-stable": [4.85, 48, 2873, 4117]},
+    "rows-longrun-v4-tools-2026-10-26.jsonl": {"pointer-stable": [2.72, 48, 3033, 4196]},
+    "rows-longrun-v5-tools.jsonl": {"pointer-stable": [-14.35, 48, 3515, 4237]},
+    "rows-longrun-v6-tools.jsonl": {"pointer-stable": [-24.25, 48, 3520, 4247]},
+    "note": "[slope, n, T1_tokens, Tlast_tokens]; v5/v6 negative slopes are tool-fetch transients (v5 T3=9771, v6 T4=7219) on a flat steady state ~4230-4250 from T5"
+  },
+  "pointer_vs_transcript": {"grew_like_a_transcript_in_any_grid": false, "max_pointer_prompt_tokens": 9771, "max_transcript_prompt_tokens": 34279, "wall_tokens": 65536, "shared_prompt_sha256_with_other_arms": 0},
+  "fixtures": {"count": 7, "N": 48, "wall_tokens": 65536, "items": 4, "lease_reopen_turns": null, "note": "lease_reopen_turns absent in all 7 -> lease-reopen can never reopen"},
+  "cross_grid": {"same_implementation_provable": false, "why": "no row carries harness_sha256/code_sha; 0 of 92 manifests carry any sha-shaped key", "observable": "v5-tools and v6-tools share fixture_sha256 5bf5f639..., yet pointer T1 prompt is 3515 vs 3520 tok with different prompt_sha256 and run_manifest_sha256 -> not byte-identical renderings"},
+  "invalidates": {
+    "survives": ["pointer-stable vs transcript-grow (P95-POWER.json disjointness, measure/p95_power_gen.py:169-187)", "pointer-stable vs transcript-compact", "pointer-stable vs lease-reopen"],
+    "unlicensed": ["any transcript-compact digest/compaction effect (P4)", "any transcript-grow FIFO eviction effect (P2 'hits the wall at N=60')", "all lease-reopen numbers incl. P3 'lowest p95 TTFT but loses t30/t60 accuracy'", "the per-cell request allocation reserve of 2 digest requests (expected_digests, run_longrun.py:1133-1135) which was never spent"]
+  },
+  "mislabel_found": false
+}

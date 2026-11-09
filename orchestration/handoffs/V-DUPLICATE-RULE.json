@@ -1,0 +1,67 @@
+{
+ "unit": "V-DUPLICATE-RULE",
+ "overall": "fail",
+ "checks": [
+  {
+   "attack": "1 recompute groups / excess / decided independently",
+   "what_i_did": "own loader, own tuple (ts, content_sha256, prompt_tokens, completion_tokens) within one file, first kept; no import of the author's helper; ts_utc used only to reproduce the author's informational legacy groups (those files stay NOT APPLICABLE)",
+   "produced": "groups 41, excess 54, decided_groups 30, decided_excess 30, rows 1101 over 14 files; per-file decided: v6-tools 11/11, v4-tools 17/17, v5-tools 2/2; legacy informational: baseline 1/11, equalinfo 2/2, live 8/11. Agreement: groups exact, excess exact, decided exact. No group has excess > 1 on a decided file (all 30 are size-2).",
+   "sound": "sound",
+   "evidence": "experiments/ptr-engine/tools/duplicate_attack.py --json; orchestration/handoffs/TVS-REGRADE.json duplicate_rows"
+  },
+  {
+   "attack": "2 prove a dropped row was a distinct request (second attempt)",
+   "what_i_did": "for all 30 dropped rows diffed the kept row on turn, rep, arm, kind, latency_s, wall_ms, ttft_s, ttft_ms, http_status, error, tool_calls, fetch_followup, billed_round, prompt_served, prompt_sha256, max_tokens, finish_reason, stop_reason, reasoning_sha256, run_id, and the attempt/msg_index/started_at fields when present",
+   "produced": "0 of 30 dropped rows differs in ANY measurement field: ttft_s and latency_s identical to six decimals in 30/30 (e.g. v6 idx 0/1 ttft_s 0.192567, latency_s 8.057474; v4-tools idx 0/1 ttft_s 0.526405, latency_s 2.872481; v5-tools idx 0/1 ttft_s 0.454734, latency_s 12.742209). Field diffs across all 30 are bookkeeping only: billed_round, fetch_followup, kind, prompt_served, prompt_sha256, tool_calls. No dropped row carries an independent round trip.",
+   "sound": "sound for the retry question: none of the 30 is a second attempt. BUT the row removed is not an artefact either -- see attack 5, which is what makes the RULE's arithmetic wrong.",
+   "evidence": "experiments/ptr-engine/tools/duplicate_attack.py attack2_forensics.all_dropped; experiments/ptr-engine/measure/DUPLICATE-ATTACK.md table"
+  },
+  {
+   "attack": "3 discriminating power: is content_sha256 a request or a response hash",
+   "what_i_did": "re-hashed every row's own payloads and compared to the recorded content_sha256; read the writer",
+   "produced": "869/869 rows with a content_sha256 equal sha256(content) exactly and 0/869 equal anything else. Writer: run_longrun.py:1493 content_sha256 = sha256_text(recorded_content), i.e. a hash of the ASSISTANT RESPONSE. It says nothing about max_tokens, tools, thinking or the message list, and prompt_sha256 is a separate field. So identical tuples are response identity, not request identity; two different requests CAN share the tuple, and the error direction of dedupe is to UNDERSTATE spend.",
+   "sound": "unsound as request identity (sound only as proof that one HTTP response was recorded twice)",
+   "evidence": "experiments/ptr-engine/longrun/run_longrun.py:1493; attack3_hash in duplicate_attack.py"
+  },
+  {
+   "attack": "4 the not_applicable half",
+   "what_i_did": "checked content_sha256 presence, ts resolution and same-second/same-token collisions on the skipped files; tried the literal tuple naively on them",
+   "produced": "The card's premise (9 of 14 applied / 5 legacy) is NOT what the data says: 11 files are applicable (9 long-run rows files + rows-cell-pointer-stable-20261026T145758Z.jsonl 6 rows + rows-pilot-thinking-2026-10-26.jsonl 6 rows) and exactly 3 are skipped -- rows-baseline-2026-10-26.jsonl (105 rows), rows-equalinfo-2026-10-26.jsonl (100), rows-live-2026-10-26.jsonl (27) = 232 rows left uncorrected. All 3 carry 0 content_sha256 and only second-resolution ts_utc. The skip does NOT hide genuine mirrors: every same-second same-token group is distinguishable as distinct sends -- baseline idx 48-59 is 12 identical HTTP 400 failures across rep 1/2/3 (error text identical, reps distinct), equalinfo idx 7/11 are rep 2 and rep 3 with latency_s 0.324 vs 0.323, idx 90/91 are rep 1 and rep 2 with latency_s 7.312 vs 0.593, live 8 groups all differ in rep (0/1/2) and client_elapsed_s. So a naive tuple on those files would fabricate 24 merges, exactly as the author said.",
+   "sound": "skip is defensible; the count in the prose is wrong (5 vs 3). Whether 232 rows contain an undetected mirror is unverified -- no content hash exists there.",
+   "evidence": "attack4_skip in duplicate_attack.py; REQUEST-LEDGER.json total/files_deduped=11 total/files_not_applicable=3"
+  },
+  {
+   "attack": "5 request-count audit: is a dropped row replaceable (the rule's arithmetic)",
+   "what_i_did": "reconstructed the row-to-send mapping from the writer and from the rows: for every turn with follow-ups, compared the last kind=tool-followup row to the kind=turn row and counted sends against rows",
+   "produced": "33 turns carry follow-ups (v6 13, v4-tools 17, v5-tools 3) but only 30 pairs exist: 3 mirrors escape the tuple because make_row stamps ts per call and the two calls land 1 ms apart -- v6 T4 idx 8/9 ts 13:16:31.644 vs .645, v6 T13 idx 28/29 13:19:39.946 vs .947, v5 T1 idx 0/1 12:17:29.765 vs .766 -- all three still share ttft_s/latency_s/prompt_tokens/completion_tokens/content_sha256. Mechanism: run_longrun.py:1969 sends and counts the turn's INITIAL request (sent += 1), run_longrun.py:965 sends each follow-up (sent += 1) and run_longrun.py:974 writes one row per follow-up, then run_longrun.py:2065-2066 appends the turn row from the SAME resp object fetch_rounds returned. So each follow-up turn sends N+1 requests and writes N+1 rows -- the turn row is a re-record of follow-up N, and the initial send has no row of its own. Rows therefore already equal sends (1101), and the pair's prompt_tokens are identical while prompt_sha256 differs (turn row hashes info['prompt'] at run_longrun.py:2039, the follow-up hashes the tool-result message at run_longrun.py:975): the turn row is internally contradictory, which is the proof it does not record the initial send. Removing 30 mirrors leaves 30 sends unrepresented: dedupe 1071 vs sends 1101.",
+   "sound": "UNSOUND as applied. 1071 is not a spend figure; 1101 is.",
+   "evidence": "duplicate_attack.py attack5_row_request_mapping (turns_with_followups, mirror_groups, mirrors_missed_by_tuple); run_longrun.py:965,974,1493,1969,2039,2065-2066"
+  }
+ ],
+ "not_reproduced": [
+  "the handoff's and the card's '9 of 14 files applied / 5 legacy files skipped': the author's own per_file table, REQUEST-LEDGER.json (files_deduped 11, files_not_applicable 3) and this recount all say 11 applied / 3 skipped, 232 uncorrected rows",
+  "nothing else: groups 41, excess 54, decided 30 and excess_defensible 30 all reproduce exactly"
+ ],
+ "overstated": [
+  "TVS-REGRADE duplicate_rows.excess_defensible=30 and dedup_requests=1071: the 30 rows are defensible to drop as duplicated MEASUREMENTS but not from the request count, because each dropped turn row is the only stand-in for a billed initial send; the defensible de-duplicated request count is 1101",
+  "REQUEST-LEDGER.json (and any REQUEST-LEDGER-2 built on it): requests=1071, budget.spent=1071, budget.projected=1071, remaining=3249 overstate remaining budget by 30 -- remaining is 3219, the figure the same file already carries as remaining_raw",
+  "LATENCY-REPORT-2's would_dedup_change_n / crosses_threshold_downward (G7 V4-TOOLS pointer-stable 68 -> 51): dedupe changes the SAMPLE SET (it removes a genuine duplicate measurement but the initial request's sample was never recorded), so n must not be reported as 51 and the threshold crossing must be withdrawn, not republished",
+  "cause.note 'one measurement, not two round-trips' is correct and was used in the wrong direction: one measurement means one of the two rows re-records the other, while the turn's initial send was never written at all"
+ ],
+ "unverified": [
+  "that 1101 is the exact number of HTTP sends: rows and sends coincide by the writer's construction on the success path, but a failed follow-up (run_longrun.py:2032 appends a row after a failed send) and the cap-refusal path are not counted in the rows; a server-side request log or the run's `sent` counter would settle it. It does not change the direction: dedupe is still wrong by at least the 30 mirrors",
+  "whether the 232 rows in the 3 skipped files contain an undetected mirror: they have no content_sha256 and only second-resolution ts_utc, so the question is decidable only from that writer, not from the rows",
+  "TVS.json's v6 window figures (raw 155955 / dedup 111994): the mirror double-counts the follow-up's tokens while the initial send's tokens were never written, so neither number is the true window total; I did not re-derive it and TVS has an owner"
+ ],
+ "blocker": "",
+ "next_unit_hint": "Three follow-ups, none of which this verifier may perform. (1) Re-issue REQUEST-LEDGER-2 with requests=1101, remaining=3219 and stop deriving request counts from row dedupe; add a note that the row set's 30 mirrors are the price of the turn row replacing the initial send's row. (2) A writer fix, separate unit, not a re-grade: append a row for the turn's initial send and stop re-recording the last follow-up as the turn row (run_longrun.py:1969-2066 and fetch_rounds at 965-975); only then does a row set contain 33 extra rows and dedupe become a correct 1101. (3) Withdraw LATENCY-REPORT-2's G7 n=51 threshold crossing and re-derive the p95 on the send's own samples. RUN-A* precondition 6 still passes (3219 >= 900) but with 30 fewer requests of margin.",
+ "write_paths": [
+  "orchestration/handoffs/V-DUPLICATE-RULE.json",
+  "orchestration/units/V-DUPLICATE-RULE.md",
+  "orchestration/journals/V-DUPLICATE-RULE.jsonl",
+  "experiments/ptr-engine/measure/DUPLICATE-ATTACK.md",
+  "experiments/ptr-engine/tools/duplicate_attack.py"
+ ],
+ "tool_calls": 26,
+ "bound": 26
+}

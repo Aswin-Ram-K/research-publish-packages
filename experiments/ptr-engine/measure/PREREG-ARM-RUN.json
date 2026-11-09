@@ -1,0 +1,136 @@
+{
+  "rule_id": "PARM-1",
+  "unit": "PREREG-ARM-RUN",
+  "status": "frozen-design-only",
+  "doc": "docs/PREREG-ARM-RUN.md",
+  "frozen_at_utc": "2026-10-26T15:41:12Z",
+  "requests_in_this_card": 0,
+  "rule_sha256": "21cb85511b78dc4046f0f8f1449b68a7de2fd8bd8f659985efd63c9651398ec8",
+  "rule_sha256_convention": {
+    "what": "sha256 of the rule body only, i.e. the lines strictly between '<!-- parm-rule:begin -->' and '<!-- parm-rule:end -->' in docs/PREREG-ARM-RUN.md",
+    "normalisation": "joined with '\\n' and terminated by one '\\n', UTF-8, nothing stripped",
+    "excluded": "every line outside the delimiters, including the timestamp line and this JSON",
+    "recompute": "python3 - <<'PY'\\nimport hashlib,pathlib\\nt=pathlib.Path('docs/PREREG-ARM-RUN.md').read_text(encoding='utf-8')\\nb=t.split('<!-- parm-rule:begin -->\\n',1)[1].split('<!-- parm-rule:end -->',1)[0]\\nprint(hashlib.sha256(b.encode('utf-8')).hexdigest())\\nPY",
+    "verified_at_write": true
+  },
+  "comparison": {
+    "arms": ["transcript-grow", "transcript-compact", "pointer-stable", "lease-reopen"],
+    "adjudicated_pair": {"A": "transcript-grow", "C": "pointer-stable"},
+    "others": "transcript-compact and lease-reopen are descriptive only; never a win"
+  },
+  "hypotheses": {
+    "H1": {
+      "claim": "within the adjudicating grid, pointer-stable has a lower p95 TTFT per turn than transcript-grow",
+      "estimator": "analyze_stats.quantile_ci(values, q=0.95) - linear-interpolated sample quantile, experiments/ptr-engine/longrun/analyze_stats.py:187-247 (_quantile_sorted :112)",
+      "interval": "percentile bootstrap inside quantile_ci, resamples=10000, seed=20261020, two-sided LEVEL=0.95, clamped to bracket the point (:238), printed via render_estimate (:467)",
+      "admissibility": "n >= MIN_N(20) AND n*(1-q) >= TAIL_MIN(3) enforced at :223; at q=0.95 that is n >= 60 (min_n_for :167). n=48 (RUN-C-V2 grid) is refused, not caveated",
+      "ranking_rule": "disjoint 95% bootstrap intervals: C.hi < A.lo; no paired quantile test exists in analyze_stats, so overlapping intervals mean NO ranking claim",
+      "on_missing_n": "quantile_ci raises InsufficientSamples / analyze records 'refused' (:550); H1 is then not adjudicable, the refusal message is quoted verbatim, and the threshold is never lowered; nearest-rank p95 from analyze_longrun.py is not admissible",
+      "recorded_p95_disagreement": "838.85/356.12 ms interpolated (analysis.txt) vs 840.4/371.7 ms nearest-rank (PER-ARM TABLE in the same file); PARM-1 binds the analyze_stats.quantile_ci number only"
+    },
+    "H2": {
+      "primary": true,
+      "claim": "within the same grid, pointer-stable carries fewer total prompt tokens per completed turn than transcript-grow",
+      "unit_of_account": "prompt_tokens summed over non-excluded completed turns, divided by that same count; not wall time, not request count (identical by construction), not completion tokens as primary",
+      "primary_field": "row.prompt_tokens (cache-inclusive)",
+      "secondary_field": "prompt_tokens - cached_tokens (cached_tokens absent => 0, counted)",
+      "materiality_margin": "C per-turn total <= 0.95 x A (5% reduction) on prompt_tokens AND < 1.00 x on uncached",
+      "margin_rationale": "prompt tokens are deterministic for fixed (fixture, arm, turn); a win must not rest on a rounding-level difference. 5% is a declared design choice, not a measurement",
+      "why_primary": "the pointer mechanism is not re-sending history; if carried prompt work does not fall, a p95 win is a serving artefact, not the thesis",
+      "card_premise_disagreement": {
+        "stated_in_brief": "RUN-C-V2 recorded pointer-stable with the higher total prompt tokens",
+        "reproduced": false,
+        "measured_from": "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl",
+        "per_arm": {"transcript-grow": {"turns": 48, "prompt_tokens": 901109, "per_turn": 18773}, "transcript-compact": {"turns": 48, "prompt_tokens": 185617, "per_turn": 3867}, "pointer-stable": {"turns": 48, "prompt_tokens": 104468, "per_turn": 2176}, "lease-reopen": {"turns": 48, "prompt_tokens": 20628, "per_turn": 430}},
+        "other_grids": {"rows-longrun-v3": "A 3563 vs C 2214", "rows-longrun-v4": "A 5428 vs C 4071", "rows-longrun-2026-10-26": "A 2771 vs C 1862"},
+        "status": "NOT REPRODUCED (v2/v4 fixtures, 3 checkpoint items, no v6 rows); not refuted either - H2 stays primary because v6 prompt composition is where C's constant prefix could stop dominating"
+      }
+    },
+    "H3": {
+      "claim": "pointer-stable is no worse than transcript-grow on checkpoint accuracy over the decidable denominator by more than the stated margin",
+      "population": "grade_v5.py cells only, via analyze_stats.accuracy_from_grade(grade, arm) :431-463; row-derived denominators forbidden (v6 rows carry answer_kind=null)",
+      "denominator": "decidable = pass + fail; undecidable (verdict text) and missing (reason == turn_missing) leave the denominator and are printed by name",
+      "margin_checkpoints": 2,
+      "margin_denominator": 12,
+      "margin_pp": 16.7,
+      "margin_kind": "fixed in checkpoints, NOT McNemar-defined",
+      "margin_rationale": "at 12 items exact two-sided McNemar reaches only p=0.0386 at a 10-2 split (docs/CHECKPOINT-COVERAGE.md §4), so a p-value-shaped margin would license a 3-checkpoint loss at some splits and refuse it at others",
+      "secondary_veto": "if b+c >= 6 (mcnemar_exact :295) and exact two-sided p < 0.05 with c = C-right/A-wrong, H3 fails regardless of margin; below 6 discordant pairs the test is refused and only the fixed margin decides",
+      "veto": "a quality failure vetoes a latency win; equal-or-better quality is a gate on every other result, not a footnote",
+      "unadjudicable_clause": "if either arm's decidable < 8 of 12, H3 returns no verdict and the run is not adjudicable; never read as pass"
+    }
+  },
+  "endpoints": {
+    "ttft_ms": {"source": "row.ttft_ms", "rule": "finite; ttft_source == 'unavailable' dropped even when a number is present (analyze_stats.py:376-398); null/non-finite dropped and counted, never 0.0"},
+    "ttft_source": {"source": "row.ttft_source", "rule": "'unavailable' => out of timing population; per-source counts printed"},
+    "wall_ms": {"source": "row.latency_s * 1000", "rule": "descriptive only, never an H1 input"},
+    "prompt_tokens": {"source": "row.prompt_tokens", "rule": "H2 primary; uncached = prompt_tokens - cached_tokens"},
+    "completion_tokens": {"source": "row.completion_tokens", "rule": "descriptive only"},
+    "stop_reason": {"source": "row.stop_reason", "rule": "PENDING: RECORD-STOP-REASON (card 3f5f1ee7-c687-47b7-bbb8-ed0db424453e); fallback finish_reason in {length,max_tokens} or truncated==true, named in the report"},
+    "checkpoint_verdicts": {"source": "grade_v5 output cells[] {arm,id,turn,verdict,reason}; arms[arm].decidable / .checkpoint_accuracy", "rule": "verdict in {pass,fail,text}; reason turn_missing is missing, not fail"}
+  },
+  "design": {
+    "arms_count": 4,
+    "turns_per_arm": 48,
+    "turns_source": "LR-01.v6.json \"N\": 48",
+    "reps": "PENDING: BUDGET-SCHEDULE (21254578-7b0e-4150-9c8f-3f89d31abdd8)",
+    "reps_requirement_from_estimator": "per-arm usable timings = turns x reps minus exclusions; H1 needs >= 60 usable => reps >= 2 at N=48 (necessary, not sufficient)",
+    "adjudicating_grid": {"fixture": "experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v6.json", "model": "occamy-1.0-NVFP4", "engine": "sglang", "max_tokens": 4096, "thinking": "off", "stream": true, "note": "all four arms, identical fixture_sha256 and reasoning policy; other caps/models are descriptive only"},
+    "strata": {"quarters": [[1, 12], [13, 24], [25, 36], [37, 48]], "use": "descriptive; no H1 claim inside a stratum"},
+    "checkpoint_ids": ["cp.3.t06", "cp.4.t08", "cp.0.t12", "cp.5.t14", "cp.6.t18", "cp.7.t20", "cp.1.t24", "cp.8.t26", "cp.9.t32", "cp.10.t36", "cp.11.t42", "cp.2.t46"],
+    "checkpoint_turns": [6, 8, 12, 14, 18, 20, 24, 26, 32, 36, 42, 46],
+    "checkpoint_ids_source": "docs/CHECKPOINT-COVERAGE.md §2, ids re-read from LR-01.v6.json (they agree)",
+    "recorded_id_disagreement": "every row file on disk carries v2 ids cp.t12/cp.t24/cp.t46 (3 items) because those grids ran against tasks-v2/runtime-v2/LR-01.v2.json; no existing row file can adjudicate H3 - v6 rows are required"
+  },
+  "exclusions": {
+    "E1_host_error": "http_status null/0 or >= 500, or transport/connection error; failed_turn == true with no HTTP status",
+    "E2_http_failure": "400 <= http_status < 500",
+    "E3_cap_truncated": "truncated == true or finish_reason in {length, max_tokens}; once RECORD-STOP-REASON lands, stop_reason == 'cap'",
+    "E4_digest_mismatch": "row.fixture_sha256 or row.run_manifest_sha256 differs from the declared freeze",
+    "rules": [
+      "an arm's bad answer is NEVER an exclusion; a truncated ANSWER with content present is graded and flagged",
+      "ttft_source == 'unavailable' is not an exclusion - it removes the turn from the timing population only",
+      "exclusions are counted by reason per arm and printed in every report",
+      ">10% excluded in any arm => that arm's columns not adjudicable; >10% run-wide => whole run not adjudicable, no verdict"
+    ]
+  },
+  "decision_matrix": [
+    {"cell": 1, "H1": true, "H2": true, "H3": true, "verdict": "CONFIRMED", "wording": "pointer-stable beats transcript-grow on p95 TTFT (C hi < A lo) and on total prompt work per completed turn, with quality no worse than 2 of 12 checkpoints. The operator's three-part claim holds in this grid."},
+    {"cell": 2, "H1": true, "H2": true, "H3": false, "verdict": "QUALITY VETO", "wording": "Latency and work both favour pointer-stable, but the quality gate fails by more than 2 of 12 checkpoints (or a licensed McNemar finds it worse). Equal-or-better quality is a gate, so no win is claimed; the thesis is not supported."},
+    {"cell": 3, "H1": false, "H2": true, "H3": true, "verdict": "DEAD AT LATENCY", "wording": "Total prompt work is lower for pointer-stable but p95 TTFT is not distinguished (intervals overlap or the p95 was refused at n<60). Work alone does not satisfy the claim; the thesis as stated is not supported."},
+    {"cell": 4, "H1": false, "H2": false, "H3": true, "verdict": "THE THESIS IS DEAD", "wording": "In the adjudicating grid pointer-stable shows neither a p95 TTFT win nor a total-work win while quality holds. The thesis is dead: the pointer design does not pay on either cost axis, and the quality result removes quality as the explanation."},
+    {"cell": 5, "H1": false, "H2": false, "H3": false, "verdict": "THE THESIS IS DEAD (with a quality regression)", "wording": "Neither cost axis favours pointer-stable and its quality is worse by more than 2 of 12 checkpoints. The thesis is dead and the arm is additionally unacceptable on quality."},
+    {"cell": 6, "H1": true, "H2": false, "H3": false, "verdict": "DEAD (work + quality)", "wording": "A p95 TTFT win is recorded, but total prompt work is not lower and quality fails. The win is a serving artefact; the thesis is not supported."},
+    {"cell": 7, "H1": false, "H2": true, "H3": false, "verdict": "DEAD (latency + quality)", "wording": "Work is lower, but p95 TTFT is not distinguished and quality fails. The thesis is not supported."},
+    {"cell": 8, "note": "H3 false never stands without a cost column, so it always lands in cells 2, 5, 6 or 7"}
+  ],
+  "thesis_dead_cell": 4,
+  "thesis_dead_condition": "H1 false AND H2 false AND H3 true",
+  "unadjudicable_wording": "the run is not adjudicable on <axis>; the operator's claim is neither confirmed nor refuted, and no arm is declared better or worse",
+  "stopping_rule": [
+    {"id": "S1", "trigger": "cost ceiling reached before planned n", "numbers": "PENDING: BUDGET-SCHEDULE (21254578-7b0e-4150-9c8f-3f89d31abdd8)", "action": "stop at last complete (rep, turn) boundary, report observed n, refuse H1 ranking if n < 60"},
+    {"id": "S2", "trigger": "E3 cap truncation > 10% in any arm or run-wide", "reference": "RUN-C-V2 truncated 15/192, 14 of them in lease-reopen", "action": "stop; a truncated comparison measures the cap, not the arms"},
+    {"id": "S3", "trigger": "harness digest drift (fixture_sha256 / run_manifest_sha256 / grader rule-body digest)", "action": "stop; cells either side are different instruments and may not be pooled"},
+    {"id": "S4", "trigger": "grade_v5 fails its own directed attack (longrun/QUALITY-POSITIVE-CONTROL.md)", "action": "stop before spending; H3 unadjudicable - a green number from a judge that cannot fail its own attack is not a quality result"},
+    {"id": "S5", "trigger": "p95 refused at the surviving n (< 60 per arm)", "action": "stop the ranking attempt, report interval + refusal text, do not attribute the stop to the arms"}
+  ],
+  "not_done_here": [
+    "runs nothing: zero inference requests, no cell, no re-grade, no git",
+    "does not pick final n or reps (PROJECTION-CALIBRATION c0c7d1c8-8fc5-41ed-958e-df92d2188d66; BUDGET-SCHEDULE 21254578-7b0e-4150-9c8f-3f89d31abdd8)",
+    "does not declare any arm better or worse",
+    "does not edit any row file, grade file, fixture, cell.py, run_longrun.py, client.py, grade_v5.py, analyze_stats.py, fixture_coverage.py, matrix_audit.py, handoff_lint.py, det_verify.py, frozen_tree.py, request_ledger.py"
+  ],
+  "pending": [
+    {"value": "reps / final n", "card": "BUDGET-SCHEDULE", "task_id": "21254578-7b0e-4150-9c8f-3f89d31abdd8", "status_at_write": "todo", "changes": "the per-arm n available to quantile_ci, hence whether H1 is adjudicable at all"},
+    {"value": "cost ceiling / request numbers for the stopping rule", "card": "BUDGET-SCHEDULE", "task_id": "21254578-7b0e-4150-9c8f-3f89d31abdd8", "status_at_write": "todo", "changes": "S1's threshold; nothing else in S1 changes"},
+    {"value": "calibrated per-turn wall projection", "card": "PROJECTION-CALIBRATION", "task_id": "c0c7d1c8-8fc5-41ed-958e-df92d2188d66", "status_at_write": "running", "changes": "only affordability of the grid, never the estimator or the decision rule"},
+    {"value": "row.stop_reason (closed vocabulary)", "card": "RECORD-STOP-REASON", "task_id": "3f5f1ee7-c687-47b7-bbb8-ed0db424453e", "status_at_write": "running", "changes": "which rows are E3 cap_truncated, hence the excluded fraction; adds a field, does not alter H1/H2/H3"}
+  ],
+  "provenance": {
+    "analyze_stats.py": "MIN_N=20, TAIL_MIN=3, LEVEL=0.95, RESAMPLES=10000, SEED=20261020 (:70-74); admissibility :223; min_n_for :167; quantile_ci :187; rank_span :139; mcnemar_exact :267; accuracy_from_grade :431; ttft_values :376; render_estimate :467",
+    "coverage": "docs/CHECKPOINT-COVERAGE.md §2 (12 ids), §4 (McNemar power table)",
+    "run_c_v2": "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl and .analysis.txt",
+    "design": "experiments/ptr-engine/longrun/DESIGN-V3.md",
+    "arms": "experiments/ptr-engine/longrun/run_longrun.py:64"
+  }
+}

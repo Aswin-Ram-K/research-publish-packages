@@ -1,0 +1,54 @@
+{
+ "unit": "WIRE-CAP-GATE",
+ "status": "done",
+ "brake": "PREVENTION",
+ "why_prevention": "the slot is reserved in an in-memory count before send_chat is called, so the decision no longer depends on the writer having flushed; rows are read from disk only once, at run start",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_cap_gate.py",
+  "docs/REQUEST-LEDGER.md",
+  "orchestration/units/WIRE-CAP-GATE.md",
+  "orchestration/handoffs/WIRE-CAP-GATE.json",
+  "orchestration/journals/WIRE-CAP-GATE.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "  GREEN: brake restored -> rc=4 rows=0 requests=0",
+  "commands": [
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_cap_gate.py' -v",
+   "python3 experiments/ptr-engine/longrun/tests/test_tool_channel2.py",
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_request_ledger.py'"
+  ],
+  "zero_rows_on_refusal": "cap=100 spent=100 headroom=100 -> CAP REFUSED at T1, rc=4, rows=0, transport calls=0; arithmetic printed with spent/would_spend/cap/reserve/headroom/allocation/used_in_run/turn",
+  "midrun_stop_turn": "allocation=2 on a 3-turn cell -> CAP REFUSED at T3; rows written = [(T1,turn),(T2,turn)]; used_in_run=2; manifest final_used_in_run=2",
+  "followup_counting": "allocation=1 on a tool-call turn -> turn sent, follow-up REFUSED (kind=tool-followup), rc=4, rows=[turn], used_in_run=1; allocation=2 -> 2 requests, rc=0, final_used_in_run=2",
+  "allows": "rc=0, used_in_run=2 == 2 rows, spent_at_start=10 spent_after=12 delta=0; manifest records allocation and final count",
+  "red_green": "RED (pre-send call neutered): rc=9 rows=3 requests=3, first row T1/turn; GREEN (restored): rc=4 rows=0 requests=0",
+  "reconcile": "delta>0 (a row no request bought) -> exit 9 'CAP GATE RECONCILE DIVERGENCE (delta=+1)'; delta<0 (request stranded mid-turn) -> loud 'CAP GATE UNRECORDED ... reported, never silent'",
+  "exit_codes": "subprocess: refusal -> process exit 4; bad --request-allocation -> 3; unparseable row file -> 5 (all before any send)",
+  "request_ledger_suite": "Ran 16 tests in 0.541s | OK",
+  "tool_channel2": "assertion (e) drifted:     assert filtered[\"before\"] == filtered[\"after\"], (filtered, \"tools-off output drifted\")",
+  "dry_run_manifest_keys_missing_in_baseline": [
+   "metrics_scrape"
+  ],
+  "cap_gate_key_in_dry_run_manifest": false
+ },
+ "known_limit": "a refusal that lands MID-turn can strand the rows of follow-ups already obtained in that turn (the turn's own row is flushed before stopping); the stranded count is printed as CAP GATE UNRECORDED and the next run's disk read under-counts by exactly that many. Reported, never silent.",
+ "blocker": "",
+ "partial_remainder": "",
+ "next_unit_hint": "WIRE-GATES (444654f4) joins the preflight chain; do not fold this loop brake into cell.py. --budget-glob lets a cell isolate its scan set.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_cap_gate.py",
+  "docs/REQUEST-LEDGER.md",
+  "orchestration/units/WIRE-CAP-GATE.md",
+  "orchestration/handoffs/WIRE-CAP-GATE.json",
+  "orchestration/journals/WIRE-CAP-GATE.jsonl"
+ ],
+ "row_files_written": 0,
+ "inference_requests": 0,
+ "assumptions": [
+  "--request-allocation default 'projection' equals the cell's existing structural request count (turns + digests + fetch-round pool), so the in-memory brake and the pre-existing 'sent >= budget' abort cannot disagree about the ceiling",
+  "the gate scans measure/rows-*.jsonl by default; the run's own row file is added when it exists, so the exit reconciliation sees this run's rows",
+  "a row file that does not exist yet is zero rows, not an unreadable file (exit 5 stays reserved for unreadable/unparseable)"
+ ]
+}

@@ -20,6 +20,9 @@ back to a ``Reference``.
 from __future__ import annotations
 
 from .adapter import build_prompt, fetch_tool_spec
+from .fetch_batch import batch_fetches, FetchRequest
+from .outcomes import RETRIEVAL_OUTCOMES, OK, NOT_FOUND, STALE_OR_REVOKED, SCOPE_UNGRANTED
+from .resume import RunState, run_items
 from .annotate import (
     DEPTH_LEAF,
     DEPTH_ROOT,

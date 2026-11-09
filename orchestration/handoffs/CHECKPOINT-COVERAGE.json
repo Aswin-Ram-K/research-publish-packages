@@ -1,0 +1,59 @@
+{
+ "unit": "CHECKPOINT-COVERAGE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v6.json",
+  "experiments/ptr-engine/tools/fixture_coverage.py",
+  "experiments/ptr-engine/longrun/tests/test_fixture_coverage.py",
+  "docs/CHECKPOINT-COVERAGE.md",
+  "orchestration/units/CHECKPOINT-COVERAGE.md",
+  "orchestration/handoffs/CHECKPOINT-COVERAGE.json"
+ ],
+ "evidence": {
+  "command_or_count": "0 inference requests; 12/12 checkpoints decidable by the gate; 8/8 tests pass; all three mutants exit 1; LR-01.v5.json unmodified",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/fixture_coverage.py --fixture experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v6.json  -> exit 0, 'PASS: 12/12 checkpoints decidable, none colliding, all <= 40 tokens'",
+   "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_fixture_coverage.py  -> 8 passed",
+   "python3 experiments/ptr-engine/tools/fixture_coverage.py --fixture /tmp/m_a.json -> exit 1, '- cp.4.t08: truth at [163] falls outside the declared pinned range #L36-L110'",
+   "python3 experiments/ptr-engine/tools/fixture_coverage.py --fixture /tmp/m_b.json -> exit 1, '- cp.1.t24: duplicate truth of cp.6.t18' / '- cp.6.t18: duplicate truth of cp.1.t24'",
+   "python3 experiments/ptr-engine/tools/fixture_coverage.py --fixture /tmp/m_c.json -> exit 1, '- cp.9.t32: kind TEXT is refused by grade_v5'",
+   "sha256sum experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json -> 967cef03c362446a3187c9a8517bb6867b03e680f9a673ab53e42bb9f06ab567 (3 checkpoints, [12,24,46])",
+   "grade_v5.derive_truth probe per item -> OK for cp.0/1/2/3/4/6/8/9; SystemExit 'fixture_truth_mismatch: <id> has no usable answer_spec' for the three NONE items; KeyError: 'function' for call_at_line"
+  ]
+ },
+ "key_findings": [
+  "12 decidable checkpoints, one per turn: T6/T8 NUM-adjacent CALLs, NUM 64+31+6+5+2, CALL 4, NONE 3; kinds NUM 5, CALL 4, NONE 3.",
+  "Cost: v5 = 3 x 4 arms x 3 reps = 36 checkpoint requests; v6 = 12 x 4 x 3 = 144; delta +108 (= 9 extra x 4 x 3).",
+  "Discordant-pair budget: b+c <= 12. Exact McNemar two-sided 12-0 = 2/4096 = 0.000488; 11-1 = 26/4096 = 0.006348; 10-2 = 158/4096 = 0.038574; b+c=6 6-0 = 2/64 = 0.03125, 5-1 = 0.21875; v5 b+c=3 best = 0.25.",
+  "v5 cannot clear p<0.25 at any n of repeats; v6 clears p<0.05 at >=10/12 and p<0.01 at 11-1.",
+  "Collision measurement made the numeral rule do real work: errors.py's pinned body contains no standalone numeral for 31/6/5/2, so all five NUM truths are non-liftable; 64 occurs once in the resolve.py pin.",
+  "The 4-item-per-turn design in the card is not gradeable: grade_v5.parse_answer_contract rejects a second ANSWER: line (multiple_answer_lines), so 12 items were put on 12 turns, which is also what the card's +108 arithmetic assumes.",
+  "grade_v5.derive_truth (longrun/grade_v5.py:247-306) dispatches only constant_value/count_classes (NUM, hardcoded resolve.py+errors.py) and call_inside_function (CALL): NONE aborts SystemExit and call_at_line raises KeyError: 'function'."
+ ],
+ "external_dependency": {
+  "file": "experiments/ptr-engine/longrun/grade_v5.py (NOT this unit's write path)",
+  "needed": "a NONE branch (no_attr_call_inside_function: confirm the attribute is never called inside the named function) and a call_at_line branch (callee + kwargs at an exact line, for a callee with three identical sites)",
+  "affects": "4 of 12 items: cp.5.t14, cp.7.t20, cp.11.t42 (NONE), cp.10.t36 (call_at_line); the other 8 grade today",
+  "measured": "SystemExit: fixture_truth_mismatch: <id> has no usable answer_spec / KeyError: 'function'"
+ },
+ "assumptions": [
+  "An automated session has no answerer, so the two internal inconsistencies in the card were resolved to the largest design that the unmodifiable grader can still grade and that matches the card's own arithmetic: 12 items on 12 checkpoint turns, and a widened resolve.py pin (#L36-L166) like the v4->v5 widening precedent.",
+  "Expected-answer token count is measured on the form the fixture declares gradeable (a CALL `...` value is a declared elision, v5 precedent), cl100k_base when tiktoken is importable else whitespace tokens."
+ ],
+ "unverified": [
+  "grade_v5 has not been run end-to-end on v6 rows (no rows exist: zero inference requests by card constraint); only derive_truth was exercised per item.",
+  "score_longrun.py acceptance.checks still mirrors the three v5 items only; the nine new items are not mirrored there (that file is another card's path)."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Two follow-ups, both 0 requests: (1) GRADE-V6-DERIVE - add the NONE and call_at_line branches to longrun/grade_v5.py derive_truth so 12/12 items grade (8/12 already do); (2) mirror cp.3..cp.11 into score_longrun.py acceptance.checks once the grader branch lands. Do NOT re-derive the fixture: LR-01.v6.json passes the gate as shipped.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v6.json",
+  "experiments/ptr-engine/tools/fixture_coverage.py",
+  "experiments/ptr-engine/longrun/tests/test_fixture_coverage.py",
+  "docs/CHECKPOINT-COVERAGE.md",
+  "orchestration/units/CHECKPOINT-COVERAGE.md",
+  "orchestration/handoffs/CHECKPOINT-COVERAGE.json"
+ ],
+ "tool_calls": 31,
+ "bound": 32
+}

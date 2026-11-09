@@ -1,0 +1,50 @@
+{
+ "unit": "WIRE-TREE-FREEZE-INTO-VERDICTS",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/tree_freeze.py",
+  "experiments/ptr-engine/longrun/tests/test_tree_freeze.py",
+  "orchestration/VERDICT-RITUAL.md",
+  "orchestration/units/WIRE-TREE-FREEZE-INTO-VERDICTS.md",
+  "orchestration/journals/WIRE-TREE-FREEZE-INTO-VERDICTS.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "35 passed in 1.32s; row verdict=pass exitCode=0 sha=f17663d1 wrapper rc 0",
+  "commands": [
+   "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_tree_freeze.py",
+   "python3 experiments/ptr-engine/tools/tree_freeze.py --path experiments/ptr-engine/tools/tree_freeze.py --path experiments/ptr-engine/longrun/tests/test_tree_freeze.py --path orchestration/VERDICT-RITUAL.md --verdict-row -- python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_tree_freeze.py",
+   "cd /tmp/tf-red && python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_tree_freeze.py -k 'VerdictRowTests or OneCommandRowFormTests'  # 13 failed, 22 deselected"
+  ],
+  "red_green": "reverted the --verdict-row parsing, the one-command form and the row print in /tmp/tf-red: all 13 new-test runs fail, every one because the flag is unknown (usage refusal), none for an unrelated import/state reason",
+  "verdict_row": {
+   "command": "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_tree_freeze.py",
+   "exitCode": 0,
+   "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3"
+  }
+ },
+ "four_verdict_mappings": {
+  "pass": "command exit 0, every declared path `same` -> row unstamped-free, wrapper exit 0",
+  "moved_during_run": "command exit 0, a declared path moved/deleted or a declared root gained a file -> `UNSTAMPED:` row, wrapper exit 13 (not FAIL)",
+  "failed": "command non-zero, nothing changed -> row prints without `UNSTAMPED:`, wrapper exit 1",
+  "failed_and_moved": "command non-zero AND bytes moved -> `UNSTAMPED:` row, wrapper exit 1 (existing code kept: the failing command is the more urgent fact)"
+ },
+ "dirty_tree_behaviour": "sha sampled once at wrap start with `git --no-optional-locks rev-parse HEAD`; if `status --porcelain` is non-empty the row still prints (it is NOT suppressed) and stderr carries `WARNING: dirty tree at HEAD <sha>; the row names a commit that does not contain these bytes`. If git cannot answer, stderr warns and the row's sha is `unstamped` rather than a guess. Dirtiness is a warning, not UNSTAMPED: only moved bytes are UNSTAMPED.",
+ "assumptions": [
+  "failed_and_moved keeps wrapper exit 1 instead of 13: the card's 'must exit 13' is honoured for moved_during_run (the required tests) and no existing exit code changes (card bound 5). Its row is still UNSTAMPED-prefixed, so the bytes are still refused.",
+  "the card's acceptance command omits `--wrap OUT`, so `--verdict-row` also works as the verb with the record in a temp file (one-command form)."
+ ],
+ "verdict_recorded_before_handoff": true,
+ "blocker": "",
+ "next_unit_hint": "Wire `--verdict-row` into the card acceptance template (orchestration/units/TEMPLATE.md `verify:` line) so ordinary cards emit rows by default; a follow-up should decide whether `orchestration_verdict` accepts an `UNSTAMPED:`-prefixed payload as a refusal (treat as FAIL-unstamped) or drops it, and whether the row should carry taskId/executionId directly.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/tree_freeze.py",
+  "experiments/ptr-engine/longrun/tests/test_tree_freeze.py",
+  "orchestration/VERDICT-RITUAL.md",
+  "orchestration/units/WIRE-TREE-FREEZE-INTO-VERDICTS.md",
+  "orchestration/handoffs/WIRE-TREE-FREEZE-INTO-VERDICTS.json",
+  "orchestration/journals/WIRE-TREE-FREEZE-INTO-VERDICTS.jsonl"
+ ],
+ "tool_calls": 14,
+ "bound": 22,
+ "known_gap_observed": "test_verdict_ritual.py::LiveLedgerTest::test_no_new_unverdicted_closure_since_the_baseline is red on a FOREIGN closure: VERDICT-BACKFILL-FIXTURE-GENERATIONS 8505be1b...:228949d9... settled done with no verdict row. Not this unit's row (this execution recorded PASS f17663d1); the baseline was not edited to mask it."
+}

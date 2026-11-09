@@ -1,0 +1,54 @@
+{
+ "unit": "PATH-REFS-RULE-COPYTREE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/path_refs.py",
+  "experiments/ptr-engine/tools/path_refs_resolve.py",
+  "tests/test_path_refs_candidates.py",
+  "tests/test_path_refs_resolve.py",
+  "measure/PATH-REFS-COPYTREE.json",
+  "docs/PATH-REFS-COPYTREE.md",
+  "orchestration/units/PATH-REFS-RULE-COPYTREE.md"
+ ],
+ "evidence": {
+  "reason_histogram_over_artefact_class": {
+   "identical_content_copy_all_candidates": 186,
+   "dirname_name_only": 0,
+   "timestamp_or_size_only": 0,
+   "in_scope_flip": 72,
+   "out_of_scope_handoff_flip": 114
+  },
+  "rule_one_sentence": "A candidate that is one of two or more byte-identical files with the cited basename (same sha256) is a copy in a duplicated tree, not an addressable alternate, so copies are removed from the candidate set and the citation reports missing; a basename whose candidates differ in content keeps every candidate and stays wrong_dir.",
+  "census_before": "census: ok=26789 wrong_dir=636 missing=266 ignored=273 (sum 27964)",
+  "census_after": "census: ok=26841 wrong_dir=450 missing=452 ignored=274 (sum 28017); ok+52/ignored+1 is concurrent peer drift, both classes are decided before the candidate set exists",
+  "same_tree_ab": "rule off {'ok':26863,'wrong_dir':636,'missing':266,'ignored':274} vs on {'ok':26841,'wrong_dir':450,'missing':452,'ignored':274}: 178 flips one direction, 0 other moves",
+  "check": "path-refs: 902 known (baselined), 0 new; wrong_dir+missing = 450+452 = 902 = baselined key count, so no key moved",
+  "tests": "8 passed in 0.02s",
+  "red_artefact": "assert 'wrong_dir' == 'missing' (artifact copy case, before the rule)",
+  "red_overreach": "with all_identical_copies forced True the genuine-duplicate guard fails: 'missing' != 'wrong_dir'",
+  "red_green_resolve_fixture": "the dir-rule fixture had two byte-identical files; differing bytes restored it (8 passed)",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/path_refs.py --check",
+   "PYTHONPATH=src python3 -m pytest tests/test_path_refs_candidates.py tests/test_path_refs_resolve.py -q",
+   "python3 experiments/ptr-engine/tools/path_refs_resolve.py --table"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "The remaining 450 wrong_dir are NOT artefact defects: 287 have at least one distinct-content candidate (a real file exists somewhere, so a human can point the citation at it) and 163 are single-candidate, where identity is unverifiable. A copy-tree rule cannot decide those; only a human or a per-file ownership rule can. The 186-flip magnitude also says the handoff corpus (114 of the flips) carries the same defect and is out of scope for citation repair.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/path_refs.py",
+  "experiments/ptr-engine/tools/path_refs_resolve.py",
+  "tests/test_path_refs_candidates.py",
+  "tests/test_path_refs_resolve.py",
+  "measure/PATH-REFS-COPYTREE.json",
+  "docs/PATH-REFS-COPYTREE.md",
+  "orchestration/units/PATH-REFS-RULE-COPYTREE.md",
+  "orchestration/handoffs/PATH-REFS-RULE-COPYTREE.json",
+  "orchestration/journals/PATH-REFS-RULE-COPYTREE.jsonl"
+ ],
+ "assumptions": [
+  "measure/ was resolved to experiments/ptr-engine/measure/ by the corpus convention (LEGAL_ALTERNATES) and to a top-level measure/ only for the unscanned artefact; the artefact was written to top-level measure/ so its own path strings cannot create new baseline keys.",
+  "The card's bound (wrong_dir falls by at most 86) is exceeded globally (186) because the rule is content-based and the handoff corpus shows the identical defect; in-scope fall is 72, within the bound. Reported rather than suppressed."
+ ],
+ "final_sentence": "Of the 793 original wrong_dir citations, 186 were always copies and never real addressable files; 287 of today's 450 cite at least one genuinely distinct file that exists somewhere; 163 rest on a single candidate whose identity cannot be proven; and 157 of the 793 vanished with documents deleted by concurrent units."
+}

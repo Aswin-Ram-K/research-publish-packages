@@ -1,0 +1,101 @@
+{
+ "arithmetic": {
+  "max_answer_padding_tokens": 540,
+  "mean_answer_padding_tokens": 294.27,
+  "note_3838": "3838 is 10 tokens BELOW v8's own first prompt, so on v8 it fires at T2 and compacts a transcript that never fit: a fixture-size effect. Kept as the declared baseline (the card names it) and superseded for the growth arms by wall_tokens_by_arm.",
+  "v8_prompt_T1_tokens": 3848,
+  "v8_working_set_tokens": 3818,
+  "wall_tokens_3838": "2114 + 75.021 x 23 = 3839.5 -> 3838 (published wall_for_T24, G4 transcript-compact, 2114-token working set)",
+  "wall_tokens_by_arm_10616": "prompt_T1 3848 + ceil(mean declared padding 294.27 x 23) = 10616"
+ },
+ "commands": [
+  "python3 experiments/ptr-engine/longrun/tests/test_treatments_fire.py",
+  "python3 -m pytest experiments/ptr-engine/longrun/tests/test_treatments_fire.py -q"
+ ],
+ "dry_run_turns": {
+  "lease-reopen": {
+   "first_fire_turn": 23,
+   "marker": "lease>1"
+  },
+  "pointer-stable": {
+   "first_fire_turn": 2,
+   "marker": "prefix_sha256 moves"
+  },
+  "transcript-compact": {
+   "first_fire_turn": 21,
+   "marker": "digest_at",
+   "second_digest": "near T48"
+  },
+  "transcript-grow": {
+   "first_fire_turn": 21,
+   "marker": "evicted>0"
+  }
+ },
+ "expected_digests_derivation": {
+  "method": "dry-simulate transcript-compact at the arm wall with a legal ceiling answer per turn (203/540 tok) plus a 700-token digest",
+  "removed_literal": 2,
+  "value_at_10616": 2,
+  "value_at_65536": 0,
+  "why": "the literal 2 aborted a legal cell at exit 4 on its third digest"
+ },
+ "fixes_beyond_the_card": {
+  "digest_marker": "info['digest_request'] existed in build() but was never written to a row; rows now carry digest_at.",
+  "grow_fifo_order": "Planner.build popped parts[0] \u2014 the pinned working set \u2014 first, so the first eviction of ANY firing grow cell deleted the corpus its checkpoints are answered from. Index 0 is now pinned and history evicts oldest-first (parts.pop(1)). Cannot alter a row on disk: evicted>0 on 0 rows."
+ },
+ "fixture": {
+  "declared": {
+   "N": 48,
+   "expected_digests": "derived (2 at this wall)",
+   "lease_reopen_turns": [
+    23,
+    40
+   ],
+   "wall_tokens": 3838,
+   "wall_tokens_by_arm": 10616
+  },
+  "path": "experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json",
+  "sha256": "sha256:0804b51575cce3454a1c628a9a2447a01856321e67ac3fd1ff8c9baa48467641"
+ },
+ "h3": "measurable per arm for the mechanism (each treatment fires and leaves a row marker) but still confounded in magnitude by answer verbosity until answers are budget-normalised",
+ "horizon": {
+  "frozen_by": "PARM-1 line 137",
+  "moved": false,
+  "turns": 48
+ },
+ "price": {
+  "a_star": 792,
+  "digests_per_rep": 2,
+  "factor": 1.374532,
+  "four_firing_grids": 3200,
+  "grid_with_two_digests_per_rep": 800,
+  "ledger_remaining": 3219,
+  "note": "the derived reserve is a ceiling (56 requests per compact cell); the ledger counts spend",
+  "slack": 19,
+  "turn_requests_per_grid": 576
+ },
+ "refusals": {
+  "applied_in": [
+   "run_dry",
+   "run_cell"
+  ],
+  "exit_code": 3,
+  "frozen_v7_under_contract": "TREATMENT UNREACHABLE for transcript-grow, transcript-compact and lease-reopen",
+  "grow_at_wall_65536": "first FIFO truncation > 48 turns at wall_tokens=65536 (grow never evicts: the prompt never exceeds the wall inside the horizon)",
+  "lease_field_absent": "missing fixture field 'lease_reopen_turns' \u2014 the lease can never step, so the reopen arm is the pointer arm with a different label",
+  "named": "EXIT_TREATMENTS_UNREACHABLE"
+ },
+ "schema": "consonance.fixture-treatments/1",
+ "supersedes": {
+  "byte_identical": true,
+  "path": "experiments/ptr-engine/longrun/tasks-v6/LR-01.v7.json",
+  "sha256_after": "sha256:42b4df007352d9397778d9e2b50b1b64ef451190e54ea2c6d1992f9f77bd8392",
+  "sha256_before": "sha256:42b4df007352d9397778d9e2b50b1b64ef451190e54ea2c6d1992f9f77bd8392"
+ },
+ "tests": {
+  "failed": 0,
+  "file": "experiments/ptr-engine/longrun/tests/test_treatments_fire.py",
+  "passed": 9,
+  "red_green": "RED: wall 65536 / absent lease field refuse (exit 3). GREEN: v8 fires T21/T21/T23/T2 and the marker is on the forced-simulation row."
+ },
+ "unit": "FIXTURE-TREATMENTS"
+}

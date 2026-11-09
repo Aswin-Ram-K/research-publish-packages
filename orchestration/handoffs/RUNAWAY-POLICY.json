@@ -1,0 +1,46 @@
+{
+  "unit": "RUNAWAY-POLICY",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_runaway_policy.py",
+    "docs/RUNAWAY-POLICY.md",
+    "measure/RUNAWAY-POLICY.json",
+    "orchestration/units/RUNAWAY-POLICY.md"
+  ],
+  "evidence": {
+    "command_or_count": "3 passed in 2.23s (pytest, tests/test_runaway_policy.py)",
+    "commands": [
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_runaway_policy.py -q  ->  3 passed in 2.23s",
+      "RED A, old predicate restored: 1 failed, 2 passed; 'assert 6 == 0' -- cell aborted at T1, 1/4 turns reached",
+      "RED B, 'wall_runaways += 0': 2 failed, 1 passed; 'assert 0 == 6' -- wall-abort and historical-hazard tests lose their bound",
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_stop_reason_producers.py tests/test_guards.py -q  ->  9 passed in 6.94s (no neighbour broken)",
+      "measurement: 27 turn rows, 25 stop / 1 length / 1 runaway_turn; cap-length rate 2/27 = 0.0741; expected 3.56 per 48-turn cell"
+    ]
+  },
+  "claims": {
+    "what_incremented_the_counter_today": "run_longrun.py:2317 (digest wall cap), :2364 (turn wall cap), :2446 (tool-followup wall cap), and :2528/:2558 _runaway_signature which returned a reason for 'truncated and completion_tokens >= max_tokens' OR 'completion_tokens > max_tokens' -- the second clause ended cell 1 at T27",
+    "abort_and_rows": "nothing deleted; partial rows kept, message said 'partial rows kept at <rows_path>'; ending row carries error=turn_wall_cap + runaway_abort=true + stop_reason=runaway_turn; cell.py:1604 records rows_written and turns_requested so the cell reads partial via exit 6 plus an incomplete row count",
+    "options": "A (keep counter, 2 cap-hits) -> 0.8796 abort per 48-turn cell, 12.04% completion, ten cells 6.4e-10; B (wall-time only) -> 0.0 observed in 27 turns (1-in-27 sensitivity 0.5349, rule-of-three 0.9755); C (raise threshold) -> k=4 0.4799, k=6 0.1421, k=8 0.0237, k=10 0.0024",
+    "recommendation": "B, because the counter must fire on the event whose cost the guard bounds, and the replacing bound is enforced in code: client.py:529/537 closes a stream at 180 s, cell.py:737/2028 G2 caps the cell at 2880 s, run_longrun.py:2333/2380 gate.acquire bounds requests, cell.py:1600/2021/2031 bind the spawn and gate chain",
+    "exit_code": "6 = EXIT_RUNAWAY, already in exit_codes.EXIT_TABLE; no new code, exit_codes.py and cell.py untouched",
+    "new_abort_message": "RUNAWAY ABORT after T2: wall-time runaways 2/2 [T1 (wall 0.4s > cap 0.4s); T2 (wall 0.4s > cap 0.4s)]; ceiling violations 0/2 [none]; 2 request(s) sent, 2/4 turns reached, partial rows kept at <rows_path>"
+  },
+  "assumptions": [
+    "The canonical grid cell is scratch/uregen1/ws/experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl; the scratch/uverbuild1/red/... copies are copy-tree artefacts of it, not a second measurement.",
+    "The digest path keeps its abort-on-first-wall-cap behaviour (a planning request the planner cannot continue without); it is now labelled as a wall-time runaway rather than a generic runaway."
+  ],
+  "blocker": "",
+  "next_unit_hint": "RUN-A-STAR-2 can launch 48-turn cells under option B: a truncated turn no longer ends the cell, and two wall-time runaways still exit 6. Downstream analysis MUST treat stop_reason=length rows as absent/wrong rather than averaging them (measure/RUNAWAY-POLICY.json records the 2-in-27 rate); if cells still abort, the cause is now wall time and the message names the turn indices.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_runaway_policy.py",
+    "docs/RUNAWAY-POLICY.md",
+    "measure/RUNAWAY-POLICY.json",
+    "orchestration/units/RUNAWAY-POLICY.md",
+    "orchestration/handoffs/RUNAWAY-POLICY.json",
+    "orchestration/journals/RUNAWAY-POLICY.jsonl"
+  ],
+  "tool_calls": 26,
+  "bound": 26
+}

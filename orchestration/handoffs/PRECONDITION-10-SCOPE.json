@@ -1,0 +1,64 @@
+{
+  "unit": "PRECONDITION-10-SCOPE",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/tools/run_a_star.py",
+    "experiments/ptr-engine/tests/test_precondition10_scope.py",
+    "docs/PRECONDITION-10-SCOPE.md",
+    "orchestration/units/PRECONDITION-10-SCOPE.md",
+    "orchestration/handoffs/PRECONDITION-10-SCOPE.json",
+    "orchestration/journals/PRECONDITION-10-SCOPE.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "11 passed (new scope tests); red->green on the real canary rows below",
+    "red_green_quoted_verbatim": [
+      "cell 1 pointer-stable    legacy=PROCEED scoped=fired marker=prompt_change_turns=11 threshold=1 prompt_max=5014",
+      "cell 7 transcript-grow   legacy=PROCEED scoped=fired marker=evicted_turns=10 threshold=1 prompt_max=13163",
+      "cell 13 transcript-compact legacy=STOP scoped=not-due marker=digest_rows=0 threshold=1 prompt_max=5586",
+      "cell 15 lease-reopen      legacy=NEVER-REACHED scoped=not-due marker=lease_ge2_turns=0 due=lease_turn"
+    ],
+    "synthetic_own_zero_still_stops": [
+      "transcript-compact own digest_rows=0 -> missing",
+      "transcript-grow    own evicted_turns=0 -> missing",
+      "lease-reopen       own lease_ge2_turns=1 -> missing",
+      "pointer-stable     own prompt_change_turns=0 -> missing"
+    ],
+    "other_arms_zero_only_proceeds": [
+      "pointer-stable     -> fired",
+      "transcript-grow    -> fired",
+      "transcript-compact -> fired",
+      "lease-reopen       -> fired"
+    ],
+    "real_rows_replayed": [
+      "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T202040Z.jsonl",
+      "experiments/ptr-engine/measure/rows-cell-transcript-grow-20261026T202444Z.jsonl",
+      "experiments/ptr-engine/measure/rows-cell-transcript-compact-20261026T203733Z.jsonl"
+    ],
+    "why_compact_does_not_stop": "max prompt 5586 < the arm's wall 10616 (LR-01.v8 via run_longrun.fixture_for_arm), so the digest was not DUE inside 12 turns; its zero is recorded as the arm's own finding, not as a reason to halt before another arm's cell",
+    "dry_run_canary": "RUN-A DRY END cells=4 refused=0 requests=0 claim=smoke turns=12 max_wall=900 canary_arms=4 canary_requests=48 (exit 0; captured from main() in-process with both ledger records pinned)",
+    "dry_run_grid": "DRY END cells=16 refused=0 requests=0 asserted in test_grid_dry_run_still_plans_sixteen_cells (exit 0)",
+    "zero_network_zero_spawn": "test_zero_network_and_zero_spawn_on_the_launcher_path replaces run_a_star.subprocess.run with a recorder and socket.socket/create_connection with failures (pattern reused from experiments/ptr-engine/tests/test_launcher_pin_and_cells.py) -> spawned == [] and sockets == []",
+    "tests_command": "/usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_precondition10_scope.py -q -> 11 passed in 0.04s",
+    "verdict_row": "PASS f17663d1 pytest experiments/ptr-engine/tests/test_precondition10_scope.py -q (orchestration_verdict record; command 'pytest ...' is what the recorder ACCEPTED)",
+    "verdict_tool_constraint": "the verdict recorder REFUSED both '/usr/bin/python3 -m pytest ...' and '/usr/bin/pytest ...' with 'command-not-allowed: only test/build runners'; the absolute interpreter used to run the tests is /usr/bin/python3, and docs/PRECONDITION-10-SCOPE.md section 4 records the absolute command",
+    "grid_impact_one_sentence": "No unintended change to the grid's stop rule 10: a complete 48-turn grid cell is due for all four arms (wall 10616 and lease turns 23/40 fall inside the window, pointer identity changes by turn 2), so the scoped rule reduces to the old rule; the only intended difference is lease-reopen now requiring lease_ge2_turns >= 2 instead of > 0, which is this card's own data edit, so RUN-A-STAR-2's card and the grid card need no update.",
+    "pre_existing_failures": "5 neighbouring dry-run tests (test_launcher_pin_and_cells.py, tests/test_grid_stamp_wiring.py) fail on 'SystemExit: REFUSED: ledger records disagree on `remaining`: {baseline-2: 3192, request-ledger: 3144}' raised at run_a_star.py:229 before the cell loop; run_a_star.py is untracked so no HEAD copy exists to diff, and the failure is in remaining_basis, untouched by this card."
+  },
+  "assumptions": [
+    "pointer-stable's own marker is prompt_change_turns because prefix_sha256 is absent from every row (ARM-INTEGRITY.md section 3, 0 of 788) although the runner computes it (run_longrun.py:1165); when it reaches make_row this ARM_TREATMENT row becomes a data edit.",
+    "'not due' means the cell's horizon made the arm's treatment impossible; it is not a pass on the arm, and the cell's stamp still records its zero marker, so the compact arm's digest_rows:0 remains a recorded finding.",
+    "The two ledger records were pinned to the 3192/4320 pair inside the new tests because the live ledger (3144) disagrees with the frozen baseline; without pinning, every launcher dry run refuses before reaching this guard."
+  ],
+  "blocker": "LEDGER-DRIFT: measure/REQUEST-LEDGER.json `remaining` 3144 vs frozen baseline 3192 makes run_a_star.py:229 refuse a live launch; owned by the ledger's card, out of this card's write list.",
+  "next_unit_hint": "Re-run the 4-arm canary unchanged (one invocation, 48 priced requests) now that cell 15 can be reached; then apply the era-B gate to lease-reopen's 12 rows. Separately, the ledger owner should reconcile 3144 vs 3192, and the runner should emit prefix_sha256 in make_row so pointer-stable's own marker can be counted directly instead of via prompt identity.",
+  "write_paths": [
+    "experiments/ptr-engine/tools/run_a_star.py",
+    "experiments/ptr-engine/tests/test_precondition10_scope.py",
+    "docs/PRECONDITION-10-SCOPE.md",
+    "orchestration/units/PRECONDITION-10-SCOPE.md",
+    "orchestration/handoffs/PRECONDITION-10-SCOPE.json",
+    "orchestration/journals/PRECONDITION-10-SCOPE.jsonl"
+  ],
+  "tool_calls": 34,
+  "bound": 25
+}

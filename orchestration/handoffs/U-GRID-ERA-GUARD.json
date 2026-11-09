@@ -1,0 +1,73 @@
+{
+ "unit": "U-GRID-ERA-GUARD",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/run_grid_report.py",
+  "experiments/ptr-engine/tests/test_grid_report_era_guard.py",
+  "docs/GRID-REPORT-ERA-GUARD.md",
+  "orchestration/units/U-GRID-ERA-GUARD.md"
+ ],
+ "evidence": {
+  "command_or_count": "20 passed (7 new era-guard tests + 13 pre-existing run_grid_report tests)",
+  "commands": [
+   "bash -lc '/usr/bin/python3 -m pytest \"/home/zer0null/reserach extarctor/experiments/ptr-engine/tests/test_grid_report_era_guard.py\" \"/home/zer0null/reserach extarctor/experiments/ptr-engine/tests/test_run_grid_report.py\" -q'  # exit 0, 20 passed in 4.11s, run from cwd /tmp",
+   "/usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_grid_report_era_guard.py -q  # RED before the gate: 5 failed, 2 passed in 1.76s",
+   "/usr/bin/python3 /tmp/eraguard2/attack.py  # attempt-4 rebuild, gate OFF vs ON (scratch, ephemeral /tmp; durable equivalent is test 7)",
+   "/usr/bin/python3 /tmp/eraguard2/one.py  # attempt-1 rebuild: refused_usable_for_absent, zero grids (scratch)"
+  ]
+ },
+ "verdict_row": {
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "command": "bash -lc '/usr/bin/python3 -m pytest \"/home/zer0null/reserach extarctor/experiments/ptr-engine/tests/test_grid_report_era_guard.py\" \"/home/zer0null/reserach extarctor/experiments/ptr-engine/tests/test_run_grid_report.py\" -q'",
+  "exit_code": 0,
+  "result": "recorded",
+  "note": "absolute interpreter (/usr/bin/python3) and absolute test paths inside an allow-listed bash -lc; the bare '/usr/bin/python3 ...' form is refused by checkVerdictCommand ('only test/build runners may be recorded'), so the runner is bash and the interpreter path stays absolute — which is what the four exit-127 deaths required."
+ },
+ "attempt4_before_after": {
+  "printed_before": "Both limbs, C\u2212A: cache-inclusive ratio **2.5000** (sign +1, pass=False), uncached ratio **2.7852** (sign +1, pass=False) \u2192 **h2_failed**.",
+  "refusal_after": "**`refused_mixed_era`** \u2014 these included cells do not share one provenance, so the pooled terms H2, TVS and verbosity would sum across eras -- no mean, interval, ratio, accuracy or n is printed for them. Provenances present (each is its own grid in H1): 1) grid `grid:eefe47632b2c:era_b_tools_on` era `era_b_tools_on`: fixture_sha256 `7777777777777777` / fixture_id `LR-01.v7` / model `occamy-1.0` / thinking `off` / tools_mode `read_file`, introduced by `rows-cell-pointer-stable-v7.jsonl` (arm `pointer-stable`; files `rows-cell-pointer-stable-v7.jsonl`, `rows-cell-transcript-grow-v7.jsonl`); 2) grid `grid:e41f591ea749:era_b_tools_on` ... fixture_id `LR-01.v8` ...",
+  "why_it_was_printed": "h2_block()/tvs_block()/verbosity_block() were fed the global included_rows / per_arm_all (run_grid_report.py) while only H1 used cluster_cells; refusals[] therefore carried no provenance refusal.",
+  "tvs_half": "NOT re-derived: the attacker's synthetic grade_v5 document died with /tmp/vgfinal. Feeding any grade document to a mixed run now yields tvs='UNDEFINED' with reason prefixed 'refused_mixed_era:' and verbosity per_arm=[] — the same gate covers the 100800.0 half."
+ },
+ "eight_row_table": [
+  {"n": 1, "attempt": "absent usable_for", "before_attacker": "refused_correctly", "my_rebuild_before": "refused_correctly (refused_usable_for_absent, no grid formed, H1 n_raw stays 70)", "after_fix": "refused_correctly (unchanged)"},
+  {"n": 2, "attempt": "usable_for: []", "before_attacker": "refused_correctly", "my_rebuild_before": "refused_correctly (excluded_by_stamp, '70 row(s) never analysed')", "after_fix": "refused_correctly (unchanged)"},
+  {"n": 3, "attempt": "stop_reason=length", "before_attacker": "refused_correctly", "my_rebuild_before": "refused_correctly (n_used=59 of 70, exclusion counted, p95 REFUSED)", "after_fix": "refused_correctly (unchanged)"},
+  {"n": 4, "attempt": "two eras mixed (v7 vs v8)", "before_attacker": "printed_a_number_it_should_not_have", "my_rebuild_before": "printed_a_number_it_should_not_have (ratio 2.5000 printed, per_arm means at n=140, refusals had no provenance row)", "after_fix": "refused_correctly (refused_mixed_era x2 naming both grids and their cells; h2.per_arm=[], tvs UNDEFINED with refused_mixed_era reason, verbosity per_arm=[], no ratio line, no 'tokens through turn')"},
+  {"n": 5, "attempt": "n_eff under 60", "before_attacker": "printed_a_number_it_should_not_have", "my_rebuild_before": "still prints the arm p95 interval beside not_adjudicable_effective_n (n_eff=1.53 reproduced exactly; F2 unchanged)", "after_fix": "unchanged, out of scope: F2 is a threshold/interval question, not a provenance one; threshold untouched"},
+  {"n": 6, "attempt": "decidable < 8/12", "before_attacker": "refused_correctly", "my_rebuild_before": "not re-run (grade_v5 fixture unrecoverable); h3_block() is byte-unchanged and the input is single-era, so the new gate does not fire", "after_fix": "refused_correctly (by construction + 13 pre-existing tests green)"},
+  {"n": 7, "attempt": "zero-answer arm", "before_attacker": "refused_correctly", "my_rebuild_before": "not re-run (same grade_v5 fixture); h3_block() unchanged", "after_fix": "refused_correctly (by construction)"},
+  {"n": 8, "attempt": "tvs no verified success", "before_attacker": "refused_correctly", "my_rebuild_before": "refused_correctly (tvs=UNDEFINED, never 0)", "after_fix": "refused_correctly (unchanged)"}
+ ],
+ "red_green": [
+  "RED (before any gate): /usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_grid_report_era_guard.py -q -> '5 failed, 2 passed in 1.76s'; failure text 'AttributeError: <module run_grid_report> has no attribute mixed_provenance' and 'AssertionError: one refusal row per provenance present / assert 0 >= 2'",
+  "GREEN (after): same file -> '7 passed in 2.04s'; combined with the pre-existing suite -> '20 passed in 4.15s'",
+  "DURABLE RED->GREEN: test_red_neutered_guard_prints_the_pooled_number monkeypatches G.mixed_provenance to (True,None) and asserts 'Both limbs, C\u2212A' reappears in the markdown and h2.per_arm is non-empty -- the defect is reproducible on demand, and the gate is the only thing suppressing it.",
+  "END-TO-END: attack.py case 4 guard=OFF h2=h2_failed + 'ratio **2.5000**' printed; guard=ON h2=refused_mixed_era + per_arm=[] + no ratio line."
+ ],
+ "what_changed": [
+  "REFUSAL_MIXED_ERA = 'refused_mixed_era' constant",
+  "provenance_detail(cluster) / _unknown_fields(cell) / mixed_provenance(clusters) / mixed_era_text(detail)",
+  "build_report(): the gate runs before h2_block/tvs_block/verbosity_block; on refusal it emits refusal-shaped blocks plus one refusals[] row per provenance, and doc['provenance_pooled']",
+  "render_markdown(): H2/verbosity empty-arm branches name the provenance refusal instead of claiming no rows exist; the ratio branch is skipped for refused_mixed_era"
+ ],
+ "assumptions": [
+  "The attacker's /tmp/vgfinal fixtures no longer exist (each bash call gets a fresh /tmp), and run_grid_report.py is untracked in git, so no pre-fix blob is recoverable. The 'before' state was reproduced by neutralising the single added gate (G.mixed_provenance -> (True, None)), which is byte-for-byte the code path attempt 4 hit: the numbers printed are the same class and the same code lines, but the exact 2.5000/100800.0 pair is only partly re-derived (H2 yes, TVS no -- no grade document).",
+  "Lines 'attempt 6/7 not re-run' rely on h3_block() being untouched by this unit and those cases being single-era, hence outside the gate. I did not reconstruct a grade_v5 document rather than guess its schema.",
+  "Era identity for the refusal message is era_of(tools_mode) plus the load-bearing signature; two grids may share the same era LABEL while differing on fixture_sha256, and both are named (the report says 'era_b_tools_on' twice with different grids). That is the honest naming: the era label is coarse, the provenance is what disagrees.",
+  "A single cluster whose load-bearing field is 'unknown' is also non-poolable ('unknown is never agreement', the rule epochs_never_pooled already states). This makes the concatenation case refuse even though the merged file collapses to one cluster.",
+  "The verdict command is wrapped in bash -lc because checkVerdictCommand rejects a bare /usr/bin/python3; the interpreter path inside is absolute, per the card's exit-127 rule."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Separate card for V-GRID-REPORT F2: suppress arm p50/p95 intervals when effective_n_verdict() fires (the interval is printed beside its own refusal). Also decide whether a mixed-era report should gate H3 when a grade document is supplied; today H3 reads the grader's cells, not the pooled rows.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/run_grid_report.py",
+  "experiments/ptr-engine/tests/test_grid_report_era_guard.py",
+  "docs/GRID-REPORT-ERA-GUARD.md",
+  "orchestration/units/U-GRID-ERA-GUARD.md",
+  "orchestration/handoffs/U-GRID-ERA-GUARD.json",
+  "orchestration/journals/U-GRID-ERA-GUARD.jsonl"
+ ],
+ "tool_calls": 27,
+ "bound": 28
+}

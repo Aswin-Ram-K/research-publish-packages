@@ -1,0 +1,41 @@
+{
+  "unit": "U7bArmCdRewrite",
+  "status": "completed",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/arm_cd.py"
+  ],
+  "write_paths": [
+    "experiments/ptr-engine/longrun/arm_cd.py",
+    "experiments/ptr-engine/longrun/tests/test_arm_cd_wiring.py",
+    "orchestration/handoffs/U7B-ARMCD.json"
+  ],
+  "evidence": [
+    "grep -n 'turn {i} body|keep the predicate honest|masked_rows_this_turn = 1' arm_cd.py -> no hits",
+    "pytest experiments/ptr-engine/longrun/tests/test_arm_cd_wiring.py -q -> 6 passed in 0.46s",
+    "PT-01 masked count table: turns 1-4 => 0 masked; turns 5-12 => 1 masked each (newly crossed window)",
+    "PT-01 D fetches: doc-live@r2 (turn24) -> OK; doc-ghost@r1 (turn24) -> NOT_FOUND; doc-live@r1 (turn24) -> STALE_OR_REVOKED; doc-secret@r1 (turn28) -> SCOPE_UNGRANTED",
+    "negative case: masked_rows==0 and fetch_rows==0 all rows -> stamp INVALID-INSTRUMENT; predicate names masked_rows (C) / fetch_rows (D)"
+  ],
+  "masked_count_table": [
+    {"turn": 1, "real_tool_outputs_masked": 0, "masked_rows": 0},
+    {"turn": 2, "real_tool_outputs_masked": 0, "masked_rows": 0},
+    {"turn": 3, "real_tool_outputs_masked": 0, "masked_rows": 0},
+    {"turn": 4, "real_tool_outputs_masked": 0, "masked_rows": 0},
+    {"turn": 5, "real_tool_outputs_masked": 1, "masked_rows": 1},
+    {"turn": 6, "real_tool_outputs_masked": 1, "masked_rows": 1},
+    {"turn": 7, "real_tool_outputs_masked": 1, "masked_rows": 1},
+    {"turn": 8, "real_tool_outputs_masked": 1, "masked_rows": 1},
+    {"turn": 9, "real_tool_outputs_masked": 1, "masked_rows": 1},
+    {"turn": 10, "real_tool_outputs_masked": 1, "masked_rows": 1},
+    {"turn": 11, "real_tool_outputs_masked": 1, "masked_rows": 1},
+    {"turn": 12, "real_tool_outputs_masked": 1, "masked_rows": 1}
+  ],
+  "fetch_outcome_table": [
+    {"turn": 24, "ref": "doc-live@r2", "revision_state": "live", "outcome": "OK"},
+    {"turn": 24, "ref": "doc-ghost@r1", "revision_state": "absent", "outcome": "NOT_FOUND"},
+    {"turn": 24, "ref": "doc-live@r1", "revision_state": "stale", "outcome": "STALE_OR_REVOKED"},
+    {"turn": 28, "ref": "doc-secret@r1", "revision_state": "ungranted", "outcome": "SCOPE_UNGRANTED"}
+  ],
+  "blocker": null,
+  "next_unit_hint": "verifier should rerun pytest and grep acceptance checks"
+}

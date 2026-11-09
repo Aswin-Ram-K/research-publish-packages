@@ -1,0 +1,74 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/measure/PROJECTION.json",
+  "experiments/ptr-engine/longrun/tests/test_projection_modes.py",
+  "docs/PROJECTION.md",
+  "orchestration/units/PROJECTION-MODE.md"
+ ],
+ "assumptions": [
+  "off/absent keeps the calibration's deliberate 60 s/turn (above measured off p90 38.1 s) rather than its 2.9 s p50: 60 s is the safe, over-projecting direction and 2.9 would break the frozen 48x60=2880 boundary asserted by test_projection_calibration.py, which this card forbids editing. The defect fixed is the auto/on under-projection.",
+  "cell.py had no --thinking flag and never passed one to the runner; run_longrun.py's own default is off, so absent is priced and run as off. The flag is now passed through so projection and payload cannot diverge.",
+  "The literal 'p90' value of --projected-from selects the artefact tail; any other value is still a rows path (backward compatible)."
+ ],
+ "blocker": "",
+ "evidence": {
+  "commands": [
+   ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_projection_modes.py -q",
+   ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_cell_gates.py -q",
+   ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_projection_calibration.py -q",
+   ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_cell.py -q",
+   ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_guards.py -q"
+  ],
+  "git_commands": 0,
+  "inference_requests": 0,
+  "neighbours": {
+   "test_cell.py": "7 passed, 6 subtests passed (exit 0)",
+   "test_cell_gates.py": "9 passed, 3 subtests passed (exit 0)",
+   "test_guards.py": "1 passed (exit 0)",
+   "test_projection_calibration.py": "1 passed (exit 0)"
+  },
+  "new_tests": "test_projection_modes.py: 8 passed",
+  "override": "--projected-turn-wall 180 with --thinking auto: 60 turns -> 10800 s, exit 8, plus printed 'OVERRIDE ... BELOW the measured p50' and manifest projection_override {value:180.0, mode:auto, calibrated_s:218.2, direction:optimistic, reason_required:true}",
+  "per_mode_table": {
+   "absent/off": {
+    "at_3600": "admitted (boundary, ==)",
+    "s_per_turn": 60.0,
+    "sixty_turns_s": 3600
+   },
+   "auto": {
+    "at_3600": "REFUSED exit 8",
+    "s_per_turn": 218.2,
+    "sixty_turns_s": 13092
+   },
+   "auto/on p90 selector": {
+    "at_3600": "REFUSED exit 8",
+    "s_per_turn": 682.7,
+    "sixty_turns_s": 40962
+   },
+   "off/absent p90 selector": {
+    "at_3600": "admitted",
+    "s_per_turn": 38.1,
+    "sixty_turns_s": 2286
+   },
+   "on": {
+    "at_3600": "REFUSED exit 8",
+    "s_per_turn": 218.2,
+    "sixty_turns_s": 13092
+   }
+  },
+  "red_green": "neutered _mode_wall -> return 60.0 => test_thinking_auto_60_turns_refused_at_3600 FAILED with 'projected_wall~=3600s ... thinking=auto' and 'assert 10 == 8'; restored copy sha256 identical => 8 passed"
+ },
+ "next_unit_hint": "Verifier: re-run the 8 new tests and the four neighbours, then neuter _mode_wall again to reproduce the red line. Consider a follow-up card to re-pin test_projection_calibration.py's 48x60=2880 expectation to --thinking off so the off/absent default could later move to its measured p50 without a false boundary.",
+ "status": "done",
+ "unit": "PROJECTION-MODE",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/measure/PROJECTION.json",
+  "experiments/ptr-engine/longrun/tests/test_projection_modes.py",
+  "docs/PROJECTION.md",
+  "orchestration/units/PROJECTION-MODE.md",
+  "orchestration/handoffs/PROJECTION-MODE.json",
+  "orchestration/journals/PROJECTION-MODE.jsonl"
+ ]
+}

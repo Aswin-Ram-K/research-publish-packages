@@ -23,7 +23,7 @@ residue 0 or 1; a planted corpus where no free variant reaches a cheap residue �
 |---|---|
 | `ptr_engine/quantise.py` | `PAD_FOR_FREE_RESIDUE`, `ShapeVariant`, `ShapeCandidate`, `ShapeChoice`, `choose_shape`, `quick_bill`, `projection_variant`, `calibration_limits` (+ `cycle_bill` unchanged and reused) |
 | `ptr_engine/__init__.py` | re-exports appended to the ENGINE-R1 block (not merged into the import block, so a concurrent card's edits cannot be clobbered) |
-| `tests/test_quantise.py` | 45 → 63 tests: 18 for the search |
+| `experiments/ptr-engine/tests/test_quantise.py` | 45 → 63 tests: 18 for the search |
 | `SPEC.md` | new section 15 (shape search) |
 | `measure/shape_search.py` | offline generator; imports the shipped `choose_shape`, so the table cannot drift from the code |
 | `measure/shape-search.json`, `measure/SHAPE-SEARCH.md` | the candidate tables (PREDICTED), the calibration residual, and the live-measurement plan |

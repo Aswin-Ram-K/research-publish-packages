@@ -37,7 +37,7 @@ basenames (`.env*`, `id_rsa*`, `*.pem/.key/.p12/.pfx`, `credentials|secrets|secr
    lines); both run on `LR-01.v4.json`, 4 arms, `--dry-run --show-prompts` → stdout diff 0
    (sha256 `487e4fdb…` both sides), 12/12 preview request bodies identical. The only excluded line is
    `manifest[...]`, whose sha256 embeds `created_utc` and differs between any two runs of the same code.
-2. **`tests/test_tool_channel.py` exit 0**, assertions (a)–(e) plus (f) accounting and (g) row schema.
+2. **`experiments/ptr-engine/longrun/tests/test_tool_channel.py` exit 0**, assertions (a)–(e) plus (f) accounting and (g) row schema.
 3. **Dry-run with tools:** exit 0, `would_send_total=48`, and the added system-prompt sentence is
    present in the actual payload under `/tmp/longrun-previews/…/turn-01.json`, not merely in stdout.
 

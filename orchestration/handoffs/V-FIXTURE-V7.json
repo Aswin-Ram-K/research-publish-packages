@@ -1,0 +1,77 @@
+{
+ "unit": "V-FIXTURE-V7",
+ "overall": "pass",
+ "checks": [
+  "12/12 agree: independent AST re-derivation of all 12 LR-01.v7 truths matches the fixture checkpoint-by-checkpoint; 0 disagree, 0 ambiguous",
+  "kinds NUM 5 / CALL 4 / NONE 3 confirmed by own derivation, matching fixture and docs/PARM-1-ERRATA.md",
+  "no source drift: resolve.py 71a14c2c1dd1b6e97b3fdf2a666ea459d093adcd0f813676cf787271a48da563 and errors.py 402dc9589d8e8fd5de82ed6c8f3364390e105bf8285eb7c326b799f8200fdba0 equal the sha256 values the fixture records under sources[]",
+  "NUM truths: 64 (resolve.py:39 DEFAULT_MAX_REFS), 6 (PtrLedger*), 31 (31 top-level ClassDef, all Ptr*), 5 (PtrLaw*), 2 (PtrUnknown*) all reproduced by ast census of errors.py",
+  "CALL truths: record_resolution with 5 exact kwargs (cp.0.t06), scope.block() 0 kwargs (cp.1.t08), ledger.resolved_count() 0 kwargs at L141 first of L141/L143/L146 (cp.9.t36), record_refusal with 3 exact kwargs scope=scope_name/serialized_ref=text/code=error.code (cp.11.t46)",
+  "NONE ids cp.3.t14 / cp.5.t20 / cp.10.t42 each confirmed absent: no *.record_refusal in resolve() (only bare _refuse(...) at L155 and record_resolution at L159), no *.resolved_count and no *.block in _refuse() (L66-71 body is one if + one record_refusal)",
+  "NONE ids are decidable but constant-answer: 3/12=25% of H3 denominator is collected free by any constant-NONE arm (PARM-1-ERRATA E1 confirmed independently)",
+  "CALL kwarg name sets are EXACT for all four ids (5/0/0/3) - no subset, no superset; grade_v5._check_documented_call aborts on a name-set divergence, so a subsetting fixture could not pass silently",
+  "FINDING F1 (false-positive surface): value elision, not name subsetting - cp.0.t06 elides 2/5 values, cp.11.t46 elides 1/3 (scope, the value distinguishing scope=scope_name from scope=scope.name); grade_cell accepts literal '...' for elided_kwargs, so 3 of 8 substantive CALL values can be answered '...' and still pass",
+  "FINDING F2: both CALL expected strings are in source order (scope,serialized_ref,bytes_appended,block_size,entry_text / scope,serialized_ref,code) not the contract's alphabetical order, and cp.11.t46 appends ', before re-raising'; order is ungraded (kwargs_as_written reported only) so this is documentation drift, not a truth error",
+  "encoding: fixture raw text contains no \\u003d escape (only \\u2014); proven by construction - replacing every '=' with \\u003d decodes to an identical structure and the audit still returns 12/12 exit 0; audit compares json.loads(raw) values, never raw text",
+  "red case 1: cp.6.t24 expected 31->30 in a /tmp copy -> [disagree] cp.6.t24 [ours=31 fixture=30], counts agree 11/disagree 1, EXIT=1",
+  "red case 2: cp.11.t46 documented kwarg 'code' dropped -> kwarg name set: SUBSET fixture omits ['code'], EXIT=1",
+  "green restore: untouched fixture -> agree 12/disagree 0, EXIT=0; fixture sha256 still 42b4df007352d9397778d9e2b50b1b64ef451190e54ea2c6d1992f9f77bd8392",
+  "read-only respected: fixture, tasks-v5/*, tasks-v6/*, ptr_engine/*.py and all measurement files unmodified; before/after fixture sha identical",
+  "independence: no code imported or copied from CHECKPOINT-ITEMS-V2, grade_v5 or det_verify; grade_v5 was read only after the derivation, to establish what the grader compares"
+ ],
+ "measurements": {
+  "fixture_sha256": "42b4df007352d9397778d9e2b50b1b64ef451190e54ea2c6d1992f9f77bd8392",
+  "source_sha256": {
+   "resolve.py": "71a14c2c1dd1b6e97b3fdf2a666ea459d093adcd0f813676cf787271a48da563",
+   "errors.py": "402dc9589d8e8fd5de82ed6c8f3364390e105bf8285eb7c326b799f8200fdba0",
+   "ledger.py": "4c40f11b29cbda9dfdc752f7d47549cf083349cfa8a583c96437a8133e00967e"
+  },
+  "verdict_counts": {"agree": 12, "disagree": 0, "ambiguous": 0},
+  "per_id": {
+   "cp.0.t06": "agree", "cp.1.t08": "agree", "cp.2.t12": "agree", "cp.3.t14": "agree",
+   "cp.4.t18": "agree", "cp.5.t20": "agree", "cp.6.t24": "agree", "cp.7.t26": "agree",
+   "cp.8.t32": "agree", "cp.9.t36": "agree", "cp.10.t42": "agree", "cp.11.t46": "agree"
+  },
+  "call_kwarg_name_sets": {
+   "cp.0.t06": {"count": 5, "verdict": "exact"},
+   "cp.1.t08": {"count": 0, "verdict": "exact"},
+   "cp.9.t36": {"count": 0, "verdict": "exact"},
+   "cp.11.t46": {"count": 3, "verdict": "exact"}
+  },
+  "elided_kwargs": {"cp.0.t06": ["bytes_appended", "entry_text"], "cp.11.t46": ["scope"]},
+  "red_green": {
+   "red_1": "counts {\"agree\": 11, \"disagree\": 1, \"ambiguous\": 0}, EXIT=1, disagree exactly cp.6.t24 (ours 31 / fixture 30)",
+   "red_2": "kwarg name set SUBSET: fixture omits ['code'] on cp.11.t46, EXIT=1",
+   "green_original": "counts {\"agree\": 12, \"disagree\": 0, \"ambiguous\": 0}, EXIT=0",
+   "green_escaped_equals": "counts {\"agree\": 12, \"disagree\": 0}, EXIT=0"
+  }
+ },
+ "disagreements": [],
+ "findings": [
+  "F1 elided CALL values: cp.0.t06 elides 2/5 and cp.11.t46 elides 1/3 kwarg values; grade_v5.grade_cell accepts a literal '...' for any elided kwarg, so 3 of 8 substantive CALL values are answerable as '...' and still grade pass - an arm that names callee + kwarg names passes all four CALL ids",
+  "F2 documentation drift: the two CALL expected strings are in source order rather than the contract's alphabetical order, and cp.11.t46 appends ', before re-raising'; grade_v5 does not grade order, so the truths stand",
+  "F3 residual reading risk: cp.3.t14 rests on the word 'itself' (resolve() does cause a record_refusal row one frame down via _refuse); and grade_v5 derives truth from the LIVE tree, so the 12 truths are stable only while acc.n3b (no_write ptr_engine/resolve.py) holds - an arm writing resolve.py can flip cp.3.t14 from NONE to a CALL"
+ ],
+ "not_reproduced": [],
+ "overstated": [],
+ "unverified": [
+  "The three leaked answers (64, 31, record_refusal shape) were visible via acceptance.checks before the fixture's checkpoints[] were opened; those three ids (cp.2.t12, cp.6.t24, cp.11.t46) were not blind, though each was re-derived from source",
+  "Whether grade_v5's live-tree truth derivation is actually isolated per arm under RUN-A* (no v6 RUN-A* grid exists yet) was not measured here"
+ ],
+ "blocker": "",
+ "next_unit_hint": "For H3 honesty, report the CALL column with its elision caveat (3/8 values answerable as '...') or tighten the fixture's documented values for cp.0.t06 and cp.11.t46 to real source text; also confirm RUN-A* isolates ptr_engine/resolve.py per arm so the 12 truths cannot move with an arm's edit",
+ "write_paths": [
+  "docs/V-FIXTURE-V7.md",
+  "experiments/ptr-engine/measure/v-fixture-v7.json",
+  "experiments/ptr-engine/tools/fixture_v7_audit.py",
+  "orchestration/units/V-FIXTURE-V7.md",
+  "orchestration/handoffs/V-FIXTURE-V7.json",
+  "orchestration/journals/V-FIXTURE-V7.jsonl"
+ ],
+ "tool_calls": 17,
+ "bound": 24,
+ "assumptions": [
+  "Question->source-fact binding was read from each checkpoint question and the source, deliberately ignoring answer_spec.derive, so the audit cannot inherit the author's mapping",
+  "Absence of a call was checked with ast.walk over the named function body, matching the reading 'inside this function'; indirect calls through _refuse are reported separately for cp.3.t14"
+ ]
+}

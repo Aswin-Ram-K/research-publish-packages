@@ -1,0 +1,52 @@
+{
+ "unit": "PHANTOM-PATH-FIX",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/path_refs.py",
+  "experiments/ptr-engine/longrun/tests/test_path_refs.py",
+  "state/logs/path-refs-baseline.json",
+  "docs/PATH-REFS.md",
+  "docs/PRICE-REPLICATION.md",
+  "experiments/ptr-engine/measure/price-replication.json",
+  "orchestration/handoffs/PRICE-REPLICATION.json",
+  "orchestration/units/PHANTOM-PATH-FIX.md",
+  "orchestration/handoffs/PHANTOM-PATH-FIX.json",
+  "orchestration/journals/PHANTOM-PATH-FIX.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "--check BEFORE: exit 1, 'path-refs: 0 known (baselined), 1054 new' (red, unbaselined corpus). --check AFTER: exit 0, 'path-refs: 1058 known (baselined), 0 new'. census at freeze: ok=25285 wrong_dir=793 missing=265 ignored=203 (752 baseline anchors). pytest: 6 passed in 0.22s (3 red -> exit 1 each, 3 green -> exit 0). BUDGET-SCHEDULE BEFORE: docs/PRICE-REPLICATION.md:222, measure/price-replication.json:35,39,115,119,393, handoffs/PRICE-REPLICATION.json:27 all wrong_dir docs/BUDGET-SCHEDULE.md -> experiments/ptr-engine/measure/BUDGET-SCHEDULE.md. AFTER: 0 wrong_dir; the only remaining mentions of docs/BUDGET-SCHEDULE.md are classified ignored (docs/COLD-START-PROBE.md:66 [says-it-does-not-exist], docs/COLD-START-SCORE.md:16/26 [named-as-phantom]).",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/path_refs.py --check",
+   "python3 experiments/ptr-engine/tools/path_refs.py --report",
+   "python3 experiments/ptr-engine/tools/path_refs.py --write-baseline",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_path_refs.py -q"
+  ]
+ },
+ "assumptions": [
+  "The baseline was frozen twice: a first freeze after the seven corrections, then a re-freeze at 2026-10-26T13:11:49 after OTHER cards wrote new references during the run (orchestration/handoffs/COLD-START-SCORE.json:9, orchestration/units/CAPGATE-UNRECORDED-REFUSE.md:17/28/33, docs/GATE-CHAIN.md:557). Those are outside this card's write paths, so they are recorded in the baseline and reported here, not repaired. The re-freeze does not excuse anything: each key is in the file with its class and resolved path.",
+  "wrong_dir covers a unique in-tree location as well as the two legal alternates (experiments/ptr-engine/measure/<basename>, docs/<basename>): a shorthand for tests/<name>.py living under experiments/ptr-engine/longrun/tests/ is still a wrong citation, and the spec's 'exactly one legal alternate' reading would have called it missing, which is false. Documented in docs/PATH-REFS.md.",
+  "The scanner skips a removed line ('-') inside a fenced diff block: such a line quotes the token that was replaced, so it is not a live reference. Applied to docs/PATH-REFS.md's own correction diff; not an allowlist widening of any surviving line.",
+  "Walk prunes .scratch/ and .verify-scratch/ (ephemeral verifier copies). Without the prune the same citation flipped between wrong_dir and missing between two runs of the same scan as a judge's snapshot appeared."
+ ],
+ "missing_not_created": [
+  "experiments/ptr-engine/tools/verdict_with_freeze.py — phantom, cited by orchestration/handoffs/COLD-START-SCORE.json:9, not created",
+  "docs/GATE-SIMPLIFY.md — phantom, named before it existed; the guard now reports that name as phantom",
+  "docs/PARM-1.md — phantom, cited by orchestration/units/CAPGATE-UNRECORDED-REFUSE.md:33; may be a deliberate future path, so reported only",
+  "docs/does-not-exist.md — phantom used as the synthetic red case in the tmp tree only"
+ ],
+ "can_a_document_name_an_absent_path_unnoticed": "No. Every path-shaped reference in docs/**/*.md, measure/*.md|*.json, orchestration/units/*.md and orchestration/handoffs/*.json is resolved on every --check; a wrong_dir or missing reference whose key is not frozen in state/logs/path-refs-baseline.json fails the run with file:line, the class and the resolved path.",
+ "blocker": "",
+ "next_unit_hint": "A NEW card (not an extension) to clear the two live phantoms the guard caught from other cards: repoint orchestration/handoffs/COLD-START-SCORE.json:9 off the phantom experiments/ptr-engine/tools/verdict_with_freeze.py, and decide whether the phantom docs/PARM-1.md is a deliberate future path. Separately, the ~700-entry longrun-tests shorthand family (`tests/<name>.py` for `experiments/ptr-engine/longrun/tests/<name>.py`) is a candidate for one mechanical rewrite pass, since it is ~90% of the wrong_dir census.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/path_refs.py",
+  "experiments/ptr-engine/longrun/tests/test_path_refs.py",
+  "state/logs/path-refs-baseline.json",
+  "docs/PATH-REFS.md",
+  "docs/PRICE-REPLICATION.md",
+  "experiments/ptr-engine/measure/price-replication.json",
+  "orchestration/handoffs/PRICE-REPLICATION.json",
+  "orchestration/units/PHANTOM-PATH-FIX.md",
+  "orchestration/handoffs/PHANTOM-PATH-FIX.json",
+  "orchestration/journals/PHANTOM-PATH-FIX.jsonl"
+ ]
+}

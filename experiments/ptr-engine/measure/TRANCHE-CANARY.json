@@ -1,0 +1,98 @@
+{
+ "unit": "TRANCHE-CANARY",
+ "generated_at": "2026-10-26T18:40:55Z",
+ "mode": "offline replay of the recorded stopped cell; zero requests; zero sockets",
+ "rows_file": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl",
+ "rows_sha256": "46afc892480ae1dbe4b20d13fd4dacb983653a9f0a04b6a42a6283b3c55ca3b1",
+ "rows_count": 27,
+ "turn_rows": 27,
+ "stopped_cell": {
+  "requests_sent": 27,
+  "cap_length_turns": [
+   3,
+   27
+  ],
+  "first_cap_turn": 3,
+  "cap_turn_wall_ms": 114838.846,
+  "sum_turn_wall_ms": 346883.2,
+  "sum_turn_wall_h": 0.096,
+  "answer_turns": 8,
+  "usable_cells": 0
+ },
+ "runs": [
+  {
+   "n": 5,
+   "verdict": {
+    "arm": "pointer-stable",
+    "rep": 1,
+    "n": 5,
+    "turns_observed": 5,
+    "parseable_answers": 0,
+    "triggers": [
+     "completion_ceiling"
+    ],
+    "verdict": "shape_degenerate",
+    "exit_code": 1,
+    "trigger": "completion_ceiling",
+    "evidence": {
+     "turn": 3,
+     "completion_tokens": 4096,
+     "max_tokens": 4096,
+     "stop_reason": "length",
+     "wall_ms": 114838.846,
+     "truncated": true,
+     "trigger": "completion_ceiling"
+    },
+    "why": "turn 3 consumed the completion ceiling: completion_tokens 4096 of max_tokens 4096 (stop_reason 'length', wall_ms 114838.846). A full-ceiling completion on a question whose answers are a few tokens is a CHANNEL/PROMPT MISMATCH, not a measurement.",
+    "rows": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl",
+    "mode": "replay",
+    "requests_spent": 0
+   },
+   "argv": [
+    "python3",
+    "experiments/ptr-engine/tools/tranche_canary.py",
+    "--rows",
+    "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl",
+    "--turns",
+    "5"
+   ],
+   "observed_exit_code": 1
+  },
+  {
+   "n": 2,
+   "verdict": {
+    "arm": "pointer-stable",
+    "rep": 1,
+    "n": 2,
+    "turns_observed": 2,
+    "parseable_answers": 0,
+    "triggers": [
+     "no_parseable_answer"
+    ],
+    "verdict": "shape_unknown",
+    "exit_code": 2,
+    "trigger": "no_parseable_answer",
+    "why": "no completion ceiling was hit and every stop reason is in-vocabulary, but the arm's answer contract produced no parseable answer in the first 2 turns, so 'ok' is not demonstrated -- this is unknown, not a pass",
+    "rows": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl",
+    "mode": "replay",
+    "requests_spent": 0
+   },
+   "argv": [
+    "python3",
+    "experiments/ptr-engine/tools/tranche_canary.py",
+    "--rows",
+    "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl",
+    "--turns",
+    "2"
+   ],
+   "observed_exit_code": 2
+  }
+ ],
+ "conclusion": "N=5 names T3 (completion_tokens 4096 == max_tokens 4096, stop_reason length, wall_ms 114838.846) -> shape_degenerate. N=2 sees only T1-T2, which are clean and carry no parseable answer, so it returns shape_unknown: the cap hit is at T3, one turn outside the window. N=2 cannot distinguish 'healthy but early' from 'about to break', which is exactly why the canary window is 5, not 2.",
+ "cost_arithmetic": {
+  "canary": "4 arms x 5 turns = 20 requests (plus each arm's 1-request warm-up = 24)",
+  "tranche": "4 arms x 48 turns x reps 2-3 + warm-ups, book value ~= 720 requests",
+  "canary_share_of_tranche": "20/720 ~= 2.8%",
+  "measured_on_the_stopped_cell": "a canary that stopped at its first cap hit would have spent 3 requests (T3 was the first); a full N=5 window spends 5. The stopped cell spent 28 requests and produced 0 usable cells."
+ }
+}

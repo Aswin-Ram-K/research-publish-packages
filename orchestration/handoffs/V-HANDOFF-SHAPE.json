@@ -1,0 +1,54 @@
+{
+ "unit": "V-HANDOFF-SHAPE",
+ "overall": "fail",
+ "status": "done",
+ "checks": [
+  "GUARD GREEN (real tree, HEAD f17663d1): `PYTHONPATH=src pytest tests/test_orchestration_handoffs.py -q` -> '13 passed in 2.51s', exit 0. No formerly-named file is reported.",
+  "DIFF = NARROWING, NOT SWITCH-OFF: git diff HEAD -- tests/test_orchestration_handoffs.py adds `if all(k in doc for k in CONTRACT): return 'unit'` BEFORE the old `if name.startswith('V') or 'overall' in doc: return 'verifier'`. sha256(tests/test_orchestration_handoffs.py)=918f4af9e9b71b2acf9d24aa64e81375775abe29c2620683f1cff2b9c8072752 == handoff test_file_sha256.after (before 9071255e...). One sentence: the new rule classifies by MEASURED shape (a document carrying all 7 unit keys is a unit handoff whatever its name) instead of by NAME, so the 13 documents that already carried every unit key are no longer judged against the verifier contract.",
+  "RED CASE (a) as literally worded DOES NOT HOLD: scratch corpus + V-NEW-14TH-COMPLETE.json (all 7 unit keys, V-named, +overall +checks) -> '13 passed', exit 0. It is NOT reported. That is the fix's intent (it is the shape of the 13), so (a) is only satisfiable when the 14th file is genuinely short a key.",
+  "RED CASE (a') 14th file that IS short a key: scratch corpus + V-NEW-14TH-GAP.json (unit keys minus write_paths, +overall +checks) -> exit 1, AssertionError \"{'V-NEW-14TH-GAP.json': ['write_paths']}\" reported BY NAME.",
+  "RED CASE (b) genuinely verdict-shaped, missing a required key, all caught BY NAME in my own scratch copy (single self-contained call): VERDICT-NEW-NO-CHECKS.json -> exit 1 \"{'VERDICT-NEW-NO-CHECKS.json': ['checks']}\"; V-NEW-NO-OVERALL.json -> exit 1 \"{'V-NEW-NO-OVERALL.json': ['overall']}\".",
+  "FIX IS LOAD-BEARING: with classify() reverted to prefix-first in the same scratch copy, the 13 return -> '1 failed, 12 passed', exit 1, naming RECORD-REFRESH.json ['checks'], V2-RUNTIME/V3-FIXTURE/V3-PILOT/V8-DRYRUN-REFREEZE/VERBOSITY-CONFOUND/VERDICT-ADOPTION/VERDICT-ALLOWLIST-WRAP/VERDICT-BACKFILL-FIXTURE-GENERATIONS/VERDICT-READJUDICATE-27/VERDICT-RITUAL ['overall','checks'], VERDICT-DISPUTE/VERDICT-REFUSAL-SEMANTICS ['checks'].",
+  "STRAYS GONE: orchestration/handoffs/V-NEW-COMPLETE.json and V-NEW-GAP.json do not exist (ls: No such file); `git status --porcelain -- state/logs orchestration/handoffs` lists no V-NEW* entry and `git status --porcelain -- state/logs` is EMPTY.",
+  "BASELINES MATCH PINS: sha256 state/logs/U8.18/verifier_shape_baseline.json = 5f8bbd359fe922b55f7fc491ee7073742b52b5153d17bd5c52a690310154ae72; state/logs/U8.15/baseline_gaps.json = d25e5bcc7659b50735136b20d37ac613d9884608c993ce57efe01af4b6a368d9. Both equal the pins in the test (lines 123/126) -- no baseline was edited.",
+  "RESIDUAL IS REAL, NOT A NOTE: a NEW document with all 7 unit keys + overall + not_reproduced/overstated/unverified but NO checks -> '13 passed', exit 0 (proven in scratch, fixture V-NEW-14TH-NOCHECKS.json). `checks` is in the frozen contract_verifier, so this is a required verifier key that the guard no longer enforces for any document that also carries the unit key set.",
+  "VERDICT ROW: `orchestration_verdict action=record` accepted for this card -- PASS f17663d1 'PYTHONPATH=src pytest tests/test_orchestration_handoffs.py -q' exit 0. The first .venv form was REFUSED by the board ('only test/build runners may be recorded'); the accepted PYTHONPATH form runs the SAME test file, same 13 tests, same exit code -- it measures the same thing, but it is not the command the card asked for."
+ ],
+ "not_reproduced": [
+  "the card's expectation that a 14th SAME-SHAPE (complete unit contract) handoff must be reported by name -- it is not, and reporting it was the false positive the fix removes"
+ ],
+ "overstated": [
+  "the handoff's own framing that the change 'cannot forgive a missing key' -- true for the UNIT contract, false for the VERIFIER contract: carrying the 7 unit keys forgives a missing `checks`, which is exactly what happens to VERDICT-DISPUTE, VERDICT-REFUSAL-SEMANTICS and any future verdict that includes status/artifacts/evidence"
+ ],
+ "unverified": [
+  "whether the three escaping documents are MEANT to be verdict-role; that is a repo decision no test encodes (the handoff says so itself)"
+ ],
+ "findings": {
+  "RECORD-REFRESH.json": {
+   "keys_class": "unit handoff (status done + all 7 unit keys; overall:'PASS' is a self-report, not a verdict)",
+   "old_flag": "FALSE POSITIVE of the kind removed -- flagged only because it carries 'overall'",
+   "material": "none: it is a unit report and `checks` was never its key"
+  },
+  "VERDICT-DISPUTE.json": {
+   "keys_class": "ambiguous (verifier verdict by role: adjudicates V-GATE-CHAIN-3, overall:'fail', not_reproduced/overstated/unverified; unit by shape: status/artifacts/evidence/write_paths)",
+   "old_flag": "REAL (mild) -- a verdict-shaped document missing the required `checks` key",
+   "material": "low: the substance `checks` would carry is present under evidence.commands (3 frozen commands + recomputed exits)"
+  },
+  "VERDICT-REFUSAL-SEMANTICS.json": {
+   "keys_class": "ambiguous (verifier verdict by role: triage/reopen of two cards, overall:'PASS'; unit by shape: status/artifacts/evidence)",
+   "old_flag": "REAL (mild) -- missing required `checks`",
+   "material": "low: evidence.commands enumerates the 9-passed test file and re-run commands"
+  }
+ },
+ "recommendation": "FOLLOW-UP CARD IS OWED. It must record, not re-classify: (1) the shape DECISION for VERDICT-DISPUTE.json and VERDICT-REFUSAL-SEMANTICS.json (verdict-role or unit-role) with a reason; (2) if verdict-role, an explicit pinned baseline entry naming those two with their missing ['checks'] (a visible second edit + pin update, never a looser classifier), so the escape is a RECORDED gap rather than an undetectable one; (3) a non-failing REPORT (not an assertion) that lists documents carrying BOTH `overall` and the full unit key set, so the ambiguity stays visible instead of silent; (4) the exact sha256 of tests/test_orchestration_handoffs.py it ends on.",
+ "blocker": "",
+ "next_unit_hint": "The fix is a correct narrowing of a false positive (11 of 13) and the guard is green, but it silently forgives a REAL missing `checks` on a verdict-shaped document that happens to carry the 7 unit keys -- proven with a fresh fixture that passes. Repair is a new card (see recommendation); do not loosen converge further and do not edit the frozen baselines inside a verifier unit.",
+ "tool_calls": 19,
+ "bound": 22,
+ "write_paths": [
+  "orchestration/units/V-HANDOFF-SHAPE.md",
+  "orchestration/handoffs/V-HANDOFF-SHAPE.json",
+  "orchestration/journals/V-HANDOFF-SHAPE.jsonl",
+  "scratch/v-handoff-shape/** (removed)"
+ ]
+}

@@ -1,0 +1,57 @@
+{
+  "unit": "HANDOFF-SHAPE-CLASSIFY",
+  "status": "done",
+  "artifacts": [
+    "tests/test_orchestration_handoffs.py",
+    "tests/test_handoff_shape_classify.py",
+    "docs/HANDOFF-SHAPE.md",
+    "orchestration/units/HANDOFF-SHAPE-CLASSIFY.md",
+    "orchestration/journals/HANDOFF-SHAPE-CLASSIFY.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "guard before: 1 failed, 12 passed naming 13 handoffs; guard after: 13 passed, exit 0; with the 8 new classifier tests: 21 passed, exit 0 (.venv/bin/python -m pytest and PYTHONPATH=src pytest both)",
+    "commands": [
+      ".venv/bin/python -m pytest tests/test_orchestration_handoffs.py -q  -> 1 failed, 12 passed (HEAD f17663d1, pre-fix)",
+      "PYTHONPATH=src pytest tests/test_orchestration_handoffs.py tests/test_handoff_shape_classify.py -q  -> 21 passed, exit 0",
+      "scratch copy of tests/ + state/logs/U8.15 + state/logs/U8.18 + orchestration/handoffs: 13 passed exit 0 with NO baseline edit",
+      "scratch: + V-NEW-COMPLETE.json (complete unit shape, V-named) -> 13 passed, exit 0",
+      "scratch: + V-NEW-GAP.json (one unit key short) -> 1 failed, exit 1, AssertionError names {'V-NEW-GAP.json': ['overall','checks','write_paths']}",
+      "scratch: + V-RED-VERDICT.json (overall+checks, missing next_unit_hint) -> 1 failed, exit 1, AssertionError names {'V-RED-VERDICT.json': ['next_unit_hint']}",
+      "scratch: classifier reverted to prefix-first -> 1 failed, exit 1 (the 13 return, so the fix is load-bearing)",
+      "sha256 state/logs/U8.18/verifier_shape_baseline.json = 5f8bbd359fe922b55f7fc491ee7073742b52b5153d17bd5c52a690310154ae72 (unchanged, == the pin)",
+      "sha256 state/logs/U8.15/baseline_gaps.json = d25e5bcc7659b50735136b20d37ac613d9884608c993ce57efe01af4b6a368d9 (unchanged, == the pin)"
+    ],
+    "verdict_row": "PASS f17663d1 'PYTHONPATH=src pytest tests/test_orchestration_handoffs.py tests/test_handoff_shape_classify.py -q' exit 0, re-run verbatim -> 21 passed"
+  },
+  "test_file_sha256": {
+    "before": "9071255ea29e071c3e6cc454430e8ad9b2989f7dc4f1d8b6d72c082d37adb065",
+    "after": "918f4af9e9b71b2acf9d24aa64e81375775abe29c2620683f1cff2b9c8072752"
+  },
+  "classify_change": {
+    "before_hunk": "if name.startswith(\"V\") or \"overall\" in doc:\n    return \"verifier\"\nreturn \"unit\"",
+    "after_hunk": "if all(k in doc for k in CONTRACT):\n    return \"unit\"\nif name.startswith(\"V\") or \"overall\" in doc:\n    return \"verifier\"\nreturn \"unit\"",
+    "why_narrows_a_false_positive_not_a_true_one": "The ONLY documents whose shape changes are those carrying the complete 7-key unit contract: they cannot have a unit-shape gap, so the move cannot forgive a missing key. Measured: 22 documents change shape, all 7/7 unit keys, all gap-free in the unit shape; 13 of them are the reported regressions, the other 9 (e.g. U10.json, V2W.json) already satisfied BOTH contracts and were merely labelled verifier. No document moves from unit to verifier, and no unit-shape gap set changes.",
+    "companion_edit": {
+      "test": "test_no_baseline_entry_over_declares",
+      "before_hunk": "live_unit = {f: m for f, m in a[\"gaps\"].items() if a[\"shapes\"][f] == \"unit\"}\nlive_verifier = {f: m for f, m in a[\"gaps\"].items() if a[\"shapes\"][f] == \"verifier\"}\n...\nmeasured = set(live.get(name, []))",
+      "after_hunk": "for label, baseline, contract in ((\"unit\", unit_baseline, CONTRACT),\n                                  (\"verifier\", verifier_baseline, verifier_contract)):\n    for name, exempted in baseline.items():\n        ...\n        doc = a[\"docs\"].get(name)\n        if doc is None:\n            continue\n        measured = {k for k in contract if k not in doc}",
+      "why": "The old form measured each exemption against {gaps of that shape}, so a document that changed SHAPE vanished from the live set and its exemption read as 'repaired'. It now measures the DOCUMENT against the exemption's own contract. Same verdict for a same-shape repair (measured shrinks, the check fires as before), so the check still bites; different only for a shape move, which is not evidence of a repair. Only V-R2VLLM-TRIAGE.json and VLLM-CELL.json are affected, and both still lack overall+checks (measured == exempted), so they are unreachable, not satisfied; if either regains the verdict shape AND those keys the check fires."
+    },
+    "diagnosis_correction": "The HANDOFF-BASELINE-REGEN hint's proposed rule (V-prefix + unit key set + no verdict-shaped key overall/verdict -> unit) explains only 8 of the 13. It leaves 5 mis-shaped: RECORD-REFRESH.json, VERDICT-DISPUTE.json, VERDICT-REFUSAL-SEMANTICS.json (unit key set AND overall) and V3-PILOT.json, VERDICT-ADOPTION.json (unit key set AND a 'verdict' key). The rule that explains all 13 is precedence by DOCUMENT COMPLETENESS: full unit key set -> unit, regardless of name or extra keys; otherwise name/overall -> verifier. Every one of the 13 carries all 7 unit keys and declares status, so this was never a missing-key defect."
+  },
+  "residual_stated_not_hidden": "An ambiguous document (all 7 unit keys + overall) is classified unit, so it is not asked for the verifier-only key 'checks'. Recorded in docs/HANDOFF-SHAPE.md and in classify()'s docstring; bounded because one unit key short and the document falls through to the verdict test (test_ambiguous_shape_cannot_smuggle_a_missing_key).",
+  "assumptions": [
+    "/tmp is a per-invocation private mount here (a directory made in one call is absent in the next), so the first attempt at the /tmp copy wrote two fixtures into the real orchestration/handoffs; both (V-NEW-COMPLETE.json, V-NEW-GAP.json) were deleted in the next call before anything else ran. The red proofs were then run in a single self-contained call under scratch/handoff-shape-red/, removed at the end of that same call. No baseline, no handoff and no path outside the declared write paths persists from this: verified `git status --porcelain -- state/logs` is empty and the two frozen baselines still match their pins.",
+    "The verdict command was recorded as 'PYTHONPATH=src pytest ...' rather than '.venv/bin/python -m pytest ...' because the board refuses a .venv/bin/python command ('only test/build runners may be recorded'); the recorded form was then re-run verbatim and passed 21/21, exit 0."
+  ],
+  "blocker": "",
+  "next_unit_hint": "A verifier must re-run the guard (expect 13 passed) and re-check the two red cases in its own scratch copy; and should judge the one open question this unit could not avoid: VERDICT-DISPUTE.json / VERDICT-REFUSAL-SEMANTICS.json / RECORD-REFRESH.json now escape the verifier-only 'checks' requirement. If those three are meant to be verdicts, the honest follow-up is a card that records that decision, not a baseline entry or a looser classifier.",
+  "write_paths": [
+    "tests/test_orchestration_handoffs.py",
+    "tests/test_handoff_shape_classify.py",
+    "docs/HANDOFF-SHAPE.md",
+    "orchestration/units/HANDOFF-SHAPE-CLASSIFY.md",
+    "orchestration/handoffs/HANDOFF-SHAPE-CLASSIFY.json",
+    "orchestration/journals/HANDOFF-SHAPE-CLASSIFY.jsonl"
+  ]
+}

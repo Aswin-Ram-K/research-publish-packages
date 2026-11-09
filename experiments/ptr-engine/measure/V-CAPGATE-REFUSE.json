@@ -1,0 +1,144 @@
+{
+ "unit": "V-CAPGATE-REFUSE",
+ "target": {
+  "run_longrun_py": "29445320c205bfe8c5d52ba150054cdbb4a915f598f0f56588e1b174a9069a61",
+  "cell_py": "e24e867b8fe9eec7d1344f5738d9f04022f9f5d0968fa0f575ab9c30e6edf013",
+  "exit_codes_py": "a57017e1e1edd67aa4ee2b5245d9619bcf10cb5cbfa4f31ac49a3cbf1f9bfa3a"
+ },
+ "shas_before": {
+  "run_longrun.py": "29445320c205bfe8c5d52ba150054cdbb4a915f598f0f56588e1b174a9069a61",
+  "cell.py": "e24e867b8fe9eec7d1344f5738d9f04022f9f5d0968fa0f575ab9c30e6edf013"
+ },
+ "shas_after": {
+  "run_longrun.py": "29445320c205bfe8c5d52ba150054cdbb4a915f598f0f56588e1b174a9069a61",
+  "cell.py": "e24e867b8fe9eec7d1344f5738d9f04022f9f5d0968fa0f575ab9c30e6edf013"
+ },
+ "derived_path": {
+  "delta_expr": "after - (spent_at_start + used_in_run)  [run_longrun.py:410-413]",
+  "branch_order": [
+   "manifest write (rc=9 on failure)",
+   "delta > 0 -> 9 DIVERGENCE",
+   "elif delta < 0 -> 9 UNRECORDED",
+   "else -> 0 reconciled"
+  ],
+  "exit_site": "run_cell returns cap_rc at run_longrun.py:2585-2588; main() sys.exit at :2914"
+ },
+ "shapes": {
+  "b1_last_row_deleted": {
+   "delta": -1,
+   "exit": 9,
+   "message": "CAP GATE UNRECORDED",
+   "stream": "stderr"
+  },
+  "b2_all_rows_deleted": {
+   "delta": -3,
+   "exit": 9,
+   "message": "CAP GATE UNRECORDED",
+   "stream": "stderr"
+  },
+  "b3_rows_file_absent": {
+   "delta": -2,
+   "exit": 9,
+   "message": "CAP GATE UNRECORDED",
+   "stream": "stderr"
+  },
+  "a_truncated_mid_json": {
+   "delta": null,
+   "exit": 5,
+   "message": "CAP GATE ROWS at exit: unparseable row",
+   "stream": "stderr"
+  },
+  "c_negative_zero": {
+   "delta": -0.0,
+   "exit": 0,
+   "note": "-0.0 == 0, no divergence: correct"
+  },
+  "c_neg_one": {
+   "delta": -1,
+   "exit": 9
+  },
+  "c_neg_half": {
+   "delta": -0.5,
+   "exit": 9
+  },
+  "c_neg_one_half": {
+   "delta": -1.5,
+   "exit": 9
+  }
+ },
+ "safe_direction": {
+  "delta_zero": {
+   "exit": 0
+  },
+  "delta_positive": {
+   "exit": 9,
+   "message": "CAP GATE RECONCILE DIVERGENCE"
+  },
+  "presend": {
+   "exit": 4,
+   "transport_calls": 4,
+   "rows_written": 4,
+   "refused_request_rows": 0,
+   "refused_request_transport": 0,
+   "refusal": "CAP REFUSED at T5 (turn) \u2014 over the global cap: projected=6 over_by=1 \u2014 nothing sent"
+  }
+ },
+ "propagation": {
+  "runner_rc": 9,
+  "cell_abort_code": 5,
+  "cell_abort_stage": "4/7 run",
+  "cell_message": "run_longrun.py exited 9 (unmapped runner failure) \u2014 rows kept at \u2026",
+  "runner_codes": [
+   2,
+   3,
+   4,
+   5,
+   6,
+   7
+  ],
+  "exit_table_9_name": "inconsistent",
+  "exit_table_9_raise_site": "cell.py: stage_consistency() -> Abort(9, \"7 consistency\", ...)",
+  "exit_codes_comment": "RUNNER_MAPPED_TO_CRASH[9]: must NOT be propagated as 9",
+  "propagates_unmodified": false
+ },
+ "red_green": {
+  "mutation": "sed 's/    elif rec[\"delta\"] < 0:/    elif False:  # MUTANT/' on a /tmp copy",
+  "red": {
+   "b1": 0,
+   "b2": 0,
+   "b3": 0,
+   "c_-1": 0,
+   "c_-0.5": 0,
+   "c_-1.5": 0,
+   "false_reconcile": "cap-gate: reconciled \u2014 the run's count 2 equals the rows gained 1 (delta 0)"
+  },
+  "green": {
+   "b1": 9,
+   "b2": 9,
+   "b3": 9,
+   "c_-1": 9,
+   "c_-0.5": 9,
+   "c_-1.5": 9
+  }
+ },
+ "exit_code_scan": {
+  "test": "experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+  "result": "20 tests OK",
+  "balanced": true
+ },
+ "residual_gap": "run_cell returns 6 (runaway) at run_longrun.py:2327,2382,2469,2565 without _gate_finish: no reconcile on those exits",
+ "overall": "partial",
+ "not_reproduced": [
+  "truncated-last-line should exit 9 with UNRECORDED (it exits 5 with CAP GATE ROWS)",
+  "UNRECORDED on stdout (it is printed to stderr)"
+ ],
+ "overstated": [
+  "cell.py propagates exit 9 unmodified (cell.py:1568 remaps 9 -> 5; exit_codes.RUNNER_MAPPED_TO_CRASH[9] documents it)"
+ ],
+ "unverified": [
+  "pre-send exit 4 through a real cell CLI invocation (probe exercised the gate and _cap_stop directly)",
+  "a full live cell run reaching reziphase end-of-run reconcile"
+ ],
+ "live_requests": 0,
+ "network": false
+}

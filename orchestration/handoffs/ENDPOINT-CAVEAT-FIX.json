@@ -1,0 +1,48 @@
+{
+  "unit": "ENDPOINT-CAVEAT-FIX",
+  "status": "done",
+  "artifacts": [
+    "docs/ENDPOINT-STATE.md",
+    "experiments/ptr-engine/measure/ENDPOINT-STATE.json",
+    "orchestration/units/ENDPOINT-CAVEAT-FIX.md",
+    "orchestration/journals/ENDPOINT-CAVEAT-FIX.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "JSON valid; original caveat strings grep 1 each, pre and post; sizes 4312->? / 10415->? (grow-only)",
+    "commands": [
+      "sha256sum docs/ENDPOINT-STATE.md experiments/ptr-engine/measure/ENDPOINT-STATE.json",
+      "bash -c 'python3 -m json.tool experiments/ptr-engine/measure/ENDPOINT-STATE.json >/dev/null && grep -qF \"### Correction (2026-10-26, after CACHE-CREDIT-CHAT)\" docs/ENDPOINT-STATE.md && grep -qF \"Per-request credit for the repeat is **not** observable\" docs/ENDPOINT-STATE.md && grep -qF \"per_request_credit_proven_on_chat_endpoint\" experiments/ptr-engine/measure/ENDPOINT-STATE.json && grep -qF \"no per-request cached-token counter appears in usage or in a cumulative metric usable to prove a cached prefix on :8012\" experiments/ptr-engine/measure/ENDPOINT-STATE.json && echo PASS-CAVEAT-FIX'"
+    ],
+    "citations_verified": [
+      "experiments/ptr-engine/longrun/client.py:604 def usage_cached_tokens(usage_payload):",
+      "experiments/ptr-engine/longrun/client.py:611 details = usage.get(\"prompt_tokens_details\")",
+      "experiments/ptr-engine/longrun/client.py:613 value = details.get(\"cached_tokens\")",
+      "experiments/ptr-engine/longrun/client.py:661 url = cfg.base_url.rstrip(\"/\") + \"/chat/completions\"",
+      "experiments/ptr-engine/longrun/client.py:339-340 if cfg.stream: body[\"stream_options\"] = {\"include_usage\": True}",
+      "experiments/ptr-engine/longrun/run_longrun.py:1760-1762 row keys prompt_tokens / cached_tokens / uncached_tokens"
+    ]
+  },
+  "corrections": [
+    {
+      "what": "card cited run_longrun.py:1755-1757 for the row keys",
+      "on_disk": "1755-1757 is the stop_evidence/completion_recorded block; the row keys are at run_longrun.py:1760-1762 (+5 lines)",
+      "effect": "substance verified, so the errata proceeded; the drift is recorded here and on the board rather than silently restated"
+    }
+  ],
+  "assumptions": [
+    "measure/CACHE-CREDIT-CHAT.json is the authority for the reversal (requests_used 2, same hour, same endpoint http://192.168.2.168:8012/v1); no new request was sent",
+    "the correction states what /v1/chat/completions exposes; the streamed path remains inferred from client.py:339-340 plus existing stream rows, as CACHE-CREDIT-CHAT.json itself records under residual_gap"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Any card measuring cached share may use rows' cached_tokens / uncached_tokens on /v1/chat/completions; if the streamed proof is wanted, spend the 2-request stream pair named in CACHE-CREDIT-CHAT.json residual_gap.",
+  "write_paths": [
+    "docs/ENDPOINT-STATE.md",
+    "experiments/ptr-engine/measure/ENDPOINT-STATE.json",
+    "orchestration/units/ENDPOINT-CAVEAT-FIX.md",
+    "orchestration/handoffs/ENDPOINT-CAVEAT-FIX.json",
+    "orchestration/journals/ENDPOINT-CAVEAT-FIX.jsonl"
+  ],
+  "requests_billed": 0,
+  "tool_calls": 14,
+  "bound": 16
+}

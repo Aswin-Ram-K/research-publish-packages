@@ -1,0 +1,54 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/analyze_stats.py",
+  "experiments/ptr-engine/longrun/tests/test_claim_wiring.py",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/WIRE-CLAIM-MODE.md",
+  "orchestration/handoffs/WIRE-CLAIM-MODE.json",
+  "orchestration/journals/WIRE-CLAIM-MODE.jsonl"
+ ],
+ "assumptions": [
+  "the claim sidecar (rows .claim.json) is the carrier because run_longrun.py is not writable here; it is read by analyze_stats and refused by name"
+ ],
+ "blocker": "",
+ "cell_sha256": "0136052e4ed9d8c9f5a86ead4f23abe985b96fd373c9ef717bc70d97bdb38a7b",
+ "claim": "the claim decision has ONE author (claim_mode.resolve_claim, called once per invocation); smoke/plumbing is allowed by G3 as claim=none/non-comparable; silence/none/unknown still exit 12 with the module's sentence verbatim; analyze_stats refuses a claim=none cell by name (incomparable_claim)",
+ "evidence": {
+  "claim_wiring": "6/6 GREEN (smoke reaches the run stage and stamps claim=none; no claim -> exit 12 verbatim; unknown/none/empty -> 12; H2 comparable; analyser refuses claim=none by name; old-default shape)",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/tests/test_claim_wiring.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_cell_gates.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_claim_mode.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_guards.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_projection_calibration.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_gate_operand_validation.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_gate_override.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_exit_codes.py"
+  ],
+  "neighbours": "claim_mode OK; guards 6/6 GREEN; projection_calibration 4/4; gate_operand_validation OK; gate_override OK; exit_codes OK; cell_gates 14/15 (1 failure = mutation anchor drift, see external)",
+  "red_green": "restoring the pre-wiring default (absent -> H2) makes test_no_claim_refused_exit_12_verbatim fail: 'AssertionError: {...hypothesis H2, claim H2, comparison_eligible True, ok True, short G3 n=3 >= 1}' -- a silent run was ALLOWED and looked comparable; with the wiring restored it is GREEN again",
+  "requests": 0
+ },
+ "external": {
+  "run_longrun.py": "the card's premise 'run_longrun.py:1563-1564 already stamps claim and comparison_eligible' is NOT true on disk (grep 'claim' in run_longrun.py = 0 hits; line 1563 is checkpoint_prompt). run_longrun.py is outside this unit's write paths, so per-row claim fields are NOT written; the resolved claim travels in the rows-file sidecar instead and the analyser reads it. A runner card is the follow-up.",
+  "tests/test_cell_gates.py": "1/15 red: RED_GREEN anchor ('G3-silence') targets the deleted line '    return \"NONE\", \"absent:--hypothesis\"' -> 'mutation anchor drifted for G3-silence'. The other 14 pass, including all 3 G3 refusal checks and the other mutation cases. The file is outside this card's write paths; the anchor needs one line updated to sabotage _resolved_claim's default instead of the deleted inline parse.",
+  "tests/test_guards.py, tests/test_projection_calibration.py": "already GREEN (6/6, 4/4) -- the 3/6 and 3/4 recorded by GATE-OPERAND-VALIDATION no longer reproduce after run_longrun.py's concurrent edit; no --claim declaration was needed and no validation was relaxed."
+ },
+ "head": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+ "next_unit_hint": "a run_longrun.py card should stamp claim/comparison_eligible on every per-turn row from a --claim-mode flag (claim_mode.row_fields is the mechanical change); then update test_cell_gates.py's RED_GREEN G3-silence anchor to the new resolver",
+ "status": "done",
+ "tool_calls": 26,
+ "unit": "WIRE-CLAIM-MODE",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/claim_mode.py",
+  "experiments/ptr-engine/longrun/analyze_stats.py",
+  "experiments/ptr-engine/longrun/tests/test_claim_mode.py",
+  "experiments/ptr-engine/longrun/tests/test_claim_wiring.py",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/WIRE-CLAIM-MODE.md",
+  "orchestration/handoffs/WIRE-CLAIM-MODE.json",
+  "orchestration/journals/WIRE-CLAIM-MODE.jsonl"
+ ]
+}

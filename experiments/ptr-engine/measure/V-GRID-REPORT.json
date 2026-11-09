@@ -1,0 +1,107 @@
+{
+ "unit": "V-GRID-REPORT",
+ "verdict": "emitter_unsound",
+ "requests_sent": 0,
+ "tool_calls": 26,
+ "bound": 22,
+ "bound_overrun": 4,
+ "bound_overrun_reason": "two bash calls lost to per-call /tmp sandbox isolation, one discarded case-4 fixture (manifests overwritten), one tool-discovery call",
+ "emitter": {
+  "path": "experiments/ptr-engine/tools/run_grid_report.py",
+  "sha256": "ef5218d6cbc21c05249bcfb9ee7594cebfc26d5d64a5d3ad89bfb9aae003a238"
+ },
+ "attempts": [
+  {
+   "n": 1,
+   "attempt": "absent usable_for",
+   "input": "C cell 70 rows, manifest has no usable_for key",
+   "exit": 0,
+   "classification": "refused_correctly",
+   "evidence": "cells: included=False refusal_kind=refused_usable_for_absent; H1 n_raw=70, n_used=70, n_eff=97.35 (the 70 abandoned rows did NOT reach the pool; n stayed 70, not 140)"
+  },
+  {
+   "n": 2,
+   "attempt": "usable_for: []",
+   "input": "same 70-row cell, manifest usable_for=[] reason=run_abandoned",
+   "exit": 0,
+   "classification": "refused_correctly",
+   "evidence": "cells: included=False refusal_kind=excluded_by_stamp; refusal text 'carries usable_for: [] ... 70 row(s) never analysed'; report differs from case 1 in refusal kind and text; H1 n_raw=70 both times"
+  },
+  {
+   "n": 3,
+   "attempt": "stop_reason=length",
+   "input": "cell 70 turns, 11 stop_reason=length (sub-run 65/10 also run)",
+   "exit": 0,
+   "classification": "refused_correctly",
+   "evidence": "n_raw=70, n_used=59 (55 in the 65-turn sub-run), truncated excl.=11 (10); p95='REFUSED' with InsufficientSamples; H1 grid labelled adjudicable because n_eff=2287.74 (83.26) > 60 under negative r -- hazard recorded, no unlicensed p95 printed"
+  },
+  {
+   "n": 4,
+   "attempt": "two eras mixed",
+   "input": "C+A rows at fixture_sha256 v7 and C+A at v8, four distinct manifests, 70 turns each",
+   "exit": 0,
+   "classification": "printed_a_number_it_should_not_have",
+   "evidence": "H1 correctly splits into 2 grids and epochs_never_pooled=2, but H2 prints C n=140 mean=5000.00 vs A n=140 mean=2000.00, ratio 2.5000 -> h2_failed, and TVS=100800.0 over 20 billed rows; refusals=[] and no incomparable_provenance naming fixture_sha256"
+  },
+  {
+   "n": 5,
+   "attempt": "n_eff under 60",
+   "input": "C cell 70 turns, ramp ttft=100+10i, r_lag1=0.9571",
+   "exit": 0,
+   "classification": "printed_a_number_it_should_not_have",
+   "evidence": "H1 verdict=not_adjudicable_effective_n, binding arm pointer-stable, refusal quoted; but the arm table still prints '765.50 [715.50, 790.00] n=70' (and p50 '455.00 [375.00, 535.00]') -- an interval for a refused H1"
+  },
+  {
+   "n": 6,
+   "attempt": "decidable < 8 of 12",
+   "input": "grade with C decidable=5 (3 pass/2 fail) and A decidable=7",
+   "exit": 0,
+   "classification": "refused_correctly",
+   "evidence": "H3 verdict=not_adjudicable; markdown prints x/12 = 3/12 and x/9 = 3/9, answered_ratio=0.4167; McNemar refused 'only 1 discordant pairs, below the frozen floor of 6', p=None"
+  },
+  {
+   "n": 7,
+   "attempt": "zero-answer arm",
+   "input": "grade C all 12 undecidable, A passing",
+   "exit": 0,
+   "classification": "refused_correctly",
+   "evidence": "answered_ratio=0.0000 printed beside the gate line; x/12=0/12; H3 verdict=not_adjudicable; no accuracy is imputed as a pass"
+  },
+  {
+   "n": 8,
+   "attempt": "tvs no verified success",
+   "input": "grade C all 12 fail, no pass checkpoint",
+   "exit": 0,
+   "classification": "refused_correctly",
+   "evidence": "tvs=UNDEFINED, reason 'no declared checkpoint passed for pointer-stable (censored at turn 70); a censored TVS is never assigned a number and never compared'; never 0"
+  }
+ ],
+ "findings": [
+  {
+   "id": "F1",
+   "kind": "printed_a_number_it_should_not_have",
+   "attempt": 4,
+   "input": "rows-c-v7.jsonl / rows-a-v7.jsonl (fixture_sha256 v7) plus rows-c-v8.jsonl / rows-a-v8.jsonl (v8), 70 turns each, all four stamped usable_for=[h1,h2]",
+   "printed": "H2 cache-inclusive ratio 2.5000 and uncached ratio 2.5000 (C n=140 mean 5000.00 tok/turn, A n=140 mean 2000.00); TVS 100800.0 tokens",
+   "why": "H1 clusters by same_provenance and epochs_never_pooled states 'no interval and no mean pools across grids', but h2_block(), tvs_block() and verbosity_block() are fed included_rows/per_arm_all globally. No incomparable_provenance refusal is emitted (refusals=[]).",
+   "quote": "Both limbs, C−A: cache-inclusive ratio **2.5000** (sign +1, pass=False), uncached ratio **2.5000** (sign +1, pass=False) → **h2_failed**. / **100800.0** tokens through turn 10 (checkpoint `t01`), arm `pointer-stable`, 20 distinct billed rows"
+  },
+  {
+   "id": "F2",
+   "kind": "printed_a_number_it_should_not_have",
+   "attempt": 5,
+   "input": "single C cell, 70 turns, ttft_ms=100+10i so r_lag1=0.9571, n_eff=1.53",
+   "printed": "p95 765.50 [715.50, 790.00] n=70 (and p50 455.00 [375.00, 535.00])",
+   "why": "effective_n_verdict() sets the grid verdict to not_adjudicable_effective_n only after arm_stats() has already emitted p50/p95; the renderer prints the arm table including p95 for the binding arm. The card requires no interval when n_eff<60.",
+   "quote": "**Refusal (`not_adjudicable_effective_n`), binding arm `pointer-stable`:** ... | `pointer-stable` | 70 | 70 | 70 | 0 | 0.9571 | 1.53 | 455.00 [375.00, 535.00] n=70 | 765.50 [715.50, 790.00] n=70 |"
+  },
+  {
+   "id": "H1",
+   "kind": "hazard_not_counted",
+   "attempt": 3,
+   "detail": "with negative lag-1 r the n_eff formula inflates above n_used; at n_used=59 it reached 2287.74, so the grid became adjudicable while p95 was REFUSED and n_used was below the 60 floor. No unlicensed p95 number was printed, so not counted as an unsound case, but it means the effective-n floor can be passed by anti-correlation."
+  }
+ ],
+ "absent_usable_for": "refused by name: cell_inclusion() sees usable_for None and returns refused_usable_for_absent; the 70 abandoned rows were dropped before provenance/pooling and H1 n_raw stayed 70. The analyser's own include-on-absence (analyze_stats.py:749) is neutralised at the consumer.",
+ "can_trust_with_16_cells": "no — H2 and TVS are pooled across incomparable provenance, and the effective-n refusal is announced while its interval is still printed."
+}

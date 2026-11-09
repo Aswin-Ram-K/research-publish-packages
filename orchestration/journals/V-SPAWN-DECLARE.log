@@ -1,0 +1,19 @@
+V-SPAWN-DECLARE journal (attacker, offline) — tree f17663d1
+1  read handoff + measure/PREFLIGHT-SPAWN-DECLARE.json; wrote stub handoff
+2  built independent harness in /tmp/vspawn (own fixture ledger, runner stub, sitecustomize Popen oracle)
+3  attack1: five refusals twice -> exit 2/3/4/8/12, runner_launch 0, preflight 0/1/1/1/1, oracle 0/1/1/1/1, validate ok.
+   ATTACK1_AGREES=True (both passes)
+4  attack2: bare child spawns twice -> oracle count 2 (not vacuous). Mutant unrecorded spawn:
+   exit4 declared=1 oracle=2; test-helper equivalence fails, but validate_refusal(ok=True) — fail-open by construction.
+5  attack3: a) purpose=other -> rejected ("undeclared spawn (purpose=other) ...");
+   b) runner_launch + gate_record=None -> rejected ("runner_launch with no gate record" + "runner_launch=1 ...");
+   b2) runner_launch WITH gate record -> rejected ("runner_launch=1 on a refusing invocation (must be 0)");
+   c) declaration block deleted -> ACCEPTED (ok=True, failures=[]); d) empty {"exit":4} -> ACCEPTED. FINDING.
+6  attack4: turns=0 -> exit4 launch0; reps=0 -> exit4 launch0; request-allocation=0 -> exit2 NO RECORD launch n/a;
+   missing fixture -> exit2 record launch0; unwritable out-dir -> exit12 NO RECORD, oracle=1, no launch;
+   turns=100000 -> exit4 launch0. No refusal launched the runner (marker never written).
+7  attack5: docs/GATE-CHAIN.md:336-353 quotes the rule with runner_launch / preflight_self_check / purpose==other /
+   gate record / {2,3,4,8,12} / 0 at 2 and 1 at 3/4/8/12 — matches code exactly.
+8  attack6: cell.py uses subprocess.run (2 sites); no os.system/exec*/fork/multiprocessing/threading.
+   Recording is at explicit callsites -> library-initiated or unrecorded spawns escape validate_refusal.
+9  pytest -q test_spawn_classification.py -> 3 passed; verdict row recorded PASS at sha f17663d1.

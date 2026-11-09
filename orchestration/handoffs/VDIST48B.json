@@ -1,0 +1,74 @@
+{
+  "unit": "VDIST48B",
+  "status": "done",
+  "verdict": "pass",
+  "target": "experiments/ptr-engine/longrun/tasks-v7/TX-02.v1.json",
+  "checker": "experiments/ptr-engine/longrun/check_pointer_fixtures.py",
+  "tests": "experiments/ptr-engine/longrun/tests/test_tx02_distance.py",
+  "findings": [
+    {
+      "id": 1,
+      "name": "turns",
+      "result": "pass",
+      "evidence": "checkpoint_count=48; unique_checkpoint_turns=48; distance counts {2:12,8:12,20:12,32:12}; measured_distance_mismatches=0"
+    },
+    {
+      "id": 2,
+      "name": "asked_not_just_graded",
+      "result": "pass",
+      "evidence": "checkpoint_expected/checkpoint_prompt called for all 88 turns; turns_with_question=48; non_empty_expected=48; mismatches=0"
+    },
+    {
+      "id": 3,
+      "name": "leak",
+      "result": "pass",
+      "evidence": "CPF.validate(fx)=[] (0 errs); manual leak hits=0 across system_prompt, items[].body, all turn questions, other turns tool_outputs[].body for all 48 expected values"
+    },
+    {
+      "id": 4,
+      "name": "masking_reach",
+      "result": "pass",
+      "evidence": "Planner('masking-no-fetch').build(33): masked_rows=6; marker [MASKED doc-fact-01@r1] present; expected 2003 absent from rendered prompt"
+    },
+    {
+      "id": 5,
+      "name": "kind_type",
+      "result": "pass",
+      "evidence": "answer_kind counts {NUM:48}; expected type counts {NUM:48}; TEXT checkpoints=0; TEXT survival vacuous"
+    },
+    {
+      "id": 6,
+      "name": "guards_red_green",
+      "result": "pass",
+      "evidence": {
+        "duplicate_checkpoint_turn": "disabled -> FAIL AssertionError missing 'duplicate checkpoint turn' (other errors shown: injected question mismatch, distance mismatch); restored -> 1 passed",
+        "kind_type_mismatch": "disabled -> FAIL AssertionError errs=[]; restored -> 1 passed",
+        "injected_question_identity": "disabled -> FAIL AssertionError errs=[]; restored -> 1 passed"
+      }
+    },
+    {
+      "id": 7,
+      "name": "budget",
+      "result": "pass",
+      "evidence": {
+        "transcript_grow": "turn3=507, turn88=2548",
+        "masking_no_fetch": "turn3=507, turn88=10072",
+        "window_32768_binds": false
+      }
+    },
+    {
+      "id": 8,
+      "name": "pytest_tx02",
+      "result": "pass",
+      "evidence": "13 passed in 0.05s"
+    },
+    {
+      "id": 9,
+      "name": "pytest_tx01",
+      "result": "pass",
+      "evidence": "7 passed in 0.03s"
+    }
+  ],
+  "not_reproducible": [],
+  "notes": "Checker restored to original (git diff clean for check_pointer_fixtures.py). No HTTP requests made. No fixture/test/checker/run_longrun/score_longrun modifications."
+}

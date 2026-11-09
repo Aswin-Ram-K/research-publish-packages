@@ -1,0 +1,67 @@
+{
+  "unit": "V-CONSONANCE-BC-REPORT-RECHECK",
+  "overall": "pass",
+  "checks": [
+    {
+      "id": "1a",
+      "item": "E2 at <=120 no longer adjudicable",
+      "result": "pass",
+      "evidence": "report line 21: 'the handoff's <=120 buys only a one-rep descriptive probe (123 requests by protocol arithmetic, including 3 checkpoint requests), not a verdict, while an adjudicable 3-rep E2 is 369 calls (450 with the 12-checkpoint fixture) and needs explicit owner approval against the 1,729 requests remaining (dated 2026-10-28)'. Line 25 adds 'E2 decides only when it is run at an adjudicable budget: at <=120 calls (123 actual by protocol arithmetic) it is a one-rep descriptive cost probe that can neither fire nor clear the falsifier, and the 369-450 adjudicable option needs explicit owner approval'. Line 26: 'in an adjudicable E2 run (a 120-call descriptive probe cannot trigger this no-go)'. Arithmetic independently checked: 3*40+3 = 123; 3*123 = 369; 369+81 = 450."
+    },
+    {
+      "id": "1b",
+      "item": "M1 attribution",
+      "result": "pass",
+      "evidence": "report line 263: 'the phrase \"when our M1 lane lands\" is at handoff from consonance/README.md:27, not in the contract; INTERFACE_CONTRACT.md §6 says it will ship \"when our manifest and replay fixture land\"'. Diff vs pre-repair copy confirms this line changed."
+    },
+    {
+      "id": "1c",
+      "item": "1.8441 rounding caveat",
+      "result": "pass",
+      "evidence": "E-13 row (line 65): '= 1.8441x (the source's rounded figure; exact 3,524.0/1,911.2 = 1.843868)'. Independent recompute 3524.0/1911.2 = 1.8438677..."
+    },
+    {
+      "id": "1d",
+      "item": "C54 derivation wording",
+      "result": "pass",
+      "evidence": "§5.1 item 2 (line ~181): 'There is no universal hot-window size in this design; C54 supplies no basis for deriving one, and no cell in the record measures one.'"
+    },
+    {
+      "id": "2",
+      "item": "no residual unqualified '<=120 decides' / 'falsifier fires at 120'",
+      "result": "pass",
+      "evidence": "grep '120|123|369|450|falsifier' over the report: hits in §1 at lines 21,25,26 (all qualified as descriptive-only / adjudicable-required); §8.1 line 282 (E1, unrelated), line 283 ('E2's falsifier fires in an adjudicable E2 run (never in the <=120-call, 123-request descriptive probe)'); §8.3 rows 300 ('<=120 descriptive (123 actual) / 369-450 adjudicable with owner approval', 'at 123: a descriptive cost estimate only, no verdict ... only an adjudicable run can fire it') and 301 ('180 for the <=120 probe; an adjudicable E2 supersedes it and needs its own cap'); line 305 budget paragraph. E-18 ledger row (line 70) still records 'E2 <= 120 calls' as the handoff's declared budget and is classed 'unverified as executed' - allowed, not presented as adjudicable. Remaining '123' hit at line 155 is the unrelated G5 ratio."
+    },
+    {
+      "id": "3",
+      "item": "evidence values unchanged by the repair",
+      "result": "pass",
+      "evidence": "26 ledger rows E-01..E-26 and 10 §4 corrections intact. Key-number counts in the current report: 67.1141 (3), 32,401 (3), 34,201 (3), 156.151, 26.14, 258,035/266,636, 6.744331504, 6.063360882, 1.8441 (5) + 1.843868 (1, the new caveat), SAFE 7 / BLOCKED 13 / SURVIVES 1 / MOVES 12 (the '7/13' and '1/12' pairs), 696/810, 20.8429, 4,774.25. Line-level diff against the pre-repair copy (/tmp/bc_report_mutant.md, 23 changed lines) shows edits confined to: the new revision row, line 21, lines 25-26, the E-13 caveat, §5.1 item 2 (C54), §7 M1 line, §8.1 item 2, §8.3 rows 2 and hard-stop, and the §8.3 budget paragraph. Apparent 32,401/34,201 and 3,524.0/1,911.2 count deltas are explained: the pre-repair copy is my own earlier mutant (32,401 deliberately corrupted to 34,201), and 3,524.0/1,911.2 gained one occurrence from the new exact-arithmetic parenthetical."
+    },
+    {
+      "id": "4",
+      "item": "checker rerun + mutant",
+      "result": "pass",
+      "evidence": "/tmp/verify_bc_report.py amended (report untouched): added assertions 'E2 sentence exact' (the full line-21 clause including '(123 requests by protocol arithmetic, including 3 checkpoint requests), not a verdict'), 'E2 table' (<=120 descriptive (123 actual) / 369-450 adjudicable), 'E2 no-go' (never in the <=120-call, 123-request descriptive probe), 'M1 attribution', 'rounding', 'C54 derivation', and a proximity guard rejecting any 120/123 mention within 80 chars of 'decides the premise'/'fires the falsifier' unless 'adjudicable' is also in that window. Recorded change: after the first amendment mutant (123->120 on line 21) still passed (exit 0) because only the 369/450 clause was pinned; adding 'E2 sentence exact' made it fail as required. Exit codes: report PASS exit 0 ('PASS: 10 corrections + 24 headline numbers + 7 arithmetic checks'); mut_a (123->120) exit 1 ('E2 sentence exact: missing ...'); mut_b (369->120) exit 1 ('E2 adjudicable: missing 369 calls (450 with the 12-checkpoint fixture)'); mut_c (appended 'E2 at <=120 decides the premise.') exit 1 ('E2 regression near 120')."
+    },
+    {
+      "id": "5",
+      "item": "no out-of-scope writes by the repair",
+      "result": "pass",
+      "evidence": "find -newermt '2026-11-03 16:20' shows only: the report, orchestration/units/CONSONANCE-BC-REPORT-FIX.md, orchestration/handoffs/CONSONANCE-BC-REPORT-FIX.json (the three declared write_paths), plus artefacts of other units (V-CONSONANCE-BC-REPORT.json 16:27, V-CONSONANCE-BC-EVAL.json 16:28, CONSONANCE-BC-EVAL-FIX.{md,json} and research/next-candidates/consonance-bounded-context-evaluation.md 16:29-16:30, whose own handoff lists that file as its write_path). Report sha256 aae035dfe6839b6204810e1ac3e941a9f36d0975254cb62261329815765c0f5d, 53,979 bytes, mtime 2026-11-03 16:29:17 -0600; both differ from the pre-repair values (sha256 a60b311ebb5b29acc1813fb6ef72486d8f46c1cd46ba1ff589ab8661eb8fbc29)."
+    }
+  ],
+  "blocker": "",
+  "next_unit_hint": "Report is clean to ship as the research recommendation. The only open item is a decision, not a defect: E2 at an adjudicable budget (369 calls, 450 with the 12-checkpoint fixture) needs explicit owner approval against the 1,729 requests remaining, and the ledger must be re-reconciled before E1 starts. Quality arms stay blocked on the fixture/grader owner (E-17).",
+  "write_paths": [
+    "orchestration/handoffs/V-CONSONANCE-BC-REPORT-RECHECK.json"
+  ],
+  "not_reproduced": [],
+  "overstated": [],
+  "unverified": [
+    "E2 request arithmetic (123 / 369 / 450) is derived from the handoff's own protocol constants and checked as arithmetic only; no run exists and none was attempted.",
+    "The claim that <=120 yields a descriptive-only estimate is a design argument, not a measured result; nothing here tests it."
+  ],
+  "tool_calls": 16,
+  "bound": 20
+}

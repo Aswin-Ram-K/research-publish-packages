@@ -1,0 +1,123 @@
+{
+  "schema": "consonance.tool-channel-root-cause/1",
+  "unit": "TOOL-CHANNEL-ROOT-CAUSE",
+  "date": "2026-10-26",
+  "question": "where does a tool call stop being a request and start being prose",
+  "cause": "client_never_sends_tools",
+  "cause_is_exactly_one_of": [
+    "client_never_sends_tools",
+    "prompt_never_requests_a_call",
+    "endpoint_ignores_tools",
+    "model_emits_prose_by_preference"
+  ],
+  "divergence_step": {
+    "step": 3,
+    "name": "request body construction",
+    "file": "experiments/ptr-engine/longrun/client.py",
+    "lines": "317-346 (request_body), 658-661 (send_chat)",
+    "why": "everything upstream is an internal convention (argv flag, prompt, parser); everything downstream depends on a schema the wire never carried"
+  },
+  "fix_owner": "client-side (experiments/ptr-engine/longrun/client.py request_body + send_chat; consumer at run_longrun.py:2426)",
+  "needs_operator_approval": false,
+  "endpoint_change_required": false,
+  "evidence": {
+    "request_body_shape": {
+      "builder": "client.py:317-346 request_body()",
+      "keys_always": ["model", "messages", "temperature", "max_tokens", "stream"],
+      "keys_conditional": [
+        {"key": "stream_options", "line": "client.py:340", "when": "cfg.stream", "value": "{'include_usage': True}"},
+        {"key": "chat_template_kwargs", "line": "client.py:343", "when": "thinking != 'auto'", "value": "{'enable_thinking': bool}"}
+      ],
+      "keys_absent": ["tools", "tool_choice", "functions", "function_call"],
+      "all_body_mutations_in_file": ["client.py:340", "client.py:343"],
+      "unique_wire_call": "client.py:658 body = request_body(cfg, messages, max_tokens=cap); client.py:659 json.dumps; client.py:661 POST cfg.base_url + '/chat/completions'",
+      "docstring_contradiction": "client.py:305-315 request_digest docstring: 'and ``tools`` where an engine takes them as a body member' — anticipated in prose, never implemented in the builder"
+    },
+    "runner_text_protocol": {
+      "parser": "run_longrun.py:605-645 parse_tool_calls",
+      "gate": "run_longrun.py:262-263 tools_enabled(cfg) -> 'read_file' in tool_names(cfg)",
+      "marker_required": "run_longrun.py:614-617 requires the literal 'read_file' then text.find('<tool_call>') as the anchor",
+      "json_shape_required": "run_longrun.py:629-632 a decoded JSON object with a string 'path' key; no JSON object -> [] calls",
+      "consumed_at": "run_longrun.py:2480-2504 (fetch_rounds), run_longrun.py:2426 resp['content'] -> planner"
+    },
+    "prompt_never_requests_the_marker": {
+      "planner": "run_longrun.py:1071-1073 Planner.messages = [system_prompt, user turn]",
+      "index_notation": "run_longrun.py:190-192 index_lines renders '- @knowledge:<id>@1 <hash8> <len>'",
+      "fixture_tool_call_marker_count": 0,
+      "fixture_read_file_occurrences": 1,
+      "fixture_read_file_quote": "On those turns the tools are unavailable - no read_file, no fetch, no follow-up request is served, so answer only from what is already in front of you.",
+      "grid_shape": "experiments/ptr-engine/measure/GRID-SHAPE.json: turns_with_at_knowledge=0, turns_with_literal_read_file=0, 46/48 turns carry a path-read invitation",
+      "observed_model_output": "``` read_file @knowledge:resolve.py@1 ``` (transcript-grow t1, tool_calls=[])"
+    },
+    "endpoint_metadata": {
+      "base_url": "http://192.168.2.168:8012/v1",
+      "models_http_status": 200,
+      "model": "occamy-1.0",
+      "owned_by": "sglang",
+      "max_model_len": 131072,
+      "tool_metadata_advertised": false,
+      "note": "the served engine parses tool calls; it just does not advertise that on /v1/models"
+    }
+  },
+  "probe": {
+    "requests_used": 2,
+    "cap": 6,
+    "live_cells": 0,
+    "fixtures_used": 0,
+    "endpoint": "http://192.168.2.168:8012/v1/chat/completions",
+    "settings": {"temperature": 0, "max_tokens": 512, "stream": false, "chat_template_kwargs": {"enable_thinking": false}},
+    "shared_prompt": "Read ptr_engine/resolve.py lines 66 through 110 and list every raise site, noting which are inside the recorded block. Give the result and the single line of evidence.",
+    "with_tools": {
+      "request_tools": [{"type": "function", "function": {"name": "read_file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "start_line": {"type": "integer"}, "end_line": {"type": "integer"}}, "required": ["path"]}}}],
+      "tool_choice": "auto",
+      "http_status": 200,
+      "finish_reason": "tool_calls",
+      "tool_calls": [
+        {
+          "id": "call_0ffd2bc459de42e790223702",
+          "index": 0,
+          "type": "function",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\": \"ptr_engine/resolve.py\", \"start_line\": 66, \"end_line\": 110}"
+          }
+        }
+      ],
+      "content": "",
+      "content_len": 0,
+      "usage": {"prompt_tokens": 344, "completion_tokens": 56, "total_tokens": 400, "prompt_tokens_details": null, "reasoning_tokens": 0},
+      "wall_s": 1.65
+    },
+    "without_tools": {
+      "request_tools": null,
+      "http_status": 200,
+      "finish_reason": "stop",
+      "tool_calls": null,
+      "content_head": "I cannot read specific lines of a file without its content being provided in the context. Please paste the text of `ptr_engine/resolve.py` lines 66\u2013110 so I can identify the raise sites and determine which fall inside the recorded block.",
+      "content_len": 237,
+      "usage": {"prompt_tokens": 51, "completion_tokens": 54, "total_tokens": 105, "prompt_tokens_details": null, "reasoning_tokens": 0},
+      "wall_s": 1.63
+    },
+    "raw_file": "experiments/ptr-engine/measure/probe-tool-channel-raw.json",
+    "interpretation": "the endpoint returns a structurally valid call with the exact arguments the executor consumes when a schema is supplied, and declines in prose when it is not; the server is not the bottleneck"
+  },
+  "rejected_alternatives": {
+    "endpoint_ignores_tools": "rejected by probe.with_tools: HTTP 200, finish_reason='tool_calls', structured function.arguments. No SGLang --tool-call-parser enablement is missing.",
+    "prompt_never_requests_a_call": "true but not sufficient: it is downstream of having no schema. The probe prompt never names read_file and still produced a call once tools were on the wire.",
+    "model_emits_prose_by_preference": "rejected by the same probe: the model calls under a schema and declines in a different register without one; no tool_choice='required' or stricter schema is needed."
+  },
+  "fix_consequences": [
+    "adding tools to request_body alone makes arms worse: with a schema the reply's content is empty (probe content_len=0) and run_longrun.py:2426 feeds resp['content'] to parse_tool_calls, which finds nothing",
+    "client.py:766 already flattens the call to tool_calls_present:true, discarding the arguments one layer below the consumer",
+    "the fix is two coupled changes: carry tools in request_body gated on tools_enabled(cfg), and consume message.tool_calls instead of scanning content",
+    "request_digest (client.py:305) covers exact bytes, so a tools-on body changes every request sha; row/ledger identity that assumed the old body must be told",
+    "tools_mode (client.py:862) already labels a tools-on run 'on:read_file' although the wire never carried a schema, so existing tools-on rows misreport their provenance"
+  ],
+  "bounds": {"tool_calls": 30, "tool_calls_used": 17, "model_requests_budget": 6, "live_probe_requests": 2},
+  "verification": {
+    "command": "/usr/bin/python3 experiments/ptr-engine/tools/tool_channel_root_cause_check.py",
+    "exit_code": 0,
+    "assertions": 17,
+    "network": false
+  }
+}

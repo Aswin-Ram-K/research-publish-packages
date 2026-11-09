@@ -1,0 +1,43 @@
+{
+  "unit": "RECORD-DRIFT-TRIAGE",
+  "status": "done",
+  "verdict": "record_stale",
+  "artifacts": [
+    "docs/LATENCY-REPORT.md",
+    "experiments/ptr-engine/tools/latency_report.py",
+    "orchestration/units/RECORD-DRIFT-TRIAGE.md",
+    "orchestration/handoffs/RECORD-DRIFT-TRIAGE.json",
+    "orchestration/journals/RECORD-DRIFT-TRIAGE.jsonl"
+  ],
+  "evidence": {
+    "A_failure_quoted": "experiments/ptr-engine/measure/test_accuracy_recomputed.py:30 AssertionError: regenerated record differs from the published one; assert b'{\\n \"unit\":...eb8695d\"\\n}\\n' == b'{\\n \"unit\":...eb8695d\"\\n}\\n'; At index 26937 diff: b'3' != b'a'  (1 failed, 1 passed in 0.04s)",
+    "A_regen_diff": "exactly 2 paths, both derived from one source: /aggregate_records_checked[2]/source_sha256 PUB='aa887d0a40955cf2b7a90f397f0e5fca2ceb2ef1e4ed2047b5cbec7186c6e91b' REGEN='3d2da7bb51df40122013209ce8fd00332519cf1a2e3b7e4c8f1d26c4ce104f9c' (source = experiments/ptr-engine/measure/OPERATOR-BRIEF.json) AND /aggregate_records_checked[2]/mentions_3/25 PUB=false REGEN=true",
+    "A_card_that_moved_it": "OPERATOR-BRIEF-4 (orchestration/handoffs/OPERATOR-BRIEF-4.json, mtime 12:50; OPERATOR-BRIEF.json mtime 12:47, generated_utc 2026-10-26T18:10Z, unit=OPERATOR-BRIEF-4) rewrote the brief after the record (mtime 11:54) and introduced the literal '3/25' at experiments/ptr-engine/measure/OPERATOR-BRIEF.json:65 (quality.grade_v5.value)",
+    "A_no_volatile_fields": "ACCURACY-RECOMPUTED.json top keys: aggregate_records_checked, consumer_source, discriminators, doc_lines, generator, generator_sha256, grade_v5_documents_checked, headline, owner_source, records, reproduce, rule, unit — no computed_at/generated_at/paths; the only differing keys are data (a source sha256 and a mention flag), so the byte comparison is legitimate",
+    "A_determinism_and_red_green": "generator deterministic: two runs byte-identical; /tmp copy BEFORE (published record) = 1 failed, 1 passed; AFTER replacing the record with a fresh regeneration = 2 passed; MUTATION flipping aggregate_records_checked[0]/mentions_5/43 True->False in that regenerated copy = 1 failed, 1 passed (data fields still compared byte-for-byte)",
+    "A_record_path_field_fix_owner": "experiments/ptr-engine/measure/ACCURACY-RECOMPUTED.json, fields aggregate_records_checked[2].source_sha256 and .mentions_3/25; regenerate with: python3 -c \"import json;d=json.load(open('experiments/ptr-engine/measure/ACCURACY-RECOMPUTED.json'));open('/tmp/gen.py','w').write(d['generator'])\" && python3 /tmp/gen.py --outdir /tmp/regen && diff /tmp/regen/ACCURACY-RECOMPUTED.json experiments/ptr-engine/measure/ACCURACY-RECOMPUTED.json  -- then copy the regenerated file over the published one. NO edit was made here (record regeneration is a card, not this unit's surface).",
+    "A_no_product_number_moved": "regenerated headline totals unchanged: det_verify 5/43 -> 5/79; the 2-field difference touches no quality or latency figure — it records that the brief now does mention 3/25",
+    "B_label_quoted": "experiments/ptr-engine/tools/latency_report.py:672-674: \"cells_with_p95_raw\": sum(1 for c in prior[\"cells\"] if (c.get(\"p95\") or {}).get(\"point\") is not None)  -- counts the PRIOR artefact's cells (also consumed as summary p95_before at :711)",
+    "B_reader_sees": "measure/LATENCY-REPORT.json p95_inventory: cells_with_p95=0, cells_with_p95_raw=0, cells_with_p50=11 over 24 prior cells (0 of them carry a p95 point) -> reads as '0 refusals / nothing here', when it is 'the previous artefact published no p95 point'",
+    "B_fix": "DOCUMENTED (no rename): one sentence added to docs/LATENCY-REPORT.md after the 'One number for the operator' paragraph, plus the same sentence as a comment at the write site (latency_report.py:672 before the key). Chosen over a rename because renaming the key in the tool without regenerating the published artefact would leave code and measure/LATENCY-REPORT.json disagreeing, and regeneration is outside this unit's surface.",
+    "B_numbers_unchanged": "cells_with_p95=0, cells_with_p95_raw=0, cells_with_p50=11 before AND after; measure/LATENCY-REPORT.json sha256 d48aff2fd2a5ba766b85d706e0b7076c688d481bb4e70dfbaa883efee9c97ebb identical before and after; py_compile latency_report.py OK",
+    "guards": "withdrawn_index --check docs/LATENCY-REPORT.md rc=0 before and after (CLEAN, 15 entries screened); path_refs --check rc=1 before and after, 902 baselined + 41 new, 0 of the 41 in docs/LATENCY-REPORT.md (pre-existing, unchanged)",
+    "pytest_snapshot": "python3 -m pytest experiments/ptr-engine/measure/test_accuracy_recomputed.py -q = 1 failed, 1 passed (test unchanged by this unit)"
+  },
+  "which_side_was_stale": "A: the RECORD — ACCURACY-RECOMPUTED.json predates OPERATOR-BRIEF-4's rewrite of its cited source; the test is correct. B: the LABEL — the field name was stale about what it counts (the prior artefact, not refusals); the number was right.",
+  "assumptions": [
+    "The card's write path 'experiments/ptr-engine/tests/test_accuracy_recomputed.py' does not exist; the file lives at experiments/ptr-engine/measure/test_accuracy_recomputed.py. Treated the card path as a stale directory in the card, not a second file. No edit to that test was needed anyway (record_stale).",
+    "Documentation was chosen over the allowed rename for B (reason recorded above); no key was added or removed."
+  ],
+  "blocker": "",
+  "next_unit_hint": "One card: regenerate experiments/ptr-engine/measure/ACCURACY-RECOMPUTED.json (fields aggregate_records_checked[2].source_sha256 + .mentions_3/25, source OPERATOR-BRIEF.json moved by OPERATOR-BRIEF-4) with the reproduce command in this handoff, then confirm test_accuracy_recomputed.py is 2 passed; no quality/latency number moves. Optional later: rename cells_with_p95_raw -> cells_with_p95_prior_artefact with a deprecated alias when the report is next regenerated anyway.",
+  "write_paths": [
+    "docs/LATENCY-REPORT.md",
+    "experiments/ptr-engine/tools/latency_report.py",
+    "orchestration/units/RECORD-DRIFT-TRIAGE.md",
+    "orchestration/handoffs/RECORD-DRIFT-TRIAGE.json",
+    "orchestration/journals/RECORD-DRIFT-TRIAGE.jsonl"
+  ],
+  "tool_calls": 22,
+  "bound": 22
+}

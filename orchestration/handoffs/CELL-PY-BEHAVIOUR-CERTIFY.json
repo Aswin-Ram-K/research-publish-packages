@@ -1,0 +1,42 @@
+{
+ "unit": "CELL-PY-BEHAVIOUR-CERTIFY",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/CELL-PY-CERTIFICATE.json",
+  "docs/CELL-PY-CERTIFICATE.md",
+  "orchestration/units/CELL-PY-BEHAVIOUR-CERTIFY.md",
+  "orchestration/handoffs/CELL-PY-BEHAVIOUR-CERTIFY.json",
+  "orchestration/journals/CELL-PY-BEHAVIOUR-CERTIFY.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "8/8 claims hold; certified cell.py c29a9fb36e9e8f0e166583d56db00b2184fbc12a97b77b1a72ca9f612c1a9c59, harness_sha256 1f7c67914e5b76680616f08c16708635060a81ab3932c20806e597a5343f3285; suite counts: 123 passed/0 failed x2 (repo root, longrun dir), 25/0, 38 passed/1 failed (stale test double); requests_sent=0, network_events=0",
+  "commands": [
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/{test_cell_gates,test_gate_override,test_exit_codes,test_spawn_classification,test_cell,test_claim_mode,test_tree_freeze}.py -q -> 123 passed, 27 subtests passed (repo root and longrun dir)",
+   "python3 cell.py --arm transcript-grow --fixture tasks-v5/runtime-v5/LR-01.v5.json --budget 1000 --max-wall 0 --hypothesis H2 -> RC=8 'G2 projection REFUSED: computed --max-wall=0 s', spawns runner_launch=0 preflight_self_check=1 declared=1 undeclared=0 record=ok",
+   "same without --hypothesis and with --hypothesis none -> RC=12 'computed hypothesis=none declared'",
+   "same --dry-run --max-wall 0 -> RC=0 '1 of 3 gate(s) would refuse'; --max-wall 3600 --dry-run -> RC=0 '0 of 3 gate(s) would refuse', G2 allow computed=2880 s limit=3600 s, '0 requests sent'",
+   "python3 -c 'import exit_codes' -> codes [0..13], EXTERNAL_CODES {13}, RUNNER_CODES {2,3,4,5,6,7}",
+   "grep -n 'Abort(7' cell.py -> 1757, 1766, 1815, 2119 (exit 7 IS raised by cell.py)",
+   "grep -n 'write_gate_manifest|run = stage_run' cell.py -> 2049 before 2057",
+   "python3 -m pytest tests/test_gate_operand_validation.py tests/test_gate_messages.py tests/test_gate_ledger.py tests/test_cap_gate.py -q -> 38 passed, 1 failed (gate_attack.py:544 stub lacks purpose=)"
+  ],
+  "requests_sent": 0,
+  "network_events": 0,
+  "certificate_sha256_note": "certificate file written at experiments/ptr-engine/measure/CELL-PY-CERTIFICATE.json",
+  "tool_calls": 23,
+  "bound": 24
+ },
+ "blocker": "",
+ "next_unit_hint": "New card: refresh tools/gate_attack.py run_chain_cases counted() stub to accept purpose= (cell.py:363) so the six named bypasses are exercisable end-to-end; then re-run test_gate_operand_validation. Any future edit to cell.py needs a baseline snapshot first.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/CELL-PY-CERTIFICATE.json",
+  "docs/CELL-PY-CERTIFICATE.md",
+  "orchestration/units/CELL-PY-BEHAVIOUR-CERTIFY.md",
+  "orchestration/handoffs/CELL-PY-BEHAVIOUR-CERTIFY.json",
+  "orchestration/journals/CELL-PY-BEHAVIOUR-CERTIFY.jsonl"
+ ],
+ "assumptions": [
+  "no live cell was run and no --request-allocation probe was possible: it is a runner flag (run_longrun.py:468), absent from cell.py, so that element of CELL-ONE-COMMAND is not_testable within a cell.py certificate",
+  "the single suite failure is attributed to a stale test double by the traceback (TypeError: counted() got an unexpected keyword argument 'purpose' at tools/gate_attack.py:544), not to cell.py behaviour"
+ ]
+}

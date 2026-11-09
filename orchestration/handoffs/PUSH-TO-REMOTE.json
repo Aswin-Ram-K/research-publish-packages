@@ -1,4 +1,70 @@
-{"unit":"PUSH-TO-REMOTE","status":"partial","artifacts":["orchestration/units/PUSH-TO-REMOTE.md","orchestration/handoffs/PUSH-TO-REMOTE.json"],
-"evidence":{"remote":"origin https://github.com/Aswin-Ram-K/research-publish-packages.git","branch":"research/next-candidates-2026-10-24","status_porcelain_count":"467","commands":["git remote -v","git branch --show-current","git status --porcelain=v1 | wc -l"]},
-"blocker":"","next_unit_hint":"commit + push pending","write_paths":["orchestration/units/PUSH-TO-REMOTE.md","orchestration/handoffs/PUSH-TO-REMOTE.json"],
-"assumptions":["work branch already non-main (research/next-candidates-2026-10-24); no branch switch needed","partial written early per bound"]}
+{
+ "unit": "PUSH-TO-REMOTE",
+ "status": "partial",
+ "artifacts": [
+  "orchestration/units/PUSH-TO-REMOTE.md",
+  "orchestration/handoffs/PUSH-TO-REMOTE.json"
+ ],
+ "evidence": {
+  "remote": "origin https://github.com/Aswin-Ram-K/research-publish-packages.git",
+  "branch": "research/next-candidates-2026-10-24",
+  "commit_full": "86c3edb71fc504d2bcc569547a8be5cf874c2c0d",
+  "commit_short": "86c3edb",
+  "commit_stat": "3324 files changed, 1915776 insertions(+), 161 deletions(-) (3305 added, 19 modified, 0 deleted)",
+  "master_before_after": "41ad35b (unchanged; local main does not exist, never created)",
+  "remote_ref_before": "0eeaa5a",
+  "ahead_behind": "0\t1 (local ahead by the one new commit)",
+  "push_result": "! [remote rejected] research/next-candidates-2026-10-24 -> research/next-candidates-2026-10-24 (push declined due to repository rule violations); remote: error: GH013: Repository rule violations found for refs/heads/research/next-candidates-2026-10-24; remote: - Push cannot contain secrets",
+  "commands": [
+   "git remote -v",
+   "git branch --show-current",
+   "git status --porcelain=v1 | wc -l",
+   "git add -A",
+   "git commit -F -",
+   "git push -u origin research/next-candidates-2026-10-24",
+   "git rev-list --left-right --count origin/research/next-candidates-2026-10-24...HEAD"
+  ]
+ },
+ "exclusions": [
+  {
+   "path": "scratch/",
+   "reason": "ephemeral scratch tree, 26977 files / 2.7 GB, includes 36 MB tectonic binary and 24x Tectonic format caches; build artifacts, not work"
+  },
+  {
+   "path": ".scratch/",
+   "reason": "ephemeral scratch tree (46 files, 7.7 MB)"
+  },
+  {
+   "path": ".verify-scratch/",
+   "reason": "verifier scratch copies (1018 files, 64 MB); includes a copy of the pre-existing dotenv test fixture under rel/tests/fixtures/copy-src/"
+  },
+  {
+   "path": ".dsh-progress/",
+   "reason": "DSH progress-event cache (100 files, 2.7 MB)"
+  },
+  {
+   "path": "**/__pycache__/, *.pyc, /node_modules/, /venv/, /.venv/",
+   "reason": "byte-code and dependency caches; none present in the tree"
+  },
+  {
+   "path": ".ucurate1/pre/research-publish-packages/",
+   "reason": "embedded git repository (nested clone, no .gitmodules) - would have been committed as an unusable submodule gitlink; removed from the index with git rm --cached -f"
+  },
+  {
+   "path": "tests/fixtures/copy-src/.env",
+   "reason": "secret-shaped name. ALREADY TRACKED at HEAD in repo history as a deliberate test fixture - not newly introduced; no new credential material added. Its untracked duplicate inside .verify-scratch/ is excluded with that tree."
+  }
+ ],
+ "blocker": "GitHub push protection (GH013) rejected the push: 10 pre-existing scraped HTML files in the commit contain secret-looking strings, all under jobs/*/raw, jobs/*/scratch, jobs/*/.cache (third-party careers/agency page source captured by the crawler, e.g. jpl.html:52, mitre.html:35, nist.html:47, caissi_careers.html:47, nist_aisi.html:55). Nothing was forced, amended, rebased or rewritten; the commit stays local and unpushed.",
+ "next_unit_hint": "Operator decision needed, two clean routes: (a) open https://github.com/Aswin-Ram-K/research-publish-packages/security/secret-scanning/unblock-secret/3LEhSZcf3bKBT0D6cqR7v6Puazs and allow these findings, then re-run the same push; or (b) authorise dropping the 10 flagged scraped-HTML caches from the snapshot, which requires rebuilding the single local unpushed commit 86c3edb (only a rewrite of a commit that has never left this machine).",
+ "assumptions": [
+  "work was already on a non-main branch, so no branch switch was needed and master/main were never touched",
+  "'all local work as is' was read as: commit real deliverables, exclude ephemeral scratch/caches/byte-code and nested clone, per the card's hard constraints"
+ ],
+ "write_paths": [
+  "orchestration/units/PUSH-TO-REMOTE.md",
+  "orchestration/handoffs/PUSH-TO-REMOTE.json"
+ ],
+ "tool_calls": 12,
+ "bound": 22
+}

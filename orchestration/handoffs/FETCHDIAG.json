@@ -1,0 +1,24 @@
+{
+  "unit": "FETCHDIAG",
+  "status": "completed",
+  "artifacts": [
+    "orchestration/units/FETCHDIAG.md",
+    "orchestration/handoffs/FETCHDIAG.json"
+  ],
+  "evidence": [
+    "TX-02 fetch r1: 110 rows, 22 fetch_rows>0 rows, 47 total fetches, tools_mode=on:fetch, temperature=null, seed=null",
+    "TX-03 fetch r1: 105 rows, 5 fetch_rows>0 rows, 8 total fetches, tools_mode=on:read_file, temperature=0.0, seed=42",
+    "TX-03 fetch r2: 101 rows, 1 fetch_rows>0 row, 1 total fetch, tools_mode=on:read_file, temperature=0.0, seed=42",
+    "Checkpoint-turn categories (TX-03 fetch r1, 48 turns): NONE=16 (all with markers present), CALL fetch(prose)=9, EMPTY unserved tool call=10, NUM_correct=12, NUM_wrong(guess)=1",
+    "Tool advertisement differs by tools_mode: TX-02 on:fetch vs TX-03 on:read_file (every row); instruction text (checkpoint_prompt arm D branch, run_longrun.py) identical in both cells",
+    "No temp-zero replay exists on disk: experiments/ptr-engine/measure/rows-tempzero-probe2.jsonl absent",
+    "masked_rows>0 on 8/100 TX-03 masking rows, consistent with 8 turns carrying tool_outputs (1,8,17,24,45,52,61,68)",
+    "root cause: tool schema not advertised on TX-03 (read_file instead of fetch); temperature unresolved pending single temp-zero rerun of TX-02 fetch cell"
+  ],
+  "blocker": null,
+  "next_unit_hint": "rerun one TX-02 fetch cell at --temperature 0 --seed 42 with --tools fetch to settle the temperature hypothesis (~105 requests)",
+  "write_paths": [
+    "orchestration/units/FETCHDIAG.md",
+    "orchestration/handoffs/FETCHDIAG.json"
+  ]
+}

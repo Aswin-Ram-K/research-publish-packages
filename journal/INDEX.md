@@ -1,7 +1,10 @@
-# Journal index — 2026-09-28 … 2026-10-13
+# Journal index — 2026-09-28 … 2026-11-04
 
-15 daily notes [corrected by UCONS1, 2026-10-15: the prose said "14"; measured 15 dated
-`YYYY-MM-DD.md` files] (2026-10-03 has no note: **no work recorded (0 commits)**). Commit counts are
+Two eras. The **Consonance/Duval era** below (15 notes, 2026-09-28 … 2026-10-13) is indexed by Duval
+commit count and anchor commit. The **campaign era** (2026-10-26 → present, second table) is indexed by
+the unit/handoff that owns each note, because this repo's own history is uncommitted and the anchors
+that matter are handoffs, not commits. 2026-10-03 has no note: **no work recorded (0 commits)**.
+Commit counts are
 author-date counts over all refs (`git -C /home/zer0null/Duval log --all`); the anchor is the commit
 carrying that day's headline claim. Corrected by unit UJC1.
 
@@ -23,3 +26,14 @@ carrying that day's headline claim. Corrected by unit UJC1.
 | [2026-10-11](2026-10-11.md) | Judge boundary closed in the goal seed; trace overclaim corrected in every site; project PAUSED | 39 | `e0b786a` |
 | [2026-10-12](2026-10-12.md) | Minimal State-driven kernel planned and built by six workstreams after Gate 0 RED → GREEN | 127 | `db1554c` |
 | [2026-10-13](2026-10-13.md) | Pilot evaluator assembled; "authenticity gate" measured caller-controlled; EXP#22 closes EMERGE with no satisfying source | 94 | `65bc07a` |
+
+## Campaign era — the ptr-engine measurement campaign
+
+| Date | Headline | Owner anchor |
+|---|---|---|
+| [2026-10-26](2026-10-26.md) | CANARY-ERA-B-4 stopped at gate 2 on the launcher's ledger refusal — zero requests sent | `orchestration/handoffs/CANARY-ERA-B-4.json` |
+| [2026-10-27](2026-10-27.md) | 16-cell gen-6 grid run; verdict `not_adjudicable_floor`; ledger 2,591/4,320 after the batch | `orchestration/handoffs/GRID-RUN-2.json`, `GRID-2-FINAL.json` |
+| [2026-10-28](2026-10-28.md) | Session reorientation: agent contract rewritten, state page + doc index + doc guard added; ledger rebuilt to 2,591/1,729 | this note |
+| [2026-11-03](2026-11-03.md) | Consonance bounded-context research filed: report + prospective protocol, both PASS after repair (E2 ≤120 → 123 descriptive; comparative 6,300 → 7,560 = 4.37× ⇒ UNFUNDED); 0 live calls, no build | `orchestration/handoffs/V-CONSONANCE-BC-REPORT-RECHECK.json`, `V-CONSONANCE-BC-EVAL-RECHECK.json` |
+| [2026-11-04](2026-11-04.md) | Paper-candidate sweep of everything since the 2026-10-24 compile: four one-page briefs, N1 (append-cost residue law) recommended, six numbers corrected by independent re-check; recorded on branch `research/paper-candidates-2026-11-04`, 0 requests | `orchestration/handoffs/PAPER-CANDIDATES-2026-11-04.json` |
+| [2026-11-06](2026-11-06.md) | Research seed package: evidence warrants **two** papers (append-cost law flagship + instrument-validity methods), with kill criteria and a staged roadmap; corrections folded (5,403 uncited rows not 1,892; 69 claims not 63); 0 requests | `experiments/ptr-engine/research-seed-concepts/README.md` |

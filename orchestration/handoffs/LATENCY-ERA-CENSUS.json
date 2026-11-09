@@ -1,0 +1,52 @@
+{
+  "unit": "LATENCY-ERA-CENSUS",
+  "status": "done",
+  "artifacts": [
+    "docs/LATENCY-ERA-CENSUS.md",
+    "experiments/ptr-engine/measure/LATENCY-ERA-CENSUS.json",
+    "orchestration/units/LATENCY-ERA-CENSUS.md",
+    "orchestration/journals/LATENCY-ERA-CENSUS.jsonl"
+  ],
+  "evidence": {
+    "verdict_row": "PASS f17663d1 — python3 fence extracted from docs/LATENCY-ERA-CENSUS.md §10, generator re-run, output diffed byte-identical against measure/LATENCY-ERA-CENSUS.json (42839 bytes each, identical True, exit 0)",
+    "era_classification": "14 declared rows files / 1101 rows: post-client 1 file (rows-cell-pointer-stable-20261026T145758Z.jsonl, 6 rows, ttft_source 6/6, first_token_kind 6/6); pre-client 10 files (863 rows, ttft_source 0, first_token_kind 0); undatable-no-TTFT-column 3 files (rows-baseline 105 + rows-equalinfo 100 + rows-live 27 = 232 rows); mixed 0; undatable-but-declared 0",
+    "unclassifiable_file": "experiments/ptr-engine/measure/rows.jsonl — 49 rows, 2026-10-25 calibration/nonce corpus, no timing column, no kind, no arm, no run_id; NOT one of the 14 declared files in LATENCY-REPORT.md §8.1; counted separately as out of scope",
+    "exposed_share": "row level (tool_calls non-empty): 186 of 1101 rows = 16.89% (v4-tools 51/68, v5-tools 68/72, v6-tools 67/72, all other 11 declared files 0); run level (card's literal tool-followup-in-run rule): 212 of 1101 = 19.26% (68/72/72 — each tool file is one run); all 68 follow-up rows also carry tool_calls so the row-level set is exactly the tool_calls set",
+    "exposure_bounds": "186 of 186 tool-call rows carry a non-null ttft_ms (0 silently deleted); 0 of 186 within 1% of wall; 0 of 1101 declared rows ttft_ms == wall; ttft/wall on tool-call rows min 0.001218 p50 0.082912 p95 0.221686 max 0.390533; 0 rows above 0.5 x wall",
+    "published_cells": "12 published p50 + 3 p95 rows (G8/G9 published, G7 withdrawn): 0 era-clean, 12 era-pre (wholly pre-client), 0 undatable; 9 of 12 have 0 possible exposure; 3 (G7 51/68, G8 68/72, G9 67/72) are exposed on every row and still 0 realised; all three p95 cells are pre-client so era does not decide G7's withdrawal",
+    "cross_check": "pre-client era 186 tool-call rows: ttft present 186, null 0, ~=wall 0. post-client era: 0 tool-call rows on disk (the only post-client file is 6 tools-OFF turn rows) so the fixed latch's tool-call path is UNOBSERVABLE on rows; code-level evidence only: python3 -m pytest experiments/ptr-engine/longrun/tests/test_client_ttft.py -q => 8 passed (tests/test_client_ttft.py:226-227 tool_call/first_delta, :265-266 unavailable stays null)",
+    "provenance_check": "all 14 computed rows-file sha256 equal the digests LATENCY-REPORT.md §8.1 publishes (sha256_all_match_latency_report: true) — no rows file was modified",
+    "wall_proxy_validation": "wall = wall_ms when present else round(latency_s*1000,3); validated on the 6 rows carrying both: 6 of 6 match within 0.01 ms",
+    "corrections": "the old latch does NOT substitute wall_ms — HEAD run_longrun.py:1077 leaves ttft_s None (ttft_ms :1127); snapshots manifests/v6-run-longrun-pre-edit.py:874 and manifests/v4tools2-baseline-pre.py:762 agree; failure mode is silent deletion from quantiles, not a wall-inflated tail; analyze_stats.py:470's 'unavailable with a number' state is 0 rows (ttft_dropped_unavailable 0 in all 24 cells)",
+    "discriminator_trap": "cached_source is NOT a seam field — rows-live-2026-10-26.jsonl carries it on 25 of 27 rows with a different vocabulary and no ttft_source/ttft_ms; a cached_source-only rule would misclassify it",
+    "churn": "run_longrun.py rewritten twice under this unit: 939c225c (133065 B) -> fff28df4 (143844 B) -> 32f8680e (145581 B); client.py stable 5aa23bb5 (41593 B); all recorded as a static observation sequence so the JSON stays deterministic; era boundary rests on immutable HEAD :1077, not working-tree bytes",
+    "commands": [
+      "python3 -c \"[fence-extract docs/LATENCY-ERA-CENSUS.md §10 -> /tmp/latency_era_census.py] ; generator --out /tmp/census.json ; compare to measure/LATENCY-ERA-CENSUS.json\"  (the recorded PASS verdict row)",
+      "git rev-parse HEAD  -> f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+      "git show HEAD:experiments/ptr-engine/longrun/run_longrun.py | grep -n ttft  -> 1077 latch, 1127 ttft_ms",
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_client_ttft.py -q  -> 8 passed",
+      "sha256sum over the 15 measure/*.jsonl + the 2 owned sources"
+    ],
+    "tool_calls_used": 21,
+    "bound": 24,
+    "live_requests": 0,
+    "network_calls": 0,
+    "inference_requests": 0
+  },
+  "blocker": "",
+  "next_unit_hint": "Two gaps this census makes explicit, both for a new card (not a child of this one): (1) NO published latency figure is post-client — the fixed client's tool-call latch has never written a row any cell used, so the first cell that runs tools ON under the shipped client would be the project's first era-clean number and should stamp ttft_source/first_token_kind per row and be labelled era-clean in the report; (2) the pre-client tool rows cannot be re-timed by field (no first_token_kind), so any claim that G7/G8/G9 are unaffected beyond the measured wall-substitution absence must be argued as a bound (ttft <= 0.391 x wall worst case), never as measured fact. OPERATOR-BRIEF-3 can quote the §0 sentence as written.",
+  "assumptions": [
+    "'tool-call turn' = a row whose tool_calls list is non-empty. In the three tool files every follow-up row also carries tool_calls, so the row-level exposed set is exactly the tool_calls set (186 rows).",
+    "The card's run-level rule ('kind == tool-followup present in the same run') is applied on run_id; each of the three tool files holds exactly one run, so the run-level set is the whole file (212 rows).",
+    "Era is a property of the writer and the writer is inferred from two axes (seam-field presence; rows-file mtime vs the WIRE-CLIENT landing 2026-10-26T14:53:28Z). Both axes select the same single file. No log line names a commit, so the classification is as strong as those two axes and no stronger.",
+    "The 3 legacy files (232 rows) are labelled undatable AS TTFT SOURCES because they carry no TTFT column at all; they were written before the seam (written_before_seam true) and contribute 0 rows to every published latency figure, so their era is moot rather than unknown.",
+    "wall clock for a row without wall_ms is round(latency_s*1000, 3) — the expression client.collect_stream() uses to fill wall_ms; validated on the 6 rows carrying both columns (6 of 6 match)."
+  ],
+  "write_paths": [
+    "docs/LATENCY-ERA-CENSUS.md",
+    "experiments/ptr-engine/measure/LATENCY-ERA-CENSUS.json",
+    "orchestration/units/LATENCY-ERA-CENSUS.md",
+    "orchestration/handoffs/LATENCY-ERA-CENSUS.json",
+    "orchestration/journals/LATENCY-ERA-CENSUS.jsonl"
+  ]
+}

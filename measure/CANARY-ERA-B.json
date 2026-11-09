@@ -1,0 +1,151 @@
+{
+ "unit": "LIVE-CANARY-4ARM",
+ "generated_at_utc": "2026-10-26T19:34:08Z",
+ "live_invocations": 1,
+ "preflight": {
+  "command": "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --dry-run",
+  "rc": 0,
+  "canary_line": "RUN-A canary arms=4 cells=1,4,7,9 turns=12 requests=48 claim=smoke",
+  "end_line": "RUN-A DRY END cells=4 refused=0 requests=0 claim=smoke turns=12 max_wall=900 canary_arms=4 canary_requests=48",
+  "per_cell_gates": {
+   "1 pointer-stable": "G1 allow computed=1,188 requests limit=4,320 | G2 allow computed=720 s limit=900 s | G3 allow computed=claim=none declared (smoke/plumbing)",
+   "4 transcript-grow": "G1 allow computed=1,188 requests limit=4,320 | G2 allow computed=720 s limit=900 s | G3 allow computed=claim=none declared (smoke/plumbing)",
+   "7 transcript-compact": "G1 allow computed=1,188 requests limit=4,320 | G2 allow computed=720 s limit=900 s | G3 allow computed=claim=none declared (smoke/plumbing)",
+   "9 lease-reopen": "G1 allow computed=1,188 requests limit=4,320 | G2 allow computed=720 s limit=900 s | G3 allow computed=claim=none declared (smoke/plumbing)"
+  },
+  "verdict": "all gates allow, refused=0, canary_arms=4 canary_requests=48, max_wall=900"
+ },
+ "live": {
+  "command": "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108",
+  "launcher_exit_code": 0,
+  "outcome": "STOP rule 7: cell 1 exited 8",
+  "cells_run": 1,
+  "cells_planned": 4,
+  "rows_files_written": 0,
+  "refusal_stage": "3b/7 projection",
+  "refusal_line": "cell: 3b/7 projection REFUSED(8) G2 projection REFUSED: computed 2880 s | limit 900 s (--max-wall) | artefact experiments/ptr-engine/measure/PROJECTION.json (sha256 75d02c735da66156f6d7b13554d9cdd2da8b2d99df5d7032ea2e761feca3925c) | projected wall 2880 s = 48 requests to send (12 turn(s) x 1 rep(s)) x calibrated per-turn wall 60.0 s for thinking off (source artefact-mode) exceeds the allowed 900 s by 1980 s",
+  "cell_exit_line": "cell: EXIT 8 \u2014 refused at stage 3b/7 projection; nothing was measured",
+  "warmup_requests": 1,
+  "warmup_detail": "RUN-A warmup pointer-stable ok ms=275.5 usage={\"prompt_tokens\": 17, \"total_tokens\": 25, \"completion_tokens\": 8, \"prompt_tokens_details\": null, \"reasoning_tokens\": 8}"
+ },
+ "spend": {
+  "ledger_path": "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+  "spent_before": 1128,
+  "spent_after": 1128,
+  "delta": 0,
+  "cap": 52,
+  "within_cap": true,
+  "remaining_before": 3192,
+  "remaining_after": 3192,
+  "note": "the ledger counts ROW LINES; the one warm-up chat completion produced no row, so the true wire spend is delta + 1 = 1 request of the 4 warm-up allowance"
+ },
+ "operand_divergence": {
+  "finding": "the launcher's dry run and the live gate price DIFFERENT cell shapes, so a dry-run `allow` cannot certify the live G2 verdict",
+  "dry_run_operand": "experiments/ptr-engine/longrun/cell.py:1968-1970 turns_total = --turns(12) x arms(1) x reps(1) = 12 -> 12 x 60.0 s = 720 s <= 900 s = allow",
+  "live_operand": "experiments/ptr-engine/longrun/cell.py:354-369 stage_budget runs run_longrun.py --dry-run WITHOUT --turns, so the runner prices the fixture's N=48: 'turn_requests=48 (N=48 x reps=1) digest_requests=0 cell_total=48 would_send_total=48' -> 48 x 60.0 s = 2880 s > 900 s = REFUSED(8)",
+  "factor": 4,
+  "grid_side_effect": "the grid asks --turns 48 --max-wall 2880, so its live operand (48) x 60 s = 2880 s sits exactly ON the limit (allow at the boundary); the mismatch only bites the 12-turn canary whose wall is 900 s"
+ },
+ "arms": [
+  {
+   "arm": "pointer-stable",
+   "cell": 1,
+   "turns": 0,
+   "answer_verified": null,
+   "parseable_answers": 0,
+   "stop_signal_source": null,
+   "first_cap_turn": null,
+   "wall_ms_max": null,
+   "ttft_ms_p50": null,
+   "tool_calls": 0,
+   "fetch_rounds_used": 0,
+   "verdict": "shape_unknown",
+   "exit_code": 8,
+   "why": "cell.py refused at stage 3b/7 before the runner started; 0 turn rows exist, so tranche_canary has nothing to read. Never rounded to ok."
+  },
+  {
+   "arm": "transcript-grow",
+   "cell": 4,
+   "turns": 0,
+   "answer_verified": null,
+   "parseable_answers": 0,
+   "stop_signal_source": null,
+   "first_cap_turn": null,
+   "wall_ms_max": null,
+   "ttft_ms_p50": null,
+   "tool_calls": 0,
+   "fetch_rounds_used": 0,
+   "verdict": "shape_unknown",
+   "exit_code": null,
+   "why": "never reached: the launcher stopped at rule 7 on cell 1"
+  },
+  {
+   "arm": "transcript-compact",
+   "cell": 7,
+   "turns": 0,
+   "answer_verified": null,
+   "parseable_answers": 0,
+   "stop_signal_source": null,
+   "first_cap_turn": null,
+   "wall_ms_max": null,
+   "ttft_ms_p50": null,
+   "tool_calls": 0,
+   "fetch_rounds_used": 0,
+   "verdict": "shape_unknown",
+   "exit_code": null,
+   "why": "never reached: the launcher stopped at rule 7 on cell 1"
+  },
+  {
+   "arm": "lease-reopen",
+   "cell": 9,
+   "turns": 0,
+   "answer_verified": null,
+   "parseable_answers": 0,
+   "stop_signal_source": null,
+   "first_cap_turn": null,
+   "wall_ms_max": null,
+   "ttft_ms_p50": null,
+   "tool_calls": 0,
+   "fetch_rounds_used": 0,
+   "verdict": "shape_unknown",
+   "exit_code": null,
+   "why": "never reached: the launcher stopped at rule 7 on cell 1"
+  }
+ ],
+ "shape_rules_used": {
+  "source": "orchestration/handoffs/CANARY-ERA-B-FIX.json + experiments/ptr-engine/tools/tranche_canary.py",
+  "shape_ok": "answer_verified >= 1 AND stop_signal_source == finish_reason",
+  "shape_degenerate": "a cap-length completion inside the N-turn window (or a tool-call storm)",
+  "shape_unknown": "fewer than N turns recorded, no traffic, or the answer contract did not fire in window; never rounded up to ok",
+  "reimplemented": false
+ },
+ "era_b_findings": {
+  "cached_token_share_per_arm": null,
+  "cached_token_note": "not measurable: no era-B turn row was written. The field exists on the era-B schema (rows-longrun-v6-tools.jsonl carries cached_tokens/uncached_tokens, e.g. T1 pointer-stable prompt_tokens=3520 cached_tokens=2944 = 83.6%), but this invocation produced 0 rows.",
+  "stop_reason_census": {},
+  "stop_reason_note": "empty: 0 turn rows, so no finish_reason was ever emitted",
+  "turn_call_cap_hits": null,
+  "fetch_budget_exhausted_hits": null,
+  "budget_note": "no turn existed to cap; the only cap that fired was the wall/request projection at stage 3b/7, which is a GATE refusal, not a turn"
+ },
+ "decision": {
+  "grid": "held",
+  "reason": "no arm was measured at all: all four are shape_unknown because cell.py exited 8 at the projection gate before request 1. A held grid is the only defensible call when the launch shape produced zero evidence.",
+  "blocking_evidence": "STOP rule 7: cell 1 exited 8; G2 computed 2880 s > limit 900 s",
+  "named_arm_turn": "n/a \u2014 the degeneration is pre-request (gate), not a cap-length completion at a turn",
+  "measurement_that_would_resolve_it": "one live 12-turn cell per arm that actually runs to T12, producing 12 kind=turn rows per arm for tranche_canary.py --turns 12. That requires either cell.py stage_budget forwarding --turns to the runner (so the live operand is 12 -> 720 s <= 900 s) or a canary --max-wall >= 2880 s (the grid's own boundary). Both are out of this unit's write scope."
+ },
+ "defect_report": {
+  "class": "preview/live operand divergence",
+  "severity": "blocking for the 12-turn canary; boundary-safe for the 48-turn grid",
+  "sites": [
+   "experiments/ptr-engine/longrun/cell.py:354-369",
+   "experiments/ptr-engine/longrun/cell.py:1968-1970"
+  ],
+  "note": "LAUNCH-CANARY-WALL fixed the rc/refusal TALLY of the dry run; it did not make the dry run's G2 operand equal the live G2 operand, so its `refused=0` still cannot certify a live allow."
+ },
+ "files_read_not_edited": [
+  "experiments/ptr-engine/longrun/cell.py"
+ ],
+ "edits": []
+}

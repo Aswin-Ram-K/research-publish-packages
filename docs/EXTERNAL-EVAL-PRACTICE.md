@@ -101,7 +101,7 @@ from the field is that **a grader must be validated on probes whose intent is kn
 
 Where the answer is a change to a repo, the field grades the **effect**: apply the patch, run the task's
 tests, pass = success ([SWE-bench](https://arxiv.org/abs/2310.06770)). This is what our fixtures already
-support (`tests/test_scope.py`, 9 tests; `predict_billed(...)` equalities; `COMPACT_MAGIC`). It costs
+support (`experiments/ptr-engine/tests/test_scope.py`, 9 tests; `predict_billed(...)` equalities; `COMPACT_MAGIC`). It costs
 **zero inference requests** and has no FN/FP of its own — its failure mode is different and must be stated:
 a test can be satisfied by cheating.
 
@@ -288,7 +288,7 @@ Costs are in card rounds (one unit each), requests (inference), and code.
 | # | practice | artifacts touched | concrete change | cost | verdict |
 |---|---|---|---|---|---|
 | 1 | **Decidable JSON answer contract** (§8) | `longrun/run_longrun.py` (checkpoint prompt), `longrun/grade_v3.py`, `longrun/grade_v4.py`, `longrun/fixtures/LR-0N.json` checkpoints | checkpoint answer is a schema-constrained object; grading parses and compares typed values; prose graders demoted to diagnostics | 1 card, 0 requests, ~150 LOC | **ADOPT** |
-| 2 | **Unit-test / state grading** (SWE-bench, τ-bench) | `longrun/fixtures/*` (tests already exist: `tests/test_scope.py`, `predict_billed`), `measure/det-verify-matrix.json` handlers | grade the workspace at the checkpoint (run the test, read the symbol) instead of the sentence; extend `CHECK_HANDLERS` to all 12 acceptance checks | 2 cards, 0 requests, ~250 LOC | **ADOPT** |
+| 2 | **Unit-test / state grading** (SWE-bench, τ-bench) | `longrun/fixtures/*` (tests already exist: `experiments/ptr-engine/tests/test_scope.py`, `predict_billed`), `measure/det-verify-matrix.json` handlers | grade the workspace at the checkpoint (run the test, read the symbol) instead of the sentence; extend `CHECK_HANDLERS` to all 12 acceptance checks | 2 cards, 0 requests, ~250 LOC | **ADOPT** |
 | 3 | **Prose-token grading as primary accuracy** | `grade_v3.py`, `grade_v4.py`, `analyze_longrun.py` | stop reporting `checkpoint_accuracy` from token presence; keep the graders as a *diagnostic* column labelled "mention behaviour" (already GRADER-FITNESS §"Consequence") | 1 card, 0 requests | **REJECT as primary** (MODIFY to diagnostic) |
 | 4 | **Per-headline CI** (Wilson / bootstrap) | `longrun/analyze_longrun.py`, `measure/METRICS.md` | every accuracy and tokens-to-success row prints Wilson 95 % CI (binary) or bootstrap CI (continuous), plus `n` | 1 card, 0 requests | **ADOPT** |
 | 5 | **McNemar exact on item-level pairs** | `analyze_longrun.py`, new `measure/analysis` module | compare arms on the same checkpoint ids; report b, c, exact p, and the discordant count; refuse the comparison when D < 6 | 1 card, 0 requests | **ADOPT** (with the n gate of §7) |
@@ -379,7 +379,7 @@ prose. Four claim kinds cover every checkpoint in `fixtures/LR-0N.json`.
  "evidence":"row commit precedes raise in _refuse"}
 
 {"cp":"acc.n2b","kind":"prohibition",
- "target":{"path":"tests/test_scope.py"},
+ "target":{"path":"experiments/ptr-engine/tests/test_scope.py"},
  "op":"not_modified","value":true,
  "evidence":"file hash unchanged since turn 0"}
 ```

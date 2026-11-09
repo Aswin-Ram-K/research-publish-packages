@@ -1,0 +1,122 @@
+{
+ "schema": "consonance.grid-params-16cell/1",
+ "unit": "GRID-PARAMS-16CELL",
+ "recorded_at": "2026-10-26T20:20:00Z",
+ "written": "2026-10-26",
+ "question": "is the power-conformant 16-cell shape wired into the records the launcher reads, so RUN-A-STAR-2 cannot launch a shape its own card does not describe?",
+ "answer": "The RECORD is now 16 cells and prices them at 1,056 against 3,192 remaining (2,136 left). The LAUNCHER is not wired: run_a_star.py reads neither GRID-PARAMS.json nor GRID-SHAPE.json, hardcodes a 10-cell CELLS tuple (run_a_star.py:99-103) and prints no price. So RUN-A-STAR-2 still cannot launch a shape its card describes -- the gap is now recorded instead of silent.",
+ "offline": {
+  "requests_sent": 0,
+  "network_events": 0,
+  "live_cells": 0,
+  "sockets": 0,
+  "commands": "run_a_star.py --dry-run (grid and canary) against a /tmp copy of the launcher with only its pin constant advanced; cell.py --dry-run only"
+ },
+ "before_after": {
+  "before": {
+   "source": "GRID-PARAMS.json revision 2 (LAUNCH-PACKAGE-RECONCILE) / GRID-SHAPE.json",
+   "cells": 10,
+   "arms": {
+    "pointer-stable": 3,
+    "transcript-grow": 3,
+    "transcript-compact": 2,
+    "lease-reopen": 2
+   },
+   "turns_per_cell": 48,
+   "turns_total": 480,
+   "price_total": 1016,
+   "price_components": {
+    "tranche": 964,
+    "canary": 48,
+    "warm_ups": 4
+   },
+   "remaining_after": 2176
+  },
+  "after": {
+   "source": "GRID-PARAMS.json revision 3 (this card)",
+   "cells": 16,
+   "arms": {
+    "pointer-stable": 6,
+    "transcript-grow": 6,
+    "transcript-compact": 2,
+    "lease-reopen": 2
+   },
+   "turns_per_cell": 48,
+   "turns_total": 768,
+   "price_total": 1056,
+   "price_arithmetic": "768 turns x 1.374532 = 1055.640576 -> 1,056",
+   "factor": 1.374532,
+   "factor_path": "experiments/ptr-engine/measure/GRID-SHAPE.json :: factor.tools_off_historical",
+   "remaining_after": 2136
+  }
+ },
+ "promotion_is_additive": {
+  "ten_cell_figures_live_at": "GRID-PARAMS.json :: supersedes.ten_cell_figures_preserved_verbatim (plus supersedes.previous_price_object_preserved_verbatim and supersedes.previous_supersedes_block_preserved_verbatim)",
+  "grid_shape_pointer": "GRID-SHAPE.json :: sixteen_cell_supersede (cells[0..9] left byte-identical; 10 entries still there)",
+  "nothing_deleted": true,
+  "launcher_unchanged": "run_a_star.py was not edited by this card"
+ },
+ "authority": {
+  "spend_status": "NOT approved spend",
+  "launch_authority": "board #865's recorded default, not a params file",
+  "authorised_here": "no spend of any kind; 0 requests"
+ },
+ "brake_arithmetic": {
+  "spent": 1128,
+  "price": 1056,
+  "cap": 4320,
+  "sum": 2184,
+  "remaining_left": 2136,
+  "identity": "1,128 + 1,056 = 2,184 <= 4,320",
+  "spent_source": "experiments/ptr-engine/measure/REQUEST-LEDGER.json :: budget.spent_raw = 1128, budget.remaining_raw = 3192, budget.cap = 4320 (rebuilt by request_ledger.build_report)",
+  "what_the_launcher_actually_uses": {
+   "spent": "run_a_star.py:167-175 spend() -- counts non-empty lines across measure/rows-*.jsonl. It does NOT call request_ledger.build_report and does NOT read REQUEST-LEDGER.json.",
+   "remaining": "run_a_star.py:571 `remaining = 3219 - (spend() - spent0)` (repeated at run_a_star.py:585, :644, :652) -- a hardcoded 3,219, not the ledger's 3,192 and not the 4,320 cap.",
+   "where_the_4_320_line_is_printed": "cell.py stage 0/7, e.g. `G1 1,224/4,320 requests` and `(cap 4,320 - reserve 0 - spent 1,128) artefact=experiments/ptr-engine/measure/REQUEST-LEDGER.json` -- the gate reads the ledger, the launcher's own remaining line does not.",
+   "consequence": "two spend records disagree by construction: the gate bills against 4,320 - 1,128 = 3,192; the launcher's stop rule bills against 3,219 - delta. The brake number this card quotes (2,136) is the gate's."
+  }
+ },
+ "proofs": {
+  "grid_dry_run": {
+   "command": "python3 /tmp/gp16/run_a_star_gen5.py --tools read_file --budget 108 --dry-run",
+   "why_a_tmp_copy": "the repo launcher refuses before any cell: 'HARNESS-PIN record disagrees with the launcher: record generation=5 digest=35ff41b7..., launcher gen 4 digest=fa6fd8cc...' (run_a_star.py:71-84 requires generation 4). The /tmp copy advances ONLY HARNESS_PIN to 35ff41b7 and `gen != 4` to `gen != 5`; nothing under the repo is edited by it.",
+   "printed": "RUN-A DRY END cells=10 refused=0 requests=0 claim=H2 turns=48 max_wall=2880 canary_arms=10 canary_requests=0",
+   "per_cell_gate_line": "cell: 0/7 dry-run G1 1,224/4,320 requests \u00b7 G2 2,880 s of 2,880 s \u00b7 G3 n=48 >= 1",
+   "tools_survived": "RUN-A tools=read_file shim=/tmp/grid-shape-shim/runner_read_file.py, and cell.py's stage 0/7 printed no harness refusal, so --tools read_file survived the shim hop"
+  },
+  "canary_dry_run": {
+   "command": "python3 /tmp/gp16/run_a_star_gen5.py --canary --tools read_file --budget 108 --dry-run",
+   "printed": "RUN-A canary arms=4 cells=1,4,7,9 turns=12 requests=48 claim=smoke",
+   "end_line": "RUN-A DRY END cells=4 refused=0 requests=0 claim=smoke turns=12 max_wall=900 canary_arms=4 canary_requests=48",
+   "tools_survived": "RUN-A tools=read_file shim=/tmp/grid-shape-shim/runner_read_file.py"
+  },
+  "both_directions": {
+   "forward": "repo GRID-PARAMS.json revision 3 -> cells 16 / price 1,056 / remaining 2,136",
+   "reverse": "a /tmp copy with GRID-PARAMS.json reverted to the 10-cell figures -> cells 10 / price 1,016 / remaining 2,176",
+   "what_this_proves": "the promotion, not coincidence, moves the RECORD; and it does NOT move the launcher, which prints cells=10 in both directions -- that is the residual, stated rather than papered over"
+  }
+ },
+ "residual": {
+  "field": "GRID-SHAPE.json :: cells[*] (10 entries; each cell_py_flags carries '--budget 67' at index 6 and '--fetch-followup-allowance 24' at index 8; each projection.followup_allowance = 24)",
+  "does_the_launcher_derive_cells_from_it": "No. run_a_star.py:99-103 is a hardcoded 10-tuple CELLS. The launcher never opens measure/GRID-SHAPE.json or measure/GRID-PARAMS.json: its only json.load calls are the pin record (run_a_star.py:75), the warm-up usage (run_a_star.py:158), row lines (run_a_star.py:193) and a cell manifest (run_a_star.py:306-307). GRID-SHAPE appears 3 times, all prose -- run_a_star.py:9 (docs/GRID-SHAPE.md), run_a_star.py:474 and run_a_star.py:478 (argparse help text). GRID-PARAMS appears 0 times.",
+  "why_not_fixed_here": "adding 6 cells to cells[*] would author a SECOND shape (a launch tool's own argv set), which this card forbids; and the launcher would still ignore it",
+  "open_items": [
+   "run_a_star.py:99-103 CELLS 10 -> 16, plus a printed price line (write path not owned by this card)",
+   "run_a_star.py:51 HARNESS_PIN generation 4 (record is generation 5) -- HARNESS-PIN-GEN5's to fix; still open, measured not repaired",
+   "run_a_star.py:571 remaining hardcodes 3,219 while the gate bills 4,320 - 1,128 = 3,192",
+   "cells[*] argv set still carries '--budget 67' / '--fetch-followup-allowance 24', superseded by 108 / 48 in GRID-PARAMS.json"
+  ]
+ },
+ "not_touched": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/analyze_stats.py",
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "experiments/ptr-engine/measure/HARNESS-PIN.json (including its digest field)",
+  "PARM-1*",
+  "every fixture, threshold, row file, grade file and published page",
+  "REQUEST-LEDGER.json",
+  "RUN-A-STAR-2's card"
+ ]
+}

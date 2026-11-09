@@ -1,0 +1,106 @@
+{
+ "unit": "GRID-BUDGET-RECHECK",
+ "date": "2026-10-26",
+ "offline": true,
+ "requests": 0,
+ "head_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+ "verdict": "PASS",
+ "question": "Can three reps of the frozen 48-turn grid finish inside the 3,219 remaining requests?",
+ "answer": "YES \u2014 the gate charges 53 requests per (arm,rep) cell, so 12 cells cost 636 and leave 2,583 of the 3,219.",
+ "recomputed_from_artefacts": {
+  "dryrun_reps1_one_arm": {
+   "command": "python3 experiments/ptr-engine/longrun/cell.py --dry-run --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 48 --reps 1 --hypothesis H2 --arm transcript-grow --out-dir /tmp/gr-man",
+   "gate_line": "G1 allow computed=1,154 requests limit=4,320 requests (cap 4,320 - reserve 0 - spent 1,101) artefact=experiments/ptr-engine/measure/REQUEST-LEDGER.json sha256=2f60b831a8439a9ba4ba5fafb8f6ca1ba4fb40cdaf1ccff4f29182c0d6e4c1e5",
+   "computed": 1154
+  },
+  "dryrun_reps3_one_arm": {
+   "computed": 1258,
+   "gate_line": "G1 allow computed=1,258 requests limit=4,320 requests (cap 4,320 - reserve 0 - spent 1,101)",
+   "arithmetic": "1,101 + 144 + 13 = 1,258"
+  },
+  "budget_schedule_A_star": {
+   "turns": 576,
+   "factor": 1.374532,
+   "arithmetic": "576 x (1,101/801 = 1.374532) = 791.730337 -> ceil = 792 requests; per rep 192 x 1.374532 = 263.91 -> 264 requests",
+   "source": "orchestration/handoffs/BUDGET-SCHEDULE.json computed.schedules['A*']"
+  }
+ },
+ "decomposition_of_1154": {
+  "already_spent": 1101,
+  "turns": 48,
+  "fetch_follow_up_allowance": 5,
+  "digests": 0,
+  "warm_ups": 0,
+  "per_arm_fixed_cost": 0,
+  "sum": "1101 + 48 + 5 = 1154",
+  "terms": [
+   {
+    "term": "turns_total = turns x arms x reps",
+    "value": 48,
+    "code": "experiments/ptr-engine/longrun/cell.py:875"
+   },
+   {
+    "term": "allowance = ceil(turns_total x FETCH_FOLLOWUP_RATIO) = ceil(48 x 68/801) = ceil(4.0749) = 5",
+    "value": 5,
+    "code": "experiments/ptr-engine/longrun/cell.py:124 (FETCH_FOLLOWUP_RATIO = 68.0/801.0), cell.py:888, cell.py:1100"
+   },
+   {
+    "term": "would_spend = turns_total + allowance = 53",
+    "value": 53,
+    "code": "experiments/ptr-engine/longrun/cell.py:895"
+   },
+   {
+    "term": "projected = requests_published + would_spend = 1101 + 53",
+    "value": 1101,
+    "code": "experiments/ptr-engine/tools/request_ledger.py:599; printed at cell.py:1179"
+   }
+  ],
+  "omitted_term": "the already-spent baseline of 1,101 requests: the gate prints CUMULATIVE projected spend (spent + new), the 1.374532 multiplier priced MARGINAL spend only (request_ledger.py:599 vs BUDGET-SCHEDULE's 576 x factor)",
+  "ratio_note": "the gate's per-turn rate is 1 + 68/801 = 1.084894; the historical factor is 1,101/801 = 1.374532; the difference is exactly 232/801 = 0.289638, the 232 unmarked request rows in the ledger (1,101 = 801 turn + 68 tool-followup + 232 unmarked). The gate's allowance carries the 68 follow-ups and omits the 232 unmarked rows."
+ },
+ "gate_enforcement": {
+  "gate": "cell.py G1 ledger-cap (eval_gate_ledger, cell.py:1127-1192)",
+  "what_it_compares": "projected (= spent + would_spend) against headroom (= cap - reserve = 4,320), which is algebraically would_spend <= 3,219 remaining",
+  "enforced_figure": "the dry-run arithmetic (48 turns + 5 allowance = 53 per cell), never 1.374532",
+  "multiplier_usage": "grep of cell.py: FETCH_FOLLOWUP_RATIO only; 1.374532 is never read by the gate",
+  "runner_own_cap": "run_longrun.py:434-443 projected_requests = N + digests(transcript-compact only, run_longrun.py:1342) + TOOL_FETCH_ROUNDS_PER_ARM (24, run_longrun.py:226); RequestCapGate caps each cell at that allocation, not against the remaining budget"
+ },
+ "price_table": [
+  {
+   "reps": 1,
+   "cells": 4,
+   "new_requests": 212,
+   "cumulative_printed": 1313,
+   "remaining_after": 3007
+  },
+  {
+   "reps": 2,
+   "cells": 8,
+   "new_requests": 424,
+   "cumulative_printed": 1525,
+   "remaining_after": 2795
+  },
+  {
+   "reps": 3,
+   "cells": 12,
+   "new_requests": 636,
+   "cumulative_printed": 1737,
+   "remaining_after": 2583
+  }
+ ],
+ "price_table_arithmetic": "run_longrun.py:2843 cells = [(arm, rep) for arm in arms for rep in range(1, reps+1)]; each cell is one arm at 48 turns -> 53 requests (48 + ceil(48 x 68/801)=5); 4 arms x R reps x 53",
+ "largest_frozen_design": "3 reps = 12 cells = 636 new requests, remaining 2,583. Three reps fit; PARM-1's 48 turns/arm is unchanged.",
+ "h3_cost": "none at 3 reps: 3 checkpoint ids per rep x 3 reps = 9 ids -> 36 paired items (BUDGET-SCHEDULE computed.evaluability['A*']), well over H3's b+c>=6. Even 2 reps gives 6 ids / 15 pairs; 1 rep gives only 3 ids and is NOT evaluable (b+c<=3<6).",
+ "no_network_proof": "sys.addaudithook counted socket.*/urllib./http.client events across all four dry runs: AUDIT_NETWORK_EVENTS=0 [] for each; every gate line ends '0 requests sent, no endpoint contacted'",
+ "commands": [
+  "python3 experiments/ptr-engine/longrun/cell.py --dry-run --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 48 --reps 1 --hypothesis H2 --arm transcript-grow --out-dir /tmp/gr-man",
+  "python3 experiments/ptr-engine/longrun/cell.py --dry-run --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 48 --reps 3 --hypothesis H2 --arm transcript-grow --out-dir /tmp/gr-man"
+ ],
+ "not_edited": [
+  "cell.py",
+  "run_longrun.py",
+  "PARM-1",
+  "LR-01.v8.json",
+  "measure/REQUEST-LEDGER.json"
+ ]
+}

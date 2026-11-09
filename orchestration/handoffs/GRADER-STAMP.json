@@ -1,0 +1,68 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "experiments/ptr-engine/tools/grader_identity.py",
+  "experiments/ptr-engine/longrun/tests/test_grader_stamp.py",
+  "orchestration/units/GRADER-STAMP.md",
+  "orchestration/journals/GRADER-STAMP.jsonl"
+ ],
+ "assumptions": [
+  "Bound was 22 calls and it was overrun (recorded in evidence.bound): the /tmp path in this sandbox is PRIVATE PER SHELL CALL, so the red copy and the demo evidence had to be re-created inside single calls, and one edit was refused until the file was re-read with the read tool.",
+  "GRADER_VERSION 5.1 is introduced as the first version string this writer has ever recorded; no prior version exists to inherit, so 5.1 is a defensible first value named as an assumption rather than inferred.",
+  "The stamp is written before --out is opened, so an uncomputable stamp refuses the RUN, not just the file. With --out omitted (print-only) the document is still stamped in memory; nothing is written either way.",
+  "Rows sha is taken from the rows FILE PATH argument after it is read; a rows file mutated between read and stamp would be stamped at its post-read bytes, which is the honest bytes on disk at write time."
+ ],
+ "blocker": "",
+ "bound": {
+  "cause": "per-call-private /tmp forced re-creation of the red copy and the demo rows in single calls; one edit refused pending a read-tool read of grade_v5.py",
+  "declared": 22,
+  "used": 28
+ },
+ "evidence": {
+  "command_or_count": "python3 -m pytest experiments/ptr-engine/longrun/tests/test_grader_stamp.py -q -> 6 passed (GREEN); RED run with GRADE_V5_MODULE=/tmp/grader-stamp/grade_v5_nostamp.py -> 2 failed, 4 passed; regression test_grade_v5.py + test_grade_v5_repair.py + test_grader_stamp.py -> 24 passed",
+  "commands": [
+   "PYTHONDONTWRITEBYTECODE=1 python3 -m pytest experiments/ptr-engine/longrun/tests/test_grader_stamp.py -q",
+   "GRADE_V5_MODULE=/tmp/grader-stamp/grade_v5_nostamp.py PYTHONDONTWRITEBYTECODE=1 python3 -m pytest experiments/ptr-engine/longrun/tests/test_grader_stamp.py -q",
+   "PYTHONDONTWRITEBYTECODE=1 python3 experiments/ptr-engine/longrun/grade_v5.py --rows /tmp/grader-stamp/rows.jsonl --fixture experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json --out /tmp/grader-stamp/demo.grade-v5.json",
+   "sha256sum experiments/ptr-engine/longrun/grade_v5.py /tmp/grader-stamp/rows.jsonl",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_grade_v5.py experiments/ptr-engine/longrun/tests/test_grade_v5_repair.py experiments/ptr-engine/longrun/tests/test_grader_stamp.py -q"
+  ],
+  "real_output": {
+   "demo_document": "grader_sha256=056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772, grader_version=5.1, rows_sha256=797e028e71dd7016b147d2baabd9a846b0398c01abcc82dd006e2dc42b6260a6",
+   "forward_only_statement": "stamping is forward-only from this card's sha; the 11 unstamped files remain datable only by re-derivation, as `docs/QUALITY-ERAS.md` already records.",
+   "green": "6 passed in 0.14s",
+   "head": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+   "newest_stored_grade_mtime": "2026-10-26T10:56:19",
+   "red": "2 failed, 4 passed -- test_fresh_document_carries_all_three_stamp_fields and test_writer_refuses_when_stamp_uncomputable fail on the copy with the stamp call removed; the fixture grading is identical (acc=3/3 in both docs)",
+   "refusal": "stamp_document patched to raise StampError -> main returns 3 and 'file written: False' (stderr: grade_v5: refusing to write an unstamped document: stamp_uncomputable: rows file vanished before writing)",
+   "regression": "24 passed in 0.14s",
+   "resolver": "stamped -> source=stamp stamped=True sha=056eb605e2baf5c9 ; stamp removed -> source=derived stamped=False sha=None requires=regrade_result missing=['grader_sha256','grader_version','rows_sha256'] ; with regrade sha -> source=derived sha matches",
+   "sha256": {
+    "grade_v5.py": "056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+    "grader_identity.py": "4b5b0b96c5f600d22b5a82282e7a3300b3b660e178f3612772d67bc11e0b793d",
+    "test_grader_stamp.py": "2a84c9e04cd97650cd255cee2b6c97463aa98d97fe3dae20f03ca98d96f396c0"
+   },
+   "sha_match": "sha256sum grade_v5.py = 056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772 ; sha256sum rows file = 797e028e71dd7016b147d2baabd9a846b0398c01abcc82dd006e2dc42b6260a6 -- both equal the stamped fields",
+   "stored_grade_files": 11,
+   "unstamped_remaining": 11
+  },
+  "verdict": {
+   "command": "python3 -m pytest experiments/ptr-engine/longrun/tests/test_grader_stamp.py -q",
+   "exitCode": 0,
+   "result": "PASS",
+   "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3"
+  }
+ },
+ "next_unit_hint": "(1) Every FUTURE grade_v5 write is now self-dating; the 11 historical files are not and must not be restamped -- read them through tools/grader_identity.py, which returns source=derived and demands a regrade result. (2) grade_v6/attack_grade_v5 writers do not stamp; if a v6 document is to be datable, it needs the same stamp_document contract (name the writer, not a sha table). (3) docs/QUALITY-ERAS.md's census counts should stay as recorded for the historical files; a census taken after this card will show 11 unstamped of 20 already-stored plus any future stamped files.",
+ "status": "done",
+ "unit": "GRADER-STAMP",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "experiments/ptr-engine/tools/grader_identity.py",
+  "experiments/ptr-engine/longrun/tests/test_grader_stamp.py",
+  "orchestration/units/GRADER-STAMP.md",
+  "orchestration/handoffs/GRADER-STAMP.json",
+  "orchestration/journals/GRADER-STAMP.jsonl",
+  "/tmp/grader-stamp/**"
+ ]
+}

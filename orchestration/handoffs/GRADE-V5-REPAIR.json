@@ -1,0 +1,48 @@
+{
+ "unit": "GRADE-V5-REPAIR",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "experiments/ptr-engine/longrun/tests/test_grade_v5_repair.py",
+  "docs/GRADE-V5-REPAIR.md",
+  "experiments/ptr-engine/measure/GRADE-V5-REPAIR.json",
+  "orchestration/units/GRADE-V5-REPAIR.md",
+  "orchestration/handoffs/GRADE-V5-REPAIR.json",
+  "orchestration/journals/GRADE-V5-REPAIR.jsonl"],
+ "evidence": {
+  "gate": "orchestration/handoffs/GRADE-V6-DERIVE.json status=done and lists grade_v5.py in artifacts",
+  "rule_stated": "grade_v5.py:_integral_numeral docstring and docs/GRADE-V5-REPAIR.md 'The rule, stated once': a verdict is a function of content and AST truth only; NUM integer equality; decidable = pass + fail",
+  "num": "ANSWER: 64.99 -> fail/num_not_integer:64.99; NUM 64.999 -> fail; 64.0 -> fail naming 64.0; 64 -> pass; NUM 64 -> pass; '64.' -> pass; 640 -> fail",
+  "row_self_grade": "row content='ANSWER: TEXT the default is 64' + fields num_equal/64 -> verdict=fail reason=row_fields_disagree_with_content (was pass/num_equal); _parsed_from_row raises RowFieldDisagreement naming both sides",
+  "non_answers": "no_answer_line / prose_only / empty_answer / empty_text / empty_num / unparseable -> undecidable; arm decidable=pass+fail; CLI prints 'acc=1/1 decidable=1(pass 1, fail 0) undecidable=2 missing=0'",
+  "attack_before": "FN 0 / 8 | FP 3 / 22 (P12,P37,P38) | exit 1 | T8 LIMITATION-unsat, T10 DEFECT-unsat",
+  "attack_after": "FN 0 / 8 | FP 1 / 22 (P12) | exit 0 | T8 SATISFIED, T10 SATISFIED | UNSATISFIED (defect-class): none",
+  "red": "GRADE_V5_MODULE=<pre-repair copy> pytest tests/test_grade_v5_repair.py -q -> 10 failed, 8 passed",
+  "green": "pytest tests/test_grade_v5_repair.py -q -> 18 passed",
+  "derive_12": "pytest tests/test_grade_v6_derive.py -q -> 14 passed; the repair test asserts 12 items derive and all 12 correct answers pass (accuracy 12/12)",
+  "suite": "pytest experiments/ptr-engine/longrun/tests/ -q -> 131 passed, 4 failed: 2 in test_decidability_seam (old decidable=3 denominator), test_guards + test_projection_calibration (neither imports grade_v5; the projection-calibration file appeared after the gate check - not attributable)",
+  "inference_requests": 0,
+  "commands": [
+   "python3 experiments/ptr-engine/tools/attack_grade_v5.py",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_grade_v5_repair.py -q",
+   "GRADE_V5_MODULE=/tmp/grade_v5_prerepair.py python3 -m pytest experiments/ptr-engine/longrun/tests/test_grade_v5_repair.py -q",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_grade_v6_derive.py -q",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/ -q"]},
+ "blocker": "Cross-unit integration gate open, outside this unit's write paths: analyze_stats.py (graded_n) still counts non-answers as decidable, so DECIDABILITY-SEAM refuses (grader decidable=1 vs analyser graded_n=3) and test_decidability_seam.py:163/190 assert the superseded decidable=3 / '1/3 (pass 1, fail 2, undecidable 0)' denominator. Safe failure: a printed refusal, not a wrong percentage.",
+ "next_unit_hint": "A unit owning analyze_stats.py must set graded_n = pass + fail and report undecidable and missing beside it, then re-point test_decidability_seam.py:163/190 at the new denominator. score_longrun.py carries the answer_spec truth mirror only (verdicts are not graded there) and was left untouched.",
+ "assumptions": [
+  "An ANSWER body in no contract form with no leading numeral is unparseable -> undecidable; a well-formed contract attempt with a wrong value stays fail (ANSWER: 65, NUM 0x40, 640, two ANSWER lines).",
+  "turn_missing stays a decidable fail so the omission rule (16/16) is unchanged.",
+  "RowFieldDisagreement raises for direct callers and is caught per cell in grade_rows as a fail naming both sides, so a spoofed row neither passes nor aborts the arm.",
+  "verified_success additionally requires zero undecidable cells."],
+ "residual_fp_p12": "P12 expect=fail contradicts its own note ('the fixture elides scope; the answer may write a literal ...'); the unchanged v5 elided_kwargs rule passes it. Bad probe expectation, not tuned.",
+ "residual_t7": "T7's predicate is unsatisfiable: it requires passed==0 in the missing_turn arm (which has two correct turns), computes undecided as a[decidable] != a[decidable] (always False), and treats turn_missing as decidable, which the omission rule requires.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/grade_v5.py",
+  "experiments/ptr-engine/longrun/tests/test_grade_v5_repair.py",
+  "docs/GRADE-V5-REPAIR.md",
+  "experiments/ptr-engine/measure/GRADE-V5-REPAIR.json",
+  "orchestration/units/GRADE-V5-REPAIR.md",
+  "orchestration/handoffs/GRADE-V5-REPAIR.json",
+  "orchestration/journals/GRADE-V5-REPAIR.jsonl"]
+}

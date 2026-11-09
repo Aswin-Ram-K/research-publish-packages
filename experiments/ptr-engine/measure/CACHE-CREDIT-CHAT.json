@@ -1,0 +1,141 @@
+{
+ "unit": "CACHE-CREDIT-CHAT",
+ "sampled_at_utc": "2026-10-26T17:04:37Z",
+ "endpoint_under_test": "http://192.168.2.168:8012/v1",
+ "model": "occamy-1.0",
+ "request_cap": 4,
+ "method": {
+  "path": "/v1/chat/completions",
+  "prompt_tokens_target": 1400,
+  "max_tokens": 4,
+  "temperature": 0,
+  "pair": "two byte-identical sends, same body object",
+  "stop_rule": "stop as soon as a cached count appears"
+ },
+ "nonstream": [
+  {
+   "which": "request1",
+   "usage_verbatim": {
+    "prompt_tokens": 2106,
+    "total_tokens": 2110,
+    "completion_tokens": 4,
+    "prompt_tokens_details": null,
+    "reasoning_tokens": 4
+   },
+   "http_status": 200,
+   "elapsed_s": 0.502,
+   "metrics_before": {
+    "sglang:cache_hit_rate": 0.0,
+    "sglang:cached_tokens_total": 18626432.0,
+    "sglang:realtime_tokens_total": 25689759.0,
+    "sglang:uncached_prompt_tokens_histogram_sum": 5813789.0,
+    "sglang:uncached_prompt_tokens_histogram_count": 4649.0
+   },
+   "metrics_after": {
+    "sglang:cache_hit_rate": 0.0,
+    "sglang:cached_tokens_total": 18626432.0,
+    "sglang:realtime_tokens_total": 25691869.0,
+    "sglang:uncached_prompt_tokens_histogram_sum": 5815895.0,
+    "sglang:uncached_prompt_tokens_histogram_count": 4650.0
+   },
+   "metrics_delta": {
+    "sglang:cached_tokens_total": 0.0,
+    "sglang:cache_hit_rate": 0.0,
+    "sglang:uncached_prompt_tokens_histogram_sum": 2106.0,
+    "sglang:uncached_prompt_tokens_histogram_count": 1.0,
+    "sglang:realtime_tokens_total": 2110.0
+   },
+   "cache_hit_rate_gauge_raw": [
+    "sglang:cache_hit_rate{engine_type=\"unified\",model_name=\"occamy-1.0\",moe_ep_rank=\"0\",pp_rank=\"0\",tp_rank=\"0\"} 0.0"
+   ],
+   "content_sha_length": 9189
+  },
+  {
+   "which": "request2",
+   "usage_verbatim": {
+    "prompt_tokens": 2106,
+    "total_tokens": 2110,
+    "completion_tokens": 4,
+    "prompt_tokens_details": {
+     "cached_tokens": 2048
+    },
+    "reasoning_tokens": 4
+   },
+   "http_status": 200,
+   "elapsed_s": 0.195,
+   "metrics_before": {
+    "sglang:cache_hit_rate": 0.0,
+    "sglang:cached_tokens_total": 18626432.0,
+    "sglang:realtime_tokens_total": 25691869.0,
+    "sglang:uncached_prompt_tokens_histogram_sum": 5815895.0,
+    "sglang:uncached_prompt_tokens_histogram_count": 4650.0
+   },
+   "metrics_after": {
+    "sglang:cache_hit_rate": 0.9724596391263058,
+    "sglang:cached_tokens_total": 18628480.0,
+    "sglang:realtime_tokens_total": 25693978.0,
+    "sglang:uncached_prompt_tokens_histogram_sum": 5815953.0,
+    "sglang:uncached_prompt_tokens_histogram_count": 4651.0
+   },
+   "metrics_delta": {
+    "sglang:cached_tokens_total": 2048.0,
+    "sglang:cache_hit_rate": 0.972,
+    "sglang:uncached_prompt_tokens_histogram_sum": 58.0,
+    "sglang:uncached_prompt_tokens_histogram_count": 1.0,
+    "sglang:realtime_tokens_total": 2109.0
+   },
+   "cache_hit_rate_gauge_raw": [
+    "sglang:cache_hit_rate{engine_type=\"unified\",model_name=\"occamy-1.0\",moe_ep_rank=\"0\",pp_rank=\"0\",tp_rank=\"0\"} 0.9724596391263058"
+   ],
+   "content_sha_length": 9189
+  }
+ ],
+ "stream": null,
+ "stream_skipped_because": "non-stream pair already showed credit: response no.2 cached_tokens=2048, cached_tokens_total delta=2048.0",
+ "requests_used": 2,
+ "stopped_at": "answer",
+ "tvs_0_8523_recomputed": {
+  "cached_tokens": 93568,
+  "prompt_tokens": 109780,
+  "ratio": 0.852323,
+  "matches_published_0_8523": true
+ },
+ "provenance_from_code": [
+  "longrun/client.py:604 usage_cached_tokens() -> usage.prompt_tokens_details.cached_tokens (top-level cached_tokens not read; None, never 0, when absent)",
+  "longrun/client.py:661 url = cfg.base_url.rstrip('/') + '/chat/completions'",
+  "longrun/client.py:339-340 stream_options={'include_usage': True} when streaming",
+  "longrun/run_longrun.py:1755-1757 row keys prompt_tokens / cached_tokens / uncached_tokens (uncached = prompt - cached, None when either is None)",
+  "longrun/run_longrun.py:1699 cached = resp.get('cached_tokens')",
+  "measure/TVS.json definition.cached_share = sum(cached_tokens)/sum(prompt_tokens) over rows whose cached_tokens is non-null"
+ ],
+ "residual_gap": {
+  "what": "the streamed pair was not spent (stop rule); streamed usage on /v1/chat/completions is inferred from client.py:339-340 plus existing stream:true rows carrying cached_reported:true, not re-measured by this probe",
+  "how_to_close": "a fresh 2-request unit sending the same byte-identical pair with stream:true and stream_options.include_usage=true"
+ },
+ "answers": {
+  "a": "YES - request 2 of a byte-identical pair on /v1/chat/completions reports prompt_tokens_details.cached_tokens=2048 (request 1 prompt_tokens_details=null) and accrues +2048 on sglang:cached_tokens_total",
+  "b": "BOTH - response field usage.prompt_tokens_details.cached_tokens (client.py:604) and metric delta sglang:cached_tokens_total; the response field IS already written into rows as cached_tokens by run_longrun.py:1756",
+  "c": "YES - measurable on the frozen runner as it stands; no patch needed, nothing applied"
+ },
+ "endpoint_caveat_replacement": ":8012's /v1/chat/completions does report cache credit per request - usage.prompt_tokens_details.cached_tokens (null on a cold request, 2048 of 2106 on the second of a byte-identical pair) - and /metrics carries the cumulative counter sglang:cached_tokens_total, whose delta equals the reported figure exactly, with sglang:cache_hit_rate as a 0.0-when-idle corroborating gauge; the missing field and missing counter on /v1/completions are properties of that endpoint, not of the engine.",
+ "request_log": [
+  {
+   "n": 1,
+   "path": "/v1/chat/completions",
+   "stream": false,
+   "http": 200,
+   "prompt_tokens": 2106,
+   "cached_tokens": null,
+   "ts": "2026-10-26T17:04:38Z"
+  },
+  {
+   "n": 2,
+   "path": "/v1/chat/completions",
+   "stream": false,
+   "http": 200,
+   "prompt_tokens": 2106,
+   "cached_tokens": 2048,
+   "ts": "2026-10-26T17:04:38Z"
+  }
+ ]
+}

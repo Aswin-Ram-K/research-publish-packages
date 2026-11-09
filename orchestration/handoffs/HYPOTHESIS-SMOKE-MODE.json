@@ -1,0 +1,89 @@
+{
+ "unit": "HYPOTHESIS-SMOKE-MODE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/claim_mode.py",
+  "experiments/ptr-engine/longrun/tests/test_claim_mode.py",
+  "orchestration/units/HYPOTHESIS-SMOKE-MODE.md",
+  "orchestration/handoffs/HYPOTHESIS-SMOKE-MODE.json",
+  "orchestration/journals/HYPOTHESIS-SMOKE-MODE.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "Ran 21 tests in 0.003s -- OK (exit 0)",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/tests/test_claim_mode.py  # 21 passed, exit 0",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_claim_mode.py -q  # 21 passed",
+   "python3 experiments/ptr-engine/longrun/claim_mode.py  # prints both shapes + refusals"
+  ],
+  "test_count": 21,
+  "red_green": [
+   "GREEN resolve_claim(None) raises ClaimRefusal(code=12). RED mutant: replace `raise ClaimRefusal(flag_value)` with `return ClaimRecord(MODE_SMOKE, CLAIM_NONE, False)` -> the same silence guard returns False and the refusal test fails.",
+   "GREEN assert_comparable([H2_ROW, SMOKE_ROW]) raises IncomparableClaim('incomparable_claim: ... cell=PLUMB-1 arm=plumbing ...'). RED mutant: replace `if offenders:` with `if False:` -> returns comparable=True with claims {'h2':1,'none':1} and the by-name test fails."
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "A follow-up card applies the two wiring notes once V-GATE-CHAIN-3 settles: (1) cell.py eval_gate_prereg lines 889-899 -> 5 lines; (2) analyze_stats.py 3 hunks. Then LIVE-SMOKE-8 can run `--hypothesis smoke` legally with no arm contamination. Verify with `--hypothesis none` (exit 12) and a mixed smoke+H2 analyse (refused 'incomparable_claim').",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/claim_mode.py",
+  "experiments/ptr-engine/longrun/tests/test_claim_mode.py",
+  "orchestration/units/HYPOTHESIS-SMOKE-MODE.md",
+  "orchestration/handoffs/HYPOTHESIS-SMOKE-MODE.json",
+  "orchestration/journals/HYPOTHESIS-SMOKE-MODE.jsonl"
+ ],
+ "resolved_shapes": {
+  "smoke": {
+   "mode": "smoke",
+   "claim": "none",
+   "comparison_eligible": false
+  },
+  "plumbing": {
+   "mode": "smoke",
+   "claim": "none",
+   "comparison_eligible": false
+  },
+  "hypothesis": {
+   "mode": "hypothesis",
+   "claim": "H1|H2|H3",
+   "comparison_eligible": true
+  }
+ },
+ "refusal": {
+  "class": "claim_mode.ClaimRefusal (code=12, stage='3c/7 G3 prereg gate'); as_abort() returns cell.Abort, the class G3's silence refusal is converted into by _enforce(verdict, stage, 12) at cell.py:735",
+  "refused_inputs": [
+   "absent (None)",
+   "empty / whitespace",
+   "explicit 'none'",
+   "unknown spelling (H4, primary, ...)"
+  ],
+  "message": "claim REFUSED: --hypothesis=%r is not a declaration this run may make. The three accepted forms are (1) `--hypothesis smoke` and (2) `--hypothesis plumbing` ... and (3) `--hypothesis H1`, `--hypothesis H2` or `--hypothesis H3` ... Silence is not a claim: an absent or empty --hypothesis is refused here, and so is an explicit `none` -- a run may start without a hypothesis only by declaring that it makes no claim."
+ },
+ "row_fields": {
+  "fields": [
+   "claim",
+   "comparison_eligible"
+  ],
+  "values": "claim = 'none' | 'H1' | 'H2' | 'H3'; comparison_eligible = false | true",
+  "placement": "top level of the per-turn row literal, immediately after `\"arm\": arm,` at run_longrun.py:1563-1564; write via **claim_mode.row_fields(claim). The cell-level manifest literal at run_longrun.py:1159-1160 is a different artefact and is not a substitute.",
+  "historical_rows": "NOT backfilled. Absent BOTH fields is the LEGACY state: assert_comparable counts it (legacy_rows/legacy_arms) and does not refuse it; a claim-free declaration is never inferred from absence."
+ },
+ "wiring_notes": {
+  "cell_py": "# --- file: experiments/ptr-engine/longrun/cell.py (sha256 fd4f2b01a6bfdeea425a... today)\n# function: eval_gate_prereg   current lines 889-899 (the silence branch)\n#\n# context today (cell.py:874-899):\n#     stage = \"3c/7 G3 prereg gate\"\n#     ...\n#     name, source = _declared_hypothesis(args, doc)        # line 877\n#     ...\n#     verdict = { ... }                                     # lines 881-888\n#     if not name or name in (\"NONE\", \"NULL\", \"-\"):         # <-- REPLACE 889-899\n#\n# REPLACE lines 889-899 with exactly these 5 lines:\n    from claim_mode import check_prereg_claim, smoke_prereg_verdict\n    claim = check_prereg_claim(args, Abort)   # absent/empty/\"none\"/unknown -> Abort(12)\n    verdict.update({\"hypothesis\": claim[\"claim\"],\n                    \"comparison_eligible\": claim[\"comparison_eligible\"]})\n    if claim[\"is_smoke\"]:\n        return smoke_prereg_verdict(verdict, n)\n#\n# Keep `name, source = _declared_hypothesis(args, doc)` at line 877: it still fills\n# verdict[\"hypothesis_source\"] (\"flag:--hypothesis\") and is overwritten for smoke.\n# `Abort` is the module-level class; check_prereg_claim raises THAT class with\n# code 12 and stage \"3c/7 G3 prereg gate\" -- identical to G3's silence refusal.\n# Lazy import inside the function matches cell.py's own _ledger_module()/_h1_min_n()\n# convention and avoids breaking the gate tests that import cell.py by path.\n# Acceptance: `--hypothesis none` -> exit 12 with the three-form message;\n#             `--hypothesis smoke` -> G3 ok, comparison_eligible false;\n#             `--hypothesis H2` -> unchanged.",
+  "analyze_stats_py": "# --- file: experiments/ptr-engine/longrun/analyze_stats.py (sha256 0a9a786102ca870edb3f... today)\n# Hunk 1 -- module imports, insert after line 92 (`import row_provenance as _row_provenance`):\nfrom claim_mode import assert_comparable, IncomparableClaim   # noqa: E402\n#\n# Hunk 2 -- function analyze(), insert between line 1021\n# (`selector = turn_latency_rows if selector is None else selector`) and line 1022 (`arms = {}`):\n    assert_comparable(rows, label=\"analyze\")\n#\n# Context today (analyze_stats.py:1021-1026):\n#     selector = turn_latency_rows if selector is None else selector\n#     arms = {}\n#     for row in rows or ():\n#         if isinstance(row, dict):\n#             arms.setdefault(_arm_of(row), []).append(row)\n#     prov = dict(provenance) if provenance is not None else provenance_cells(rows)\n#\n# Hunk 3 (so the CLI reports instead of tracebacking) -- function main(), before\n# `report = analyze(...)` at line 1331:\n    try:\n        assert_comparable(rows, label=\"analyze\")\n    except IncomparableClaim as exc:\n        print(str(exc))\n        return 11          # cell.py's EXIT_ANALYSE: the analyser refused\n#\n# `--assume-comparable` is provenance-only and must NOT override this: a claim-free\n# cell is not a provenance mismatch, it is a cell that makes no claim."
+ },
+ "invariant": "A run may start without a hypothesis only by declaring that it makes no claim, and its rows can never enter a comparison.",
+ "assumptions": [
+  "The accepted claim-free spellings are `smoke` and `plumbing` (the card says 'smoke/plumbing'); `none` stays refused because it names no declaration, which preserves G3's silence rule rather than weakening it.",
+  "Rows with no claim fields are LEGACY, not claim-free: refusing them would retroactively invalidate every historical analyse call, while the card's invariant concerns cells that DECLARE claim=none.",
+  "The cell.py patch is NOT three lines at the location: the smoke path must return an ok:True verdict before PARM-1's `name not in hyps` check and must bypass the n-admissibility thresholds. Smallest honest patch = replace the 11-line silence branch (889-899) with 5 lines plus a lazy import; check_prereg_claim + smoke_prereg_verdict keep it to that size and keep Abort(12) as the raised class.",
+  "as_abort() requires the caller's Abort class rather than importing cell: running cell.py as a script means module __main__, so `import cell` would execute the conductor twice and raise a DIFFERENT Abort class that main()'s handler would not catch (exit 1 instead of 12).",
+  "Bound: 20 calls; this unit used ~24 because producing an exact, ready-to-apply wiring note required two extra reads (cell.py import block, analyze_stats.py main error handling). Recorded rather than hidden."
+ ],
+ "unchanged_guards": {
+  "cell.py_sha256": "fd4f2b01a6bfdeea425a92de428f770bf9f07fbe3bdc3b1d8cfd1f4a17ee2ec6",
+  "analyze_stats.py_sha256": "0a9a786102ca870edb3ff714538a512e0ea59534e4ced2f3d012aec0e39b493b",
+  "run_longrun.py_sha256": "939c225c052319b91ef7df0e69678b85ae855fc9bb3fbf293441b7bafb99b1c3",
+  "note": "All three untouched by this unit; no historical row or fixture written."
+ },
+ "tool_calls": 24,
+ "bound": 20
+}

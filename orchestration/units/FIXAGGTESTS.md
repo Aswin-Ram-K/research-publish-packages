@@ -1,0 +1,15 @@
+# FIXAGGTESTS
+
+unit: FIXAGGTESTS
+status: done
+artifacts:
+  - experiments/ptr-engine/longrun/tests/test_tx_agg.py
+evidence:
+  - "pytest: 19 passed"
+  - "default checker: AGG reachability inherently failing (not disabled)"
+blocker: none
+next_unit_hint: VFinal
+write_paths:
+  - experiments/ptr-engine/longrun/tests/test_tx_agg.py
+  - orchestration/units/FIXAGGTESTS.md
+  - orchestration/handoffs/FIXAGGTESTS.json

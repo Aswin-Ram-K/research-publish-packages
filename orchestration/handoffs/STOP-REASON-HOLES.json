@@ -1,0 +1,52 @@
+{
+ "unit": "STOP-REASON-HOLES",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/client.py",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_stop_reason_producers.py",
+  "docs/STOP-REASON.md",
+  "orchestration/units/STOP-REASON-HOLES.md"
+ ],
+ "evidence": {
+  "test_stop_reason_producers": "8/8 checks passed",
+  "before_after": {
+   "tool_call_hole": "empty_response -> tool_calls",
+   "runaway_abort": "turn_wall_cap -> runaway_turn",
+   "length_from_row": "empty_response (row-only, no manifest) -> length"
+  },
+  "red_green": {
+   "a_tool_signal_removed": "FAIL tool-hole: stop_reason=empty_response (expected tool_calls)",
+   "b_runaway_producer_removed": "FAIL runaway: stop_reason=turn_wall_cap exit 6 (expected runaway_turn)",
+   "restored": "8/8 green"
+  },
+  "ten_members": "10/10 inducible; unmappable string -> unknown",
+  "neighbour_exit_codes": {
+   "test_client_ttft": 0,
+   "test_wire_client": 0,
+   "test_guards": 0,
+   "test_tool_channel": 1,
+   "test_tool_channel2": 1,
+   "test_tool_channel3": 0,
+   "test_record_stop_reason": 0,
+   "test_projection_calibration": 0
+  },
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/tests/test_stop_reason_producers.py",
+   "python3 experiments/ptr-engine/longrun/tests/<neighbour>.py"
+  ]
+ },
+ "blocker": "Two neighbour files were already red before this unit and were NOT edited (card forbids editing them): test_tool_channel fails `rounds == TOOL_FETCH_ROUNDS_PER_ARM` (gets 3, the later TOOL_FETCH_ROUNDS_PER_TURN=3 per-turn cap); test_tool_channel2 fails its frozen v4tools2-baseline-pre.py dry-run byte-identity (prompt 61 B shorter per turn). Neither touches the stop-reason path or any request body this unit changed.",
+ "next_unit_hint": "A stale-neighbour unit: refresh test_tool_channel's expectation to the per-turn cap and re-freeze test_tool_channel2's baseline (or scope its byte-identity check to fields the unit owns).",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/client.py",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_stop_reason_producers.py",
+  "docs/STOP-REASON.md",
+  "orchestration/units/STOP-REASON-HOLES.md",
+  "orchestration/handoffs/STOP-REASON-HOLES.json",
+  "orchestration/journals/STOP-REASON-HOLES.jsonl"
+ ],
+ "tool_calls": 24,
+ "bound": 28
+}

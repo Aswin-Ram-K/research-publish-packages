@@ -49,6 +49,6 @@ Read-only, untouched: `src/**`, `papers/**`, `release/**`,
 - `python3 examples/worked_example.py` → 12 items, 30,000 body bytes, 447-byte index,
   **r = 67.1×**; zero-resolution prompt 472 bytes; two resolves 2,496 B and 25 B.
 - Determinism: two processes, two different warmpool roots → identical index sha256
-  (`tests/test_determinism.py`).
+  (`experiments/ptr-engine/tests/test_determinism.py`).
 - Red check: mutating `store.get`'s hash comparison and `resolve`'s scope comparison
   turns 4 tests red; restoring returns 95 green.

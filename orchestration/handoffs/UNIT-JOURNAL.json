@@ -1,0 +1,44 @@
+{
+  "unit": "UNIT-JOURNAL",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/tools/unit_journal.py",
+    "experiments/ptr-engine/longrun/tests/test_unit_journal.py",
+    "docs/UNIT-JOURNAL.md",
+    "orchestration/journals/UNIT-JOURNAL.jsonl",
+    "orchestration/units/UNIT-JOURNAL.md",
+    "orchestration/handoffs/UNIT-JOURNAL.json"
+  ],
+  "evidence": {
+    "command_or_count": "4/4 tests green; kill test reconstructs 6 records / last_step 5, 2 artifacts present, 1 missing named",
+    "commands": [
+      "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_unit_journal.py' -v  ->  Ran 4 tests in 0.810s OK",
+      "UNIT_JOURNAL_TOOL=/tmp/uj_broken.py python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_unit_journal.py' -v  ->  FAILED (failures=4)",
+      "python3 experiments/ptr-engine/tools/unit_journal.py status --unit UNIT-JOURNAL  ->  records: 8 last_step: 7, artifacts exist (4), artifacts MISSING (0)",
+      "python3 experiments/ptr-engine/tools/unit_journal.py resume --unit UNIT-JOURNAL  ->  paste-ready paragraph with the 4 artifacts and byte sizes"
+    ]
+  },
+  "red_green": {
+    "red": "3 guards reverted (missing-artifact exit 1->0, torn-line tolerance->SystemExit, append mode 'a'->'w'): FAILED (failures=4) — (a) status returned 0 for a missing artifact and resume died on the torn line, (b) torn line raised 'torn line: refusing', (c) expected exit 1 got 0, (d) 'earlier bytes were rewritten'",
+    "green": "Ran 4 tests in 0.810s — OK"
+  },
+  "killed_process_reconstruction": "records: 6 last_step: 5 torn_lines: 0 | artifacts exist (2): docs/A.md 5 bytes, out/B.json 7 bytes | artifacts MISSING (1): docs/NEVER-WRITTEN.md | last next: run corpus audit, then handoff | resume exit 0 while status exit 1 (missing artifact only)",
+  "blocker": "",
+  "next_unit_hint": "Adopt the protocol in future cards: log after every artifact write, after every evidence command, and a 'next' record BEFORE the handoff. A follow-up card for a killed unit should run 'unit_journal.py resume --unit <SUPERSEDED>' first instead of re-deriving the work; orchestration/journals/ is never edited and never cleaned.",
+  "write_paths": [
+    "experiments/ptr-engine/tools/unit_journal.py",
+    "experiments/ptr-engine/longrun/tests/test_unit_journal.py",
+    "docs/UNIT-JOURNAL.md",
+    "orchestration/journals/UNIT-JOURNAL.jsonl",
+    "orchestration/units/UNIT-JOURNAL.md",
+    "orchestration/handoffs/UNIT-JOURNAL.json"
+  ],
+  "tool_calls": 13,
+  "bound": 26,
+  "assumptions": [
+    "Journal paths are resolved relative to the workspace root passed as --root (default cwd), so the same tool works from a temp dir in tests.",
+    "status counts a deliberately logged-but-absent artifact as MISSING (exit 1) rather than treating a 'planned' artifact as an error of the journal; a torn line is counted in torn_lines and never affects the exit code.",
+    "The card's 'handoff partial within 5 calls' instruction was a fallback for running out of budget; work finished inside the bound, so the handoff reports done."
+  ],
+  "inference_requests": 0
+}

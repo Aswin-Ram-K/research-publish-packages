@@ -1,0 +1,100 @@
+{
+ "unit": "LAUNCH-PACKAGE-AUDIT",
+ "status": "done",
+ "artifacts": [
+  "docs/LAUNCH-PACKAGE.md",
+  "experiments/ptr-engine/measure/LAUNCH-PACKAGE.json",
+  "orchestration/units/LAUNCH-PACKAGE-AUDIT.md"
+ ],
+ "evidence": {
+  "command_or_count": "ready_to_launch=False blocking=4 gates=8 contra=8; pin recomputed 2b4d4808\u2026 vs recorded 1f7c6791\u2026; pytest test_request_ledger_dedup 8 passed",
+  "commands": [
+   "python3 -m pytest experiments/ptr-engine/tests/test_request_ledger_dedup.py -q  ->  8 passed in 0.32s",
+   "sha256 over name:sha256\\n for HARNESS_FILES+fixture (cell.py:334-346 order) -> 2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871",
+   "sha256sum experiments/ptr-engine/measure/REQUEST-LEDGER.json -> 6da0c1f19b7cd37203c9d99de5e5d8a9db879e002f389a2b525a776624c27806 == LEDGER-GRID-BASELINE-2.json source_ledger_sha256",
+   "grep -n TOOL_FETCH_ROUNDS_PER_ARM run_longrun.py -> :230 = 48; :2857 --fetch-rounds-per-arm",
+   "verdict row recorded PASS f17663d1fed0162a7dc3c5a0a58d372c710974c3"
+  ]
+ },
+ "ready_to_launch": false,
+ "blocking": [
+  "G6 pin moved: 1f7c6791\u2026 != tree 2b4d4808\u2026 (run_longrun.py 0d581d1f\u2026 -> b2003038\u2026, mtime 2026-10-26T19:04:32Z) \u2014 re-pin before launch",
+  "G3 price: 1,016 exists in no measure artefact; RUN-A-STAR-2 prompt says 964/2,228, its description says 1,016/2,176",
+  "G5 canary: docs/TRANCHE-CANARY.md:23 and docs/FETCH-BUDGET-48.md:166 still prescribe N=5; gate must be N=12 + answer_verified>=1 + finish_reason",
+  "G8 command: GRID-SHAPE.json cell_py_flags[6]='--budget 67' and [8]='--fetch-followup-allowance 24' remain stale"
+ ],
+ "contradictions": [
+  {
+   "field": "allowance",
+   "a": "48 (GRID-PARAMS.json :: fetch_followup_allowance.value; run_a_star.py:44)",
+   "b": "24 (GRID-SHAPE.json cells[*].cell_py_flags[8])",
+   "ruling": "stale; GRID-PARAMS supersedes declares it"
+  },
+  {
+   "field": "budget",
+   "a": "108 (GRID-PARAMS.json; run_a_star.py:181,:280)",
+   "b": "67 (GRID-SHAPE.json cells[*].cell_py_flags[6])",
+   "ruling": "stale; 67 refuses at exit 3 stage 3/7 before any request"
+  },
+  {
+   "field": "runner constant",
+   "a": "48 at run_longrun.py:230 with --fetch-rounds-per-arm :2857",
+   "b": "24 at run_longrun.py:226 'no override' (GRID-PARAMS.json :: per_arm_round_cap; docs/DRYRUN-TOOLS-SHAPE.md:70 :2228)",
+   "ruling": "disagree; doc right for bytes read, tree moved at 19:04:32Z, lines shifted :226->:230"
+  },
+  {
+   "field": "price",
+   "a": "964 (GRID-PARAMS.json :: price.total; docs/GRID-PARAMS.md:43; docs/FETCH-BUDGET-48.md:132)",
+   "b": "724 (GRID-SHAPE.json :: grid.requests_incl_digests; docs/GRID-SHAPE.md:130) \u00b7 1,016 (RUN-A-STAR-2 card prose only)",
+   "ruling": "724 stale where GRID-SHAPE speaks; 1,016 has no artefact"
+  },
+  {
+   "field": "remaining",
+   "a": "3,192 (REQUEST-LEDGER.json :: budget.remaining_raw; LEDGER-GRID-BASELINE-2.json :: remaining)",
+   "b": "2,228 (GRID-PARAMS) \u00b7 2,468 (GRID-SHAPE) \u00b7 2,176 (RUN-A-STAR-2 description/title) \u00b7 3,219 (LEDGER-GRID-BASELINE.json, frozen at 1101)",
+   "ruling": "2,228 re-derives; 2,468 only from retired 724; 2,176 only from un-artefacted 1,016; 3,219 superseded by -2 at 19:04:18Z"
+  },
+  {
+   "field": "canary",
+   "a": "N=12, answer_verified>=1, stop_signal_source=finish_reason (CANARY-ERA-B-FIX.json)",
+   "b": "N=5 (docs/TRANCHE-CANARY.md:23; docs/FETCH-BUDGET-48.md:166)",
+   "ruling": "stale; TRANCHE-CANARY.md:140-142 itself says era B cannot gate at N=5"
+  },
+  {
+   "field": "fixture",
+   "a": "LR-01.v8.json 0804b515\u2026 (HARNESS-PIN.json; run_a_star.py:36 FIX)",
+   "b": "LR-01.v6 (LIVE-SMOKE-8 card 0821ef12-a414-4ce3-90c0-9069c0f7618d)",
+   "ruling": "disagree; smoke card's fixture and 24-request allocation predate era B / pool 48"
+  },
+  {
+   "field": "pin",
+   "a": "1f7c67914e5b76680616f08c16708635060a81ab3932c20806e597a5343f3285 (HARNESS-PIN.json)",
+   "b": "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871 (recomputed)",
+   "ruling": "MOVED; only run_longrun.py differs"
+  }
+ ],
+ "pin": {
+  "recorded": "1f7c67914e5b76680616f08c16708635060a81ab3932c20806e597a5343f3285",
+  "recomputed": "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871",
+  "verdict": "moved"
+ },
+ "command": "python3 <CELL=experiments/ptr-engine/longrun/cell.py> --arm <pointer-stable|transcript-grow|transcript-compact|lease-reopen> --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 48 --reps 1 --thinking off --max-wall 2880 --turn-wall-cap 180 --runaway-turns 2 --budget 108 --hypothesis H2 --no-cell-handoff --out-dir experiments/ptr-engine/measure --endpoint <ENDPOINT> [--dry-run] --fetch-followup-allowance 48",
+ "verdict_row": {
+  "command": "python3 -m pytest experiments/ptr-engine/tests/test_request_ledger_dedup.py -q",
+  "exitCode": 0,
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "result": "PASS"
+ },
+ "assumptions": [
+  "handoff-within-6-calls read as 'write the handoff as soon as the evidence is gathered'; the read-only audit needed 9 evidence calls before the fact set was complete"
+ ],
+ "blocker": "",
+ "next_unit_hint": "HARNESS-REPIN-2 (re-pin after run_longrun.py b2003038\u2026) and a one-line edit of docs/TRANCHE-CANARY.md:23 + docs/FETCH-BUDGET-48.md:166 to N=12; then re-run LAUNCH-PACKAGE-AUDIT to flip ready_to_launch",
+ "write_paths": [
+  "docs/LAUNCH-PACKAGE.md",
+  "experiments/ptr-engine/measure/LAUNCH-PACKAGE.json",
+  "orchestration/units/LAUNCH-PACKAGE-AUDIT.md",
+  "orchestration/handoffs/LAUNCH-PACKAGE-AUDIT.json",
+  "orchestration/journals/LAUNCH-PACKAGE-AUDIT.jsonl"
+ ]
+}

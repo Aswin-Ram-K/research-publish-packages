@@ -1,0 +1,89 @@
+{
+  "unit": "V-LEDGER-BASELINE",
+  "kind": "independent_ledger_baseline_verification",
+  "date_utc": "2026-10-26T20:14:00Z",
+  "offline": {"requests_sent": 0, "network_events": 0, "live_cells": 0, "commands": "pure reads + in-process recompute"},
+  "verdict": "baseline_sound",
+  "head_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "subject": {
+    "ledger": "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+    "ledger_sha256_now": "6da0c1f19b7cd37203c9d99de5e5d8a9db879e002f389a2b525a776624c27806",
+    "baseline": "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-2.json",
+    "baseline_sha256_now": "3b79f4766abc8479a7a963f9e04063837928d09d48d2435e91f488b3c6d3ae0d",
+    "superseded_v1": "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE.json"
+  },
+  "check_1_row_count": {
+    "method": "own counter, not build_report: glob = request_ledger.py:784 default (<repo>/experiments/ptr-engine/measure/rows-*.jsonl); rule = classify() at request_ledger.py:302-311 minus suppression_marker() at :292-301 (billed:false, followup_suppressed truthy, served_from == 'prompt'); every non-suppressed row costs 1, kind in ('turn','tool-followup') counted clean, anything else counted + flagged assumed_billed",
+    "files": 15,
+    "rows": 1128,
+    "requests_independent": 1128,
+    "assumed_billed": 232,
+    "ledger_requests": 1128,
+    "ledger_requests_raw": 1128,
+    "ledger_assumed_billed": 232,
+    "per_file_mismatches": [],
+    "per_file": "identical to REQUEST-LEDGER.json :: per_file on rows, requests and sha256 for all 15 files"
+  },
+  "check_2_the_27": {
+    "claim": "v2 figure is exactly 1,101 + 27, the 27 being rows-cell-pointer-stable-20261026T182535Z.jsonl lines 1-27",
+    "confirmed": true,
+    "file": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl",
+    "sha256": "46afc892480ae1dbe4b20d13fd4dacb983653a9f0a04b6a42a6283b3c55ca3b1",
+    "lines": 27,
+    "kinds": ["turn"],
+    "first_ts": "2026-10-26T18:25:56.773Z",
+    "last_ts": "2026-10-26T18:31:25.300Z",
+    "arithmetic": "1,101 (the other 14 files, recomputed independently) + 27 = 1,128 = requests = requests_raw",
+    "v2_pointer": "REQUEST-LEDGER.json :: supersedes {requests_raw 1101, requests_deduplicated 1071, files 14, artefact_sha256_at_read 2f60b831a8439a9ba4ba5fafb8f6ca1ba4fb40cdaf1ccff4f29182c0d6e4c1e5}"
+  },
+  "check_3_dedup_diagnostic": {
+    "requests_deduplicated": 1098,
+    "duplicate_excess": 30,
+    "deduction_rule_sound": false,
+    "diagnostic_deducted": false,
+    "reproduced_by_builder_now": true,
+    "cap_gate_figure": 1128,
+    "one_sentence": "The cap gate spends against 1,128 -- not 1,071 and not 1,098 -- because request_ledger.py:596 publishes requests = requests_raw whenever deduct is false and request_ledger.py:687 sets budget.spent = requests_published, so the 1,098/1,071 de-duplicated figures are printed diagnostics only and can never reduce spend.",
+    "code": ["experiments/ptr-engine/tools/request_ledger.py:596", "experiments/ptr-engine/tools/request_ledger.py:687", "experiments/ptr-engine/tools/request_ledger.py:626", "experiments/ptr-engine/longrun/cell.py:1255"]
+  },
+  "check_4_baseline_integrity": {
+    "a_pinned_ledger_sha_matches": {"frozen": "6da0c1f19b7cd37203c9d99de5e5d8a9db879e002f389a2b525a776624c27806", "recomputed_now": "6da0c1f19b7cd37203c9d99de5e5d8a9db879e002f389a2b525a776624c27806", "ok": true},
+    "b_frozen_numbers_equal_builder_now": {"frozen": {"requests": 1128, "remaining": 3192, "requests_deduplicated": 1098, "duplicate_excess": 30, "deducted": false}, "builder_now": {"requests": 1128, "remaining": 3192, "requests_deduplicated": 1098, "duplicate_excess": 30, "deducted": false}, "files": 15, "ok": true, "method": "import request_ledger; build_report(sorted(glob(measure/rows-*.jsonl)), 4320, 0, 0) -- in-process, nothing written"},
+    "c_v1_byte_unchanged": {"frozen": "6b6dff4473e5e1b9a20ab73b58dfb4a884d50dff019751058ebbd0188b307470", "recomputed_now": "6b6dff4473e5e1b9a20ab73b58dfb4a884d50dff019751058ebbd0188b307470", "mtime_utc": "2026-10-26T18:24:48.831554+00:00", "ok": true},
+    "all_three_pass": true
+  },
+  "check_5_headroom_and_refusal": {
+    "cap": 4320,
+    "reserve": 0,
+    "spent": 1128,
+    "remaining": 3192,
+    "arithmetic": "4,320 - 1,128 = 3,192",
+    "price_16_cell": {"requests": 1056, "shape": "PAIR-6+CTX-2 = 768 turns (16 cells x 48) at factor 1.374532 -> 1,055.7 -> 1,056", "sources": ["experiments/ptr-engine/measure/price-replication.json:38,461", "docs/PRICE-REPLICATION.md:175,215"], "remaining_after": 2136, "fits": true},
+    "price_wired_10_cell_package": {"requests": 1016, "decomposition": "964 tranche + 48 canary + 4 warm-ups", "source": "experiments/ptr-engine/measure/GRID-PARAMS.json :: price", "remaining_after": 2176, "fits": true},
+    "cell_level_refusal_string": {
+      "code": "experiments/ptr-engine/longrun/run_longrun.py:407-413",
+      "text": "CAP REFUSED at T{turn} ({kind}) — over the {limits}: spent={spent} would_spend={would} cap={cap} reserve={reserve} headroom={headroom} allocation={allocation} used_in_run={used_in_run} turn={turn} kind={kind} projected={projected} over_by={over_by} — nothing sent"
+    },
+    "prelaunch_g1_refusal_string": {
+      "code": "experiments/ptr-engine/longrun/cell.py:1283-1291",
+      "text": "this cell would need %s requests (would_spend: %d turn(s) x %d arm(s) x %d rep(s) = %d requests, plus a %d-request fetch follow-up allowance) on top of the %s requests already spent, taking cumulative spend (projected) to %s requests against a limit of %s requests (cap %s - reserve %s): shortfall %s requests, so it must not send"
+    },
+    "gate_accounting_line": {"code": "experiments/ptr-engine/tools/request_ledger.py:745-747", "text": "budget: spent={spent} would_spend={would_spend} cap={cap} reserve={reserve} headroom={headroom} projected={projected} remaining={remaining} (spent is the RAW count; de-duplicated diagnostic spent={spent_deduplicated} remaining={remaining_deduplicated} -- NOT deducted)"}
+  },
+  "check_6_zero_spend": {
+    "asserted": true,
+    "newest_rows_file": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl",
+    "rows": 27,
+    "mtime_utc": "2026-10-26T18:31:25.298437+00:00",
+    "last_row_ts": "2026-10-26T18:31:25.300Z",
+    "mtime_minus_last_ts_s": -0.002,
+    "note": "the newest rows-cell-* file is the 27-row era-A cell; its mtime trails its last row timestamp by 2 ms (inside the writer's flush interval). No rows file post-dates the baseline freeze (2026-10-26T19:04:18Z) and no live row exists."
+  },
+  "notes_for_the_launcher": [
+    "GRID-CELL-SANITY.json says both rows-cell-* files must_not_enter_analysis; that is an analysis-eligibility rule, not a spend rule -- their 33 rows were billed and are correctly inside the 1,128.",
+    "Line-number drift already recorded by the ledger itself: the ledger-cap build_report call is cell.py:1255 (not :734, which is the projection gate's `if not ok:`), and content_sha256 is assigned at run_longrun.py:1555 (not :1493).",
+    "The 16-cell 1,056 price is the PAIR-6+CTX-2 SHAPE price and is documented; the wired launch package today is the 10-cell 1,016. Both fit 3,192; a launcher must not mix them."
+  ],
+  "not_done": ["no rebuild, no re-pin, no edit of REQUEST-LEDGER.json, either baseline, any rows-* file, request_ledger.py, cell.py, run_longrun.py, the pin, the params or any threshold"],
+  "reproduce": "python3 -c \"recount over measure/rows-*.jsonl with request_ledger.classify/suppression_marker; assert 15 files, 1128 requests, ledger sha 6da0c1f1...c27806\" (exit 0)"
+}

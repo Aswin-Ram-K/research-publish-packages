@@ -1,0 +1,63 @@
+{
+  "unit": "CONTRACT-DIFF-TREE-SCOPE",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/tools/launch_contract_diff.py",
+    "experiments/ptr-engine/tests/test_launch_contract_diff.py",
+    "experiments/ptr-engine/measure/LAUNCH-CONTRACT-DIFF.json",
+    "docs/LAUNCH-CONTRACT.md",
+    "orchestration/units/CONTRACT-DIFF-TREE-SCOPE.md",
+    "orchestration/handoffs/CONTRACT-DIFF-TREE-SCOPE.json",
+    "orchestration/journals/CONTRACT-DIFF-TREE-SCOPE.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "default check exit 1; scoped gen 4 exit 13 (MOVED); scoped matching tree exit 0; default with help 108->67 exit 1; suite 7 passed; engine suite 266 passed",
+    "actual output": "default: DISAGREES harness_pin_digest fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac | 35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb | 2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871  EXIT=1 || scoped: MOVED harness_pin_digest, judged_tree generation=4 harness_sha256=fa6fd8cc... pinned_at=2026-10-26T19:27:25Z, moved input grade_v5.py 056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772 -> 3d70ed1d43d2ab098eeeba4b50fa574273c71e9ff24af5adaa9e519d10c77940, moved input run_longrun.py b20030386610c58bd278681c8c365935336960513787b8380892e276ba42965e -> 30dfa9e9e09683c4beedc1676294ae98dec1c39313e74dec4a31fb980a16576b, moved digests scope=fa6fd8cc... live=35ff41b7... EXIT=13 || /tmp restored-record tree: 22 numbers AGREES=16, STALE-BY-DESIGN=6, EXIT=0 || default with help 108->67: DISAGREES per_cell_budget 'competing values: 108, 67 (108 at experiments/ptr-engine/tools/run_a_star.py:241; 67 at experiments/ptr-engine/tools/run_a_star.py:367)' EXIT=1; scoped on the same tree: EXIT=1 (only per_cell_budget) || pytest experiments/ptr-engine/tests/test_launch_contract_diff.py -q -> 7 passed; pytest experiments/ptr-engine/tests -q -> 266 passed",
+    "commands": [
+      "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check",
+      "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check --pin-generation 4",
+      "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check --root /tmp/cd-scope/tree-gen4 --pin-generation 4",
+      "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check --root /tmp/cd-scope/tree-gen5-help",
+      "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check --root /tmp/cd-scope/tree-gen5-help --pin-generation 5",
+      "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check --tree-sha 0000000000000000000000000000000000000000000000000000000000000000",
+      "python3 experiments/ptr-engine/tools/launch_contract_diff.py --write --pin-generation 4",
+      "pytest experiments/ptr-engine/tests/test_launch_contract_diff.py -q",
+      "pytest experiments/ptr-engine/tests -q"
+    ],
+    "verdict_row": "orchestration_verdict record -> PASS f17663d1 'pytest experiments/ptr-engine/tests/test_launch_contract_diff.py -q' exitCode 0"
+  },
+  "blocker": "",
+  "next_unit_hint": "bump the pin to generation 5 when the tree settles (HARNESS-PIN.json is not this tool's to write), then re-run --check --pin-generation 5; the default --check stays red on harness_pin_digest until that bump, by design",
+  "write_paths": [
+    "experiments/ptr-engine/tools/launch_contract_diff.py",
+    "experiments/ptr-engine/tests/test_launch_contract_diff.py",
+    "experiments/ptr-engine/measure/LAUNCH-CONTRACT-DIFF.json",
+    "docs/LAUNCH-CONTRACT.md",
+    "orchestration/units/CONTRACT-DIFF-TREE-SCOPE.md",
+    "orchestration/handoffs/CONTRACT-DIFF-TREE-SCOPE.json",
+    "orchestration/journals/CONTRACT-DIFF-TREE-SCOPE.jsonl"
+  ],
+  "scope_decision": {
+    "argument": "--pin-generation N resolves the generation through HARNESS-PIN.json's supersedes chain (supersedes_pin_generation_{n-1}); --tree-sha SHA256 judges an explicitly named digest but is REFUSED (exit 2) unless the pin records it, so a scope cannot be used to launder a disagreement",
+    "moved_exit_code": 13,
+    "why_13": "the project's established tree-moved code: experiments/ptr-engine/longrun/exit_codes.py EXIT_TREE_MOVED = 13, declared as an external code raised by tools/tree_freeze.py (':88 13 tree moved', UNSTAMPED: prefix at :74). Imported from that table, never re-typed; 1 keeps its meaning (the work failed), 2 is usage",
+    "report": "judged_tree {generation, harness_sha256, pinned_at} on the document and on the digest row, plus live_harness_sha256 and moved_inputs [{path, name, recorded_sha256, current_sha256}]; the unscoped document has no judged_tree key at all"
+  },
+  "artefact": {
+    "needed_rerecord": true,
+    "why": "the file did not exist on disk at all, and the new fields (judged_tree, moved_inputs, live_harness_sha256, operational_rule) are part of the deliverable",
+    "written_under": "pin generation 4 (--write --pin-generation 4)",
+    "recorded_summary": "by_status {MOVED:1, AGREES:15, STALE-BY-DESIGN:6}, moved ['harness_pin_digest'], check_exit 13, unscoped_check_exit 0",
+    "numbers_rederived": "none (price 1,016 / ledger 1,128 and 3,192 / canary wall 900 are compared, not re-derived)"
+  },
+  "operational_rule": "a check whose acceptance depends on files other cards may edit must be run with an explicit scope; a check that cannot name its tree cannot distinguish a defect from a neighbour.",
+  "assumptions": [
+    "generation-4 bytes of grade_v5.py (056eb605...) are unrecoverable: not tracked by git (git ls-files shows no grade_v5.py; git show HEAD:... returns nothing), no .bak/.orig beside it, and no file under the workspace carries that sha256. Case (b) is therefore a /tmp copy whose RECORDED generation 4 was made to match its bytes (the condition the scope argument must accept), not bytes restored to the record. Stated in docs/LAUNCH-CONTRACT.md under 'Traps'.",
+    "the verdict row records the pytest suite rather than the bare scoped command: by this card's own rule 2 the real-tree '--check --pin-generation 4' exits 13, and a 13 cannot be a PASS closure. The suite executes --pin-generation 4/5 and asserts (a)(b)(c)(c'), and the measured 13 is quoted in the row's evidence."
+  ],
+  "external_changes": [
+    "experiments/ptr-engine/longrun/run_longrun.py moved mid-card by a neighbour: b20030386610c5... -> 30dfa9e9e09683c4... (it was SAME as the generation-4 record at 14:50 and MOVED by 14:56) -- reported as a mover in the MOVED row, never fatal",
+    "experiments/ptr-engine/tools/launch_contract_diff.py itself was edited by a neighbour while this card was reading it (70800-byte view at 14:50 -> a DISAGREES detail block that prefers an occurrence carrying a real line number, +6 lines); the change was preserved, not reverted"
+  ],
+  "offline": {"requests_sent": 0, "network_events": 0, "live_cells": 0}
+}

@@ -1,0 +1,118 @@
+{
+  "unit": "OPERATOR-BRIEF-4",
+  "replaces": "docs/OPERATOR-BRIEF.md (issue 3, superseded in place)",
+  "generated_utc": "2026-10-26T18:10Z",
+  "requests_in_this_card": 0,
+  "inference_requests": 0,
+  "network": false,
+  "rule": "every number carries the path and field it was re-read from today; a figure with no artefact is omitted and named as omitted, never estimated",
+  "verdict": {
+    "overall": "not adjudicable",
+    "missing_measurement": "one grid holding all four arms with >=60 usable timings per arm and the 12 declared checkpoint ids in its rows",
+    "path": "docs/PREREG-ARM-RUN.md",
+    "lines": "150-152 (four-arm clause), 36-37 (n>=60 p95 floor)"
+  },
+  "hypotheses": {
+    "H1_latency": {
+      "status": "undecidable",
+      "p50_ms": {
+        "lease-reopen": {"value": 136.17, "n": 34},
+        "pointer-stable": {"value": 166.96, "n": 47},
+        "transcript-compact": {"value": 202.49, "n": 48},
+        "transcript-grow": {"value": 482.24, "n": 48}
+      },
+      "p50_gap_pointer_vs_grow_ms": 315.29,
+      "other_grid_p50_gaps_ms": [32.39, 11.99],
+      "p95_comparisons_between_two_arms": 0,
+      "path": "experiments/ptr-engine/measure/P95-POWER.json",
+      "fields": [".sets", ".per_grid_summary[0].p50_gap_ms", ".per_grid_summary[1].p50_gap_ms", ".per_grid_summary[2].p50_gap_ms"]
+    },
+    "H2_cache_cost": {
+      "status": "undecidable",
+      "why": "the uncached limb changes sign between grids; the frozen gate needs both limbs on one grid",
+      "gate": "<= 0.95 x cache-inclusive AND < 1.00 x uncached per completed turn",
+      "path": "docs/PREREG-ARM-RUN.md",
+      "lines": "65-72"
+    },
+    "H3_quality": {
+      "status": "not evaluable at this n",
+      "declared_checkpoint_ids": 12,
+      "ids_that_are_NONE_items": 3,
+      "margin_pp": 16.7,
+      "mcnemar_min_discordant": 6,
+      "min_decidable_to_verdict": "8 of 12",
+      "paths": ["docs/PREREG-ARM-RUN.md", "docs/PARM-1-ERRATA.md"],
+      "lines": "95-114"
+    }
+  },
+  "quality": {
+    "frozen_checkpoint_accuracy": {
+      "value": "2 of 66 cells",
+      "numerator": 2,
+      "denominator": 66,
+      "governs": "the 8 cell-*.grade-v5.json documents generated at/after 2026-10-26T15:56Z",
+      "path": "experiments/ptr-engine/measure/PROSE-VALUE-METRIC.json",
+      "fields": [".population.n_frozen_pass", ".population.n_cells", ".population.n_documents"]
+    },
+    "value_aware": {
+      "value": "4 of 66",
+      "passes_missed_by_frozen_rule": 2,
+      "wrong_values_asserted_but_graded_non_pass": 4,
+      "path": "experiments/ptr-engine/measure/PROSE-VALUE-METRIC.json",
+      "fields": [".overall.frozen_nonpass_right", ".overall.frozen_nonpass_wrong", ".overall.frozen_pass"]
+    },
+    "grid_wide": {
+      "grade_v5": {"value": "3/25", "pct": 12.0, "path": "docs/QUALITY-ERAS.md"},
+      "det_verify": {"value": "5/43", "instrument_sha_prefix": "12ccc74e", "path": "docs/QUALITY-ERAS.md", "note": "partial grid; citable only with the instrument sha attached"}
+    }
+  },
+  "cost": {
+    "p95_comparisons_between_two_arms": 0,
+    "p95_note": "every p95-bearing grid on disk is single-arm; the tools-grid p95 is withdrawn with no replacement (WITHDRAWN.json WI-004); p95 at n=48 is refused by docs/PREREG-ARM-RUN.md:36-37",
+    "tvs": {
+      "events": 3,
+      "censored": 20,
+      "declared_pairs": 23,
+      "event_arm": "pointer-stable",
+      "event_turn": 12,
+      "path": "experiments/ptr-engine/measure/TVS-CENSORED.json",
+      "fields": [".counts.n_event", ".counts.n_censored", ".counts.declared_pairs"]
+    }
+  },
+  "plan": {
+    "tranche_1": {
+      "shape": "PAIR-3+CTX-2: 4 arms, pair 3 reps, context 2 reps",
+      "turns": 480,
+      "requests": 660,
+      "remaining_after": 2559,
+      "remaining_now": 3219,
+      "path": "experiments/ptr-engine/measure/price-replication.json",
+      "fields": [".budget.tranche_1", ".budget.tranche_1_remaining", ".budget.remaining_raw"]
+    },
+    "promotion_rule": "pooled p95 intervals separate C-lower AND all three rep-level p50 gaps >= 100 ms, then PAIR-6+CTX-2",
+    "stop_rule": "no 792 grid if pooled p95 intervals overlap or any rep's p50 gap < 100 ms",
+    "hard_constraint": "PARM-1:150-152 requires all four arms in the same grid with identical fixture_sha256 and reasoning policy, so a pair-only grid is not an admissible H1 verdict",
+    "spend_basis": {"cap": 4320, "spent": 1101, "remaining": 3219, "path": "experiments/ptr-engine/measure/REQUEST-LEDGER.json", "fields": [".budget.cap", ".budget.spent", ".budget.remaining"]}
+  },
+  "blockers": [
+    {"what": "gate chain not passed: six operands bypass the projection gate", "path": "orchestration/handoffs/V-GATE-CHAIN-3.json", "unblock": "class-shaped repair validating every variable of the three decision expressions, then a fresh verifier"},
+    {"what": "spawn rule unverified: refusal record may declare fewer spawns than observed", "path": "orchestration/handoffs/V-SPAWN-DECLARE.json", "unblock": "validate_refusal must reject a record with no spawns block"},
+    {"what": "tree moved under the audit: cell.py no longer matches the card pin", "path": "experiments/ptr-engine/measure/TREE-FREEZE.json", "unblock": "fix V-TREE-FREEZE D1 (classify against the BEFORE freeze), then re-freeze"},
+    {"what": "fixture v8 re-freeze: DONE", "path": "experiments/ptr-engine/measure/V8-DRYRUN-REFREEZE.json", "unblock": "none - closed"},
+    {"what": "quality-register repairs open (analyze_stats graded_n; prose-as-answer undecided)", "path": "orchestration/handoffs/GRADE-V5-REPAIR.json", "unblock": "a unit owning analyze_stats.py sets graded_n = pass + fail and reports undecidable/missing beside it"}
+  ],
+  "superseded_do_not_cite": [
+    {"figure": "~466 requests", "replacement": "1,101 requests used / 3,219 remaining", "path": "experiments/ptr-engine/measure/REQUEST-LEDGER.json"},
+    {"figure": "1,071 requests / 3,249 remaining as spend", "replacement": "1,101 / 3,219; the 30-row deduction is not applied", "path": "experiments/ptr-engine/measure/REQUEST-LEDGER.json"},
+    {"figure": "55/64 wilson95 0.8594", "replacement": "3/3 checkpoint accuracy for that run", "path": "experiments/ptr-engine/measure/WITHDRAWN.json"},
+    {"figure": "p95 318.14 [235,526] n=68", "replacement": "withdrawn, no replacement", "path": "experiments/ptr-engine/measure/WITHDRAWN.json"},
+    {"figure": "5/43 mixes grader eras", "replacement": "withdrawn charge; 5/43 reproduces under det_verify sha 12ccc74e", "path": "experiments/ptr-engine/measure/WITHDRAWN.json"},
+    {"figure": "217k prompt trajectory", "replacement": "pointer-stable turn 48 = 2,197 tokens; corpus max 51,216", "path": "experiments/ptr-engine/measure/WITHDRAWN.json"},
+    {"figure": "384 requests for the grid", "replacement": "660 for tranche 1", "path": "experiments/ptr-engine/measure/price-replication.json"}
+  ],
+  "would_change_mind": [
+    "one admissible four-arm grid whose pooled p95 intervals separate and whose three rep-level p50 gaps all exceed 100 ms",
+    "a second and third grid reproducing the 315.29 ms p50 gap",
+    "a quality run where pointer-stable reaches 8 of 12 decidable and loses more than 2 checkpoints (H3 veto)"
+  ]
+}

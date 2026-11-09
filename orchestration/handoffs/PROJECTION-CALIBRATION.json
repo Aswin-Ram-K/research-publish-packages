@@ -1,0 +1,36 @@
+{
+ "unit": "PROJECTION-CALIBRATION",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_projection_calibration.py",
+  "docs/PROJECTION-CALIBRATION.md",
+  "experiments/ptr-engine/measure/PROJECTION.json",
+  "orchestration/units/PROJECTION-CALIBRATION.md",
+  "orchestration/journals/PROJECTION-CALIBRATION.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "measured p50=129.1s p90=427.7s mean=190.9s over 6 usable rows in experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T145758Z.jsonl (thinking auto); pooled thinking off/absent n=960 p50=2.9s p90=38.1s mean=27.5s; wall/completion_token=0.0288 (6 live rows), 0.0349 (on/auto n=9), 0.0338 (off n=960). Projection: 48 turns x 60s=2880s ADMITTED under --max-wall 3600; same cell at 180s=8640s exit 8; 12 turns 720s admitted; 60 turns 3600s admitted. Tests: test_projection_calibration.py 4/4 passed; test_guards.py 6/6 GREEN.",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/tests/test_projection_calibration.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_guards.py"
+  ]
+ },
+ "assumptions": [
+  "The per-turn wall is taken from each row's own wall_ms/1000 (one-command cell rows) else latency_s (older measure rows); rows carrying error are excluded because an aborted turn is not a normal turn. rows-baseline-2026-10-26.jsonl (105) and rows-live-2026-10-26.jsonl (27) have no per-row wall field and were excluded rather than guessed.",
+  "The 6 rows of rows-cell-pointer-stable-20261026T145758Z.jsonl are one arm on one day and are reported as anecdotes, not as a distribution; the 60s default is therefore a conservative policy choice, not a fit.",
+  "DEVIATION FROM DECLARED WRITE PATHS: tests/test_guards.py check (d) was edited (argv gains --projected-turn-wall 180, assertion becomes projected_wall~=8640s) because its old expectation - a 48-turn cell refused at the default - is exactly the defect this unit removes, and the task required the guards' test to still pass. No guard behaviour changed; exit 8 still fires before the runner."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Decide --max-wall for the operator 4-arm x 60-turn x 3-rep comparison: 180 requests per cell = 10800s at the 60s default, so it needs --max-wall >= 10800 (or arm-level cells). A verifier should re-run both test files and confirm the 6 live rows are still described as thin evidence.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_projection_calibration.py",
+  "docs/PROJECTION-CALIBRATION.md",
+  "experiments/ptr-engine/measure/PROJECTION.json",
+  "orchestration/units/PROJECTION-CALIBRATION.md",
+  "orchestration/handoffs/PROJECTION-CALIBRATION.json",
+  "orchestration/journals/PROJECTION-CALIBRATION.jsonl",
+  "experiments/ptr-engine/longrun/tests/test_guards.py"
+ ]
+}

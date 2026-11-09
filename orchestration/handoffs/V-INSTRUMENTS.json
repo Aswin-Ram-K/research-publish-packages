@@ -1,0 +1,124 @@
+{
+  "unit": "V-INSTRUMENTS",
+  "overall": "partial",
+  "status": "done",
+  "checks": [
+    "A request_ledger count PASS — recomputed first from rows only: 14 files, 1101 rows, kinds turn=801 tool-followup=68 unmarked=232. My rule (reached the wire = prompt_tokens present OR an HTTP-status error) gives 1099 requests vs the recorded 1101, delta -2 (0.18%). The 2 excluded rows live in rows-live-2026-10-26.jsonl and record pre-flight failures ('setup: TypeError: Ledger.__init__() missing 1 required positional argument', 'target_not_reached P1=385') with null tokens and no http_status. Direction: their count inflates spend, never understates — conservative, and it can refuse a run that fits by <=2 requests (with spent=1101, --would-spend 3220 is over by 1; at 1099 the last admissible value would be 3221).",
+    "A edge cases PASS — 12 HTTP-400 rows (unit C0-BASELINE, null tokens) counted by both rules, correctly: a rejected request still took a wire slot. 68 tool-followup rows counted. All 23 is_checkpoint=True rows (21 kind=turn, 2 tool-followup) are genuine calls with their own prompt/completion tokens and their own content, so counting them is right. Null-token rows: 14 = 12 HTTP-400 (count) + 2 setup (do not count) — this is the only disagreement.",
+    "A exclusion markers PARTIAL — the rule licenses billed:false / followup_suppressed / served_from=='prompt'; 0 rows carry any of them. The near-miss markers are billed_round=False (4 rows) and prompt_served=1 (the same 4 tool-followup rows) whose completions are 288/279/405/58 tokens, so they generated text and counting them is correct. The exclusion code is unreachable against this schema but harmless.",
+    "A exit codes PASS — induced all four myself: 0 'within budget: 1101 <= 4320 (3219 left)'; 4 'OVER BUDGET: spent=1101 + would_spend=3220 = 4321 > cap=4320 - reserve=0 = 4320 (over by 1)'; 5 on a /tmp corrupt row file 'row file error: /tmp/bad-rows.jsonl:2: unparseable row: Expecting value: line 1 column 1 (char 0)' + 'nothing counted: an unreadable row file makes the total unknowable' (counts nothing, including the valid line before it); 3 'usage error: no row files matched'.",
+    "B calibration PARTIAL — my recompute (wall_ms/1000 else latency_s, error rows dropped) reproduces PROJECTION.json to 4 dp with delta 0: live cell-pointer-stable n=6 mean 190.9 p50 129.1 p90 427.7 ratio 0.0288; on/auto n=9 mean 286.5 p50 218.2 p90 682.7 ratio 0.0349; off/absent n=960 mean 27.5 p50 2.9 p90 38.1 ratio 0.0338. Classification also reconciles exactly (thinking values off 601 / absent 491 / auto 8 / on 1 => 9 and 960). 0.03 s/token is the rounded published figure (BUDGET-SCHEDULE.md:24: 0.0338 off, 0.0288 live, 0.0349 on/auto) and 0.03 x a nominal 2000-token turn = 60 s = defaults.projected_turn_wall_s.",
+    "B residual spread PARTIAL — the ratio does not hold per row. Per-row s/token: live n=6 p10 0.0281 p50 0.0283 p90 0.0290 (p90/p50 1.02x, tight); on/auto n=9 p50 0.0289 p90 0.0439 max 0.0521 (1.52x, bimodal: clusters 0.0281-0.0290 n=6 and 0.0416-0.0521 n=3 with nothing between, so the pooled 0.0349 describes no single row); off n=960 p50 0.0343 p90 0.0420 max 2.4500 (71x the median, long turns that emit few completion tokens).",
+    "B boundary PASS — cell.eval_gate_projection driven directly at turns=60, projected=3600: ACCEPT at --max-wall 3601 and at 3600 (ok = not(projected > max_wall), equality inclusive), REFUSE at 3599. Boundary is exact at +-1 s.",
+    "B defect reachability — the 180 s abort-cap defect IS still reachable by flag: --projected-turn-wall 180 gives projected=10800, byte-for-byte the old worst case (60 x 180); --turn-wall-cap 180 ALONE leaves projected=3600 and accepts (the cap is only printed as the worst case); --projected-from the live file (p90 427.7) gives 25662 and refuses. The repair is a default change, not an invariant.",
+    "B mode-blind default (why partial) — --projected-from defaults to None and no non-test code passes it, so the artefact's single 60 s is consumed for every mode. For a 60-turn thinking-auto cell the default projects 3600 s (accepted at --max-wall 3600) while the instrument's own measurement of that configuration is p50 60x218.2=13092 s (3.6x) and p90 60x682.7=40962 s (11.4x); PROJECTION.json measured_p90_live_six_427.7 already marks 60 turns at 25662 s admitted_under_3600=false. Off cells are over-projected 20x (wasteful but safe); thinking cells are under-projected (unsafe direction).",
+    "C vocabulary induction PASS — 10/10 members induced through client.derive_stop_reason with my own fake inputs, not their tests: stop<-finish='stop'; length<-finish='length'; tool_calls<-finish='tool_calls'; content_filter<-finish='content_filter'; turn_wall_cap<-error_code; runaway_turn<-error_code; http_error<-error_code; stream_error<-error_code; empty_response<-no finish+no content; unknown<-no finish+content. An unmappable server string ('weird') -> unknown, never squeezed into a neighbour. Row writer run_longrun.stop_reason_for_row verified level by level: vocab resp carried unchanged; extra.error turn_wall_cap/runaway_turn passed through; other code + http_status -> http_error; other code without status -> stream_error; no extra -> unknown.",
+    "C adversarial PARTIAL — (i) finish_reason='length' with completion_tokens=5 < max_tokens=4096 -> 'length' (the server's finish chunk outranks token arithmetic, precedence 2 over 3), so a length label is not independently corroborated by completion_tokens>=max_tokens; defensible but unverified. (ii) no finish chunk with completion_tokens=128 >= max_tokens=128 -> 'length' (rule 3; this is the recovery path for the old 128-token stops). (iii) finish_reason='tool_calls' -> 'tool_calls', correct when the finish chunk arrives. (iii-b) a tool call whose stream ends with NO finish chunk and no text content -> 'empty_response' — a HOLE: derive_stop_reason receives no tool-call signal and only sees content_present, so a dispatched tool call can be recorded as a silent empty response.",
+    "C unreachable member — runaway_turn has NO producer. client.py:698 calls derive_stop_reason without error_code, so members 5-8 can only arrive via stop_reason_for_row's extra.error branch; that branch accepts 'runaway_turn' but nothing in the non-test tree ever writes error='runaway_turn' (run_longrun.py:1812 records runaway turns as error=turn_wall_cap). 0 rows can ever carry it: the vocabulary is closed but not fully reachable.",
+    "C historical rows FAIL-on-claim — group by stop_reason over the corpus is {None: 1101}: 0 of 1101 rows carry a stop_reason field (677 carry finish_reason/max_tokens), so the seven cap-exhausted arm-checks are NOT identifiable today by group by stop_reason; only a future run records the word, with truncated derived from it so the two cannot disagree. Could the vocabulary have labelled the old rows differently? Yes, only with the cap supplied: the 99 stage-1 rows with empty content at completion_tokens=128 all lack max_tokens; re-derived WITH the frozen manifest cap 128 (longrun/manifests/stage1-lr01-lease-reopen-r1.json:36) they are 99/99 'length'; re-derived from the row as-is they are 99/99 'empty_response'."
+  ],
+  "evidence": {
+    "command_or_count": "14 files / 1101 rows / mine 1099 requests / ledger exit 4 printed '4321 > 4320 (over by 1)' / projection delta 0 at 4dp / 10 of 10 stop reasons induced / rows carrying stop_reason = 0",
+    "commands": [
+      "python3 experiments/ptr-engine/tools/request_ledger.py",
+      "python3 experiments/ptr-engine/tools/request_ledger.py --would-spend 3220",
+      "python3 experiments/ptr-engine/tools/request_ledger.py --glob /tmp/bad-rows.jsonl --quiet",
+      "python3 experiments/ptr-engine/tools/request_ledger.py --glob '/tmp/nomatch-*.jsonl' --quiet",
+      "python3 - <<'EOF' (own glob+jsonl recount: kinds, wire rule, per-file assumed_billed) EOF",
+      "PYTHONDONTWRITEBYTECODE=1 python3 - <<'EOF' (import cell; eval_gate_projection at max-wall 3601/3600/3599; --projected-turn-wall 180; --turn-wall-cap 180; --projected-from live p90) EOF",
+      "PYTHONDONTWRITEBYTECODE=1 python3 - <<'EOF' (import client, run_longrun; derive_stop_reason 10/10 + 3 adversarial + stop_reason_for_row; corpus stop_reason census) EOF",
+      "sha256sum experiments/ptr-engine/tools/request_ledger.py experiments/ptr-engine/longrun/cell.py experiments/ptr-engine/longrun/client.py experiments/ptr-engine/longrun/run_longrun.py experiments/ptr-engine/measure/PROJECTION.json experiments/ptr-engine/measure/REQUEST-LEDGER.json experiments/ptr-engine/measure/STOP-REASON.json"
+    ]
+  },
+  "recomputed_vs_recorded": {
+    "A_requests": {"mine": 1099, "recorded": 1101, "delta": -2, "pct": 0.18, "direction": "their count inflates spend (conservative)"},
+    "A_remaining": {"mine": 3221, "recorded": 3219, "delta": 2},
+    "A_assumed_billed": {"mine": 230, "recorded": 232, "delta": -2},
+    "B_s_per_token_live": {"mine": 0.0288, "recorded": 0.0288, "delta": 0},
+    "B_s_per_token_on_auto": {"mine": 0.0349, "recorded": 0.0349, "delta": 0},
+    "B_s_per_token_off": {"mine": 0.0338, "recorded": 0.0338, "delta": 0},
+    "B_p90_live_s": {"mine": 427.7, "recorded": 427.7, "delta": 0},
+    "B_p90_on_auto_s": {"mine": 682.7, "recorded": 682.7, "delta": 0},
+    "B_p90_off_s": {"mine": 38.1, "recorded": 38.1, "delta": 0},
+    "C_members_induced": {"mine": "10/10", "recorded": "10", "delta": 0},
+    "C_rows_with_stop_reason": {"mine": 0, "recorded_claim": "identifiable by group by stop_reason", "delta": "claim holds only for future runs"}
+  },
+  "induced_exit_codes": {"0": "within budget: 1101 <= 4320 (3219 left)", "4": "OVER BUDGET: spent=1101 + would_spend=3220 = 4321 > cap=4320 - reserve=0 = 4320 (over by 1)", "5": "row file error: /tmp/bad-rows.jsonl:2: unparseable row + nothing counted", "3": "usage error: no row files matched", "8": "induced via eval_gate_projection at --max-wall 3599 with projected 3600, and via --projected-turn-wall 180 (projected 10800)"},
+  "projection_abort_cap_reachable": true,
+  "projection_abort_cap_detail": "--projected-turn-wall 180 reproduces projected=10800 = 60 requests x 180 s, identical to the pre-repair worst case; --turn-wall-cap 180 alone no longer moves the projection (3600, accepted). The repair is a default change, not an invariant.",
+  "stop_reason_table": [
+    {"member": "stop", "path": "derive_stop_reason finish_reason='stop'", "observed": "stop"},
+    {"member": "length", "path": "finish_reason='length' OR no finish chunk with completion_tokens>=max_tokens", "observed": "length"},
+    {"member": "tool_calls", "path": "finish_reason='tool_calls'/'function_call'", "observed": "tool_calls"},
+    {"member": "content_filter", "path": "finish_reason='content_filter'", "observed": "content_filter"},
+    {"member": "turn_wall_cap", "path": "TurnWallCap / extra.error='turn_wall_cap'", "observed": "turn_wall_cap"},
+    {"member": "runaway_turn", "path": "error_code='runaway_turn' only — NO producer writes it", "observed": "runaway_turn (unreachable in rows)"},
+    {"member": "http_error", "path": "RequestFailure(status) / extra.error + http_status", "observed": "http_error"},
+    {"member": "stream_error", "path": "RequestFailure(None) / extra.error without status", "observed": "stream_error"},
+    {"member": "empty_response", "path": "no finish chunk + no content", "observed": "empty_response"},
+    {"member": "unknown", "path": "no finish chunk + content present, or unmappable finish_reason", "observed": "unknown"}
+  ],
+  "stop_reason_adversarial": [
+    {"case": "finish_reason=length but completion_tokens=5 < max_tokens=4096", "observed": "length", "reading": "server finish chunk outranks token arithmetic; a length label is not corroborated by the token count"},
+    {"case": "no finish chunk, completion_tokens=128 >= max_tokens=128", "observed": "length", "reading": "correct — this is the recovery path for the old 128-token cap stops"},
+    {"case": "tool call with finish_reason=tool_calls", "observed": "tool_calls", "reading": "correct when the finish chunk arrives"},
+    {"case": "tool call with NO finish chunk and no text content", "observed": "empty_response", "reading": "HOLE — derive_stop_reason sees no tool-call signal, so a dispatched tool call can be recorded as a silent empty response"}
+  ],
+  "not_reproduced": [
+    "Seven cap-exhausted arm-checks identifiable by group by stop_reason: NOT reproducible on the existing corpus (0 of 1101 rows carry the field); the seven are a docs/STOP-REASON.md:9 claim about arm-rp arm-checks outside the measure corpus, and the analogous measure population is the 99 stage-1 empty-content rows at completion_tokens=128.",
+    "runaway_turn as a reachable row value: no producer exists; it is inducible only by passing an error_code that no caller passes."
+  ],
+  "overstated": [
+    "docs/STOP-REASON.md:9 'now identifiable by group by stop_reason' — true only for runs recorded after RECORD-STOP-REASON, false for the immutable historical rows.",
+    "The projection's 'calibrated' framing: the artefact holds per-mode p90s but the consumed default is a single pooled 60 s that no code overrides."
+  ],
+  "unverified": [
+    "Whether a real server ever ends a tool-call stream without a finish chunk (the empty_response hole is reachable in code; its frequency on the wire is not observable offline).",
+    "Whether the 12 HTTP-400 rows were billed by the server (counted as requests because they reached the wire; their token cost is unknowable from the rows)."
+  ],
+  "assumptions": [
+    "A request = a row that reached the wire (prompt_tokens present OR an HTTP-status error). Stated because the two pre-flight setup rows carry neither.",
+    "Per-row wall = wall_ms/1000 when present else latency_s, error rows dropped — matching PROJECTION.json's stated method so the comparison is like-for-like rather than a different question.",
+    "0.03 s/token is read as the rounded form of the three recorded group ratios, since 0.03 x 2000-token turn reproduces the 60 s default exactly."
+  ],
+  "corrections": [
+    "My first pass classified rows by truthiness of `thinking`, which folded `thinking='off'` (601 rows) into the thinking-on group and produced n=610. The recorded classification (on/auto = 9, off/absent = 960) is correct and I adopted it — the divergence was mine, not theirs."
+  ],
+  "blocker": "",
+  "next_unit_hint": "If the projection is to be trusted for thinking cells, make --projected-from default to the last row file of the same mode (or add per-mode defaults to PROJECTION.json and consume defaults.projected_turn_wall_s_by_mode), and add an error_code='runaway_turn' producer or drop the member. Both are source changes and belong to a fresh authoring unit, not this verifier.",
+  "write_paths": [
+    "orchestration/units/V-INSTRUMENTS.md",
+    "orchestration/handoffs/V-INSTRUMENTS.json",
+    "orchestration/journals/V-INSTRUMENTS.jsonl",
+    "docs/V-INSTRUMENTS.md"
+  ],
+  "shas_unchanged": {
+    "experiments/ptr-engine/tools/request_ledger.py": "6eaf221234334d604fef0e54955f70bc94377fd5d58c4fdc8caa85e324b00b95",
+    "experiments/ptr-engine/longrun/cell.py": "f387c4abbb835f2e28dc641f6ba2ee962dc5b0ee29a25514ac94cdb338a89fc2",
+    "experiments/ptr-engine/longrun/client.py": "195939a7052c8d405c15a23203745f312357913620b7fd9e3a1e2f58ad2d2feb",
+    "experiments/ptr-engine/longrun/run_longrun.py": "266406e4f46d2ceda8ecc460f8699152581337061adb2acf54f9c792410be7b9",
+    "experiments/ptr-engine/measure/PROJECTION.json": "69305f014a0270bccef2fb8994d7306eb78d729ab854abdb3e97cccab371dbad",
+    "experiments/ptr-engine/measure/REQUEST-LEDGER.json": "e47d6970124627daeee1c042843d57e75f74e1a0d2c7a59b0dc448b581c68fc1",
+    "experiments/ptr-engine/measure/STOP-REASON.json": "4b14ced4572319c2cc209ff1bcca6632d26be0b84d4cb0aba0b28260959c01a3",
+    "experiments/ptr-engine/measure/rows-*.jsonl (14 files, aggregate)": "3a5ea7057efc1a4da10476d8100965d432aa3ee1642fe66f90bf6e85ed1245f7"
+  },
+  "sha_drift_observed": {
+    "file": "experiments/ptr-engine/longrun/cell.py",
+    "sha_at_read_and_boundary_test": "ccda8520bddd09e932ac4a729df60ef0b6cbdb4dc44ae42a1cd59761cbd091e6",
+    "sha_at_final_validation": "f387c4abbb835f2e28dc641f6ba2ee962dc5b0ee29a25514ac94cdb338a89fc2",
+    "mtime": "2026-10-26 10:58:15 -05:00",
+    "size": 65374,
+    "who": "a concurrent session, not this unit — I wrote no source",
+    "mitigation": "G2 boundary re-run on the current bytes gives identical verdicts (3601 -> (3600, ACCEPT), 3600 -> (3600, ACCEPT), 3599 -> (3600, REFUSE), --projected-turn-wall 180 -> (10800, REFUSE)), so the B verdict stands on the file as it now exists; the diff itself is outside this unit and no pristine copy is held.",
+    "consequence": "the B findings must not be read as pinning cell.py — pin it by the sha a fresh unit reads"
+  },
+  "inference_requests": 0,
+  "tool_calls": 22,
+  "bound": 36,
+  "artifacts": [
+    "orchestration/units/V-INSTRUMENTS.md",
+    "orchestration/handoffs/V-INSTRUMENTS.json",
+    "orchestration/journals/V-INSTRUMENTS.jsonl",
+    "docs/V-INSTRUMENTS.md"
+  ]
+}

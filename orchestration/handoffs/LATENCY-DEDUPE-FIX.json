@@ -1,0 +1,46 @@
+{
+  "unit": "LATENCY-DEDUPE-FIX",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/tools/latency_report.py",
+    "tests/test_turn_dedup.py",
+    "experiments/ptr-engine/measure/LATENCY-REPORT.json",
+    "orchestration/units/LATENCY-DEDUPE-FIX.md",
+    "orchestration/handoffs/LATENCY-DEDUPE-FIX.json",
+    "orchestration/journals/LATENCY-DEDUPE-FIX.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "a==b==48 for all 6 cells (G4 pointer-stable/lease-reopen/transcript-compact/transcript-grow, G8 v5-tools, G9 v6-tools); before: G8 b=46, G9 b=37, G4 arms already 48; c stays 48/46/9/33; kept rows unchanged 70 (G8) / 61 (G9)",
+    "old_rule_quote": "experiments/ptr-engine/tools/latency_report.py:202-214 (pre-fix): key=(ts, content_sha256, prompt_tokens, completion_tokens), FIRST OCCURRENCE KEPT (seen.add at :211); TURN_ROW_KINDS consulted nowhere in latency_report.py -- owner analyze_stats.py:608 ('turn-initial','turn'), caller dedupe_rows latency_report.py:230-245, applied at :310-311 before the analyser runs at :324",
+    "new_precedence": "on collision a kind in TURN_ROW_KINDS row always beats a non-turn row; two turn-kind rows -> later row_seq / else later send_index / else later file position survives; non-turn collisions keep first-occurrence; survivor stays in its original wire position so the kept-row count is unchanged",
+    "turn_row_kinds_source": "turn_row_kinds() reads analyze_stats.TURN_ROW_KINDS via load_analyzer(), never restated; resolved value ('turn-initial','turn')",
+    "row_seq_field": "rows carry no row_seq and no send_index (identity fields are arm, kind, rep, turn), so _row_seq falls back to file position; run_longrun.py writes the attributed turn row as the LAST send of the turn (send_index=len(followup_rows))",
+    "verdict_command": "PYTHONPATH=src python3 -m pytest tests/test_turn_dedup.py -q -> 8 passed, exit 0",
+    "red_green": "precedence mutated back (if False and new_turn and not prev_turn:) -> 8 failed, naming G8 rows-longrun-v5-tools.jsonl (b=46) and G9 rows-longrun-v6-tools.jsonl (b=37); restore cmp byte-identical, 8 passed again",
+    "report_regenerated_by_generator": "python3 experiments/ptr-engine/tools/latency_report.py --report <in place> --out <same> --summary <scratch>; never hand-edited",
+    "cells_moved": "8 cells before, 8 after, identical set: G2 transcript-grow, G4 lease-reopen, G4 pointer-stable, G5 pointer-stable, G6 pointer-stable, G7 pointer-stable, G8 pointer-stable, G9 pointer-stable",
+    "report_numbers": "G8 n_turn_dedup 46->48, ttft_used 45->47, n_followup_dedup 24->22; G9 37->48, 37->48, 24->13; G7 31->48, 30->47, 20->3; n_dedup unchanged 70/61/51, dedup_excess 2/11/17 unchanged",
+    "p95_refused": "analyze_stats.min_n_for(0.95)=60; p95_inventory cells_with_p95_raw=0, cells_with_p95=0, cells=[] before AND after; floor_policy cells_with_p95_published=0, WITHHELD=3 (G7 68/51, G8 72/70, G9 72/61); every cell p95.point is null with refusal text (G8 'refusing p95 at n=47 ... minimum n for p95 is 60', G9 n=48, G7 n=30) -- no p95 was produced from a 48-turn cell",
+    "guards": "withdrawn_index.py --self-test: 15 entries, 0 problems. withdrawn_index.py --check LATENCY-REPORT.json: 1 finding, WI-004 quote '318.14' at lines 1541 and 3865 (G7 supersedes.p95=318.143), and the SAME two hits fire on the pre-fix report -> pre-existing, not fixed here. path_refs.py --check: 902 known (baselined), 35 NEW, all in other units' documents (RUNAWAY-POLICY, TVS-ROWS-IDENTITY, ANALYSIS-CONSUMER-FIX, GATE-ATTACK-STUB-FIX, RUNNER-ROUNDS-48) -> pre-existing, not fixed here; no finding points at a file this unit wrote",
+    "untouched": "analyze_stats.py thresholds, analyze.py, cell.py, run_longrun.py, rows, grades, PARM-1, WITHDRAWN.json",
+    "verdict_row": "PASS f17663d1 PYTHONPATH=src python3 -m pytest tests/test_turn_dedup.py -q"
+  },
+  "blocker": "",
+  "assumptions": [
+    "The card's write path experiments/ptr-engine/longrun/latency_report.py does not exist; the generator lives at experiments/ptr-engine/tools/latency_report.py (GRIDS/MEASURE constants there) and that is the file edited. Likewise measure/LATENCY-REPORT.json is experiments/ptr-engine/measure/LATENCY-REPORT.json. No second copy was created.",
+    "tests/test_turn_dedup.py was the card's path and exists at the repo root; the two longrun 'latency' test files declare no pytest tests (collected 0), so the card's file is the whole latency-dedup suite.",
+    "One green evidence test (test_dropped_rows_are_the_mirrored_copy_of_a_surviving_tool_call) was mirrored rather than deleted: after the fix the dropped copy is the tool-followup row and the kept twin is the turn row. Its claim (same measurement, differs only in kind/prompt_sha256) is unchanged.",
+    "For the two-turn collision branch no cell in the corpus exercises it (every drop is turn vs tool-followup), so the row_seq/send_index tie-break is stated and implemented but not exercised by measured data; G8/G9/G7 red->green covers the exercised branch."
+  ],
+  "next_unit_hint": "Publish the corrected turn/TTFT figures for G7/G8/G9 wherever LATENCY-REPORT is summarised (docs/operator brief, TVS latency section) -- and check anything that quoted G8 ttft_used 45 / G9 37, or G8 n_turn_dedup 46 / G9 37 / G7 31. Separately, card the 9-distinct-of-48 transcript-compact result into the QUALITY record (answer-degeneracy / TVS quality), not the latency record. Also note the pre-existing WI-004 318.14 finding and the 35 pre-existing path_refs findings for a cleanup card.",
+  "write_paths": [
+    "experiments/ptr-engine/tools/latency_report.py",
+    "tests/test_turn_dedup.py",
+    "experiments/ptr-engine/measure/LATENCY-REPORT.json",
+    "orchestration/units/LATENCY-DEDUPE-FIX.md",
+    "orchestration/handoffs/LATENCY-DEDUPE-FIX.json",
+    "orchestration/journals/LATENCY-DEDUPE-FIX.jsonl"
+  ],
+  "tool_calls": 24,
+  "bound": 26
+}

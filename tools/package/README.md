@@ -5,7 +5,7 @@ Seven parameterised, idempotent commands replacing the throwaway scripts that we
 **`--package <slug>`**: a slug naming a directory under `papers/`, or an explicit path
 (`--package scratch/uneutral10/package` reproduces the shipped known-good numbers below).
 
-Run everything from the workspace root (`/home/zer0null/reserach extarctor`).
+Run everything from the workspace root (`/home/zer0null/research extractor`).
 
 ## Provenance (read this before trusting a number)
 

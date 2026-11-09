@@ -1,0 +1,49 @@
+{
+ "unit": "GATE-OVERRIDE-FIX",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_gate_override.py",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/GATE-OVERRIDE-FIX.md"
+ ],
+ "evidence": {
+  "cell.py_sha256_after": "fd4f2b01a6bfdeea425a92de428f770bf9f07fbe3bdc3b1d8cfd1f4a17ee2ec6",
+  "commit_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "attack_reproduced_red_before_fix": "RED a-override-negative: expected exit 8 for --projected-turn-wall -1 (a per-turn wall of zero or less is not 'unlimited'), got 10 (exit 10 = the runner ran, matching V-GATE-CHAIN-2's live spawn)",
+  "attack_refused_after_fix": "for v in -1 0: rc=8 marker=none, and the refusal line reads 'G2 projection REFUSED: computed --projected-turn-wall=-1 s | limit a positive per-turn ceiling (> 0 s)' (same for 0)",
+  "row_file_red": "RED b-rows-priced-zero: expected exit 8 for a row file that prices at <= 0 s, got 2 (mutant: 'if _rows_carry_a_wall(selector):' -> 'if False:')",
+  "manifest_red": "RED c-manifest-unique: AssertionError: two runs in one second share a manifest path: /tmp/gate-override-c-v6vappwa/manifests/cell-transcript-grow-20260101T000000Z.gates.json (mutant: name reverted to second-resolution stamp)",
+  "dry_run_red": "RED d-dry-run-contract: AssertionError: the dry-run line no longer tells the caller it must parse it (mutant: 'callers MUST parse this ' -> 'nothing ')",
+  "green_after_restore": "restored byte-identical: True fd4f2b01... ; GREEN: Ran 45 tests in 3.066s OK rc=0",
+  "commands": [
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_gate_override.py' -> Ran 7 tests in 0.541s OK",
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_cell.py' -> Ran 7 tests OK",
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_cell_gates.py' -> Ran 15 tests OK",
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_exit_codes.py' -> Ran 16 tests OK",
+   "bash -c 'cd experiments/ptr-engine/longrun/tests && python3 -m unittest test_cell test_cell_gates test_exit_codes test_gate_override' -> Ran 45 tests OK, rc 0",
+   "python3 /tmp/rg2.py (in-place mutants of cell.py, restored byte-identically) -> 4 RED for the right reasons + GREEN 45/45"
+  ],
+  "suite_counts": {
+   "test_gate_override.py": "7/7 OK",
+   "test_cell.py": "7/7 OK",
+   "test_cell_gates.py": "15/15 OK",
+   "test_exit_codes.py": "16/16 OK",
+   "combined": "45/45 OK"
+  },
+  "notes": "The dry-run exit codes were NOT changed: --dry-run still exits 0 and the contract sentence is documented in docs/GATE-CHAIN.md section 7 and asserted by test_d. Live-run exit codes 2/3/4/5/6/7/8/9/10/11/12 unchanged; the only new refusal is G2's existing 8. test_cell_gates.py was not edited (the new guards live in test_gate_override.py, whose env pins the three real artefact paths because test_cell_gates mutates os.environ with temp paths it deletes -- without the pin the combined 45-test run failed 6 for that reason, not for a gate)."
+ },
+ "blocker": "",
+ "next_unit_hint": "Independent verifier (fresh unit, not the author): re-run `bash -c 'cd experiments/ptr-engine/longrun/tests && python3 -m unittest test_cell test_cell_gates test_exit_codes test_gate_override'`, re-probe `--projected-turn-wall -1 --max-wall 1 --budget 600` against a stubbed CELL_RUNNER_PATH (expect exit 8, zero spawns), and re-mutate the guards for its own red->green. Then the chain may be tested with one live RUN-A* cell; do not launch one until the verifier's PASS.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_gate_override.py",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/GATE-OVERRIDE-FIX.md",
+  "orchestration/handoffs/GATE-OVERRIDE-FIX.json"
+ ],
+ "assumptions": [
+  "A rows file that CONTAINS wall rows which all price at <= 0 s is a projection refusal (exit 8), while a file with no wall row at all remains a bad argument (exit 2). test_projection_calibration pins the empty-file case at 2; both behaviours were kept and the distinction is documented in cell.py.",
+  "The stub runner (CELL_RUNNER_PATH) is the same offline stand-in V-GATE-CHAIN-2 used: only whether the subprocess is spawned is measured."
+ ]
+}

@@ -1,0 +1,54 @@
+{
+ "unit": "CAPGATE-CELL-LABEL",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/exit_codes.py",
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_capgate_label.py",
+  "experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+  "docs/EXIT-CODES.md",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/CAPGATE-CELL-LABEL.md",
+  "orchestration/journals/CAPGATE-CELL-LABEL.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "verdict row: exitCode 0, sha f17663d1fed0162a7dc3c5a0a58d372c710974c3, verdict=pass, changed=0; test_capgate_label.py 5 tests OK; test_exit_codes.py 20 tests OK",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/tree_freeze.py --wrap /tmp/capgate-label-wrap.json --path <7 declared files> --verdict-row -- bash -c 'python3 experiments/ptr-engine/longrun/tests/test_exit_codes.py >/dev/null && python3 experiments/ptr-engine/longrun/tests/test_capgate_label.py >/dev/null' -> tree_freeze: verdict=pass exit_code=0 changed=0; {\"exitCode\":0,\"sha\":\"f17663d1fed0162a7dc3c5a0a58d372c710974c3\"}",
+   "runner 9 at cell level: cell._runner_exit_code(9)=14 'capgate-unrecorded'; message 'cap gate refused: unrecorded spend \u2014 CAP GATE UNRECORDED (delta=-2) \u2014 refusing, exit 9: ... used_in_run=3 rows_gained=1 headroom_before=4 headroom_after=6 (runner rc 9) \u2014 rows kept at ...'",
+   "reconcile on abort: R._abort_stop(6, gate(delta=-2)) -> 9 plus 'CAP GATE UNRECORDED (delta=-2)'; delta=0 -> 6; delta=+1 -> 9 'CAP GATE RECONCILE DIVERGENCE'; four runaway returns in run_cell (run_longrun.py:2500,2558,2648,2747) now route through _abort_stop, none returns 6 without reconciling",
+   "RED (a) cell.py remap reverted -> runner 9 becomes cell code 5 (runner-crash), message 'run_longrun.py exited 9 (unmapped runner failure)'",
+   "RED (b) _abort_stop mutated to 'return rc' -> the same delta=-2 aborted run returns 6 with the refusal printed and thrown away",
+   "RED (c) RUNNER_MAPPED_TO_CELL[9] dropped -> scan reports 'DECLARED BUT NEVER RAISED: [14]'",
+   "RED (d) docs/EXIT-CODES.md with the '| 14 |' row removed -> DocsTableTests fails (rows != declared)",
+   "GREEN: test_capgate_label.py 5 tests OK (a runner-9 labelling end to end through stage_run against a fake runner, b reconcile-on-abort incl. its own /tmp-mutant red, c honest branches 0/9/4, d table+cell+docs agreement, e induced refusal runner_launch==0 with the counter proven live at 1); test_exit_codes.py 20 tests OK",
+   "agreement counts BEFORE: EXIT_TABLE 14 entries (0-13), 1 external (13), cell-side declared 13, raised 13, drift none. AFTER: EXIT_TABLE 15, 1 external, cell-side declared 14, raised 14, drift none both ways"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "residuals, both stated rather than papered over: (1) the pre-send exit 4 is STILL unverified end-to-end -- test_c exercises _cap_stop directly, exactly the direct-gate exercise V-CAPGATE-REFUSE recorded as unverified, so no full live cell CLI invocation closed it; closing it needs a scripted cell invocation against a fake endpoint. (2) run_cell's BUDGET ABORT returns 4 at run_longrun.py:2395 and 2540 without reconciling (same class of hole as the runaway returns, out of this card's four-site scope). (3) run_longrun.py was being rewritten by another unit while this card edited it (see assumptions); the file's regions this card touched are pinned by the verdict row's sha.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/exit_codes.py",
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/tests/test_capgate_label.py",
+  "experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+  "docs/EXIT-CODES.md",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/CAPGATE-CELL-LABEL.md",
+  "orchestration/handoffs/CAPGATE-CELL-LABEL.json",
+  "orchestration/journals/CAPGATE-CELL-LABEL.jsonl"
+ ],
+ "assumptions": [
+  "code 14 chosen: 0-13 were taken and no existing code was renumbered; 4 (ledger), 9 (runner reconcile / cell inconsistency), 12 (prereg), 13 (tree-moved) untouched",
+  "the runner keeps exiting 9 (EXIT_CAP_DIVERGENCE); only the CALLER-side code became 14, so the collision is resolved on the cell side without editing another card's numbering",
+  "the runner's stderr is now teed through a thread so the refusal can be QUOTED; liveness is preserved (each line is written to the cell's stderr as it arrives) and the lines are kept only for the message",
+  "concurrent-write hazard: run_longrun.py changed sha three times during this unit (30dfa9e9 -> 29501afc -> ac02813a -> 4f40dde1); the runaway sites moved from 2327/2382/2469/2565 to 2500/2558/2648/2747. Edits were anchored on CONTENT (each 'return 6' preceded by 'RUNAWAY ABORT'), not line numbers, and the final file is the pinned sha above. If another unit rewrites the file after that sha, this card's reconcile-on-abort is the part to re-check"
+ ],
+ "containment": "no rows-*, grade, PARM-1, fixture, analyze_stats.py, spawn_record.py rules or any threshold touched; no network, zero inference requests",
+ "live_requests": 0,
+ "network": false,
+ "tool_calls": 29,
+ "bound": 30
+}

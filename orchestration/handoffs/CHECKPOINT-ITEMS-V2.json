@@ -1,0 +1,91 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/longrun/tasks-v6/LR-01.v7.json",
+  "experiments/ptr-engine/longrun/tests/test_checkpoint_items_v2.py",
+  "experiments/ptr-engine/measure/CHECKPOINT-ITEMS-V2.md",
+  "orchestration/units/CHECKPOINT-ITEMS-V2.md",
+  "orchestration/handoffs/CHECKPOINT-ITEMS-V2.json",
+  "orchestration/journals/CHECKPOINT-ITEMS-V2.jsonl"
+ ],
+ "assumptions": [
+  "An automated session has no answerer, so the card's two stale premises were resolved by measuring both: the grader-side repair had already landed (GRADE-V6-DERIVE) and the fixture-level answer-form declaration had not. Delivering the fixture-level fix rather than re-editing the grader is the conservative reading of 'do not weaken any grader rule'.",
+  "Renumbering ids in turn order is treated as the explicit old->new map the card requires; values, turns and pins are unchanged so historical results stay comparable through the map."
+ ],
+ "blocker": "",
+ "bound": 30,
+ "caveats": [
+  "A constant ANSWER: NONE passes the three NONE items for free: 3 of 12 decidable items have a constant-answer floor. The denominator is honest, one quarter of it is cheap."
+ ],
+ "evidence": {
+  "census_before": "8/12 gradeable on LR-01.v6.json as found: cp.5.t14/cp.7.t20/cp.11.t42 -> SystemExit: fixture_truth_mismatch: <id> has no usable answer_spec; cp.10.t36 -> KeyError: 'function'",
+  "command_or_count": "0 inference requests; 12/12 items decidable; 9 tests pass; 24/24 synthetic probes; historical fixtures byte-identical",
+  "commands": [
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_checkpoint_items_v2.py -q -> 9 passed",
+   "python3 experiments/ptr-engine/tools/fixture_coverage.py --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v7.json -> exit 0, 'PASS: 12/12 checkpoints decidable, none colliding, all <= 40 tokens'",
+   "grade_v5.grade_rows(positives) -> 12/12 pass (call_equal x4, num_equal x5, none_confirmed_absent_in_source x3)",
+   "grade_v5.grade_rows(negatives) -> 12/12 fail (num_mismatch x4, kwarg_set_mismatch x2, callee_mismatch x1, kwarg_value_mismatch:scope x1, kind_mismatch:NONE_expected x3)",
+   "red: cp.2.t12 expected 64 -> 32 -> SystemExit fixture_truth_mismatch (documents '32' but AST derives 64); green: restored -> pass/num_equal",
+   "sha256sum tasks-v5/.../LR-01.v5.json -> 967cef03c362446a3187c9a8517bb6867b03e680f9a673ab53e42bb9f06ab567 (before = after)",
+   "sha256sum tasks-v5/.../LR-01.v6.json -> ff89625df95dca6ae47dd24db72f43d83c24f9cd371e16938258ec03b7e946db (before = after)",
+   "sha256sum tasks-v6/LR-01.v7.json -> 42b4df007352d9397778d9e2b50b1b64ef451190e54ea2c6d1992f9f77bd8392 (new)"
+  ],
+  "derived_truths": {
+   "cp.0.t06": "CALL ledger.record_resolution(block_size=scope.block(), bytes_appended=len(presented.encode('utf-8')), entry_text=entry.text, scope=scope.name, serialized_ref=presented) @ resolve.py:159",
+   "cp.1.t08": "CALL scope.block() @ resolve.py:163",
+   "cp.10.t42": "NONE (block absent inside _refuse)",
+   "cp.11.t46": "CALL ledger.record_refusal(code=error.code, scope=scope_name, serialized_ref=text) @ resolve.py:69",
+   "cp.2.t12": "NUM 64 @ resolve.py:39 (DEFAULT_MAX_REFS)",
+   "cp.3.t14": "NONE (record_refusal absent inside resolve)",
+   "cp.4.t18": "NUM 6 @ errors.py:176-211 (^PtrLedger\\w*$)",
+   "cp.5.t20": "NONE (resolved_count absent inside _refuse)",
+   "cp.6.t24": "NUM 31 @ errors.py:15-247 (^Ptr\\w*$)",
+   "cp.7.t26": "NUM 5 @ errors.py:217-247 (^PtrLaw\\w*$)",
+   "cp.8.t32": "NUM 2 @ errors.py:36-42 (^PtrUnknown\\w*$)",
+   "cp.9.t36": "CALL ledger.resolved_count() @ resolve.py:141 (derive.callee pinned in the spec)"
+  },
+  "grader_state_note": "GRADE-V6-DERIVE landed after CHECKPOINT-COVERAGE and added the NONE + call_at_line branches, so today's grade_v5 derives 12/12 on the unmodified v6 fixture; the remaining fixture-level defect was that no item DECLARED its answer form and cp.10.t36 borrowed its callee from prose.",
+  "h3": {
+   "at_12": "2/12 = 16.7 pp (the frozen statement)",
+   "at_8": "2/8 = 25 pp",
+   "errata_requested": "state margin = 2 / decidable so the percentage follows the count",
+   "parm1_targets": "12/12 -> 16.7 pp (PREREG-ARM-RUN.md:99/103; :113 refuses adjudication below 8/12 decidable)"
+  },
+  "id_map": {
+   "cp.0.t12": "cp.2.t12",
+   "cp.1.t24": "cp.6.t24",
+   "cp.10.t36": "cp.9.t36",
+   "cp.11.t42": "cp.10.t42",
+   "cp.2.t46": "cp.11.t46",
+   "cp.3.t06": "cp.0.t06",
+   "cp.4.t08": "cp.1.t08",
+   "cp.5.t14": "cp.3.t14",
+   "cp.6.t18": "cp.4.t18",
+   "cp.7.t20": "cp.5.t20",
+   "cp.8.t26": "cp.7.t26",
+   "cp.9.t32": "cp.8.t32"
+  },
+  "t36_root_cause": "answer_spec.derive was {rule: call_at_line, line: 141, file: ...} with no 'function' key while the pre-repair dispatcher routed CALL through call_inside_function, which dereferences derive['function'] -> bare KeyError: 'function'; the branch landed in GRADE-V6-DERIVE and v7 pins derive.callee so the callee no longer comes from prose."
+ },
+ "next_unit_hint": "Prereg owner adds one errata line (margin = 2 / decidable; 16.7 pp at 12, 25 pp at 8) to ANCHOR-PREREG*/PREREG-ARM-RUN, then wires LR-01.v7.json into run_longrun/PARM-1 through the id map. Optional follow-up: reconcile CHECKPOINT-COVERAGE.md \u00a76, which still says only 8/12 are gradeable.",
+ "partial_items": [
+  "cp.3.t14 (was cp.5.t14)",
+  "cp.5.t20 (was cp.7.t20)",
+  "cp.10.t42 (was cp.11.t42)"
+ ],
+ "partial_reason": "Requirement 2 asked for a NUM or CALL form for the three former NONE items. A NUM recast needs a call-count derivation rule grade_v5 does not implement (only constant_value/count_classes) and grade_v5.py is not a write path; a CALL recast is impossible because the only refusal call inside resolve() is positional (_refuse(ledger, scope.name, presented, error), rejected by _parse_call as call_arg_not_kwarg) and the only call inside _refuse() is already item cp.11.t46 (duplicate-truth refused by the coverage gate); NUM 0 collides in its own pinned range. The items keep NONE, now DECLARE the form, and are proven decidable in both directions.",
+ "status": "partial",
+ "tool_calls": 27,
+ "unit": "CHECKPOINT-ITEMS-V2",
+ "unverified": [
+  "No live cell run: rows against LR-01.v7.json do not exist (zero inference requests by constraint), so the 12 positives/negatives are synthetic markers, not model answers.",
+  "run_longrun.py still defaults to LR-01.v6.json; adopting v7 is a prereg/wiring change outside this unit's write paths."
+ ],
+ "write_paths": [
+  "experiments/ptr-engine/longrun/tasks-v6/",
+  "experiments/ptr-engine/longrun/tests/test_checkpoint_items_v2.py",
+  "experiments/ptr-engine/measure/CHECKPOINT-ITEMS-V2.md",
+  "orchestration/units/CHECKPOINT-ITEMS-V2.md",
+  "orchestration/handoffs/CHECKPOINT-ITEMS-V2.json",
+  "orchestration/journals/CHECKPOINT-ITEMS-V2.jsonl"
+ ]
+}

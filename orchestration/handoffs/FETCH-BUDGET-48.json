@@ -1,0 +1,57 @@
+{
+  "unit": "FETCH-BUDGET-48",
+  "status": "done",
+  "artifacts": [
+    "docs/FETCH-BUDGET-48.md",
+    "experiments/ptr-engine/measure/FETCH-BUDGET-48.json",
+    "orchestration/units/FETCH-BUDGET-48.md",
+    "orchestration/handoffs/FETCH-BUDGET-48.json",
+    "orchestration/journals/FETCH-BUDGET-48.jsonl"
+  ],
+  "conclusion": "budget_sufficient",
+  "evidence": {
+    "v6_billed_rounds": "20 of 24, closes never, last billed T16, per-turn [0,0,2,3,0,0,0,0,3,3,1,1,1,0,3,3,0,...,0], cum [0,0,2,5,5,5,5,5,8,11,12,13,14,14,17,20,20...20]",
+    "v6_refusals": "0 fetch_budget_exhausted in 371 tool calls (errors: turn_call_cap 236, per_turn_round_cap 7, path_not_found 10, range_out_of_bounds 2, none 116)",
+    "v4_billed_rounds": "20 of 24, closes never, last billed T30 (V5-era; rounds billed on path_not_found, not a modern demand measure)",
+    "v5_billed_rounds": "24 of 24 by T3 (21 bought at T3 alone); closes at T3",
+    "v5_post_closure": "45 turns, 41 with tool calls, 226 fetch_budget_exhausted refusals, 1 cap-length completion (T29: completion_tokens 4096 / max_tokens 4096, finish_reason length, truncated true, 130 refused calls)",
+    "invitation_after_closure": "43 of 45 post-closure turns still invite a read (fixture census 46/48, non-inviting T30/T48); the model acted on it in 41/45 turns",
+    "fixture_census": "LR-01.v8.json 46/48 path-ref turns, LR-01.v7.json 46/48; sha prefixes 0804b51575cce345 and 42b4df007352d939",
+    "exhaustion_code": "run_longrun.py:940-950 refusal error=fetch_budget_exhausted, billed=false, empty <tool_result>, per CALL not per turn, no exit code, row carries no closed-channel marker; sibling bounds per_turn_round_cap run_longrun.py:912-918, turn_call_cap run_longrun.py:955-958",
+    "recommended_budget": "48 -> price 480 turns + 480 rounds + 4 digests = 964, leaves 2,228 of 3,192, +240 over 724",
+    "structural_note": "only B=144 (3 x 48, the per-turn-cap ceiling) makes closure impossible in a 48-turn cell; B=144 costs 1,924 and leaves 1,268",
+    "per_cell_budget_flag": "GRID-SHAPE.json cell flags carry --budget 67 while the same cells project 48 + 24 = 72; any allowance above 19 makes turns+rounds exceed 67 and the cell dies on BudgetExhausted (run_longrun.py:961)",
+    "commands": [
+      "python3 -c '...count billed_round + fetch_budget_exhausted over rows-longrun-v{4,5,6}-tools...' -> v6 billed 20 v6 refusals 0 v5 refusals 226 (exit 0)",
+      "PYTHONPATH=.:experiments/ptr-engine python3 -m pytest experiments/ptr-engine/tests/ -q -k 'not real_corpus and not artefact_matches_a_fresh_scan' -> 222 passed, 2 deselected (exit 0)",
+      "PYTHONPATH=.:experiments/ptr-engine python3 -m pytest experiments/ptr-engine/tests/test_request_ledger_sound.py -q -> 1 failed, 11 passed (PRE-EXISTING ledger drift, not caused here)",
+      "PYTHONPATH=.:experiments/ptr-engine python3 -m pytest experiments/ptr-engine/tests/test_request_ledger_dedup.py -q -> 1 failed, 7 passed (same drift: fresh scan raw=1128 remaining=3192 vs artefact spent 1101 remaining 3219)"
+    ]
+  },
+  "assumptions": [
+    "billed rounds for V6 are rows with billed_round=true; V4/V5 rows have no billed_round field, so their rounds are counted as tool-followup rows, which is what bought the request in that era",
+    "the card's 'remaining 3,192' was used as the headroom (fresh scan) rather than the frozen artefact's 3,219 (spent 1,101); 3,192 is conservative by 27 and is not a transposition",
+    "RUN-A-STAR-2 is not on disk (grep 'STAR-2' = 0 hits; orchestration/units/RUN-A-STAR.md:18 carries stop rules 1-7 only), so rule 8's text could not be read; the mechanism it names was verified at run_longrun.py:2560 with --runaway-turns 2",
+    "no live cell was run and no request was made; every figure is a count over rows already on disk"
+  ],
+  "blocker": "",
+  "next_unit_hint": "budget change card: set the tools-on fetch allowance to 48 (price 964 vs 724, fits 3,192) AND raise per-cell --budget from 67 to at least turns+B, or the cell aborts on BudgetExhausted. Separate card: refresh REQUEST-LEDGER.json from the fresh corpus scan (1128 spent / 3192 remaining) and green the two ledger tests.",
+  "write_paths": [
+    "docs/FETCH-BUDGET-48.md",
+    "experiments/ptr-engine/measure/FETCH-BUDGET-48.json",
+    "orchestration/units/FETCH-BUDGET-48.md",
+    "orchestration/handoffs/FETCH-BUDGET-48.json",
+    "orchestration/journals/FETCH-BUDGET-48.jsonl"
+  ],
+  "not_touched": [
+    "run_longrun.py",
+    "cell.py",
+    "the fixture",
+    "GRID-SHAPE.json",
+    "graders",
+    "analyser",
+    "every row file",
+    "every published number"
+  ],
+  "tool_calls": 22
+}

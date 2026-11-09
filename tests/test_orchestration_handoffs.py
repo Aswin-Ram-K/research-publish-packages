@@ -56,9 +56,12 @@ but broken).
 
 Two shapes, one guard (U8.18)
 -----------------------------
-Shape is decided per file by `classify()`: a filename starting with "V", or a document
-carrying a "verdict"/"overall" key, is a **verifier verdict** judged against the verifier
-contract; anything else is a **unit handoff** judged against CONTRACT (the identical 7
+Shape is decided per file by `classify()`: a document carrying the complete 7-key unit
+contract is a **unit handoff** (whatever its filename); otherwise a filename starting with
+"V", or a document carrying an "overall" key, is a **verifier verdict** judged against the
+verifier contract.  The prefix is a naming convention, not a shape measurement -- see
+classify()'s docstring and docs/HANDOFF-SHAPE.md.  Anything else is a **unit handoff**
+judged against CONTRACT (the identical 7
 keys U8.15 froze).  Both contracts are asserted against FROZEN baselines of pre-existing
 gaps: state/logs/U8.15/baseline_gaps.json for the unit shape (U8.15) and
 state/logs/U8.18/verifier_shape_baseline.json for the verifier shape (U8.18).  Any NEW
@@ -103,7 +106,7 @@ RED evidence captured by U8.18 (scratch fixtures, new classifier)
 A broken handoff is a parse failure ([A]); a merely incomplete one is a key gap ([B],[C]).
 Both are reported, neither is tolerated.
 """
-import hashlib, json, pathlib, time
+import hashlib, json, pathlib, time, warnings
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 HANDOFFS = ROOT / "orchestration" / "handoffs"
@@ -120,7 +123,7 @@ BASELINE_GAPS_PATH = ROOT / "state" / "logs" / "U8.15" / "baseline_gaps.json"
 BASELINE_GAPS_SHA256 = "d25e5bcc7659b50735136b20d37ac613d9884608c993ce57efe01af4b6a368d9"
 
 VERIFIER_BASELINE_PATH = ROOT / "state" / "logs" / "U8.18" / "verifier_shape_baseline.json"
-VERIFIER_BASELINE_SHA256 = "5f8bbd359fe922b55f7fc491ee7073742b52b5153d17bd5c52a690310154ae72"
+VERIFIER_BASELINE_SHA256 = "c692935180293684401dd40ec19801eaebcd33435ea29973fa5fdf952343b780"
 
 # A handoff must declare its outcome; a verifier declares it with 'overall'.  U8.25 removed
 # the 13-file BASELINE_NO_STATUSISH exemption: it was measured as protecting NOTHING (zero
@@ -189,25 +192,113 @@ def frozen_baselines():
 
 
 def classify(name, doc):
-    """Return 'verifier' for a verifier verdict, else 'unit'.
+    """Return 'unit' for a unit handoff, 'verifier' for a verifier verdict.
 
-    Discriminator: filename prefix "V" (the repo's verifier-unit naming, 43/43 V* files),
-    corroborated by an explicit "verdict"/"overall" key so a verdict-shaped handoff that is
-    not named V* is still read as a verdict.
+    SHAPE IS MEASURED, NOT NAMED (unit HANDOFF-SHAPE-CLASSIFY, 2026-10-26).
 
-    Failure mode (deliberate, fail-loud): an AMBIGUOUS file -- one classified as a verifier
-    only because it carries "overall" while really being a unit report -- is then judged
-    against the verifier contract, which requires `checks`.  A unit report normally has no
-    `checks`, so it FAILS as a new gap rather than passing silently; the misclassification
-    is loud, not quiet.  Conversely a V*-prefixed file is always judged as a verdict, even
-    if it is really a unit report -- likewise loud (missing `overall`/`checks`).
+    A document that carries the complete 7-key unit contract (CONTRACT) IS a unit handoff
+    -- whatever its filename, and whatever else it carries.  Those 7 keys are the
+    *specification* of the unit report (AGENTS.md unit-contract rule 5, and CONTRACT
+    below), not a measurement of one, so a document carrying all of them has no
+    unit-shape gap for a classifier to absolve.  That is what makes this
+    reclassification safe in the only direction that can weaken the guard: the documents
+    it moves to the unit shape already carry every key the unit shape requires, so no
+    missing required key can disappear behind the new label.
 
-    Consequence U8.25 acted on: a "V*" name can NEVER be judged as a unit handoff, so any
-    V* entry in the unit baseline was unreachable text (41 of them were retired).
+    A VERIFIER VERDICT is the *other* shape: a report whose job is a judgement about
+    someone else's claims rather than a self-report of the work, and which therefore does
+    not carry the unit report's key set.  It is recognised by an explicit verdict key
+    ("overall") or by the repo's verifier naming convention (a "V" prefix).  The prefix
+    is corroboration of a habit -- a name a human chose -- and NOT a shape measurement.
+
+    The defect this replaces (measured 2026-10-26 at HEAD f17663d1): the prefix test ran
+    FIRST, so a "V"-prefixed document was judged a verdict even when it carried the full
+    unit contract.  13 such documents were reported as "new verifier-shape gaps" -- a
+    defect the classifier invented.  Every one of the 13 carries all 7 unit keys and
+    declares status=done; 12 are "V"-named and one (RECORD-REFRESH.json) was read as a
+    verdict only because it self-reports "overall":"PASS".  A "V"-prefixed document with
+    the unit key set is a unit handoff.
+
+    AMBIGUOUS (unit key set AND "overall") goes to UNIT, deliberately.  Ordering the
+    tests this way is what keeps the guard honest: the document is judged against the keys
+    it demonstrably has, and since those are exactly the unit contract, no key can be
+    forgiven by the ambiguity.  The real consequence is that such a document is not asked
+    for "checks" -- it is a unit report that also self-reports a verdict, e.g.
+    RECORD-REFRESH {"status":"done","overall":"PASS"}.  That residual is stated in
+    docs/HANDOFF-SHAPE.md rather than papered over; and the rescue is bounded, because a
+    document missing even one unit key falls through to the verdict test and is caught
+    there (see test_ambiguous_shape_cannot_smuggle_a_missing_key).
+
+    "verdict" is NOT a trigger: it appears as an incidental field in real unit reports
+    (V3-PILOT, VERDICT-ADOPTION carry it beside status), so treating it as verdict
+    corroboration would re-invent the same false positive under a new name.
     """
+    if all(k in doc for k in CONTRACT):
+        return "unit"
     if name.startswith("V") or "overall" in doc:
         return "verifier"
     return "unit"
+
+
+# ---------------------------------------------------------------------------
+# THE REPORT (non-failing): the ambiguity itself must be visible on EVERY run
+# ---------------------------------------------------------------------------
+# The shape-first rule above is correct and is NOT relaxed here.  Its price is stated
+# plainly: a document carrying the full 7-key unit contract AND an `overall` verdict key is
+# judged as a unit handoff, so a `checks` key the VERIFIER contract requires is never asked
+# of it -- on a verdict-ROLE document that is a genuinely missing required key, forgiven by
+# the shape.  Unit HANDOFF-SHAPE-DECISION (2026-10-26) answered V-HANDOFF-SHAPE's finding,
+# which proved it with a fresh fixture that passed.  The answer was NOT a looser classifier:
+#
+#   * the ROLE of the three affected documents is decided below, with a reason each;
+#   * the two verdict-role ones are recorded as gaps (['checks']) in the PINNED verifier
+#     baseline -- state/logs/U8.18/verifier_shape_baseline.json -- so the escape is an
+#     expected, dated, readable defect instead of an invisible one;
+#   * RECORD-REFRESH.json is unit-role: `checks` was never its key, so it carries no gap;
+#   * and this report prints the whole ambiguity on every run, so a NEW both-shape document
+#     appears as role=UNDECIDED rather than slipping in unseen.
+#
+# The report is deliberately a REPORT, not an assertion about the corpus: a future both-shape
+# document is a decision to be made, not a test to be failed, and failing the suite for it
+# would tempt exactly the loosening this record exists to prevent.  What IS asserted is that
+# the recorded decisions are still in the pinned baseline (test_verdict_role_decision_...),
+# so the record cannot be deleted quietly.
+SHAPE_DECISIONS = {
+    # name: (role, why -- decided by unit HANDOFF-SHAPE-DECISION on 2026-10-26)
+    "RECORD-REFRESH.json": (
+        "unit",
+        "overall:PASS is a self-report of its own insertion work; checks was never its key"),
+    "VERDICT-DISPUTE.json": (
+        "verdict",
+        "its job was to adjudicate another card's PASS (overall:fail is a judgement, not a "
+        "self-report) -> recorded gap ['checks']"),
+    "VERDICT-REFUSAL-SEMANTICS.json": (
+        "verdict",
+        "triage and reopening of two cards (overall:PASS is a judgement) -> recorded gap "
+        "['checks']"),
+}
+
+
+def ambiguous_shape_names(docs):
+    """Names of settled handoffs carrying BOTH `overall` and all 7 unit contract keys."""
+    return sorted(n for n, d in docs.items()
+                  if "overall" in d and all(k in d for k in CONTRACT))
+
+
+def _ambiguity_report(docs):
+    """The non-failing report line: every both-shape document, its verifier gaps, its role."""
+    contract = frozen_baselines()[2]
+    names = ambiguous_shape_names(docs)
+    parts = []
+    for name in names:
+        missing = [k for k in contract if k not in docs[name]]
+        role, why = SHAPE_DECISIONS.get(
+            name, ("UNDECIDED", "a NEW both-shape document: record a role and a reason "
+                                "(docs/HANDOFF-SHAPE.md), never a looser classifier"))
+        parts.append("%s missing=%s role=%s (%s)" % (name, missing or "none", role, why))
+    return ("HANDOFF-SHAPE REPORT (non-failing, not an assertion): %d handoff(s) carry BOTH "
+            "'overall' and the full 7-key unit contract -> %s"
+            % (len(names), "; ".join(parts) if parts else "none"))
 
 
 def required_keys(shape):
@@ -448,17 +539,30 @@ def test_no_baseline_entry_over_declares():
     frozen while the corpus is re-measured, so the check can only ever TIGHTEN.
     """
     a = audit()
-    unit_baseline, verifier_baseline, _c = frozen_baselines()
-    live_unit = {f: m for f, m in a["gaps"].items() if a["shapes"][f] == "unit"}
-    live_verifier = {f: m for f, m in a["gaps"].items() if a["shapes"][f] == "verifier"}
+    unit_baseline, verifier_baseline, verifier_contract = frozen_baselines()
     mid = set(a["mid_write"])
     over = {}
-    for label, baseline, live in (("unit", unit_baseline, live_unit),
-                                  ("verifier", verifier_baseline, live_verifier)):
+    # MEASURED AGAINST THE DOCUMENT, NOT AGAINST A SHAPE FILTER (unit HANDOFF-SHAPE-CLASSIFY).
+    # The old form read `live = {gaps of this shape}`, so a document that changed SHAPE fell
+    # out of `live` and its exemption was reported as "repaired" although nobody repaired
+    # anything -- a classifier-driven false positive that stayed invisible until the
+    # classifier started honouring the unit key set (V-R2VLLM-TRIAGE.json, VLLM-CELL.json).
+    # Each exemption is now measured by asking ITS OWN contract about the document itself:
+    # "how many of the keys this exemption forgives does the document STILL lack?"  For a
+    # same-shape repair this is identical to before, so the check still bites exactly as the
+    # docstring claims -- the repair removes keys from `measured` and the entry over-declares.
+    # (V-R2VLLM-TRIAGE still lacks overall+checks, so its verifier exemption is unreachable
+    # under the current classifier, not over-declaring; if it ever regains the verdict shape
+    # AND the keys, this test fires.)
+    for label, baseline, contract in (("unit", unit_baseline, CONTRACT),
+                                      ("verifier", verifier_baseline, verifier_contract)):
         for name, exempted in baseline.items():
             if name in mid:                      # torn read: not evidence of a repair
                 continue
-            measured = set(live.get(name, []))
+            doc = a["docs"].get(name)
+            if doc is None:                      # not settled this run (absent/unreadable)
+                continue
+            measured = {k for k in contract if k not in doc}
             if set(exempted) - measured:
                 over["%s:%s" % (label, name)] = {"exempted": exempted, "measured": sorted(measured)}
     assert over == {}, (
@@ -585,3 +689,81 @@ def test_still_changing_file_is_skipped_with_a_reason(tmp_path, monkeypatch):
     reason = a["skip_reason"]["U9.94.json"]
     assert "still changing" in reason, reason
     assert reason.endswith("(unfinished write, not a defect)"), reason
+
+
+# ---------------------------------------------------------------------------
+# U8.18/HANDOFF-SHAPE-DECISION: the recorded gap must stay recorded, and the
+# ambiguity must be visible on every run without ever failing one.
+# ---------------------------------------------------------------------------
+def test_report_documents_carrying_both_shapes_is_visible_and_non_failing():
+    """The both-shape ambiguity is REPORTED on every run and does NOT change the exit code.
+
+    V-HANDOFF-SHAPE proved the residual with a fixture that passed: a verdict-ROLE document
+    carrying all 7 unit keys is never asked for `checks`.  Hiding that would be the silent
+    pass the finding is about, so the corpus is printed here (and warned, which is what makes
+    it visible under `-q`) with the role recorded for each name.  Nothing here asserts a
+    corpus fact: a NEW both-shape document must be decided, not failed, and a failing test
+    would only invite someone to loosen the rule instead.
+    """
+    a = audit()
+    line = _ambiguity_report(a["docs"])
+    print(line)
+    warnings.warn(line, stacklevel=1)
+    assert line.startswith("HANDOFF-SHAPE REPORT"), line
+    assert len(ambiguous_shape_names(a["docs"])) <= len(a["docs"]), line
+
+
+def test_report_flags_a_new_both_shape_document_as_undecided(tmp_path):
+    """A NEW both-shape document is REPORTED as UNDECIDED -- the silent pass is closed.
+
+    This is the defect V-HANDOFF-SHAPE measured, restated as a fixture: the classifier
+    reports NO gap for such a document (that is the price of shape-first, unchanged), so the
+    only thing standing between it and a silent pass is the report naming it.  The report
+    must name it; the guard's exit status must stay green.
+    """
+    (tmp_path / "VERDICT-NEW-BOTH-SHAPES.json").write_text(json.dumps(
+        {"unit": "VERDICT-NEW-BOTH-SHAPES", "status": "done", "artifacts": [], "evidence": {},
+         "blocker": "", "next_unit_hint": "", "write_paths": [], "overall": "fail"}))
+    a = audit(tmp_path)
+    assert a["failures"] == [] and a["mid_write"] == []
+    assert a["gaps"] == {}, a["gaps"]           # the classifier forgives `checks`: recorded, not hidden
+    line = _ambiguity_report(a["docs"])
+    assert "VERDICT-NEW-BOTH-SHAPES.json" in line, line
+    assert "role=UNDECIDED" in line, line
+    assert "missing=['checks']" in line, line
+
+
+def test_red_v_named_14th_gap_still_bites_by_name(tmp_path):
+    """RED case (a') from V-HANDOFF-SHAPE, kept: a V-named 14th handoff short a key is NAMED."""
+    (tmp_path / "V-NEW-14TH-GAP.json").write_text(json.dumps(
+        {"unit": "V-NEW-14TH-GAP", "status": "done", "artifacts": [], "evidence": {},
+         "blocker": "", "next_unit_hint": "", "overall": "pass", "checks": []}))
+    a = audit(tmp_path)
+    assert a["shapes"]["V-NEW-14TH-GAP.json"] == "verifier", a["shapes"]
+    assert a["gaps"] == {"V-NEW-14TH-GAP.json": ["write_paths"]}, a["gaps"]
+
+
+def test_red_verdict_shaped_missing_checks_still_bites_by_name(tmp_path):
+    """RED case (b) from V-HANDOFF-SHAPE, kept: a verdict missing `checks` is NAMED."""
+    (tmp_path / "VERDICT-NEW-NO-CHECKS.json").write_text(json.dumps(
+        {"unit": "VERDICT-NEW-NO-CHECKS", "overall": "pass", "blocker": "",
+         "next_unit_hint": "", "write_paths": []}))
+    a = audit(tmp_path)
+    assert a["shapes"]["VERDICT-NEW-NO-CHECKS.json"] == "verifier", a["shapes"]
+    assert a["gaps"] == {"VERDICT-NEW-NO-CHECKS.json": ["checks"]}, a["gaps"]
+
+
+def test_verdict_role_decision_is_a_recorded_pinned_gap():
+    """The decision of record survives, and cannot be deleted quietly.
+
+    The two verdict-role documents are RECORDED gaps (['checks']) in the PINNED baseline --
+    a visible second edit with its pin updated in exactly one place -- and the unit-role
+    document is deliberately NOT there.  Asserting the entries makes their removal a red
+    test rather than a tidy-up nobody notices.
+    """
+    _u, verifier_baseline, _c = frozen_baselines()
+    for name in ("VERDICT-DISPUTE.json", "VERDICT-REFUSAL-SEMANTICS.json"):
+        assert verifier_baseline.get(name) == ["checks"], (name, verifier_baseline.get(name))
+        assert SHAPE_DECISIONS[name][0] == "verdict", (name, SHAPE_DECISIONS[name])
+    assert "RECORD-REFRESH.json" not in verifier_baseline, verifier_baseline
+    assert SHAPE_DECISIONS["RECORD-REFRESH.json"][0] == "unit", SHAPE_DECISIONS["RECORD-REFRESH.json"]

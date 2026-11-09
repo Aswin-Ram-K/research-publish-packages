@@ -1,0 +1,65 @@
+{
+ "unit": "LEDGER-GRID-BASELINE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE.json",
+  "docs/LEDGER-GRID-BASELINE.md",
+  "experiments/ptr-engine/tools/ledger_delta.py",
+  "tests/test_ledger_delta.py",
+  "orchestration/units/LEDGER-GRID-BASELINE.md",
+  "orchestration/journals/LEDGER-GRID-BASELINE.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "frozen: spent 1101 / requests_raw 1101 / remaining_raw 3219 / cap 4320 / duplicate_excess 30 / deduction_rule_sound false / diagnostic.deducted false; 14 rows files, 1101 rows summed = ledger total, 0 sha-or-row disagreements; rows-runA-* absent -> pre_grid; green delta 0 exit 0; red (baseline spent 1101->1106) deficit 5 exit 1; pytest 5 passed",
+  "commands": [
+   "sha256sum experiments/ptr-engine/measure/LEDGER-GRID-BASELINE.json -> 6b6dff4473e5e1b9a20ab73b58dfb4a884d50dff019751058ebbd0188b307470",
+   "sha256sum experiments/ptr-engine/measure/REQUEST-LEDGER.json -> 2f60b831a8439a9ba4ba5fafb8f6ca1ba4fb40cdaf1ccff4f29182c0d6e4c1e5 (68882 bytes, mtime 2026-10-26T11:14:36-0500, UNCHANGED by this unit)",
+   "bash -lc '.venv/bin/python experiments/ptr-engine/tools/ledger_delta.py --baseline experiments/ptr-engine/measure/LEDGER-GRID-BASELINE.json' -> spent_before 1101 / spent_now 1101 / delta 0 / remaining_now 3219 / remaining_before_minus_delta 3219 / deficit none / verdict OK, EXIT=0",
+   "bash -lc '.venv/bin/python experiments/ptr-engine/tools/ledger_delta.py --baseline <tmp baseline with budget.spent=1106>' -> spent_before 1106 / delta -5 / deficit 5 / 3 discrepancies / FAIL, EXIT=1",
+   "bash -lc '.venv/bin/python -m pytest tests/test_ledger_delta.py -q' -> 5 passed in 0.14s",
+   "ls experiments/ptr-engine/measure/rows-runA-* -> No such file or directory (at capture and at re-check)",
+   "latest rows-file mtime 2026-10-26T08:23:48-0500 (rows-longrun-v6-tools.jsonl) < ledger mtime 2026-10-26T11:14:36-0500 -> nothing written after the ledger build",
+   "recount: 105+6+100+27+29+40+192+192+96+96+68+72+72+6 = 1101 = ledger total.rows, all 14 disk sha256 equal the ledger per_file sha256",
+   "orchestration_verdict record -> PASS f17663d1 bash -lc '.venv/bin/python -m pytest tests/test_ledger_delta.py -q'"
+  ]
+ },
+ "baseline": {
+  "label": "pre_grid",
+  "captured_utc": "2026-10-26T18:24:48Z",
+  "captured_local": "2026-10-26T13:24:48-0500",
+  "spent": 1101,
+  "requests_raw": 1101,
+  "remaining_raw": 3219,
+  "cap": 4320,
+  "requests_deduplicated_diagnostic_only": 1071,
+  "deducted": false,
+  "baseline_sha256": "6b6dff4473e5e1b9a20ab73b58dfb4a884d50dff019751058ebbd0188b307470",
+  "ledger_sha256": "2f60b831a8439a9ba4ba5fafb8f6ca1ba4fb40cdaf1ccff4f29182c0d6e4c1e5",
+  "rows_runA_present": false
+ },
+ "expected_tranche_1": {
+  "arithmetic": "480 turns x 1.374532 (1101/801) = 659.775 -> ~660 marginal requests",
+  "expected_delta": 660,
+  "expected_spent_after": 1761,
+  "expected_remaining_after": 2559,
+  "competing_recorded_figure": "GRID-BUDGET-RECHECK.json: gate enforces dry-run 53/cell x 10 cells = 530 (cell.py never reads 1.374532); bracket ~530-660, anything outside must be explained",
+  "not_predicted": "per-arm split; grid completion not assumed"
+ },
+ "assumptions": [
+  "the grid-had-not-spent determination rests on absence of rows-runA-* plus every rows file predating the ledger build; if RUN-A* writes rows into a differently named file, re-check before trusting the label",
+  "the frozen delta field pair is budget.spent (both sides); requests_raw/remaining_raw are the cross-checks and the only counts used, per the never-deduct-1071 rule"
+ ],
+ "blocker": "",
+ "next_unit_hint": "When RUN-A* settles, run bash -lc '.venv/bin/python experiments/ptr-engine/tools/ledger_delta.py --baseline experiments/ptr-engine/measure/LEDGER-GRID-BASELINE.json'; report delta against sha 6b6dff44… and check the baseline file still hashes to it. If LEDGER was regenerated wholesale, diff the rows-file inventory too.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE.json",
+  "docs/LEDGER-GRID-BASELINE.md",
+  "experiments/ptr-engine/tools/ledger_delta.py",
+  "tests/test_ledger_delta.py",
+  "orchestration/units/LEDGER-GRID-BASELINE.md",
+  "orchestration/handoffs/LEDGER-GRID-BASELINE.json",
+  "orchestration/journals/LEDGER-GRID-BASELINE.jsonl"
+ ],
+ "tool_calls": 15,
+ "bound": 20
+}

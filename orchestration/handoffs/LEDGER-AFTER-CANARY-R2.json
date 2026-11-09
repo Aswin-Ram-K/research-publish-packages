@@ -1,0 +1,71 @@
+{
+  "unit": "LEDGER-AFTER-CANARY-R2",
+  "card": "208b36cd-64de-45cd-b8b5-567daca12e5a",
+  "execution": "6320f71b-e04f-4c98-bf0c-90f14f2b3396",
+  "status": "done",
+  "supersedes_handoff": "orchestration/handoffs/LEDGER-AFTER-CANARY.json",
+  "artifacts": [
+    "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+    "experiments/ptr-engine/measure/LEDGER-AFTER-CANARY.json",
+    "docs/LEDGER-AFTER-CANARY.md",
+    "orchestration/units/LEDGER-AFTER-CANARY-R2.md",
+    "orchestration/journals/LEDGER-AFTER-CANARY.jsonl",
+    "orchestration/handoffs/LEDGER-AFTER-CANARY-R2.json"
+  ],
+  "evidence": {
+    "rebuild": "requests_raw=1176 requests=1176 requests_deduplicated=1146 duplicate_excess=30 remaining=3144 remaining_raw=3144 cap=4320 reserve=0 files=19 rows=1176",
+    "on_disk_equals_fresh_build": "every builder key identical; only extra keys on disk are supersedes / superseded_by_unit / built_by / generated_at_utc",
+    "determinism": "builder twice -> byte-identical, sha256 eadc56f6166d6987ed607f741d31431d373d1207797312b687b971533beee4f4",
+    "supersedes": "artefact_sha256 6da0c1f19b7cd37203c9d99de5e5d8a9db879e002f389a2b525a776624c27806 spent 1128 remaining 3192 generated_at_utc 2026-10-26T18:56:31Z files 15 started_dedup 1098 -- superseded, never mutated",
+    "dedupe_diagnostic": "diagnostic.deducted=false, deduction.applied=false, requests_deduplicated=1146 candidate_excess=30; content_sha256 hashes assistant content (DEDUPE-ROOT-CAUSE, V-DUPLICATE-RULE fail) so it cannot price spend",
+    "delta": "48 = 1128 + 48 = 1176. NOT the card's 36: three canary arms (12+12+12=36) plus rows-cell-pointer-stable-20261026T204258Z.jsonl (12, first row 20:43:11.557Z, manifest created 20:42:58.636Z, cap_gate.spent_at_start=1164, cap_gate.reconcile.spent_after=1176). CANARY-ERA-B-3.json records spent_rows_before=1128 -> spent_rows_after=1164, which is the 36 and is correct as of its own measurement",
+    "files_added": [
+      {"file": "rows-cell-pointer-stable-20261026T202040Z.jsonl", "rows": 12, "requests": 12, "first_ts": "2026-10-26T20:20:58.079Z", "canary_arm": "pointer-stable"},
+      {"file": "rows-cell-transcript-grow-20261026T202444Z.jsonl", "rows": 12, "requests": 12, "first_ts": "2026-10-26T20:26:41.642Z", "canary_arm": "transcript-grow"},
+      {"file": "rows-cell-transcript-compact-20261026T203733Z.jsonl", "rows": 12, "requests": 12, "first_ts": "2026-10-26T20:37:34.021Z", "canary_arm": "transcript-compact"},
+      {"file": "rows-cell-pointer-stable-20261026T204258Z.jsonl", "rows": 12, "requests": 12, "first_ts": "2026-10-26T20:43:11.557Z", "canary_arm": "NOT the canary -- separate live cell, manifest longrun-2026-10-26T204258Z-pointer-stable-r1"}
+    ],
+    "preexisting_files_intact": "15/15 sha-unchanged vs LEDGER-GRID-BASELINE-2.json rows_inventory.per_file; 0 missing; exactly 4 added; all 19 per_file shas equal the bytes on disk (0 mismatches)",
+    "delta_tool": "/usr/bin/python3 experiments/ptr-engine/tools/ledger_delta.py (default baseline v2, sha 3b79f4766abc8479a7a963f9e04063837928d09d48d2435e91f488b3c6d3ae0d, label pre_grid_era_b) -> spent_before 1128, spent_now 1176, delta 48, remaining_now 3144, requests_raw_now 1176, rows_guard 4 new, deficit none, verdict OK, exit 0. NOTE: the tool resolves baseline paths from the WORKSPACE ROOT; run it from /home/zer0null/reserach extarctor, not from experiments/ptr-engine",
+    "gate_reading": "G1 RE-COUNTS; it does not read budget.spent. experiments/ptr-engine/longrun/cell.py:1255 report = ledger.build_report(_ledger_row_paths(doc), facts['cap'], facts['reserve'], would_spend); row paths come from the artefact `files` list via _ledger_row_paths at cell.py:1200-1213; spend is read from the fresh report at cell.py:1261 (b = report['budget']) and used at cell.py:1267 (unspent = b['cap'] - b['reserve'] - b['spent']). Consequence: the gate was NOT mispriced by the literal 1,128, but WAS under-priced by 48 because the stale artefact named 15 row files while 19 existed -- the `files` list, not the number, is the stale operand. Card/prose readers that take budget.spent literally did overstate headroom by 48",
+    "tests": "35 passed, 7 subtests passed (exit 0)",
+    "verdict_row": "PASS f17663d1 bash -lc '/usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_request_ledger_sound.py experiments/ptr-engine/tests/test_request_ledger_dedup.py experiments/ptr-engine/longrun/tests/test_cell_gates.py -q' exit 0",
+    "artefact_sha256": {
+      "experiments/ptr-engine/measure/REQUEST-LEDGER.json": "63e3a15631d63e4ee1fd7e8acc905262f5bb4f1680749f723e1877c3d34f5716",
+      "experiments/ptr-engine/measure/LEDGER-AFTER-CANARY.json": "1226fd9792d5c94b6160a097722d97f06765c3072d3288b925e79bae744176ec",
+      "docs/LEDGER-AFTER-CANARY.md": "f13c1b45d39da52c3c3ef00ebf830e16b34e92f692b2961f30083dcf48d4871f"
+    },
+    "commands": [
+      "/usr/bin/python3 experiments/ptr-engine/tools/request_ledger.py --glob 'measure/rows-*.jsonl' --cap 4320 --reserve 0 --would-spend 0 --write <scratch>/run1.json --quiet",
+      "/usr/bin/python3 experiments/ptr-engine/tools/request_ledger.py --glob 'measure/rows-*.jsonl' --cap 4320 --reserve 0 --would-spend 0 --write <scratch>/run2.json --quiet",
+      "/usr/bin/python3 experiments/ptr-engine/tools/ledger_delta.py",
+      "bash -lc '/usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_request_ledger_sound.py experiments/ptr-engine/tests/test_request_ledger_dedup.py experiments/ptr-engine/longrun/tests/test_cell_gates.py -q'"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "The stale operand is the artefact's `files` list, not its `spent` field: G1 counts only row files the snapshot names, so any snapshot read by G1 is stale the moment a cell appends rows. Either rebuild measure/REQUEST-LEDGER.json immediately before every launch (deterministic, ~90 ms) or change cell.py:_ledger_row_paths to glob measure/rows-*.jsonl. Also: the card's expected delta (36) was already stale when written -- measure deltas with ledger_delta.py, which carries a rows guard, instead of quoting a handoff's spend line.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+    "experiments/ptr-engine/measure/LEDGER-AFTER-CANARY.json",
+    "docs/LEDGER-AFTER-CANARY.md",
+    "orchestration/units/LEDGER-AFTER-CANARY-R2.md",
+    "orchestration/handoffs/LEDGER-AFTER-CANARY-R2.json",
+    "orchestration/journals/LEDGER-AFTER-CANARY.jsonl",
+    "orchestration/journals/LEDGER-AFTER-CANARY-R2.jsonl"
+  ],
+  "not_reproduced": [
+    "The card's premise that measure/REQUEST-LEDGER.json still reads spent 1128: by this execution it already read 1176 (rebuilt 2026-10-26T22:33:00Z by the previous execution of this card, sha 63e3a156...), and it is byte-equal to a fresh builder run apart from the provenance keys. The stale 1128 snapshot's sha (6da0c1f1...) is preserved in `supersedes`",
+    "The card's instruction that the delta 'must equal 36': measured 48, because a fourth 12-row cell file appeared 2m58s after the canary's spend record. Reported per the card's own escape clause rather than forced to 36"
+  ],
+  "overstated_in_predecessor": [
+    "orchestration/handoffs/LEDGER-AFTER-CANARY.json lists orchestration/journals/LEDGER-AFTER-CANARY.jsonl among its write_paths, but that file did not exist before this execution; the journal is now written (9 records, 0 torn lines). No other predecessor claim was found false: the ledger, the attribution file, the docs page, the test edits (mtime 17:33/17:34) and the 35-passing test run were all re-verified green here",
+    "The predecessor's delta_tool command line (--baseline experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-2.json) fails when run from experiments/ptr-engine because ledger_delta.py resolves that path from the workspace root; the v2 baseline is the tool's default and must be run from /home/zer0null/reserach extarctor. The numbers it reported are correct"
+  ],
+  "bound": {"declared": 25, "used": 35, "note": "exceeded: the prelude had to be re-derived rather than inherited (the predecessor's journal did not exist), and the delta guard needed four separate probes -- determinism twice, on-disk-vs-fresh diff, ledger_delta, per-file sha compare. Recorded rather than hidden, matching the predecessor's own overrun"},
+  "tool_calls": 35,
+  "assumptions": [
+    "The three data deliverables were verified in place and deliberately NOT rewritten: rewriting a proven-correct number only moves a timestamp and would erase the 22:33 rebuild record. Their shas are pinned in artefact_sha256 above and unchanged by this execution",
+    "Unit-scoped files carry the -R2 suffix (card -R2, handoff -R2) so the previous execution's record stays readable rather than being mutated; the journal uses the contracted name because the predecessor never wrote it",
+    "Delta attribution rests on two independent sources: each row file's first/last ts and row count, and the fourth cell's own manifest cap_gate (spent_at_start 1164 -> spent_after 1176). No number was taken from a handoff"
+  ]
+}

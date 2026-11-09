@@ -1,0 +1,36 @@
+{
+ "unit": "GATES-MESSAGE-CONSISTENCY",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_gate_messages.py",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/GATES-MESSAGE-CONSISTENCY.md",
+  "orchestration/journals/GATES-MESSAGE-CONSISTENCY.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "5 passed (tests/test_gate_messages.py); 15 passed (tests/test_cell_gates.py incl. the G1/G2 red->green mutation table); no change to any decision, threshold, exit code or computed/limit/ok value",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/tests/test_gate_messages.py",
+   "python3 experiments/ptr-engine/longrun/cell.py --arm transcript-grow --fixture tasks-v5/runtime-v5/LR-01.v5.json --turns 48 --max-wall 1e308 --budget 1000 --hypothesis H2 --out-dir /tmp/gm-out --no-cell-handoff  (exit 8, G2 refusal text now 'exceeds ... by N s')"
+  ],
+  "red_green": [
+   "a: pre-fix allow G1 'shortfall unexpectedly found in ... shortfall -4,167 requests' -> green: no shortfall, spent+would_spend==projected<=headroom, remaining==headroom-projected",
+   "b: mutant 'swap G1 families' -> \"'shortfall' not found\" -> green: refused G1 (cap 120, spent 100) names shortfall 33 and exits 4",
+   "c: pre-fix allow G2 2880 \"'exceeds' unexpectedly found in 'projected wall 2880s = 48 request(s) ... exceeds the allowed 2880s'\" -> green: 'within the 2880 s allowed' , computed '2880 s', limit '2880 s (--max-wall)'",
+   "c2: pre-fix refuse G2 2881 \"'request(s)' unexpectedly found in ... 48 request(s) ... 2881 s\" -> green: 'exceeds ... by 1 s', exit 8, no 'request(s)'",
+   "d: mutant 'G1 digest -> None' -> 'G1 carries no artefact_sha256: None' -> green: all three artefact_sha256 match sha256 of their artefact bytes"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "G1's `limit` string still renders '<headroom> requests (cap X - reserve Y - spent Z)' where headroom == cap - reserve, so the parenthetical does not add up; it is a VALUE change (docs/GATE-CHAIN.md 6a records it) and needs its own card. Also pre-existing and NOT caused by this card: test_gate_operand_validation F1-F8 fail because tools/gate_attack.run_chain_cases' `counted()` stub does not accept cell.py's `purpose=` kwarg (TypeError -> exit 1); test_verdict_ritual fails on VERDICT-BACKFILL-FIXTURE-GENERATIONS (a done handoff with no verdict row); test_stop_reason fails on a stale measure/STOP-REASON.json (rows 1101 vs 1128).",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_gate_messages.py",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/GATES-MESSAGE-CONSISTENCY.md",
+  "orchestration/handoffs/GATES-MESSAGE-CONSISTENCY.json",
+  "orchestration/journals/GATES-MESSAGE-CONSISTENCY.jsonl"
+ ],
+ "verdict": "PASS f17663d1 python3 experiments/ptr-engine/longrun/tests/test_gate_messages.py"
+}

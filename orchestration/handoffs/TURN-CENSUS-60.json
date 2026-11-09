@@ -1,0 +1,45 @@
+{
+ "unit": "TURN-CENSUS-60",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/TURN-CENSUS.json",
+  "docs/TURN-CENSUS.md",
+  "orchestration/units/TURN-CENSUS-60.md",
+  "orchestration/journals/TURN-CENSUS-60.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "15 rows files, 1128 raw rows -> 915 turns by analyze_stats.turn_latency_rows; max usable turns per cell per arm = 48 (measure/rows-longrun-v6-tools.jsonl / pointer-stable, tied with every other 48-turn cell); cells with >=min_n_for(0.95)=60 = NONE ([])",
+  "commands": [
+   "python3 -c \"import json,glob,sys; sys.path.insert(0,'longrun'); import analyze_stats as A; ... turn_latency_rows per file, group by arm, count turns/usable/ttft/excluded -> max_usable (48, 'measure/rows-longrun-v6-tools.jsonl', 'pointer-stable') cells_ge_floor []\"  # exit 0",
+   "python3 -m pytest experiments/ptr-engine/tests -q  # 224 passed, exit 0 (verdict anchor)",
+   "grep -rn usable_for docs/  # stamps + citations",
+   "sed -n 25,60p docs/H1-CONDITIONING.md ; sed -n 76p docs/H1-CONDITIONING.md  # R-all n=144 table row"
+  ],
+  "q1": "No cell/arm reaches 60 usable turns. 0 of 15 files, 0 of 15 arm-by-file rows. Largest is 48.",
+  "q2": "48 usable turns per cell per arm is the corpus maximum. Of those, only cells with ttft_present=48 carry a latency sample: rows-longrun-c (4 arms), longrun-v3, -v4, -v4-tools, -v5-tools, -v6-tools. rows-longrun-2026-10-26.jsonl has 48 turns/arm but 0 non-null ttft_ms.",
+  "q3": "A single cell needs n>=60 (min_n_for(0.95)=60, 60*0.05=3>=TAIL_MIN). At 48 turns/arm 48*0.05=2.4<3 so it is unreachable by counting fixes; only pooling reps (3x48=144) or a >48-turn cell reaches it. No rows-*.jsonl on disk holds more than one rep.",
+  "doc_quote": "docs/H1-CONDITIONING.md:76 | **R-all** | PARM-1 frozen, primary | select_r_all(rows, fire_turn=None) | every completed turn | 48 | **144 all four arms** | **yes** | ; docs/H1-CONDITIONING.md:42-43 'n=48 : 48 x 0.05 = 2.4 < TAIL_MIN = 3 -> per-rep p95 is INADMISSIBLE (that is why PARM-1 pools) / n=144 : 144 x 0.05 = 7.2 -> the top ~7 observations set p95 (rank span 132-142)'",
+  "stamps": "measure/GRID-CELL-SANITY.json stamps BOTH cells usable_for: [] (cells[0] 27 rows, cells[1] 6 rows).",
+  "published_figures_on_stamped_cells": [
+   "docs/RUNAWAY-POLICY.md:34 - ttft_ms_p50 141.58 over the 27 kind=turn rows of rows-cell-pointer-stable-20261026T182535Z.jsonl (census-excluded cell)",
+   "docs/ANALYSIS-PATH.md:33 - same computation quoted as reproduction (ttft_p50 n=27 141.58ms [131.35, 166.38])",
+   "docs/ANALYSIS-CONSUMER.md:100 - counts 27 -> 25 over the same cell"
+  ],
+  "definition_note": "Every file reports definition_fallback: true: no rows file on disk carries kind='turn-initial'. The legacy kind='turn' row is the selector everywhere, so every latency figure in this corpus is a marked fallback."
+ },
+ "blocker": "",
+ "next_unit_hint": "Keep the per-cell p95s withdrawn permanently (no cell can reach 60 turns). Any p95 card must be the pooled R-all reading at n=144, which requires 3 reps x 48 turns of non-null ttft_ms per arm pooled on disk - that artifact does not exist yet (no file carries more than one rep). Side observation, not fixed here: experiments/ptr-engine/longrun/tests/test_latency_floor_policy.py now FAILS at case_d_artefact (AssertionError ('G8', {'n': 45, 'refused': 'refusing p95 at n=45 ...'})) - the published report artifact moved past the test's expectation and the test needs re-pinning by its owner.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/TURN-CENSUS.json",
+  "docs/TURN-CENSUS.md",
+  "orchestration/units/TURN-CENSUS-60.md",
+  "orchestration/handoffs/TURN-CENSUS-60.json",
+  "orchestration/journals/TURN-CENSUS-60.jsonl"
+ ],
+ "assumptions": [
+  "usable = selected turn with stop_reason != 'length' (the card's definition).",
+  "per-arm grouping used row['arm'] (falling back to '(none)' for rows-live-2026-10-26.jsonl, which carries no arm field)."
+ ],
+ "tool_calls": 24,
+ "bound": 16
+}

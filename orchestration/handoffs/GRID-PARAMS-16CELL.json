@@ -1,0 +1,47 @@
+{
+ "unit": "GRID-PARAMS-16CELL",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/measure/GRID-PARAMS.json",
+  "experiments/ptr-engine/measure/GRID-SHAPE.json",
+  "experiments/ptr-engine/measure/GRID-PARAMS-16CELL.json",
+  "docs/GRID-PARAMS.md",
+  "orchestration/units/GRID-PARAMS-16CELL.md",
+  "orchestration/journals/GRID-PARAMS-16CELL.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "promotion done (16 cells / 768 turns / price 1,056 = 768 x 1.374532 / remaining 2,136); launcher dry run prints cells=10 -- the launcher is NOT wired",
+  "before_after": {"cells": "10 -> 16", "arms": "3/3/2/2 -> 6/6/2/2", "turns": "480 -> 768", "price": "1016 -> 1056", "remaining_after": "2176 -> 2136"},
+  "grid_dry_run": "RUN-A DRY END cells=10 refused=0 requests=0 claim=H2 turns=48 max_wall=2880 canary_arms=10 canary_requests=0",
+  "grid_gate_line": "cell: 0/7 dry-run G1 1,224/4,320 requests (cap 4,320 - reserve 0 - spent 1,128)",
+  "canary_dry_run": "RUN-A canary arms=4 cells=1,4,7,9 turns=12 requests=48 claim=smoke | RUN-A DRY END cells=4 refused=0 requests=0 claim=smoke turns=12 max_wall=900 canary_arms=4 canary_requests=48",
+  "tools_flag": "RUN-A tools=read_file shim=/tmp/grid-shape-shim/runner_read_file.py -- --tools read_file survived the shim",
+  "both_directions": "repo copy cells=16 price=1056 remaining=2136 (10-cell verbatim block reads price 1,016); /tmp copy reverted to 10 cells reads cells=10 price=1016 remaining=2176; launcher prints cells=10 either way",
+  "brake": "1,128 spent + 1,056 = 2,184 <= 4,320 -> 2,136 left (gate lines, cell.py stage 0/7)",
+  "launcher_spend_lines": "run_a_star.py:167-175 spend() counts measure/rows-*.jsonl lines (no request_ledger.build_report); run_a_star.py:571 remaining = 3219 - (spend() - spent0), repeated :585, :644, :652 -- 3,219 not the ledger's 3,192 and not the 4,320 cap",
+  "pin_state": "HARNESS-PIN.json generation 5 digest 35ff41b7 vs run_a_star.py:51 generation 4 digest fa6fd8cc -- repo launcher aborts 'HARNESS-PIN record disagrees with the launcher'; the dry-run evidence used a /tmp launcher copy with ONLY that constant advanced",
+  "residual_field": "GRID-SHAPE.json :: cells[*] still 10 entries ('--budget 67' at cell_py_flags[6], '--fetch-followup-allowance 24' at [8]); the launcher does NOT derive cells from it (run_a_star.py:99-103 hardcodes the tuple; 0 references to GRID-PARAMS, 3 prose references to GRID-SHAPE at :9, :474, :478)",
+  "offline": "requests_sent=0 network_events=0 live_cells=0 sockets=0",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --budget 108 --dry-run",
+   "python3 /tmp/gp16/run_a_star_gen5.py --tools read_file --budget 108 --dry-run",
+   "python3 /tmp/gp16/run_a_star_gen5.py --canary --tools read_file --budget 108 --dry-run"
+  ]
+ },
+ "blocker": "WIRING, not arithmetic: run_a_star.py:99-103 hardcodes a 10-cell CELLS tuple and reads neither GRID-PARAMS.json nor GRID-SHAPE.json, and it prints no price -- so the record is 16 cells while the launch is still 10. run_a_star.py is not in this card's write paths. Separately run_a_star.py:51 pins generation 4 while HARNESS-PIN.json is generation 5, so the repo launcher refuses before any cell (HARNESS-PIN-GEN5's to fix; not repaired here).",
+ "next_unit_hint": "A card owning experiments/ptr-engine/tools/run_a_star.py: (a) advance HARNESS_PIN to generation 5 / 35ff41b7 and the gen check to 5, (b) CELLS 10 -> 6/6/2/2 = 16, (c) add a printed price line reading GRID-PARAMS.json price.total so the dry run and the record cannot disagree, (d) decide whether run_a_star.py:571 bills 3,219 or the gate's 3,192.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/GRID-PARAMS.json",
+  "experiments/ptr-engine/measure/GRID-SHAPE.json",
+  "experiments/ptr-engine/measure/GRID-PARAMS-16CELL.json",
+  "docs/GRID-PARAMS.md",
+  "orchestration/units/GRID-PARAMS-16CELL.md",
+  "orchestration/handoffs/GRID-PARAMS-16CELL.json",
+  "orchestration/journals/GRID-PARAMS-16CELL.jsonl"
+ ],
+ "assumptions": [
+  "price 1,056 is recorded as the card mandates (768 x 1.374532) even though 1.374532 is GRID-SHAPE.json factor.tools_off_historical while the cells are tools-on (ceiling 1.5 -> 1,152); the mismatch is recorded in price.caveats, not smoothed",
+  "1,056 carries no canary and no warm-ups, unlike rev 2's 1,016 (which included 48 + 4); like-for-like would be 1,108, leaving 2,084 -- recorded as a caveat",
+  "16 cells at the launcher's own G1 basis (48 turns + 48 allowance = 96/cell) would be 1,536, leaving 1,656; all three figures fit the 4,320 cap, which is why the brake cannot arbitrate"
+ ]
+}

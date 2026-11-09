@@ -1,0 +1,80 @@
+{
+ "unit": "LEDGER-BASELINE-REPIN",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-2.json",
+  "experiments/ptr-engine/tools/ledger_delta.py",
+  "tests/test_ledger_delta.py",
+  "docs/LEDGER-BASELINE.md",
+  "orchestration/units/LEDGER-BASELINE-REPIN.md",
+  "orchestration/journals/LEDGER-BASELINE-REPIN.jsonl"
+ ],
+ "evidence": {
+  "v2_baseline": {
+   "file": "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-2.json",
+   "sha256": "3b79f4766abc8479a7a963f9e04063837928d09d48d2435e91f488b3c6d3ae0d",
+   "frozen_at": "2026-10-26T19:04:18Z",
+   "requests": 1128,
+   "remaining": 3192,
+   "cap": 4320,
+   "reserve": 0,
+   "requests_deduplicated": 1098,
+   "deducted": false,
+   "source_ledger_sha256": "6da0c1f19b7cd37203c9d99de5e5d8a9db879e002f389a2b525a776624c27806",
+   "supersedes": {
+    "file": "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE.json",
+    "frozen_at": "2026-10-26T18:24:48Z",
+    "requests": 1101
+   }
+  },
+  "v1_unchanged": {
+   "before": "6b6dff4473e5e1b9a20ab73b58dfb4a884d50dff019751058ebbd0188b307470",
+   "after": "6b6dff4473e5e1b9a20ab73b58dfb4a884d50dff019751058ebbd0188b307470",
+   "equal": true
+  },
+  "baseline_arg_before": "experiments/ptr-engine/tools/ledger_delta.py:89 ap.add_argument(\"--baseline\", required=True, ...) -- it DID NOT hardcode v1; but it had no default, so a bare call errored",
+  "baseline_arg_after": "experiments/ptr-engine/tools/ledger_delta.py:158 ap.add_argument(\"--baseline\", default=DEFAULT_BASELINE) with DEFAULT_BASELINE = LEDGER-GRID-BASELINE-2.json at :82",
+  "proof_delta_zero": "spent_before 1128 / spent_now 1128 / delta 0 / remaining_now 3192 / remaining_before_minus_delta 3192 / rows_guard checked 15 new 0 / deficit none / exit 0",
+  "proof_plus48": "/tmp/baseline-repin/ledger-plus48.json: delta 48 (1176-1128), remaining 3144, deficit none, exit 0; same sim against v1 reports delta 75",
+  "proof_v1_explicit": "--baseline LEDGER-GRID-BASELINE.json -> spent_before 1101, delta 27, deficit none, exit 0 (old behaviour intact)",
+  "tests": "PYTHONPATH=.:src python3 -m pytest tests/test_ledger_delta.py -q -> 9 passed in 0.25s",
+  "guard_decision": "implemented (cheap): check_rows_inventory(base,cur) in ledger_delta.py refuses a rows file whose line count moved with no sha change, a sha change at unchanged count, or a vanished file; new files reported not refused. 3 new tests (2 red, 1 green).",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/ledger_delta.py",
+   "python3 experiments/ptr-engine/tools/ledger_delta.py --baseline experiments/ptr-engine/measure/LEDGER-GRID-BASELINE.json",
+   "python3 experiments/ptr-engine/tools/ledger_delta.py --ledger /tmp/baseline-repin/ledger-plus48.json",
+   "PYTHONPATH=.:src python3 -m pytest tests/test_ledger_delta.py -q -p no:cacheprovider",
+   "sha256sum experiments/ptr-engine/measure/LEDGER-GRID-BASELINE.json experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-2.json"
+  ]
+ },
+ "assumptions": [
+  "v2 also carries `budget`/`counting` blocks alongside the required top-level keys because ledger_delta.py reads budget.spent and counting.remaining_raw first; without them remaining_before would read 0 and the cross-check would fail for the wrong reason.",
+  "v2 also carries rows_inventory.per_file (15 files, 1128 rows) so the guard has something to compare on real data; the card's required keys are unchanged.",
+  "frozen_at uses the sampling clock 2026-10-26T19:04:18Z; v1 keeps its own captured_utc and was not touched."
+ ],
+ "blocker": "",
+ "next_unit_hint": "RUN-A-STAR-2 must quote spend as current - 1128 via a bare ledger_delta.py; if the ledger is ever regenerated wholesale, diff the rows inventory, not just budget.spent.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-2.json",
+  "experiments/ptr-engine/tools/ledger_delta.py",
+  "tests/test_ledger_delta.py",
+  "docs/LEDGER-BASELINE.md",
+  "orchestration/units/LEDGER-BASELINE-REPIN.md",
+  "orchestration/handoffs/LEDGER-BASELINE-REPIN.json",
+  "orchestration/journals/LEDGER-BASELINE-REPIN.jsonl"
+ ],
+ "not_touched": [
+  "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE.json (sha unchanged)",
+  "experiments/ptr-engine/measure/REQUEST-LEDGER.json (sha unchanged 6da0c1f1\u2026)",
+  "rows-*.jsonl",
+  "request_ledger.py (builder)",
+  "cell.py",
+  "run_longrun.py",
+  "run_a_star.py",
+  "PARM-1*",
+  "GRID-*.json"
+ ],
+ "tool_calls": 17,
+ "bound": 16,
+ "bound_note": "2 calls lost to the read-before-write policy (tool + test rewritten via write after cat), 1 to pytest needing PYTHONPATH, 1 over the 16-call bound overall; no network, no ask_user_question."
+}

@@ -1,0 +1,58 @@
+{
+  "unit": "VHARDEN",
+  "status": "complete",
+  "artifacts": [
+    "orchestration/units/VHARDEN.md",
+    "orchestration/handoffs/VHARDEN.json"
+  ],
+  "evidence": {
+    "pytest": {
+      "command": "/home/zer0null/research extractor/.venv/bin/python -m pytest tests/test_tx_sup.py tests/test_tx_agg.py tests/test_tx_hop.py tests/test_tx_abs.py -q",
+      "output": ".................................................................        [100%]\n65 passed in 0.14s",
+      "per_file": {
+        "test_tx_sup.py": "21 passed in 0.06s",
+        "test_tx_agg.py": "17 passed in 0.04s",
+        "test_tx_hop.py": "18 passed in 0.08s",
+        "test_tx_abs.py": "9 passed in 0.04s"
+      }
+    },
+    "checker_default": {
+      "command": "/home/zer0null/research extractor/.venv/bin/python check_pointer_fixtures.py tasks-v7/TX-SUP.v1.json tasks-v7/TX-AGG.v1.json tasks-v7/TX-HOP.v1.json tasks-v7/TX-ABS.v1.json",
+      "output_summary": "TX-SUP.v1.json: OK\nTX-AGG.v1.json: FAIL (reachability: expected aggregate not present in introduction turn body; inherent to aggregation)\nTX-HOP.v1.json: OK\nTX-ABS.v1.json: FAIL (duplicate expected 'NONE', kind/type mismatch, reachability; inherent to absent-fact design with disabled checks)",
+      "sample_lines": [
+        "tasks-v7/TX-SUP.v1.json: OK",
+        "tasks-v7/TX-AGG.v1.json: FAIL",
+        "  - checkpoint cp.TX-AGG.g00.d2 fact value '156145' not found in introduction turn 4 tool output",
+        "tasks-v7/TX-HOP.v1.json: OK",
+        "tasks-v7/TX-ABS.v1.json: FAIL",
+        "  - duplicate expected value 'NONE' (checkpoints 'cp.TX-ABS.fact-01.Gabs.d32' and 'cp.TX-ABS.fact-02.Gabs.d6')",
+        "files checked: 4"
+      ]
+    },
+    "extrapolability": "No run of >=3 values with constant first difference found in any fixture. No expected value equals a linear function of group index or ordinal. Checked SUP revision bodies, AGG group members/sums, HOP keyed tables, ABS fact bodies.",
+    "question_leakage": "0 direct or cross-checkpoint expected-value leaks in question text across all four fixtures.",
+    "structure": "All four: 48 checkpoints, 48 unique turns (verified via run_longrun.checkpoint_expected/checkpoint_prompt), buckets {2:12,6:12,20:12,32:12}. Distinct expected: SUP/AGG/HOP 48; ABS 37 (36 NUM + NONE).",
+    "kind_invariants": {
+      "TX-SUP": "ground_truth revision=2 for all 48; stale!=current for all; stale present in body; correct answer is latest revision.",
+      "TX-AGG": "Recomputed all 48 aggregates (all/first2/last2/first+third) match expected; first 6 checkpoints each have >=2 bodies/values.",
+      "TX-HOP": "For all 48 checkpoints, key id in A body, expected not in A body, expected+key+alt1 in B body.",
+      "TX-ABS": "12 absent + 36 answerable; absent per bucket {2:3,6:3,20:3,32:3}; VAL_G appears in no body/system_prompt/items."
+    },
+    "guards_red_green": {
+      "TX-SUP": "In-memory mutation making rev1+rev2 values an arithmetic progression (diff 100) caused test_tx_sup_no_arithmetic_progression_across_revisions assertion to fail: AssertionError ('fact-01', [100,100,100,100,100,100,100]).",
+      "TX-AGG": "In-memory mutation making group members arithmetic (diff 100) caused test_tx_agg_no_arithmetic_member_series to fail: AssertionError ('g00', [100,100,100]); mutation making sums linear (diff 4000) caused test_tx_agg_no_constant_group_offset to fail: AssertionError [4000 x11].",
+      "TX-HOP": "In-memory mutation making keyed-table rows arithmetic (diff 100) caused test_tx_hop_no_arithmetic_progression_in_keyed_table to fail: AssertionError ('cp.TX-HOP.chain1.VAL1.d2', 'constant diff', [100,100,100])."
+    },
+    "residual_channels": [
+      "TX-HOP: target row is always the first data row of the B table (48/48); answer can be taken by row position without joining on the key.",
+      "TX-ABS: absent subject is the fixed token VAL_G in all 12 absent checkpoints (predictable marker).",
+      "TX-AGG: introduction-turn body count varies (1 vs 2) by checkpoint (not sufficient to compute a sum)."
+    ]
+  },
+  "blocker": "TX-HOP has a residual inference channel (predictable row ordering); not fully cleared for request spend until row order is varied.",
+  "next_unit_hint": "Fix TX-HOP row ordering (vary target row position among data rows) then re-run VHARDEN; TX-SUP, TX-AGG, TX-ABS cleared for request spend.",
+  "write_paths": [
+    "orchestration/handoffs/VHARDEN.json",
+    "orchestration/units/VHARDEN.md"
+  ]
+}

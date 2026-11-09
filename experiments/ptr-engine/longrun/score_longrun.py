@@ -54,7 +54,8 @@ from pathlib import Path
 
 SCHEMA = "consonance.fixture/1"
 RUNTIME_SCHEMA = "consonance.longrun-fixture/1"
-SCHEMAS_ACCEPTED = (SCHEMA, RUNTIME_SCHEMA)
+RUNTIME_SCHEMA_V2 = "consonance.longrun-fixture/2"
+SCHEMAS_ACCEPTED = (SCHEMA, RUNTIME_SCHEMA, RUNTIME_SCHEMA_V2)
 KINDS = ("artifact", "fact", "constraint", "repair")
 EXIT_OK, EXIT_FAIL, EXIT_TAMPERED, EXIT_INPUT = 0, 1, 2, 3
 
@@ -154,12 +155,39 @@ def answer_of(record, check_id, turn):
             if key in answers:
                 return as_text(answers[key])
     text = record.get("_content", "")
+    # ANSWER-CONTRACT (v5): parse the contracted line into its typed value so
+    # that exact comparison applies to the value, not the raw line.
     try:
-        parsed = json.loads(text)
-        if isinstance(parsed, dict):
+        import grade_v5 as _g5
+        parsed = _g5.parse_answer_contract(text)
+    except ImportError:
+        parsed = None
+    if isinstance(parsed, dict) and parsed.get("answer_kind") is not None:
+        kind = parsed["answer_kind"]
+        value = parsed.get("answer_value")
+        if kind == "NUM":
+            if value is not None:
+                return str(value)
+            raw = parsed.get("answer_raw")
+            return str(raw).strip() if raw is not None else text
+        if kind == "CALL" and isinstance(value, dict):
+            callee = value.get("callee")
+            kwargs = value.get("kwargs") or {}
+            return "%s(%s)" % (
+                callee, ", ".join("%s=%s" % (k, kwargs[k])
+                                  for k in sorted(kwargs)))
+        if kind == "NONE":
+            return "NONE"
+        if kind == "TEXT":
+            return str(value) if value is not None else text
+        if kind == "OOV":
+            return text
+    try:
+        parsed_json = json.loads(text)
+        if isinstance(parsed_json, dict):
             for key in ("answer", "value", "result"):
-                if key in parsed:
-                    return as_text(parsed[key])
+                if key in parsed_json:
+                    return as_text(parsed_json[key])
     except (ValueError, TypeError):
         pass
     return text
@@ -319,7 +347,7 @@ def normalise_fixture(fixture, fixture_sha):
     data["_schema"] = schema
     data["_fixture_sha256"] = fixture_sha
     data["_authored_digest"] = None
-    data["_turn_field"] = "question" if schema == RUNTIME_SCHEMA else "instruction"
+    data["_turn_field"] = "question" if schema in (RUNTIME_SCHEMA, RUNTIME_SCHEMA_V2) else "instruction"
 
     turns = []
     for raw in fixture.get("turns") or []:
@@ -331,7 +359,7 @@ def normalise_fixture(fixture, fixture_sha):
         turns.append(turn)
     data["turns"] = turns
 
-    if schema == RUNTIME_SCHEMA:
+    if schema in (RUNTIME_SCHEMA, RUNTIME_SCHEMA_V2):
         data["_items"] = [i for i in fixture.get("items") or []
                           if isinstance(i, dict)]
         data["_wall_tokens"] = fixture.get("wall_tokens")
@@ -636,7 +664,7 @@ def eval_artifact(raw, run, checks):
                       + len(raw.get("must_not_contain") or [])))
 
 
-def eval_fact(check_id, turn, expected, mode, run, checks, question="", required=True):
+def eval_fact(check_id, turn, expected, mode, run, checks, question="", required=True, answer_spec=None):
     if mode in ("semantic", "paraphrase", "judge"):
         checks.add(check_id, "fact", turn, "unverifiable",
                    "checkpoint requires semantic equivalence; no deterministic judge",
@@ -646,6 +674,17 @@ def eval_fact(check_id, turn, expected, mode, run, checks, question="", required
     if record is None:
         checks.add(check_id, "fact", turn, "fail",
                    "no record at turn %s" % turn, required=required)
+        return "fail"
+    answer_kind = record.get("answer_kind") if isinstance(record, dict) else None
+    if answer_kind == "OOV":
+        checks.add(check_id, "fact", turn, "ungradeable",
+                   "out-of-vocabulary answer at turn %s" % turn, required=required)
+        return "ungradeable"
+    expected_kind = (answer_spec or {}).get("kind") if isinstance(answer_spec, dict) else None
+    if expected_kind and answer_kind and str(answer_kind) != str(expected_kind):
+        checks.add(check_id, "fact", turn, "fail",
+                   "answer kind %r != expected %r at turn %s"
+                   % (answer_kind, expected_kind, turn), required=required)
         return "fail"
     answer = answer_of(record, check_id, turn)
     if not str(answer).strip():
@@ -749,6 +788,238 @@ def compile_dict_check(raw, check_id):
 # --------------------------------------------------------------------------- #
 # scoring
 # --------------------------------------------------------------------------- #
+def mirror_answer_contract(fixture, run, checks):
+    """Grade every checkpoint via the answer contract, mirroring grade_v5."""
+    try:
+        import grade_v5 as _g5
+    except ImportError:
+        return
+    try:
+        truth = _g5.derive_truth(fixture)
+    except SystemExit:
+        return
+    turns = (run.get("turns") or {}) if isinstance(run, dict) else {}
+    for tr in truth:
+        t = tr["turn"]
+        rec = turns.get(t) if isinstance(turns, dict) else None
+        text = ""
+        if isinstance(rec, dict):
+            text = rec.get("_content", "") or rec.get("content", "")
+        try:
+            parsed = _g5.parse_answer_contract(text)
+        except Exception:
+            parsed = {"answer_kind": None, "answer_value": None,
+                      "answer_raw": text, "answer_parse_error": "unparseable"}
+        cell = _g5.grade_cell(tr, parsed)
+        verdict = cell.get("verdict", "fail")
+        detail = cell.get("reason", "")
+        cid = "acc.derive.%s" % tr["id"]
+        try:
+            checks.add(cid, "fact", t, verdict, detail)
+        except Exception:
+            pass
+
+
+def _answer_value_of(row):
+    import re
+    ak = row.get("answer_kind")
+    v = row.get("answer_value")
+    if ak == "NUM":
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            m = re.search(r"\d+", str(v)) if v is not None else None
+            return int(m.group(0)) if m else None
+    if v is not None:
+        m = re.search(r"=\s*(\d+)", str(v))
+        if m:
+            return int(m.group(1))
+        m = re.search(r"\b(\d+)\b", str(v))
+        if m and ak in ("TEXT",):
+            return int(m.group(1))
+    for key in ("answer_raw", "content"):
+        txt = row.get(key)
+        if txt:
+            m = re.search(r"=\s*(\d+)", str(txt))
+            if m:
+                return int(m.group(1))
+            m = re.search(r"ANSWER:\s*NUM\s+(\d+)", str(txt))
+            if m:
+                return int(m.group(1))
+    return None
+
+
+def _checkpoint_id_of(row):
+    cp = row.get("checkpoint")
+    if isinstance(cp, dict):
+        return cp.get("id", row.get("checkpoint_id"))
+    if cp is not None:
+        return cp
+    return row.get("checkpoint_id")
+
+
+
+
+def _is_interim_row(row):
+    if row.get("interim") is True:
+        return True
+    if row.get("kind") in ("turn-initial", "tool-followup"):
+        return True
+    cp = row.get("checkpoint")
+    if cp is not None:
+        content = str(row.get("content") or row.get("answer_raw") or "")
+        low = content.lower()
+        if "fetch(" in low or "fetch " in low:
+            # a checkpoint row that itself issues a fetch is not the final answer
+            ak = row.get("answer_kind")
+            if ak not in ("NUM", "NONE", "TEXT"):
+                return True
+    return False
+
+
+def score_answer_contract_rows(fixture, rows):
+    """Grade answer-contract rows.
+
+    One graded answer per checkpoint id: the last non-interim row for that id.
+    - interim rows (row["interim"] truthy) are excluded entirely.
+    - more than one non-interim row for the same checkpoint id fails loudly.
+    - a run whose number of non-interim checkpoint rows != the fixture's
+      checkpoint count is reported as ``denominator_mismatch``.
+    """
+    fixture_checkpoints = fixture.get("checkpoints") or []
+    fixture_count = len(fixture_checkpoints)
+    fixture_cp_by_id = {}
+    for c in fixture_checkpoints:
+        if isinstance(c, dict) and c.get("id") is not None:
+            fixture_cp_by_id[str(c.get("id"))] = c
+
+    # collect checkpoint-bearing rows in file order, grouped by (arm, rep, id)
+    # collect ALL checkpoint-bearing rows (interim or not) so missing
+    # answers are still graded as failures and counted in the denominator
+    all_rows_by_key = {}   # (arm, rep) -> {cid: {"all":[], "final":[]}}
+    arm_rep_order = []
+    for row in (rows or []):
+        cid = _checkpoint_id_of(row)
+        if cid is None:
+            continue
+        cid = str(cid)
+        arm = row.get("arm") or "default"
+        rep = row.get("rep")
+        key = (arm, rep)
+        if key not in all_rows_by_key:
+            all_rows_by_key[key] = {}
+            arm_rep_order.append(key)
+        bucket = all_rows_by_key[key].setdefault(cid, {"all": [], "final": []})
+        bucket["all"].append(row)
+        if not _is_interim_row(row):
+            bucket["final"].append(row)
+
+    distinct_ids = 0
+    for by_id in all_rows_by_key.values():
+        distinct_ids += len(by_id)
+    # denominator mismatch: distinct checkpoint ids present != fixture count
+    if fixture_count and distinct_ids != fixture_count:
+        return {"status": "denominator_mismatch",
+                "graded_checkpoints": distinct_ids,
+                "fixture_checkpoints": fixture_count}
+
+    # fail loudly on duplicated non-interim answers for the same checkpoint id
+    dup_ids = []
+    for by_id in all_rows_by_key.values():
+        for cid, bucket in by_id.items():
+            if len(bucket["final"]) > 1:
+                dup_ids.append(cid)
+    if dup_ids:
+        raise ValueError("duplicate non-interim checkpoint answers: %s"
+                         % ", ".join(sorted(set(dup_ids))))
+
+    out = {}
+    for key in arm_rep_order:
+        arm, rep = key
+        by_id = all_rows_by_key[key]
+        contract_correct = 0
+        value_correct = 0
+        ungradeable = 0
+        abstained = 0
+        kind_mismatch = 0
+        total = 0
+        by_distance = {}
+        for cid, bucket in by_id.items():
+            finals = bucket["final"]
+            if finals:
+                final = finals[-1]
+            else:
+                final = None
+            total += 1
+            if final is None:
+                # no non-interim answer -> graded as a failure (turn_missing)
+                ungradeable += 1
+                # still record by_distance using fixture checkpoint if available
+                cp = fixture_cp_by_id.get(cid, {})
+                dist = cp.get("distance") if isinstance(cp, dict) else None
+                try:
+                    dist = int(dist)
+                except (TypeError, ValueError):
+                    dist = None
+                bd_key = dist if dist is not None else 0
+                bd = by_distance.setdefault(bd_key, {"contract": 0, "value": 0, "n": 0})
+                bd["n"] += 1
+                continue
+            cp = final.get("checkpoint")
+            if not isinstance(cp, dict):
+                cp = fixture_cp_by_id.get(cid, {})
+            expected = None
+            if isinstance(cp, dict):
+                expected = cp.get("expected")
+            if expected is None:
+                expected = fixture_cp_by_id.get(cid, {}).get("expected")
+            try:
+                exp_int = int(str(expected).strip())
+            except (TypeError, ValueError):
+                exp_int = None
+            dist = None
+            if isinstance(cp, dict):
+                dist = cp.get("distance")
+            if dist is None:
+                dist = fixture_cp_by_id.get(cid, {}).get("distance")
+            try:
+                dist = int(dist)
+            except (TypeError, ValueError):
+                dist = None
+            bd_key = dist if dist is not None else 0
+            bd = by_distance.setdefault(bd_key, {"contract": 0, "value": 0, "n": 0})
+            bd["n"] += 1
+            ak = final.get("answer_kind")
+            vv = _answer_value_of(final)
+            value_ok = (exp_int is not None and vv is not None and vv == exp_int)
+            contract_ok = (ak == "NUM" and value_ok)
+            if contract_ok:
+                contract_correct += 1
+                bd["contract"] += 1
+            if value_ok:
+                value_correct += 1
+                bd["value"] += 1
+            if ak is None or final.get("answer_parse_error"):
+                ungradeable += 1
+            if ak == "NONE":
+                abstained += 1
+            if ak not in (None, "NUM") and value_ok:
+                kind_mismatch += 1
+        out_key = "%s__rep%s" % (arm, rep)
+        out[out_key] = {
+            "arm": arm, "rep": rep,
+            "contract_correct": contract_correct,
+            "value_correct": value_correct,
+            "ungradeable": ungradeable,
+            "abstained": abstained,
+            "kind_mismatch_value_correct": kind_mismatch,
+            "total": total,
+            "graded_checkpoints": total,
+            "fixture_checkpoints": fixture_count,
+            "by_distance": by_distance,
+        }
+    return out
+
 def score(fixture, run, fixture_sha):
     checks = CheckList(fixture.get("required_checks") or [])
     tampered = False
@@ -818,7 +1089,8 @@ def score(fixture, run, fixture_sha):
                        "checkpoint lacks turn or expected value", required=True)
         else:
             verdict = eval_fact(check_id, int(turn), expected, mode, run, checks,
-                                item.get("question", ""), required=True)
+                                item.get("question", ""), required=True,
+                                answer_spec=item.get("answer_spec"))
         checkpoint_results.append(verdict)
 
     # 3. acceptance checks (structured or prose)
@@ -876,6 +1148,20 @@ def score(fixture, run, fixture_sha):
 
     # 5. the mid-run repair trap
     eval_repair(fixture, run, checks)
+
+    # ordering/behaviour claims that cannot be graded from text are recorded
+    # explicitly as ungraded claims, never folded into the answer string.
+    ungraded_claims = []
+    for idx, claim in enumerate((fixture.get("ungraded_claims") or [])):
+        if not isinstance(claim, dict):
+            continue
+        cid = str(claim.get("id") or ("ungraded.%d" % (idx + 1)))
+        reason = str(claim.get("reason") or "no deterministic evidence in the run log")
+        checks.add(cid, "fact", claim.get("turn"), "unverifiable",
+                   reason, required=False)
+        ungraded_claims.append({
+            "id": cid, "claim": claim.get("claim"), "reason": reason,
+            "graded": False})
 
     # 6. log completeness: absence of evidence is failure
     declared_turns = fixture.get("turns")
@@ -945,6 +1231,7 @@ def score(fixture, run, fixture_sha):
         "repair_turns": repair_turns,
         "checkpoint_accuracy": accuracy,
         "constraint_violations": violations,
+        "ungraded_claims": ungraded_claims,
         "fixture_schema": fixture.get("_schema", SCHEMA),
         "fixture_sha256_at_score": fixture_sha,
         "fixture_sha256_at_run": recorded,
@@ -977,6 +1264,8 @@ def main(argv=None):
     parser.add_argument("--run", help="run log (NDJSON or JSON)")
     parser.add_argument("--out", help="also write the scorecard to this path")
     parser.add_argument("--pretty", action="store_true", help="indent JSON")
+    parser.add_argument("--answer-contract", action="store_true",
+                        help="score answer-contract rows (two-level) instead of artifact checks")
     args = parser.parse_args(argv)
 
     fixture_path = args.fixture or args.fixture_pos
@@ -986,12 +1275,18 @@ def main(argv=None):
                           "exit_code": EXIT_INPUT}))
         return EXIT_INPUT
     try:
-        fixture_bytes = Path(fixture_path).read_bytes()
-        fixture_sha = hashlib.sha256(fixture_bytes).hexdigest()
-        fixture = json.loads(fixture_bytes.decode("utf-8"))
-        fixture = normalise_fixture(fixture, fixture_sha)
-        run = load_run(run_path)
-        scorecard = score(fixture, run, fixture_sha)
+        if args.answer_contract:
+            import json as _j
+            fixture = json.loads(Path(fixture_path).read_bytes().decode("utf-8"))
+            rows = [json.loads(l) for l in Path(run_path).read_text(encoding="utf-8").splitlines() if l.strip()]
+            scorecard = score_answer_contract_rows(fixture, rows)
+        else:
+            fixture_bytes = Path(fixture_path).read_bytes()
+            fixture_sha = hashlib.sha256(fixture_bytes).hexdigest()
+            fixture = json.loads(fixture_bytes.decode("utf-8"))
+            fixture = normalise_fixture(fixture, fixture_sha)
+            run = load_run(run_path)
+            scorecard = score(fixture, run, fixture_sha)
     except (OSError, ValueError, TypeError) as exc:
         print(json.dumps({"error": str(exc), "exit_code": EXIT_INPUT}))
         print("score_longrun: %s" % exc, file=sys.stderr)
@@ -1005,6 +1300,8 @@ def main(argv=None):
             Path(args.out).write_text(text + "\n", encoding="utf-8")
         except OSError as exc:
             print("score_longrun: cannot write --out: %s" % exc, file=sys.stderr)
+    if args.answer_contract:
+        return 0
     return scorecard["exit_code"]
 
 

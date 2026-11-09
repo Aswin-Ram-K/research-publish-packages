@@ -1,0 +1,74 @@
+{
+ "unit": "LAUNCH-CONTRACT-DIFF",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/launch_contract_diff.py",
+  "tests/test_launch_contract_diff.py",
+  "measure/LAUNCH-CONTRACT-DIFF.json",
+  "docs/LAUNCH-CONTRACT-DIFF.md",
+  "orchestration/units/LAUNCH-CONTRACT-DIFF.md"
+ ],
+ "evidence": {
+  "command_or_count": "22 numbers: AGREES=15, STALE-BY-DESIGN=4, DISAGREES=3; --check exit 1; pytest 6 passed; guard exit 0 / exit 1",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check  # exit 1",
+   "PYTHONPATH=src python3 -m pytest tests/test_launch_contract_diff.py -q  # 6 passed",
+   "cp tree -> /tmp/lcd-proof/tree; --check -> exit 1",
+   "reconcile 3 disagreements; --check -> exit 0 (22 numbers: AGREES=15, STALE-BY-DESIGN=7)",
+   "mutate GRID-PARAMS harness pin back to 2b4d4808; --check -> exit 1",
+   "sha256 of the six pin inputs recomputed from bytes: equals fa6fd8cc (pin is live)"
+  ]
+ },
+ "disagreements": [
+  {
+   "number": "harness_pin_digest",
+   "values": [
+    "fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac (HARNESS-PIN.json, run_a_star.py:51)",
+    "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871 (GRID-PARAMS.json:159)"
+   ],
+   "authoritative": "fa6fd8cc (generation 4; what the launcher passes; cell.py aborts otherwise)",
+   "owner": "GRID-PARAMS.json regeneration (pin bump card)"
+  },
+  {
+   "number": "per_cell_budget",
+   "values": [
+    "108 (run_a_star.py:241, :366; GRID-PARAMS.json:188)",
+    "67 (run_a_star.py:367 help text)"
+   ],
+   "authoritative": "108 (the argv actually exec'd)",
+   "owner": "run_a_star.py help string (launcher card)"
+  },
+  {
+   "number": "per_arm_round_cap",
+   "values": [
+    "48 (run_longrun.py:230, override :2857; GRID-PARAMS.json:175)",
+    "24 with 'no override' (docs/GRID-PARAMS.md:90)"
+   ],
+   "authoritative": "48 (the code constant and the flag that exists)",
+   "owner": "docs/GRID-PARAMS.md rev-2 sync (doc card)"
+  }
+ ],
+ "blocker": "",
+ "next_unit_hint": "A launcher must read HARNESS-PIN.json generation 4 for --expect-harness (never GRID-PARAMS), 108 for --budget, 48 rounds/arm; grid 2880 s/H2/48 turns, canary 900 s/smoke/12 turns x 4 arms. Fix owners: pin bump, launcher help string, docs/GRID-PARAMS.md rev-2 sync.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/launch_contract_diff.py",
+  "tests/test_launch_contract_diff.py",
+  "measure/LAUNCH-CONTRACT-DIFF.json",
+  "docs/LAUNCH-CONTRACT-DIFF.md",
+  "orchestration/units/LAUNCH-CONTRACT-DIFF.md",
+  "orchestration/handoffs/LAUNCH-CONTRACT-DIFF.json",
+  "orchestration/journals/LAUNCH-CONTRACT-DIFF.jsonl"
+ ],
+ "tool_calls": 28,
+ "bound": 26,
+ "assumptions": [],
+ "offline": {
+  "requests_sent": 0,
+  "network_events": 0,
+  "live_cells": 0
+ },
+ "bound_note": "bound was 26; 2 calls over, spent on the required verdict row (needs a 40-hex sha) and the board handoff. No extra work was done with them.",
+ "verdict_command": "PYTHONPATH=src python3 -m pytest tests/test_launch_contract_diff.py -q",
+ "verdict_exit": 0,
+ "head_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3"
+}

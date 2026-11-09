@@ -1,0 +1,47 @@
+{
+  "unit": "HARNESS-MAP-V2",
+  "status": "done",
+  "artifacts": [
+    "docs/HARNESS-MAP-V2.md",
+    "experiments/ptr-engine/measure/HARNESS-MAP-V2.json",
+    "orchestration/units/HARNESS-MAP-V2.md",
+    "orchestration/journals/HARNESS-MAP-V2.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "exit codes verified at raise sites: 11 codes raised (0,1,2,3,4,5,6,7,8,9,11); declared_but_unraised=1 (7: cell.py:22 declares, grep -c 'Abort(7' cell.py == 0); undeclared_but_raised=1 (1: unit_journal.py:174, frozen_tree.py:54/364, matrix_audit.py:630, handoff_lint.py:381); single-site codes: 8 cell.py:402, 9 cell.py:559, 11 matrix_audit.py:627; batch: 20 cards / 20 rounds / 0 live requests / 20 zero-request rounds; 116 tool calls recorded by 6 of 20 cards against bounds 166 (69.9%), 14 handoffs omit tool_calls (not_measured); wall: 15 cards measurable, sum 6473 s, median 317 s, max 1380 s, 5 not_measured; 71 recorded evidence commands: 54 verification-shaped (76.1%), 4 change-shaped, 2 both, 11 neither; 14 inefficiencies: closed 6 (5,6,8,11,12,14), narrowed 5 (1,4,7,9,10), open 2 (2,13), superseded 1 (3); v1 figures 40 rounds / 863 requests / 31 zero-request rounds shown side by side, not overwritten",
+    "commands": [
+      "grep -rnE '^EXIT_[A-Z0-9_]+ *= *[0-9]+' experiments/ptr-engine tools tests src",
+      "grep -nE 'Abort\\(|code=[0-9]+' experiments/ptr-engine/longrun/cell.py",
+      "grep -c 'Abort(7' experiments/ptr-engine/longrun/cell.py  # -> 0",
+      "sed -n '534,575p;740,800p' experiments/ptr-engine/longrun/cell.py",
+      "sed -n '1455,1470p;1570,1580p;1590,1596p;1978,2012p' experiments/ptr-engine/longrun/run_longrun.py",
+      "sed -n '139,180p' experiments/ptr-engine/longrun/client.py",
+      "sed -n '600,632p' experiments/ptr-engine/tools/matrix_audit.py",
+      "python3 - <<'PY' (journal+handoff census: 20 cards, tool_calls, bounds, wall spans)",
+      "python3 - <<'PY' (command census: 54/71 verification-shaped, 4 change-shaped)",
+      "python3 -c \"json.load(...)\" on measure/HARNESS-MAP-V2.json and this handoff -> JSON OK",
+      "python3 experiments/ptr-engine/tools/handoff_lint.py orchestration/handoffs/HARNESS-MAP-V2.json -> exit 0",
+      "PYTHONPATH=src python3 -m pytest tests/test_orchestration_handoffs.py -q -> 1 failed, 12 passed (test_no_new_contract_key_gaps: V2-RUNTIME.json, V3-FIXTURE.json, V3-PILOT.json missing overall,checks -- pre-existing, unchanged from v1)"
+    ]
+  },
+  "corrections": [
+    "N2 as briefed ('a linter status exempt from every check') is NOT what the code does: handoff_lint.py:209-232 requires non-empty evidence AND a recovery provenance block for status:recovered, and treats it as a stub candidate. Recorded as a corrected finding; the residual gap is that tests/test_orchestration_handoffs.py exercises no recovered record.",
+    "v1 item 10 is narrowed, not closed: the guard runs now (PYTHONPATH fixed) but test_no_new_contract_key_gaps still fails on the same three verifier-shape handoffs v1 named."
+  ],
+  "not_reproduced": [],
+  "assumptions": [
+    "This batch's live requests are 0 by construction: every card carries the OFFLINE tag and no handoff records a send. Not independently instrumented (no per-request log exists for a batch that sent none).",
+    "Per-call stage attribution is not recorded anywhere; 'heaviest stage' is card-level (audit cards 26/28 and 25/28), not call-level."
+  ],
+  "tool_calls": 26,
+  "bound": 30,
+  "blocker": "",
+  "next_unit_hint": "Two cheap closes the map now names: (a) give stage_record an Abort(7) path so its declared exit code exists; (b) call handoff_lint.lint_doc inside cell.py:621 write_handoff so an incomplete handoff cannot be written. A third, if the operator wants the overhead down: make unit_journal.py write one schema and record tool_calls per step, so the next map is not 70% not_measured.",
+  "write_paths": [
+    "docs/HARNESS-MAP-V2.md",
+    "experiments/ptr-engine/measure/HARNESS-MAP-V2.json",
+    "orchestration/units/HARNESS-MAP-V2.md",
+    "orchestration/handoffs/HARNESS-MAP-V2.json",
+    "orchestration/journals/HARNESS-MAP-V2.jsonl"
+  ]
+}

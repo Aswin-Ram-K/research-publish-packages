@@ -1,0 +1,124 @@
+{
+  "slug": "tool-channel-sglang",
+  "note": "docs/research/tool-channel-sglang.md",
+  "protocol": "docs/RESEARCH-PROTOCOL.md",
+  "question": "On an SGLang OpenAI-compatible server, what makes structured message.tool_calls appear, which parser names exist for Qwen-family and other models, and what does tool_choice do?",
+  "retrieved_at": "2026-10-26",
+  "live_model_requests": 0,
+  "budget": {
+    "fetches_used": 2,
+    "fetch_limit": 6,
+    "minutes_used_leq": 10,
+    "stop_reason": "Every question in scope was answered by one primary page (launch flag, parser names, tool_choice) or shown to be a local check rather than a web question (launch argv, served model family). Excluded from scope and moved to open_questions."
+  },
+  "sources": [
+    {
+      "id": "s1",
+      "url": "https://docs.sglang.io/docs/advanced_features/tool_parser",
+      "retrieved_at": "2026-10-26",
+      "kind": "primary",
+      "publisher": "SGLang project documentation",
+      "version_scope": "current-main, unversioned; not pinned to the SGLang build running at :8012",
+      "claim_taken": "The launch flag --tool-call-parser selects the parser used to interpret responses; the supported-parsers table lists qwen, qwen3_coder and the other families; Tool Choice Mode documents tool_choice='required' and specific-function choice, implemented with EBNF grammar, fully supported on the default xgrammar backend."
+    }
+  ],
+  "claims": [
+    {
+      "id": "V1",
+      "claim": "--tool-call-parser <parser> is an sglang.launch_server launch flag.",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "Launch example: python3 -m sglang.launch_server --model-path Qwen/Qwen2.5-7B-Instruct --tool-call-parser qwen25 --host 0.0.0.0 --log-level warning  # qwen25"
+    },
+    {
+      "id": "V2",
+      "claim": "The flag defines the parser used to interpret responses.",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "Verbatim: 'Note that `--tool-call-parser` defines the parser used to interpret responses.'"
+    },
+    {
+      "id": "V3",
+      "claim": "Documented parser table: qwen (Qwen series except Qwen3-Coder), qwen3_coder (Qwen3-Coder), plus deepseekv3/deepseekv31/deepseekv32, glm, gpt-oss, kimi_k2, llama3, llama4, mistral, pythonic, step3, apertus2509.",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "'Currently supported parsers' table rows, verbatim model column: qwen -> 'Qwen series (e.g. Qwen/Qwen3-Next-80B-A3B-Instruct, Qwen/Qwen3-VL-30B-A3B-Thinking) except Qwen3-Coder'; qwen3_coder -> 'Qwen3-Coder (e.g. Qwen/Qwen3-Coder-30B-A3B-Instruct)'."
+    },
+    {
+      "id": "V4",
+      "claim": "qwen25 appears in the page's examples (launch, POST /parse_function_call body, FunctionCallParser) but is not a row of the supported-parsers table.",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "Example tokens: '--tool-call-parser qwen25'; native API body '\"tool_call_parser\": \"qwen25\"'; offline 'FunctionCallParser(tools=tools, tool_call_parser=\"qwen25\")'. Table rows are qwen and qwen3_coder only."
+    },
+    {
+      "id": "V5",
+      "claim": "tool_choice is supported and implemented using EBNF grammar.",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "Verbatim: 'SGLang supports OpenAI's `tool_choice` parameter to control when and which tools the model should call. This feature is implemented using EBNF (Extended Backus-Naur Form) grammar to ensure reliable tool calling behavior.'"
+    },
+    {
+      "id": "V6",
+      "claim": "Supported tool_choice values are 'required' (forces at least one tool call) and {type:function, function:{name:...}} (forces a specific function).",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "Verbatim bullets: 'Forces the model to call at least one tool'; 'Forces the model to call a specific function'."
+    },
+    {
+      "id": "V7",
+      "claim": "tool_choice is fully supported on the Xgrammar backend (the default, --grammar-backend xgrammar) and may not be fully supported on others such as outlines.",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "Verbatim: 'Tool choice is fully supported with the Xgrammar backend, which is the default grammar backend (`--grammar-backend xgrammar`). However, it may not be fully supported with other backends such as `outlines`.'"
+    },
+    {
+      "id": "V8",
+      "claim": "The native endpoint POST /parse_function_call takes a per-request tool_call_parser and returns normal_text plus calls[].",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "Example body {text, tool_call_parser: qwen25, tools} and response fields normal_text, calls[0].name, calls[0].parameters."
+    },
+    {
+      "id": "I1",
+      "claim": "Without a tool parser configured, the OpenAI-compatible response carries no structured message.tool_calls.",
+      "status": "inferred",
+      "source": "s1",
+      "evidence": "Reasoned from V1+V2 (the flag is what interprets responses, set in every tool example); the page never states the negative case. Owns a local check of the :8012 launch argv."
+    },
+    {
+      "id": "I2",
+      "claim": "tool_choice is only meaningful where a tool parser is active; the documented dependency of tool_choice is the grammar backend, not the flag.",
+      "status": "inferred",
+      "source": "s1",
+      "evidence": "V7 names the grammar backend as the dependency and the page never states 'tool_choice requires --tool-call-parser'. The plumbing-level requirement is inference."
+    },
+    {
+      "id": "I3",
+      "claim": "A parser name that does not match the model family degrades to unparsed text rather than failing at startup.",
+      "status": "inferred",
+      "source": "s1",
+      "evidence": "V3 pairs each parser with model families and qwen explicitly excludes Qwen3-Coder; the page documents no error behaviour for a mismatch. Makes the local family check load-bearing."
+    },
+    {
+      "id": "X1",
+      "claim": "An SGLang server given tools returns structured tool_calls.",
+      "status": "contradicted",
+      "source": "s1",
+      "evidence": "Documented behaviour (V1, V4) vs our stack: 0 structured calls in 36 live requests (batch record, not re-measured by this card). Recorded as a disagreement, not resolved by citation: unresolved premises are (A) whether :8012 was launched with --tool-call-parser and (B) whether the parser name matches the served model family, both local checks."
+    }
+  ],
+  "changes_plan": [
+    "The root-cause card becomes two local reads (launch argv for --tool-call-parser/--grammar-backend; served model id and family) before any further live tool-call battery.",
+    "No further live measurement is justified to establish documented behaviour; a live request is justified only to test premise A or B on this stack.",
+    "Any experiment varying tool_choice must also record --grammar-backend, because V7 makes the grammar backend the documented dependency.",
+    "A text-protocol shim, if adopted, is recorded as workaround:true and does not satisfy the tool-channel acceptance criterion."
+  ],
+  "open_questions": [
+    "Q1 (local, owned by the root-cause card): was the :8012 server launched with --tool-call-parser, and with which name?",
+    "Q2 (local, owned by the root-cause card): which model family does occamy-1.0 belong to, i.e. which row of the parser table applies? Not speculated here.",
+    "Q3 (local): which SGLang build does :8012 run? The cited page is unversioned current-main docs, so version drift keeps claims about our build inferred until the package version or --help output is read.",
+    "Q4 (web, not fetched): are qwen25 and qwen the same parser, and does a mismatched parser fail loudly? The page is silent; the library source would answer it."
+  ],
+  "does_not_settle": "Nothing about the :8012 server's configuration, version, or model family; nothing about whether any specific request on our stack will produce structured calls. Those are measurement and local-inspection questions, not documentation questions."
+}

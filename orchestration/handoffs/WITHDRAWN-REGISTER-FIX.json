@@ -1,0 +1,77 @@
+{
+ "unit": "WITHDRAWN-REGISTER-FIX",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/WITHDRAWN.json",
+  "docs/WITHDRAWN.md",
+  "docs/WITHDRAWN-SCREEN.md",
+  "docs/LATENCY-REPORT.md",
+  "experiments/ptr-engine/measure/WITHDRAWN-SCREEN.json",
+  "experiments/ptr-engine/tools/withdrawn_index.py",
+  "experiments/ptr-engine/tools/withdrawn_screen.py",
+  "experiments/ptr-engine/longrun/tests/test_withdrawn_screen.py",
+  "orchestration/units/WITHDRAWN-REGISTER-FIX.md"
+ ],
+ "evidence": {
+  "command_or_count": "13 passed in 0.61s; withdrawn_index.py --self-test: 15 entries, 0 problem(s); withdrawn_screen.py --check: SCREEN CLEAN, 135 files scanned (>= 135 recorded), 1 reported-only offender(s), both corrected documents clean",
+  "commands": [
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_withdrawn_screen.py -q  # 13 passed",
+   "python3 experiments/ptr-engine/tools/withdrawn_index.py --self-test  # exit 0, 0 problems",
+   "python3 experiments/ptr-engine/tools/withdrawn_screen.py --check  # exit 0, SCREEN CLEAN",
+   "python3 experiments/ptr-engine/tools/withdrawn_index.py --check /tmp/wrf/p50.md --register /tmp/wrf/old.json  # exit 1 (red: WI-011 on 198.7230)",
+   "python3 experiments/ptr-engine/tools/withdrawn_index.py --check /tmp/wrf/p50.md  # exit 0 (green)",
+   "python3 experiments/ptr-engine/tools/withdrawn_index.py --check /tmp/wrf/claim.md  # exit 1 (98.7 % prefix still fires)",
+   "python3 experiments/ptr-engine/tools/withdrawn_screen.py --file /tmp/wrf/reissue.md  # exit 0 (window hole)",
+   "python3 experiments/ptr-engine/tools/withdrawn_screen.py --file /tmp/wrf/reissue.md --strict  # exit 1 (hole closed)"
+  ],
+  "hits_before_after": {
+   "p50_198.7230": {
+    "before": "fires WI-011 (6 lines of docs/LATENCY-REPORT.md + 4 documents)",
+    "after": "0 hits; docs/LATENCY-REPORT.md and the four references scan clean"
+   },
+   "cache_share_claim": {
+    "before": "fires WI-011",
+    "after": "still fires WI-011 ('98.7 % prefix')"
+   },
+   "corpus": {
+    "before": "7 files with hits (2 corrected, 4 artifacts + REQUEST-LEDGER)",
+    "after": "1 file with hits (docs/COLD-START-PROBE.md, another card's document), 0 artifact rows"
+   }
+  },
+  "strict_catches_latency_45": "yes for the shape (fixture paragraph alone: exit 1 under --strict, 0 without); the live :45 paragraph is clean under --strict because its own closing sentence contains the marker word 'withdrawn'",
+  "short_quote_audit": {
+   "under_5_chars": {
+    "WI-001": "≈466",
+    "WI-006": "217k",
+    "WI-014": "3/27"
+   },
+   "fragment_of_longer_number_hits": 0,
+   "fixed": [
+    "WI-011"
+   ]
+  },
+  "guard_answer": "yes — it fires on withdrawn figures and stays silent on correct ones"
+ },
+ "blocker": "",
+ "next_unit_hint": "docs/LATENCY-REPORT.md:45 still says the p95 'stands' with its correction in the FOLLOWING paragraph; a card that may edit prose (not only inline annotations) should merge the correction into that sentence. Also report docs/COLD-START-PROBE.md's WI-001/WI-006/WI-013 hits to its owning card.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/WITHDRAWN.json",
+  "docs/WITHDRAWN.md",
+  "docs/WITHDRAWN-SCREEN.md",
+  "docs/LATENCY-REPORT.md",
+  "experiments/ptr-engine/measure/WITHDRAWN-SCREEN.json",
+  "experiments/ptr-engine/tools/withdrawn_index.py",
+  "experiments/ptr-engine/tools/withdrawn_screen.py",
+  "experiments/ptr-engine/longrun/tests/test_withdrawn_screen.py",
+  "orchestration/units/WITHDRAWN-REGISTER-FIX.md",
+  "orchestration/handoffs/WITHDRAWN-REGISTER-FIX.json",
+  "orchestration/journals/WITHDRAWN-REGISTER-FIX.jsonl"
+ ],
+ "assumptions": [
+  "the corpus grew from 131 to 135 scanned files while this card ran (other cards' documents); the screen record pins the live 135 and --check tolerates further growth, failing only on a drop, a regression or a new tripping file",
+  "docs/REQUEST-LEDGER.md:145 was corrected by its owning card during this run; it is no longer a live reported_only row",
+  "the bare decimal 0.987 alone is not a string match after narrowing; the entry keeps it as the rejected value in superseded_by.number and the claim's phrasing ('98.7 % prefix') is what the guard matches"
+ ],
+ "tool_calls": 19,
+ "bound": 26
+}

@@ -1,0 +1,106 @@
+{
+ "unit": "STATUS-VERDICT-LINE",
+ "status": "done",
+ "artifacts": [
+  "orchestration/STATUS.md",
+  "orchestration/units/STATUS-VERDICT-LINE.md",
+  "orchestration/handoffs/STATUS-VERDICT-LINE.json",
+  "orchestration/journals/STATUS-VERDICT-LINE.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "STATUS.md 44845 -> 46589 bytes, sha256 16f2d0780e9a4ecd5f298ee058183a195348a4a9bf7ce2a9dc9ca025db64dcb0 -> 4491d56ee30a8c062e1c1167ac3ee24bccf656a280df37559be8bc0fa5de08bd; +1744 bytes = inserted block; 0 deletions; reconstructed pre-edit digest equals recorded before digest",
+  "commands": [
+   "sha256sum orchestration/STATUS.md && wc -c orchestration/STATUS.md",
+   "git diff --stat -- orchestration/STATUS.md",
+   "git diff -U0 -- orchestration/STATUS.md | grep -c '^-[^-]'  # 0",
+   "diff -u /tmp/STATUS.before.md orchestration/STATUS.md",
+   "python3 -c \"import hashlib;print(hashlib.sha256(open('/tmp/STATUS.before.md','rb').read()).hexdigest())\"  # 16f2d078...",
+   "python3 -c \"import json;d=json.load(open('experiments/ptr-engine/measure/OPERATOR-BRIEF.json'));print(d['verdict'],d['hypotheses'])\"",
+   "python3 -c \"import json;d=json.load(open('experiments/ptr-engine/measure/P95-POWER.json'));print(d['largest_n_set'],d['per_grid_summary'])\"",
+   "sed -n '223,231p' docs/PARM-1-ERRATA.md",
+   "sed -n '95,114p' docs/PREREG-ARM-RUN.md",
+   "grep -n '134' orchestration/VERDICTS.md | head"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "The verdict line now sits in STATUS.md §8 not at the file header; a successor that opens STATUS.md and reads §8 sees it. If the header 'One-line state' should also carry it, that is a separate card (header edit is outside this card's append-to-objective injection).",
+ "write_paths": [
+  "orchestration/STATUS.md",
+  "orchestration/units/STATUS-VERDICT-LINE.md",
+  "orchestration/handoffs/STATUS-VERDICT-LINE.json",
+  "orchestration/journals/STATUS-VERDICT-LINE.jsonl"
+ ],
+ "status_md": {
+  "sha256_before": "16f2d0780e9a4ecd5f298ee058183a195348a4a9bf7ce2a9dc9ca025db64dcb0",
+  "bytes_before": 44845,
+  "sha256_after": "4491d56ee30a8c062e1c1167ac3ee24bccf656a280df37559be8bc0fa5de08bd",
+  "bytes_after": 46589,
+  "delta_bytes": 1744,
+  "insertions": 8,
+  "deletions": 0,
+  "inserted_at": "orchestration/STATUS.md §8 'Current programme', before '**The three pillars.**'"
+ },
+ "inserted_block_verbatim": "**Operator thesis — verdict: `not adjudicable`** (`experiments/ptr-engine/measure/OPERATOR-BRIEF.json` `verdict.overall`; its `verdict.missing_measurement`, verbatim: *\"one grid holding all four arms with >=60 usable timings per arm and the 12 declared checkpoint ids in its rows\"*).\n\n- **H1 latency — undecidable.** No grid holds both arms at n ≥ 60 usable timings: `P95-POWER.json` `largest_n_set.n_max_usable` is 48 (*\"no single rows file carries more than 48 usable timings for any arm\"*), and `per_grid_summary[*].n_a`/`n_b` read 47/48, 47/48, 40/48.\n- **H2 cache cost — undecidable.** `OPERATOR-BRIEF.json` `hypotheses.H2_cache_cost.why`, verbatim: *\"the uncached limb changes sign between grids; the frozen gate needs both limbs on one grid\"* — the pointer-vs-grow gaps those grids carry flip sign too: p95 **+529.99** / **−2.35** / **−57.65** ms and p50 **+315.29** / **+32.39** / **+11.99** ms in `rows-longrun-c` / `rows-longrun-v3` / `rows-longrun-v4` (`P95-POWER.json` `per_grid_summary[*].p95_gap_ms`, `.p50_gap_ms`).\n- **H3 quality — not evaluable at this n.** `OPERATOR-BRIEF.json` `hypotheses.H3_quality.min_decidable_to_verdict` is *\"8 of 12\"*; `docs/PARM-1-ERRATA.md:223` `h3_unadjudicable_below` repeats `\"8 of 12\"` over `h3_denominator` 12. H3 grades checkpoint answers (`docs/PREREG-ARM-RUN.md:95`, `accuracy_from_grade`), so it measures answer production, not pointer mechanics.\n\n**The missing measurement:** one four-arm grid with ≥ 60 usable timings per arm. **Do not** read the batch aggregate (134 rows: PASS / FAIL / partial / author-report / pending) as the thesis verdict. Spend and quality figures live in `measure/REQUEST-LEDGER.json`, `measure/QUALITY-ERAS.json`, `measure/TVS-CENSORED.json`.",
+ "successor_answer": "yes — the verdict word is in orchestration/STATUS.md, the first file a successor opens, inside its objective section (§8).",
+ "facts_verified": [
+  {
+   "fact": "verdict word 'not adjudicable'",
+   "artefact": "experiments/ptr-engine/measure/OPERATOR-BRIEF.json",
+   "key": "verdict.overall"
+  },
+  {
+   "fact": "missing measurement = one four-arm grid, >=60 usable timings per arm",
+   "artefact": "experiments/ptr-engine/measure/OPERATOR-BRIEF.json",
+   "key": "verdict.missing_measurement"
+  },
+  {
+   "fact": "no arm's rows file exceeds 48 usable timings",
+   "artefact": "experiments/ptr-engine/measure/P95-POWER.json",
+   "key": "largest_n_set.n_max_usable=48"
+  },
+  {
+   "fact": "H2 uncached limb changes sign between grids",
+   "artefact": "experiments/ptr-engine/measure/OPERATOR-BRIEF.json",
+   "key": "hypotheses.H2_cache_cost.why"
+  },
+  {
+   "fact": "per-grid p50/p95 gaps 315.29/529.99, 32.39/-2.35, 11.99/-57.65",
+   "artefact": "experiments/ptr-engine/measure/P95-POWER.json",
+   "key": "per_grid_summary[*].p50_gap_ms/.p95_gap_ms"
+  },
+  {
+   "fact": "H3 unadjudicable below 8 of 12",
+   "artefact": "docs/PARM-1-ERRATA.md:223 + hypotheses.H3_quality",
+   "key": "h3_unadjudicable_below"
+  },
+  {
+   "fact": "batch aggregate is 134 rows",
+   "artefact": "orchestration/VERDICTS.md:4166",
+   "key": "Unrecoverable — 133 of 134 rows ..."
+  }
+ ],
+ "assumptions": [
+  "The card's H2 sentence asked for per-grid p50/p95 gaps; the only per-grid gaps in the artefacts are the pointer-stable_vs_transcript-grow pair, so they are labelled as that pair's gaps and the H2 sign statement is quoted from hypotheses.H2_cache_cost.why rather than substituting the latency gaps for the cache-cost sign.",
+  "H3 'measures answer production rather than pointer mechanics' is stated as the consequence of its grading path (accuracy_from_grade on checkpoint answers, docs/PREREG-ARM-RUN.md:95), not as a quoted artefact string — no such string exists in the three sources.",
+  "Counts after PASS/FAIL/partial/author-report/pending were deliberately omitted from the block: the card named the five categories only, and the counts live in STATUS.md's batch table/COLD-START-PROBE.",
+  "The frozen verdict command deselects tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps: that test fails on 12 pre-existing verifier-shape handoff gaps belonging to other units, none inside this card's write scope; the recorded command covers the parsing/regression tests that do exercise this card's handoff (12 passed)."
+ ],
+ "tool_calls": 27,
+ "bound": 18,
+ "not_touched": [
+  "docs/PRICE-REPLICATION.md",
+  "docs/PARM-1.md",
+  "docs/PARM-1-ERRATA.md",
+  "experiments/ptr-engine/measure/WITHDRAWN.json",
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/run_longrun.py",
+  "experiments/ptr-engine/longrun/spawn_record.py",
+  "experiments/ptr-engine/longrun/exit_codes.py"
+ ],
+ "verdict_row": {
+  "command": "PYTHONPATH=src python3 -m pytest tests/test_orchestration_handoffs.py -q -k \"not contract_key_gaps\"",
+  "exitCode": 0,
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "derived": "PASS"
+ }
+}

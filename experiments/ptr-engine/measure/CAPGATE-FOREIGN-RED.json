@@ -1,0 +1,26 @@
+{
+ "unit": "CAPGATE-FOREIGN-RED",
+ "verdict": "done",
+ "wrong_side": "the test (stale); the writer is correct",
+ "deciding_code": {
+  "run_longrun.py:2462-2468": "'attributed = bool(followup_rows) and attribute_initial_send()' / 'row_extra[\"row_measurement_source\"] = (\"tool-followup\" if followup_rows else \"turn-initial\")' -- the LAST follow-up's row IS the turn row",
+  "run_longrun.py:2504-2517": "with attribution the initial send gets its OWN kind=\"turn-initial\" row (send_index=0, initial_send=True), so k=1 writes ['turn-initial','turn']",
+  "run_longrun.py:2518-2520": "'for frow in (followup_rows[:-1] if attributed else followup_rows)' -- follow-ups 1..k-1 get their own rows; k=1 leaves none",
+  "tests/test_row_attribution.py:222-231": "THE INVARIANT: distinct request_sha256 per turn == sends; ttft appears once; 'no two rows may carry the same request identity'",
+  "tests/test_row_attribution.py:183-195 (test_k1_initial_send_has_its_own_row)": "k=1 -> exactly 2 measured rows: one turn-initial send_index 0, one turn send_index 1 carrying prompt_sha256 of the TURN prompt"
+ },
+ "old_assertion": "        self.assertIn(\"tool-followup\", [r[\"kind\"] for r in allowed[\"rows\"]])\n",
+ "new_assertion": "        by_send = sorted(allowed[\"rows\"], key=lambda r: int(r[\"send_index\"]))\n        self.assertEqual([int(r[\"send_index\"]) for r in by_send], [0, 1],\n                         \"each send owns exactly one row\")\n        self.assertEqual([r[\"row_measurement_source\"] for r in by_send],\n                         [\"turn-initial\", \"tool-followup\"],\n                         \"row 0 measures the turn's own send, row 1 the follow-up's\")\n        self.assertIs(by_send[1][\"fetch_followup\"], True,\n                      \"the follow-up's row is marked as the follow-up it measures\")\n        shas = [r[\"request_sha256\"] for r in by_send]\n        self.assertEqual(len(set(shas)), 2, f\"each send has its OWN request_sha256: {shas}\")\n        self.assertTrue(all(s and s != R.client.REQUEST_SHA_UNKNOWN for s in shas), shas)\n",
+ "suite_before": {
+  "capgate": "Ran 9 tests, FAILED (failures=1) -- AssertionError: 'tool-followup' not found in ['turn-initial', 'turn']",
+  "longrun_full": "Ran 176 tests, FAILED (failures=2)"
+ },
+ "suite_after": {
+  "capgate": "Ran 9 tests, OK",
+  "row_attribution": "5 passed",
+  "longrun_full": "Ran 176 tests, FAILED (failures=1) -- only test_verdict_ritual, unrelated",
+  "repo_root_pytest": "2 failed, 1375 passed, 1 skipped -- both failures pre-existing and outside this unit's write paths"
+ },
+ "invariant_test_still_passes": true,
+ "answer": "No: with the cap-gate suite green, no card's acceptance command can fail for a reason outside its own write scope via this test; the surviving reds are separate governance cards."
+}

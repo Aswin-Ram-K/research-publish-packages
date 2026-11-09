@@ -1,0 +1,74 @@
+{
+  "unit": "VERDICT-REFUSAL-SEMANTICS",
+  "status": "done",
+  "overall": "PASS",
+  "artifacts": [
+    "docs/VERDICT-SEMANTICS.md",
+    "experiments/ptr-engine/tools/verdict_semantics.py",
+    "experiments/ptr-engine/longrun/tests/test_verdict_semantics.py",
+    "orchestration/units/VERDICT-REFUSAL-SEMANTICS.md",
+    "orchestration/handoffs/VERDICT-REFUSAL-SEMANTICS.json",
+    "orchestration/journals/VERDICT-REFUSAL-SEMANTICS.log"
+  ],
+  "evidence": {
+    "command_or_count": "9 passed in 0.07s (own test file, measured before this handoff); verdict row recorded PASS exit 0 sha f17663d1; fake EXIT_TABLE[14] in a /tmp copy makes the guard RED with 'exit-code partition drift: unclassified in exit_codes.EXIT_TABLE=[14]' rc=1; 0 inference requests",
+    "commands": [
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_verdict_semantics.py -q -> exit 0, 9 passed",
+      "pytest tests/test_orchestration_handoffs.py -> exit 4 (TODAY, re-run): ImportError tests/conftest.py:19 'from resextract.llm import OccamyClient' / ModuleNotFoundError: No module named 'resextract'",
+      "python3 experiments/ptr-engine/longrun/exit_codes.py printout -> EXIT_TABLE keys {0..13}; 13 tree-moved is already declared",
+      "red proof: copy exit_codes.py to /tmp, append EXIT_TABLE[14]=dict(EXIT_TABLE[EXIT_PREREG], name='fake-14'), VERDICT_SEMANTICS_EXIT_CODES_DIR=<tmp> python3 -c 'import verdict_semantics' -> rc 1, RuntimeError names 14"
+    ]
+  },
+  "triage": [
+    {
+      "card": "RECORD-REFRESH",
+      "taskId": "92dbabe8-24e2-43ce-bbdf-0b5c157dc1a1",
+      "executionId": "b0b2ccf1-20ba-4ef9-8541-b9d529ceb727",
+      "row": "verdict.jsonl / closure.jsonl: verdict failed, reason exit-4, command 'pytest tests/test_orchestration_handoffs.py', exitCode 4, sha f17663d1",
+      "rerun_today": "exit 4 at COLLECTION; tests/conftest.py:19 imports resextract.llm.OccamyClient -> ModuleNotFoundError: No module named 'resextract'",
+      "classification": "refused_before_measuring (pytest usage/collection error -- for pytest 4 IS the usage error, and in the conductor 4 IS the ledger cap; either way nothing loaded, and the command names a handoff-lint test, not VERDICTS.md or STATUS.md, so it could not measure this card's artefact even if it had loaded)",
+      "work_was_fine": "handoff 3,694 B: insertions only, head -c 424582 sha == pre-edit d01359d2..., head -c 41302 sha == pre-edit 8d6815cd..., withdrawn_index --check exit 0 before and after, self-test 0 problems, 0 requests"
+    },
+    {
+      "card": "RECLAIM-ACCEPTANCE",
+      "taskId": "b0ce86cf-7e0d-44da-a3c2-fba06565d747",
+      "executionId": "83f801aa-55d0-4656-9f3d-e4cfbdb15e2a",
+      "row": "verdict.jsonl / closure.jsonl: verdict failed, reason no-verdict, command null, exitCode null, sha null",
+      "rerun_today": "no command in the row to re-run; the card's own journal (2026-10-26T12:41, today) records its closest acceptance command 'python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p test_*.py' at exit=1, red on test_verdict_ritual's {'FIXTURE-GENERATIONS': [...]} != {}",
+      "classification": "not_reproducible (command absent from the row). Nearest available command, if the card is re-opened, is blocked_by_another_card: FIXTURE-GENERATIONS owns the handoff that settled done with no verdict row"
+    },
+    {
+      "card": "other closures in the same sweep (1793036214061)",
+      "taskId": "none",
+      "row": "PROSE-VALUE-METRIC verified exit 0; GRID-BUDGET-RECHECK verified exit 0",
+      "rerun_today": "not re-run; both are PASS/verified and not in scope",
+      "classification": "none (no FAIL closure besides the two above)"
+    }
+  ],
+  "reopen": {
+    "card": "RECORD-REFRESH",
+    "why": "it is the only one of the two whose work can be measured by a command that touches its own artefact; RECLAIM-ACCEPTANCE's honest next command is another card's red",
+    "command": "sh -c 'test \"$(head -c 424582 orchestration/VERDICTS.md | sha256sum | cut -d\" \" -f1)\" = d01359d2d127153b53b02d377af311e9ef03e98b0acac604b54be708e6a1cbde && test \"$(head -c 41302 orchestration/STATUS.md | sha256sum | cut -d\" \" -f1)\" = 8d6815cd4a2df58b2312df5c65f46f3468630538b5a537f8bfb4ec6f8f07290d && python3 experiments/ptr-engine/tools/withdrawn_index.py --check orchestration/VERDICTS.md && python3 experiments/ptr-engine/tools/withdrawn_index.py --check orchestration/STATUS.md'",
+    "note": "that command measures the two artefacts the card edited (old bytes are an exact prefix = insertions only, plus the guard); the card must record its own row -- no row was recorded for it here",
+    "second_card": "RECLAIM-ACCEPTANCE should NOT be re-opened until FIXTURE-GENERATIONS has its verdict row; then its own suite command can measure it"
+  },
+  "assumptions": [
+    "Borderline exit codes adjudicated explicitly, not silently: 6 runaway -> verified_fail (the run executed and its length/property is the measurement), 7 unwritable -> unstamped_refusal (an artefact that could not be written cannot be measured), 9 inconsistent -> verified_fail (two measurements of the same rows disagree). 2 keeps its double role (preflight refusal and argparse usage error); both refuse before measuring, so one verdict is honest.",
+    "13 tree-moved is ALREADY in exit_codes.EXIT_TABLE at HEAD f17663d1, so the doc classifies it as a refusal rather than describing it as pending.",
+    "RECLAIM-ACCEPTANCE was not re-run under a substitute command: a row must be earned by the card that owns the artefact, and its journal already carries today's measurement.",
+    "No inference request was made; 0 requests."
+  ],
+  "requests": 0,
+  "tool_calls": 18,
+  "bound": 26,
+  "blocker": "",
+  "next_unit_hint": "Apply the same partition to the 104-card failed column: for every row whose exit code is in {2,3,4,7,8,12,13} (or whose command is null), the card is unstamped and needs a measuring command, not a retry of the same command. The mechanical classifier exists at experiments/ptr-engine/tools/verdict_semantics.py; docs/VERDICT-SEMANTICS.md is the one table a reader should be pointed at.",
+  "write_paths": [
+    "docs/VERDICT-SEMANTICS.md",
+    "experiments/ptr-engine/tools/verdict_semantics.py",
+    "experiments/ptr-engine/longrun/tests/test_verdict_semantics.py",
+    "orchestration/units/VERDICT-REFUSAL-SEMANTICS.md",
+    "orchestration/handoffs/VERDICT-REFUSAL-SEMANTICS.json",
+    "orchestration/journals/VERDICT-REFUSAL-SEMANTICS.log"
+  ]
+}

@@ -1,0 +1,58 @@
+{
+ "unit": "ANALYSIS-CONSUMER-FIX",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/analyze_stats.py",
+  "experiments/ptr-engine/longrun/tests/test_analysis_consumer.py",
+  "docs/ANALYSIS-CONSUMER.md",
+  "orchestration/units/ANALYSIS-CONSUMER-FIX.md",
+  "orchestration/journals/ANALYSIS-CONSUMER-FIX.jsonl"
+ ],
+ "evidence": {
+  "commands": [
+   "cd experiments/ptr-engine && python3 -m pytest longrun/tests/test_analysis_consumer.py -q",
+   "cd experiments/ptr-engine && python3 longrun/analyze_stats.py --rows measure/rows-cell-pointer-stable-20261026T182535Z.jsonl measure/rows-longrun-2026-10-26.jsonl --json /tmp/acf-e1.json",
+   "cd experiments/ptr-engine && python3 longrun/analyze_stats.py --rows measure/rows-cell-pointer-stable-20261026T182535Z.jsonl --no-census",
+   "cd experiments/ptr-engine && python3 longrun/analyze_stats.py --rows measure/rows-cell-pointer-stable-20261026T182535Z.jsonl measure/rows-cell-pointer-stable-20261026T145758Z.jsonl",
+   "cd experiments/ptr-engine && python3 -m pytest longrun/tests -q"
+  ],
+  "tests": "6 passed test_analysis_consumer.py (was 6 failed before the patch)",
+  "era_a": "usable_for EXCLUDED rows-cell-pointer-stable-20261026T182535Z.jsonl 27 row(s) NOT analysed source=sanity usable_for=[]; document n_rows=192 (not 219)",
+  "truncated": "era A: excluded=2 of 27 (7.4%) surviving n=25, p95 still refused 'minimum n for p95 is 60'; v4-tools 1/48 -> n 47; v5-tools 1/48 -> n 47; v6-tools 0/48 -> n 48",
+  "refusal": "every cell usable_for [] -> printed 'no usable cells', exit code 1",
+  "regression": "longrun/tests: 583 passed, 30 failed; none of the 30 failure messages mentions analyze_stats, usable_for, split_truncated or truncated_turns (pre-existing drift outside this card's write paths)",
+  "identity": "tools/tokens_to_verified.py sha256 d4cca36ca6d9f20f2622655947fc0cfc77877c26dad149a5b7656276abc5ac4d (unchanged from measure/ANALYSIS-PATH.json)",
+  "frozen_untouched": {
+   "min_n_for_p95": 60,
+   "MIN_N": 20,
+   "TAIL_MIN": 3,
+   "LEVEL": 0.95,
+   "mcnemar_floor": "unchanged"
+  },
+  "docs_to_regenerate": [
+   "docs/LATENCY-REPORT.md:35",
+   "docs/LATENCY-REPORT.md:36",
+   "docs/LATENCY-REPORT.md:37",
+   "docs/LATENCY-REPORT.md:98",
+   "docs/LATENCY-REPORT.md:99",
+   "docs/LATENCY-REPORT.md:100",
+   "docs/LATENCY-REPORT.md:108",
+   "docs/LATENCY-REPORT.md:125",
+   "docs/LATENCY-REPORT.md:141-145"
+  ]
+ },
+ "blocker": "",
+ "assumptions": [
+  "cell.py is frozen by the card, so the manifest writer lives in analyze_stats.py (write_cell_manifest_usable_for / --stamp-rows); cell.py's next revision must call it per finished cell. For today's cells the grid census measure/GRID-CELL-SANITY.json carries the same stamp.",
+  "A cell with NO usable_for stamp anywhere is included and printed 'unstamped ... not a certification' rather than excluded, so pre-existing cells without a stamp are not silently killed; the 'no usable cells' refusal triggers only when cells are stamped empty."
+ ],
+ "next_unit_hint": "Regenerate docs/LATENCY-REPORT.md from the analyser (lines 35,36,37,98,99,100,108,125,141-145): the G7 and G8 tools-on cells each carry one truncated turn, so their published n (51 and 70) must be re-derived; then wire cell.py's next revision to call write_cell_manifest_usable_for() at cell completion.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/analyze_stats.py",
+  "experiments/ptr-engine/longrun/tests/test_analysis_consumer.py",
+  "docs/ANALYSIS-CONSUMER.md",
+  "orchestration/units/ANALYSIS-CONSUMER-FIX.md",
+  "orchestration/handoffs/ANALYSIS-CONSUMER-FIX.json",
+  "orchestration/journals/ANALYSIS-CONSUMER-FIX.jsonl"
+ ]
+}

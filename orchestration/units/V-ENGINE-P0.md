@@ -34,8 +34,8 @@ Each was applied to `.verify-scratch/engine/`, the suite run, the file restored 
 
 | # | invariant broken | patch | failing test(s) | assertion |
 |---|---|---|---|---|
-| a | one-way resolution | new public `recover(ResourceRef) -> Reference` in `reference.py` | `tests/test_oneway.py::test_no_public_callable_turns_a_resourceref_into_a_reference` | `assert ['ptr_engine....-> Reference'] == []` (1 failed, 94 passed) |
-| b | no-prefetch | `adapter.build_prompt`: `if ledger is not None and not …` → `if False and …` (ledger gate) | `tests/test_noprefetch.py::test_build_prompt_raises_for_a_ref_with_no_resolve_row` | `DID NOT RAISE PtrUnresolvedRefError` — the hash gate (`adapter.py:117`) fired first with `PTR_BODY_MISMATCH` (1 failed, 94 passed) |
+| a | one-way resolution | new public `recover(ResourceRef) -> Reference` in `reference.py` | `experiments/ptr-engine/tests/test_oneway.py::test_no_public_callable_turns_a_resourceref_into_a_reference` | `assert ['ptr_engine....-> Reference'] == []` (1 failed, 94 passed) |
+| b | no-prefetch | `adapter.build_prompt`: `if ledger is not None and not …` → `if False and …` (ledger gate) | `experiments/ptr-engine/tests/test_noprefetch.py::test_build_prompt_raises_for_a_ref_with_no_resolve_row` | `DID NOT RAISE PtrUnresolvedRefError` — the hash gate (`adapter.py:117`) fired first with `PTR_BODY_MISMATCH` (1 failed, 94 passed) |
 | c | capability scope | `resolve`: `if scope.index.scope != scope.name:` → `if False and …` | `test_scope.py::test_the_wrong_scope_is_ungranted`, `test_negative_controls.py::test_four_ungranted_scope`, `::test_all_seven_codes_are_distinct` | `Failed: DID NOT RAISE PtrScopeUngrantedError` / `DID NOT RAISE PtrError` (3 failed, 92 passed) |
 | d | determinism | `compile.py` header gains `compiled={time.time_ns()}` | `test_determinism.py::test_two_processes_two_roots_agree`, `::test_material_order_does_not_matter`, `::test_recompiling_into_the_same_store_is_idempotent` | `AssertionError: index bytes differ between two processes` (3 failed, 92 passed) |
 | e | append_cost | `annotate.append_cost` returns constant `16` | `test_annotate.py::test_append_cost_is_length_modulo_block_size`, `::test_off_grid_is_detectable_and_on_grid_is_not` | `assert 16 == (16 % 7)`; `an on-grid append must read as 0` (2 failed, 93 passed) |
@@ -52,7 +52,7 @@ A *realistic* reverse bridge survives the whole suite. Patch: `resolve()` record
 Applied to the copy: **`95 passed`, exit 0**, and the round trip works end-to-end
 (`recover(resolve(@knowledge:k01@1))` → `@knowledge:k01@1`, equal to the original).
 
-Why: `tests/test_oneway.py:78` calls each public callable with a synthetic `DUMMY`
+Why: `experiments/ptr-engine/tests/test_oneway.py:78` calls each public callable with a synthetic `DUMMY`
 ResourceRef that no `resolve()` ever produced; a registry lookup raises `KeyError` and
 the sweep treats "refusing" as compliant. The invariant "no public callable turns a
 ResourceRef into a Reference" is therefore only guarded against helpers that succeed on
@@ -95,7 +95,7 @@ SPEC states all four things asked about:
    resolve. `resolve.py:117-123` is deliberate, so the SPEC sentence is the wrong one.
 2. `SPEC.md:166` — "Every failure is a `PtrError` subclass with a stable `code`". Six
    bare `ValueError` sites: `ptr_engine/ledger.py:51,60,136,138,141,213`, and
-   `tests/test_ledger.py:97` asserts `ValueError` explicitly.
+   `experiments/ptr-engine/tests/test_ledger.py:97` asserts `ValueError` explicitly.
 
 **Behaviour in the code that SPEC does not state:**
 
@@ -120,7 +120,7 @@ fetch returns, but not what the sentence says.
 ### 6. Seven negative controls
 
 Seven distinct codes, in the order the test fixes
-(`tests/test_negative_controls.py:104-114`):
+(`experiments/ptr-engine/tests/test_negative_controls.py:104-114`):
 
 `PTR_SYNTAX` · `PTR_UNKNOWN_KIND` · `PTR_UNKNOWN_ID` · `PTR_SCOPE_UNGRANTED` ·
 `PTR_PROJECTION_UNENUMERATED` · `PTR_POINTER_INVALID` · `PTR_BUDGET_EXCEEDED`

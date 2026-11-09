@@ -1,0 +1,48 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_cell.py",
+  "orchestration/units/CELL-ONE-COMMAND.md",
+  "experiments/ptr-engine/measure/cell-transcript-grow-20261026T144540Z.json",
+  "experiments/ptr-engine/measure/cell-transcript-grow-20261026T144540Z.md"
+ ],
+ "assumptions": [
+  "'truth' on a v5 checkpoint is the fixture's documented 'expected' plus the AST 'answer_spec'; preflight accepts either key and requires the derivation, because the real LR-01.v5.json carries 'expected', not 'truth'.",
+  "The runner reports no request quota, so the 4,320 remainder is computed best-effort as the cap minus rows already on disk in experiments/ptr-engine/measure/ and is labelled best-effort wherever printed.",
+  "would_send_total is the runner's dry-run count for the fixture's full N; when --turns truncates a cell the dry-run figure is conservative (higher than the run), never lower.",
+  "Each row in a rows file is one request; requests_used counts rows written by the runner (zero in --offline mode)."
+ ],
+ "blocker": "",
+ "bound": 34,
+ "evidence": {
+  "command_or_count": "7 offline tests OK; 0 inference requests; would_send_total=48 for a 48-turn v5 cell (192 all four arms)",
+  "commands": [
+   "python3 -m unittest experiments.ptr-engine.longrun.tests.test_cell  ->  Ran 7 tests in 0.61s OK",
+   "python3 experiments/ptr-engine/longrun/cell.py --arm transcript-grow --fixture experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json --turns 48 --reps 1 --budget 1  ->  exit 3, 'would_send_total=48 +10% headroom = 53 exceeds --budget 1'",
+   "python3 experiments/ptr-engine/longrun/cell.py ... --offline <rows>  ->  exit 0, JSON + markdown + handoff written",
+   "python3 experiments/ptr-engine/longrun/run_longrun.py --dry-run --arms transcript-grow,transcript-compact,pointer-stable,lease-reopen --reps 1  ->  would_send_total=192"
+  ],
+  "exit_codes": {
+   "0": "cell measured, graded, analysed and recorded",
+   "2": "stage 1/7 preflight (fixture unparseable, system_prompt missing/empty, checkpoint question/turn/truth/answer_spec missing, truth not AST-derivable, answer-contract form absent from system prompt, unknown arm) and stage 2/7 harness (--expect-harness mismatch)",
+   "3": "budget: would_send_total + 10% headroom exceeds --budget, or --budget absent, or the dry-run yields no would_send_total; refused before the runner is invoked past --dry-run",
+   "4": "run: run_longrun.py exited non-zero",
+   "5": "grade: grade_v5.py exited non-zero",
+   "6": "analyse: analyze_stats.py crashed (a legitimate statistical refusal is printed and the cell still exits 0)",
+   "7": "record: could not write the JSON/markdown"
+  },
+  "harness_sha256": "53fb8112f0912b7744d14b448d13ef8ff1ae6bf0032f5e57cf94c981074d8d5e",
+  "red_green": "6/6 guards: test_red_green_every_guard mutates cell.py one guard at a time (markdown write, system_prompt check, AST truth derivation, budget comparison, --expect-harness comparison, p95-refusal recording) and asserts the matching check fails; all six mutants are red, the unmodified file is green",
+  "would_send_total_48turn_v5": 48
+ },
+ "next_unit_hint": "Run one live cell: cell.py --arm transcript-grow --fixture .../LR-01.v5.json --turns 48 --reps 1 --budget 60 --expect-harness 53fb8112... ; the only seam to keep is the CLI adapter around grade_v5.py.",
+ "status": "done",
+ "tool_calls": 29,
+ "unit": "CELL-ONE-COMMAND",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_cell.py",
+  "orchestration/units/CELL-ONE-COMMAND.md",
+  "orchestration/handoffs/CELL-ONE-COMMAND.json"
+ ]
+}

@@ -1,0 +1,61 @@
+{
+  "unit": "RUN-DRY-TURN-SCOPE",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_dry_turn_scope.py",
+    "orchestration/units/RUN-DRY-TURN-SCOPE.md",
+    "orchestration/handoffs/RUN-DRY-TURN-SCOPE.json",
+    "orchestration/journals/RUN-DRY-TURN-SCOPE.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "14 passed (python3 -m pytest experiments/ptr-engine/longrun/tests/test_dry_turn_scope.py -q)",
+    "conflicting_lines_before": {
+      "live_457_460": "n_turns = int(fixture[\"N\"]) / max_turns = int(getattr(cfg, \"max_turns\", 0) or 0) / if max_turns > 0: /     n_turns = min(n_turns, max_turns)",
+      "dry_2079": "for t in range(1, int(fixture[\"N\"]) + 1):",
+      "dry_count_2120_2124": "turns = int(fixture[\"N\"]) * c[\"reps\"] ... assert turns == int(fixture[\"N\"]) * c[\"reps\"], \"turn count must be N x reps\""
+    },
+    "reproduction_before": [
+      "--dry-run -> 'pointer-stable      turn_requests=48 (N=48 x reps=1)  digest_requests=0  cell_total=48' / 'would_send_total=48'",
+      "--dry-run --max-turns 12 -> 'pointer-stable      turn_requests=48 (N=48 x reps=1)  digest_requests=0  cell_total=48' / 'would_send_total=48'"
+    ],
+    "after_cases": {
+      "max_turns_12": "turn_requests=12 (N=48 --max-turns=12 x reps=1)  digest_requests=0  cell_total=12 / would_send_total=12",
+      "no_flag": "turn_requests=48 (N=48 x reps=1)  digest_requests=0  cell_total=48 / would_send_total=48",
+      "max_turns_96": "turn_requests=48 (N=48 x reps=1)  digest_requests=0  cell_total=48 / would_send_total=48",
+      "max_turns_24": "turn_requests=24 (N=48 --max-turns=24 x reps=1)  digest_requests=0  cell_total=24 / would_send_total=24"
+    },
+    "byte_identical_proof": "git-free diff against a /tmp copy with ONLY the run_dry loop/count reverted to fixture[N]: printed blocks identical for the 48-turn cell and for --max-turns 96; --max-turns 48 identical to no-flag. Only line 1 (manifest sha) differs, and it embeds created_utc: two identical invocations differ in exactly ['created_utc'], and --max-turns is not recorded in the manifest.",
+    "live_paths_unchanged": "projected_requests old formula vs new cell_turns identical in 56/56 cases (max_turns 0,1,12,24,48,96,200 x 4 arms x tools off/on); cell_turns = {0:48, 1:1, 12:12, 24:24, 48:48, 96:48, 200:48}",
+    "red_green": "green 14 passed; RUNNER_UNDER_TEST=<copy with run_dry reverted> -> 7 failed, 7 passed (shortened-cell cases + source guard fail; full-cell byte-identical cases stay green)",
+    "neighbour_tests": "test_budget_turn_scope.py + test_cap_gate.py + test_arm_treatments.py -> 23 passed, 3 subtests passed; test_frozen_tree.py -> 7 passed",
+    "sha256": {
+      "run_longrun.py_before": "b20030386610c58bd278681c8c365935336960513787b8380892e276ba42965e",
+      "run_longrun.py_after": "30dfa9e9e09683c4beedc1676294ae98dec1c39313e74dec4a31fb980a16576b",
+      "test_dry_turn_scope.py": "c4bcf32f334d5f97d67737b87ead80ca898c762d02a6ef9f6fbe2073673eda28"
+    },
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --arm pointer-stable --reps 1 --dry-run",
+      "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --arm pointer-stable --reps 1 --dry-run --max-turns 12",
+      "python3 experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --arm pointer-stable --reps 1 --dry-run --max-turns 24",
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_dry_turn_scope.py -q",
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_budget_turn_scope.py experiments/ptr-engine/longrun/tests/test_cap_gate.py experiments/ptr-engine/longrun/tests/test_arm_treatments.py -q"
+    ],
+    "verdict_row": "PASS f17663d1 — python3 -m pytest experiments/ptr-engine/longrun/tests/test_dry_turn_scope.py -q",
+    "pin": "run_longrun.py is in HARNESS_FILES (cell.py:128-135). HARNESS-PIN.json generation 4 pins it at b2003038... and the file is now 30dfa9e9..., so gen 4's harness_sha256 fa6fd8cc... no longer describes this tree. Already stale (grade_v5.py moved earlier) and stays stale until HARNESS-PIN-GEN5. NOT re-pinned."
+  },
+  "blocker": "",
+  "next_unit_hint": "HARNESS-PIN-GEN5 must regenerate the pin over the current HARNESS_FILES (run_longrun.py is now 30dfa9e9...). If a shortened canary is desired, re-run its G2 dry pricing now that --max-turns reaches the preview: 12 turns x 60 s = 720 s inside the 900 s wall.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_dry_turn_scope.py",
+    "orchestration/units/RUN-DRY-TURN-SCOPE.md",
+    "orchestration/handoffs/RUN-DRY-TURN-SCOPE.json",
+    "orchestration/journals/RUN-DRY-TURN-SCOPE.jsonl"
+  ],
+  "assumptions": [
+    "Ran the dry run through run_longrun.py --fixture (the documented entry point in docs/CANARY-ARGV.md); the card's `--task tasks-v6/LR-01.v8.json` form makes the runner read the stub fixtures/LR-01.json and exits 2 with FIXTURE ERROR, so --fixture was used.",
+    "The card's 'run_dry turn loop and its count only' write scope was read together with task 5's 'one source of truth, not a second min()': the shared cell_turns() replaces the two pre-existing identical min() blocks in projected_requests and run_cell as well. Behaviour is proven identical (56/56 projection cases; byte-identical full-cell dry run), so no live decision changes.",
+    "Offline dry runs rewrite manifests/dryrun-LR-01-pointer-stable-r1.json's created_utc (manifest content otherwise unchanged). Precedent: orchestration/handoffs/FETCH-CHANNEL.json."
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "unit": "RUNNER-WALL-KEY",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_wall_key.py",
+    "experiments/ptr-engine/measure/RUNNER-WALL-KEY.json",
+    "docs/RUNNER-WALL-KEY.md",
+    "orchestration/units/RUNNER-WALL-KEY.md"
+  ],
+  "evidence": {
+    "command_or_count": "6/6 PASS tests/test_wall_key.py; pytest treatments_fire + arm_treatments + wall_key = 22 passed; 0 requests (socket guard never fired)",
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/tests/test_wall_key.py",
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_treatments_fire.py experiments/ptr-engine/longrun/tests/test_arm_treatments.py experiments/ptr-engine/longrun/tests/test_wall_key.py -q",
+      "python3 /tmp/wallkey/wall_key_probe.py"
+    ],
+    "v8_table": "grow 10616 T21; compact 10616 T21; lease 10616 lease-step T23; pointer 10616 prefix T2",
+    "discriminating_table": "top 3838 / by_arm 38380 -> all four arms key_read=wall_tokens_by_arm[arm], wall_used=38380, fire=None; top-level-only counterfactual fires T2",
+    "red_before_fix": "AssertionError: wall_for_arm silently fell back to the top-level 3838 for transcript-grow; the arm would fire the wall at T2 instead of T21 / design_cap_tokens=3838 in dryrun manifest"
+  },
+  "blocker": "",
+  "next_unit_hint": "F3 closed: the runner reads the per-arm wall and refuses the fallback. Before collecting the grid, re-run the v8 dry run so every dryrun-LR-01-*-r1.json manifest is re-frozen with design_cap_tokens=10616 (the old r1 manifests still carry 3838 and are stale provenance, not a code bug).",
+  "verdict": "PASS",
+  "verdict_command": "python3 experiments/ptr-engine/longrun/tests/test_wall_key.py",
+  "verdict_exit": 0,
+  "head_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "requests": 0,
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_wall_key.py",
+    "experiments/ptr-engine/measure/RUNNER-WALL-KEY.json",
+    "docs/RUNNER-WALL-KEY.md",
+    "orchestration/units/RUNNER-WALL-KEY.md",
+    "orchestration/handoffs/RUNNER-WALL-KEY.json",
+    "orchestration/journals/RUNNER-WALL-KEY.jsonl"
+  ],
+  "assumptions": []
+}

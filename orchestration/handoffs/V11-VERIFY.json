@@ -1,0 +1,30 @@
+{
+  "unit": "V11-VERIFY",
+  "overall": "fail",
+  "checks": [
+    {"id": 1, "name": "Bodies namespacing", "result": "fail-blocker", "evidence": "_BODIES[ref] bare-ref at pointer_table.py:102; probe: after ALPHA then BETA, _BODIES={'doc-x@r1':'BETA-BODY'}; fetch(body=None, eA) returns 'BETA-BODY'. reset_bodies() at :36, zero callers."},
+    {"id": 2, "name": "Markers", "result": "pass", "evidence": "grep MASKED lines 378/1499 via make_ref; missing revision raises ValueError at 377/1498."},
+    {"id": 3, "name": "Memoisation", "result": "pass", "evidence": "mask_calls 1→4, 2→4, 3→4; cache at arm_cd.py:60-63. tokenizer_calls() counts fetch-truncation only."},
+    {"id": 4, "name": "tool_call_id", "result": "pass", "evidence": "rendered {role:tool, tool_call_id:call_123, name:fetch, content:OK/doc-a@r1}; propagation 139-144→115→3031-3034."},
+    {"id": 5, "name": "Arm names", "result": "pass", "evidence": "grep old names 0 in source/docs; ARM_C=masking-no-fetch ARM_D=bounded-context-fetch."},
+    {"id": 6, "name": "Budget provenance", "result": "pass", "evidence": "resolve_fetch_budget raises ValueError missing key; PT=1024 stamped run_longrun:2459/3026."},
+    {"id": 7, "name": "Walls grounded", "result": "pass", "evidence": "I recomputed 3787, 22.829787234042552, 4312/4403/4221 exactly via working_set_block+count_channel_tokens."},
+    {"id": 8, "name": "Checker can fail", "result": "pass", "evidence": "4 broken fixtures FAIL with expected errors; PT-01/02/03 OK."},
+    {"id": 9, "name": "Malformed fetch args", "result": "pass", "evidence": "parse invalid=True; batched INVALID_ARGS, not NOT_FOUND."},
+    {"id": 10, "name": "Char-vs-token", "result": "pass", "evidence": "25 tokens (4-char) trunc False at budget 30; char=100 would truncate."},
+    {"id": 11, "name": "Schema mutation", "result": "pass", "evidence": "changed==1 asserted on doc-secret@r1; FixtureError inconsistent."},
+    {"id": 12, "name": "Digests", "result": "pass", "evidence": "sha256 df71…/b7b9…/240a… match PIN-UPDATES gen-8."},
+    {"id": 13, "name": "Hygiene", "result": "partial-fail", "evidence": "3 modules clean; run_longrun 6x except Exception + 2x /tmp; scratch probe+u11 not empty."},
+    {"id": 14, "name": "Suite", "result": "pass", "evidence": "29 passed in 0.37s."},
+    {"id": 15, "name": "Honest scope", "result": "plumbing-only", "evidence": "Bodies alpha-v1 placeholders; note verbatim plumbing only, no cost differential."},
+    {"id": 16, "name": "Shippable", "result": "no", "evidence": "Blockers: bodies collide, reset dead, gate0.1/0.4, launch contract gen7/8, cap headroom."}
+  ],
+  "blocker": "bodies namespacing — _BODIES keyed by bare ref (pointer_table.py:102), fallback leaks across fixtures; reset_bodies() zero callers",
+  "next_unit_hint": "namespace _BODIES per fixture or entry-body-only; wire reset_bodies() per-fixture + red test; clean hygiene; reconcile harness pin",
+  "write_paths": ["orchestration/notes/joint-plan/V11-verdict.md", "orchestration/units/V11-VERIFY.md", "orchestration/handoffs/V11-VERIFY.json"],
+  "not_reproduced": [],
+  "overstated": ["bodies namespaced per fixture", "reset_bodies called per fixture", "except//tmp 0 in four modules"],
+  "unverified": ["gate 0.1 acc.2-4", "gate 0.4", "launch contract gen7/8", "cap headroom"],
+  "tool_calls": 40,
+  "bound": "read-only except declared write_paths; pytest via .venv/bin/python only; no network/model"
+}

@@ -1,0 +1,133 @@
+{
+  "slug": "ADOPTION-LEDGER",
+  "question": "For each hairy problem this batch met, did we look for something that already exists before building, what did we find, what would adoption cost, what build would it save, and what did we decide?",
+  "retrieved_at": "2026-10-26",
+  "sources": [
+    {
+      "id": "s1",
+      "url": "https://docs.sglang.io/docs/advanced_features/tool_parser",
+      "retrieved_at": "2026-10-26",
+      "kind": "primary",
+      "claim_taken": "`--tool-call-parser <parser>` is a launch flag on sglang.launch_server and \"--tool-call-parser defines the parser used to interpret responses\" (quoted in docs/research/tool-channel-sglang.md V1-V2)"
+    }
+  ],
+  "claims": [
+    {
+      "id": "C1",
+      "claim": "On SGLang, structured tool calls are produced by the server under a launch-time tool parser, so the tool channel is a wire contract the client must speak (send `tools`, consume `tool_calls`), not a client library we must write.",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "\"--tool-call-parser defines the parser used to interpret responses\"; the page's launch example passes --tool-call-parser qwen25 to sglang.launch_server"
+    },
+    {
+      "id": "C2",
+      "claim": "The adoptable part of the tool-channel problem was the wire contract, not a library: our root cause was a missing `tools` key in the client request body, so no client-side dependency could have supplied it.",
+      "status": "inferred",
+      "source": "s1",
+      "evidence": "handoff orchestration/handoffs/TOOL-CHANNEL-ROOT-CAUSE.json: cause=client_never_sends_tools; client.py:317-346 body keys are {model, messages, temperature, max_tokens, stream[, stream_options][, chat_template_kwargs]}"
+    },
+    {
+      "id": "C3",
+      "claim": "The earlier \"0 structured tool calls in 36 live requests\" was a client omission, not evidence against the vendor documentation; both records stand because they describe different request bodies.",
+      "status": "inferred",
+      "evidence": "probe_with_tools -> finish_reason=tool_calls, tool_calls[0].function.name=read_file, content_len=0; probe_without_tools -> finish_reason=stop, tool_calls=null (orchestration/handoffs/TOOL-CHANNEL-ROOT-CAUSE.json)"
+    }
+  ],
+  "ledger": [
+    {
+      "id": "R1",
+      "problem": "tool calls on SGLang",
+      "hairy_because": [
+        "mechanism unclear (0 structured calls in 36 live requests)",
+        "two components must change (request body + response consumer)",
+        "same-shaped problem solved outside this repo"
+      ],
+      "option": {
+        "name": "SGLang server-side tool parser (--tool-call-parser at launch); adoptable part is the OpenAI-compatible tools/tool_calls wire contract",
+        "licence": "unassessed",
+        "maturity": "unassessed",
+        "last_release": "unassessed"
+      },
+      "would_replace": "the hand-written text-protocol scan (run_longrun.py:605-645, <tool_call> notation in content) and a planned client-side shim",
+      "adopt_cost": {
+        "dependencies": 0,
+        "files": 2,
+        "risk": "every tools-on request's exact bytes change, so request_digest / row sha moves"
+      },
+      "build_cost_avoided": "a client-side tool-call parser plus its ambiguity handling",
+      "decision": "borrow-idea",
+      "sources": [
+        {"url": "https://docs.sglang.io/docs/advanced_features/tool_parser", "retrieved_at": "2026-10-26"},
+        {"url": "orchestration/handoffs/TOOL-CHANNEL-ROOT-CAUSE.json", "retrieved_at": "2026-10-26"}
+      ]
+    },
+    {
+      "id": "R2",
+      "problem": "retry / backoff & HTTP client",
+      "hairy_because": ["we wrote infrastructure (a retry loop) rather than measuring", "same-shaped problem solved outside this repo"],
+      "option": {
+        "name": "unassessed — candidate class only: a maintained HTTP client/transport library offering retry + backoff",
+        "licence": "unassessed",
+        "maturity": "unassessed",
+        "last_release": "unassessed"
+      },
+      "would_replace": "the hand-rolled retry/backoff and HTTP request path in experiments/ptr-engine/longrun/client.py",
+      "adopt_cost": {"dependencies": null, "files": null, "risk": "not measured — no candidate read"},
+      "build_cost_avoided": null,
+      "decision": "unassessed",
+      "sources": []
+    },
+    {
+      "id": "R3",
+      "problem": "gate / budget / verdict / provenance stack",
+      "hairy_because": ["about 200 rounds of infrastructure", "multi-component", "same-shaped problem solved outside this repo"],
+      "option": {
+        "name": "unassessed — no candidate framework named or read in this batch",
+        "licence": "unassessed",
+        "maturity": "unassessed",
+        "last_release": "unassessed"
+      },
+      "would_replace": "the hand-built gate, budget, verdict and provenance layers (orchestration/verdicts/, orchestration/VERDICTS.md, verdict-ritual tests)",
+      "adopt_cost": {"dependencies": null, "files": null, "risk": "not measured — no candidate read"},
+      "build_cost_avoided": null,
+      "decision": "unassessed",
+      "note": "Status quo is hand-built. This is the operator's counter-example (protocol 8.3); its counter-arguments (custom semantics, frozen thresholds, one-writer discipline) must be written case by case, not assumed. Nothing is claimed about what mature tools cover.",
+      "sources": []
+    },
+    {
+      "id": "R4",
+      "problem": "research-note / handoff shape validation",
+      "hairy_because": ["we wrote a validator rather than measuring", "JSON-shape checking is solved outside this repo"],
+      "option": {
+        "name": "unassessed — candidate class only: a JSON-Schema validator or note linter",
+        "licence": "unassessed",
+        "maturity": "unassessed",
+        "last_release": "unassessed"
+      },
+      "would_replace": "tools/check_research_notes.py and the handoff parsers under tests/",
+      "adopt_cost": {"dependencies": null, "files": null, "risk": "not measured — no candidate read"},
+      "build_cost_avoided": null,
+      "decision": "unassessed",
+      "sources": []
+    }
+  ],
+  "decision_vocabulary": {
+    "decisions": ["adopt", "adapt", "borrow-idea", "build", "not-applicable"],
+    "non_decision": "unassessed — no candidate named or read; recorded as backlog, never given an invented name or URL"
+  },
+  "changes_plan": [
+    "docs/RESEARCH-PROTOCOL.md gains section 8 'Adopt before build' (hairy test, adoption memo format, adopt-by-default, four added anti-patterns, handoff fields adoption_considered/adoption_memo) and two checklist bullets; sections 1-7 are unchanged.",
+    "orchestration/units/TEMPLATE.md ## Research gains the adoption paragraph and the two handoff keys, appended after the existing research_note/claims_status block.",
+    "A card meeting a 8.1 test now lands docs/research/ADOPT-<SLUG>.md + measure/research/ADOPT-<SLUG>.json before its build card."
+  ],
+  "open_questions": [
+    "Q1 (owner: future ADOPT-HTTP-RETRY card): which maintained HTTP client/transport covers retry + backoff for our call shape, and at what licence/maturity?",
+    "Q2 (owner: future ADOPT-VERDICT-STACK card): which existing gate/verdict/provenance tooling covers the non-custom parts of that stack?",
+    "Q3 (owner: future ADOPT-NOTE-LINT card): would a JSON-Schema validator replace tools/check_research_notes.py without losing its protocol-headings check?",
+    "Q4 (owner: any later memo that proposes changing the served SGLang build): SGLang licence, maturity and last release were not read on this pass."
+  ],
+  "budget": {
+    "fetches_used": 0,
+    "stop_reason": "each row is either answered from evidence already landed in this workspace (R1) or explicitly marked unassessed (R2-R4); naming an unread candidate would be invention"
+  }
+}

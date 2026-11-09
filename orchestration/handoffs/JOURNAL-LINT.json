@@ -1,0 +1,41 @@
+{
+ "unit": "JOURNAL-LINT",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/handoff_lint.py",
+  "experiments/ptr-engine/longrun/tests/test_journal_lint.py",
+  "state/logs/journal-lint-baseline.json",
+  "orchestration/units/JOURNAL-LINT.md",
+  "orchestration/handoffs/JOURNAL-LINT.json",
+  "orchestration/journals/JOURNAL-LINT.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "census over orchestration/handoffs/*.json: 1023 handoffs, 70 with journal, 953 missing, 0 empty, 0 unparseable, 52 no-step, 8 no-ts, 18 stale; frozen baseline 1009 entries at 2026-10-26T12:06:27-0500; existing code counts before==after (E_MISSING_KEY 35, E_ARTIFACT_ABSENT 75, E_DONE_NO_EVIDENCE 4, E_DONE_NO_ARTIFACTS 3, E_STUB 16, W_NO_COMMANDS 187, W_VERSION_STALE 21); E_JOURNAL_MISSING 1009 pre-freeze -> 0 after freeze; new codes only; 14/14 tests pass, 3/3 red->green fail against a pre-rule copy of the linter",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/handoff_lint.py orchestration/handoffs --summary --quiet",
+   "python3 experiments/ptr-engine/tools/handoff_lint.py orchestration/handoffs --summary --quiet --journal-baseline-out state/logs/journal-lint-baseline.json",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_journal_lint.py -q",
+   "HANDOFF_LINT_TOOL=/tmp/jl/handoff_lint.prerule.py python3 -m pytest experiments/ptr-engine/longrun/tests/test_journal_lint.py -q",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_handoff_lint.py -q"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Board-side enforcement is the remaining gap: add a pre-handoff hook that refuses to settle a card whose orchestration/journals/<UNIT>.jsonl is absent or step-less. It needs operator approval (sandbox/plugin change) which this workspace cannot grant, so the rule stays CI-plus-advisory. Secondary: 52 journals record no step number (LATENCY-ERA-CENSUS, TVS-CENSORED among them) -- unit_journal.py writes step numbers, hand-rolled journals do not; add a lint hint in the card template.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/handoff_lint.py",
+  "experiments/ptr-engine/longrun/tests/test_journal_lint.py",
+  "state/logs/journal-lint-baseline.json",
+  "orchestration/units/JOURNAL-LINT.md",
+  "orchestration/handoffs/JOURNAL-LINT.json",
+  "orchestration/journals/JOURNAL-LINT.jsonl"
+ ],
+ "assumptions": [
+  "The card's WRITE PATHS block omitted experiments/ptr-engine/tools/handoff_lint.py, but step 2 orders the EXISTING linter be extended and HANDOFF-LINT.json names that module; writing a second linter is what step 2 forbids. I edited that module additively (new functions + new codes, no existing code path altered) and proved the other codes' counts identical before/after on the live corpus.",
+  "The journal rule is applied only when <root>/orchestration/journals exists, so every pre-existing test fixture (tmp workspaces with no journal convention) keeps its exact prior behaviour; the additive proof is a test.",
+  "A torn FINAL journal line is tolerated when an earlier record is usable, matching tools/unit_journal.py (torn_lines: 1 is not fatal there); the last VALID record is what must carry step+timestamp.",
+  "Forward-only is keyed on the handoff mtime: exempt when the basename is in the frozen baseline, or the handoff is not newer than frozen_at, or it was written inside a 180s in-flight grace window (sibling units write handoffs concurrently). The live corpus grew 1023 -> 1031 handoffs during this unit and produced 0 new misses.",
+  "A unit card with no handoff is invisible to the rule by construction; the test counts them (7 at the last run) rather than pretending they are covered.",
+  "sha of HEAD at handoff time: f17663d1fed0162a7dc3c5a0a58d372c710974c3"
+ ],
+ "limit": "A linter that runs in a unit's own test suite cannot police a unit that never runs it -- the unit that writes no journal is exactly the unit that skips the suite. The alternative is a board-side pre-handoff hook that refuses to settle a card whose journal is absent; it needs operator approval this workspace cannot grant."
+}

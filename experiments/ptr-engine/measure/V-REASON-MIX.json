@@ -1,0 +1,152 @@
+{
+  "unit": "V-REASON-MIX",
+  "verifier_of": "QUALITY-REASON-MIX",
+  "claim_file": "experiments/ptr-engine/measure/QUALITY-REASON-MIX.json",
+  "live_requests": 0,
+  "network": false,
+  "method": "re-derived every cell from the 11 named *.grade-v5.json documents, using the grader's verbatim `reason` string and the row's own raw reply text; classifier written independently of experiments/ptr-engine/tools/reason_mix.py",
+  "their_totals": {
+    "never_answered": 63,
+    "answered_wrong_value": 0,
+    "answered_right_but_rejected_by_contract": 3,
+    "undecidable": 0,
+    "unclassifiable": 0,
+    "sum": 66
+  },
+  "my_totals": {
+    "never_answered": 64,
+    "answered_wrong_value": 1,
+    "answered_right_but_rejected_by_contract": 1,
+    "undecidable": 0,
+    "unclassifiable": 0,
+    "sum": 66
+  },
+  "reproduction": {
+    "cells_in_named_sources": 75,
+    "cells_in_claim_rows": 75,
+    "claim_rows_minus_sources": [],
+    "sources_minus_claim_rows": [],
+    "duplicates": 0,
+    "passes_total": 9,
+    "non_passes_total": 66,
+    "real_grid_cells": 69,
+    "real_grid_passes": 3,
+    "real_grid_non_passes": 66,
+    "verdict": "their five bucket totals reproduce EXACTLY from their named sources (63+0+3+0+0 = 66). No cell is omitted, double-counted, or duplicated."
+  },
+  "verbatim_reason_census_all_75_cells": [
+    {"reason": "prose_only", "verdict": "undecidable", "n": 28},
+    {"reason": "turn_missing", "verdict": "fail", "n": 21},
+    {"reason": "unparseable", "verdict": "undecidable", "n": 9},
+    {"reason": "num_equal", "verdict": "pass", "n": 7},
+    {"reason": "no_answer_line", "verdict": "undecidable", "n": 5},
+    {"reason": "answer_not_contract", "verdict": "fail", "n": 2},
+    {"reason": "call_equal", "verdict": "pass", "n": 2},
+    {"reason": "answer_not_contract:multiple_answer_lines", "verdict": "fail", "n": 1}
+  ],
+  "answer_raw_by_reason": {
+    "turn_missing": "none (row absent from the grid entirely)",
+    "prose_only": "none - content carries no ANSWER line, and the grader deliberately never reads prose",
+    "no_answer_line": "none (empty turn)",
+    "unparseable": "'ANSWER: NOT-AN-ANSWER' x9 - the runner's no-answer sentinel (tools/answer_degeneracy_check.py:43 REFUSAL, tools/reason_mix.py:83 SENTINELS), not a model answer",
+    "answer_not_contract": "{'ANSWER: ledger.record_refusal(scope=scope_name, serialized_ref=text, code=error.code)', None}",
+    "answer_not_contract:multiple_answer_lines": "'ANSWER: 7'",
+    "num_equal": "{'ANSWER: 64' x3 (real grids), 'ANSWER: NUM 64' x2, 'ANSWER: NUM 31' x2 (demo grids)}",
+    "call_equal": "the ledger.record_refusal CALL with keywords in contract order (demo grids)"
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "high",
+      "title": "bucket2 cannot receive a wrong value from a grade_v5 cell: the mapping is keyed to a reason the current grader never emits",
+      "evidence": "experiments/ptr-engine/tools/reason_mix.py:66 maps `number_wrong` (a grade_v4-era reason). experiments/ptr-engine/longrun/grade_v5.py:665 emits `num_mismatch` for a parseable wrong NUM, :684 `kwarg_value_mismatch:<name>`, :662 `kind_mismatch:<K>_expected`, :657 `num_not_integer:<n>`, :641 `none_but_call_exists`, :638 `none_contradicted_by_source`. None of these is in REASON_BUCKET. Verified by calling the author's own classifier: classify('fail','num_mismatch','ANSWER: NUM 65') -> ('unclassifiable', \"reason 'num_mismatch' not in REASON_BUCKET\"); same for kwarg_value_mismatch:code, kind_mismatch:NUM_expected, num_not_integer:6.4, none_contradicted_by_source.",
+      "consequence": "`answered_wrong_value: 0` is not a measurement on this grader family: a wrong-value cell would land in `unclassifiable`, or be silently absent because the corpus happened to contain none. The published `unclassifiable: 0` does not detect the gap because no cell exercised it."
+    },
+    {
+      "id": "F2",
+      "severity": "high",
+      "title": "a named bucket-3 cell IS a wrong-value answer: rows-longrun-v3 cp.1.t24 asserts ANSWER: 7 against expected 31",
+      "evidence": "experiments/ptr-engine/measure/cell-longrun-v3-20261026T1556Z.grade-v5.json, arm pointer-stable, id cp.1.t24: verdict 'fail', reason 'answer_not_contract:multiple_answer_lines', answer_raw 'ANSWER: 7', expected 31, asserted null. The claim records it under bucket 'answered_right_but_rejected_by_contract' (note the word RIGHT). The last ANSWER line isolates numeral 7; 7 != 31.",
+      "consequence": "The sentence 'zero wrong-value answers in 66 non-passes' is contradicted by this one cell: the reply DID answer, in contract-shaped form, and answered 7 where truth is 31. It is a wrong value the contract could not reach because two ANSWER lines made it unparseable - not evidence that arms avoid wrong values."
+    },
+    {
+      "id": "F3",
+      "severity": "medium",
+      "title": "second bucket-3 cell answered nothing: rows-longrun-v6-tools cp.1.t24 has answer_raw null",
+      "evidence": "claim row: grid rows-longrun-v6-tools.jsonl, arm pointer-stable, cp.1.t24, reason 'answer_not_contract', answer_raw null, bucket answered_right_but_rejected_by_contract; source cell-pointer-stable-20261026T145722Z.grade-v5.json. Re-derived with the current grader (experiments/ptr-engine/measure/regrade/rows-longrun-v6-tools.grade-v5.json) the same cell is verdict 'undecidable', reason 'prose_only'.",
+      "consequence": "A cell with no ANSWER line at all was counted as 'answered, right, rejected by contract'. It belongs in never_answered. That is the mirror image of the error the card predicted: the mapping moves a non-answer INTO bucket 3, inflating the contract share rather than deflating it."
+    },
+    {
+      "id": "F4",
+      "severity": "medium",
+      "title": "the third bucket-3 cell is genuine and must stay: the CALL is semantically exact, only keyword order differs",
+      "evidence": "rows-longrun-v6-tools cp.2.t46, answer_raw 'ANSWER: ledger.record_refusal(scope=scope_name, serialized_ref=text, code=error.code)'. grade_v5.py:668-690 grades callee + kwarg name set + value text and states 'order is a formatting rule, not a truth rule'. So the answer is right and the rejection is form-only. Reclassified by me as answered_right_but_rejected_by_contract (same as the claim)."
+    },
+    {
+      "id": "F5",
+      "severity": "medium",
+      "title": "era: 2 of the claim's 3 bucket-3 cells come from a file QUALITY-ERAS already marks pre-T3; the bucket is era-inflated 3 -> 1",
+      "evidence": "experiments/ptr-engine/measure/QUALITY-ERAS.json census: cell-longrun-v4 and cell-longrun-v4-tools = era 'current', 'byte-identical re-derivation against the current grader'; cell-pointer-stable-20261026T145722Z = era 'pre-T3', 're-derivation DIFFERS: arms.pointer-stable.cells'; the two cell-transcript-grow files = 'undatable' (rows file absent). Independent current-grader recompute over the same 69-cell population (measure/regrade/*.grade-v5.json): 29 prose_only, 21 turn_missing, 10 unparseable, 5 no_answer_line, 3 num_equal, 1 answer_not_contract:multiple_answer_lines -> by the claim's own mapping that is 65 / 0 / 1 / 0 / 0, not 63 / 0 / 3 / 0 / 0.",
+      "consequence": "bucket3 share numerator is 1, not 0, on either era once F2 is applied; the claim's bucket3 = 3 is one pre-T3 prose cell (F3) plus one wrong value (F2)."
+    },
+    {
+      "id": "F6",
+      "severity": "low",
+      "title": "bucket name `never_answered` over-reads its own population",
+      "evidence": "of 64 never_answered cells, only 21 are turn_missing (no row exists at all). The other 43 have a graded turn: 28 prose_only + 10 unparseable(sentinel) + 5 no_answer_line. grade_v5.py:199-202 states the rule in the open: 'An absent answer is not a wrong answer. An empty turn has no value to grade (no_answer_line); prose with no contract line at all has nothing the contract may read (prose_only). Both are undecidable.' The population is 'answered outside the contract', not 'never answered'.",
+      "mitigation": "The over-read does not hide a correct answer: of the 28 prose_only turns, 0 contain the numeral 64; 17 carry some other numeral. So no pass is concealed by the naming."
+    }
+  ],
+  "mapping_attack_verbatim": {
+    "rule": "my own rule, applied without reading REASON_BUCKET: a cell is (1) never_answered when no turn exists, the turn is empty, the reply is the runner sentinel 'ANSWER: NOT-AN-ANSWER', or the reply is prose that asserts no value for the asked quantity; (2) answered_wrong_value when a value is asserted that differs from expected; (3) answered_right_but_rejected_by_contract when the asserted value equals expected but the form is outside the contract.",
+    "my_buckets_vs_theirs": {
+      "prose_only (28)": "never_answered - both. prose_only with answer_raw null means no contract line was written; 0 of 28 contain 64.",
+      "turn_missing (21)": "never_answered - both. No row exists at that turn, so no answer was recorded.",
+      "unparseable (9)": "never_answered - both. answer_raw is the runner sentinel 'ANSWER: NOT-AN-ANSWER', i.e. the runner recorded a refusal, not a model value.",
+      "no_answer_line (5)": "never_answered - both. Empty turn.",
+      "answer_not_contract:multiple_answer_lines (1)": "DISAGREE. Theirs: answered_right_but_rejected_by_contract. Mine: answered_wrong_value - the isolated line is 'ANSWER: 7' against expected 31. See F2.",
+      "answer_not_contract, answer_raw null (1)": "DISAGREE. Theirs: answered_right_but_rejected_by_contract. Mine: never_answered - there is no answer line to be right or wrong. See F3.",
+      "answer_not_contract, answer_raw = the ledger CALL (1)": "AGREE. answered_right_but_rejected_by_contract - kwarg order only. See F4.",
+      "num_equal (7) / call_equal (2)": "passes - both."
+    },
+    "unstated_rules": [
+      "The mapping lists 'unparseable' only inside its own prose note; the note's split (sentinel -> never_answered, real text -> contract bucket) is stated for `unparseable` but is NOT stated for the two cells whose reason is exactly 'answer_not_contract' with answer_raw null vs a real line - the claim in practice sent both to bucket 3.",
+      "The mapping names `number_wrong:*` and `missing_anchor:*` (grade_v4 reasons) with no grade_v5 counterpart, so 'answered_wrong_value' as written documents a grader family this population is not graded by (F1)."
+    ]
+  },
+  "answered_wrong_value_structurally_empty": {
+    "answer": "NO - it is empirically empty, not structurally empty. A correct-format wrong value is fully gradable and grades fail.",
+    "synthetic_proof": {
+      "method": "built three throwaway row dicts in memory (no file written) and passed them to grade_v5.grade_rows against the same fixture longrun/tasks-v5/runtime-v5/LR-01.v5.json",
+      "rows": [
+        {"turn": 12, "content": "ANSWER: NUM 65", "result": "verdict=fail reason='num_mismatch' asserted=65 expected=64"},
+        {"turn": 24, "content": "ANSWER: NUM 999", "result": "verdict=fail reason='num_mismatch' asserted=999 expected=31"},
+        {"turn": 46, "content": "ANSWER: CALL ledger.record_refusal(code=WRONG.code, scope=scope_name, serialized_ref=text)", "result": "verdict=fail reason='kwarg_value_mismatch:code'"}
+      ],
+      "conclusion": "the fixture's checkpoint set admits parseable-and-wrong answers (a different integer, a different kwarg value); the contract does NOT make a wrong answer indistinguishable from no answer. Bucket2 is empty because no arm in this corpus produced a parseable wrong answer - and because the author's classifier cannot bucket one if it had (F1). The single wrong value that IS in the corpus (F2) hid inside bucket 3, behind an unparseable two-line reply."
+    }
+  },
+  "threshold_arithmetic": {
+    "their_numerator": 0,
+    "their_denominator": 42,
+    "reproduced": "66 non-passes - 24 pointer-stable non-passes = 42 non-pointer non-passes (lease-reopen 12 + transcript-compact 12 + transcript-grow 18)",
+    "share_reproduced": "0/42 = 0.0%",
+    "threshold": 60.0,
+    "threshold_met_under_their_rule": false,
+    "verdict": "`threshold_met false` is ARITHMETICALLY CORRECT under the card's own rule: 0.0% < 60%. But the test is INAPPLICABLE, not failed: 42 of 42 non-pointer non-passes are non-answers, so the denominator contains nothing whose contract compliance could be measured. The honest conclusion is 'no non-pointer arm produced a contract-form answer, so compliance is untested', not 'the arms comply 0% of the time'. The headline's own reading (H3 measures whether an arm answers at all) is the correct one; the threshold line over-reads it into a compliance result."
+  },
+  "three_passes": {
+    "cells": [
+      {"grid": "rows-longrun-v4-2026-10-26.jsonl", "cp": "cp.0.t12", "answer_raw": "ANSWER: 64", "reason": "num_equal", "source": "cell-longrun-v4-20261026T1556Z.grade-v5.json", "generated_at": "2026-10-26T15:56:19+00:00", "era": "current (QUALITY-ERAS: byte-identical re-derivation)", "same_grader": "grade_v5, rule 'ANSWER-CONTRACT v1', fixture LR-01.v5"},
+      {"grid": "rows-longrun-v4-tools-2026-10-26.jsonl", "cp": "cp.0.t12", "answer_raw": "ANSWER: 64", "reason": "num_equal", "source": "cell-longrun-v4-tools-20261026T1556Z.grade-v5.json", "generated_at": "2026-10-26T15:56:19+00:00", "era": "current (byte-identical re-derivation)", "same_grader": "grade_v5, rule 'ANSWER-CONTRACT v1', fixture LR-01.v5"},
+      {"grid": "rows-longrun-v6-tools.jsonl", "cp": "cp.0.t12", "answer_raw": "ANSWER: 64", "reason": "num_equal", "source": "cell-pointer-stable-20261026T145722Z.grade-v5.json", "generated_at": "2026-10-26T14:57:22+00:00", "era": "PRE-T3 (QUALITY-ERAS: 're-derivation DIFFERS: arms.pointer-stable.cells')", "same_grader": "declares grade_v5 / same rule string / same fixture, but no grader sha is recorded, so the repair state at 14:57 is unconfirmable"}
+    ],
+    "confirmed": "the third pass SURVIVES the era change: the current-grader re-derivation experiments/ptr-engine/measure/regrade/rows-longrun-v6-tools.grade-v5.json still grades cp.0.t12 pass / num_equal / 'ANSWER: 64'. So all three passes are real under both eras, but only 2 of 3 are same-batch siblings - the pointer-stable file is a pre-T3 document that AGREES with the current grader on this cell and disagrees on others.",
+    "all_three_same_grader": "No - two are current-era (15:56:19) and one is pre-T3 (14:57:22); all three declare grader grade_v5 with the identical `rule` and `contract` strings and the same fixture, so they are the same grader FAMILY but not the same repair era."
+  },
+  "verdict": "partial",
+  "verdict_reason": "all five totals reproduce exactly from the named sources, and the never_answered call is right for prose_only / turn_missing / sentinel-unparseable / no_answer_line; but bucket 3 is wrong on two named cells (F2: a wrong value 7-vs-31; F3: a null answer), the mapping's bucket-2 reason vocabulary is from grade_v4 and misses every reason grade_v5 emits (F1), and two of the three bucket-3 cells come from a pre-T3 document (F5).",
+  "one_sentence_answer": "The quality pillar as currently graded measures answer PRESENCE-in-contract-form, not answer correctness: only 5 of 69 real-grid cells emitted an ANSWER line (3 right, 1 verifiably wrong, 1 right-but-out-of-form), so the number that separates presence from correctness is the attempted-answer rate 5/69 = 7.2% against correctness-among-attempts 3/5 = 60% - while the headline's '0 wrong in 66' is an artefact of a bucket that cannot receive a wrong value.",
+  "tool_calls": 17,
+  "bound": 24
+}

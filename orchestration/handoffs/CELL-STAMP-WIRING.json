@@ -1,0 +1,42 @@
+{
+ "artifacts": [
+  "tests/test_stamp_wiring.py",
+  "docs/CELL-STAMP-WIRING.md",
+  "orchestration/units/CELL-STAMP-WIRING.md",
+  "orchestration/handoffs/CELL-STAMP-WIRING.json",
+  "orchestration/journals/CELL-STAMP-WIRING.jsonl"
+ ],
+ "assumptions": [
+  "Used measure/rows-longrun-v6-tools.jsonl (72 rows / 48 turns, kind='turn' + 'tool-followup') as the 'real 48-turn era-B-shaped rows file'; era-B fixtures in the corpus use kind='turn' with definition_fallback=true, which the analyser accepts. No synthetic rows were created.",
+  "Passed --no-census on every case so the real measure/GRID-CELL-SANITY.json could not supply a fallback stamp and confound the absent-key branch; the census fallback path (:728) is documented but not exercised end-to-end, since exercising it needs a census file the write paths forbid creating.",
+  "--resamples 200 instead of the default 10000 for speed; the p50 and its order-statistic span do not depend on resample count.",
+  "/tmp is per-call ephemeral in this harness, so every /tmp fixture was built and consumed inside a single bash call; nothing persistent was written there.",
+  "OBSERVED, NOT AUTHORED: experiments/ptr-engine/longrun/cell.py has mtime 2026-10-26 14:17:26 (-0500), inside this session's window, while this unit only ever read it. It is git-untracked (?? ), so no diff against a baseline exists; it contains zero occurrences of `usable_for`, so the change is not this unit's subject matter. Most likely a concurrent card unit writing its own work. Frozen files this unit actually touched: none. analyze_stats.py mtime 14:14:14 and run_longrun.py 14:04:32 both PREDATE the session start (14:15:17)."
+ ],
+ "blocker": "",
+ "evidence": {
+  "absent_stamp_branch": "exp/ptr-engine/longrun/analyze_stats.py:722 `... and USABLE_FOR_FIELD in man` (and :728 for the census) cannot match a key-less manifest, so :733-734 returns {\"usable_for\": None, \"reason\": \"\", \"source\": USABLE_FOR_UNSTAMPED, \"manifest_path\": None}; :749 `excluded = analyses is not None and len(analyses) == 0` is False for None, so :754 keeps the cell; :1753 prints `usable_for unstamped ... (included: no usability stamp on disk -- not a certification)`; :1760-1763 refuses ONLY when every cell was excluded.",
+  "bound": 24,
+  "commands": [
+   "PYTHONPATH=src python3 -m pytest tests/test_stamp_wiring.py -q",
+   "python3 analyze_stats.py --rows /tmp/stampwiring/rows.jsonl --manifest /tmp/stampwiring/man-a.json --no-census --resamples 200",
+   "python3 analyze_stats.py --stamp-rows /tmp/stampwiring/rows.jsonl --manifest-out /tmp/stampwiring/man-a.json --usable-for \"h1,h2,h3\" --usable-for-reason \"era-B 48-turn scan\""
+  ],
+  "grid_step": "RUN-A-STAR-2 must run, AFTER EACH CELL (not only the last): `UF=\"h1,h2,h3\"` (or `UF=\"\"` for a rejected cell); `python3 analyze_stats.py --stamp-rows \"$CELL_ROWS\" --manifest-out \"$CELL_MANIFEST\" --usable-for \"$UF\" --usable-for-reason \"$CELL_REASON\" && grep -q '\"usable_for\"' \"$CELL_MANIFEST\"`. Check: (1) exit 0, (2) key present by grep, (3) value is the intended list and [] is distinguishable from absent (json KeyError), (4) analyser line reads source=manifest, not unstamped.",
+  "red_green": "tests/test_stamp_wiring.py -> `PYTHONPATH=src python3 -m pytest tests/test_stamp_wiring.py -q` = 9 passed (green). Red: a COPY of the module with the absent branch replaced by `return {\"usable_for\": [\"h1\",\"h2\",\"h3\"], \"reason\": \"\", \"source\": \"manifest\", \"manifest_path\": None}` reports `usable_for=['h1','h2','h3'] source='manifest'`, invariant 'absent is None/unstamped' = False; test_guard_bites_when_absent_is_treated_as_usable asserts that. The real branch was NOT edited.",
+  "stamp_command": "from experiments/ptr-engine/longrun: `python3 analyze_stats.py --stamp-rows <ROWS> --manifest-out <MAN> --usable-for \"h1,h2,h3\" --usable-for-reason \"<why>\"` (writer write_cell_manifest_usable_for analyze_stats.py:777 -> stamp_usable_for :759; CLI flag :1647). Before: keys ['N','arm','dry_run','rep','rows_path','run_id','schema'], usable_for present False. After: `stamped usable_for=['h1','h2','h3'] into man-a.json` EXIT=0, key at man-a.json:9, reason :14. Analyser re-run: unstamped -> `source=manifest`, ttft_p50 identical 144.81ms [143.58,147.68]. `--usable-for \"\"` stamps [] and flips the cell to `no usable cells`/exit 1. A rows path with no matching manifest raises FileNotFoundError (analyze_stats.py:793), exit 1.",
+  "three_cases": "fixture measure/rows-longrun-v6-tools.jsonl (72 rows = 48 turns + 24 tool-followup) copied to /tmp/stampwiring; `python3 analyze_stats.py --rows /tmp/stampwiring/rows.jsonl --manifest /tmp/stampwiring/man-<case>.json --no-census --resamples 200`: (a) NO key -> EXIT=0, `usable_for unstamped`, `ttft_p50 n=48 144.81ms [143.58, 147.68]`; (b) [\"h1\",\"h2\",\"h3\"] -> EXIT=0, `usable_for ['h1','h2','h3'] source=manifest`, SAME interval; (c) [] -> EXIT=1, `usable_for EXCLUDED rows.jsonl 72 row(s) NOT analysed` then `no usable cells: every input cell is stamped usable_for: [] -- refusing rather than printing an empty table as success`.",
+  "tool_calls": 15,
+  "verdict_answer": "SILENTLY INCLUDED \u2014 an unstamped cell enters every statistic with one stdout line `usable_for unstamped ... not a certification` and exit 0; only an explicit usable_for: [] is excluded, and only an all-empty grid is refused."
+ },
+ "next_unit_hint": "Per-cell stamping is the only defence because analyze_stats.py:749 defaults to include on absence. A future unit may flip the absent default to deny-by-absence (then cell.py/run_longrun.py must write the stamp at cell close, and this unit's test 1 flips polarity with it).",
+ "status": "done",
+ "unit": "CELL-STAMP-WIRING",
+ "write_paths": [
+  "tests/test_stamp_wiring.py",
+  "docs/CELL-STAMP-WIRING.md",
+  "orchestration/units/CELL-STAMP-WIRING.md",
+  "orchestration/handoffs/CELL-STAMP-WIRING.json",
+  "orchestration/journals/CELL-STAMP-WIRING.jsonl"
+ ]
+}

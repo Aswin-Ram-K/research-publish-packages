@@ -19,7 +19,7 @@ the pipeline and nothing in `src/` or `tests/` may depend on it.
 - If an experiment needs to modify target-shaped files, it first makes a **sandbox copy** under
   its own `experiments/<name>/` directory (or under `state/`) and runs against that copy. The copy
   lives inside this workspace; the original is untouched.
-- Nothing is ever written outside this workspace: `/home/zer0null/reserach extarctor`.
+- Nothing is ever written outside this workspace: `/home/zer0null/research extractor`.
 - After an experiment, the target may be checked with **read-only** commands only
   (`git status`, mtime sweeps). No `git` state changes in the target, ever.
 

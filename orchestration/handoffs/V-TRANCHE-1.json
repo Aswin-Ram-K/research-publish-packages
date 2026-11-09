@@ -1,0 +1,55 @@
+{
+  "unit": "V-TRANCHE-1",
+  "overall": "pass",
+  "verdict": "prereg_frozen_no_rows",
+  "checks": [
+    "prereg frozen with 0 rows on disk; both rows_files=[] and discovery refusal verified",
+    "sha256(docs/PREREG-TRANCHE-1.md)=899d1367546104bedb0fd6ce2de3627726b8dfd938abd85403b57bc976bd0481 recorded in measure/PREREG-TRANCHE-1.json and matches",
+    "verify_tranche1.py --check exit 0: 20 thresholds, drift [], doc table == JSON",
+    "verify_tranche1.py (default, no rows) exit 0: {verdict: awaiting_rows, analysis: null}; no statistic computed",
+    "pytest experiments/ptr-engine/tests/test_verify_tranche1.py -q: 17 passed",
+    "verify_tranche1.py --self-test: 7/7 synthetic cases ok",
+    "no rows-runA-* created; no measure/tranche1-verify.json written (demonstration output went to /tmp)"
+  ],
+  "not_reproduced": [],
+  "overstated": [],
+  "unverified": [
+    "the post-grid analysis path (analyze() over real rows) is exercised only on synthetic rows; its first real run is the re-run of this card"
+  ],
+  "red_green": {
+    "disjoint_interval": {"green": "separated_lower at CAGR n=144", "red": "DIRECTION=C_higher -> separated_higher"},
+    "overlap": {"green": "overlap at n=144", "red": "DIRECTION_STRICT_DISJOINT=False -> separated_lower"},
+    "below_floor": {"green": "refused, reason insufficient_n_floor, floor 60", "red": "MIN_N_USABLE=40 -> reason changes to insufficient_tail"},
+    "censored_tvs": {"green": "tvs null, censored true, censor_kind no_verified_checkpoint, at turn 48", "red": "TVS_CENSOR_AS_ZERO=True -> tvs 0, censored false"},
+    "turn_missing": {"green": "missing_ids [cp.0.t06], decidable 1, H3 not_adjudicable", "red": "TURN_MISSING_COUNTS_AS_FAIL=True -> missing_ids [], decidable 2"},
+    "h2_split": {"green": "h2_failed_split (inclusive passes, uncached fails)", "red": "H2_REQUIRE_BOTH=False -> h2_pass"},
+    "mcnemar": {"green": "licensed b=7 c=0 p<0.05, veto true", "red": "MCNEMAR_ALPHA=0.001 -> veto false"}
+  },
+  "synthetic_verdicts": {
+    "disjoint_p95_intervals": "h1 separated_lower (pointer-stable hi < transcript-grow lo); n=144",
+    "overlapping_p95_intervals": "h1 overlap -> direction refused",
+    "below_n_floor": "h1 refused, reason insufficient_n_floor, n=48 floor=60",
+    "censored_tvs": "tvs null + censored true + censored_at_turn 48",
+    "turn_missing_checkpoint": "missing id printed by name, leaves denominator, H3 not_adjudicable"
+  },
+  "blocker": "",
+  "next_unit_hint": "second pass of this card after RUN-A*: run verify_tranche1.py with default paths (writes measure/tranche1-verify.json), require --check still exit 0, and publish H1 R-all n=144/96, H2 both limbs, H3 x/12+x/9 with NONE flags, tvs or its censoring turn",
+  "write_paths": [
+    "docs/PREREG-TRANCHE-1.md",
+    "experiments/ptr-engine/tools/verify_tranche1.py",
+    "experiments/ptr-engine/tests/test_verify_tranche1.py",
+    "experiments/ptr-engine/measure/PREREG-TRANCHE-1.json",
+    "orchestration/units/V-TRANCHE-1.md",
+    "orchestration/handoffs/V-TRANCHE-1.json",
+    "orchestration/journals/V-TRANCHE-1.jsonl"
+  ],
+  "tool_calls": 34,
+  "bound": 28,
+  "assumptions": [
+    "Bound overrun (34 vs 28): 5 calls were spent locating the real analyze_stats.py line numbers because the frozen docs cite stale :70-74/:187-247 ranges; remaining calls were the required artefact writes.",
+    "Verdict row sha is HEAD f17663d1 with a dirty tree (tree_freeze warning: the commit does not contain these bytes); the row is still the measured evidence for the pytest command.",
+    "H2 denominator: graded missing counts are removed from decidable because PREREG-ARM-RUN.md:113 and PARM-1 say turn_missing leaves the denominator; grade_v5 counts it in fail, so the harness subtracts the missing subset and reports grade_decidable beside it. This is the frozen text, not a relaxation.",
+    "R-all n is 144 for the three-rep arms and 96 for lease-reopen (2 reps); the prereg says so and the report must not write n=144 for all four.",
+    "No board post was made: the required REPORT content is in this handoff and the final reply; the [verdict] row was recorded first."
+  ]
+}

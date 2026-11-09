@@ -1,0 +1,86 @@
+{
+ "artifacts": [
+  "state/harness-baselines/20261026T190209Z/MANIFEST.json",
+  "state/harness-baselines/20261026T190209Z/experiments/ptr-engine/longrun/cell.py",
+  "state/harness-baselines/20261026T190209Z/experiments/ptr-engine/longrun/run_longrun.py",
+  "state/harness-baselines/20261026T190209Z/experiments/ptr-engine/longrun/analyze_stats.py",
+  "state/harness-baselines/20261026T190209Z/experiments/ptr-engine/longrun/client.py",
+  "state/harness-baselines/20261026T190209Z/experiments/ptr-engine/longrun/grade_v5.py",
+  "state/harness-baselines/20261026T190209Z/experiments/ptr-engine/longrun/spawn_record.py",
+  "state/harness-baselines/20261026T190209Z/experiments/ptr-engine/longrun/exit_codes.py",
+  "state/harness-baselines/20261026T190209Z/experiments/ptr-engine/tools/det_verify.py",
+  "state/harness-baselines/20261026T190209Z/experiments/ptr-engine/tools/run_a_star.py",
+  "state/harness-baselines/20261026T190209Z/experiments/ptr-engine/tools/tree_freeze.py",
+  "docs/HARNESS-BASELINES.md",
+  "experiments/ptr-engine/tools/harness_baseline.py",
+  "tests/test_harness_baseline.py",
+  "orchestration/units/HARNESS-BASELINE-SNAPSHOT.md",
+  "orchestration/handoffs/HARNESS-BASELINE-SNAPSHOT.json",
+  "orchestration/journals/HARNESS-BASELINE-SNAPSHOT.jsonl"
+ ],
+ "assumptions": [
+  "the unit lists 8 files, cell.py:128-135 lists 5 different HARNESS_FILES; the union (10) was snapshotted so the digest a cell actually refuses on is covered",
+  "the fixture is per-invocation with no fixed path, so harness_sha256_of_HARNESS_FILES excludes it and is not comparable to the HARNESS-REPIN pin 1f7c6791",
+  "the red test tampers with a copy under /tmp, never a workspace source, because no harness file may be edited"
+ ],
+ "blocker": "",
+ "bound": {
+  "exceeded": false,
+  "limit": 18,
+  "tool_calls": 15
+ },
+ "evidence": {
+  "baseline": {
+   "dir": "state/harness-baselines/20261026T190209Z",
+   "file_shas": {
+    "experiments/ptr-engine/longrun/analyze_stats.py": "800c8f6c2a483895febbe1bdc1a946408d6d4d01bdb7c1accda83d70364cdf6c",
+    "experiments/ptr-engine/longrun/cell.py": "c29a9fb36e9e8f0e166583d56db00b2184fbc12a97b77b1a72ca9f612c1a9c59",
+    "experiments/ptr-engine/longrun/client.py": "5aa23bb5470b7e0909992b3f0947867953ba39204e5d03eff0f95c30e57ca7bb",
+    "experiments/ptr-engine/longrun/exit_codes.py": "a57017e1e1edd67aa4ee2b5245d9619bcf10cb5cbfa4f31ac49a3cbf1f9bfa3a",
+    "experiments/ptr-engine/longrun/grade_v5.py": "056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+    "experiments/ptr-engine/longrun/run_longrun.py": "0d581d1f2ef90b1c3667c5cffcbe2088c60e6892188d4f643248a06b2fd32eb3",
+    "experiments/ptr-engine/longrun/spawn_record.py": "eba1547168afd1bd73891ee752994e90da9c77a70f386d39a9ef7dc7de8fe07c",
+    "experiments/ptr-engine/tools/det_verify.py": "12ccc74ea31c3843021f1ae6fa771b458082f78393e2117cd86960fd221b6439",
+    "experiments/ptr-engine/tools/run_a_star.py": "2c60504a66064204eefcf7969a34347b8c30c372065d2a6175f7d810b7594010",
+    "experiments/ptr-engine/tools/tree_freeze.py": "e63e4f7f6fd72bb5fff0a499fac8def59ea0caa210fdc3b82eb3ee6e81764092"
+   },
+   "files": 10,
+   "harness_sha256_of_HARNESS_FILES": "12616ff35b2941f622c3da67016874c4bae53e735596e08e87361348b62f355d",
+   "manifest_sha256": "37e50181f225878cc9fcdff9f4fc242346285f456f3fcdf80d461e493d20838a",
+   "taken_at": "2026-10-26T19:02:09Z"
+  },
+  "command_or_count": "baseline state/harness-baselines/20261026T190209Z, 10 files, manifest_sha256=37e50181f225878cc9fcdff9f4fc242346285f456f3fcdf80d461e493d20838a, harness_sha256_of_HARNESS_FILES=12616ff35b2941f622c3da67016874c4bae53e735596e08e87361348b62f355d; verify green 0 differing exit 0; red (tampered /tmp copy) moved cell.py exit 1; pytest 1 passed; run_longrun.py diff stat 1295 insertions / 224 deletions; requests_sent=0 network_events=0; harness files edited=0",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/harness_baseline.py snapshot -> baseline state/harness-baselines/20261026T190209Z; manifest_sha256 37e50181f225878cc9fcdff9f4fc242346285f456f3fcdf80d461e493d20838a",
+   "python3 experiments/ptr-engine/tools/harness_baseline.py verify state/harness-baselines/20261026T190209Z -> 10x same, 0 differing file(s), exit 0",
+   "snapshot --root /tmp/hb-red/repo --out /tmp/hb-red/bases --label RED; append one line to /tmp copy of cell.py; verify /tmp/hb-red/bases/RED --root /tmp/hb-red/repo -> moved experiments/ptr-engine/longrun/cell.py baseline c29a9fb36e9e8f0e166583d56db00b2184fbc12a97b77b1a72ca9f612c1a9c59 -> now dce7550c965156324186efedda270b3b5c27fe73cf61243ed85e9b639ac0e34c; 1 differing file(s); exit 1",
+   "PYTHONPATH=src python3 -m pytest tests/test_harness_baseline.py -q -> 1 passed in 0.12s",
+   "git --no-optional-locks diff --stat f17663d1 -- experiments/ptr-engine/longrun/run_longrun.py -> 1 file changed, 1295 insertions(+), 224 deletions(-)",
+   "git --no-optional-locks rev-parse HEAD -> f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+   "git --no-optional-locks ls-files --error-unmatch experiments/ptr-engine/longrun/cell.py -> error: pathspec ... did not match any file(s) known to git (untracked)"
+  ],
+  "network_events": 0,
+  "next_change_covered": "the next edit to any of the 10 files is provable byte-for-byte against state/harness-baselines/20261026T190209Z (cell.py against c29a9fb3), and the 5-file HARNESS_FILES digest against 12616ff3",
+  "requests_sent": 0,
+  "unattributable": "cell.py 18:54:16Z (e24e867b -> c29a9fb3): no baseline prior to that timestamp; permanently unattributable, content not guessed",
+  "verdict_row": {
+   "command": "PYTHONPATH=src python3 -m pytest tests/test_harness_baseline.py -q",
+   "exitCode": 0,
+   "recorded_before_handoff_write": true,
+   "result": "1 passed in 0.12s",
+   "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3"
+  }
+ },
+ "next_unit_hint": "Any card that edits cell.py/run_longrun.py/analyze_stats.py must run harness_baseline.py snapshot BEFORE the edit and name the baseline dir + post-edit sha in its handoff; a later card can then diff -u the two baselines instead of reconstructing attribution.",
+ "status": "done",
+ "unit": "HARNESS-BASELINE-SNAPSHOT",
+ "write_paths": [
+  "state/harness-baselines/**",
+  "docs/HARNESS-BASELINES.md",
+  "experiments/ptr-engine/tools/harness_baseline.py",
+  "tests/test_harness_baseline.py",
+  "orchestration/units/HARNESS-BASELINE-SNAPSHOT.md",
+  "orchestration/handoffs/HARNESS-BASELINE-SNAPSHOT.json",
+  "orchestration/journals/HARNESS-BASELINE-SNAPSHOT.jsonl"
+ ]
+}

@@ -1,0 +1,37 @@
+{
+  "unit": "HANDOFF-LINT",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/tools/handoff_lint.py",
+    "experiments/ptr-engine/longrun/tests/test_handoff_lint.py",
+    "experiments/ptr-engine/measure/HANDOFF-LINT.json",
+    "docs/HANDOFF-LINT.md",
+    "orchestration/units/HANDOFF-LINT.md",
+    "orchestration/handoffs/HANDOFF-LINT.json"
+  ],
+  "evidence": {
+    "command_or_count": "946 handoffs scanned; shape split unit=778 verifier=168 neither=0; 0 unparseable; 0 skipped mid-write; E_ARTIFACT_ABSENT 75, E_MISSING_KEY 34, E_STUB 16, E_DONE_NO_EVIDENCE 4, E_DONE_NO_ARTIFACTS 3, W_NO_COMMANDS 182, W_VERSION_STALE 21; 40 of 759 done/pass claims list artifacts not all present (5.3%); 13/13 tests pass; all 8 codes red->green.",
+    "commands": [
+      "python3 experiments/ptr-engine/tools/handoff_lint.py orchestration/handoffs --summary --out experiments/ptr-engine/measure/HANDOFF-LINT.json",
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_handoff_lint.py -q",
+      "python3 -m pytest tests/test_orchestration_handoffs.py -q",
+      "git --no-optional-locks status --porcelain orchestration/handoffs"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Wire handoff_lint into the unit contract: run it on a card's own handoff before the card settles, and treat 40/759 as the frozen baseline for the substantiation gap (frozen like the U8.15/U8.18 shape baselines under state/logs/). Remaining honest gap: 2 remote-scheme (GX10:) and 10 /tmp artifacts are uncheckable locally, so 12 of the 75 absences are 'not verifiable here', not 'proven missing'.",
+  "write_paths": [
+    "experiments/ptr-engine/tools/handoff_lint.py",
+    "experiments/ptr-engine/longrun/tests/test_handoff_lint.py",
+    "experiments/ptr-engine/measure/HANDOFF-LINT.json",
+    "docs/HANDOFF-LINT.md",
+    "orchestration/units/HANDOFF-LINT.md",
+    "orchestration/handoffs/HANDOFF-LINT.json"
+  ],
+  "assumptions": [
+    "Shape detection prefers 'overall' over 'status' when both are present, because the verdict is read from 'overall'.",
+    "Artifact existence strips only non-path decorations (trailing parenthetical note, #L anchor, #json-pointer, backticks) plus brace/comma expansion; 173 of 272 initially-absent entries were such false positives and are now correctly green.",
+    "W_VERSION_STALE is best-effort and deliberately narrow: orchestration/units/<unit>.md must contain a 'superseded' marker AND be newer than the handoff; otherwise it is skipped.",
+    "Pre-existing failure observed, NOT caused by this card: tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps reports verifier-shape gaps ['overall','checks'] for V2-RUNTIME.json, V3-FIXTURE.json and V3-PILOT.json. All three carry status:'done' and no 'overall', i.e. they are unit-shaped handoffs whose unit name starts with 'V'; that guard's classifier keys off the name prefix, handoff_lint keys off key presence. All three files are git-unmodified."
+  ]
+}

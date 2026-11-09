@@ -1,0 +1,62 @@
+{
+ "unit": "VERIFY-BATCH-1",
+ "overall": "pass",
+ "checks": [
+  "HARNESS-GUARDS: python3 experiments/ptr-engine/longrun/tests/test_guards.py -> 6/6 GREEN, exit 0 (re-run, not copied)",
+  "HARNESS-GUARDS: outgoing payload captured via injected transport (client.send_chat opener): max_tokens=4096 on the wire, returned row max_tokens=4096 -- a fake-server test also asserts last_body['max_tokens']==4096",
+  "HARNESS-GUARDS red->green in throwaway copy .verify-tmp/rev (full experiments/ptr-engine tree, correct layout so all 6 cases are green at baseline): R1 remove \"max_tokens\": cap from request_body -> (a) RED; R2 disable wall-cap check in client.collect_stream -> (b) RED; R3 DEFAULT_THINKING='auto' -> (e) RED; baseline restored -> 6/6 GREEN exit 0",
+  "HARNESS-GUARDS (d): my own preflight run with fake runner -> cell exit 8, projected_wall=8640s vs cap 3600s, runner marker absent, out-dir empty; --max-wall 0 -> marker written, exit 5 (runner entered) -- runner never invoked on refusal",
+  "HARNESS-GUARDS evidence rows intact: measure/rows-cell-pointer-stable-20261026T145758Z.jsonl 6 rows, sha256 5ac9dd992f5d8715696925f56c225024e172cb98b4b9a937a0ee63bd099e9800, mtime 10:17 (before the 10:24 handoff); turn5 error=None truncated=True completion_tokens=16384 wall_ms=475873",
+  "CHECKPOINT-COVERAGE: independent AST extraction (my own script, does not import fixture_coverage.py) re-derived all 12 truths: NUM 64/6/31/5/2, CALL 4, NONE 3; every truth line inside its declared range; cl100k token counts max 29 (cp.3.t06) so all <=40",
+  "CHECKPOINT-COVERAGE: python3 experiments/ptr-engine/tools/fixture_coverage.py --fixture ...LR-01.v6.json -> exit 0 'PASS: 12/12 checkpoints decidable, none colliding, all <= 40 tokens'; pytest test_fixture_coverage.py -> 8 passed",
+  "CHECKPOINT-COVERAGE: LR-01.v5.json byte-unchanged sha256 967cef03c362446a3187c9a8517bb6867b03e680f9a673ab53e42bb9f06ab567, size 42183, mtime 09:35:15 (predates the unit)",
+  "CHECKPOINT-COVERAGE: v5->v6 cost arithmetic recomputed 3x4x3=36 -> 12x4x3=144, delta +108 = 9 extra items x 4 arms x 3 reps",
+  "CHECKPOINT-COVERAGE: all three author mutants reproduce independently (range shift cp.4.t08 exit 1; duplicate truth exit 1; kind TEXT exit 1)",
+  "MATRIX-HONESTY: independent derivation 23 run/arm pairs x 4 declared checkpoints (cp.0.t12, cp.1.t24, cp.2.t46, repair.t30) x 1 rep = 92 cells (9 LR-01 rows-longrun-*.jsonl files, 4 arms, rep always 1)",
+  "MATRIX-HONESTY: matrix_audit.py re-run -> 92 cells; pass 5, fail 38, missing_turn_absent 29, missing_answer_empty 7, missing_row_absent 0, missing_checkpoint_absent 0, undecidable 13; overall 5/43 PARTIAL GRID; pytest test_matrix_audit.py -> 11 passed",
+  "MATRIX-HONESTY: corrected headlines recomputed from the cells array: rows-longrun-c lease-reopen 0/3, pointer-stable 1/3, transcript-compact 0/3, transcript-grow 0/3; v6 pointer-stable 2/3; v4 pointer-stable 1/3 -- all match docs/MATRIX-COVERAGE.md",
+  "MATRIX-HONESTY mtime sweep: no rows-longrun-*.jsonl (latest 08:23) and no *.grade-v4.json (08:36) touched; measure/MATRIX-COVERAGE.json carries 10:32 because MY attack D run overwrote it via the default --out and I regenerated it with the author's exact command -- restored states are 92 cells, 5/38/29/7/0/0/13, 5/43, live_requests 0",
+  "HANDOFF-LINT: pytest test_handoff_lint.py -> 13 passed; corpus audit reproduces every code count E_MISSING_KEY 34, E_ARTIFACT_ABSENT 75, E_STUB 16, E_DONE_NO_EVIDENCE 4, E_DONE_NO_ARTIFACTS 3, W_NO_COMMANDS 182, W_VERSION_STALE 21, done/pass-with-missing 40",
+  "HANDOFF-LINT: files scanned 954 == real count (ls orchestration/handoffs/*.json | wc -l = 954 at that moment); the author's 946 was the live count at their run and 15 handoffs arrived after 10:24:30 from concurrent units (960 by my byte-integrity snapshot)",
+  "HANDOFF-LINT byte-integrity: sha256+size+mtime of all 960 handoffs before and after a lint run -> 0 changed",
+  "HANDOFF-LINT attacks on a synthetic dir: 0-byte artifact -> E_ARTIFACT_ABSENT + E_DONE_NO_ARTIFACTS (refused); artifacts entry pointing at a directory -> E_ARTIFACT_ABSENT (refused); verifier-shaped handoff without 'checks' -> E_MISSING_KEY + E_DONE_NO_EVIDENCE"
+ ],
+ "blocker": "",
+ "next_unit_hint": "Three reportable defects, none fixed here: (1) MATRIX-HONESTY cannot detect an extraneous cell -- matrix_audit.py:122 harvests arms from the rows themselves (arms = sorted({r.get('arm') for r in rows ...})), so a ghost arm is silently admitted as declared (my attack D: 2 run/arm pairs, 8 cells, exit 0); (2) CHECKPOINT-COVERAGE answerable_from_pinned_range is checked against the per-item source pointer only, never against sources[].pointer, so a truth outside the working set the model is shown still reports YES/exit 0 (attack C3), and a kind/rule mismatch (kind NUM over a call_inside_function derive) passes exit 0 (my mutant); (3) client.py:truncated needs a usage chunk -- 4096 emitted deltas with no usage chunk and no finish_reason yields truncated=False (attack B boundary). A follow-up card should add an arm/checkpoint declaration to the fixture (or a --strict extraneous check), validate sources[] pins, add the kind<->rule cross-check, and make truncated fall back to the emitted-token count at the cap.",
+ "write_paths": [
+  "orchestration/handoffs/VERIFY-BATCH-1.json",
+  "orchestration/verdicts/VERIFY-BATCH-1.md",
+  "experiments/ptr-engine/measure/BATCH-1-VERIFICATION.json",
+  "orchestration/units/VERIFY-BATCH-1.md"
+ ],
+ "not_reproduced": [
+  "HANDOFF-LINT '946 handoffs scanned' -- I re-ran and got 954; the real count was 954 at my run and 960 later, so the number was true at authoring time and is drift, not error, but I could not reproduce 946"
+ ],
+ "overstated": [
+  "MATRIX-HONESTY: the 'declared cell space' cannot detect a cell no fixture declares -- an arm harvested only from the rows is still called declared (attack D: ghost arm silently scored, exit 0)",
+  "MATRIX-HONESTY: a row carrying an undeclared checkpoint id (cp.99.t99) is dropped with no finding or counter",
+  "CHECKPOINT-COVERAGE: 'answerable_from_pinned_range' does not consider the pinned working set in sources[].pointer -- truth at L39 with the resolve.py working-set pin moved to #L100-L166 still reports YES and exit 0",
+  "CHECKPOINT-COVERAGE: the gate does not cross-check answer_spec.kind against derive.rule; kind NUM over a call_inside_function derive reports PASS exit 0",
+  "HARNESS-GUARDS: the wall cap is checked when a chunk arrives, so a stream that emits nothing is not bounded by --turn-wall-cap at all (my silent generator: 1.0s cap, aborted only at 3.00s when the next chunk arrived; with no chunk it is bounded only by --timeout). The handoff's assumptions state this honestly, so it is a documented limit, not a hidden one"
+ ],
+ "unverified": [
+  "grade_v5 end-to-end on v6 rows (no rows exist; the unit reports this itself)",
+  "score_longrun.py acceptance.checks mirroring the 9 new items (another card's path; untouched)"
+ ],
+ "attacks": {
+  "A_slow_stream": "1 token / 100 ms, never stopping, cap 2.0s -> TurnWallCap at wall=2.002s, overshoot 0.002s, 19 tokens emitted; cap DOES abort a slow-but-emitting stream. Silent (no-chunk) stream is bounded only by --timeout, not the cap",
+  "B_4095_tokens": "4095 deltas + finish=stop, no usage -> finish_reason=stop, truncated=False, cap not tripped (PASS). Boundary hole: 4096 deltas, no usage, no finish -> truncated=False (should be True)",
+  "C_shifted_pin": "cp.0.t12 source #L39 -> #L40 -> 'cp.0.t12: truth at [39] falls outside the declared pinned range #L40', exit 1 (PASS). Shifting sources[].pointer instead -> still PASS exit 0 (gap)",
+  "D_extraneous_cell": "synthetic rows dir with arm 'ghost-arm' and a row for undeclared cp.99.t99 -> ghost-arm admitted as declared ('2 run/arm pairs x 4 = 8 cells'), scored 0/1, exit 0; cp.99.t99 silently dropped. NOT detected",
+  "E_empty_artifact": "status:'done' handoff listing a 0-byte artifact -> E_ARTIFACT_ABSENT + E_DONE_NO_ARTIFACTS, exit 1: it does NOT pass. Empty-but-existing is caught; content/semantics remain unchecked, and the diagnostic mislabels it 'absent'"
+ },
+ "most_dont_trust": "The MATRIX-HONESTY 92-cell 'declared cell space': it is whatever the row files contain, so it cannot certify that a cell should exist.",
+ "containment": {
+  "inference_requests": 0,
+  "host_192_168_2_168_contacted": false,
+  "unit_artifacts_edited": "none outside throwaway copies; measure/MATRIX-COVERAGE.json was overwritten by my attack D default --out and regenerated with the author's exact command (states identical to the handoff)",
+  "temp_area": ".verify-tmp (removed after the run)"
+ },
+ "tool_calls": 45,
+ "bound": 45
+}

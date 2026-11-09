@@ -1,0 +1,43 @@
+{
+  "unit": "ANALYSIS-PATH-DRYRUN",
+  "status": "done",
+  "artifacts": [
+    "docs/ANALYSIS-PATH.md",
+    "experiments/ptr-engine/measure/ANALYSIS-PATH.json",
+    "orchestration/units/ANALYSIS-PATH-DRYRUN.md",
+    "orchestration/journals/ANALYSIS-PATH-DRYRUN.jsonl"
+  ],
+  "evidence": {
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl  # exit 0",
+      "python3 experiments/ptr-engine/longrun/grade_v5.py --rows experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json  # exit 0 from repo root",
+      "python3 experiments/ptr-engine/tools/tokens_to_verified.py --rows experiments/ptr-engine/measure/rows-longrun-v4-tools-2026-10-26.jsonl --grade experiments/ptr-engine/measure/cell-longrun-v4-tools-20261026T1556Z.grade-v5.json --arm pointer-stable",
+      "python3 experiments/ptr-engine/tools/tokens_to_verified.py --rows experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.jsonl --grade experiments/ptr-engine/measure/cell-longrun-v3-20261026T1556Z.grade-v5.json --arm pointer-stable"
+    ],
+    "item_1_row_selection": "v6-tools 72 rows -> 48 selected, dropped_followup=24, zero tool-followup in selection; multi-arm 192 -> 192, n per arm = {transcript-grow:48, transcript-compact:48, pointer-stable:48, lease-reopen:48}",
+    "item_2_p95": "refusing p95 at n=48: rank span 43-48 (p89.6-p100.0), n*(1-q)=2.4 < 3, minimum n is 60; forced n=96 -> p95=355.11ms [252.48, 416.60]",
+    "item_3_provenance": "incomparable_provenance eraA-vs-eraB: differs on fixture_sha256, model, tools_mode; no interval and no verdict computed",
+    "item_4_usable_for": "usable_for consumed by nothing: only producer tests/test_grid_cell_sanity.py:499, only readers that test and docs/GRID-CELL-SANITY.md; analyze_stats computed ttft_p50 n=27 [131.35,166.38] on the excluded cell, exit 0",
+    "item_5_tvs": "v4-tools -> tvs.turn=12 tokens=50847 requests_counted=12; v3 -> tvs=null reason=no_verified_success; v6-tools with v4-tools grade -> tvs.tokens=111994 requests_counted=20 with NO rows_file refusal",
+    "item_6_h3": "x_of_12=8, x_of_9_substantive=6, none_passes=2, mcnemar={discordant:6,floor:6,b:3,c:3,p:1.0,licensed:true}; below floor refusal at 2 discordant; direct b=1,c=3 -> b+c<6, p=0.62500, smallest attainable 0.12500",
+    "item_7_path": "grade_v5 exit 0 from repo root, exit 1 from experiments/ptr-engine (FileNotFoundError: 'experiments/ptr-engine/ptr_engine/resolve.py')",
+    "verdict_counts": {"ok": 3, "refuses_as_designed": 2, "gap": 3},
+    "requests_spent": 0
+  },
+  "blocker": "",
+  "next_unit_hint": "grid may proceed; the post-grid re-run must run every step from the repo root and must not glob measure/rows-cell-*.jsonl until a usable_for consumer exists (manifest field + skip-by-name in analyze_stats.main()). Smallest repairs: (1) usable_for -> manifest + analyser skip, (2) tokens_to_verified rows_file identity check, (3) grade_v5 src_path resolved against the repo root.",
+  "write_paths": [
+    "docs/ANALYSIS-PATH.md",
+    "experiments/ptr-engine/measure/ANALYSIS-PATH.json",
+    "orchestration/units/ANALYSIS-PATH-DRYRUN.md",
+    "orchestration/handoffs/ANALYSIS-PATH-DRYRUN.json",
+    "orchestration/journals/ANALYSIS-PATH-DRYRUN.jsonl"
+  ],
+  "assumptions": [
+    "the card names analyze.py, which does not exist; the analysis instrument was taken to be longrun/analyze_stats.py (only module carrying analyze()/compare()/quantile_ci())",
+    "item 6 used a synthetic in-memory 12-id grade because no on-disk grade has 12 graded cells per arm with a licensed McNemar; the synthetic shape mirrors the real grade files",
+    "item 2 pooling of two stand-in reps to n=96 and item 6's grade were built in memory only; no rows file was written"
+  ],
+  "tool_calls": 24,
+  "bound": 26
+}

@@ -1,0 +1,113 @@
+{
+  "unit": "HARNESS-MAP-PREGRID",
+  "pre_grid": true,
+  "generated_at": "2026-10-26T15:12:00-05:00",
+  "head_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "offline": true,
+  "requests_sent": 0,
+  "bound": {"tool_calls_max": 30, "tool_calls_used": 27},
+  "stage_map": {
+    "stages": 13,
+    "unlocated": 0,
+    "rows": [
+      {"stage": "preflight", "file_line": "experiments/ptr-engine/longrun/cell.py:247", "reads": "fixture JSON (system_prompt, checkpoints[].turn/question/truth/answer_spec), arm list", "writes": "nothing", "refuses": "exit 2"},
+      {"stage": "harness freeze", "file_line": "cell.py:329 (list cell.py:128)", "reads": "5 HARNESS_FILES + fixture", "writes": "digest in cell record", "refuses": "exit 2"},
+      {"stage": "budget / G1", "file_line": "cell.py:354, :1215; tools/request_ledger.py:787", "reads": "row files, --budget, cap/reserve", "writes": "ledger JSON (request_ledger.py:821)", "refuses": "4 over, 5 rows, 3 usage"},
+      {"stage": "G2 projection", "file_line": "cell.py:813, :683", "reads": "projection artefact p90, --max-wall, --turn-wall-cap", "writes": "gate verdict", "refuses": "exit 8"},
+      {"stage": "G3 prereg", "file_line": "cell.py:1390", "reads": "claim sidecar, checkpoint count", "writes": "gate verdict", "refuses": "exit 12"},
+      {"stage": "run", "file_line": "cell.py:1571 -> run_longrun.py:2191", "reads": "frozen manifest, fixture, endpoint", "writes": "rows jsonl, claim sidecar (cell.py:1601)", "refuses": "5 crash remap (cell.py:1639), 9 cap divergence (run_longrun.py:318)"},
+      {"stage": "row writing", "file_line": "run_longrun.py:1781, :1998", "reads": "response payload, usage, manifest sha", "writes": "one row per request, fsynced", "refuses": "resume blocked after a failed row (:2039)"},
+      {"stage": "grade", "file_line": "cell.py:1648 -> grade_v5.py:1081", "reads": "rows + fixture truth (grade_v5.py:553)", "writes": "<rows>.grade-v5.json (grade_v5.py:1101)", "refuses": "SystemExit fixture_truth_mismatch (:463, :582)"},
+      {"stage": "analyse", "file_line": "cell.py:1671 -> analyze_stats.py:1620", "reads": "rows, grade, manifest usable_for (:714)", "writes": "analysis JSON (:1840)", "refuses": "SystemExit no usable cells (:1761)"},
+      {"stage": "record", "file_line": "cell.py:1775", "reads": "gate verdicts, grade, analysis", "writes": "measure/cell-<arm>-<stamp>.json + .md (:1785, :1835)", "refuses": "propagates stage code"},
+      {"stage": "launcher", "file_line": "experiments/ptr-engine/tools/run_a_star.py:467", "reads": "HARNESS-PIN record, prior stamp (:266)", "writes": "run-a-star.json (:131), journal (:116)", "refuses": "exit 4 (:68)"},
+      {"stage": "verdict binding", "file_line": "tools/tree_freeze.py:413; tools/verdict_scope.py:198", "reads": "git HEAD / tracked bytes", "writes": "freeze record (tree_freeze.py:505), verdict payload (verdict_scope.py:180)", "refuses": "13 moved, 2 usage, 1 cmd failed"},
+      {"stage": "request ledger report", "file_line": "tools/request_ledger.py:571", "reads": "row files matched", "writes": "--write JSON only", "refuses": "4 (:846), 5 (:811)"}
+    ]
+  },
+  "diff_vs_v1": {
+    "v1_map": "docs/HARNESS-MAP.md (18 stages)",
+    "new": ["preflight", "harness freeze", "G1 ledger", "G2 projection", "G3 prereg", "run_a_star.py", "tree_freeze.py", "verdict_scope.py", "request_ledger.py"],
+    "replaced_in_chain": ["v1 stages 9/10 grade_v3/grade_v4 still on disk; chain grades with grade_v5 (cell.py:1648)"],
+    "gone": [],
+    "moved": {
+      "claim": "8 of 8 checked run_longrun.py line refs no longer resolve to the named function",
+      "examples": {"build_manifest": "859 -> 1404", "write_manifest": "938 -> 1498", "make_row": "1191 -> 1781", "append_row": "1296 -> 1998", "run_dry": "1344 -> 2057", "run_cell": "1445 -> 2191", "Planner": "709 -> 1050", "send_chat": "1026 -> 1541"}
+    }
+  },
+  "cost": {
+    "offline": {
+      "scope": "orchestration/handoffs/*.json mtime 2026-10-26",
+      "settled_cards": 282,
+      "tool_calls": {"n": 147, "median": 21, "min": 6, "max": 45, "recorded_zero": 0},
+      "bound": {"n": 141, "median": 26, "min": 14, "max": 60},
+      "zero_request_rounds_proxy": {"count": 280, "of": 282, "basis": "only 2 row files exist today (10:17, 13:31); proxy = upper bound"},
+      "status_mix": {"done": 221, "partial": 47, "pass": 7, "fail": 5, "blocked": 2}
+    },
+    "live": {
+      "cells": [
+        {"path": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T145758Z.jsonl", "requests": 6, "turns": "1-6", "requests_per_turn": 1.0, "latency_sum_s": 1145.6, "ttft_p50_ms": 299.0, "stop_reasons": {"none": 6}, "usable_for": []},
+        {"path": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl", "requests": 27, "turns": "1-27", "requests_per_turn": 1.0, "latency_sum_s": 346.9, "ttft_p50_ms": 141.6, "stop_reasons": {"stop": 25, "length": 1, "runaway_turn": 1}, "usable_for": []}
+      ],
+      "one_live_attempt": {"card": "LIVE-CANARY-4ARM", "exec": "bd952f84", "warm_ups": 1, "cell_requests": 0, "stopped": "rc 8: 48 x 60 s = 2880 s > 900 s", "wall_time": "not recorded -> omitted"},
+      "factor_path": "run_longrun.py:1781 one row per request; tool fetch adds a row; 0 tool calls in both cells; 48-turn projection at 60 s/turn (docs/CANARY-ERA-B.md:52-53)"
+    }
+  },
+  "inefficiencies": {
+    "tally": {"closed": 6, "narrowed": 7, "open": 1, "superseded": 0},
+    "items": [
+      {"n": 1, "state": "closed", "proof": "cell.py:255-260 exit 2 on missing system_prompt; longrun/tests/test_answer_contract.py"},
+      {"n": 2, "state": "open", "proof": "tasks-v6/LR-01.v7.json is a 7th generation; v6 still in service; no pool rule"},
+      {"n": 3, "state": "narrowed", "proof": "current fixture 12/12 decidable; historical 36/92 empty cells untouched"},
+      {"n": 4, "state": "narrowed", "proof": "run_longrun.py:999 writes tool_calls error=turn_call_cap into the row; no hint to the model"},
+      {"n": 5, "state": "closed", "proof": "tools/request_ledger.py:169 deduction_permitted; cell.py:1215 eval_gate_ledger"},
+      {"n": 6, "state": "narrowed", "proof": "cell.py:128-135 binds 5 files + fixture; measure/HARNESS-PIN.json digest_recipe: cell.py is NOT in its own list; resume refusal run_longrun.py:2039,:2232"},
+      {"n": 7, "state": "narrowed", "proof": "grade_v5.py has 0 occurrences of fixture_sha256 at HEAD"},
+      {"n": 8, "state": "closed", "proof": "tests/test_orchestration_handoffs.py; 1158 handoffs parsed, 0 unparseable"},
+      {"n": 9, "state": "narrowed", "proof": "no artefact tier written by the runner; repair.t30 undecidable (regrade-det.json:limits[0])"},
+      {"n": 10, "state": "narrowed", "proof": "guard recorded red (1 failed / 21 passed) with 4 gap files; not re-run here"},
+      {"n": 11, "state": "closed", "proof": "cell.py:683/:813 mode-aware projection; wrong-mode override refused exit 8"},
+      {"n": 12, "state": "narrowed", "proof": "chain has one grader (cell.py:1648 -> grade_v5); no artefact shows det_verify retired"},
+      {"n": 13, "state": "closed", "proof": "tools/regrade.py 20919 B + docs/REGRADE.md"},
+      {"n": 14, "state": "closed", "proof": "docs/GATE-CHAIN.md:95 exit 12; cell.py:1390"}
+    ],
+    "still_open": ["#2 fixture generations, no pool rule"],
+    "narrowed_list": ["#3", "#4", "#6", "#7", "#9", "#10", "#12"]
+  },
+  "new_waste": [
+    {"rank": 1, "waste": "this card duplicates HARNESS-MAP-V3's re-adjudication and batch pricing over the same corpus", "count": "1 card, 0 requests", "owner": "HARNESS-MAP-PREGRID (me)", "evidence": "docs/HARNESS-MAP-V3.md:62-136"},
+    {"rank": 2, "waste": "grid card gates 1,056 while price artefact says 1,016", "count": "40-request disagreement", "owner": "RUN-A-STAR-2 card text / GRID-PARAMS", "evidence": "measure/GRID-PARAMS.json price.total=1016; task d2d00521 title; task e07e2764 superseded-figure note"},
+    {"rank": 3, "waste": "phantom tool verdict_with_freeze.py still cited", "count": "1 surviving citation", "owner": "PHANTOM-PATH-FIX residual", "evidence": "measure/COLD-START-SCORE.json:78; units/PHANTOM-PATH-FIX.md:42"},
+    {"rank": 4, "waste": "verdict sha cannot bind harness bytes: 8 of 10 chain files untracked", "count": "8/10", "owner": "unowned", "evidence": "git ls-files --error-unmatch"},
+    {"rank": 5, "waste": "cell.py outside its own HARNESS_FILES", "count": "1 conductor unbound", "owner": "PIN-COVERS-CELL-PY (queued)", "evidence": "cell.py:128-135; measure/HARNESS-PIN.json digest_recipe"},
+    {"rank": 6, "waste": "12-turn canary arithmetically impossible under 48-turn projection", "count": "1 warm-up + 0 cell requests, 1 card", "owner": "BUDGET-STAGE-MAX-TURNS / RUN-DRY-TURN-SCOPE", "evidence": "docs/CANARY-ERA-B.md:40-61"},
+    {"rank": 7, "waste": "proof-line drift: 3 of 3 checked V3 proofs stale at HEAD", "count": "3/3", "owner": "HARNESS-MAP-V3", "evidence": "cell.py:217-225; run_longrun.py:930-945, :1459-1472"},
+    {"rank": 8, "waste": "three instruments blind to what they protect (grade_v5 fixture sha, pin excluding cell.py, sha over untracked bytes)", "count": "3", "owner": "several", "evidence": "as items 4,5,7"},
+    {"rank": 9, "waste": "todo inflated by foreign/never-run cards", "count": "todo=25 across 3 workspaces; foreign minimum measured 2; the quoted 11 is not re-derivable -> omitted", "owner": "board composition", "evidence": "task_board_list summary + todo rows"}
+  ],
+  "verdict_rate": {
+    "ledger": "~/.dsh/storages/orchestration/closure.jsonl (1058 closures); verdict.jsonl (182 rows, 177 tasks)",
+    "all": {"closures": 1058, "with_row": 184, "rate": 0.174},
+    "before_ritual_1030_1113": {"closures": 38, "with_row": 1, "rate": 0.026},
+    "after_ritual_1113": {"closures": 169, "with_row": 159, "rate": 0.941},
+    "retroactive_rows": {"count": 35, "note": "recorded after their own card's closure; reported separately, moves no column"},
+    "sha_binding": {"head": "f17663d1fed0162a7dc3c5a0a58d372c710974c3", "note": "most recent verdict row names this sha, but 8 of 10 chain files are untracked, so the sha is silent about the bytes read"}
+  },
+  "answer": "not measurable yet",
+  "missing_instrument": "one gated, completed cell: measure/cell-<arm>-<stamp>.json + cell-<arm>-<stamp>.gates.json + rows + grade; zero exist",
+  "era_b_absence": "no era-B cell exists; only measure/ANALYSIS-PATH.json era_b_standin_rows (72 era-A rows) and 33 era-A rows, all usable_for: []",
+  "cannot_say": "whether the grid will be cheaper, or which arm is better: no cell in this repository has been graded and both existing cells carry usable_for: []",
+  "assumptions": [
+    {"item": "offline card scope", "value": "handoffs with mtime 2026-10-26", "reason": "the card says 'this batch'; mtime of the batch day is the only re-derivable boundary"},
+    {"item": "zero-request rounds", "value": "proxy 280/282", "reason": "handoffs do not record requests; row-file absence is an upper bound, labelled as a proxy"},
+    {"item": "verdict numerator", "value": "task has >=1 row in verdict.jsonl", "reason": "rows do not carry a closure id; task-level match is the only join available"},
+    {"item": "guard not re-run", "value": "tests/test_orchestration_handoffs.py not executed", "reason": "running pytest writes caches outside the declared write paths"}
+  ],
+  "artifacts": [
+    "docs/HARNESS-MAP-PREGRID.md",
+    "experiments/ptr-engine/measure/HARNESS-MAP-PREGRID.json",
+    "orchestration/units/HARNESS-MAP-PREGRID.md",
+    "orchestration/handoffs/HARNESS-MAP-PREGRID.json",
+    "orchestration/journals/HARNESS-MAP-PREGRID.jsonl"
+  ]
+}

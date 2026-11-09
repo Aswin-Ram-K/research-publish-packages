@@ -1,0 +1,12 @@
+2026-10-26T12:41 -05:00 V-TREE-FREEZE independent attack started; tool read (325 lines), handoff TREE-FREEZE.json read
+12:42 freeze/verify scratch in /tmp/vtreefreeze: freeze rc=0, tree_sha256 f175c69b...
+12:43 ATTACK1 real move x2: append 1 byte -> "a.txt, b6a98d9c..., d88a4f37..., moved" ; rc=13 ; b.txt same
+12:44 ATTACK2 x2: touch -> "same (touched)" rc=0 ; one-byte alpha->alphz with size 6 and mtime_ns restored -> "moved" rc=13 (bytes hashed, not mtime)
+12:45 ATTACK3 x2: delete after freeze -> "..., <absent>, deleted" rc=13, no traceback
+12:45 ATTACK3b x2: delete DURING --wrap -> "refused -- refusing to freeze a path that does not exist" rc=2, record NOT written (D1)
+12:47 ATTACK4 x2: moved rc=13 ; malformed JSON rc=2 ; valid JSON missing "files" -> KeyError traceback rc=1 (D2) ; caller rc!=0 maps moved and malformed both to FAIL
+12:47 caller grep: tree_freeze.py / EXIT_TREE_MOVED / --wrap referenced only by tool, its tests, docs, exit_codes; no in-repo caller wires the wrapper today
+12:50 ATTACK5 x2: pass/0/moved=0 rc=0 ; moved_during_run/0/moved=1 rc=13 ; failed/7/moved=0 rc=1 ; failed_and_moved/7/moved=1 rc=1
+12:52 ATTACK6: baseline 34 passed, 14 subtests passed; mutant copies under /tmp/vtreefreeze/mut: drop EXIT_TABLE[13] -> 3 failed (scan-equality green); drop EXTERNAL_CODES[13] -> 7 failed (scan-equality red); drop both -> 4 failed (scan green); injected sys.exit(17) in cell.py -> scan caught (3 failed)
+12:55 ATTACK7 x2: new file after freeze rc=0 same; new file during --wrap -> verdict=pass, tree_sha256 before==after, new file on disk; outside-set edit rc=0; dir refused rc=2; symlink retarget different bytes -> moved, identical bytes -> same (touched)
+12:58 baseline command re-run for verdict row: 34 passed, 14 subtests passed, rc=0, HEAD f17663d1fed0162a7dc3c5a0a58d372c710974c3

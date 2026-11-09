@@ -1,0 +1,79 @@
+{
+ "unit": "POWER-UNDER-TURN-N",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/POWER-UNDER-TURN-N.json",
+  "docs/POWER-UNDER-TURN-N.md",
+  "experiments/ptr-engine/tests/test_power_under_turn_n.py",
+  "orchestration/units/POWER-UNDER-TURN-N.md",
+  "orchestration/handoffs/POWER-UNDER-TURN-N.json",
+  "orchestration/journals/POWER-UNDER-TURN-N.jsonl"
+ ],
+ "verdict": "grid_underpowered",
+ "evidence": {
+  "command_or_count": "python3 experiments/ptr-engine/tests/test_power_under_turn_n.py --red-green -> exit 0, '6/6 green case(s), 0 failure(s)', '3/3 red case(s) reproduced'; verdict row PASS f17663d1",
+  "commands": [
+   "python3 /tmp/putn_all.py  (turn_latency_rows + quantile_ci, 1000x200 paired run-block resampling, seed 20261026) -> measure/POWER-UNDER-TURN-N.json",
+   "python3 experiments/ptr-engine/tests/test_power_under_turn_n.py --red-green -> exit 0",
+   "python3 -m pytest experiments/ptr-engine/tests/test_power_under_turn_n.py -q -> 6 passed",
+   "python3 experiments/ptr-engine/tools/grid_resume.py  (read-only, offline: 0 requests) -> 10 cells: pointer-stable r1-r3, transcript-grow r1-r3, transcript-compact r1-r2, lease-reopen r1-r2",
+   "sha256 of all 15 rows files re-checked against the artefact: unchanged"
+  ],
+  "turn_n_denominator": {
+   "rows-longrun-c": "pointer-stable 47, transcript-grow 48, transcript-compact 48, lease-reopen 34 (after stop-reason drop)",
+   "rows-longrun-v3": "47 / 48",
+   "rows-longrun-v4": "40 / 48",
+   "tools_pointer_stable": "v4-tools 47 (request filter 68), v5-tools 47 (72), v6-tools 48 (72)"
+  },
+  "refusal_every_cell": "refusing p95 at n=47: the 95% order-statistic span is ranks 42-47 (p89.4-p100.0) and n*(1-q)=2.4 < 3; minimum n for p95 is 60",
+  "disjoint_144": {
+   "turn_n": {
+    "c": 100.0,
+    "v3": 2.9,
+    "v4": 12.3
+   },
+   "request_n": {
+    "c": 100.0,
+    "v3": 1.5,
+    "v4": 9.0
+   }
+  },
+  "answers": {
+   "a": "only the pooled 3-run n=144 is admissible (48*0.05=2.4<3 refused by name); 100.0% disjoint there, 100.0% diagnostic at n=48 (floor ignored)",
+   "b": "315.29 ms p50 / 529.99 ms p95 reproduce on rows-longrun-c at turn-n; v3 32.39 / -2.35 and v4 11.99 / -57.65 reproduce and stay non-separating (2.9% / 12.3% at n=144)",
+   "c": "lag-1 0.3921 pooled, 0.4598 median, C 0.6423, A 0.1071; n_eff(144) = 62.89 pooled (clears 60 by 2.9), 53.29 median, 31.36 on C - the binding arm does NOT clear"
+  },
+  "price": {
+   "ledger_factor": 1.374532,
+   "need_raw_turns_per_arm_C": 276,
+   "shape": "288 = 6 runs x 48",
+   "pair_only_576_turns": 792,
+   "conformant_four_arm_768_turns": 1056,
+   "remaining_after": 2136,
+   "parm_1": "docs/PREREG-ARM-RUN.md:150-152 requires all four arms; pair-only 792 not admissible"
+  },
+  "offline": {
+   "requests_sent": 0,
+   "network_events": 0,
+   "live_cells": 0
+  }
+ },
+ "blocker": "",
+ "next_unit_hint": "Owner decision, not a repair: the 1,016 grid's pair n (144) clears the raw floor but not the effective one on the binding arm (31.36 < 60). The smallest conformant design that does is 6 runs x 48 on the pair + 2 runs x 48 on transcript-compact and lease-reopen = 768 turns = 1,056 requests (PARM-1:150-152 satisfied, 48 turns/arm preserved, 2,136 left of 3,192). If the operator keeps the 1,016 shape, H1 must be reported with the binding-arm effective n (31.36) beside the interval, not as a 144-sample reading.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/POWER-UNDER-TURN-N.json",
+  "docs/POWER-UNDER-TURN-N.md",
+  "experiments/ptr-engine/tests/test_power_under_turn_n.py",
+  "orchestration/units/POWER-UNDER-TURN-N.md",
+  "orchestration/handoffs/POWER-UNDER-TURN-N.json",
+  "orchestration/journals/POWER-UNDER-TURN-N.jsonl"
+ ],
+ "assumptions": [
+  "The 'pooled 144' of the prior card was read as the launch grid's pair n (3 runs x 48), because grid_resume.py declares exactly 3 runs per pair arm; every n above 48 is still an extrapolation from the rows on disk (each arm has 1 run).",
+  "The lag-1 dependence is reported as a design discount (n_eff = n(1-r)/(1+r)) applied to the effective floor; the frozen admissibility rule itself is applied to RAW n, unchanged.",
+  "n_eff(144) for the design uses 3 independent runs with a common within-run r, which is algebraically 144(1-r)/(1+r); with r=0 it would be 144, so the discount is the whole question and both readings are carried.",
+  "stop_reason 'runaway_turn' was dropped together with 'length' and truncated=true, per the card; the only rows it removes on disk are in rows-cell-pointer-stable-20261026T182535Z (27 -> 25 turns)."
+ ],
+ "tool_calls": 18,
+ "bound": 45
+}

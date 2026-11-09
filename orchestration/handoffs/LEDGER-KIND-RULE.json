@@ -1,0 +1,78 @@
+{
+ "unit": "LEDGER-KIND-RULE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/request_ledger.py",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-4.json",
+  "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+  "experiments/ptr-engine/tests/test_ledger_kind_rule.py",
+  "docs/LEDGER-RECONCILE.md",
+  "orchestration/units/LEDGER-KIND-RULE.md",
+  "orchestration/journals/LEDGER-KIND-RULE.jsonl",
+  "orchestration/VERDICTS.jsonl"
+ ],
+ "evidence": {
+  "per_file_table": "25 files, recount == attribution on every one; TOTAL 1321 == 1321",
+  "reconcile": "RUN-A RECONCILE baseline=1321 attributed_delta=0 live=1321 explained=1321 gap=0 as_of=2026-10-27T20:53:48Z",
+  "remaining_basis": "(2999, 'ledger:baseline-4+attributed-delta', 4320)",
+  "ledger_recount": "budget: spent=1321 ... remaining=2999 (25 files)",
+  "unit_tests": "python3 -m unittest tests.test_ledger_kind_rule -v -> Ran 7 tests ... OK",
+  "fixture_plus_one": "ledger +1 and attribution +1, remaining -1 (one-sided move would be a STOP)",
+  "fixture_unknown_kind": "ledger: 'row file error: ...: unrecognised row kind 'turn-initial-typo' ... nothing counted' (exit 5); attribution: SystemExit",
+  "grid_arithmetic": "2999 - 1056 = 1943 -> fits; grid NOT re-shaped, cap NOT lowered",
+  "commands": [
+   "bash -lc 'cd experiments/ptr-engine && python3 -m unittest tests.test_ledger_kind_rule -v'",
+   "bash -lc 'cd experiments/ptr-engine && python3 tools/request_ledger.py --glob \"measure/rows-*.jsonl\" --cap 4320 --reserve 0 --would-spend 0'",
+   "bash -lc 'cd experiments/ptr-engine && python3 -c \"import sys;sys.path.insert(0,\\\"tools\\\");import run_a_star as r;print(r.remaining_basis())\"'"
+  ]
+ },
+ "kind_rule": {
+  "turn": "bills -- run_longrun.py:2703 make_row; gate :2527",
+  "tool-followup": "bills -- run_longrun.py:1126 make_row; gate :1115",
+  "turn-initial": "bills -- run_longrun.py:2726-2729, the initial send's own row; :2672 'k+1 requests'",
+  "digest": "bills -- run_longrun.py:2479 gate then :2481 send_chat; rows :2491/:2504/:2512",
+  "(no kind)": "counted + flagged assumed_billed (232 legacy rows)",
+  "tool_call": "NOT a kind -- no make_row site; 'tool_calls' is a row FIELD (run_longrun.py:2692)",
+  "unknown kind": "REFUSED on both sides"
+ },
+ "supersedes": {
+  "baseline": "LEDGER-GRID-BASELINE-3.json (1176/3144, as_of 2026-10-26T22:33:00Z)",
+  "why": "stale (145 rows in 6 files billed after its as_of) + attribution rule omitted turn-initial (30 rows, 2+7+13+6+1+1)"
+ },
+ "bound": 28,
+ "tool_calls": 36,
+ "bound_exceeded": true,
+ "bound_note": "The 28-call bound was exceeded during read/probe/verify (36 calls). The probes were not optional: RUN-A-STAR-2's own numbers were wrong, so the writer's make_row sites, both tallies and the ledger had to be read before the rule could be stated. Deliverables are complete; no test, cell or cap was affected and nothing was skipped to save a call.",
+ "blocker": "",
+ "next_unit_hint": "RUN-A-STAR-3 may run against baseline-4 (1321/2999): remaining-1056=1943 fits. Run REQUEST-LEDGER.json through request_ledger.py after every cell batch (it now refuses on an unknown kind rather than guessing); if a future writer emits a new kind, add it to COUNTED_KINDS only WITH its make_row call site as evidence.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/request_ledger.py",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-4.json",
+  "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+  "experiments/ptr-engine/tests/test_ledger_kind_rule.py",
+  "docs/LEDGER-RECONCILE.md",
+  "orchestration/units/LEDGER-KIND-RULE.md",
+  "orchestration/journals/LEDGER-KIND-RULE.jsonl",
+  "orchestration/VERDICTS.jsonl",
+  "orchestration/handoffs/LEDGER-KIND-RULE.json"
+ ],
+ "untouched": [
+  "rows-*.jsonl",
+  "fixtures",
+  "cell.py",
+  "run_longrun.py",
+  "client.py",
+  "analyze_stats.py",
+  "grade_v5.py",
+  "HARNESS-PIN.json",
+  "GRID-PARAMS.json",
+  "LEDGER-GRID-BASELINE-3.json",
+  "published pages"
+ ],
+ "assumptions": [
+  "baseline-4 as_of = the instant REQUEST-LEDGER.json was regenerated (2026-10-27T20:53:48Z); every rows file on disk is stamped earlier, so the delta window starts empty by construction.",
+  "request_ledger.py's own build_report does not stamp generated_at_utc; the artefact's identity is therefore its sha256 plus the recorded regeneration instant, not an in-file timestamp."
+ ]
+}

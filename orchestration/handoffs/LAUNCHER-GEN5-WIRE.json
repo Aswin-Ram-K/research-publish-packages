@@ -1,0 +1,115 @@
+{
+ "unit": "LAUNCHER-GEN5-WIRE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/tests/test_launcher_pin_and_cells.py",
+  "docs/LAUNCHER-WIRING.md",
+  "orchestration/units/LAUNCHER-GEN5-WIRE.md",
+  "orchestration/journals/LAUNCHER-GEN5-WIRE.jsonl",
+  "orchestration/handoffs/LAUNCHER-GEN5-WIRE.json"
+ ],
+ "evidence": {
+  "commands": [
+   "/home/zer0null/reserach extarctor/.venv/bin/python -m pytest \"/home/zer0null/reserach extarctor/experiments/ptr-engine/tests/test_launcher_pin_and_cells.py\" -q",
+   "/home/zer0null/reserach extarctor/.venv/bin/python experiments/ptr-engine/tools/run_a_star.py --dry-run",
+   "/home/zer0null/reserach extarctor/.venv/bin/python experiments/ptr-engine/tools/run_a_star.py --canary --dry-run",
+   "/home/zer0null/reserach extarctor/.venv/bin/python -m pytest tests/test_run_a_star_claim.py tests/test_launcher_dryrun_refusal.py -q",
+   "RUN_A_STAR_PATH=state/logs/launcher-gen5-red/red_<guard>.py /home/zer0null/reserach extarctor/.venv/bin/python -m pytest experiments/ptr-engine/tests/test_launcher_pin_and_cells.py -q -k <guard>"
+  ],
+  "new_suite": "12 passed in 0.47s (also from /tmp cwd: 12 passed, rc 0)",
+  "dry_run": "RUN-A DRY END cells=16 refused=0 requests=0 claim=H2 turns=48 max_wall=2880 canary_arms=16 canary_requests=0 (rc 0)",
+  "price_line": "RUN-A PRICE source=experiments/ptr-engine/measure/GRID-PARAMS.json price_total=1056 price_remaining_after=2136 remaining=3192 remaining_basis=ledger:baseline-2 cap=4320 cells=16 price_approved=false",
+  "canary_dry_run": "RUN-A DRY END cells=4 refused=0 requests=0 claim=smoke turns=12 max_wall=900 canary_arms=4 canary_requests=48 (rc 0)",
+  "existing_suites_before": "12 failed, 2 passed (tests/test_run_a_star_claim.py + tests/test_launcher_dryrun_refusal.py)",
+  "existing_suites_after": "1 failed, 13 passed",
+  "existing_suite_preexisting_failure": "tests/test_run_a_star_claim.py:103 -> self.assertEqual(PIN_GEN, 4, \"HARNESS-PIN generation moved: %r\" % (PIN_GEN,)) -> AssertionError: 5 != 4 : HARNESS-PIN generation moved: 5 -- a stale generation expectation in a file OUTSIDE this card's declared write paths; quoted, not fixed (the record it reads really is generation 5).",
+  "before_after": {
+   "cells": {
+    "before": 10,
+    "after": 16,
+    "record": "measure/GRID-PARAMS.json shape.arms 6/6/2/2"
+   },
+   "price": {
+    "before": "no price line at all",
+    "after": "price_total=1056 printed beside remaining=3192",
+    "record": "measure/GRID-PARAMS.json price.total"
+   },
+   "remaining_basis": {
+    "before": "3219 literal at run_a_star.py:571,585,644,652 (pre-rebuild total, off by 27)",
+    "after": "ledger:baseline-2 = 3192 (cap 4320), printed as remaining_basis= on DRY/start/cell/grid_end/END lines",
+    "record": "LEDGER-GRID-BASELINE-2.json + REQUEST-LEDGER.json"
+   },
+   "pin": {
+    "before": "HARNESS_PIN = fa6fd8cc... (generation 4), check 'gen != 4'",
+    "after": "PIN_EXPECTED_GENERATION=5 / PIN_EXPECTED_DIGEST=35ff41b7..., record read at import",
+    "record": "measure/HARNESS-PIN.json"
+   }
+  },
+  "red_green": [
+   {
+    "guard": "pin: current record lets the launcher proceed",
+    "red": "mutant with PIN_EXPECTED_GENERATION=4/fa6fd8cc -> AssertionError: HARNESS-PIN record disagrees with the launcher: record generation=5 digest='35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb', launcher signed-off generation=4 digest='fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac' ... (2 failed)",
+    "green": "test_real_pin_lets_the_launcher_proceed passes"
+   },
+   {
+    "guard": "pin: /tmp record with a wrong digest aborts naming both",
+    "red": "mutant -> AssertionError: the launcher's signed-off digest is not named: HARNESS-PIN record disagrees with the launcher: record generation=5 digest='0000...', launcher signed-off generation=4 digest='fa6fd8cc...'",
+    "green": "test_wrong_digest_in_a_tmp_record_aborts_naming_both passes; the refusal names 0000... AND 35ff41b7..., and no DRY END is reached"
+   },
+   {
+    "guard": "cells: dry run prints cells=16",
+    "red": "mutant with the old 10-tuple literal -> E AssertionError: ... assert 10 == 16 ; and E AssertionError: --cell must be 1..10 (assert (1 != 0 and '1..16' in '--cell must be 1..10')) -- 2 failed",
+    "green": "test_cell_plan_is_the_promotion_not_a_literal + test_dry_run_prints_sixteen_cells pass; DRY END cells=16"
+   },
+   {
+    "guard": "cells: a 10-cell regression is refused by the record",
+    "red": "SHAPE_EXPECTATION reverted to 3/3/2/2 -> AssertionError: shape disagrees with the launcher's signed-off promotion (refused before any cell; test_cells_regression_to_ten_is_refused sees the refusal)",
+    "green": "same mutant path now refuses instead of launching 10 cells; real launcher passes the same assertion"
+   },
+   {
+    "guard": "price: missing price.total is a named refusal",
+    "red": "mutant without the field check -> AssertionError: Traceback ... KeyError (the launcher crashed instead of refusing by name)",
+    "green": "test_missing_price_field_refuses_by_name passes: 'GRID-PARAMS price.total MISSING' and no PRICE line, no DRY END"
+   },
+   {
+    "guard": "remaining: 3219 is gone and the basis is the ledger",
+    "red": "mutant restoring the literal -> AssertionError: the pre-rebuild total is still baked into the launcher ; assert '3219' not in ... '3219' is contained here: rem_cap = 3219, \"literal\", None",
+    "green": "test_remaining_comes_from_the_ledger_not_3219 passes; remaining_basis()=3192 ledger:baseline-2 cap 4320"
+   },
+   {
+    "guard": "zero network: no socket, no live cell.py, no warm-up",
+    "red": "mutant that drops --dry-run and warms up -> E Failed: the launcher opened a connection ; E AssertionError: a dry run warmed up the endpoint: [1]",
+    "green": "test_dry_run_opens_no_socket_and_launches_no_live_cell + test_warmup_is_never_called_by_a_dry_run pass"
+   }
+  ],
+  "offline": {
+   "model_requests": 0,
+   "source_requests": 0,
+   "live_cells": 0,
+   "how": "every launch is --dry-run (cell.py returns at cell.py:2009 before the runner); the zero-network test asserts no socket is opened, every spawned child carries --dry-run, and warmup() is never called"
+  },
+  "red_mutants": "state/logs/launcher-gen5-red/ (generator mk_red.py + red_pin.py, red_cells.py, red_cells10.py, red_price.py, red_remaining.py, red_net.py); each is the real launcher with ONE defect restored, loaded via RUN_A_STAR_PATH, run only with --dry-run"
+ },
+ "assumptions": [
+  "remaining basis chosen = ledger (remaining_basis=ledger:baseline-2), not the 4,320 cap: LEDGER-GRID-BASELINE-2.json is the frozen pre-grid baseline (label pre_grid_era_b, frozen 19:04:18Z) and REQUEST-LEDGER.json agrees at 3,192, so both records witness one number; the cap is not a remaining figure and would have over-stated the pool by 1,128. Two records that disagree is a refusal (test_disagreeing_ledger_records_are_a_refusal) rather than a silent choice.",
+  "3,219 was NOT adopted as a third basis: it is the pre-rebuild total the launcher happened to hold, and the 27-request gap it implies is exactly what LEDGER-REBUILD-27 settled. Keeping it would have re-created the defect the card is about.",
+  "The pin is read at import with a signed-off expectation (generation+digest), rather than either hardcoding the digest or accepting whatever the record says: the first is the drift that broke the launch, the second cannot fail when a new generation freezes. A refusal is deferred from import to the gates so the module stays importable for the tests that prove the refusal; main() calls pinned_digest() and grid_record() before building any plan, so no cell can start.",
+  "The cell plan is derived from shape.arms in the record, but the record's shape is required to equal the launcher's SHAPE_EXPECTATION (6/6/2/2). I did not let the record alone define the plan: a record edited to 3/3/2/2 would then silently relaunch the 10-cell shape, which is the CELLS regression this card is asked to make impossible.",
+  "The price line is printed in BOTH the dry run and the live start (before any cell), and carries price_approved=false from price.spend_status, so the printed line cannot be mistaken for approved spend.",
+  "The price is quoted as the record's total (1,056 = 768 turns x 1.374532, the tools-off historical factor) without smoothing it toward the tools-on ceiling of 1,152 or the G1 basis of 1,536 -- GRID-PARAMS.json records all three as fitting the 4,320 cap and the launcher prints the one the record calls total.",
+  "Two test-only import hooks were added (RUN_A_STAR_PIN, RUN_A_STAR_GRID) so the /tmp-record proofs run without editing the real measure/ files; they default to the real records and are named in docs/LAUNCHER-WIRING.md.",
+  "The test file lives at experiments/ptr-engine/tests/test_launcher_pin_and_cells.py exactly as the card declares, while the two existing launcher suites live in /home/zer0null/reserach extarctor/tests/. Both were run; the new suite is invoked by absolute path so it runs from any cwd."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Run the 16-cell grid (768 turns, price 1,056, remaining 3,192 -> 2,136) as its own card: this card proves the launcher OBEYS the records, not that the cells pass. A verifier should re-run the four suites and diff the DRY END and PRICE lines against measure/GRID-PARAMS.json; also decide whether tests/test_run_a_star_claim.py:103 (assertEqual(PIN_GEN, 4)) is re-pointed at the record's generation by its owner, since it is stale and outside this card.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/tests/test_launcher_pin_and_cells.py",
+  "docs/LAUNCHER-WIRING.md",
+  "orchestration/units/LAUNCHER-GEN5-WIRE.md",
+  "orchestration/handoffs/LAUNCHER-GEN5-WIRE.json",
+  "orchestration/journals/LAUNCHER-GEN5-WIRE.jsonl",
+  "state/logs/launcher-gen5-red/"
+ ]
+}

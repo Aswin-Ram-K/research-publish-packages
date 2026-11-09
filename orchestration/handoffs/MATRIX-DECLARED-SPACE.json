@@ -1,0 +1,47 @@
+{
+ "unit": "MATRIX-DECLARED-SPACE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/matrix_audit.py",
+  "experiments/ptr-engine/longrun/tests/test_matrix_audit.py",
+  "docs/MATRIX-DECLARED-SPACE.md",
+  "experiments/ptr-engine/measure/MATRIX-HONESTY.json",
+  "orchestration/units/MATRIX-DECLARED-SPACE.md",
+  "orchestration/journals/MATRIX-DECLARED-SPACE.jsonl"
+ ],
+ "evidence": {
+  "tests": "python3 -m pytest tests/test_matrix_audit.py -q -> 17 passed in 0.37s",
+  "real_corpus_after": "declared cell space: 23 run/arm pairs x 4 checkpoint ids x 1 rep = 92 cells; TOTAL 5 pass 38 fail 0 m_row 29 m_turn 7 m_ans 0 m_cp 13 undec = 92; overall 5/43 (pass 5, fail 38, missing 36, undecidable 13); extraneous_cell=0; exit 0",
+  "real_corpus_before": "TOTAL 5 38 0 29 7 0 13 = 92; overall 5/43 = 11.6%; exit 0 (pre-edit module output captured before the change)",
+  "extraneous_counts_real_corpus": "0 extraneous cells out of 92 declared (arm, checkpoint) pairs over 9 rows-longrun-*.jsonl batches; 23 run/arm pairs from 88 manifests, 0 declaration gaps",
+  "red": "PRE-FIX: declared_cells=3, extraneous_cell=0 -> pointer-stable-2 ADMITTED as declared; PRE-FIX exit code: 0 (defect invisible)",
+  "green": "GREEN post-fix: extraneous_cell=1 named=\"arm 'pointer-stable-2' appears in rows-longrun-inject.jsonl but no declaration admits it\"; exit code 11",
+  "declaration": "arms=experiments/ptr-engine/longrun/run_longrun.py:64 (ARMS), refusal at :862; manifests=experiments/ptr-engine/longrun/manifests/*.json (arm+rows_path); checkpoints=experiments/ptr-engine/longrun/fixtures/LR-01.json:283 checkpoints / :303 repair",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/matrix_audit.py --out experiments/ptr-engine/measure/MATRIX-HONESTY.json",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_matrix_audit.py -q",
+   "sha256sum experiments/ptr-engine/longrun/fixtures/LR-01.json experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v5.json"
+  ]
+ },
+ "extraneous_cell": 0,
+ "exit_code_11": "extraneous_cell > 0 (distinct from --strict exit 1)",
+ "assumptions": [
+  "The card's write path experiments/ptr-engine/longrun/matrix_audit.py does not exist; the audited module is experiments/ptr-engine/tools/matrix_audit.py (the verifier's ':122' is the harvest line there). The real module was changed rather than duplicating it into longrun/.",
+  "fixtures/LR-01.json is the fixture det_verify reads (sha256 2c07e461...); it declares checkpoint turns 12/24/46 + repair 30 without explicit ids, so ids are synthesized as cp.<i>.t<turn>, which coincide exactly with tasks-v5/runtime-v5/LR-01.v5.json's cp.0.t12/cp.1.t24/cp.2.t46.",
+  "rep is declared as 1 per the fixture's single-run contract; a row with rep != 1 is extraneous. Every row on disk is rep 1."
+ ],
+ "blocker": "",
+ "next_unit_hint": "A verifier should re-run the four red-green cases against tools/matrix_audit.py and confirm exit 11 is returned only for undeclared pairs; the grader (grade_v5.py) was not read or used by these tests.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/matrix_audit.py",
+  "experiments/ptr-engine/longrun/tests/test_matrix_audit.py",
+  "docs/MATRIX-DECLARED-SPACE.md",
+  "experiments/ptr-engine/measure/MATRIX-HONESTY.json",
+  "orchestration/units/MATRIX-DECLARED-SPACE.md",
+  "orchestration/handoffs/MATRIX-DECLARED-SPACE.json",
+  "orchestration/journals/MATRIX-DECLARED-SPACE.jsonl"
+ ],
+ "live_requests": 0,
+ "tool_calls": 26,
+ "bound": 28
+}

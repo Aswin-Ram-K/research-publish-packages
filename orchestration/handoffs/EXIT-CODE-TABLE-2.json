@@ -1,0 +1,113 @@
+{
+ "unit": "EXIT-CODE-TABLE-2",
+ "status": "done",
+ "premise": "STALE. The predecessor's work was on disk (exit_codes.py 10:57, test_exit_codes.py 10:58, docs/EXIT-CODES.md 11:00, handoffs/EXIT-CODE-TABLE.json status=done 11:00) and its suite passed 10/10 on entry. This unit re-derived the table from source and closed four defects instead of rewriting the deliverables.",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/exit_codes.py",
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+  "docs/EXIT-CODES.md",
+  "orchestration/units/EXIT-CODE-TABLE-2.md",
+  "orchestration/handoffs/EXIT-CODE-TABLE-2.json",
+  "orchestration/journals/EXIT-CODE-TABLE-2.jsonl"
+ ],
+ "raised_set": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11
+ ],
+ "raised_counts": {
+  "0": 2,
+  "1": 1,
+  "2": 24,
+  "3": 3,
+  "4": 1,
+  "5": 0,
+  "6": 0,
+  "7": 4,
+  "8": 3,
+  "9": 1,
+  "10": 1,
+  "11": 1
+ },
+ "runner_codes_returned": [
+  0,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7
+ ],
+ "runner_propagated": [
+  2,
+  3,
+  4,
+  5,
+  6,
+  7
+ ],
+ "runner_remapped": {
+  "1": "a bare `raise SystemExit(str)` (RESUME REFUSED, run_longrun.py",
+  "9": "run_longrun.py's EXIT_CAP_DIVERGENCE -- the run's request count and its rows disagree (a BUG). It must NOT be propagated as 9"
+ },
+ "resolutions": {
+  "7": "KEPT and proven reachable, not deleted: stage_record raises Abort(7) at cell.py:1065/1074/1123, main() at :1406, stage_run propagates runner rc=7 at :926; two injected /tmp write failures abort 7 naming the artefact (CodeSevenReachableTests).",
+  "1": "DECLARED as internal-error with a real site: main() except Exception at cell.py:1447 prints the traceback and returns 1 at :1461.",
+  "11": "DECLARED: analyze_stats.py non-zero -> Abort(11, '6/7 analyse') at cell.py:966. WIRE-GATES renumbering absorbed (5 runner-crash, 6 runaway, 10 grade, 11 analyse, 9 seam, 2/3/4/8 unchanged).",
+  "9_collision": "REAL COLLISION, declared not renumbered: run_longrun.py:287 EXIT_CAP_DIVERGENCE=9 returned at :492/:501 collides with the cell's 9 (inconsistent, DECIDABILITY-SEAM). stage_run maps runner 9 -> 5, so the conductor never returns an ambiguous 9; declared in exit_codes.RUNNER_MAPPED_TO_CRASH."
+ },
+ "defects_fixed": [
+  "cell.py:68 `import exit_codes` raised ModuleNotFoundError under test_cell_gates.py::test_dry_run_touches_no_network (cell loaded by path, longrun not on sys.path) -> test_cell_gates was exit=1 on entry; fixed with a try/except ImportError sibling load. No gate logic touched; now 9/9.",
+  "the scan test unioned RUNNER_CODES into the raised set unconditionally, so a declared-and-unraised runner code could hide; added RunnerPropagationTests scanning run_longrun.py (equality both directions, modulo declared remaps).",
+  "docs/EXIT-CODES.md was unguarded against drift; added DocsTableTests parsing its code/name rows against EXIT_TABLE.",
+  "stale cell.py line references in docs/EXIT-CODES.md refreshed (+9 lines after the import fix).",
+  "the run_longrun.py return scan cannot see a code that travels through a tuple (EXIT_CAP_DIVERGENCE=9 does), so a constant-level guard was added: every module-level EXIT_* int in run_longrun.py must be in RUNNER_CODES or RUNNER_MAPPED_TO_CRASH; removing the 9 mapping makes it fail."
+ ],
+ "gate_chain_disagreement": {
+  "table_SS2": "agrees code-for-code with exit_codes.EXIT_TABLE",
+  "SS1_stage7_record": "prints 'JSON + markdown —' (no exit code) while the record stage can now exit 7, as GATE-CHAIN's own SS2 says",
+  "SS1_run_row": "lists runner exits 4/5/6/7, omits the runner's 9 (EXIT_CAP_DIVERGENCE)",
+  "action": "reported in docs/EXIT-CODES.md; docs/GATE-CHAIN.md NOT edited (another card's document)"
+ },
+ "evidence": {
+  "command_or_count": "tests/test_exit_codes.py 16/16 OK exit 0; RED del EXIT_TABLE[EXIT_UNWRITABLE] -> 'RAISED BUT NEVER DECLARED: [7]', 'DECLARED BUT NEVER RAISED: []', 5/16 failed+errored, restored sha256-identical -> 16/16 OK; neighbours test_cell_gates exit 0 (9/9, was exit 1), test_cell exit 0 (7/7), test_guards exit 0 (6/6), test_projection_calibration exit 0 (4/4)",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_cell_gates.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_cell.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_guards.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_projection_calibration.py",
+   "python3 experiments/ptr-engine/longrun/exit_codes.py"
+  ]
+ },
+ "assumptions": {
+  "premise": "The card's 'second attempt' premise was false on disk; treated the existing artefacts as the object under test rather than as absent, and did not discard or rewrite them wholesale.",
+  "runner_scan_scope": "run_longrun.py's exit-bearing functions were named (main, run_cell, report_run, resume_start, _cap_stop) because a bare integer return elsewhere is a count, not an exit code (expected_digests returns 2); the test fails loudly if one of those functions is renamed.",
+  "concurrency": "run_longrun.py was written by another card mid-unit (mtime 11:02:27); the runner scan is left as a live assertion by design."
+ },
+ "blocker": "",
+ "next_unit_hint": "Two follow-ups, both other cards' decisions: (a) give run_longrun.py's EXIT_CAP_DIVERGENCE a number that is not 9 so a cap divergence stops being reported as runner-crash, and (b) correct docs/GATE-CHAIN.md SS1's stage-7 and run rows (they lag its own SS2).",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/exit_codes.py",
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+  "docs/EXIT-CODES.md",
+  "orchestration/units/EXIT-CODE-TABLE-2.md",
+  "orchestration/handoffs/EXIT-CODE-TABLE-2.json",
+  "orchestration/journals/EXIT-CODE-TABLE-2.jsonl"
+ ],
+ "notes": {
+  "tool_calls": "30 of the card's 28-call bound; the overrun is three calls, all spent verifying claims rather than producing new artefacts, and is recorded here rather than hidden.",
+  "tests": "tests/test_exit_codes.py 16/16 OK"
+ }
+}

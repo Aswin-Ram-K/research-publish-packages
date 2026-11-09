@@ -1,0 +1,50 @@
+{
+ "unit": "FIX-HANDOFF-CLASSIFIER",
+ "status": "recovered",
+ "artifacts": [
+  "tests/test_orchestration_handoffs.py",
+  "orchestration/handoffs/VERIFY-CLASSIFIER-FIX.json"
+ ],
+ "evidence": {
+  "artifact_sizes_mtimes": [
+   {
+    "path": "tests/test_orchestration_handoffs.py",
+    "bytes": 32463,
+    "mtime": "2026-10-25T02:42:59"
+   },
+   {
+    "path": "orchestration/handoffs/VERIFY-CLASSIFIER-FIX.json",
+    "bytes": 2274,
+    "mtime": "2026-10-25T02:50:47"
+   }
+  ],
+  "quoted": {
+   "verify_evidence": "{\"clause_now\": \"if name.startswith(\\\"V\\\") or \\\"overall\\\" in doc:  # tests/test_orchestration_handoffs.py:208\", \"green\": \"EXIT=0: 13 passed in 2.48s (pre-fix baseline was 1 failed, 12 passed)\", \"guard_bites\": \"SYNTH-NOT-V.json -> EXIT_SIMULATED=1: {'SYNTH-NOT-V.json': {'shape': 'verifier', 'missing': ['checks']}}\", \"wider\": \"EXIT=0: 14 passed, 1364 deselected in 2.88s\", \"routing_moves\": [\"BILL-AUDIT: verifier -> unit (old missing ['overall','checks'], new missing [])\", \"R2-A2/R2-A3/R2-B2/R2-C/R2-SGL-CAP/U0.22/U3.2/U6.16/U6.17: unit -> unit\", \"V-R2VLLM-TRIAGE/V2T/V4R/V5F/V6E/V6F/VLLM-CELL: verifier -> verifier\"], \"reverted\": false}",
+   "verify_checks_1": "proof1 green: pytest tests/test_orchestration_handoffs.py -q -> EXIT=0, 13 passed",
+   "classify_head": "def classify(name, doc):\n    \"\"\"Return 'verifier' for a verifier verdict, else 'unit'.\n\n    Discriminator: filename prefix \"V\" (the repo's verifier-unit naming, 43/43 V* files),\n    corroborated by an explicit \"verdict\"/\"overall\" key so a verdict-shaped handoff that is\n    not named V* is still read as a verdict.\n"
+  },
+  "commands": [
+   "python3 experiments/ptr-engine/tools/handoff_lint.py orchestration/handoffs --summary --out experiments/ptr-engine/measure/HANDOFF-LINT-rerun.json",
+   "python3 experiments/ptr-engine/tools/handoff_lint.py orchestration/handoffs/recovered/FIX-HANDOFF-CLASSIFIER.json",
+   "grep -n 'FIX-HANDOFF-CLASSIFIER' orchestration/VERDICTS.md ; ls -l tests/test_orchestration_handoffs.py orchestration/handoffs/VERIFY-CLASSIFIER-FIX.json"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "A fresh unit can confirm by reverting the :208 clause and watching the guard go red.",
+ "write_paths": [
+  "orchestration/handoffs/recovered/FIX-HANDOFF-CLASSIFIER.json"
+ ],
+ "recovery": {
+  "from_stub_sha256": "7925b080730f0164872647e5103c476ce9494596c2636621c68edd59592a36e4",
+  "stub_bytes": 271,
+  "stub_mtime": "2026-10-25T02:42:46",
+  "evidence_basis": [
+   "tests/test_orchestration_handoffs.py — the unit's declared deliverable; mtime 2026-10-25T02:42:59, 13 s after the stub at 02:42:46",
+   "orchestration/handoffs/VERIFY-CLASSIFIER-FIX.json (02:50) verifies exactly that file: clause at :208, 'pre-fix baseline was 1 failed, 12 passed'"
+  ]
+ },
+ "unverified": [
+  "the unit wrote no card (orchestration/units/FIX-HANDOFF-CLASSIFIER.md does not exist) and no log, so WHICH bytes it wrote is inferred from mtime ordering plus the successor's verification, not proven by a diff",
+  "the successor's own card was written at 02:51, after the test file, so authorship of the 02:42:59 edit is this unit's by exclusion — not by a recorded claim"
+ ]
+}

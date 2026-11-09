@@ -1,0 +1,162 @@
+{
+ "schema": "consonance.h1-conditioning/1",
+ "unit": "H1-CONDITIONING",
+ "dated_utc": "2026-10-26T17:14:00Z",
+ "requests": 0,
+ "rows_read": 0,
+ "measurement": false,
+ "note": "Design + arithmetic only. No rows-runA-* file exists or is implied. The grid (RUN-A*, ~800 requests) stays held on GATE-OPERAND-VALIDATION.",
+ "inputs": {
+  "fixture_treatments": {
+   "path": "experiments/ptr-engine/measure/FIXTURE-TREATMENTS.json",
+   "unit": "FIXTURE-TREATMENTS",
+   "settled": "done",
+   "sha256": "sha256:0804b51575cce3454a1c628a9a2447a01856321e67ac3fd1ff8c9baa48467641",
+   "fixture_path": "experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json"
+  },
+  "parm1": {
+   "path": "docs/PREREG-ARM-RUN.md",
+   "h1_frozen": "pointer-stable p95 TTFT below transcript-grow p95, all 48 turns per arm per rep, disjoint 95% intervals, n >= 60 per arm",
+   "edited_by_this_unit": false
+  },
+  "stats_module": {
+   "path": "experiments/ptr-engine/longrun/analyze_stats.py",
+   "imported_symbols": ["min_n_for", "rank_span", "quantile_ci", "MIN_N", "TAIL_MIN"],
+   "constants_copied": false,
+   "min_n_for_0.95": 60,
+   "TAIL_MIN": 3,
+   "MIN_N": 20
+  }
+ },
+ "horizon_turns": 48,
+ "wall_tokens_by_arm": 10616,
+ "lease_reopen_turns": [23, 40],
+ "fire_turns": {
+  "transcript-grow": {"first_fire_turn": 21, "marker": "evicted>0"},
+  "transcript-compact": {"first_fire_turn": 21, "marker": "digest_at"},
+  "lease-reopen": {"first_fire_turn": 23, "marker": "lease>1"},
+  "pointer-stable": {"first_fire_turn": 2, "marker": "prefix_sha256 moves"}
+ },
+ "treated_definition": "turn >= first_fire_turn (inclusive; the fixture's own per-rep counts are the inclusive ones: 48-21+1=28, 48-23+1=26, 48-2+1=47)",
+ "split_per_arm": {
+  "transcript-grow": {"per_rep": {"untreated": 20, "treated": 28, "total": 48, "untreated_frac": 0.4166666666666667}, "three_reps": {"untreated": 60, "treated": 84, "total": 144}},
+  "transcript-compact": {"per_rep": {"untreated": 20, "treated": 28, "total": 48, "untreated_frac": 0.4166666666666667}, "three_reps": {"untreated": 60, "treated": 84, "total": 144}},
+  "lease-reopen": {"per_rep": {"untreated": 22, "treated": 26, "total": 48, "untreated_frac": 0.4583333333333333}, "three_reps": {"untreated": 66, "treated": 78, "total": 144}},
+  "pointer-stable": {"per_rep": {"untreated": 1, "treated": 47, "total": 48, "untreated_frac": 0.020833333333333332}, "three_reps": {"untreated": 3, "treated": 141, "total": 144}}
+ },
+ "order_statistic_arithmetic": {
+  "q": 0.95,
+  "note": "a q-quantile at n is decided by roughly the top n*(1-q) observations; the untreated prefix can therefore own 100% of the tail, not be averaged into it",
+  "rows": [
+   {"n": 48, "tail_observations": 2.4, "admissible": false, "why": "48*0.05 = 2.4 < TAIL_MIN = 3 -> per-rep p95 inadmissible (this is why PARM-1 pools 3 reps)", "rank_span": [43, 48]},
+   {"n": 144, "tail_observations": 7.2, "admissible": true, "rank_span": [132, 142], "reading": "R-all"},
+   {"n": 84, "tail_observations": 4.2, "admissible": true, "rank_span": [77, 84], "reading": "R-post (grow, compact)"},
+   {"n": 78, "tail_observations": 3.9, "admissible": true, "rank_span": [71, 78], "reading": "R-post (lease)"},
+   {"n": 141, "tail_observations": 7.05, "admissible": true, "rank_span": [130, 140], "reading": "R-post (pointer)"},
+   {"n": 75, "tail_observations": 3.75, "admissible": true, "rank_span": [68, 75], "reading": "R-common"}
+  ],
+  "load_bearing": "at n=48 the tail needs 2.4 rows; at n=144 it needs 7.2; the untreated prefix supplies 60. 60 >> 7.2, so the prefix is never diluted away - it either supplies the whole tail or none of it, depending on a sign not knowable before the rows exist."
+ },
+ "readings": {
+  "R-all": {
+   "status": "primary",
+   "frozen_by": "PARM-1",
+   "selector": "select_r_all(rows, fire_turn=None)",
+   "selector_file": "experiments/ptr-engine/longrun/tests/test_h1_conditioning.py",
+   "population": "kind == 'turn' with finite ttft_ms; no turn conditioning",
+   "n_per_rep_per_arm": 48,
+   "n_at_3_reps": {"transcript-grow": 144, "transcript-compact": 144, "lease-reopen": 144, "pointer-stable": 144},
+   "clears_min_n_60": true,
+   "may_be_called_h1_confirmed": true,
+   "reported_always": true
+  },
+  "R-post": {
+   "status": "secondary",
+   "frozen_by": "H1-CONDITIONING (this unit), pre-grid",
+   "selector": "select_r_post(rows, fire_turn)",
+   "selection": "turn >= fire_turn, fire_turn derived by infer_fire_turn(rows, arm) from row markers",
+   "population": "each arm's own treated regime only",
+   "n_per_rep_per_arm": {"transcript-grow": 28, "transcript-compact": 28, "lease-reopen": 26, "pointer-stable": 47},
+   "n_at_3_reps": {"transcript-grow": 84, "transcript-compact": 84, "lease-reopen": 78, "pointer-stable": 141},
+   "clears_min_n_60": true,
+   "may_be_called_h1_confirmed": false,
+   "caveat": "n differ per arm (141 vs 84), so a pointer-vs-grow R-post comparison is not an equal-n comparison"
+  },
+  "R-common": {
+   "status": "secondary",
+   "frozen_by": "H1-CONDITIONING (this unit), pre-grid",
+   "selector": "select_r_common(rows, fire_turn=None)",
+   "selection": "turn > 23 (COMMON_FLOOR = max(fire_turns))",
+   "population": "common treated window for all arms",
+   "n_per_rep_per_arm": 25,
+   "n_at_3_reps": {"transcript-grow": 75, "transcript-compact": 75, "lease-reopen": 75, "pointer-stable": 75},
+   "clears_min_n_60": true,
+   "may_be_called_h1_confirmed": false,
+   "caveat": "equalises the window's index range, not exposure duration: pointer-stable keeps 25 of its 47 treated turns, lease-reopen 25 of 26"
+  }
+ },
+ "row_fields_read": ["ttft_ms", "kind", "turn", "arm", "evicted", "digest_at", "lease", "prefix_sha256"],
+ "row_fields_note": "evicted/digest_at/lease/prefix_sha256 exist only to VERIFY the fire turn in the rows; no reading trusts the fixture's declared constants",
+ "decision_rule": {
+  "fixed_at_utc": "2026-10-26T17:14:00Z",
+  "fixed_before_grid_ran": true,
+  "clauses": [
+   "R-all is the frozen claim and is reported always, whether it separates the arms or not.",
+   "R-post and R-common are pre-registered secondary claims: reportable as evidence, never 'H1 confirmed'.",
+   "If R-all and R-common disagree in direction, the disagreement is itself the finding: publish it with both intervals and both n, and do not resolve it by preference.",
+   "Forbidden: choosing the reading after seeing the intervals; testing more than these three; dropping a reading because it is inconvenient; reporting any reading without its n."
+  ]
+ },
+ "errata": {
+  "target": "docs/PREREG-ARM-RUN.md",
+  "applied": false,
+  "status": "proposed-conditional",
+  "warranted_now": false,
+  "reason": "PARM-1 is frozen and no rows exist; applying the errata now would pre-authorise a second claim before the data that would justify it, and would enable exactly the post-hoc reading switch the decision rule forbids. Apply only if the grid produces an R-all/R-common direction disagreement and the treated-window number is chosen for publication as a claim.",
+  "proposed_claim": {
+   "name": "CP-H1-COMMON",
+   "statement": "on the common treated window turn > 23, pointer-stable's p95 TTFT is below transcript-grow's",
+   "statistic": "analyze_stats.quantile_ci(values, 0.95) on selected ttft_ms; disjoint 95% intervals, the PARM-1 disjointness rule",
+   "population": "kind == 'turn', finite ttft_ms, turn > 23; 25 rows per arm per rep",
+   "n_at_3_reps": 75,
+   "admissibility": "75 >= min_n_for(0.95)=60 and 75*0.05=3.75 >= TAIL_MIN=3",
+   "direction": "pointer-stable p95 < transcript-grow p95",
+   "precedence": "R-all (all 48 turns) remains the primary H1 claim; CP-H1-COMMON is additional and additive",
+   "thresholds_touched": false,
+  "digest_pattern": "docs/PARM-1-ERRATA.md (additive, digest-checked, frozen thresholds untouched)"
+  }
+ },
+ "guard": {
+  "file": "experiments/ptr-engine/longrun/tests/test_h1_conditioning.py",
+  "command": "python3 -m pytest experiments/ptr-engine/longrun/tests/test_h1_conditioning.py -q",
+  "result": "10 passed",
+  "offline": true,
+  "fails_if": [
+   "a reading's selector is not derivable from rows alone (rows carry only the eight named fields; R-post's n must move 28->26 when the marker moves T21->T23)",
+   "a reading carried as a claim sits below min_n_for(0.95)=60 at 3 reps",
+   "the fixture's declared fire turns differ from the fire turns observable in a synthetic 48-turn row sample (6 rows per regime)"
+  ],
+  "red_green": {
+   "mutant_red": "select_r_post := lambda rows, fire_turn: _usable(rows) (ignores turn, returns all 48) -> AssertionError for every arm (28/26/47 != 48)",
+   "mutant_red_2": "R-common promoted to a claim at 1 rep (n=25 < 60) -> underfloor AssertionError",
+   "green": "the three real selectors pass and reproduce 48/28/26/47 per rep and 144/84/78/141/75 at 3 reps"
+  },
+  "synthetic_rows_note": "synth_rows() builds in-memory rows with fake ttft: plumbing only, never written to disk, never reported as a measurement"
+ },
+ "does_not_decide": [
+  "whether the treatment matters at all",
+  "in which direction pooling distorts the arms",
+  "whether the grid is affordable",
+  "whether GATE-OPERAND-VALIDATION passes"
+ ],
+ "answer": {
+  "question": "does H1's frozen statistic measure the treatment or a mixture of regimes?",
+  "verdict": "undecidable from the fixture alone",
+  "what_the_fixture_fixes": "which turns are treated, hence the mixture ratios 20/48, 20/48, 22/48, 1/48",
+  "what_is_missing": "the sign: whether the untreated regime is slower or faster, i.e. whether the mixed tail is owned by treated or untreated rows",
+  "reading_that_would_answer_it": "R-common (turn > 23), where all four treatments are already firing"
+ },
+ "commands": [
+  "python3 -m pytest experiments/ptr-engine/longrun/tests/test_h1_conditioning.py -q"
+ ]
+}

@@ -1,0 +1,62 @@
+{
+  "unit": "VERDICT-ALLOWLIST-WRAP",
+  "status": "partial",
+  "artifacts": [
+    "experiments/ptr-engine/measure/VERDICT-RECLAIM.json",
+    "docs/VERDICT-RECLAIM.md",
+    "orchestration/units/VERDICT-ALLOWLIST-WRAP.md"
+  ],
+  "evidence": {
+    "sha_measured": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+    "sha_confirmed_head": true,
+    "propagation_proof": "bash -lc 'exit 3' -> captured 3",
+    "green_today_under_wrap": 7,
+    "red_today_under_wrap": 0,
+    "row_recorded_count": 3,
+    "refused_count": 4,
+    "red_count": 0,
+    "ancillary_test_red_preexisting": "tests/test_orchestration_handoffs.py::test_no_new_contract_key_gaps is red at f17663d1 (exit 1) and names 13 handoffs as NEW verifier-shape gaps; 12 of them predate this unit (VERDICT-DISPUTE.json 11:53, VERDICT-RITUAL.json 11:10, VERDICT-ADOPTION.json ...), so the frozen baseline under state/logs/ does not cover them and the red is not caused by this handoff. Not repaired here: regenerating that baseline is outside this unit's write paths.",
+    "own_verify": "python3 -c 'exec(...)' asserting counts {recorded 3, refused 4, red 0}, propagation captured_exit 3, handoff status partial -> exit 0 (row recorded for this card)",
+    "recorded_rows": [
+      "3f95bcf2 [886034dc]: PASS f17663d1 bash -lc '.venv/bin/python -m pytest tests/test_r2_opt_sim.py -q'",
+      "583f5df6 [b8ff5dcf]: PASS f17663d1 bash -lc '.venv/bin/python -m pytest tests/test_r2_opt_sim.py -q -p no:cacheprovider'",
+      "6ae7a4a6 [b6033158]: PASS f17663d1 bash -lc '.venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --self-test'"
+    ],
+    "refusals": [
+      "refused (command-frozen): execution 42662825-508f-44db-918b-322053d0cec2 already has a verdict for command \"python3 experiments/context-cache/cells/R2-VLLM/selftest_offline.py\"; use orchestration_verdict action:\"handoff\" for the open items  [R2-VLLM]",
+      "refused (command-frozen): execution 07cd3ac0-ea51-4a06-8366-dc43d79adffb already has a verdict for command \"python3 papers/context-cache/verify_package.py\"; use orchestration_verdict action:\"handoff\" for the open items  [C63-CELL]",
+      "refused (command-not-allowed): verdict command \"const\" is not allowed: only test/build runners may be recorded (see checkVerdictCommand)  [ACCOUNT-INVENTORY]",
+      "refused (command-not-allowed): verdict command \"const\" is not allowed: only test/build runners may be recorded (see checkVerdictCommand)  [PROFILE-PACK]"
+    ],
+    "commands": [
+      "bash -lc 'exit 3' -> 3 (propagation proof)",
+      "for each of the 7 refused cards: argv ['bash','-lc', <stored command verbatim from RECLAIM-GREEN-ROWS.json>] from the repo root -> exits {R2-OPT-SIM 0, SIM-PROMOTE 0, R2-VLLM 0, C63-CELL 0, RUN-INSTRUMENT-FIX 0, ACCOUNT-INVENTORY 0, PROFILE-PACK 0}",
+      "git rev-parse HEAD -> f17663d1fed0162a7dc3c5a0a58d372c710974c3"
+    ],
+    "green_cards_with_a_row_after_pass": 5,
+    "still_in_failed_column": true
+  },
+  "findings": [
+    "The bash wrap defeats command-not-allowed for a .venv/bin/python launcher: 3 rows recorded on executions that had settled.",
+    "The wrap does NOT defeat command-frozen: R2-VLLM and C63-CELL already carry a verdict row on their executions, for a DIFFERENT command (python3 ...) than the one RECLAIM-GREEN-ROWS attributed. The census's command strings for those two came from the card prompt, not from the execution record - a correction to the previous unit's '7 refused' figure.",
+    "The wrap does NOT defeat the node -e case: checkVerdictCommand splits on ';' quote-unaware, so the node program's second statement ('const ...') is read as a segment runner. Wrapping only fixes the FIRST segment; both ACCOUNT-INVENTORY and PROFILE-PACK stay refused.",
+    "No row moved any card's column: every card remains in the failed column."
+  ],
+  "honest_limit": "A recorded row proves only that 'the stored command exits 0 today under a shell runner' - at HEAD f17663d1, in this working tree. It does not prove the card was correct when its execution ran, it does not prove the execution's own acceptance command was that string, and it does not move the card's column. If the ritual is to mean more than that, DECISIONS-2 item 13 needs the operator's word.",
+  "assumptions": [
+    "The stored command strings were taken verbatim from experiments/ptr-engine/measure/RECLAIM-GREEN-ROWS.json; the two node -e strings were re-quoted for bash -lc (outer double quotes, inner double quotes escaped) so the executed byte sequence is the same program - no command text was changed.",
+    "A card whose execution already carries a frozen verdict row was left alone after the refusal (no retry, no overwrite, no handoff) per the unit's stop rule.",
+    "None of the seven commands spends a live request: they are pytest, a local selftest, run_longrun --self-test, and a read-only node inventory check. Zero inference requests were made."
+  ],
+  "blocker": "",
+  "next_unit_hint": "DECISIONS-2 item 13 needs the operator: (a) make checkVerdictCommand quote-aware and recognise a venv launcher (.venv/bin/python) - that reclaims R2-VLLM/C63-CELL/ACCOUNT-INVENTORY/PROFILE-PACK without a re-run; or (b) create one fresh 'reclaim' execution per card so the row cites the tree the command ran against (the only route that also cures the sha-mismatch noted by RECLAIM-GREEN-ROWS). Do not retry these four under a third wrapper: the two refusal kinds are structural.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/VERDICT-RECLAIM.json",
+    "docs/VERDICT-RECLAIM.md",
+    "orchestration/units/VERDICT-ALLOWLIST-WRAP.md",
+    "orchestration/handoffs/VERDICT-ALLOWLIST-WRAP.json",
+    "orchestration/journals/VERDICT-ALLOWLIST-WRAP.jsonl"
+  ],
+  "tool_calls": 16,
+  "bound": 24
+}

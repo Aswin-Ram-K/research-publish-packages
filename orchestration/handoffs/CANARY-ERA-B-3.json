@@ -1,0 +1,117 @@
+{
+  "unit": "CANARY-ERA-B-3",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/CANARY-ERA-B-3.json",
+    "docs/CANARY-ERA-B-3.md",
+    "orchestration/units/CANARY-ERA-B-3.md",
+    "orchestration/handoffs/CANARY-ERA-B-3.json",
+    "orchestration/journals/CANARY-ERA-B-3.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "live canary: 1 invocation, 3 of 4 cells, 36 requests (delta 36, cap 52); classification pointer-stable=shape_degenerate(t4) transcript-grow=shape_degenerate(t1,t2,t4,t5,t11) transcript-compact=shape_ok lease-reopen=shape_unknown; decision grid_may_launch=false (HOLD)",
+
+    "preconditions_quoted": {
+      "1_dry_run_exit_and_tail": "exit 0; RUN-A DRY END cells=4 refused=0 requests=0 claim=smoke turns=12 max_wall=900 canary_arms=4 canary_requests=48",
+      "1_G1": "cell: 0/7 dry-run G1 allow computed=1,188 requests limit=4,320 requests (cap 4,320 - reserve 0 - spent 1,128) artefact=experiments/ptr-engine/measure/REQUEST-LEDGER.json sha256=6da0c1f19b7cd37203c9d99de5e5d8a9db879e002f389a2b525a776624c27806 flag=--turns / --reps / --fetch-followup-allowance (or a larger cap in the ledger)",
+      "1_G2": "cell: 0/7 dry-run G2 allow computed=720 s limit=900 s (--max-wall) artefact=experiments/ptr-engine/measure/PROJECTION.json sha256=75d02c735da66156f6d7b13554d9cdd2da8b2d99df5d7032ea2e761feca3925c flag=--thinking / --projected-from p90 / --max-wall",
+      "1_G3": "cell: 0/7 dry-run G3 allow computed=claim=none declared (smoke/plumbing) limit=no claim is made, so no PARM-1 n threshold applies artefact=experiments/ptr-engine/measure/PREREG-ARM-RUN.json sha256=696de5100315889172d4424de1c60a9699c17bc5d3a736226cc3171987bf56d6 flag=--hypothesis / --turns / --reps",
+      "1_scope": "G1/G2/G3 printed identically for cells 1 pointer-stable, 7 transcript-grow, 13 transcript-compact, 15 lease-reopen",
+      "2_argv": "launcher imported in-process: PIN_GENERATION=5, PIN_ABORT=None, pinned_digest()=35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb; cell_argv appends ['--expect-harness', pinned_digest()] at run_a_star.py:521-527; it does NOT carry fa6fd8cc",
+      "3_pin": "measure/HARNESS-PIN.json generation=5 frozen_at 2026-10-26T20:05:00Z harness_sha256=35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb; cell.py sha256=cf512f5f3bd075c46a2c7c508ce9b803a32d9ba1ceb44edf3c729ded6ce3ce18 == the recorded sha; all six HARNESS_FILES re-hashed and byte-identical to the pin (analyze_stats 30b07d4d, client 5aa23bb5, fixture 0804b515, grade_v5 3d70ed1d, run_longrun 30dfa9e9, det_verify 12ccc74e) -> tree NOT moving",
+      "4_ledger_before": "spent 1128 · remaining 3192 · cap 4320"
+    },
+
+    "ledger": {
+      "before": "spent 1128 · remaining 3192 · cap 4320 (measure/REQUEST-LEDGER.json)",
+      "after_file_re_read": "spent 1128 · remaining 3192 · cap 4320 — delta 0 in the FILE, because the ledger is a snapshot built 2026-10-26T18:56:31Z and rewriting it is another card's write path (and on this card's forbidden list)",
+      "measured_live_delta": 36,
+      "delta_source": "RUN-A journal spent_rows_before=1128 -> spent_rows_after=1164, plus three new 12-row files on disk = 36 request rows",
+      "delta_above_52": false,
+      "priced_vs_spent": "48 priced, 36 spent, 12 never spent because cell 15 never ran"
+    },
+
+    "invocation": {
+      "command": "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --hypothesis smoke --max-wall 900",
+      "invocations": 1,
+      "retries": 0,
+      "process_exit": 0,
+      "start_line": "RUN-A start spent_rows=1128 cells=4 fixture=experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json tools=read_file canary=True claim=smoke turns=12 max_wall=900.0 remaining_basis=ledger:baseline-2",
+      "stop_line": "RUN-A STOP precondition 10: transcript-compact cell 1 no mechanism {'evicted_turns': 0, 'digest_rows': 0, 'lease_ge2_turns': 0}",
+      "end_line": "RUN-A END cells=3 new_requests=36 remaining=3156 remaining_basis=ledger:baseline-2 cap=4320 stops=[{'rule': 'precondition-10', 'arm': 'transcript-compact', 'markers': {'evicted_turns': 0, 'digest_rows': 0, 'lease_ge2_turns': 0}}]"
+    },
+
+    "per_arm_classification": [
+      {
+        "arm": "pointer-stable",
+        "cell": 1,
+        "shape": "shape_degenerate",
+        "rows": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T202040Z.jsonl",
+        "row_evidence": "turn 4: completion_tokens=4096 max_tokens=4096 finish_reason=length truncated=true tool_calls=[] wall_ms=115176.165; answer_verified true at t8 and t12; content ends in 'Let me run the tests.' repeated to the ceiling",
+        "turn": 4
+      },
+      {
+        "arm": "transcript-grow",
+        "cell": 7,
+        "shape": "shape_degenerate",
+        "rows": "experiments/ptr-engine/measure/rows-cell-transcript-grow-20261026T202444Z.jsonl",
+        "row_evidence": "turns 1,2,4,5,11: completion_tokens=4096 max_tokens=4096 finish_reason=length; t1 content writes the call as fenced text '``` read_file @knowledge:resolve.py@1 ```' with tool_calls=[]",
+        "turns": [1, 2, 4, 5, 11]
+      },
+      {
+        "arm": "transcript-compact",
+        "cell": 13,
+        "shape": "shape_ok",
+        "rows": "experiments/ptr-engine/measure/rows-cell-transcript-compact-20261026T203733Z.jsonl",
+        "row_evidence": "answer_verified=true at t8 and t12 (>=1); all 12 turns finish_reason=stop, completion 18-44 of max 4096, zero cap-length turns; answer 'ANSWER: NONE'",
+        "caveat": "stop_signal_source is null on every row; the era-B gate was read through the recorded finish_reason fallback. Under a literal stop_signal_source=finish_reason reading this arm would be shape_unknown — the decision is false either way"
+      },
+      {
+        "arm": "lease-reopen",
+        "cell": 15,
+        "shape": "shape_unknown",
+        "rows": null,
+        "row_evidence": "zero rows: launcher halted after cell 13 on RUN-A STOP precondition 10; zero evidence is never rounded to shape_ok"
+      }
+    ],
+
+    "classification_instrument": {
+      "command": "python3 experiments/ptr-engine/tools/tranche_canary.py --rows <rows file> --turns 12 --json (offline replay, 0 requests)",
+      "results": "pointer-stable shape_degenerate exit 1 turn 4; transcript-grow shape_degenerate exit 1 turn 1; transcript-compact shape_ok exit 0",
+      "defect": "instrument reported shape_era='A' for all three and gated on parseable_answers, because _shape_era() (tools/tranche_canary.py:274-280) returns 'A' if ANY row has a truthy stop_reason and era-B rows carry both stop_reason and finish_reason; the era-B gate (answer_verified>=1 AND stop_signal_source=finish_reason) was therefore applied by hand from the rows"
+    },
+
+    "decision": {
+      "grid_may_launch": false,
+      "verdict": "HOLD",
+      "rules_fired": [
+        "any shape_degenerate => grid_may_launch false: pointer-stable turn 4; transcript-grow turns 1,2,4,5,11",
+        "any shape_unknown => grid_may_launch false: lease-reopen never ran"
+      ],
+      "cause": "tool channel — ZERO structured tool calls across all 36 requests (tool_calls=[] on every row of all three arms); transcript-grow t1 shows the model writing the call as fenced text instead of invoking it, and pointer-stable t4 degenerates into a repeated-prose loop. Secondary: fixture/answer format — nothing forces a read before answering, though the checkpoint line is cheap when reached (compact answers 'ANSWER: NONE' in 18 tokens)",
+      "one_measurement_for_lease_reopen": "re-run cell 15 alone (12 turns, ~12 requests) once the launcher's precondition-10 stop is scoped off the zero-marker arm, and apply the era-B gate to its 12 rows",
+      "hold_is_a_success": "the canary ran live and spent 36 requests; the HOLD is the card's delivered decision, not a refusal"
+    },
+
+    "verdict_row": "PASS f17663d1 python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --hypothesis smoke --max-wall 900 — this PASS attests the LIVE invocation ran (36 requests, 36 rows on disk); it does NOT attest that the grid may launch. A dry-run PASS is not a live canary and was not used here."
+  },
+
+  "blocker": "TOOL-CHANNEL-NO-CALLS: 0 structured tool calls in 36 live requests on arms whose channel is read_file (tool_calls=[] everywhere), so two of four arms burn the 4096-token ceiling in prose. Second blocker: launcher precondition 10 stops the canary on the ZERO-MARKER arm transcript-compact, so cell 15 lease-reopen was never measured and 12 of 48 priced requests were not spent (owner: a launcher card; this card may not edit run_a_star.py).",
+  "next_unit_hint": "Two cards, not one: (a) fix the tool channel — make the shim/model agree on how read_file is invoked (fenced-text calls are being billed as narration), then re-run the 4-arm canary unchanged; (b) scope launcher precondition 10 so a zero-marker arm does not halt the run, so cell 15 can be measured for ~12 requests. Also stamp stop_signal_source on era-B rows, and fix _shape_era() (tools/tranche_canary.py:274-280) so an era-B window is not graded by the era-A contract.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/CANARY-ERA-B-3.json",
+    "docs/CANARY-ERA-B-3.md",
+    "orchestration/units/CANARY-ERA-B-3.md",
+    "orchestration/handoffs/CANARY-ERA-B-3.json",
+    "orchestration/journals/CANARY-ERA-B-3.jsonl"
+  ],
+  "assumptions": [
+    "The card's step-8 flag list (--thinking off, --max-turns 12, --turn-wall-cap 180, --runaway-turns 2, --no-cell-handoff) is cell.py argv, not launcher argv: cell_argv() (run_a_star.py:508-527) builds exactly those, and the launcher's own argparse exposes only --tools/--cell/--dry-run/--budget/--hypothesis/--canary/--max-wall/--fixture, so passing them to the launcher would be an argc error. The live launcher form used was --tools read_file --canary --budget 108 --hypothesis smoke --max-wall 900, which yields those cell flags plus --expect-harness 35ff41b7…",
+    "'Cap-length completion' read as completion_tokens == max_tokens with finish_reason == 'length' inside the 12-turn window. No turn in this run was cut by the WALL cap instead of the token ceiling — turns_over_180s=0 in all three cells — so the wall-vs-ceiling question did not arise on any degenerate turn.",
+    "The era-B shape_ok gate was applied from the rows because stop_signal_source is null on all 36 rows; the recorded finish_reason fallback (CANARY-ERA-B-FIX) was used. Recording the literal reading would make transcript-compact shape_unknown instead of shape_ok; the decision grid_may_launch=false is identical under either reading, so the hold is not an artefact of this choice.",
+    "The ledger delta of 36 is measured from RUN-A's own started/ended journal plus three new 12-row files (36 rows), not from REQUEST-LEDGER.json, which is a stale snapshot that a live run does not rewrite. The card asked for a re-read delta; the re-read is reported as 0-in-file with the reason stated rather than as a silent 0.",
+    "The verdict row records the LIVE canary command with measured exit 0, because a dry-run row was the exact defect of attempt 2. Its PASS attests execution and evidence, not a launch decision. The absolute form /usr/bin/python3 was refused by checkVerdictCommand (command-not-allowed), so the PATH-resolved python3 that actually ran the cell is recorded — it resolves to /usr/bin/python3 (readlink -f /usr/bin/python3.14) and does not have attempt 2's exit-127 relative-venv failure mode.",
+    "The launcher's precondition-10 stop is reported as a finding (F1), not repaired: run_a_star.py is on this card's forbidden list.",
+    "Rows written by the run were not edited, and no cell.py/run_longrun.py/run_a_star.py/analyze_stats.py/grade_v5.py/pin/grid-params/ledger/fixture/grade/published-page was modified by this unit."
+  ]
+}

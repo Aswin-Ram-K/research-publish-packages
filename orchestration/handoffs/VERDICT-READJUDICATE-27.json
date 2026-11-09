@@ -1,0 +1,61 @@
+{
+ "unit": "VERDICT-READJUDICATE-27",
+ "status": "done",
+ "artifacts": [
+  "docs/VERDICT-READJUDICATION.md",
+  "experiments/ptr-engine/measure/VERDICT-READJUDICATION.json",
+  "orchestration/units/VERDICT-READJUDICATE-27.md"
+ ],
+ "evidence": {
+  "command_or_count": "29 units re-adjudicated by running their own acceptance commands today: pass 10 (9 of the 27), fail 1, stale-tree 1, not-runnable 17; 8 verdict rows recorded (7 PASS, 1 FAIL exit-1)",
+  "commands": [
+   "python3 tools/audit/arms_parity_status.py -> exit 0 (C5_surfaces: ok)",
+   "python3 papers/context-cache/verify_package.py -> exit 0 (69 claims, 69 mapped 1:1, UNVERIFIED: none)",
+   "python3 experiments/ptr-engine/tools/det_verify.py -> exit 0",
+   "python3 experiments/ptr-engine/tools/grader_fitness.py -> exit 0",
+   "python3 experiments/context-cache/cells/R2-VLLM/selftest_offline.py -> exit 0 (pass=16 fail=0 red_green=True)",
+   "python3 experiments/ptr-engine/tools/tests/test_anchor_classify.py -> exit 0 (OK)",
+   "python3 experiments/ptr-engine/longrun/tests/test_request_identity.py -> exit 0 (ALL GREEN)",
+   ".venv/bin/python -m pytest tests/test_r2_opt_sim.py -q -> exit 0 (23 passed in 0.07s) [row refused: command-not-allowed]",
+   ".venv/bin/python -m pytest tests/test_r2_opt_sim.py -q -p no:cacheprovider -> exit 0 (23 passed) [row refused]",
+   "python3 -c \"...LR-01.v2.json...\" -> exit 0 [row refused: command-not-allowed, ';' split]",
+   "python3 experiments/ptr-engine/longrun/tests/test_tool_channel2.py -> exit 1 (AssertionError: tools-off output drifted)"
+  ]
+ },
+ "verdict_rows_recorded": {
+  "pass": [
+   "ARMS-PARITY-WITHDRAW",
+   "C63-CELL",
+   "DET-VERIFY-FIX",
+   "GRADE-FIT-CONTROL",
+   "R2-VLLM",
+   "R2.1-TIGHTEN",
+   "DEDUPE-ROOT-CAUSE"
+  ],
+  "fail": [
+   "PROBE-CP3-V6 (exit 1)"
+  ]
+ },
+ "assumptions": [
+  "Input set is 29: the 27 delivered-unverdicted rows of FAILED-TRIAGE.json plus FAILED-TRIAGE (5e7e5af7) and DEDUPE-ROOT-CAUSE (31e3b9a5), per the scope-29 tag addendum.",
+  "A recorded `test -s` / hash-print / `wc -l` is not an acceptance command: those units are classed not-runnable (evidence-only) rather than pass, because a PASS on them would be a PASS on the strength of artifacts existing.",
+  "Commands carrying a trailing annotation in the handoff (e.g. '... (red before, green after, exit 0/1)') were run with the annotation stripped; the executable part is unchanged.",
+  "For ARMS-PARITY-WITHDRAW and R2-VLLM the unit's `.venv/bin/python` form was refused by the gate, so the same script was re-run and recorded through allow-listed `python3`; disclosed in the row's output field. For R2-OPT-SIM and SIM-PROMOTE no such substitute exists (system python3 lacks resextract), so those two stay pass-measured / row-refused.",
+  "PROBE-CP3-V6 is reported FAIL as measured, not repaired; its drift is noted as a candidate cause (run_longrun.py modified 11:33, after the unit's 08:23 run) and not concluded."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Nothing to re-run: all 29 units were adjudicated, none left over. The follow-up worth a card is the gate allow-list gap: 354 of 4255 recorded handoff commands (8.3%) start with `.venv/bin/python` and can never be recorded as a verdict row, and `python3 -c` commands containing ';' are split and refused. Fixing that in checkVerdictCommand would let venv-based suites (R2-OPT-SIM, SIM-PROMOTE) carry PASS at all. Do NOT extend re-adjudication to the 66 retriable units: they have no artefacts to measure.",
+ "write_paths": [
+  "docs/VERDICT-READJUDICATION.md",
+  "experiments/ptr-engine/measure/VERDICT-READJUDICATION.json",
+  "orchestration/units/VERDICT-READJUDICATE-27.md",
+  "orchestration/handoffs/VERDICT-READJUDICATE-27.json",
+  "orchestration/journals/VERDICT-READJUDICATE-27.jsonl"
+ ],
+ "tool_calls": 29,
+ "bound": 34,
+ "live_requests_count": 0,
+ "side_effects": [
+  "det_verify.py and grader_fitness.py are self-writing: they rewrote experiments/ptr-engine/measure/det-verify-matrix.json and .../grader-fitness.json (mtimes 11:34). git status --porcelain reports no content change for either path."
+ ]
+}

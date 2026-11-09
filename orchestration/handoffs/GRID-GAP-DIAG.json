@@ -1,0 +1,44 @@
+{
+ "arithmetic": "162 req/cell measured (2591/16). Gen-7 provenance forces all 16 cells: 16 x 162 = 2592 > 1729 remaining => grid unaffordable; H1 not adjudicable this cycle.",
+ "artifacts": [
+  "docs/GRID-GAP-DIAGNOSIS.md",
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/tests/test_grid_gap_fix.py",
+  "orchestration/units/GRID-GAP-DIAG.md"
+ ],
+ "blocker": "The only correct transcript fix and the only correct cap-gate fix are both in pinned/fixture (B) layers; executing them mints generation 7, and re-running 16 gen-7 cells (2592) exceeds the 1729 remaining requests.",
+ "classification": {
+  "exit_4_cap_gate": "B pinned run_longrun.py projected_requests (482-485) counts 1 request/turn + 48 fetch rounds; tools-on turn costs 1 turn-initial + k followups + 1 turn = k+1; refusal correct enforcement of an under-counting model -> generation 7",
+  "rows_path_nesting": "C write side, A location: cell.py emitted run.rows_path only; pinned reader analyze_stats.py:664/682 needs top-level -> repaired in cell.py, no generation",
+  "transcript_treatments_never_fire": "B fixture tasks-v6/LR-01.v8.json (wall_tokens_by_arm 10616 = 3848 + 6769 declared padding; live T1 5630, growth 41-98 tok/turn => turns-to-wall 73-113 > 48) -> v9 generation 7"
+ },
+ "evidence": {
+  "command_or_count": "4 passed (test_grid_gap_fix.py); 0 requests sent; 0 cells run; cell.py c494e212 -> c15f086c",
+  "commands": [
+   "bash -lc '.venv/bin/pytest experiments/ptr-engine/tests/test_grid_gap_fix.py -q'  -> 4 passed",
+   ".venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --dry-run ... --arms transcript-grow ...  -> first FIFO truncation T21, first wall > 48 (NEVER)",
+   "reconstructed gate: projected_requests=96 (48 turns + 48 fetch rounds), rows 94 at T47, refusal on 97th"
+  ],
+  "generation": {
+   "cell_py_sha256_after": "c15f086c457d2dc465683d447fecb17ff5e6961b03ee163486d49d78e184687e",
+   "cell_py_sha256_before": "c494e212679f8e73c84226cf486566d0716559c0f2cd677f20845b24057baf86",
+   "touched": "none"
+  },
+  "verdict_row": {
+   "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+   "verdict": "PASS",
+   "verdict_line": "PASS f17663d1 bash -lc '.venv/bin/pytest experiments/ptr-engine/tests/test_grid_gap_fix.py -q'"
+  }
+ },
+ "next_unit_hint": "Escalate the gen-7 pin/re-baseline decision; do not launch a cell. If a report is needed, build the (C) census over the 16 nested gen-6 records (reader is pinned).",
+ "status": "done",
+ "unit": "GRID-GAP-DIAG",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/tests/test_grid_gap_fix.py",
+  "docs/GRID-GAP-DIAGNOSIS.md",
+  "orchestration/units/GRID-GAP-DIAG.md",
+  "orchestration/handoffs/GRID-GAP-DIAG.json",
+  "state/logs/grid-gap-diag-journal.md"
+ ]
+}

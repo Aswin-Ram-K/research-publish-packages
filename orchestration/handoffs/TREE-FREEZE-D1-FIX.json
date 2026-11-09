@@ -1,0 +1,67 @@
+{
+  "unit": "TREE-FREEZE-D1-FIX",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/tools/tree_freeze.py",
+    "experiments/ptr-engine/longrun/tests/test_tree_freeze.py",
+    "docs/TREE-FREEZE.md",
+    "orchestration/units/TREE-FREEZE-D1-FIX.md",
+    "orchestration/handoffs/TREE-FREEZE-D1-FIX.json",
+    "orchestration/journals/TREE-FREEZE-D1-FIX.log"
+  ],
+  "evidence": {
+    "attacked_by": "orchestration/handoffs/V-TREE-FREEZE.json (overall partial)",
+    "defect_quoted": "D1 (high): a file DELETED by the wrapped command is not classified at all -- after=freeze(paths) refuses the missing path, --wrap exits 2 (usage) and writes NO record (reproduced twice). moved_during_run/failed_and_moved only ever describe changed bytes, never deletions.",
+    "scope_gaps_addressed": [
+      "new files created after the freeze are invisible -> now a 'created' row from a before/after scan of the declared roots; a grown tree is moved_during_run, not pass",
+      "a new file created by the wrapped command still yields verdict=pass -> reproduced as created row, verdict=moved_during_run, rc 13",
+      "files outside the declared path set are never observed -> declared ROOTS are now watched; 'declared set did not cover' is printed",
+      "directories refused / symlinks followed -> unchanged, still refused and followed (recorded, not claimed fixed)"
+    ],
+    "verdict_row": "orchestration_verdict record -> PASS f17663d1 for python3 -m pytest experiments/ptr-engine/longrun/tests/test_tree_freeze.py experiments/ptr-engine/longrun/tests/test_exit_codes.py -q (42 passed, 14 subtests passed)",
+    "commands": [
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_tree_freeze.py experiments/ptr-engine/longrun/tests/test_exit_codes.py -q -> 42 passed, 14 subtests passed in 1.34s, HEAD f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+      "python3 experiments/ptr-engine/tools/tree_freeze.py freeze --out /tmp/tfd1/one/f.json /tmp/tfd1/one/input.py -> 0a775022744f64c352863f165f2e125898419999bc57c83204772036d0ef6b2e, tree_sha256 14ae584c316a02b9e1d1aebb2d9d1daaab802fc00ecf764f26cb347bc937ffa2",
+      "append one byte; python3 ... verify /tmp/tfd1/one/f.json -> 829500d2d37c8a3a9c253cebf30c7144be0a872bfb462c99f2905357e26559bb, verdict moved, rc 13; before != after (bytes named, both printed)",
+      "old after-freeze step on the deleted path (red): freeze(['/tmp/tfd1/red/tree/a.py'], after_old.json) -> Refused (CLI 2): 'refusing to freeze a path that does not exist'; after document written: False",
+      "new wrapper on the same induced deletion (green): --wrap /tmp/tfd1/red/new_rec.json ... -- python3 -c 'os.unlink(...)' -> verdict=moved_during_run, deleted=['/tmp/tfd1/red/tree/a.py'], row state=deleted before=9e26bf369911c45c243c684147b23fc9e1dcfcf257d299a1c632016a6fcd33f4 after=None, rc 13"
+    ],
+    "induced_cases": [
+      "(a) delete declared file, exit 0 -> moved_detail state=deleted, before sha, after null, verdict moved_during_run, rc 13 (BaselineIsTheBeforeFreezeTests.test_a_deleted_declared_file_is_a_row_not_a_refusal)",
+      "(b) create file in declared root, exit 0 -> moved_detail state=created, before null, after sha, verdict moved_during_run, rc 13, output 'declared set did not cover' (test_a_file_created_during_the_run_is_a_created_row_not_a_pass)",
+      "(c) edit declared file, exit 1 -> failed_and_moved, rc 1, record exit_code 1 (test_edit_with_command_exit_one_is_failed_and_moved)",
+      "(d) untouched tree, exit 1 -> failed, rc 1, moved_detail [] (test_untouched_tree_with_command_exit_one_is_failed)",
+      "(e) declared path missing before the run -> rc 2, no record, command never started (marker absent) (test_a_declared_path_missing_before_the_run_is_refused_before_the_command)",
+      "plus VerdictMappingTests (the four-case table incl. exit 3 and 137, no fifth outcome) and InvalidDocumentTests (D2: exit 2, not 1, no KeyError)"
+    ],
+    "no_old_assertion_rewritten": "all pre-existing tests in test_tree_freeze.py and test_exit_codes.py are unchanged and green: the legacy row keys recorded_sha/current_sha/verdict and the CLI codes (0/1/2/13) were preserved, so nothing had to be re-quoted or justified",
+    "wrapper_ownership": "verdict_with_freeze.py does not exist in this tree; task_board_list {status:'running'} shows no WIRE-TREE-FREEZE-INTO-VERDICTS card (running: OPERATOR-BRIEF-4, SPAWN-VALIDATOR-FIX, this card). tree_freeze.py --wrap IS the wrapper path; nothing else was edited"
+  },
+  "consumer_sentence": "moved_during_run is unstamped, never FAIL: a settle-time consumer must read the record's `verdict` (and its before/after digests), not the process status -- exit 13 means the bytes it judged no longer exist, so the remedy is a re-run against the settled tree, never a FAIL stamp.",
+  "contract_decision": "Creation cannot be DECLARED: `freeze` refuses a path that does not exist (exit 2) BEFORE the command runs, so a baseline of nothing never exists. Creation is WITNESSED instead: --wrap scans each declared root (parent dir of the declared paths, recursively, skipping .git/__pycache__/caches) before and after, emits `created` rows (before null, after sha), and prints that the declared set did not cover them. Document and test state the same rule; verify() (static, no scan) keeps its three states.",
+  "verdict_mapping": "classify_verdict(exit_code, changed): 0+none=pass/0; 0+any=moved_during_run/13; nonzero+none=failed/1; nonzero+any=failed_and_moved/1 (record keeps the command's own exit_code). No fifth outcome.",
+  "unverified": [
+    "any external (outside-repo) consumer of the wrapper or of exit 13 -- none exists in-repo to exercise",
+    "the declared-root scan cost on a very large declared root (bounded, recursive, cache dirs skipped, but not benchmarked here)",
+    "symlink retargeting and directory arguments are still outside the contract (unchanged by this card)"
+  ],
+  "assumptions": [
+    "classify(before) plus a before/after root scan is the intended reading of 'absent before, present after is a new file', since a declared path cannot be absent before the run without losing the baseline",
+    "keeping the CLI code 1 (not the command's own code) for failed/failed_and_moved preserves the tested contract while the record carries the command's own exit_code; the task's '(command's own exit)' is recorded in the record, not in the process status"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Follow-up card (not this one): wire a settle-time consumer that reads the record's `verdict`/`deleted`/`created` and treats moved_during_run as unstamped. Optionally extend verify() with a recorded scan-roots list so a static verify can also report created paths; and decide whether symlink retargeting belongs in the contract.",
+  "write_paths": [
+    "experiments/ptr-engine/tools/tree_freeze.py",
+    "experiments/ptr-engine/longrun/tests/test_tree_freeze.py",
+    "docs/TREE-FREEZE.md",
+    "orchestration/units/TREE-FREEZE-D1-FIX.md",
+    "orchestration/handoffs/TREE-FREEZE-D1-FIX.json",
+    "orchestration/journals/TREE-FREEZE-D1-FIX.log",
+    "/tmp/tfd1"
+  ],
+  "tool_calls": 15,
+  "bound": 24,
+  "requests": 0,
+  "offline": true
+}

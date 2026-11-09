@@ -1,0 +1,570 @@
+{
+  "schema": "consonance.grid-params/3",
+  "revision": 3,
+  "unit": "GRID-PARAMS-16CELL",
+  "written": "2026-10-26",
+  "recorded_at": "2026-10-26T20:20:00Z",
+  "question": "what launch parameters does the fetch-budget measurement require, and does the record describe the 16-cell power-conformant shape RUN-A-STAR-2 must launch?",
+  "status": "sixteen_cell_shape_recorded / launcher_still_hardcodes_ten / NOT approved spend",
+  "offline": {
+    "requests_sent": 0,
+    "network_events": 0,
+    "live_cells": 0,
+    "commands": "cell.py --dry-run via the launcher (pin-patched /tmp copy of the launcher only); grid + canary"
+  },
+  "supersedes": {
+    "card": "GRID-PARAMS-16CELL",
+    "file": "experiments/ptr-engine/measure/GRID-PARAMS.json",
+    "recorded_at": "2026-10-26T20:20:00Z",
+    "previous_revision": 2,
+    "previous_unit": "LAUNCH-PACKAGE-RECONCILE",
+    "fields_changed": [
+      "shape.cells 10 -> 16 (arms 3/3/2/2 -> 6/6/2/2)",
+      "price.total 1016 -> 1056 (768 x 1.374532)",
+      "price.remaining_after 2176 -> 2136",
+      "status parameters_measured -> sixteen_cell_shape_recorded"
+    ],
+    "reason": "POWER-UNDER-TURN-N measured n_eff(144)=31.36 against the floor of 60 on the binding arm (rows-longrun-c, r=0.6423); RUN-A-STAR-2 is 16 cells because 6/6/2/2 pair arms is the smallest conformant shape (n_eff(288)=62.73). The record must describe the shape the card launches, or the card can launch a shape the record does not describe.",
+    "not_overwritten": true,
+    "ten_cell_figures_preserved_verbatim": {
+      "cells": 10,
+      "arms": {
+        "pointer-stable": 3,
+        "transcript-grow": 3,
+        "transcript-compact": 2,
+        "lease-reopen": 2
+      },
+      "reps": "one rep per cell, cells 1..10 in GRID-SHAPE.json order",
+      "turns_per_cell": 48,
+      "turns_total": 480,
+      "fetch_followup_allowance": 48,
+      "per_cell_budget": 108,
+      "price_total": 1016,
+      "price_components": {
+        "tranche": 964,
+        "canary": 48,
+        "warm_ups": 4
+      },
+      "price_arithmetic": "964 tranche + 48 canary + 4 warm-ups = 1,016",
+      "tranche_identity": "480 turns + 480 rounds + 4 digests = 964",
+      "canary_identity": "12 turns x 4 arms = 48 requests",
+      "remaining_before": 3192,
+      "remaining_after": 2176,
+      "spend_status": "NOT approved spend: payable only if the grid runs, quoted beside the 3,192 remaining figure"
+    },
+    "previous_price_object_preserved_verbatim": {
+      "total": 1016,
+      "components": {
+        "tranche": 964,
+        "canary": 48,
+        "warm_ups": 4
+      },
+      "arithmetic": "964 tranche + 48 canary + 4 warm-ups = 1,016",
+      "tranche_identity": "480 turns + 480 rounds + 4 digests = 964",
+      "canary_identity": "12 turns x 4 arms = 48 requests (N=12 per docs/TRANCHE-CANARY.md:23 as corrected here)",
+      "warm_up_identity": "4 warm-up requests, one per arm",
+      "remaining_before": 3192,
+      "remaining_after": 2176,
+      "remaining_arithmetic": "3,192 - 1,016 = 2,176",
+      "source_of_remaining": "experiments/ptr-engine/measure/REQUEST-LEDGER.json :: budget.remaining_raw, cross-checked against LEDGER-GRID-BASELINE-2.json :: remaining (3192, frozen 2026-10-26T19:04:18Z)",
+      "supersedes": "rev 1 total 964 / remaining_after 2228 \u2014 964 is the TRANCHES-ONLY figure and survives as price.components.tranche, not as the launch price",
+      "spend_status": "NOT approved spend: payable only if the grid runs, quoted beside the 3,192 remaining figure"
+    },
+    "previous_per_cell_budget_preserved_verbatim": {
+      "meaning": "--budget on cell.py is the per-cell REQUEST budget enforced at the 3/7 budget preflight: it takes the runner's own --dry-run would_send_total, multiplies by (1 + BUDGET_HEADROOM=0.10, cell.py:140), and refuses with Abort(3, '3/7 budget') when required > --budget (cell.py:388-392). It is not a runtime ceiling and it does not raise any cap.",
+      "minimum_requests": 96,
+      "arithmetic": "turns 48 + rounds 48 = 96 (non-compact arms; cells 1-6, 9-10). transcript-compact cells (7, 8) add expected_digests=2 -> 98. Digests do NOT need adding to the non-compact figure; they are the only extra term and they exist only on the two compact cells.",
+      "gate_arithmetic": "the shipped 10% headroom means the cell's --budget must exceed the raw projection: ceil(96 x 1.10) = ceil(105.6) = 106 for non-compact; ceil(98 x 1.10) = ceil(107.8) = 108 for transcript-compact.",
+      "recommended": 108,
+      "recommended_reason": "one uniform value covering all 10 cells (worst case = transcript-compact, 108). 106 would pass cells 1-6 and 9-10 and refuse cells 7-8.",
+      "today_if_the_flag_is_not_changed": {
+        "runner_projection_with_24_rounds": "48 turns + 24 rounds = 72 (compact: 74)",
+        "cell_gate_required": "ceil(72 x 1.10) = 80 (compact: ceil(74 x 1.10) = 82)",
+        "existing_flag": "--budget 67",
+        "existing_behaviour": "80 > 67, so a 48-turn tools-on cell is REFUSED at the 3/7 budget preflight with exit 3 before any request is sent (cell.py:388-392). The card's shorthand 'abort on BudgetExhausted' is imprecise: BudgetExhausted is a different, runtime error (run_longrun.py:272, raised at :984, caught at :2469) raised against the runner's INTERNALLY computed budget projected_requests = turns + digests + 24 = 72 (run_longrun.py:436-443), which --budget never reaches. Both would look like a runner failure in a log; neither is one.",
+        "finding": "yes - --budget 67 aborts the cell, but as preflight exit 3, not as BudgetExhausted"
+      },
+      "measured_on": "2026-10-26, LAUNCH-PACKAGE-RECONCILE",
+      "measured_claim": "the GATE is permissive, not tight: --budget 67 is ALLOWED today and --budget 108 is ALLOWED today. Neither value has ever been observed to refuse.",
+      "what_stage_3_actually_computes": {
+        "stage": "3/7 budget (cell.py:353-395), reached only on the LIVE path; cell.py --dry-run returns at cell.py:2009 BEFORE this stage, so a --dry-run can never exercise --budget",
+        "runner_argv": "cell.py:363-366 -> [sys.executable, RUNNER, '--dry-run', '--fixture', ..., '--arms', arm, '--reps', reps]",
+        "parsed": "re.search(r'would_send_total=(\\d+)', out)",
+        "then": "required = ceil(would_send_total * (1 + BUDGET_HEADROOM=0.10)); refuse Abort(3,'3/7 budget') iff required > --budget",
+        "MEASURED_would_send_total": 48,
+        "MEASURED_required": 53,
+        "why_48_not_96": "the runner's --dry-run projects TURNS only. The 48 fetch rounds are NOT added to would_send_total, so this card's earlier 'turns 48 + rounds 48 = 96' is the price arithmetic, not what the gate computes. required = ceil(48 x 1.10) = 53."
+      },
+      "measurement": [
+        {
+          "budget": 67,
+          "exit_code": 5,
+          "stage_reached": "4/7 run",
+          "stage_3_line": "cell: 3/7 budget ok would_send_total=48 +10%=53 <= budget=67 (quota_remaining=3192 best-effort)",
+          "verdict": "ALLOWED at 3/7; continued through 3a/7 G1, 3b/7 projection, 3c/7 G3, and stopped only at 4/7 because the probe shim refused the live launch"
+        },
+        {
+          "budget": 108,
+          "exit_code": 5,
+          "stage_reached": "4/7 run",
+          "stage_3_line": "cell: 3/7 budget ok would_send_total=48 +10%=53 <= budget=108 (quota_remaining=3192 best-effort)",
+          "verdict": "ALLOWED at 3/7; identical path and stop point to 67"
+        }
+      ],
+      "recommended_basis": "the launch command in LAUNCH-PACKAGE-AUDIT already carries 108, run_a_star.py:181 hard-codes it and run_a_star.py:280 defaults to it; 108 is retained for consistency, NOT because 67 refuses. It does not.",
+      "superseded_finding": "GRID-PARAMS rev 1 (BUDGET-48-WIRE) said '80 > 67, so a 48-turn tools-on cell is REFUSED at the 3/7 budget preflight with exit 3 before any request is sent (cell.py:388-392)'. MEASURED FALSE on the current cell.py. See docs/FETCH-BUDGET-48.md dated correction (LAUNCH-PACKAGE-RECONCILE)."
+    },
+    "previous_supersedes_block_preserved_verbatim": {
+      "card": "LAUNCH-PACKAGE-RECONCILE",
+      "file": "experiments/ptr-engine/measure/GRID-PARAMS.json",
+      "previous_revision": 1,
+      "previous_unit": "BUDGET-48-WIRE",
+      "fields_changed": [
+        "price.total 964 -> 1016 (with components)",
+        "price.remaining_after 2228 -> 2176",
+        "per_cell_budget: '67 refuses at exit 3' -> measured ALLOWED",
+        "per_arm_round_cap.finding 'no override flag' -> flag exists at run_longrun.py:2857",
+        "harness pin 1f7c6791 -> 2b4d4808"
+      ],
+      "reason": "the 1,016 price had no artefact (LAUNCH-PACKAGE-AUDIT G3), the '67 refuses' figure was never measured, and the runner moved at 2026-10-26T19:04:32Z",
+      "not_overwritten": true,
+      "previous_revision_preserved": {
+        "schema": "consonance.grid-params/1",
+        "unit": "BUDGET-48-WIRE",
+        "written": "2026-10-26",
+        "question": "what launch parameters does the fetch-budget measurement require, and are they wired?",
+        "status": "parameters_written / wiring_divergence_found",
+        "offline": {
+          "requests_sent": 0,
+          "network_events": 0,
+          "live_cells": 0
+        },
+        "supersedes": {
+          "file": "experiments/ptr-engine/measure/GRID-SHAPE.json",
+          "field": "grid.requests_incl_digests (724) and the 24-round allowance carried in cells[*].cell_py_flags (--fetch-followup-allowance 24) and cells[*].projection.followup_allowance",
+          "reason": "the 24-round pool is measured to close a channel mid-cell (v5: 24 of 24 by T3, then 226 fetch_budget_exhausted refusals across 45 post-closure turns); the measurement prices 48, which changes both the per-cell request budget and the grid price from 724 to 964",
+          "not_overwritten": true,
+          "note": "GRID-SHAPE.json is left byte-unchanged; it remains the record of what was decided on 2026-10-26 before this measurement. Cards that launch cells must read THIS file for launch parameters."
+        },
+        "licensing_measurement": {
+          "source": "orchestration/handoffs/FETCH-BUDGET-48.json",
+          "v6_billed_rounds": "20 of 24, closes never, last billed T16",
+          "v4_billed_rounds": "20 of 24, closes never, last billed T30 (rounds billed on path_not_found - not a modern demand measure)",
+          "v5_billed_rounds": "24 of 24 by T3 (21 bought at T3 alone); closes at T3",
+          "v5_post_closure": "45 turns, 41 with tool calls, 226 fetch_budget_exhausted refusals, 1 cap-length completion (T29: completion_tokens 4096 / max_tokens 4096, finish_reason length, truncated true, 130 refused calls)",
+          "invitation_after_closure": "43 of 45 post-closure turns still invite a read; the model acted in 41/45"
+        },
+        "demand_regimes": {
+          "v6_never_closes": {
+            "billed_rounds": 20,
+            "of_pool": 24,
+            "closes": false,
+            "last_billed_turn": 16,
+            "refusals": "0 fetch_budget_exhausted in 371 tool calls",
+            "meaning": "the modern cell's demand fits 20 of the 24 rounds already bought"
+          },
+          "v5_closes_at_T3": {
+            "billed_rounds": 24,
+            "of_pool": 24,
+            "closes": true,
+            "closing_turn": 3,
+            "single_turn_burst": 21,
+            "meaning": "one recon turn bought 21 rounds; the remaining 45 turns asked for reads against a dead channel",
+            "direct_observation": "this is an observed failure chain in one cell (channel closes -> refusals -> T29 burns the completion ceiling with 130 refused calls), not a probability estimate"
+          },
+          "why_48": "v6's 20-of-24 is a demand observation, not a guarantee: it says today's model fit, not that a cell whose channel can close at T3 and whose remaining turns keep asking for reads is the shape we decided to run. 48 covers v6's observed 20 with 28 rounds of margin and makes the v5 single-turn burst (21) impossible to close the pool by itself. Cost of the margin: +240 requests, which fits remaining headroom."
+        },
+        "fetch_followup_allowance": {
+          "value": 48,
+          "was": 24,
+          "flag": "--fetch-followup-allowance",
+          "flag_owner": "experiments/ptr-engine/longrun/cell.py:1882-1887 (argparse), consumed at cell.py:1160-1165 (fetch_followup_allowance)",
+          "what_the_flag_actually_sets": "the G1 ledger gate's reserved request count for follow-ups only: would_spend = turns_total + allowance (cell.py:1160-1165, priced at cell.py:1167-1175). It is an ACCOUNTING reserve. It does not reach the runner: cell.py:1550 (stage_run argv) emits no allowance flag, and run_a_star.py:201 appends the flag to the cell argv, not to the runner.",
+          "v5_counter_example": "v5 is the cell that spent its 24 rounds by T3 and then carried 226 refusals across 45 turns while 43 of those 45 turns still invited a read. A cell shaped like that is not the cell we decided to run."
+        },
+        "per_arm_round_cap": {
+          "runtime_constant": 24,
+          "declared_at": "experiments/ptr-engine/longrun/run_longrun.py:226 (TOOL_FETCH_ROUNDS_PER_ARM = 24)",
+          "enforced_at": "experiments/ptr-engine/longrun/run_longrun.py:940 (rounds_used + fresh >= TOOL_FETCH_ROUNDS_PER_ARM -> billed=false, error=fetch_budget_exhausted)",
+          "required_for_this_measurement": 48,
+          "flag_exists": false,
+          "finding": "There is NO flag that sets the per-arm round cap. The only fetch flag on the runner is --fetch-rounds-per-turn (run_longrun.py:2830, default TOOL_FETCH_ROUNDS_PER_TURN = 3 at run_longrun.py:232), which caps rounds PER TURN. run_longrun.py is frozen by this unit, so 48 rounds per arm is a REQUIREMENT recorded here, not a runnable invocation: it needs a change to run_longrun.py:226 (a separate card). Until then a 48-turn tools-on cell still closes at 24 billed rounds."
+        },
+        "per_cell_budget": {
+          "meaning": "--budget on cell.py is the per-cell REQUEST budget enforced at the 3/7 budget preflight: it takes the runner's own --dry-run would_send_total, multiplies by (1 + BUDGET_HEADROOM=0.10, cell.py:140), and refuses with Abort(3, '3/7 budget') when required > --budget (cell.py:388-392). It is not a runtime ceiling and it does not raise any cap.",
+          "minimum_requests": 96,
+          "arithmetic": "turns 48 + rounds 48 = 96 (non-compact arms; cells 1-6, 9-10). transcript-compact cells (7, 8) add expected_digests=2 -> 98. Digests do NOT need adding to the non-compact figure; they are the only extra term and they exist only on the two compact cells.",
+          "gate_arithmetic": "the shipped 10% headroom means the cell's --budget must exceed the raw projection: ceil(96 x 1.10) = ceil(105.6) = 106 for non-compact; ceil(98 x 1.10) = ceil(107.8) = 108 for transcript-compact.",
+          "recommended": 108,
+          "recommended_reason": "one uniform value covering all 10 cells (worst case = transcript-compact, 108). 106 would pass cells 1-6 and 9-10 and refuse cells 7-8.",
+          "today_if_the_flag_is_not_changed": {
+            "runner_projection_with_24_rounds": "48 turns + 24 rounds = 72 (compact: 74)",
+            "cell_gate_required": "ceil(72 x 1.10) = 80 (compact: ceil(74 x 1.10) = 82)",
+            "existing_flag": "--budget 67",
+            "existing_behaviour": "80 > 67, so a 48-turn tools-on cell is REFUSED at the 3/7 budget preflight with exit 3 before any request is sent (cell.py:388-392). The card's shorthand 'abort on BudgetExhausted' is imprecise: BudgetExhausted is a different, runtime error (run_longrun.py:272, raised at :984, caught at :2469) raised against the runner's INTERNALLY computed budget projected_requests = turns + digests + 24 = 72 (run_longrun.py:436-443), which --budget never reaches. Both would look like a runner failure in a log; neither is one.",
+            "finding": "yes - --budget 67 aborts the cell, but as preflight exit 3, not as BudgetExhausted"
+          }
+        },
+        "price": {
+          "total": 964,
+          "identity": "480 turns + 480 rounds + 4 digests = 964",
+          "turn_rows": 480,
+          "rounds": 480,
+          "digest_rows_derived": 4,
+          "previous_price": 724,
+          "delta": 240,
+          "remaining_before": 3192,
+          "remaining_after": 2228,
+          "remaining_arithmetic": "3192 - 964 = 2228",
+          "spend_status": "NOT approved spend: this is a price payable only if the grid runs, quoted beside the 3,192 remaining figure",
+          "ledger_caveat": {
+            "artefact_says": "requests 1101 / 3219 remaining",
+            "fresh_scan_says": "requests 1128 / 3192 remaining",
+            "gap": 27,
+            "settled_by": "LEDGER-REBUILD-27",
+            "choice_here": "3,192 is used because it is the conservative figure; the 27-request gap is unresolved until LEDGER-REBUILD-27 lands"
+          }
+        },
+        "wiring_consistency_check": {
+          "requested": "verify that --fetch-followup-allowance sets the per-arm rounds (run_longrun.py:226, :940-950) and that --budget is the per-cell request budget",
+          "result": "DIVERGENT on the first premise, PARTLY DIVERGENT on the second",
+          "premise_1": "--fetch-followup-allowance does NOT set the per-arm rounds. run_longrun.py:226 is a module constant with no override; run_longrun.py:940 compares against that constant. The flag is cell.py's G1 accounting reserve and never reaches the runner (cell.py:1550 argv).",
+          "premise_2": "--budget IS the per-cell request budget, but it is a preflight gate with a 10% headroom applied to the runner's own projection (cell.py:388-392); it is not the ceiling the runner raises BudgetExhausted against.",
+          "paths_note": "the card cited run_longrun.py:226 and :940-950 without a directory; the file is experiments/ptr-engine/longrun/run_longrun.py, not experiments/ptr-engine/measure/run_longrun.py (which does not exist)",
+          "consequence": "raising the flag to 48 rescues the PRICE accounting (G1 reserves 96 instead of 72) but does NOT keep a channel open past 24 billed rounds. The 48-round half of this measurement is blocked on the frozen runner."
+        },
+        "cards_that_must_read_this_file": [
+          "orchestration/units/RUN-A-STAR.md (any card that launches the 10-cell grid)",
+          "orchestration/units/DRYRUN-TOOLS-SHAPE.md",
+          "orchestration/units/GRID-SHAPE-TOOLS.md",
+          "orchestration/units/FETCH-BUDGET-48.md",
+          "orchestration/units/ANALYSIS-PATH-DRYRUN.md",
+          "orchestration/units/CANARY-FALSE-POSITIVE.md"
+        ],
+        "what_48_does_not_fix": {
+          "burst": "a model that buys 21 rounds in one turn (v5 T3) can still buy 21 of 48; two such turns close it. What bounds it is the per-turn cap --fetch-rounds-per-turn (TOOL_FETCH_ROUNDS_PER_TURN = 3, run_longrun.py:232), which already holds a single turn to 3 BILLED rounds - v5 predates that bound. 48 alone bounds the pool, not the burst rate.",
+          "structure": "only 144 rounds per arm (3 x 48 turns, the per-turn-cap ceiling) makes closure arithmetically impossible in a 48-turn cell; 144 costs 1,924 and leaves 1,268 of 3,192",
+          "wiring": "48 rounds cannot be switched on at all through an existing flag (see per_arm_round_cap.flag_exists = false)"
+        },
+        "answer_to_the_card_question": "No, not with today's wiring: a 48-turn tools-on cell keeps its channel open only to 24 billed rounds (run_longrun.py:226), and the flag this unit was asked to set is an accounting reserve that does not reach the runner. With run_longrun.py:226 raised to 48 it would carry 48 rounds - 28 more than v6's observed 20 - but that is a demand margin, not a structural guarantee.",
+        "not_touched": [
+          "GRID-SHAPE.json",
+          "PARM-1*",
+          "cell.py",
+          "run_longrun.py",
+          "every row file",
+          "every published number",
+          "REQUEST-LEDGER.json"
+        ]
+      }
+    }
+  },
+  "harness_pin": {
+    "harness_sha256": "64e69e49a49433dd60ac7dc31ed39911e15e765a1597e611e0f66a03649993d4",
+    "read_the_pin_at": "experiments/ptr-engine/measure/HARNESS-PIN.json (harness_sha256, generation 6) -- this block is a CACHED COPY, not the authority; run_a_star.py:68-69 PIN_EXPECTED_GENERATION/PIN_EXPECTED_DIGEST is the signed-off expectation a launcher actually passes, and it was advanced to generation 6 by LAUNCHER-GEN6-WIRE",
+    "artefact": "experiments/ptr-engine/measure/HARNESS-PIN.json (generation 6)",
+    "generation": 8,
+    "generation_2_preserved_verbatim": true,
+    "delta_that_moved_it_to_generation_3": "run_longrun.py 0d581d1f -> b2003038, caused by RUNNER-ROUNDS-48: TOOL_FETCH_ROUNDS_PER_ARM 24 -> 48 at run_longrun.py:230 plus the new --fetch-rounds-per-arm override at run_longrun.py:2857",
+    "delta_that_moved_it_to_generation_5": "grade_v5.py 056eb605\u2026 -> 3d70ed1d\u2026 (GRADE-V5-T4-DECORATION) and run_longrun.py b2003038\u2026 -> 30dfa9e9\u2026 (RUN-DRY-TURN-SCOPE); the other four pinned inputs are byte-identical",
+    "launch_must_pass": "--expect-harness efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3",
+    "launcher_pending_advance": {
+      "file": "experiments/ptr-engine/tools/run_a_star.py",
+      "line": "68-69 (PIN_EXPECTED_GENERATION / PIN_EXPECTED_DIGEST)",
+      "generation": 5,
+      "state": "CLEARED 2026-10-26T19:20:00-05:00 by LAUNCHER-GEN6-WIRE: both constants now hold generation 6 / efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3, so pinned_digest() passes the record and a launcher dry run proceeds",
+      "effect_before": "pinned_digest() exits 'HARNESS-PIN record disagrees with the launcher' (run_a_star.py:98 requires generation 5): no launcher cell could start",
+      "why_not_done_here": "this block was written by HARNESS-PIN-GEN6, whose write paths exclude run_a_star.py; LAUNCHER-GEN6-WIRE owns the advance"
+    },
+    "supersedes": {
+      "recorded_at": "2026-10-26T19:41:30Z",
+      "unit": "GRID-PARAMS-DIGEST-SUPERSEDE",
+      "harness_sha256": "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871",
+      "generation": 3,
+      "superseded_by_harness_sha256": "fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac",
+      "superseded_by_generation": 4,
+      "superseded_at": "2026-10-26T19:27:25Z",
+      "reason": "generation 3 \u2192 4 because analyze_stats.py moved 800c8f6c\u2026 \u2192 30b07d4d\u2026 at 19:14:14Z (LATENCY-DEDUPE-FIX)",
+      "why_this_block_was_wrong": "this block was written 18 minutes before the pin moved, so it quoted a digest that was correct when written and dead by the time a launcher read it; the value above is now the pinned one and the generation-3 value is preserved here",
+      "old_block_preserved_verbatim": {
+        "harness_sha256": "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871",
+        "artefact": "experiments/ptr-engine/measure/HARNESS-PIN.json (generation 3)",
+        "generation": 3,
+        "generation_2_preserved_verbatim": true,
+        "delta_that_moved_it": "run_longrun.py 0d581d1f -> b2003038, caused by RUNNER-ROUNDS-48: TOOL_FETCH_ROUNDS_PER_ARM 24 -> 48 at run_longrun.py:230 plus the new --fetch-rounds-per-arm override at run_longrun.py:2857",
+        "launch_must_pass": "--expect-harness 2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871"
+      }
+    },
+    "supersedes_generation_5": {
+      "recorded_at": "2026-10-26T20:05:00Z",
+      "unit": "HARNESS-PIN-GEN5",
+      "harness_sha256": "fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac",
+      "generation": 4,
+      "superseded_by_harness_sha256": "35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb",
+      "superseded_by_generation": 5,
+      "superseded_at": "2026-10-26T19:53:45Z",
+      "reason": "grade_v5.py moved under GRADE-V5-T4-DECORATION and run_longrun.py moved under RUN-DRY-TURN-SCOPE after this block was written at 19:27:25Z; the block quoted a digest that was correct when written and dead by the time a launcher read it. The value above is now the pinned one; the generation-4 block is preserved verbatim below and the generation-3 entry under 'supersedes' is left untouched.",
+      "old_block_preserved_verbatim": {
+        "harness_sha256": "fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac",
+        "read_the_pin_at": "experiments/ptr-engine/measure/HARNESS-PIN.json (harness_sha256, generation 4) -- this block is a CACHED COPY, not the authority; run_a_star.py:51 HARNESS_PIN is the value a launcher actually passes",
+        "artefact": "experiments/ptr-engine/measure/HARNESS-PIN.json (generation 4)",
+        "generation": 4,
+        "generation_2_preserved_verbatim": true,
+        "delta_that_moved_it_to_generation_3": "run_longrun.py 0d581d1f -> b2003038, caused by RUNNER-ROUNDS-48: TOOL_FETCH_ROUNDS_PER_ARM 24 -> 48 at run_longrun.py:230 plus the new --fetch-rounds-per-arm override at run_longrun.py:2857",
+        "launch_must_pass": "--expect-harness fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac"
+      }
+    },
+    "delta_that_moved_it_to_generation_6": "client.py 5aa23bb5\u2026 -> 9b12b2ea\u2026 and run_longrun.py 30dfa9e9\u2026 -> 4f40dde1\u2026 (TOOL-CHANNEL-WIRE, execution dda84411, verdict PASS f17663d1); the other four pinned inputs are byte-identical to generation 5",
+    "supersedes_generation_6": {
+      "recorded_at": "2026-10-26T23:25:10Z",
+      "unit": "HARNESS-PIN-GEN6",
+      "generation": 5,
+      "harness_sha256": "35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb",
+      "superseded_by_harness_sha256": "efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3",
+      "superseded_by_generation": 6,
+      "superseded_at": "2026-10-26T19:20:00-05:00",
+      "reason": "client.py and run_longrun.py moved under TOOL-CHANNEL-WIRE (execution dda84411, verdict PASS f17663d1) after generation 5 froze at 2026-10-26T20:05:00Z; the block quoted the generation-5 digest, correct when written and dead by the time a launcher read it. The generation-5 block is preserved verbatim below.",
+      "old_block_preserved_verbatim": {
+        "harness_sha256": "35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb",
+        "read_the_pin_at": "experiments/ptr-engine/measure/HARNESS-PIN.json (harness_sha256, generation 5) -- this block is a CACHED COPY, not the authority; run_a_star.py:51 HARNESS_PIN is the value a launcher actually passes, and it still carries generation 4 until 'launcher_pending_advance' below is cleared",
+        "artefact": "experiments/ptr-engine/measure/HARNESS-PIN.json (generation 5)",
+        "generation": 5,
+        "generation_2_preserved_verbatim": true,
+        "delta_that_moved_it_to_generation_3": "run_longrun.py 0d581d1f -> b2003038, caused by RUNNER-ROUNDS-48: TOOL_FETCH_ROUNDS_PER_ARM 24 -> 48 at run_longrun.py:230 plus the new --fetch-rounds-per-arm override at run_longrun.py:2857",
+        "delta_that_moved_it_to_generation_5": "grade_v5.py 056eb605\u2026 -> 3d70ed1d\u2026 (GRADE-V5-T4-DECORATION) and run_longrun.py b2003038\u2026 -> 30dfa9e9\u2026 (RUN-DRY-TURN-SCOPE); the other four pinned inputs are byte-identical",
+        "launch_must_pass": "--expect-harness 35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb",
+        "launcher_pending_advance": {
+          "file": "experiments/ptr-engine/tools/run_a_star.py",
+          "line": 51,
+          "generation": 4,
+          "effect": "pinned_digest() exits 'HARNESS-PIN record disagrees with the launcher' (run_a_star.py:80 requires generation 4): no launcher cell can start, and the pin-patched /tmp copy was needed to reach any dry-run output at all",
+          "why_not_done_here": "HARNESS-PIN-GEN5's write paths exclude run_a_star.py; this card does not re-pin",
+          "state": "STILL OPEN at 2026-10-26T20:20:00Z: measured, not repaired"
+        },
+        "supersedes": {
+          "recorded_at": "2026-10-26T19:41:30Z",
+          "unit": "GRID-PARAMS-DIGEST-SUPERSEDE",
+          "harness_sha256": "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871",
+          "generation": 3,
+          "superseded_by_harness_sha256": "fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac",
+          "superseded_by_generation": 4,
+          "superseded_at": "2026-10-26T19:27:25Z",
+          "reason": "generation 3 \u2192 4 because analyze_stats.py moved 800c8f6c\u2026 \u2192 30b07d4d\u2026 at 19:14:14Z (LATENCY-DEDUPE-FIX)",
+          "why_this_block_was_wrong": "this block was written 18 minutes before the pin moved, so it quoted a digest that was correct when written and dead by the time a launcher read it; the value above is now the pinned one and the generation-3 value is preserved here",
+          "old_block_preserved_verbatim": {
+            "harness_sha256": "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871",
+            "artefact": "experiments/ptr-engine/measure/HARNESS-PIN.json (generation 3)",
+            "generation": 3,
+            "generation_2_preserved_verbatim": true,
+            "delta_that_moved_it": "run_longrun.py 0d581d1f -> b2003038, caused by RUNNER-ROUNDS-48: TOOL_FETCH_ROUNDS_PER_ARM 24 -> 48 at run_longrun.py:230 plus the new --fetch-rounds-per-arm override at run_longrun.py:2857",
+            "launch_must_pass": "--expect-harness 2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871"
+          }
+        },
+        "supersedes_generation_5": {
+          "recorded_at": "2026-10-26T20:05:00Z",
+          "unit": "HARNESS-PIN-GEN5",
+          "harness_sha256": "fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac",
+          "generation": 4,
+          "superseded_by_harness_sha256": "35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb",
+          "superseded_by_generation": 5,
+          "superseded_at": "2026-10-26T19:53:45Z",
+          "reason": "grade_v5.py moved under GRADE-V5-T4-DECORATION and run_longrun.py moved under RUN-DRY-TURN-SCOPE after this block was written at 19:27:25Z; the block quoted a digest that was correct when written and dead by the time a launcher read it. The value above is now the pinned one; the generation-4 block is preserved verbatim below and the generation-3 entry under 'supersedes' is left untouched.",
+          "old_block_preserved_verbatim": {
+            "harness_sha256": "fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac",
+            "read_the_pin_at": "experiments/ptr-engine/measure/HARNESS-PIN.json (harness_sha256, generation 4) -- this block is a CACHED COPY, not the authority; run_a_star.py:51 HARNESS_PIN is the value a launcher actually passes",
+            "artefact": "experiments/ptr-engine/measure/HARNESS-PIN.json (generation 4)",
+            "generation": 4,
+            "generation_2_preserved_verbatim": true,
+            "delta_that_moved_it_to_generation_3": "run_longrun.py 0d581d1f -> b2003038, caused by RUNNER-ROUNDS-48: TOOL_FETCH_ROUNDS_PER_ARM 24 -> 48 at run_longrun.py:230 plus the new --fetch-rounds-per-arm override at run_longrun.py:2857",
+            "launch_must_pass": "--expect-harness fa6fd8cc519f5a2794b54fe5f215c808f781b136de657bdece7f5eb4bf37e8ac"
+          }
+        }
+      }
+    }
+  },
+  "fetch_followup_allowance": {
+    "value": 48,
+    "was": 24,
+    "flag": "--fetch-followup-allowance",
+    "flag_owner": "experiments/ptr-engine/longrun/cell.py:1882-1887 (argparse), consumed at cell.py:1160-1165",
+    "what_the_flag_actually_sets": "the G1 ledger gate's reserved request count for follow-ups only: would_spend = turns_total + allowance (cell.py:1160-1165, priced at cell.py:1167-1175). It is an ACCOUNTING reserve. It does not reach the runner: cell.py:1550 (stage_run argv) emits no allowance flag, and run_a_star.py:201 appends the flag to the cell argv, not to the runner.",
+    "correction_to_rev_1": "rev 1 key 'per_arm_round_cap.finding' said the runner has NO flag for the per-arm cap. FALSE since 19:04:32Z: run_longrun.py:2857 declares --fetch-rounds-per-arm (resolver run_longrun.py:277). The 48-round half is now runnable, not a blocked requirement."
+  },
+  "per_arm_round_cap": {
+    "runtime_constant": 48,
+    "declared_at": "experiments/ptr-engine/longrun/run_longrun.py:230 (TOOL_FETCH_ROUNDS_PER_ARM = 48)",
+    "override_flag": "--fetch-rounds-per-arm at experiments/ptr-engine/longrun/run_longrun.py:2857, resolver at run_longrun.py:277, default TOOL_FETCH_ROUNDS_PER_ARM",
+    "per_turn_cap": "TOOL_FETCH_ROUNDS_PER_TURN = 3, run_longrun.py:232",
+    "required_for_this_measurement": 48,
+    "flag_exists": true,
+    "was_in_rev_1": "runtime_constant 24 at run_longrun.py:226, flag_exists false"
+  },
+  "per_cell_budget": {
+    "meaning": "--budget on cell.py is the per-cell REQUEST budget enforced at the 3/7 budget preflight: it takes the runner's own --dry-run would_send_total, multiplies by (1 + BUDGET_HEADROOM=0.10, cell.py:140), and refuses with Abort(3, '3/7 budget') when required > --budget (cell.py:388-392). It is not a runtime ceiling and it does not raise any cap.",
+    "minimum_requests": 96,
+    "arithmetic": "turns 48 + rounds 48 = 96 (non-compact arms; cells 1-6, 9-10). transcript-compact cells (7, 8) add expected_digests=2 -> 98. Digests do NOT need adding to the non-compact figure; they are the only extra term and they exist only on the two compact cells.",
+    "gate_arithmetic": "the shipped 10% headroom means the cell's --budget must exceed the raw projection: ceil(96 x 1.10) = ceil(105.6) = 106 for non-compact; ceil(98 x 1.10) = ceil(107.8) = 108 for transcript-compact.",
+    "recommended": 108,
+    "recommended_reason": "one uniform value covering all 10 cells (worst case = transcript-compact, 108). 106 would pass cells 1-6 and 9-10 and refuse cells 7-8.",
+    "today_if_the_flag_is_not_changed": {
+      "runner_projection_with_24_rounds": "48 turns + 24 rounds = 72 (compact: 74)",
+      "cell_gate_required": "ceil(72 x 1.10) = 80 (compact: ceil(74 x 1.10) = 82)",
+      "existing_flag": "--budget 67",
+      "existing_behaviour": "80 > 67, so a 48-turn tools-on cell is REFUSED at the 3/7 budget preflight with exit 3 before any request is sent (cell.py:388-392). The card's shorthand 'abort on BudgetExhausted' is imprecise: BudgetExhausted is a different, runtime error (run_longrun.py:272, raised at :984, caught at :2469) raised against the runner's INTERNALLY computed budget projected_requests = turns + digests + 24 = 72 (run_longrun.py:436-443), which --budget never reaches. Both would look like a runner failure in a log; neither is one.",
+      "finding": "yes - --budget 67 aborts the cell, but as preflight exit 3, not as BudgetExhausted"
+    },
+    "measured_on": "2026-10-26, LAUNCH-PACKAGE-RECONCILE",
+    "measured_claim": "the GATE is permissive, not tight: --budget 67 is ALLOWED today and --budget 108 is ALLOWED today. Neither value has ever been observed to refuse.",
+    "what_stage_3_actually_computes": {
+      "stage": "3/7 budget (cell.py:353-395), reached only on the LIVE path; cell.py --dry-run returns at cell.py:2009 BEFORE this stage, so a --dry-run can never exercise --budget",
+      "runner_argv": "cell.py:363-366 -> [sys.executable, RUNNER, '--dry-run', '--fixture', ..., '--arms', arm, '--reps', reps]",
+      "parsed": "re.search(r'would_send_total=(\\d+)', out)",
+      "then": "required = ceil(would_send_total * (1 + BUDGET_HEADROOM=0.10)); refuse Abort(3,'3/7 budget') iff required > --budget",
+      "MEASURED_would_send_total": 48,
+      "MEASURED_required": 53,
+      "why_48_not_96": "the runner's --dry-run projects TURNS only. The 48 fetch rounds are NOT added to would_send_total, so this card's earlier 'turns 48 + rounds 48 = 96' is the price arithmetic, not what the gate computes. required = ceil(48 x 1.10) = 53."
+    },
+    "measurement": [
+      {
+        "budget": 67,
+        "exit_code": 5,
+        "stage_reached": "4/7 run",
+        "stage_3_line": "cell: 3/7 budget ok would_send_total=48 +10%=53 <= budget=67 (quota_remaining=3192 best-effort)",
+        "verdict": "ALLOWED at 3/7; continued through 3a/7 G1, 3b/7 projection, 3c/7 G3, and stopped only at 4/7 because the probe shim refused the live launch"
+      },
+      {
+        "budget": 108,
+        "exit_code": 5,
+        "stage_reached": "4/7 run",
+        "stage_3_line": "cell: 3/7 budget ok would_send_total=48 +10%=53 <= budget=108 (quota_remaining=3192 best-effort)",
+        "verdict": "ALLOWED at 3/7; identical path and stop point to 67"
+      }
+    ],
+    "recommended_basis": "the launch command in LAUNCH-PACKAGE-AUDIT already carries 108, run_a_star.py:181 hard-codes it and run_a_star.py:280 defaults to it; 108 is retained for consistency, NOT because 67 refuses. It does not.",
+    "superseded_finding": "GRID-PARAMS rev 1 (BUDGET-48-WIRE) said '80 > 67, so a 48-turn tools-on cell is REFUSED at the 3/7 budget preflight with exit 3 before any request is sent (cell.py:388-392)'. MEASURED FALSE on the current cell.py. See docs/FETCH-BUDGET-48.md dated correction (LAUNCH-PACKAGE-RECONCILE)."
+  },
+  "price": {
+    "total": 1056,
+    "arithmetic": "768 turns x 1.374532 = 1055.640576 -> 1,056 requests",
+    "factor": 1.374532,
+    "factor_path": "experiments/ptr-engine/measure/GRID-SHAPE.json :: factor.tools_off_historical = 1.374532",
+    "remaining_before": 9503,
+    "remaining_after": 8447,
+    "remaining_arithmetic": "9,503 - 1,056 = 8,447",
+    "spend_status": "NOT approved spend: payable only if the grid runs, quoted beside the 3,192 remaining figure. Launch authority is board #865's recorded default, not this file.",
+    "supersedes": "rev 2 total 1,016 (10 cells) -- preserved verbatim under supersedes.ten_cell_figures_preserved_verbatim",
+    "caveats": {
+      "factor_is_tools_off": "1.374532 is GRID-SHAPE.json factor.tools_off_historical. The 16 cells are tools-on read_file cells (GRID-SHAPE.json factor.tools_on_ceiling = 1.5), so 1,056 is the tools-off price of a tools-on shape: at the tools-on ceiling the same 768 turns would be 1,152. Recorded, not smoothed.",
+      "not_like_for_like_with_1016": "rev 2's 1,016 = 964 tranche + 48 canary + 4 warm-ups. The 1,056 this rev records is 768 turns x factor only: it carries no canary and no warm-ups. Like-for-like it would be 1,056 + 48 + 4 = 1,108 against 3,192, leaving 2,084.",
+      "launcher_g1_basis_is_a_third_number": "cell.py G1 prices each 48-turn tools-on cell at turns 48 + allowance 48 = 96 (dry run prints G1 computed=1,224 = 1,128 spent + 96). Over 16 cells that basis is 16 x 96 = 1,536, i.e. 1,128 + 1,536 = 2,664 cumulative, leaving 1,656. All three figures (1,056 / 1,108 / 1,536) fit the 4,320 cap; the brake cannot choose between them."
+    }
+  },
+  "canary": {
+    "N": 12,
+    "verdict_rule": "N=12, shape_ok, answer_verified >= 1, stop_signal_source=finish_reason",
+    "artefact": "experiments/ptr-engine/measure/CANARY-ERA-B-FIX.json :: era_b_gateable / canary_can_gate_era_b = true",
+    "why_not_5": "CANARY-ERA-B-FIX.json :: definitive_verdicts.at_n5 \u2014 'at N=5 era B is structurally blind: the first checkpoint is T12, so no tools-on row can carry answer_verified, and no cap/storm occurs in turns 1-5'; tools_on_definitive 0 of 3 at N=5, and 3 of 3 definitive from N=12",
+    "docs_corrected_here": [
+      "docs/TRANCHE-CANARY.md:23",
+      "docs/FETCH-BUDGET-48.md:166"
+    ]
+  },
+  "grid_shape_superseded_by_pointer": {
+    "what": "experiments/ptr-engine/measure/GRID-SHAPE.json is NOT edited by this card and remains byte-unchanged as the 2026-10-26 decision record. These of its fields are superseded:",
+    "fields": [
+      {
+        "pointer": "grid.requests_incl_digests",
+        "stale_value": 724,
+        "superseded_by": "price.components.tranche = 964 (and price.total = 1,016)"
+      },
+      {
+        "pointer": "grid.remaining_after_incl_digests",
+        "stale_value": 2468,
+        "superseded_by": "price.remaining_after = 2,176"
+      },
+      {
+        "pointer": "grid.cumulative_g1",
+        "stale_value": 1821,
+        "superseded_by": "canary + warm-ups are now inside the price: 1,128 spent + 1,016 = 2,144"
+      },
+      {
+        "pointer": "cells[*].cell_py_flags[6] (the '--budget 67' token)",
+        "stale_value": "--budget 67",
+        "superseded_by": "per_cell_budget.recommended = 108"
+      },
+      {
+        "pointer": "cells[*].cell_py_flags[8] (the '--fetch-followup-allowance 24' token)",
+        "stale_value": "--fetch-followup-allowance 24",
+        "superseded_by": "fetch_followup_allowance.value = 48"
+      },
+      {
+        "pointer": "cells[*].projection.followup_allowance",
+        "stale_value": 24,
+        "superseded_by": "fetch_followup_allowance.value = 48"
+      },
+      {
+        "pointer": "factor.ceiling_from (the 'TOOL_FETCH_ROUNDS_PER_ARM=24 at run_longrun.py:226' text)",
+        "stale_value": "24 at run_longrun.py:226",
+        "superseded_by": "per_arm_round_cap: 48 at run_longrun.py:230, override --fetch-rounds-per-arm run_longrun.py:2857"
+      }
+    ],
+    "rule": "A launcher reads THIS file. GRID-SHAPE.json is read as history only."
+  },
+  "cards_that_must_read_this_file": [
+    "orchestration/units/RUN-A-STAR.md (any card that launches the 10-cell grid)",
+    "orchestration/units/DRYRUN-TOOLS-SHAPE.md",
+    "orchestration/units/GRID-SHAPE-TOOLS.md",
+    "orchestration/units/FETCH-BUDGET-48.md",
+    "orchestration/units/ANALYSIS-PATH-DRYRUN.md",
+    "orchestration/units/CANARY-FALSE-POSITIVE.md",
+    "orchestration/units/LAUNCH-PACKAGE-RECONCILE.md"
+  ],
+  "answer_to_the_card_question": "The launch parameters are now measured, not assumed: the pool is 48 rounds (constant at run_longrun.py:230, overridable at run_longrun.py:2857), the per-cell --budget gate computes ceil(48 x 1.10) = 53 and therefore allows BOTH 67 and 108 \u2014 108 is kept for consistency with the launch command, not because 67 refuses. The launch price is 1,016 = 964 + 48 + 4 against 3,192 remaining, leaving 2,176.",
+  "not_touched": [
+    "GRID-SHAPE.json",
+    "PARM-1*",
+    "cell.py",
+    "run_longrun.py",
+    "every row file",
+    "every grade file",
+    "every published number",
+    "REQUEST-LEDGER.json"
+  ],
+  "shape": {
+    "cells": 16,
+    "arms": {
+      "pointer-stable": 6,
+      "transcript-grow": 6,
+      "transcript-compact": 2,
+      "lease-reopen": 2
+    },
+    "reps_per_arm": {
+      "pointer-stable": 6,
+      "transcript-grow": 6,
+      "transcript-compact": 2,
+      "lease-reopen": 2
+    },
+    "turns_per_cell": 48,
+    "turns_total": 768,
+    "turns_arithmetic": "16 cells x 48 turns = 768 turns",
+    "why_16": "POWER-UNDER-TURN-N measured n_eff(144)=31.36 on the binding arm (rows-longrun-c, r=0.6423) against a floor of 60. The former 10-cell shape runs pair arms at 3/3/2/2; the smallest conformant shape is six runs per pair arm, i.e. 6/6/2/2 = 16 cells, and n_eff(288)=62.73 clears the floor of 60.",
+    "power_floor": 60,
+    "n_eff_at_10_cell_shape": 31.36,
+    "n_eff_at_16_cell_shape": 62.73,
+    "binding_arm": "rows-longrun-c (r=0.6423)",
+    "priced_per_cell": "per_cell_budget.recommended = 108 covers every one of the 16 cells (worst case transcript-compact)",
+    "wall_basis": "60 s/turn x 48 turns x 16 cells, sequential = 46,080 s (12.8 h)"
+  },
+  "residual_launcher_not_wired": {
+    "finding": "experiments/ptr-engine/tools/run_a_star.py does NOT read this file. Its grid is the module constant CELLS (run_a_star.py:99-103), a literal 10-tuple, and it prints no price line at all.",
+    "evidence": {
+      "grep": "grep -n 'GRID-PARAMS' experiments/ptr-engine/tools/run_a_star.py -> 0 matches. 'GRID-SHAPE' -> 3 matches, all prose: run_a_star.py:9 (docs/GRID-SHAPE.md), run_a_star.py:474 and :478 (argparse help). No json.load of either measure file: the launcher's json.load sites are the pin record (:75), warm-up usage (:158), row lines (:193) and a cell manifest (:306-307).",
+      "cells_constant": "run_a_star.py:99-103 CELLS = 3 pointer-stable + 3 transcript-grow + 2 transcript-compact + 2 lease-reopen = 10",
+      "dry_run_line": "RUN-A DRY END cells=10 refused=0 requests=0 claim=H2 turns=48 max_wall=2880 canary_arms=10 canary_requests=0",
+      "no_price_line": "the launcher has no code path that prints a price; the dry run prints cells and refuses only"
+    },
+    "consequence": "Promoting this file additively cannot move what the launcher prints: the dry run says cells=10 before and after. Wiring 16 cells into the launch is a change inside run_a_star.py:99-103 plus a price line, and run_a_star.py is not in this card's write paths.",
+    "who_owns_it": "a follow-up card owning experiments/ptr-engine/tools/run_a_star.py (CELLS -> 16, and a printed price), NOT this card"
+  },
+  "spend_status": "NOT approved spend"
+}

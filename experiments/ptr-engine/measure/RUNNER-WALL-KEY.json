@@ -1,0 +1,91 @@
+{
+  "unit": "RUNNER-WALL-KEY",
+  "question": "Which wall key does each code path read, and does any path fall back to the top-level wall_tokens?",
+  "offline": true,
+  "requests": 0,
+  "head_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "resolution_order": [
+    "1. per-arm — run_longrun.py:1186-1195  by_arm = fixture.get(\"wall_tokens_by_arm\") or {}  /  return int(by_arm[arm])",
+    "2. top-level — run_longrun.py:1197  return int(fixture[\"wall_tokens\"])  (reached ONLY when no non-empty wall_tokens_by_arm is declared; a declared block with the arm missing now raises FixtureError at :1189-1195)",
+    "3. schema default — NONE on the v8 path. adaptation.wall_tokens_default=65536 is read only by adapt_v2.py:139-143 / adapt_v3.py:156-160 / adapt_fixture.py:190-194 for OLD fixtures that carry long_run.wall_tokens; run_longrun.py never consults it",
+    "4. hard-coded constant — none for tokens. DEFAULT_WALL_TOKENS exists only in those legacy adapters; run_longrun.py has no token-wall constant"
+  ],
+  "path_reads": {
+    "run_longrun.py": [
+      "152-155 load_fixture: previously REQUIRED the top-level key; now requires wall_tokens OR a non-empty wall_tokens_by_arm",
+      "1006 self.wall_tokens = int(fixture[\"wall_tokens\"]) — the fixture handed to Planner is already arm-substituted at 1217 and 2176 (<= 2126), so this reads the PER-ARM value",
+      "1077 while len(parts) > 1 and est_tokens(\"\n\n\".join(parts + [current]), self.bpt) > self.wall_tokens:  (grow/FIFO truncation, per-arm)",
+      "1094 if t > 1 and est_tokens(window, self.bpt) > self.wall_tokens:  (compact wall, per-arm)",
+      "1186-1197 wall_for_arm — per-arm first, top-level only as legacy fallback",
+      "1190-1197 fixture_for_arm — shallow copy with wall_tokens overwritten to the per-arm value",
+      "1237 \"wall_tokens\": int(fx[\"wall_tokens\"])  (fires dict, built from the per-arm fx)",
+      "1261 wall = int(fires.get(\"wall_tokens\") or wall_for_arm(fixture, arm))",
+      "1319-1332 expected_digests: fx = fixture_for_arm(fixture, \"transcript-compact\") — per-arm",
+      "1377/1389 build_manifest: int(fixture[\"wall_tokens\"]) — correct on the live path (2163 gets the arm fixture from 2126); the DRY-RUN path at 2826 used the BASE fixture and froze 3838 — FIXED",
+      "2118 check_treatments -> fixture_for_arm (per-arm); 2126 fixture = fixture_for_arm(fixture, arm); 2176 Planner(arm, fixture, dry_run=False)"
+    ],
+    "cell.py": [
+      "NO read of wall_tokens / wall_tokens_by_arm / wall_tokens_basis at all — cell.py only handles wall-CLOCK (wall_ms, projected_turn_wall, --max-wall, --turn-wall-cap). It passes --fixture straight through to run_longrun.py at :318 (dry-run) and :1460 (live), so the token wall is resolved entirely inside the runner"
+    ],
+    "loaders_schema": [
+      "run_longrun.py:127-169 load_fixture — the only fixture schema/validation code on this path (schema id consonance.longrun-fixture/1); no default is injected for the wall",
+      "no jsonschema/spec file validates wall_tokens_by_arm or wall_tokens_basis anywhere in the tree (grep: only the fixture itself, measure/*.json and manifests carry the fields)"
+    ],
+    "tests_before": [
+      "tests/test_treatments_fire.py:128-132 pins RED by clearing wall_tokens_by_arm and setting wall_tokens=65536 (asserts the refusal message quotes 65536) — it pins the LEGACY single-key shape, not a silent fallback",
+      "tests/test_treatments_fire.py:148 expected_digests(dict(fx, wall_tokens=65536, wall_tokens_by_arm={})) == 0 — again explicit, no by_arm-bearing fallback case",
+      "tests/test_arm_treatments.py:75 assert fx[\"wall_tokens\"] < WALL_NOW — pins the probe fixture's wall, not the resolution rule",
+      "NO pre-existing test asserted that a by_arm-bearing fixture never reads the top-level value; that hole is what tests/test_wall_key.py fills"
+    ],
+    "residual_top_level_reads_outside_the_runner": [
+      "score_longrun.py:337 data[\"_wall_tokens\"] = fixture.get(\"wall_tokens\") — the GRADER's provenance copy, top-level only; not a wall the cell runs at, out of this unit's write paths",
+      "project_wallclock.py:164 out[name] = {..., \"wall_tokens\": d.get(\"wall_tokens\")} — projection input, top-level only",
+      "adapt_v2.py / adapt_v3.py / adapt_fixture.py — legacy v2/v3 fixture adapters, top-level and long_run.wall_tokens only; not on the v8 path"
+    ]
+  },
+  "discriminating_fixture": {
+    "shape": "tasks-v6/LR-01.v8.json copied in memory: wall_tokens=3838, wall_tokens_by_arm={all four: 38380} (10x)",
+    "table": [
+      "arm,key_read,wall_used,first_fire_turn",
+      "transcript-grow,wall_tokens_by_arm[transcript-grow],38380,None (no fire in 48)",
+      "transcript-compact,wall_tokens_by_arm[transcript-compact],38380,None (no fire in 48)",
+      "lease-reopen,wall_tokens_by_arm[lease-reopen],38380,None (lease step still T23)",
+      "pointer-stable,wall_tokens_by_arm[pointer-stable],38380,None (prefix change still T2)"
+    ]
+  },
+  "v8_as_shipped": {
+    "table": [
+      "arm,key_read,wall_used,first_fire_turn",
+      "transcript-grow,wall_tokens_by_arm[transcript-grow],10616,21",
+      "transcript-compact,wall_tokens_by_arm[transcript-compact],10616,21",
+      "lease-reopen,wall_tokens_by_arm[lease-reopen],10616,None (lease step T23)",
+      "pointer-stable,wall_tokens_by_arm[pointer-stable],10616,None (prefix change T2)"
+    ],
+    "matches_fixture_treatments_dry_run": "grow T21, compact T21, lease T23, pointer prefix T2 — yes"
+  },
+  "counterfactual_top_level_only": [
+    "arm,key_read,wall_used,first_fire_turn",
+    "transcript-grow,wall_tokens(top-level),3838,2",
+    "transcript-compact,wall_tokens(top-level),3838,2",
+    "lease-reopen,wall_tokens(top-level),3838,None",
+    "pointer-stable,wall_tokens(top-level),3838,None"
+  ],
+  "fix_needed": true,
+  "fixes": [
+    "run_longrun.py:1186-1200 wall_for_arm — a non-empty wall_tokens_by_arm is authoritative; an arm missing from it raises FixtureError instead of silently returning the top-level 3838. The top-level key is still accepted for legacy fixtures that declare no per-arm block.",
+    "run_longrun.py:2826 (dry run) — build_manifest now receives fixture_for_arm(fixture, arm). Before: dryrun-LR-01-*-r1.json froze engine_flags.design_cap_tokens=3838 and fixture.wall_tokens=3838 for a cell built at 10616.",
+    "run_longrun.py:152-163 load_fixture — accepts a fixture that declares only wall_tokens_by_arm; requires neither key to be silently defaulted.",
+    "run_longrun.py:2820-2831 main — WALL-KEY preflight resolves every requested arm's wall before a manifest is frozen, exiting 2 with FIXTURE ERROR instead of running an arm at the wrong wall."
+  ],
+  "red_green": {
+    "red_before_fix": [
+      "FAIL test_arm_missing_from_a_declared_by_arm_block_does_not_fall_back_to_3838: AssertionError: wall_for_arm silently fell back to the top-level 3838 for transcript-grow; the arm would fire the wall at T2 instead of T21",
+      "FAIL test_dry_run_manifest_records_the_per_arm_wall_not_the_top_level_one: ('/tmp/wallkey-manifest-*/dryrun-LR-01-transcript-compact-r1.json', {'design_cap_tokens': 3838, ...})",
+      "FAIL test_loader_accepts_a_fixture_that_declares_only_wall_tokens_by_arm: fixture ... missing required key 'wall_tokens'"
+    ],
+    "green_after_fix": "6/6 PASS; pytest tests/test_treatments_fire.py + tests/test_arm_treatments.py + tests/test_wall_key.py = 22 passed"
+  },
+  "regression_test": "experiments/ptr-engine/longrun/tests/test_wall_key.py — test_arm_missing_from_a_declared_by_arm_block_does_not_fall_back_to_3838 (a future fallback quotes 3838 in the AssertionError and fails), test_dry_run_manifest_records_the_per_arm_wall_not_the_top_level_one (fails on design_cap_tokens=3838), test_discriminating_fixture_reads_per_arm_not_the_top_level_key (10x gap; a fallback would read 3838 and fire at T2)",
+  "recommendation_top_level_3838": "KEEP it in LR-01.v8.json (the fixture is an audited artefact and must not be edited) as an explicit 'below-first-prompt, do not use' marker whose only safe role is legacy single-key fixtures — enforced by refusal rather than documented and hoped for: a declared wall_tokens_by_arm is now authoritative and an arm missing from it refuses. Renaming or removing it would require editing the audited v8 fixture; instead, future fixtures (v9+) should omit the top-level key entirely, which the loader now accepts.",
+  "verdict": "PASS"
+}

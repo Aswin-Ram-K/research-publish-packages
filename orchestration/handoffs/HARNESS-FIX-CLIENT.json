@@ -1,0 +1,48 @@
+{
+  "unit": "HARNESS-FIX-CLIENT",
+  "status": "partial",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/client.py",
+    "experiments/ptr-engine/longrun/tests/test_client_ttft.py",
+    "orchestration/units/HARNESS-FIX-CLIENT.md"
+  ],
+  "evidence": {
+    "command_or_count": "8/8 cases green; offline=yes",
+    "commands": [
+      "python3 experiments/ptr-engine/longrun/tests/test_client_ttft.py  ->  exit 0, '8/8 cases green; offline=yes'",
+      "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_client_ttft.py  ->  '8 passed in 0.02s'",
+      "python3 -c \"import ast; ast.parse(open('experiments/ptr-engine/longrun/client.py').read())\"  ->  'client.py parses'",
+      "inference requests sent: 0 (every SSE body, every /metrics body and the clock are fakes; socket.socket stubbed to raise for the whole test run)"
+    ],
+    "old_latch_line": "if (piece_c or piece_r) and ttft is None: ttft = time.perf_counter() - t0",
+    "new_latch_lines": "kind = token_kind(delta)  # non-empty content | reasoning_content | tool_calls\nif kind is not None and ttft is None:\n    ttft = clock() - t0\n    first_token_kind = kind",
+    "metrics_flag": "--metrics-scrape / --no-metrics-scrape (cfg.metrics_scrape, env PTR_METRICS_SCRAPE, DEFAULT_METRICS_SCRAPE=True)",
+    "test_outcomes": {
+      "a_first_delta_tool_calls": "GREEN ttft_ms=300.0 first_token_kind=tool_call wall_ms=500.0; RED pre-fix ttft_ms=None",
+      "b_empty_content_then_token": "GREEN ttft_ms=450.0 (not 100.0); RED pre-fix carried no first_token_kind/ttft_source",
+      "c_no_delta": "GREEN ttft_ms=None ttft_source=unavailable first_token_kind=None wall_ms=2500.0; RED pre-fix had no ttft_source",
+      "d_usage_cached_zero": "GREEN cached_tokens=0 cached_source=prompt_tokens_details (usage beats the 32-token delta); RED pre-fix had no cached_source",
+      "e_metrics_delta": "GREEN cached_tokens=32 cached_source=metrics_delta with two scrape snapshots carrying all four keys; RED pre-fix imputed 0",
+      "f_scrape_opt_out": "GREEN metrics_scrape=False, 0 getter calls, null counters; DEFAULT_METRICS_SCRAPE is True",
+      "g_failed_scrape": "GREEN null snapshots, cached_tokens None, request still measured (ttft_ms=50.0)",
+      "h_parser_and_url": "GREEN sums label sets, absent counter -> None, /v1 stripped from the metrics URL, backwards delta refused"
+    },
+    "premise_corrections": [
+      "experiments/ptr-engine/longrun/client.py did not exist in this checkout: the pre-fix latch is inline at run_longrun.py:1069-1078. The card's path is now real because this unit created the module there; run_longrun.py is untouched.",
+      "No wall-clock fallback exists in the pre-fix code: a turn whose first delta is a tool call recorded ttft_ms=None and timing_usable=False, so it was dropped from the p95 sample rather than inflated by the whole response time. Both failure modes are dishonest; both are closed.",
+      "Defect 2 was half-done already: run_longrun.py:990 sends stream_options.include_usage and extract_usage reads prompt_tokens_details. The missing pieces were the cached_source attribution, the metrics scrape, and the metrics-delta fallback."
+    ],
+    "one_change_needed_from_part_b": "Wire it in run_longrun.py: (1) call client.send_chat(cfg, messages) in place of the inline send_chat; (2) add client.add_metrics_scrape_argument(ap) so cfg.metrics_scrape exists; (3) pass through in make_row: ttft_source, first_token_kind, cached_source, engine_metrics_before, engine_metrics_after, metrics_scrape, wall_ms (ttft_ms and cached_tokens already pass through); (4) stop using normalize_cached_tokens for streaming rows or it will impute 0 for an SGLang null and mask the metrics delta."
+  },
+  "blocker": "",
+  "next_unit_hint": "Part B (run_longrun.py owner): import client, add --metrics-scrape, pass the seven new fields into make_row, then re-run the growth arms and recompute p95 TTFT — the cited grow 838.85 / compact 224.08 / stable 356.12 / lease-reopen 201.78 ms were sampled under the old latch and must not be reused.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/client.py",
+    "experiments/ptr-engine/longrun/tests/test_client_ttft.py",
+    "orchestration/units/HARNESS-FIX-CLIENT.md",
+    "orchestration/handoffs/HARNESS-FIX-CLIENT.json"
+  ],
+  "tool_calls": 15,
+  "bound": 30,
+  "requests_sent": 0
+}

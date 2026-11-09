@@ -1,0 +1,64 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/measure/RUN-A-STAR.md",
+  "experiments/ptr-engine/measure/run-a-star.json",
+  "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl",
+  "experiments/ptr-engine/measure/cell-pointer-stable-20261026T182535Z.refusal.json",
+  "experiments/ptr-engine/measure/cell-pointer-stable-20261026T182535Z-p4-001.gates.json",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "orchestration/units/RUN-A-STAR.md",
+  "orchestration/journals/RUN-A-STAR.jsonl"
+ ],
+ "assumptions": [
+  {
+   "key": "rows file naming",
+   "value": "rows-cell-<arm>-<stamp>.jsonl",
+   "why": "cell.py:2007 fixes this name; the card's 'rows-runA-*' template would require patching the pinned harness, which the card forbids. Bytes are untouched and the twins are named alongside as the harness always names them."
+  },
+  {
+   "key": "driver script path",
+   "value": "experiments/ptr-engine/tools/run_a_star.py",
+   "why": "the grid needs a driver (10 sequential cells + between-cell stop rules); tools/ is where every probe in this repo lives. No result bytes live in it."
+  },
+  {
+   "key": "per-cell brake",
+   "value": "--budget 67 + the runner's own WIRE-CAP-GATE global cap (4320, reserve 0)",
+   "why": "cell.py exposes no --request-allocation passthrough, and patching it is forbidden; the runner's per-request cap gate and cell.py's G1 both refuse on cumulative+this-cell against the artefact cap, which is the effect the card's cap correction asks for. The superseded 900 was never used as a ledger cap."
+  },
+  {
+   "key": "one cell per invocation",
+   "value": "--reps 1, 48 turns, --no-cell-handoff",
+   "why": "matches TRANCH1-DRYRUN-2's 10 launch commands; the rep label indexes the cell."
+  }
+ ],
+ "blocker": "At the frozen flags (--max-tokens 4096, --tools off, --runaway-turns 2) the v8 fixture drives occamy-1.0 into tool-call syntax degeneration that consumes the 4096 completion ceiling on T3 and T27, so --runaway-turns 2 ends every cell at exit 6 before turn 48. No cell can reach the horizon, so H1/H2/H3 are unadjudicable. Stop rule 7 forbids a retry and the card forbids changing a threshold.",
+ "bound": 44,
+ "evidence": {
+  "command_or_count": "1 of 10 cells attempted, 0 completed; cell 1 exit 6 (runaway, T3+T27 truncated at max_tokens 4096); 28 of 660 requests billed (27 cell + 1 warm-up); remaining 3,192 of 3,219; 0 turns over the 180 s turn cap; treatment-fire turns pointer T2 / grow T21 / compact T21 / lease T23",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/tranch1_dryrun.py --check -> PASS 10/10, design_cap_tokens=[10616] on every arm, 0 spawns, 0 network",
+   "python3 experiments/ptr-engine/longrun/cell.py --dry-run --arm pointer-stable --fixture .../LR-01.v8.json --budget 67 --hypothesis H2 -> G1 1154/4320, G2 2880/2880, G3 n=48>=1, checkpoints=12 kinds NUM5/CALL4/NONE3",
+   "python3 -u experiments/ptr-engine/tools/run_a_star.py -> CELL 1 pointer-stable r1 rc=6 dur=349.5s remaining=3192; STOP rule 7; END cells=1 new_requests=27 remaining=3192",
+   "python3 -c 'read rows-cell-pointer-stable-20261026T182535Z.jsonl' -> T3 wall_ms=114838.8 finish=length truncated=true comp=4096 loops read_file/fetch; T27 wall_ms=115331.2 truncated=true comp=4096 repeats <tool_call>",
+   "python3 -c 'read cell-pointer-stable-...refusal.json' -> exit 6, message 'run_longrun.py exited 6 (one or more runaway turns ended the cell)', cell_sha256=e24e867b... (matches disk), tree_sha=f17663d1... (matches git HEAD)"
+  ]
+ },
+ "next_unit_hint": "A new card must decide the launch-shape question BEFORE any further spend: either (a) pass --tools read_file for the v8 grid (the grounded questions are '@knowledge:' source inspections), or (b) drop the v8 fixtures whose questions invite tool calls at tools-off, or (c) raise --runaway-turns only via a re-frozen PARM-1 amendment with a priced cost - never by editing a threshold mid-grid. Card CAPGATE-CELL-LABEL is still open (defect (a) relabel, defect (b) missed reconcile on runaway).",
+ "not_reproduced": [],
+ "overstated": [],
+ "requests_spent": 28,
+ "status": "partial",
+ "tool_calls": 36,
+ "unit": "RUN-A*",
+ "unverified": [],
+ "write_paths": [
+  "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T182535Z.jsonl",
+  "experiments/ptr-engine/measure/cell-pointer-stable-20261026T182535Z*.json",
+  "experiments/ptr-engine/measure/RUN-A-STAR.md",
+  "experiments/ptr-engine/measure/run-a-star.json",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "orchestration/units/RUN-A-STAR.md",
+  "orchestration/handoffs/RUN-A-STAR.json",
+  "orchestration/journals/RUN-A-STAR.jsonl"
+ ]
+}

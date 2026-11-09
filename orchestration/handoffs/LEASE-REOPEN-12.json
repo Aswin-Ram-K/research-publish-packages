@@ -1,0 +1,65 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/measure/LEASE-REOPEN-12.json",
+  "docs/LEASE-REOPEN-12.md",
+  "experiments/ptr-engine/measure/rows-cell-lease-reopen-20261027T024223Z.jsonl",
+  "experiments/ptr-engine/measure/cell-lease-reopen-20261027T024223Z.json"
+ ],
+ "assumptions": [
+  "the ledger payload measure/REQUEST-LEDGER.json is forbidden to this card, so the honest delta is the in-memory recompute with its own billed rule; the file's static 3144 is quoted beside it, never as the spend",
+  "no launcher edit: the launcher has no single-cell 12-turn CLI form (--canary ignores --cell and prices 48 requests), so its own cell_argv()/run_cell() drove one cell unmodified"
+ ],
+ "blocker": "",
+ "bound": 30,
+ "bound_overrun": {
+  "bound": 30,
+  "used": 38,
+  "why": "2 calls lost to a write that the fs backend accepted at /tmp but never materialised (had to re-write into scratch/), 3 lost to orchestration_verdict refusals (unknown taskId, absolute /usr/bin/python3, then the accepted bare-python form), and 4 to locating HARNESS-PIN/cell.py by their real paths; no extra launch, no retry, 23 of 24 requests spent."
+ },
+ "evidence": {
+  "census": {
+   "billed_rounds": 23,
+   "finish_reasons": [
+    "stop",
+    "tool_calls"
+   ],
+   "rows": 30,
+   "rows_with_structured_tool_calls": 20,
+   "rows_with_tools_schema_sent": 30,
+   "stop_signal_source_present": 0,
+   "tool_call_items": 56,
+   "tool_calls_executed": 27,
+   "tool_followup_rows": 11,
+   "turn_rows": 12,
+   "turns_seen": "1-12"
+  },
+  "decision": {
+   "all_four_arms_ok": false,
+   "grid_may_launch": false,
+   "single_measurement_that_would_resolve": "one lease-reopen cell at >=23 turns (the grid 48-turn shape) whose rows show the T23 lease step/prefix change AND >=1 answer_verified row"
+  },
+  "gate1": "HARNESS-PIN.json generation 6, digest recomputed efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3 == harness_sha256, 6/6 files match; test_pin_matches_the_bytes_on_disk 1 passed",
+  "gate2": "launcher dry run (cell 15 = lease-reopen r1, launcher's own cell_argv through run_cell) rc=0 would_refuse=[] gates: G1 1236/4320, G2 720s of 900s, G3 n=12 smoke; argv carries --turns 12 --turn-wall-cap 180 --runaway-turns 2 --budget 108 --expect-harness efefd8859c3f\u202679b3",
+  "gate3": "REQUEST-LEDGER.json not rewritten: remaining 3144 -> 3144 (delta 0, file stale by 49 billed rows since its 22:33Z build); recomputed with run_a_star._row_counts: requests 1225 -> 1248, remaining 3095 -> 3072, delta +23 (=12 turns + 11 tool follow-ups), inside the 24-request cap",
+  "shape": {
+   "answer_verified_rows": 0,
+   "cap_length_rows": [],
+   "final_turn_finish_reason": "stop",
+   "grade": "9 decidable, 0 pass, 0 fail, 9 undecidable (turn_missing)",
+   "last_turn": 12,
+   "shape": "shape_unknown"
+  },
+  "treatment": "fixture lease_reopen_turns [23,40]; cell.py preflight 'first lease step at turn T23'; cell is 12 turns -> the treatment CANNOT fire in this cell"
+ },
+ "next_unit_hint": "Give the grid's lease-reopen arm its own first-cell mechanism check: one >=23-turn lease cell that shows the T23 lease step in its rows and returns >=1 verified answer. Also reopen CANARY-ERA-B-FIX: stop_signal_source is populated on 0 of 30 generation-6 rows.",
+ "status": "done",
+ "tool_calls": 38,
+ "unit": "LEASE-REOPEN-12",
+ "write_paths": [
+  "experiments/ptr-engine/measure/LEASE-REOPEN-12.json",
+  "docs/LEASE-REOPEN-12.md",
+  "orchestration/units/LEASE-REOPEN-12.md",
+  "orchestration/handoffs/LEASE-REOPEN-12.json",
+  "journal/2026-10-26.md"
+ ]
+}

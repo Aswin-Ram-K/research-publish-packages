@@ -1,0 +1,173 @@
+{
+ "unit": "LATENCY-REPORT-2",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/LATENCY-REPORT.json",
+  "docs/LATENCY-REPORT.md",
+  "experiments/ptr-engine/tools/latency_report.py",
+  "experiments/ptr-engine/longrun/tests/test_latency_dedup.py",
+  "orchestration/units/LATENCY-REPORT-2.md",
+  "orchestration/journals/LATENCY-REPORT-2.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "zero inference requests, zero network; analyze_stats.py invoked 10 times offline (once per grid, one --rows call each) on de-duplicated rows written to a temp dir outside the repo; 14 rows files hashed, 1101 raw -> 1071 de-duplicated (30 excess); p95 cells 3 -> 2; 1 p95 WITHDRAWN",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/latency_report.py --report experiments/ptr-engine/measure/LATENCY-REPORT.json --out experiments/ptr-engine/measure/LATENCY-REPORT.json",
+   "python3 experiments/ptr-engine/longrun/tests/test_latency_dedup.py",
+   "LATENCY_DEDUP=off python3 experiments/ptr-engine/longrun/tests/test_latency_dedup.py  # must fail (red)",
+   "sha256sum experiments/ptr-engine/measure/rows-*.jsonl experiments/ptr-engine/longrun/analyze_stats.py"
+  ],
+  "counts": {
+   "row_files": 14,
+   "rows_raw": 1101,
+   "rows_dedup": 1071,
+   "excess_defensible": 30,
+   "files_decided": 11,
+   "files_not_applicable": 3,
+   "files_not_applicable_list": [
+    "rows-baseline-2026-10-26.jsonl",
+    "rows-equalinfo-2026-10-26.jsonl",
+    "rows-live-2026-10-26.jsonl"
+   ],
+   "cells": 24,
+   "p50_available": 12,
+   "p95_available_before": 3,
+   "p95_available_after": 2,
+   "p95_withdrawn": 1,
+   "pairs_with_p95_before": 0,
+   "pairs_with_p95_after": 0,
+   "analyzer_invocations": 10,
+   "live_requests": 0,
+   "network": false
+  },
+  "p95_after": [
+   {
+    "grid": "G8",
+    "label": "V5-TOOLS",
+    "arm": "pointer-stable",
+    "n": 70,
+    "n_turn": 46,
+    "n_followup": 24,
+    "p95": 397.41134999999986,
+    "lo": 273.83869999999996,
+    "hi": 659.703
+   },
+   {
+    "grid": "G9",
+    "label": "V6-TOOLS",
+    "arm": "pointer-stable",
+    "n": 61,
+    "n_turn": 37,
+    "n_followup": 24,
+    "p95": 429.696,
+    "lo": 318.804,
+    "hi": 477.058
+   }
+  ],
+  "p95_withdrawn_detail": [
+   {
+    "grid": "G7",
+    "label": "V4-TOOLS",
+    "arm": "pointer-stable",
+    "old": {
+     "point": 318.143,
+     "lo": 235.00144999999998,
+     "hi": 526.405,
+     "n": 68
+    },
+    "n_raw": 68,
+    "n_dedup": 51,
+    "refusal": "refusing p95 at n=51: the 95% order-statistic span is ranks 46-51 (p90.2-p100.0) and n*(1-q)=2.6 < 3; minimum n for p95 is 60",
+    "why": "17 of the published n=68 were duplicate mirrors of rows already counted; at the honest n=51 the analyser refuses by name, so the value is withdrawn rather than replaced"
+   }
+  ],
+  "cells_moved": [
+   {
+    "grid": "G7",
+    "n_raw": 68,
+    "n_dedup": 51,
+    "p50_before": 202.2185,
+    "p50_after": 198.723,
+    "p95_before": 318.143,
+    "p95_after": null
+   },
+   {
+    "grid": "G8",
+    "n_raw": 72,
+    "n_dedup": 70,
+    "p50_before": 145.44650000000001,
+    "p50_after": 143.9145,
+    "p95_before": 433.18995000000007,
+    "p95_after": 397.41134999999986
+   },
+   {
+    "grid": "G9",
+    "n_raw": 72,
+    "n_dedup": 61,
+    "p50_before": 158.187,
+    "p50_after": 147.585,
+    "p95_before": 435.27465000000007,
+    "p95_after": 429.696
+   }
+  ],
+  "red_green": {
+   "green": "python3 experiments/ptr-engine/longrun/tests/test_latency_dedup.py -> exit 0; PASS a_refusal 'refusing p95 at n=51 ... minimum n for p95 is 60'; PASS b_interval 'p95 163.65 [158.65, 166.00] n=68'; PASS c_legacy '12 rows kept, literal R would have removed 11'",
+   "red": "LATENCY_DEDUP=off python3 experiments/ptr-engine/longrun/tests/test_latency_dedup.py -> exit 1; AssertionError: p95 was produced at n=68 after de-dup ... at tests/test_latency_dedup.py:93",
+   "restored": "re-run without the env var -> exit 0"
+  },
+  "integrity": {
+   "rows_files_modified": 0,
+   "grade_files_modified": 0,
+   "analyze_stats_sha256": "2d3d473a6269d8979baa6c159778af56c4372e88dadbf9a3261f7bfef97cb163 (unchanged)",
+   "protected_not_touched": [
+    "TVS.json",
+    "REQUEST-LEDGER.json",
+    "docs/TVS.md",
+    "every rows file",
+    "every grade file"
+   ],
+   "report_sha256": "636b95e8db6c07e8ba4cd4c329dcdfbba4e588fbe458d8ae811e66c2a5e96948 (deterministic: two consecutive runs produced this digest)",
+   "rows_sha256_unchanged": {
+    "rows-longrun-v4-tools-2026-10-26.jsonl": "f11391aa2989949f904b8092074cb7b85b65dfe5b8c89431930fe921b28de77f",
+    "rows-longrun-v5-tools.jsonl": "586b66f27939bd05e09d8b48dad745a5fa268c3f31103695746df3e3f8443cb5",
+    "rows-longrun-v6-tools.jsonl": "1e78d75f259afbe0406643825941a65b4773b4342b847698005ad5908b3e531e"
+   }
+  }
+ },
+ "duplicate_rows": {
+  "rule": "identical (ts, content_sha256, prompt_tokens, completion_tokens) within one file; first occurrence kept (orchestration/handoffs/TVS-REGRADE.json duplicate_rows.rule)",
+  "rule_source_agreement": "measure/DUPLICATE-ROWS.md \u00a71 Rule R states the same rule; no disagreement, so the handoff rule was used",
+  "per_file_status": {
+   "decided": 11,
+   "not_applicable": 3
+  }
+ },
+ "blocker": "",
+ "next_unit_hint": "The honest denominator for H1 is 2 p95 values, both pointer-stable, in 2 single-arm tools grids (G8 n=70 = 46 turn + 24 follow-up; G9 n=61 = 37 turn + 24 follow-up), intervals overlapping; 0 p95 arm-versus-arm differences. To produce a third p95 that is not duplicate-inflated, a cell needs >=60 independent request rows with a TTFT in ONE grid, and >=60 TURN rows if the number is to be quoted as a turn-level p95. G7 cannot supply it: at n=51 de-duplicated it is 9 samples short.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/LATENCY-REPORT.json",
+  "docs/LATENCY-REPORT.md",
+  "experiments/ptr-engine/tools/latency_report.py",
+  "experiments/ptr-engine/longrun/tests/test_latency_dedup.py",
+  "orchestration/units/LATENCY-REPORT-2.md",
+  "orchestration/handoffs/LATENCY-REPORT-2.json",
+  "orchestration/journals/LATENCY-REPORT-2.jsonl"
+ ],
+ "assumptions": [
+  {
+   "what": "legacy file count is 3, not the 5 the brief and DUPLICATE-ROWS \u00a71 state",
+   "why": "measured schema: exactly 3 of 14 files carry no content_sha256 and a second-resolution ts_utc (baseline 105 + equalinfo 100 + live 27 = the 232 legacy rows both documents quote). DUPLICATE-ROWS' own \u00a72 table also marks only 3 files not_applicable. Both documents disagree with the measurement, so the measured 3 was used and the discrepancy is stated in docs/LATENCY-REPORT.md."
+  },
+  {
+   "what": "p95 n counts request rows with a TTFT (turn + tool-follow-up), not turn rows only",
+   "why": "analyze_stats.ttft_values() takes every row with a usable ttft_ms; after de-duplication the surviving p95 n are 70 (46 turn + 24 follow-up) and 61 (37 turn + 24 follow-up). The turn-only counts are reported beside each cell so the denominator cannot be mistaken for a turn-level one."
+  },
+  {
+   "what": "quality blocks and comparisons were carried over, not recomputed",
+   "why": "tvs/quality/ledger have owners (TVS.json, PARM-1-ERRATA, REQUEST-LEDGER-2); this unit re-derives latency only. De-duplication cannot change a graded checkpoint verdict, and no comparison involves G7/G8/G9 (all three are single-arm)."
+  }
+ ],
+ "tool_calls": 36,
+ "bound": 28,
+ "bound_exceeded": "yes - 36 calls against a 28-call bound; the overrun is in the script/doc iteration (dedupe bookkeeping, supersedes idempotence, doc patch), not in extra measurement. Recorded rather than hidden."
+}

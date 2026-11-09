@@ -1,0 +1,105 @@
+{
+  "unit": "HANDOFF-BASELINE-REGEN",
+  "status": "blocked",
+  "status_note": "All measurement, per-file pre-existence, the dated baseline record and both red/green proofs are done. The final step -- making the guard actually read the record at HEAD -- requires editing tests/test_orchestration_handoffs.py, which this unit's card forbids; rule 5 says stop and report blocked rather than buy green with an edit to the guard.",
+  "head": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "artifacts": [
+    "state/logs/handoff-shape-baseline-2026-10-26.json",
+    "docs/HANDOFF-SHAPE-BASELINE.md",
+    "orchestration/units/HANDOFF-BASELINE-REGEN.md",
+    "orchestration/journals/HANDOFF-BASELINE-REGEN.jsonl"
+  ],
+  "evidence": {
+    "reproduced_red_at_HEAD": "1 failed, 12 passed; test_no_new_contract_key_gaps names the same 13 files the report named (counts block below)",
+    "pre_existence_test": "per-file mtime vs the reporting unit (2026-10-26T13:18:18) and vs the last shape freeze (2026-10-24T08:05:56), cross-checked against first/last journal lines; 12 of 13 predate the reporting unit, 0 of 13 predate the freeze",
+    "green": "/tmp tree copy + one loader line for the dated record -> 13 passed, exit 0",
+    "red": "/tmp tree copy + a 14th same-shape handoff -> 1 failed, exit 1, naming only V9.99-REGRESSION-PROBE.json",
+    "counts": "new verifier gaps: 13 at HEAD before -> 0 with the record applied (in /tmp) -> 13 in the workspace after this unit (unchanged: BLOCKED, not green)",
+    "test_integrity": "sha256 of tests/test_orchestration_handoffs.py unchanged: 9071255ea29e071c3e6cc454430e8ad9b2989f7dc4f1d8b6d72c082d37adb065",
+    "verdict_row": "FAIL exit-1 sha f17663d1 -- the honest HEAD state, recorded before this handoff was written"
+  },
+  "reproduced": {
+    "command": "bash -c 'exec \"/home/zer0null/reserach extarctor/.venv/bin/python\" -m pytest \"/home/zer0null/reserach extarctor/tests/test_orchestration_handoffs.py\" -q'",
+    "exit": 1,
+    "result": "1 failed, 12 passed; test_no_new_contract_key_gaps names exactly the 13 files reported by VERDICT-ALLOWLIST-WRAP",
+    "gaps": {
+      "RECORD-REFRESH.json": ["checks"],
+      "V2-RUNTIME.json": ["overall", "checks"],
+      "V3-FIXTURE.json": ["overall", "checks"],
+      "V3-PILOT.json": ["overall", "checks"],
+      "V8-DRYRUN-REFREEZE.json": ["overall", "checks"],
+      "VERBOSITY-CONFOUND.json": ["overall", "checks"],
+      "VERDICT-ADOPTION.json": ["overall", "checks"],
+      "VERDICT-ALLOWLIST-WRAP.json": ["overall", "checks"],
+      "VERDICT-BACKFILL-FIXTURE-GENERATIONS.json": ["overall", "checks"],
+      "VERDICT-DISPUTE.json": ["checks"],
+      "VERDICT-READJUDICATE-27.json": ["overall", "checks"],
+      "VERDICT-REFUSAL-SEMANTICS.json": ["checks"],
+      "VERDICT-RITUAL.json": ["overall", "checks"]
+    }
+  },
+  "what_they_actually_are": "All 13 are COMPLETE unit handoffs: each carries all 7 unit-contract keys (unit, status, artifacts, evidence, blocker, next_unit_hint, write_paths). The only key each lacks is 'checks' (10 also lack 'overall'), and 'checks' is required only by the verifier contract. classify() routes all 13 to the verifier contract on the filename prefix 'V' (13/13); 3 also carry an 'overall' scalar. The test docstring's premise '43/43 V* files are verifier verdicts' is false at HEAD: 1085 handoffs, 147 V*-prefixed, 14 of them complete unit handoffs without 'checks'.",
+  "mtimes": {
+    "RECORD-REFRESH.json": "2026-10-26T12:34:53",
+    "V2-RUNTIME.json": "2026-10-26T04:34:21",
+    "V3-FIXTURE.json": "2026-10-26T05:52:56",
+    "V3-PILOT.json": "2026-10-26T06:01:42",
+    "V8-DRYRUN-REFREEZE.json": "2026-10-26T12:29:59",
+    "VERBOSITY-CONFOUND.json": "2026-10-26T12:52:41",
+    "VERDICT-ADOPTION.json": "2026-10-26T11:39:35",
+    "VERDICT-ALLOWLIST-WRAP.json": "2026-10-26T13:18:18",
+    "VERDICT-BACKFILL-FIXTURE-GENERATIONS.json": "2026-10-26T12:39:11",
+    "VERDICT-DISPUTE.json": "2026-10-26T11:53:05",
+    "VERDICT-READJUDICATE-27.json": "2026-10-26T11:37:29",
+    "VERDICT-REFUSAL-SEMANTICS.json": "2026-10-26T12:43:10",
+    "VERDICT-RITUAL.json": "2026-10-26T11:10:31"
+  },
+  "pre_existence": {
+    "test_applied": "mtime (< or >) the clock of the unit that observed the red, and (< or >) the mtime of the last shape freeze; cross-checked against each handoff's first/last journal line where a journal exists (3 of 13 have none; VERBOSITY-CONFOUND and VERDICT-REFUSAL-SEMANTICS journal to .log, not .jsonl). Journal start times match handoff mtimes to the minute.",
+    "vs_reporting_unit_VERDICT-ALLOWLIST-WRAP_2026-10-26T13:18:18": "12 of 13 predate it; VERDICT-ALLOWLIST-WRAP.json IS that unit. This confirms the card's claim: the red is not caused by the reporting unit.",
+    "vs_last_shape_freeze_2026-10-24T08:05:56": "0 of 13 predate it. All 13 were created on 2026-10-26, two days after U8.18 froze the verifier shape, so on the card's own rule they are NOT freeze-eligible as history; they are the current batch's own records.",
+    "per_file": "full per-file record (path, missing keys under both contracts, shape, why it reached the verifier contract, mtime, journal first/last, both pre-existence verdicts) is in state/logs/handoff-shape-baseline-2026-10-26.json under 'entries'. No entry is a stub or a false record: every one parses, carries its unit's own 'unit' value equal to its filename stem, and is unit-complete."
+  },
+  "counts": {
+    "new_verifier_gaps_at_HEAD_before": 13,
+    "new_unit_gaps_at_HEAD_before": 0,
+    "real_unit_contract_gaps_among_the_13": 0,
+    "dated_record_applied_in_tmp_copy": 0,
+    "workspace_after_this_unit": 13
+  },
+  "red_green": {
+    "green": {
+      "setup": "/tmp copy of the tree (tests/ + state/logs/U8.15, U8.18, the dated record + orchestration/handoffs/*.json), plus ONE loader line in the copy's test",
+      "command": "cd /tmp/hsb-proof && \"/home/zer0null/reserach extarctor/.venv/bin/python\" -m pytest tests/test_orchestration_handoffs.py -q",
+      "exit": 0,
+      "result": "13 passed"
+    },
+    "red": {
+      "setup": "same /tmp copy, plus a 14th handoff V9.99-REGRESSION-PROBE.json (unit-complete, V-prefixed, no 'checks') created ONLY in /tmp; nothing added to this workspace's orchestration/handoffs/",
+      "command": "cd /tmp/hsb-proof && \"/home/zer0null/reserach extarctor/.venv/bin/python\" -m pytest tests/test_orchestration_handoffs.py -q",
+      "exit": 1,
+      "result": "1 failed, 12 passed; NEW verifier-shape gaps names exactly {'V9.99-REGRESSION-PROBE.json': ['overall','checks']} -- the 13 stay exempt, so the 14th is named and only the 14th"
+    },
+    "test_integrity": "sha256(tests/test_orchestration_handoffs.py) = 9071255ea29e071c3e6cc454430e8ad9b2989f7dc4f1d8b6d72c082d37adb065 before and after the whole unit; no edit, skip, xfail or relaxed assertion in the workspace."
+  },
+  "loader_resolution": "frozen_baselines() reads exactly two hash-pinned paths: state/logs/U8.15/baseline_gaps.json (BASELINE_GAPS_SHA256) and state/logs/U8.18/verifier_shape_baseline.json (VERIFIER_BASELINE_SHA256), and caches them in the module global _BASELINES. No directory, no glob, no third path, no env hook. Both baseline files are byte-identical to their pins (verified: d25e5bcc... and 5f8bbd35...). Therefore the new dated file CANNOT be resolved by the guard as it stands.",
+  "blocker": "Making the guard green at HEAD requires one of: (1) adding the 13 entries to the pinned state/logs/U8.18/verifier_shape_baseline.json AND updating VERIFIER_BASELINE_SHA256 inside tests/test_orchestration_handoffs.py, or (2) adding one loader line inside the same test. Both edit the frozen guard, which this unit's card forbids; the card's rule 5 says stop and report blocked. A third route was considered and rejected: a tests/conftest.py hook that pre-populates _BASELINES would exempt the same files while leaving the guard's text untouched -- the same act, harder to see.",
+  "rejected_freeze_rationale": "Baselining them as 'missing checks' would record a gap no unit handoff ever owed: 'checks' is not a unit-contract key. The guard would then be green on a fabricated exemption, and the fabricated exemption would have to be removed as soon as classify() is fixed, because test_no_baseline_entry_over_declares fires when an exemption claims more than the live measurement.",
+  "next_unit_hint": "Card a unit that is ALLOWED to edit tests/test_orchestration_handoffs.py, with a verifier that is not its author. Durable fix: classify() should treat a V-prefixed document that carries the 7 unit keys and no verdict-shaped key (overall/verdict) as a unit handoff -- the prefix is a naming convention, not a shape measurement, and it is now wrong 14 times over. Interim fix (if the freeze is preferred): apply state/logs/handoff-shape-baseline-2026-10-26.json with the exact loader line recorded in that file ('proposed_loader_line') and flip 'applied' to true. Freezing alone does not hold: every future unit whose handoff name begins with V, or that reports an 'overall' scalar, becomes the 14th false positive.",
+  "assumptions": [
+    "The card's '13 pre-existing gaps' were treated as a measurement to be re-derived, not a conclusion to honour: the reproduction confirmed the 13 names and refuted the reading that they are key gaps.",
+    "Pre-existence was judged against two clocks because the card's rule keys on the last shape freeze while the report's claim keys on the reporting unit; both verdicts are recorded and the disagreement is stated rather than resolved in the unit's favour.",
+    "The red-direction proof was run in a /tmp copy of the tree, never in the workspace's orchestration/handoffs/, because /tmp is wiped between tool calls here and a stray handoff would become a record nobody wrote."
+  ],
+  "tool_calls": 19,
+  "bound": 24,
+  "requests": 0,
+  "contains_no_requests": true,
+  "write_paths": [
+    "state/logs/handoff-shape-baseline-2026-10-26.json",
+    "docs/HANDOFF-SHAPE-BASELINE.md",
+    "orchestration/units/HANDOFF-BASELINE-REGEN.md",
+    "orchestration/handoffs/HANDOFF-BASELINE-REGEN.json",
+    "orchestration/journals/HANDOFF-BASELINE-REGEN.jsonl"
+  ]
+}

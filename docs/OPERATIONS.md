@@ -5,7 +5,7 @@ end-to-end acceptance procedure) and [`AGENTS.md`](../AGENTS.md) (how work is do
 **Spec of record:** [`docs/PLAN.md`](PLAN.md). **Live ledger:**
 [`orchestration/STATUS.md`](../orchestration/STATUS.md).
 
-Everything runs from the workspace root — `/home/zer0null/reserach extarctor` — with the venv at
+Everything runs from the workspace root — `/home/zer0null/research extractor` — with the venv at
 `.venv/`. Nothing is installed globally; no systemd unit is enabled.
 
 ---
@@ -164,7 +164,7 @@ Full policy: [`docs/SECRET_SCAN_POLICY.md`](SECRET_SCAN_POLICY.md). The rules to
 - **No writes into a target repo.** `/home/zer0null/Duval` and every other registered target are
   strictly read-only: no writes, no `git` state changes, no hooks installed inside them (AGENTS.md;
   `docs/PLAN.md` §"Hard constraints").
-- **No writes outside this workspace** (`/home/zer0null/reserach extarctor`).
+- **No writes outside this workspace** (`/home/zer0null/research extractor`).
 - **No systemd unit is enabled.** The refresh timer and any `deploy/` unit files are to be **created but
   never enabled** without explicit user approval (plan §5, §10 batch 7). Note: `deploy/` **does not
   exist** at this reading — U7.2, the unit that owns the staged units, has persisted no card and no

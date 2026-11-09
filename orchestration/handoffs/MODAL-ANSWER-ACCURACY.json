@@ -1,0 +1,57 @@
+{
+ "unit": "MODAL-ANSWER-ACCURACY",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/MODAL-ANSWER.json",
+  "docs/MODAL-ANSWER.md",
+  "orchestration/units/MODAL-ANSWER-ACCURACY.md"
+ ],
+ "evidence": {
+  "command_or_count": "11 era-A grids / 29 (grid,arm) groups / 1109 turn rows; modal answer graded with grade_v5.parse_answer_contract+grade_cell vs derive_truth(LR-01.v6.json): counterfactual pass 0/12 in all 29 groups (prose_only or unparseable); NONE ids cp.5.t14,cp.7.t20,cp.11.t42 pass 0 of 3; observed passes 3, all one-arm and none modal; headline rows-longrun-v4/transcript-grow modal 'I need to read the specified lines of resolve.py. ANSWER: NOT-AN-ANSWER' x35 of 48, at 11 of 12 checkpoint turns, 0 pass",
+  "commands": [
+   "python3 (inline, offline) import grade_v5; derive_truth(tasks-v5/runtime-v5/LR-01.v6.json); parse_answer_contract+grade_cell per modal -> experiments/ptr-engine/measure/MODAL-ANSWER.json",
+   "python3 (inline, offline) format docs/MODAL-ANSWER.md from that JSON",
+   "PYTHONPATH=src python3 -m pytest experiments/ptr-engine/longrun/tests/test_grade_v5_repair.py -q -p no:cacheprovider"
+  ],
+  "verdict_command": "PYTHONPATH=src python3 -m pytest experiments/ptr-engine/longrun/tests/test_grade_v5_repair.py -q -p no:cacheprovider",
+  "verdict_exit_code": 0,
+  "verdict": "PASS f17663d1",
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "requests_spent": 0,
+  "error_control": "no grader seeded error; truth derivation cross-checks each checkpoint's documented expected string against the AST (grade_v5._check_documented_call), and parse/grade failures surface as reason strings rather than aborts"
+ },
+ "definition": "modal = most frequent normalised turn-row answer per (grid, arm), ties by earliest first occurrence; counterfactual = modal graded at a checkpoint turn it did not appear at; observed = the string emitted at that turn; era A = tools off",
+ "method_three_sentences": [
+  "Modal: turn rows only (kind absent or 'turn'; tool-followup excluded), normalised strip+collapse-whitespace+casefold, highest count of turns, ties by earliest first occurrence in turn order.",
+  "Every encoded turn of the arm counts toward the frequency (denominator is the arm's turn rows, not 12).",
+  "Each modal is parsed by grade_v5.parse_answer_contract and graded by grade_v5.grade_cell against grade_v5.derive_truth(LR-01.v6.json) at all 12 ids; grading a modal at a turn it did not appear at is COUNTERFACTUAL and is labelled as such."
+ ],
+ "key_findings": {
+  "counterfactual_pass_total": "0 of 12 in 29 of 29 groups",
+  "none_decomposition": "3 NONE ids (cp.5.t14, cp.7.t20, cp.11.t42) x 29 groups = 87 counterfactual NONE cells; 0 pass",
+  "observed_passes": "3, all one-arm, none modal: cell-pointer-stable/182535Z cp.0.t12 num_equal; cell-pointer-stable/182535Z cp.7.t20 none_confirmed_absent_in_source; longrun-v4 pointer-stable cp.0.t12 num_equal",
+  "arm_vs_instruction": "arm effect: identical instruction, modal frequencies 1/1/1/24 in rows-longrun-2026-10-26 and 2/35 in rows-longrun-v4",
+  "read_refusal": "no blanket read-refusal; modals are read_file tool-call envelopes or 'ANSWER: NOT-AN-ANSWER' deferrals; 6 x1 truncation disclaimers on grids that received a truncated body",
+  "inviting_fixture_line": "experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-01.v6.json:685 (and 695,715,725,745,755,775,785,815,835,865,885) — '(answer must be derivable from experiments/ptr-engine/ptr_engine/resolve.py#L...)'; indented source this page quotes is the fixture's JSON, so the string is the prompt-side invitation, not the knotted hline",
+  "era_b_comparability": "not comparable on quality: --tools read_file services the read, so the instrument changes; provenance gate already refuses eraA-vs-eraB (docs/ANALYSIS-PATH.md:32)"
+ },
+ "contradictions": [
+  "docs/ANSWER-DEGENERACY.md:19 x16 — agree, none edited",
+  "docs/ANSWER-DEGENERACY.md:171-176 discriminator run: neither branch (0/12 pass, 0 NONE passes) — refinement of an open question, not a number",
+  "docs/ANSWER-DEGENERACY.md:159-161 illustrative '64 answered correctly by all four arms' not realised in era A (two one-arm passes, neither modal) — hypothetical wording, nothing edited"
+ ],
+ "carry_forward_for_turn_dedup_reconcile": "transcript-compact rows-longrun-c = 9 distinct of 48, largest group 16; x/12 for its modal = 0 pass, 12 undecidable (prose_only); NONE decomposition 0 of 3 (modal contains no 'ANSWER: NONE')",
+ "blocker": "",
+ "next_unit_hint": "Append the carry-forward numbers (9 distinct of 48; x/12 = 0/12 prose_only counterfactual; NONE 0 of 3) to the QUALITY record from a unit whose write paths include it — MODAL-ANSWER-ACCURACY was barred from every QUALITY/TVS/PARM-1 path. Then, if era-B quality is wanted, card it as its own instrument (tools on) and do not difference it against era A's x/12.",
+ "assumptions": [
+  "era A = tools off; the three -tools grids are era B and were excluded",
+  "rows-cell-pointer-stable-20261026T182535Z.jsonl is era A despite its row field names containing 'tool' (docs/CANARY-FALSE-POSITIVE.md:18)"
+ ],
+ "write_paths": [
+  "experiments/ptr-engine/measure/MODAL-ANSWER.json",
+  "docs/MODAL-ANSWER.md",
+  "orchestration/units/MODAL-ANSWER-ACCURACY.md",
+  "orchestration/handoffs/MODAL-ANSWER-ACCURACY.json",
+  "orchestration/journals/MODAL-ANSWER-ACCURACY.jsonl"
+ ]
+}

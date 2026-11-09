@@ -1,0 +1,341 @@
+{
+ "unit": "V-GATE-REPIN",
+ "taken": "2026-10-26T12:58:00-05:00",
+ "verdict": "partial",
+ "verdict_rule": "PASS only if all four breaks refuse with the right codes AND every refusal shows popen_calls == 0 by the primitive oracle AND the oracle is demonstrably live AND the six F-cases' expectations are not bypass-encoding.",
+ "offline": {
+  "requests_sent": 0,
+  "network_calls": 0,
+  "note": "every probe ran with subprocess.Popen tripwired: a live runner spawn is counted and then raised, so no child is created and no socket can open; the only delegated child is the pre-gate `run_longrun.py --dry-run` self-check, which prints 'offline: zero requests'."
+ },
+ "pins": {
+  "before": {
+   "experiments/ptr-engine/longrun/cell.py": {
+    "sha256": "24627d7b648262f901825e87459b41a3ce7185539e46ccd3dda01c3002233253",
+    "size": 104869,
+    "mtime_ns": 1793035628100164323
+   },
+   "experiments/ptr-engine/longrun/run_longrun.py": {
+    "sha256": "9e8c30df9355e7bee243a15bf9ea67b23a20dd4c3d6ced6c9af1e53a6d76add1",
+    "size": 151435,
+    "mtime_ns": 1793035588600689132
+   },
+   "experiments/ptr-engine/longrun/exit_codes.py": {
+    "sha256": "97cdfc1e63471aecff83fc212346a56b719d44ecde13ae58c0f9bd4f8a3a86c8",
+    "size": 12623,
+    "mtime_ns": 1793030850109447518
+   },
+   "experiments/ptr-engine/longrun/grade_v5.py": {
+    "sha256": "056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+    "size": 44739,
+    "mtime_ns": 1793034776180268337
+   }
+  },
+  "after": {
+   "experiments/ptr-engine/longrun/cell.py": {
+    "sha256": "24627d7b648262f901825e87459b41a3ce7185539e46ccd3dda01c3002233253",
+    "size": 104869,
+    "mtime_ns": 1793035883681770898
+   },
+   "experiments/ptr-engine/longrun/run_longrun.py": {
+    "sha256": "9e8c30df9355e7bee243a15bf9ea67b23a20dd4c3d6ced6c9af1e53a6d76add1",
+    "size": 151435,
+    "mtime_ns": 1793035588600689132
+   },
+   "experiments/ptr-engine/longrun/exit_codes.py": {
+    "sha256": "97cdfc1e63471aecff83fc212346a56b719d44ecde13ae58c0f9bd4f8a3a86c8",
+    "size": 12623,
+    "mtime_ns": 1793030850109447518
+   },
+   "experiments/ptr-engine/longrun/grade_v5.py": {
+    "sha256": "056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+    "size": 44739,
+    "mtime_ns": 1793034776180268337
+   }
+  },
+  "moved_mid_card": {
+   "cell.py": "mtime_ns 1793035628100164323 -> 1793035883681770898; sha256 unchanged (24627d7b...); bytes identical, mtime moved (an unexplained touch/rewrite during the card)"
+  },
+  "sha_stable_throughout": true,
+  "prior_claim": {
+   "claimed_pin": "cell.py=6b0ca83a",
+   "now_names_cell_py": false,
+   "note": "6b0ca83a209433479e119323bc20a84588196cd002e72ba3639162455aea8b4e is the cell_sha256 recorded in measure/GATE-OPERAND-VALIDATION.json; the live cell.py is 24627d7b... and does not carry it."
+  }
+ },
+ "oracle": {
+  "primitive": "subprocess.Popen",
+  "also_instrumented": [
+   "os.posix_spawn",
+   "os.fork",
+   "os.execv"
+  ],
+  "why_posix_spawn_is_deduped": "python3.14 Popen uses os.posix_spawn as its mechanism; counting it inside our own delegated Popen call would double-count one spawn. A direct os.posix_spawn outside that delegation is still counted and tripwired.",
+  "not_the_oracle": "cell._run (counted for contrast only, as cell__run_calls)"
+ },
+ "spawn_structure": {
+  "gate_chain_first_spawn_site": "cell.py stage 2/7 'harness' -> run_longrun.py --dry-run, BEFORE any gate is evaluated (cell.py:169 via _run)",
+  "live_runner_spawn_site": "cell.py:1506 subprocess.run(argv) in stage_run",
+  "consequence": "the literal 'popen_calls == 0 for a refusing invocation' cannot hold on this tree: every invocation, refusals included, makes exactly one Popen call for the pre-gate dry-run self-check."
+ },
+ "breaks": [
+  {
+   "case": "B1 --max-wall 0",
+   "run": 1,
+   "exit": 8,
+   "expected": 8,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3b/7 projection REFUSED(8) G2 projection REFUSED: computed --max-wall=0 s | limit a positive ceiling (> 0 s) | artefact ../../../tmp/vgate_repin/art/projection-e2e.json (sha256 75d02c735da66156f6d7b13554d9cdd2da8b2d99df5d7032ea2e761feca3925c) | to change this decision pass --thinking / --projected-from p90 / --max-wall | --max-wall 0 is not a wall: a ceiling of zero or less is not 'unlimited' and does not disable the gate. Pass a positive number of seconds; there is no unlimited mode"
+  },
+  {
+   "case": "B1 --max-wall 0",
+   "run": 2,
+   "exit": 8,
+   "expected": 8,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3b/7 projection REFUSED(8) G2 projection REFUSED: computed --max-wall=0 s | limit a positive ceiling (> 0 s) | artefact ../../../tmp/vgate_repin/art/projection-e2e.json (sha256 75d02c735da66156f6d7b13554d9cdd2da8b2d99df5d7032ea2e761feca3925c) | to change this decision pass --thinking / --projected-from p90 / --max-wall | --max-wall 0 is not a wall: a ceiling of zero or less is not 'unlimited' and does not disable the gate. Pass a positive number of seconds; there is no unlimited mode"
+  },
+  {
+   "case": "B2 --max-wall -1",
+   "run": 1,
+   "exit": 8,
+   "expected": 8,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3b/7 projection REFUSED(8) G2 projection REFUSED: computed --max-wall=-1 s | limit a positive ceiling (> 0 s) | artefact ../../../tmp/vgate_repin/art/projection-e2e.json (sha256 75d02c735da66156f6d7b13554d9cdd2da8b2d99df5d7032ea2e761feca3925c) | to change this decision pass --thinking / --projected-from p90 / --max-wall | --max-wall -1 is not a wall: a ceiling of zero or less is not 'unlimited' and does not disable the gate. Pass a positive number of seconds; there is no unlimited mode"
+  },
+  {
+   "case": "B2 --max-wall -1",
+   "run": 2,
+   "exit": 8,
+   "expected": 8,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3b/7 projection REFUSED(8) G2 projection REFUSED: computed --max-wall=-1 s | limit a positive ceiling (> 0 s) | artefact ../../../tmp/vgate_repin/art/projection-e2e.json (sha256 75d02c735da66156f6d7b13554d9cdd2da8b2d99df5d7032ea2e761feca3925c) | to change this decision pass --thinking / --projected-from p90 / --max-wall | --max-wall -1 is not a wall: a ceiling of zero or less is not 'unlimited' and does not disable the gate. Pass a positive number of seconds; there is no unlimited mode"
+  },
+  {
+   "case": "B3 no --hypothesis",
+   "run": 1,
+   "exit": 12,
+   "expected": 12,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3c/7 G3 prereg gate REFUSED(12) G3 prereg REFUSED: computed hypothesis=none declared | limit a declared claim (smoke|plumbing, or one of H1, H2, H3) | artefact experiments/ptr-engine/measure/PREREG-ARM-RUN.json (sha256 696de5100315889172d4424de1c60a9699c17bc5d3a736226cc3171987bf56d6) | to change this decision pass --hypothesis smoke|plumbing|H1|H2|H3 | a live cell spends requests on a claim it must name; no hypothesis was declared, and silence is not a claim you may spend on | claim REFUSED: --hypothesis=None is not a declaration this run may make."
+  },
+  {
+   "case": "B3 no --hypothesis",
+   "run": 2,
+   "exit": 12,
+   "expected": 12,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3c/7 G3 prereg gate REFUSED(12) G3 prereg REFUSED: computed hypothesis=none declared | limit a declared claim (smoke|plumbing, or one of H1, H2, H3) | artefact experiments/ptr-engine/measure/PREREG-ARM-RUN.json (sha256 696de5100315889172d4424de1c60a9699c17bc5d3a736226cc3171987bf56d6) | to change this decision pass --hypothesis smoke|plumbing|H1|H2|H3 | a live cell spends requests on a claim it must name; no hypothesis was declared, and silence is not a claim you may spend on | claim REFUSED: --hypothesis=None is not a declaration this run may make."
+  },
+  {
+   "case": "B4 --hypothesis none",
+   "run": 1,
+   "exit": 12,
+   "expected": 12,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3c/7 G3 prereg gate REFUSED(12) G3 prereg REFUSED: computed hypothesis=none declared | limit a declared claim (smoke|plumbing, or one of H1, H2, H3) | artefact experiments/ptr-engine/measure/PREREG-ARM-RUN.json (sha256 696de5100315889172d4424de1c60a9699c17bc5d3a736226cc3171987bf56d6) | to change this decision pass --hypothesis smoke|plumbing|H1|H2|H3 | a live cell spends requests on a claim it must name; no hypothesis was declared, and silence is not a claim you may spend on | claim REFUSED: --hypothesis='none' is not a declaration this run may make."
+  },
+  {
+   "case": "B4 --hypothesis none",
+   "run": 2,
+   "exit": 12,
+   "expected": 12,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3c/7 G3 prereg gate REFUSED(12) G3 prereg REFUSED: computed hypothesis=none declared | limit a declared claim (smoke|plumbing, or one of H1, H2, H3) | artefact experiments/ptr-engine/measure/PREREG-ARM-RUN.json (sha256 696de5100315889172d4424de1c60a9699c17bc5d3a736226cc3171987bf56d6) | to change this decision pass --hypothesis smoke|plumbing|H1|H2|H3 | a live cell spends requests on a claim it must name; no hypothesis was declared, and silence is not a claim you may spend on | claim REFUSED: --hypothesis='none' is not a declaration this run may make."
+  }
+ ],
+ "f_cases": [
+  {
+   "case": "F1",
+   "run": null,
+   "exit": 8,
+   "expected": 8,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3b/7 projection REFUSED(8) G2 projection REFUSED: computed --max-wall=1e+308 | limit --max-wall <= 2,592,000 | artefact ../../../tmp/vgate_repin/art/projection-e2e.json (sha256 75d02c735da66156f6d7b13554d9cdd2da8b2d99df5d7032ea2e761feca3925c) | to change this decision pass --max-wall | ... exceeds the upper bound 2,592,000 | requirement: --max-wall <= 2,592,000"
+  },
+  {
+   "case": "F2",
+   "run": null,
+   "exit": 8,
+   "expected": 8,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3b/7 projection REFUSED(8) G2 projection REFUSED: computed projected_wall_s=0 | limit a computed projection >= 1 s | artefact ../../../tmp/vgate_repin/art/projection-e2e.json (sha256 75d02c735da66156f6d7b13554d9cdd2da8b2d99df5d7032ea2e761feca3925c) | to change this decision pass --projected-turn-wall / --turns | 48 request(s) x 0 s per turn rounds to 0 s: a projection that prices nothing is not a projection"
+  },
+  {
+   "case": "F3",
+   "run": null,
+   "exit": 8,
+   "expected": 8,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3b/7 projection REFUSED(8) G2 projection REFUSED: computed projected_turn_wall_s_by_mode['absent']=0 | limit projected_turn_wall_s_by_mode['absent'] > 0 | artefact ../../../tmp/vgate_repin/art/projection-e2e-zero.json (sha256 637049ff75a8549f84874bf507e44e399ee75f1e888adc668107253b4776da0f) | to change this decision pass --thinking | projected_turn_wall_s_by_mode['absent']=0 is at the required minimum 0."
+  },
+  {
+   "case": "F4",
+   "run": null,
+   "exit": 4,
+   "expected": 4,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3a/7 G1 ledger gate REFUSED(4) G1 ledger-cap REFUSED: computed --turns=0 | limit --turns >= 1 | artefact ../../../tmp/vgate_repin/art/ledger-e2e.json (sha256 0d8bbffbc56eebcefe821b0c0dda7a730c11fcc846c5396e7383fd92ad12956f) | to change this decision pass --turns | --turns=0 is below the required minimum 1 | requirement: --turns >= 1"
+  },
+  {
+   "case": "F5",
+   "run": null,
+   "exit": 4,
+   "expected": 4,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3a/7 G1 ledger gate REFUSED(4) G1 ledger-cap REFUSED: computed --turns=-1 | limit --turns >= 1 | artefact ../../../tmp/vgate_repin/art/ledger-e2e.json (sha256 0d8bbffbc56eebcefe821b0c0dda7a730c11fcc846c5396e7383fd92ad12956f) | to change this decision pass --turns | --turns=-1 is below the required minimum 1 | requirement: --turns >= 1"
+  },
+  {
+   "case": "F8",
+   "run": null,
+   "exit": 8,
+   "expected": 8,
+   "popen_calls": 1,
+   "preflight_popen": 1,
+   "live_runner_spawns": 0,
+   "posix_spawn_calls": 0,
+   "fork_calls": 0,
+   "execv_calls": 0,
+   "cell__run_calls": 1,
+   "ok": true,
+   "message": "cell: 3b/7 projection REFUSED(8) G2 projection REFUSED: computed --turn-wall-cap=0.0 | limit --turn-wall-cap >= 1 | artefact ../../../tmp/vgate_repin/art/projection-e2e.json (sha256 75d02c735da66156f6d7b13554d9cdd2da8b2d99df5d7032ea2e761feca3925c) | to change this decision pass --turn-wall-cap | --turn-wall-cap=0 is below the required minimum 1"
+  }
+ ],
+ "liveness": {
+  "case": "non-refusing --max-wall 3600 --hypothesis H2",
+  "exit": "1 (ORACLE-TRIPWIRE internal error, by construction)",
+  "popen_calls": 2,
+  "preflight_popen": 1,
+  "live_runner_spawns": 1,
+  "posix_spawn_calls": 0,
+  "note": "proves the oracle fires: a non-refusing invocation reaches stage_run and the live-spawn counter records exactly 1 attempt, which the tripwire stops before any child exists."
+ },
+ "repo_root_unittest": {
+  "command": "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_cell_gates.py'",
+  "cwd": "repo root, PYTHONPATH unset (env -u PYTHONPATH)",
+  "tests_run": 15,
+  "exit": 0,
+  "result": "OK"
+ },
+ "findings": [
+  {
+   "id": "F-1",
+   "kind": "structural",
+   "severity": "named-in-verdict",
+   "finding": "a spawn precedes the gate chain: stage 2/7 spawns run_longrun.py --dry-run for a harness self-check on every invocation. It is offline, but it is a Popen call, so 'zero spawns on a refusal' is false as stated.",
+   "correct_expectation": "0 LIVE runner spawns (non-dry-run); a pre-gate dry-run self-check is allowed and must be counted separately and reported."
+  },
+  {
+   "id": "F-2",
+   "kind": "prior-oracle",
+   "severity": "confirmed defect",
+   "finding": "V-GATE-OPERAND's F-case harness counted cell._run (tests/test_gate_operand_validation.py:75-80) and separately faked stage_run, so its live_spawns==0 could never fire for the actual spawn sites (cell.py:169 and cell.py:1506). The substance is unchanged, but that zero was unfalsifiable by construction.",
+   "correct_expectation": "count subprocess.Popen / os.posix_spawn and tripwire it, not cell._run."
+  },
+  {
+   "id": "F-3",
+   "kind": "bypass-encoding",
+   "severity": "none found",
+   "finding": "all six F-cases expect a refusal (8,8,8,4,4,8) and assert nothing that a bypass would satisfy. Caveat: F3 passes only because the harness swaps PROJECTION_ARTEFACT for a zero-per-turn artefact; on the real tree the artefact's per-turn figure is positive, so F3 pins the gate's zero-handling, not the tree's state.",
+   "correct_expectation": "unchanged (refusal), but F3's scope is the synthetic zero artefact, not the deployed projection."
+  }
+ ],
+ "write_paths": [
+  "experiments/ptr-engine/measure/V-GATE-REPIN.json",
+  "docs/V-GATE-REPIN.md",
+  "orchestration/units/V-GATE-REPIN.md",
+  "orchestration/handoffs/V-GATE-REPIN.json",
+  "orchestration/journals/V-GATE-REPIN.jsonl"
+ ]
+}

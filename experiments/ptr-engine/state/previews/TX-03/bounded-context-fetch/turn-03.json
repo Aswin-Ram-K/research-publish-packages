@@ -1,0 +1,59 @@
+{
+  "chat_template_kwargs": {
+    "enable_thinking": false
+  },
+  "max_tokens": 4096,
+  "messages": [
+    {
+      "content": "You are a long-horizon coding agent working on TX-03. Work only from tool outputs; never restate a fact you did not read.\n\nANSWER BUDGET: answer with exactly one of these forms, one line, nothing else:\nANSWER: NUM <integer>\nANSWER: CALL <name>(<kw>=<value>, ...)\nANSWER: NONE\nANSWER: TEXT <string>\nAny other kind token is a contract violation. NONE means \"I cannot answer because the fact is unavailable\".",
+      "role": "system"
+    },
+    {
+      "content": "WORKING SET\nINDEX\n- @knowledge:item-1@1 5021bb84 33\n\nBODY item-1 (33 B)\nunrelated working set placeholder\n\n\nQUESTION (T1): Work turn 1.\nTOOL OUTPUTS:\nTOOL_OUTPUT (doc-fact-01@1): # doc-fact-01\nVAL_A = 3000\nVAL_B = 3001\nVAL_C = 3002\nVAL_D = 3003\nVAL_E = 3004\nVAL_F = 3005\n\nANSWER (T1): <<answer from turn 1: not produced in dry-run>>\n\nQUESTION (T2): Work turn 2.\nANSWER (T2): <<answer from turn 2: not produced in dry-run>>\n\nQUESTION (T3): What is VAL_A of doc-fact-01?\n\nCHECKPOINT TURN.\nEvery fact you need may sit behind a marker of the form `[MASKED <ref>]`, where `<ref>` is exactly `doc-<name>@r<revision>` (for example `[MASKED doc-constants@r1]`).\nTwo protocols, kept separate:\n(1) RETRIEVAL. When markers are present you MUST, in a single round, issue one fetch call for EVERY ref that appears as a `[MASKED <ref>]` marker, then answer from the returned bodies. Answering before fetching every marker is a protocol violation and is recorded as `retrieval_omitted`. Worked example (two calls in one round): fetch(ref=\"doc-config@r1\") and fetch(ref=\"doc-constants@r1\").\n(2) ANSWERING. While working a turn you MAY reply with a TOOL CALL instead of an `ANSWER:` line. A tool call is NOT an answer and must NOT carry the `ANSWER:` prefix. Use the structured shape the tool schema expects, e.g. {\"name\":\"fetch\",\"arguments\":{\"ref\":\"doc-config@r1\"}}. One round may contain several such calls, e.g. three: {\"name\":\"fetch\",\"arguments\":{\"ref\":\"doc-config@r1\"}}, {\"name\":\"fetch\",\"arguments\":{\"ref\":\"doc-constants@r1\"}}, {\"name\":\"fetch\",\"arguments\":{\"ref\":\"doc-errors@r1\"}}. After the tool results come back, reply with the `ANSWER:` line.\n`ANSWER: CALL <name>(...)` is reserved for an answer whose CONTENT is a call; it is never used for retrieval.\nEmit exactly one line and nothing else, in this contract (the answer line comes after retrieval, never wrapped around a fetch):\n  ANSWER: NUM <integer>\n  ANSWER: CALL <callee>(<kw>=<value>, <kw>=<value>, ...)\n  ANSWER: NONE\n  ANSWER: TEXT <one line of prose>\nFor CALL, put the keyword arguments in alphabetical order and give each value as the source text shows it. Anything written after that line is not read.",
+      "role": "user"
+    }
+  ],
+  "model": "occamy-1.0",
+  "seed": 42,
+  "stream": true,
+  "stream_options": {
+    "include_usage": true
+  },
+  "temperature": 0.0,
+  "tool_choice": "auto",
+  "tools": [
+    {
+      "function": {
+        "description": "Retrieve a masked body by reference. Ranges are byte offsets into the stored body.",
+        "name": "fetch",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "range": {
+              "additionalProperties": false,
+              "properties": {
+                "end": {
+                  "type": "integer"
+                },
+                "start": {
+                  "type": "integer"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "ref": {
+              "description": "Pointer reference.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "ref"
+          ],
+          "type": "object"
+        }
+      },
+      "type": "function"
+    }
+  ]
+}

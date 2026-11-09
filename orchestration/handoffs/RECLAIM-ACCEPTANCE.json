@@ -1,0 +1,64 @@
+{
+ "unit": "RECLAIM-ACCEPTANCE",
+ "status": "partial",
+ "verdict_word": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/measure/RECLAIM-ACCEPTANCE.json",
+  "docs/RECLAIM-ACCEPTANCE.md",
+  "orchestration/units/RECLAIM-ACCEPTANCE.md",
+  "orchestration/handoffs/RECLAIM-ACCEPTANCE.json",
+  "orchestration/journals/RECLAIM-ACCEPTANCE.jsonl"
+ ],
+ "evidence": {
+  "head_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "command_or_count": "SEAM-TEST-RED suite exit=1 (176 tests, 1 failure=test_verdict_ritual/FIXTURE-GENERATIONS; test_cap_gate 9/9 OK; seam 5/5 OK); CLAIM-ROW-STAMP test_claim_rows 5/5 GREEN exit=0, test_cap_gate 9/9 OK; WIRE-CAP-GATE cap_gate discover exit=0 -> PASS row recorded, test_tool_channel2 exit=1 (pre-existing assertion e)",
+  "commands": [
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_*.py'",
+   "python3 experiments/ptr-engine/longrun/tests/test_decidability_seam.py",
+   "cd experiments/ptr-engine/longrun && python3 tests/test_claim_rows.py",
+   "cd experiments/ptr-engine/longrun && python3 tests/test_cap_gate.py",
+   "cd experiments/ptr-engine/longrun && python3 tests/test_cell_gates.py",
+   "cd experiments/ptr-engine/longrun && python3 tests/test_claim_wiring.py",
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_cap_gate.py' -v",
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_request_ledger.py'",
+   "python3 experiments/ptr-engine/longrun/tests/test_tool_channel2.py"
+  ],
+  "verdict_rows_recorded": [
+   {
+    "taskId": "9d182ed2-34ec-491c-be23-ff6d24b0650b",
+    "executionId": "84fbcae2-240d-4a5d-a3ae-4594e84580c4",
+    "command": "bash -c \"python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_cap_gate.py' -v\"",
+    "exitCode": 0,
+    "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+    "result": "PASS"
+   }
+  ],
+  "census": {
+   "reclaimable": 2,
+   "blocked_by_foreign_red": 1,
+   "still_red_own_work": 0,
+   "not_runnable": 0,
+   "false_fails_from_the_one_stale_capgate_assertion": 1
+  },
+  "classification": {
+   "SEAM-TEST-RED": "blocked-by-foreign-red (cap-gate red gone; test_verdict_ritual FIXTURE-GENERATIONS now red; own seam test green; no row)",
+   "CLAIM-ROW-STAMP": "reclaimable / already verified PASS at HEAD (no row needed)",
+   "WIRE-CAP-GATE": "reclaimable (was no-verdict, not the red) -> PASS row recorded"
+  }
+ },
+ "blocker": "SEAM-TEST-RED cannot be reclaimed: its recorded suite command still exits 1 on a second foreign red (test_verdict_ritual: FIXTURE-GENERATIONS closed with no verdict row). One row for a not-exit-0 card would be a false PASS, so none recorded.",
+ "next_unit_hint": "Record a verdict row for FIXTURE-GENERATIONS (task 96ec0bcc-9d40-444a-a0f8-c82c7e27f9ec / exec efa8039f-751e-4ceb-b3e5-eaef3df6f8b5) and SEAM-TEST-RED's suite command goes exit 0 without touching its code. Only then re-run SEAM-TEST-RED's recorded command. Separately, test_tool_channel2 assertion (e) ('tools-off output drifted', line 294) is red for its own pre-existing reason and needs its own card.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/RECLAIM-ACCEPTANCE.json",
+  "docs/RECLAIM-ACCEPTANCE.md",
+  "orchestration/units/RECLAIM-ACCEPTANCE.md",
+  "orchestration/handoffs/RECLAIM-ACCEPTANCE.json",
+  "orchestration/journals/RECLAIM-ACCEPTANCE.jsonl"
+ ],
+ "assumptions": [
+  "The closure ledger (~/.dsh/storages/orchestration/closure.jsonl) is the authority for the recorded acceptance command; SEAM-TEST-RED and CLAIM-ROW-STAMP carried one, WIRE-CAP-GATE carried none (no-verdict), so its command is the first entry of its handoff evidence.commands, marked as such.",
+  "The verdict allow-list refuses python3, so the recorded command is wrapped in bash -c; the wrapped text is verbatim the card's own command."
+ ],
+ "requests": 0,
+ "tool_calls": 17
+}

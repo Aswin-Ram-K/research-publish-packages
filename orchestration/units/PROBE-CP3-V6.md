@@ -39,8 +39,8 @@ spends the requests T46 needs; that is the same defect as (b), one ledger over. 
 are recorded per row: `fetch_rounds_used` (billed rounds) and `fetch_followup` rows (requests).
 
 ## Acceptance evidence
-1. `tests/test_tool_channel2.py` -> exit 0 (V5 regression: 5/5, incl. duplicate billing and resume counter).
-2. `tests/test_tool_channel3.py` -> exit 0, red-before-green for (a) and (b) plus tools-off inert.
+1. `experiments/ptr-engine/longrun/tests/test_tool_channel2.py` -> exit 0 (V5 regression: 5/5, incl. duplicate billing and resume counter).
+2. `experiments/ptr-engine/longrun/tests/test_tool_channel3.py` -> exit 0, red-before-green for (a) and (b) plus tools-off inert.
 3. dry run on the tools2 fixture -> exit 0, `would_send_total=48`.
 4. live rows: 48 turn rows, `requests_spent <= 80`.
 5. `grade_v3.py` per checkpoint.

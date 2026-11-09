@@ -1,0 +1,52 @@
+{
+ "unit": "REGRADE-ONE-COMMAND",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/regrade.py",
+  "docs/REGRADE.md",
+  "experiments/ptr-engine/measure/REGRADE.json",
+  "experiments/ptr-engine/longrun/tests/test_regrade.py",
+  "orchestration/units/REGRADE-ONE-COMMAND.md",
+  "orchestration/journals/REGRADE-ONE-COMMAND.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "9 long-run grids regraded x3 (2 pinned runs + production), all byte-identical; 8/9 existing grade-v5 files identical, 1 differs in 22 paths; TVS 48347/50847/111994 regenerate; 8 tests passed",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/regrade.py --all --report --as-of 2026-10-26T16:00:00+00:00",
+   "python3 experiments/ptr-engine/tools/regrade.py --rows measure/rows-longrun-v6-tools.jsonl --check",
+   "python3 experiments/ptr-engine/tools/tokens_to_verified.py --rows measure/rows-longrun-v4-tools-2026-10-26.jsonl --grade measure/regrade/rows-longrun-v4-tools-2026-10-26.grade-v5.json --arm pointer-stable",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_regrade.py -q"
+  ],
+  "per_grid": {
+   "rows-longrun-2026-10-26-fix": {"checkpoint_accuracy": "0/3,0/3,0/3,0/2", "check": "identical"},
+   "rows-longrun-2026-10-26-policy": {"checkpoint_accuracy": "0/3,0/3,0/3,0/1", "check": "identical"},
+   "rows-longrun-2026-10-26": {"checkpoint_accuracy": "0/0 x4", "check": "identical"},
+   "rows-longrun-c-2026-10-26": {"checkpoint_accuracy": "0/0 x4", "check": "identical"},
+   "rows-longrun-v3-2026-10-26": {"checkpoint_accuracy": "0/1,0/0", "check": "identical"},
+   "rows-longrun-v4-2026-10-26": {"checkpoint_accuracy": "1/1,0/0", "tvs": 48347, "check": "identical"},
+   "rows-longrun-v4-tools-2026-10-26": {"checkpoint_accuracy": "1/1", "tvs": 50847, "check": "identical"},
+   "rows-longrun-v5-tools": {"checkpoint_accuracy": "0/0", "tvs": null, "check": "identical"},
+   "rows-longrun-v6-tools": {"checkpoint_accuracy": "1/1 (published file says 1/3)", "tvs": 111994, "check": "differs", "first_difference": "arms.pointer-stable.cells"}
+  },
+  "determinism": "two runs + production, 9/9 byte-identical with --as-of 2026-10-26T16:00:00+00:00",
+  "archaeology": {"rows_files_without_grade": 6, "grade_files_not_current_grader_sha": 19, "grade_v5_files_identical": 8},
+  "red_green": "mutate recorded grader_sha256 -> --check exit 1 naming grader_sha256; restore -> IDENTICAL exit 0",
+  "tests": "8 passed"
+ },
+ "blocker": "",
+ "next_unit_hint": "Wire measure/REGRADE.json into OPERATOR-BRIEF/STATUS only additively; re-deriving published quality 5/43 needs matrix_audit/det_verify, not this tool. A separate card should record grader_sha256 in future grade_v5 outputs at write time.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/regrade.py",
+  "docs/REGRADE.md",
+  "experiments/ptr-engine/measure/REGRADE.json",
+  "experiments/ptr-engine/measure/regrade/",
+  "experiments/ptr-engine/longrun/tests/test_regrade.py",
+  "orchestration/units/REGRADE-ONE-COMMAND.md",
+  "orchestration/handoffs/REGRADE-ONE-COMMAND.json",
+  "orchestration/journals/REGRADE-ONE-COMMAND.jsonl"
+ ],
+ "assumptions": [
+  "The two published grids are read as (a) the grade_v5 checkpoint-accuracy grid over the 23 declared run/arm pairs and (b) the TVS grid over the same 23 pairs; 5/43 is reported as a different instrument, not conflated with grade_v5.",
+  "A legacy grade's provenance keys are excluded from a --check difference only when the old document lacks them; a recorded sha is always compared."
+ ]
+}

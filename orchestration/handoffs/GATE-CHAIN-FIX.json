@@ -1,0 +1,62 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/exit_codes.py",
+  "experiments/ptr-engine/longrun/tests/test_cell_gates.py",
+  "experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+  "docs/GATE-CHAIN.md",
+  "docs/EXIT-CODES.md",
+  "orchestration/units/GATE-CHAIN-FIX.md",
+  "orchestration/journals/GATE-CHAIN-FIX.jsonl"
+ ],
+ "assumptions": [
+  "D4 was already repaired in cell.py when this unit started (import fallback present at cell.py:68-79); no re-fix was needed, so a regression test was added instead. The (d) demonstration re-added the bare import to prove the stated command catches it."
+ ],
+ "blocker": "",
+ "bound": 30,
+ "evidence": {
+  "D1_after": "--max-wall 0 -> exit 8, 'G2 projection REFUSED: computed --max-wall=0 s | limit a positive ceiling (> 0 s)'",
+  "D1_before": "--max-wall 0 and -1 ALLOWED (ok = not (max_wall > 0 and projected > max_wall))",
+  "D2_after": "absent --hypothesis -> exit 12, 'hypothesis=none declared', 'silence is not a claim'",
+  "D2_before": "absent --hypothesis -> hypothesis_source=default:PARM-1.primary, runner invoked",
+  "D3_after": "G3 refusal -> exit 12 (EXIT_PREREG); exit 2 keeps broken input only; scan test balances both ways (16/16)",
+  "D3_before": "G3 refusal shared exit 2 with preflight/harness/argparse/unreadable artefact",
+  "D4_after": "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_cell_gates.py' (repo root) -> 'Ran 15 tests in 1.504s / OK'; test_repo_root_import pins it",
+  "D4_before": "at session start the try/except import fallback was already present and the stated command was green; a bare `import exit_codes` reproduces ModuleNotFoundError from the repo root",
+  "commands": [
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_cell_gates.py'",
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_exit_codes.py'",
+   "python3 experiments/ptr-engine/longrun/tests/test_guards.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_projection_calibration.py",
+   "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_projection_modes.py",
+   "python3 -m unittest discover -s experiments/ptr-engine/longrun/tests -p 'test_cell.py'"
+  ],
+  "counts": "test_cell_gates 15/15 OK; test_exit_codes 16/16 OK; test_guards 6/6 GREEN; test_projection_calibration 4/4; test_projection_modes 8 passed; test_cell 7/7 OK",
+  "red_green": [
+   "(a) AssertionError: expected exit 8 for --max-wall 0 (a ceiling of zero or less is not 'unlimited'), got 10",
+   "(b) AssertionError: expected exit 12 (no hypothesis declared), got 10",
+   "(c) AssertionError: expected exit 12 (prereg refusal), got 2",
+   "(d) ModuleNotFoundError: No module named 'exit_codes' (stated discover command, repo root)"
+  ]
+ },
+ "next_unit_hint": "verifier V-GATE-CHAIN-FIX: re-run the four red\u2192green demos from the repo root, and attack the chain again with --max-wall 0/-1, no --hypothesis, --hypothesis none/H9, H1 n=48/60/144.",
+ "seams_crossed": [
+  "experiments/ptr-engine/longrun/tests/test_guards.py \u2014 drove a live path with no --hypothesis and used --max-wall 0 as a 'disabled' switch; added --hypothesis H2 and replaced that red with a documented source mutation",
+  "experiments/ptr-engine/longrun/tests/test_projection_calibration.py \u2014 checks a/c drove live paths with no --hypothesis; added --hypothesis H2 (honest: H2 needs n>=1, cells are n=48/n=10)",
+  "experiments/ptr-engine/longrun/tests/test_projection_modes.py \u2014 same seam; added --hypothesis H2 to its _cell helper (n=10..60)"
+ ],
+ "status": "done",
+ "tool_calls": 28,
+ "unit": "GATE-CHAIN-FIX",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/exit_codes.py",
+  "experiments/ptr-engine/longrun/tests/test_cell_gates.py",
+  "experiments/ptr-engine/longrun/tests/test_exit_codes.py",
+  "docs/GATE-CHAIN.md",
+  "docs/EXIT-CODES.md",
+  "orchestration/units/GATE-CHAIN-FIX.md",
+  "orchestration/handoffs/GATE-CHAIN-FIX.json",
+  "orchestration/journals/GATE-CHAIN-FIX.jsonl"
+ ]
+}

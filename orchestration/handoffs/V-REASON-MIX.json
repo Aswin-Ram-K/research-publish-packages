@@ -1,0 +1,64 @@
+{
+  "unit": "V-REASON-MIX",
+  "kind": "verifier",
+  "overall": "partial",
+  "checks": [
+    "all 11 named grade-v5 sources walked; 75 cells keyed by (rows_file,arm,checkpoint_id); claim rows 75; no omission, no duplication",
+    "their five bucket totals reproduce exactly: never_answered 63, answered_wrong_value 0, contract 3, undecidable 0, unclassifiable 0 = 66 non-passes",
+    "reason census verbatim: prose_only 28, turn_missing 21, unparseable 9, num_equal 7, no_answer_line 5, answer_not_contract 2, call_equal 2, answer_not_contract:multiple_answer_lines 1",
+    "my rule: never_answered 64, answered_wrong_value 1, contract 1, undecidable 0, unclassifiable 0 = 66",
+    "synthetic wrong-value rows in memory grade fail/num_mismatch (NUM 65 vs 64, NUM 999 vs 31) and fail/kwarg_value_mismatch:code -> bucket2 not structurally empty",
+    "author classifier returns unclassifiable for num_mismatch, kwarg_value_mismatch:code, kind_mismatch:NUM_expected, num_not_integer:6.4, none_contradicted_by_source (REASON_BUCKET is grade_v4 vocabulary)",
+    "0/42 = 0.0% < 60% -> threshold_met false arithmetically correct; test inapplicable because 42/42 are non-answers",
+    "three passes: 2 current-era (cell-longrun-v4, v4-tools 15:56:19), 1 pre-T3 (cell-pointer-stable 14:57:22, QUALITY-ERAS: re-derivation DIFFERS); the pre-T3 pass still re-derives to pass/num_equal/ANSWER: 64 in measure/regrade/rows-longrun-v6-tools.grade-v5.json",
+    "current-grader recompute over the same 69-cell population: 65 / 0 / 1 / 0 / 0, not 63 / 0 / 3 / 0 / 0",
+    "containment: no existing file edited; synthetic rows never written to disk"
+  ],
+  "not_reproduced": [],
+  "overstated": [
+    "bucket3 writes down two misattributed cells: rows-longrun-v3 cp.1.t24 (ANSWER: 7, expected 31) is a WRONG value filed as 'answered right but rejected by contract'; rows-longrun-v6-tools cp.1.t24 has answer_raw null, a non-answer filed as a contract rejection",
+    "the sentence 'zero wrong-value answers in 66 non-passes' is contradicted by rows-longrun-v3 cp.1.t24",
+    "bucket_totals_real_grids_only = 63/0/3 is era-inflated: 2 of the 3 contract cells come from the pre-T3 cell-pointer-stable document; the current grader gives 1",
+    "'never_answered' over-reads its population: 43 of 64 are turns that exist and were graded undecidable (prose_only 28, sentinel-unparseable 10, no_answer_line 5); grade_v5.py:199-202 says the same"
+  ],
+  "unverified": [
+    "the repair state of grade_v5 at 2026-10-26T14:57:22 (no grader sha recorded in any grade-v5 document; era is datable only by re-running the grader)",
+    "the two cell-transcript-grow grade-v5 files are undatable per QUALITY-ERAS (rows file absent); their 6 passes are demo-grid only and do not enter the real-grid totals"
+  ],
+  "corrections": [
+    "reclassify rows-longrun-v3 cp.1.t24 from answered_right_but_rejected_by_contract to answered_wrong_value",
+    "reclassify rows-longrun-v6-tools cp.1.t24 from answered_right_but_rejected_by_contract to never_answered",
+    "add num_mismatch, kwarg_value_mismatch:*, kind_mismatch:*, num_not_integer:*, none_but_call_exists, none_contradicted_by_source to REASON_BUCKET bucket 2, or state that bucket 2 is grade_v4-only",
+    "restate the threshold line as 'contract compliance untested (0 of 42 non-pointer cells emitted a contract-form answer)' rather than 'threshold not met'"
+  ],
+  "blocker": "",
+  "next_unit_hint": "A follow-up unit should decide whether prose that asserts a value counts as an answer for H3: 17 of 28 prose_only turns carry a numeral, none carries 64, and one lease-reopen turn states 'The default per-turn resolve budget is 1 ref' where the truth is DEFAULT_MAX_REFS = 64. If prose counts, bucket 2 is not empty and the presence/correctness split must be recomputed from turn text, not from the contract line.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/V-REASON-MIX.json",
+    "docs/V-REASON-MIX.md",
+    "orchestration/units/V-REASON-MIX.md",
+    "orchestration/handoffs/V-REASON-MIX.json",
+    "orchestration/journals/V-REASON-MIX.jsonl"
+  ],
+  "scope": "the 11 grade-v5 documents named by QUALITY-REASON-MIX.json; real grids = the 9 grids with 69 cells; demo grids (cell-demo-rows, rows.jsonl) excluded by the claim and by me",
+  "evidence": {
+    "cells_walked": 75,
+    "claim_rows": 75,
+    "passes": 9,
+    "non_passes": 66,
+    "real_grid_cells": 69,
+    "real_grid_passes": 3,
+    "attempted_answers_real_grids": 5,
+    "correct_among_attempts": 3,
+    "commands": [
+      "python3 - <<'EOF' ... walk 11 grade-v5 docs, key-set diff vs claim rows, verbatim reason census ... EOF",
+      "python3 - <<'EOF' ... sys.path.insert(0,'experiments/ptr-engine/longrun'); import grade_v5 as G; G.grade_rows(fixture, synthetic_rows, truth) -> num_mismatch / kwarg_value_mismatch:code ... EOF",
+      "python3 - <<'EOF' ... import reason_mix as RM; RM.classify('fail','num_mismatch','ANSWER: NUM 65') -> ('unclassifiable', ...) ... EOF",
+      "python3 - <<'EOF' ... aggregate experiments/ptr-engine/measure/regrade/*.grade-v5.json (9 grids, current grader) -> 29/21/10/5/3/1 ... EOF",
+      "python3 - <<'EOF' ... scan the 28 prose_only turns' raw content for numerals -> 17/28 carry a numeral, 0/28 carry 64 ... EOF"
+    ]
+  },
+  "tool_calls": 18,
+  "bound": 24,
+  "live_requests": 0
+}

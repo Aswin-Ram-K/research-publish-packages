@@ -1,0 +1,48 @@
+{
+ "unit": "V-LEDGER-REBUILD",
+ "overall": "pass",
+ "checks": [
+  "independent rule (turn + tool-followup count; only billed:false/followup_suppressed/served_from:prompt suppress) gives requests_raw 1128 over 15 rows-*.jsonl files; zero licensed suppression markers occur at row level (0 rows carry billed, followup_suppressed, served_from; 14 rows carry http errors and still count)",
+  "builder reproduces exactly: requests_raw 1128 / requests 1128 / requests_deduplicated 1098 / duplicate_excess 30 / remaining 3192 / remaining_raw 3192 / diagnostic.deducted false / files 15 / rows 1128 / 12 deduped / 3 not_applicable; difference 0, cause none",
+  "delta 1128-1101=27 is the stopped cell only: its file has 27 rows and the other 14 files sum to 1101; it is the newest file (mtime 13:31:25 -0500) vs baseline captured 13:24:48 -0500",
+  "attack A delete stopped cell (tmp copy): exit 0, 1101/1071, 14 files, remaining 3219 -- no test or guard fires, because ledger_delta.py reads the REQUEST-LEDGER.json snapshot, not the corpus",
+  "attack B byte-identical duplicate file: exit 0, 1197 raw / 1167 dedup, duplicate_excess still 30 -- dedup is per-file only (request_ledger.py:455-482), external duplication is undetected",
+  "attack C1 truncated last line: exit 5, unparseable row, nothing counted; C2 dropped whole last line: exit 0, silently 1100",
+  "no consumer deducts the dedup figure: grep over request_ledger.py, ledger_delta.py, tests, cell.py and docs finds only printed diagnostics; diagnostic.deducted is false and the budget figure is 1128 raw / 3192 remaining",
+  "LEDGER-GRID-BASELINE.json still claims 1101/3219 (dedup 1071) at sha 6b6dff44...; ledger_delta.py compares against it and reports delta 27, deficit none (exit 0). The baseline was pinned before the stopped cell wrote its rows, so the grid delta currently measures that rebuild",
+  ".venv/bin/python -m pytest tests/test_ledger_delta.py tests/test_gap_closure_ledger.py -q -> 13 passed (exit 0)"
+ ],
+ "findings": [
+  "F1 experiments/ptr-engine/tools/request_ledger.py:629 -- diagnostic.deducted is a literal False, not bool(deduct); a future deduction would be invisible in the diagnostic block",
+  "F2 the newest cell rows carry request_sha256/request_identity_complete, the evidence key deduction_permitted() demands, but that gate is global and the identity hash is not on every row nor on the 3 legacy files",
+  "F3 per-file-only dedup + silent whole-line loss: both let the count move without any refusal"
+ ],
+ "answered": "yes: 1,128 requests and 3,192 remaining are the defensible budget figure (raw, de-duplicated 1,098 explicitly not deducted); the grid path still reads a stale 1,101 baseline whose 27 delta is the stopped cell's rebuild, not grid spend.",
+ "blocker": "",
+ "next_unit_hint": "pin a new pre-grid baseline (or record the 27 as pre-grid spend) before RUN-A* banks any delta; make diagnostic.deducted derive from bool(deduct); refuse a rows file whose line count changes without a sha in the manifest",
+ "not_reproduced": [],
+ "overstated": [],
+ "unverified": [
+  "whether the 27 stopped-cell requests were billed on the wire -- the rows are the writer's record, not an engine-side meter; not checkable offline"
+ ],
+ "tool_calls": 20,
+ "bound": 18,
+ "bound_note": "over by 2: both extra calls were orchestration_verdict attempts refused for command-not-allowed before a third form was accepted",
+ "scope": "independent recompute of LEDGER-REBUILD-27; no ledger artefact, rows file, builder, cell.py, run_longrun.py or published page edited; attacks ran only in /tmp/vledger",
+ "containment": {
+  "network_requests": 0,
+  "ask_user_question": 0,
+  "writes": [
+   "experiments/ptr-engine/measure/V-LEDGER-REBUILD.json",
+   "orchestration/units/V-LEDGER-REBUILD.md",
+   "orchestration/handoffs/V-LEDGER-REBUILD.json",
+   "orchestration/journals/V-LEDGER-REBUILD.jsonl"
+  ]
+ },
+ "write_paths": [
+  "experiments/ptr-engine/measure/V-LEDGER-REBUILD.json",
+  "orchestration/units/V-LEDGER-REBUILD.md",
+  "orchestration/handoffs/V-LEDGER-REBUILD.json",
+  "orchestration/journals/V-LEDGER-REBUILD.jsonl"
+ ]
+}

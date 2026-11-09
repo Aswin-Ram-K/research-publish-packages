@@ -64,7 +64,7 @@ The gate is executable: `det_verify.py` exits 0 when FN=FP=0, 2 otherwise.
 
 ## 3. Red case (the guard must be able to fail)
 
-[tests/test_det_verify.py](../../experiments/ptr-engine/tools/tests/test_det_verify.py) monkeypatches the shipped
+[experiments/ptr-engine/tools/tests/test_det_verify.py](../../experiments/ptr-engine/tools/tests/test_det_verify.py) monkeypatches the shipped
 checker's globals — the file on disk is not altered — so the same assertions that pass in
 the green run fail under degradation:
 

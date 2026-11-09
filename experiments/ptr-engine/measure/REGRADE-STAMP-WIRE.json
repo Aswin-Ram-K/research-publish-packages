@@ -1,0 +1,130 @@
+{
+ "findings": [
+  "F1 fixed: no hard-coded digest decides identity; the old pin 6893d559518168e3ba4fc4a9f5d7642d213d61e2e3c3d0b0a8f01e3379af3077 appears nowhere in regrade.py (grep-asserted by the test).",
+  "F2 fixed: grader_sha256 + grader_version 5.1 + rows_sha256 on every regrade output.",
+  "Historical stored grids also predate GRADE-V5-REPAIR (decidable_source), so a full --check of them reports those era fields; that is reported, not restamped.",
+  "cell-pointer-stable-20261026T145722Z.grade-v5.json does not reproduce under the current grader (22 graded fields differ) -- a separate era finding, out of scope here."
+ ],
+ "offline": true,
+ "pin_semantics": {
+  "constant": "EXPECTED_GRADER_SHA",
+  "role": "expectation compared against the resolved digest, never the source of identity; --sha256 demands an exact digest (exit 3), the pin alone only reports drift",
+  "value": "056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772"
+ },
+ "proof_1_historical_grids": {
+  "clean_case": {
+   "conclusion": "stamps are the ONLY provenance a regrade adds; every graded field is byte-identical to the pre-stamp document",
+   "exit": 0,
+   "provenance_only": [
+    "grader_sha256",
+    "grader_version",
+    "rows_sha256"
+   ],
+   "result": "IDENTICAL rows-longrun-2026-10-26.jsonl (grader_sha256=056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772)",
+   "what": "a pre-stamp document made by stripping ONLY the three stamp keys from a fresh regrade output (/tmp/prestamp.json); resubmitted with --check"
+  },
+  "grids": [
+   {
+    "differing_paths": [
+     "arms.lease-reopen.decidable_source",
+     "arms.pointer-stable.decidable_source",
+     "arms.transcript-compact.decidable_source",
+     "arms.transcript-grow.decidable_source"
+    ],
+    "exit": 1,
+    "finding": "decidable_source is pre-existing era drift (GRADE-V5-REPAIR field), not caused by the stamp change; no stored grade doc postdates that repair",
+    "grade": "measure/cell-longrun-base-20261026T1556Z.grade-v5.json",
+    "provenance_only": [
+     "grader_sha256=056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+     "grader_version=5.1",
+     "rows_sha256=bc61d38192d4e4316021ec8d3d0e21dcb8e6153f463260a0138da21969d0b21e"
+    ],
+    "rows": "measure/rows-longrun-2026-10-26.jsonl"
+   },
+   {
+    "differing_paths": [
+     "arms.lease-reopen.decidable_source",
+     "arms.pointer-stable.decidable_source",
+     "arms.transcript-compact.decidable_source",
+     "arms.transcript-grow.decidable_source"
+    ],
+    "exit": 1,
+    "grade": "measure/cell-longrun-policy-20261026T1556Z.grade-v5.json",
+    "provenance_only": [
+     "grader_sha256=056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+     "grader_version=5.1",
+     "rows_sha256=9b1097234bf8d2464a4d24ec48cf0cccc1ecd64bd853815fc6643b1ad3da3368"
+    ],
+    "rows": "measure/rows-longrun-2026-10-26-policy.jsonl"
+   },
+   {
+    "differing_paths": "22 paths (verdict/undecidable/reason/checkpoint_accuracy and decidable_* fields across 3 cells)",
+    "exit": 1,
+    "finding": "NOT a stamp issue: this stored document is a pre-v5 grader output (cells[1]/cells[2] verdict fail vs current undecidable). Reported, not fixed -- outside this card's write scope and not a regrade defect.",
+    "grade": "measure/cell-pointer-stable-20261026T145722Z.grade-v5.json",
+    "rows": "measure/rows-longrun-v6-tools.jsonl"
+   }
+  ],
+  "rule": "every differing path must be a stamp field or a generated_at-style timestamp; anything else is a finding"
+ },
+ "proof_2_red_green": {
+  "green": {
+   "command": "python3 tools/regrade.py --rows measure/rows-longrun-2026-10-26.jsonl --check --grade /tmp/prestamp.json",
+   "exit": 0,
+   "text": "IDENTICAL rows-longrun-2026-10-26.jsonl (grader_sha256=056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772)",
+   "what": "the resolver version, same grid, no digest flag"
+  },
+  "red": {
+   "command": "PYTHONPATH=$PWD/tools python3 /tmp/regrade-red/regrade.py --rows measure/rows-longrun-2026-10-26.jsonl --grader longrun/grade_v5.py --check --grade measure/cell-longrun-base-20261026T1556Z.grade-v5.json --sha256 6893d559518168e3ba4fc4a9f5d7642d213d61e2e3c3d0b0a8f01e3379af3077",
+   "exit": 3,
+   "text": "ERROR grader sha256 mismatch: file=056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772 expected=6893d559518168e3ba4fc4a9f5d7642d213d61e2e3c3d0b0a8f01e3379af3077",
+   "what": "tools/regrade.py copied to /tmp/regrade-red/regrade.py with the pre-stamp pin restored as EXPECTED_GRADER_SHA=6893d559518168e3ba4fc4a9f5d7642d213d61e2e3c3d0b0a8f01e3379af3077"
+  }
+ },
+ "proof_3_edited_grader_detected": {
+  "conclusion": "drift stays detectable because it is resolved, not pinned; the edited grader's documents carry the edited digest, so a --check against an unedited-grader document differs at grader_sha256",
+  "digest_edited": "114e60a23e0bc03a12016690e91ff2d8680690a64c361d3197606b938090884a",
+  "digest_original": "056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+  "resolved": {
+   "command": "... --grader /tmp/grader-edit/grade_v5.py (no --sha256)",
+   "exit": 0,
+   "text": "NOTE grader sha256 drift: resolved=114e60a23e0bc03a12016690e91ff2d8680690a64c361d3197606b938090884a expected-pin=056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772 (identity resolved at run time; pass --sha256 to require a digest)",
+   "written_stamp": "114e60a23e0bc03a12016690e91ff2d8680690a64c361d3197606b938090884a"
+  },
+  "strict": {
+   "command": "... --grader /tmp/grader-edit/grade_v5.py --sha256 056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+   "exit": 3,
+   "text": "ERROR grader sha256 mismatch: file=114e60a23e0bc03a12016690e91ff2d8680690a64c361d3197606b938090884a expected=056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772"
+  },
+  "what": "grade_v5.py copied to /tmp/grader-edit/grade_v5.py and one comment line appended; behavior identical, bytes different"
+ },
+ "requests": 0,
+ "resolver_call_site": {
+  "call": "experiments/ptr-engine/tools/regrade.py:405 (identity = resolve_grader_identity(grader_path, args.sha256))",
+  "definition": "experiments/ptr-engine/tools/regrade.py:72 (resolve_grader_identity)",
+  "identity_source": "experiments/ptr-engine/tools/grader_identity.py:file_sha256 (single sha implementation)",
+  "stamp_write": "experiments/ptr-engine/tools/regrade.py:167 (doc[\"grader_version\"] = getattr(grader, \"GRADER_VERSION\", None))"
+ },
+ "scope": "F1 stale pin -> resolve the grader through tools/grader_identity.py; F2 regrade output carries all three stamp keys. Forward-only: no historical grade document was edited, restamped or rewritten.",
+ "stamp_keys_as_regrade_writes_them": {
+  "grader_sha256": "sha256 of the grader file resolved at run time: 056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+  "grader_version": "GRADER_VERSION of the loaded grader module: 5.1",
+  "rows_sha256": "sha256 of the rows file graded, e.g. bc61d38192d4e4316021ec8d3d0e21dcb8e6153f463260a0138da21969d0b21e",
+  "validation": "grader_identity.grader_identity(doc) must return source=stamp, else exit 3"
+ },
+ "status": "done",
+ "suites": {
+  "after": {
+   "test_grader_stamp.py": "6 passed",
+   "test_regrade.py": "8 passed",
+   "test_regrade_stamp.py": "6 passed"
+  },
+  "before": {
+   "test_grader_stamp.py": "6 passed",
+   "test_regrade.py": "8 passed",
+   "test_regrade_stamp.py": "absent"
+  }
+ },
+ "unit": "REGRADE-STAMP-WIRE",
+ "verdict_word": "pass"
+}

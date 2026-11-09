@@ -1,0 +1,736 @@
+{
+  "unit": "ADOPT-HARNESS",
+  "card": "2dbeba03-a3ae-4cbc-a45c-47fceb534abf",
+  "generated_at": "2026-10-26",
+  "mode": "adopt-before-build survey; offline for the model (0 inference requests)",
+  "bound": 30,
+  "tool_calls_used": 20,
+  "code_edited": false,
+  "memo": "docs/research/ADOPT-HARNESS.md",
+  "frozen_paths_read_only": [
+    "experiments/ptr-engine/longrun/cell.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/client.py",
+    "experiments/ptr-engine/longrun/analyze_stats.py",
+    "experiments/ptr-engine/longrun/grade_v5.py"
+  ],
+  "components": [
+    {
+      "id": "live-runner",
+      "problem": "SSE client, per-turn loop, tool rounds, stop-reason classification, row writing",
+      "existing_option": [
+        {
+          "name": "openai-python",
+          "url": "https://pypi.org/pypi/openai/json",
+          "licence": "Apache-2.0",
+          "last_release": "3.39.0 (2026-10-26)"
+        },
+        {
+          "name": "litellm",
+          "url": "https://pypi.org/pypi/litellm/json",
+          "licence": "MIT",
+          "last_release": "1.106.4 (2026-10-25)"
+        },
+        {
+          "name": "inspect_ai",
+          "url": "https://pypi.org/pypi/inspect-ai/json",
+          "licence": "MIT",
+          "last_release": "0.3.285 (2026-10-25)"
+        }
+      ],
+      "replaces": [
+        "client.py (SSE decode + STOP_REASON_*, client.py:101)",
+        "client.py:25 (ttft_ms first-token latch)",
+        "run_longrun.py:988-1019 (tool rounds / per-turn cap)",
+        "run_longrun.py:1153-1241 (window/wall token management)"
+      ],
+      "adopt_cost": {
+        "files_touched": 3,
+        "dependencies_added": 2,
+        "risk": "frozen era-B instruments; deleting the SSE decoder gives up the measured TTFT latch and the stop-reason taxonomy the canary reads; grid invalidated"
+      },
+      "build_cost_paid": {
+        "unit_cards": 135,
+        "note": "client/runner cards sit inside the 135 surveyed layer cards; the real cost is the grid itself"
+      },
+      "decision": "adopt-after-grid",
+      "decision_note": "transport only, after adjudication; our ttft_ms latch and stop-reason map stay as a thin wrapper",
+      "owner_card": "ADOPT-TRANSPORT-POSTGRID"
+    },
+    {
+      "id": "gate-chain-ledger",
+      "problem": "gate chain G1 ledger cap / G2 wall projection / G3 prereg n, and the request ledger's reserve/headroom arithmetic",
+      "existing_option": [
+        {
+          "name": "vLLM bench serve",
+          "url": "https://docs.vllm.ai/en/latest/cli/",
+          "licence": "Apache-2.0 (vllm 0.32.0)",
+          "last_release": "0.32.0 (2026-10-18)"
+        },
+        {
+          "name": "SGLang /metrics",
+          "url": "https://docs.sglang.io/docs/references/production_metrics",
+          "licence": "Apache-2.0 (sglang 0.5.22)",
+          "last_release": "0.5.22 (2026-10-16)"
+        },
+        {
+          "name": "litellm spend tracking",
+          "url": "https://docs.litellm.ai/docs/proxy/cost_tracking",
+          "licence": "MIT",
+          "last_release": "1.106.4 (2026-10-25)"
+        }
+      ],
+      "replaces": [
+        "cell.py:160-162 (GATE_LEDGER/GATE_PROJECTION/GATE_PREREG)",
+        "cell.py:688-818 (G2 evaluate/enforce)",
+        "cell.py:408-417 (headroom)",
+        "tools/request_ledger.py (858 lines)"
+      ],
+      "adopt_cost": {
+        "files_touched": 0,
+        "dependencies_added": 0,
+        "risk": "n/a: every candidate is post-hoc (server counters / proxy spend logs). None reserves a pre-flight budget against an artefact and refuses before the request. Adopting one adds a second accounting, which cell.py:18-19 forbids"
+      },
+      "build_cost_paid": {
+        "unit_cards": 49,
+        "note": "18 LEDGER + 31 GATE/PREREG cards"
+      },
+      "decision": "build",
+      "decision_note": "keep; record once that no pre-flight ledger exists so this is not re-surveyed",
+      "owner_card": "ADOPT-LEDGER-RATIONALE"
+    },
+    {
+      "id": "budget-runaway-guards",
+      "problem": "turn wall cap, runaway counter, abandon-and-continue",
+      "existing_option": [
+        {
+          "name": "tenacity",
+          "url": "https://pypi.org/pypi/tenacity/json",
+          "licence": "Apache-2.0",
+          "last_release": "9.2.1 (2026-10-07)"
+        },
+        {
+          "name": "backoff",
+          "url": "https://pypi.org/pypi/backoff/json",
+          "licence": "MIT",
+          "last_release": "2.2.1 (2022-10-05, stale)"
+        }
+      ],
+      "replaces": [
+        "retry/attempt surface in client.py (~47 retry|backoff|attempt|STOP_REASON sites)"
+      ],
+      "adopt_cost": {
+        "files_touched": 1,
+        "dependencies_added": 1,
+        "risk": "client.py frozen; tenacity covers stop_after_attempt only - turn wall and abandon-and-continue stay ours"
+      },
+      "build_cost_paid": {
+        "unit_cards": 8,
+        "note": "8 BUDGET/WALL/RUNAWAY/TURN-CAP/ABANDON cards"
+      },
+      "decision": "adapt",
+      "decision_note": "retry policy only, post-grid; guards stay",
+      "owner_card": "ADOPT-RETRY-REPLAY"
+    },
+    {
+      "id": "verdict-acceptance",
+      "problem": "orchestration_verdict, frozen-command rule, tree_freeze, verdict_scope",
+      "existing_option": [
+        {
+          "name": "pre-commit",
+          "url": "https://pypi.org/pypi/pre-commit/json",
+          "licence": "MIT",
+          "last_release": "4.7.0 (2026-10-12)"
+        },
+        {
+          "name": "tox",
+          "url": "https://pypi.org/pypi/tox/json",
+          "licence": "MIT",
+          "last_release": "4.67.1 (2026-10-18)"
+        },
+        {
+          "name": "nox",
+          "url": "https://pypi.org/pypi/nox/json",
+          "licence": "Apache-2.0",
+          "last_release": "2026.10.20"
+        }
+      ],
+      "replaces": [
+        "tools/verdict_scope.py (361 lines)",
+        "tools/tree_freeze.py (584 lines)",
+        "the frozen-command binding in the DSH orchestration_verdict tool"
+      ],
+      "adopt_cost": {
+        "files_touched": 2,
+        "dependencies_added": 1,
+        "risk": "these run a suite; none binds a verdict to exit 0 AND sha == execution head sha, refuses a command edit between attempts, or re-runs the frozen judge against a scratch copy of the card tree. Adopting one replaces a proof with a checklist"
+      },
+      "build_cost_paid": {
+        "unit_cards": 16,
+        "note": "16 VERDICT/TREE-FREEZE/ACCEPTANCE cards"
+      },
+      "decision": "borrow-idea",
+      "decision_note": "pre-commit's committed-command idea is already the frozen-command rule; keep ours",
+      "owner_card": "ADOPT-LEDGER-RATIONALE"
+    },
+    {
+      "id": "provenance-pinning",
+      "problem": "harness digest pin, per-row request_sha256, row_seq, baseline snapshots",
+      "existing_option": [
+        {
+          "name": "dvc",
+          "url": "https://pypi.org/pypi/dvc/json",
+          "licence": "Apache-2.0",
+          "last_release": "3.67.1 (2026-03-31)"
+        },
+        {
+          "name": "mlflow",
+          "url": "https://pypi.org/pypi/mlflow/json",
+          "licence": "Apache-2.0 (api.github.com/repos/mlflow/mlflow license.spdx_id)",
+          "last_release": "3.17.2 (2026-10-21)"
+        },
+        {
+          "name": "lakeFS",
+          "url": "https://pypi.org/pypi/lakefs-sdk/json",
+          "licence": "BUSL-1.1",
+          "last_release": "1.88.0 (2026-10-01)"
+        },
+        {
+          "name": "wandb",
+          "url": "https://pypi.org/pypi/wandb/json",
+          "licence": "MIT",
+          "last_release": "0.31.0 (2026-10-16)"
+        }
+      ],
+      "replaces": [
+        "cell.py:185-190 (_sha256_file)",
+        "cell.py:334-354 (freeze_harness, exit 2 on moved digest)",
+        "state/harness-baselines/ snapshots",
+        "row_seq / request_sha256 fields"
+      ],
+      "adopt_cost": {
+        "files_touched": 2,
+        "dependencies_added": 1,
+        "risk": "dvc versions data, not the set of files that can move a measurement, and adds a .dvc index that would itself need pinning; mlflow/wandb need a server or DB = a second source of truth next to the rows; lakeFS is BUSL-1.1, not OSI-approved"
+      },
+      "build_cost_paid": {
+        "unit_cards": 27,
+        "note": "27 PIN/PROVENANCE/DIGEST/SHA/FREEZE cards"
+      },
+      "decision": "build",
+      "decision_note": "dvc/mlflow/wandb not-applicable for the measurement freeze; lakeFS rejected on licence",
+      "owner_card": "ADOPT-LEDGER-RATIONALE"
+    },
+    {
+      "id": "latency-stats",
+      "problem": "quantile intervals, bootstrap, n_eff autocorrelation, McNemar",
+      "existing_option": [
+        {
+          "name": "scipy.stats.bootstrap",
+          "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.bootstrap.html",
+          "licence": "BSD-3-Clause (scipy 1.18.1)",
+          "last_release": "1.18.1 (2026-08-21)"
+        },
+        {
+          "name": "statsmodels contingency_tables.mcnemar",
+          "url": "https://www.statsmodels.org/stable/generated/statsmodels.stats.contingency_tables.mcnemar.html",
+          "licence": "BSD-3-Clause (statsmodels 0.15.0)",
+          "last_release": "0.15.0 (2026-08-27)"
+        }
+      ],
+      "replaces": [
+        "analyze_stats.py:253-270 (wilson_ci)",
+        "analyze_stats.py:302-330 (rank_span, min_n_for)",
+        "analyze_stats.py:350-399 (quantile_ci percentile bootstrap)",
+        "analyze_stats.py:430-470 (mcnemar_exact)"
+      ],
+      "replaces_lines": 218,
+      "adopt_cost": {
+        "files_touched": 1,
+        "dependencies_added": 2,
+        "risk": "analyze_stats.py frozen; the estimability policy (MIN_N=20, TAIL_MIN=3, RESAMPLES=10000, SEED at analyze_stats.py:111-113) and rank_span's distribution-free refusal must survive - SciPy has no not-estimable refusal"
+      },
+      "build_cost_paid": {
+        "unit_cards": 2,
+        "note": "2 stats-subject cards; the primitives are load-bearing across 15 bootstrap + 18 mcnemar + 6 n_eff mentions"
+      },
+      "decision": "adopt-after-grid",
+      "decision_note": "SciPy for the bootstrap interval, statsmodels for McNemar; keep rank_span/min_n_for/seed as our policy layer",
+      "owner_card": "ADOPT-STATS-EQUIV"
+    },
+    {
+      "id": "contract-grading",
+      "problem": "answer-contract checks, decoration stripping, negative controls",
+      "existing_option": [
+        {
+          "name": "lm-evaluation-harness",
+          "url": "https://pypi.org/pypi/lm-eval/json",
+          "licence": "MIT",
+          "last_release": "0.4.13 (2026-08-31)"
+        },
+        {
+          "name": "inspect_ai analysis/scorers",
+          "url": "https://inspect.aisi.org.uk/reference/inspect_ai.analysis.html",
+          "licence": "MIT",
+          "last_release": "0.3.285 (2026-10-25)"
+        },
+        {
+          "name": "promptfoo",
+          "url": "https://registry.npmjs.org/promptfoo",
+          "licence": "MIT",
+          "last_release": "0.125.1 (2026-10-25)"
+        }
+      ],
+      "replaces": [
+        "grade_v5.py:178-330 (trap/decoration stripper, 153 lines)",
+        "grade_v5.py:98-115 (numeral integrality)",
+        "grade_v5.py:155-176 (_parse_call)"
+      ],
+      "replaces_lines": 153,
+      "adopt_cost": {
+        "files_touched": 1,
+        "dependencies_added": 1,
+        "risk": "lm-eval filters assume a typed answer field and a metric; our subject is prose contract compliance measured at FN 30.8%/FP 45.5% (v3) and 26.9%/50.0% (v4) - a reliability problem a different normaliser does not fix. promptfoo would replace the whole cell, not the check"
+      },
+      "build_cost_paid": {
+        "unit_cards": 23,
+        "note": "23 CONTRACT/GRADE cards"
+      },
+      "decision": "borrow-idea",
+      "decision_note": "copy lm-eval's filter-before-the-metric pattern post-grid; make the contract decidable rather than swap the stripper",
+      "owner_card": "ADOPT-ROWSCHEMA-STRICT"
+    },
+    {
+      "id": "canary-shape",
+      "problem": "era detection, degeneracy rules",
+      "existing_option": [],
+      "existing_option_note": "no candidate found: vLLM/SGLang expose model metrics not run-shape canaries; inspect_ai/lm-eval have no era detector; nothing in the candidate space matched",
+      "replaces": [
+        "canary/era logic in the longrun tools (tools/grid_resume.py and the canary test suite)",
+        "degeneracy rules in docs/CANARY-ERA-B*.md, docs/ANSWER-DEGENERACY.md"
+      ],
+      "adopt_cost": {
+        "files_touched": 0,
+        "dependencies_added": 0,
+        "risk": "none proposed; era detection is workspace-specific by construction"
+      },
+      "build_cost_paid": {
+        "unit_cards": 21,
+        "note": "21 CANARY/ERA/DEGENERACY cards"
+      },
+      "decision": "build",
+      "decision_note": "keep",
+      "owner_card": null
+    }
+  ],
+  "candidate_space_not_applicable": [
+    {
+      "name": "vLLM bench serve",
+      "url": "https://docs.vllm.ai/en/latest/cli/",
+      "licence": "Apache-2.0",
+      "last_release": "0.32.0 (2026-10-18)",
+      "reason": "closed-loop single-request load generator; reports aggregate TTFT/ITL, cannot write per-turn rows (turn, row_seq, request_sha256, stop reason) for a 48-turn tool-using conversation"
+    },
+    {
+      "name": "SGLang benchmark",
+      "url": "https://api.github.com/repos/sgl-project/sglang/contents/benchmark",
+      "licence": "Apache-2.0",
+      "last_release": "0.5.22 (2026-10-16)",
+      "reason": "same single-request shape; its TTFT latch differs from vLLM's (docs/EXTERNAL-SERVING-PRACTICE.md section 1), so adopting it would change the instrument"
+    },
+    {
+      "name": "genai-perf",
+      "url": "https://pypi.org/pypi/genai-perf/json",
+      "licence": "BSD",
+      "last_release": "0.0.16 (2025-08-26)",
+      "reason": "same load-generator shape, and no release in ~14 months"
+    },
+    {
+      "name": "pre-commit/tox/nox",
+      "url": "https://pypi.org/pypi/pre-commit/json",
+      "licence": "MIT",
+      "last_release": "4.7.0 (2026-10-12)",
+      "reason": "CI hygiene for code; irrelevant to the measurement verdict gate"
+    },
+    {
+      "name": "hydra-core",
+      "url": "https://pypi.org/pypi/hydra-core/json",
+      "licence": "MIT",
+      "last_release": "1.3.8 (2026-10-25)",
+      "reason": "config identity is part of the harness digest (cell.py:340); composition adds a resolver between fixture and digest for no rule removed"
+    },
+    {
+      "name": "typer",
+      "url": "https://pypi.org/pypi/typer/json",
+      "licence": "MIT",
+      "last_release": "0.27.3 (2026-10-06)",
+      "reason": "would rewrite argparse surfaces that G2 operand validation depends on"
+    },
+    {
+      "name": "pydantic",
+      "url": "https://pypi.org/pypi/pydantic/json",
+      "licence": "MIT",
+      "last_release": "2.14.1 (2026-10-11)",
+      "reason": "the one genuine adapt (row schema), deferred post-grid because rows are written by the frozen runner",
+      "decision": "adapt"
+    }
+  ],
+  "sources": [
+    {
+      "id": "pypi-scipy",
+      "url": "https://pypi.org/pypi/scipy/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "SciPy 1.18.1, BSD-3-Clause, 2026-08-21",
+      "kind": "primary"
+    },
+    {
+      "id": "scipy-bootstrap",
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.bootstrap.html",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "scipy.stats.bootstrap exists (SciPy v1.18.0 manual)",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-statsmodels",
+      "url": "https://pypi.org/pypi/statsmodels/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "statsmodels 0.15.0, BSD-3-Clause, 2026-08-27",
+      "kind": "primary"
+    },
+    {
+      "id": "sm-mcnemar",
+      "url": "https://www.statsmodels.org/stable/generated/statsmodels.stats.contingency_tables.mcnemar.html",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "contingency_tables.mcnemar present in statsmodels 0.15.0",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-tenacity",
+      "url": "https://pypi.org/pypi/tenacity/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "tenacity 9.2.1, Apache-2.0, 2026-10-07",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-backoff",
+      "url": "https://pypi.org/pypi/backoff/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "backoff 2.2.1, MIT, 2022-10-05 (stale)",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-httpx",
+      "url": "https://pypi.org/pypi/httpx/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "httpx 0.28.1, BSD-3-Clause, 2024-12-06",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-openai",
+      "url": "https://pypi.org/pypi/openai/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "openai 3.39.0, Apache-2.0, 2026-10-26",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-litellm",
+      "url": "https://pypi.org/pypi/litellm/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "litellm 1.106.4, MIT, 2026-10-25",
+      "kind": "primary"
+    },
+    {
+      "id": "litellm-spend",
+      "url": "https://docs.litellm.ai/docs/proxy/cost_tracking",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "Spend Tracking: spend for keys/users/teams, per-request callbacks (post-hoc)",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-inspect",
+      "url": "https://pypi.org/pypi/inspect-ai/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "inspect_ai 0.3.285, MIT, 2026-10-25",
+      "kind": "primary"
+    },
+    {
+      "id": "inspect-tools",
+      "url": "https://inspect.aisi.org.uk/tools.html",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "Tool Basics page exists (tool-calling surface)",
+      "kind": "primary"
+    },
+    {
+      "id": "inspect-analysis",
+      "url": "https://inspect.aisi.org.uk/reference/inspect_ai.analysis.html",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "ci_wilson and bootstrap_stderr in Inspect analysis API",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-lm-eval",
+      "url": "https://pypi.org/pypi/lm-eval/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "lm-eval 0.4.13, MIT, 2026-08-31",
+      "kind": "primary"
+    },
+    {
+      "id": "npm-promptfoo",
+      "url": "https://registry.npmjs.org/promptfoo",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "promptfoo 0.125.1, MIT, 2026-10-25",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-pydantic",
+      "url": "https://pypi.org/pypi/pydantic/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "pydantic 2.14.1, MIT, 2026-10-11",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-hydra",
+      "url": "https://pypi.org/pypi/hydra-core/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "hydra-core 1.3.8, MIT, 2026-10-25",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-typer",
+      "url": "https://pypi.org/pypi/typer/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "typer 0.27.3, MIT, 2026-10-06",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-mlflow",
+      "url": "https://pypi.org/pypi/mlflow/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "mlflow 3.17.2, 2026-10-21",
+      "kind": "primary"
+    },
+    {
+      "id": "gh-mlflow",
+      "url": "https://api.github.com/repos/mlflow/mlflow",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "mlflow licence spdx_id = Apache-2.0",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-dvc",
+      "url": "https://pypi.org/pypi/dvc/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "dvc 3.67.1, Apache-2.0, 2026-03-31",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-lakefs",
+      "url": "https://pypi.org/pypi/lakefs-sdk/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "lakefs-sdk 1.88.0, BUSL-1.1, 2026-10-01",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-wandb",
+      "url": "https://pypi.org/pypi/wandb/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "wandb 0.31.0, MIT, 2026-10-16",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-precommit",
+      "url": "https://pypi.org/pypi/pre-commit/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "pre-commit 4.7.0, MIT, 2026-10-12",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-tox",
+      "url": "https://pypi.org/pypi/tox/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "tox 4.67.1, MIT, 2026-10-18",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-nox",
+      "url": "https://pypi.org/pypi/nox/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "nox 2026.10.20, Apache-2.0, 2026-10-20",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-vllm",
+      "url": "https://pypi.org/pypi/vllm/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "vLLM 0.32.0, Apache-2.0, 2026-10-18",
+      "kind": "primary"
+    },
+    {
+      "id": "vllm-cli",
+      "url": "https://docs.vllm.ai/en/latest/cli/",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "bench serve / bench throughput / bench latency / bench forward subcommands exist",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-sglang",
+      "url": "https://pypi.org/pypi/sglang/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "SGLang 0.5.22, Apache-2.0, 2026-10-16",
+      "kind": "primary"
+    },
+    {
+      "id": "sglang-metrics",
+      "url": "https://docs.sglang.io/docs/references/production_metrics",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "Prometheus exposition and /metrics endpoint",
+      "kind": "primary"
+    },
+    {
+      "id": "sglang-bench-dir",
+      "url": "https://api.github.com/repos/sgl-project/sglang/contents/benchmark",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "benchmark tree exists (directory listing returned)",
+      "kind": "primary"
+    },
+    {
+      "id": "pypi-genai-perf",
+      "url": "https://pypi.org/pypi/genai-perf/json",
+      "retrieved_at": "2026-10-26",
+      "claim_taken": "genai-perf 0.0.16, BSD, 2025-08-26",
+      "kind": "primary"
+    }
+  ],
+  "top3": [
+    {
+      "rank": 1,
+      "proposal": "statistics primitives -> SciPy + statsmodels",
+      "decision": "adopt-after-grid",
+      "delete": "analyze_stats.py:350-399 bootstrap interval, :253-270 wilson_ci body, :430-470 mcnemar_exact body (~218 of 1846 lines)",
+      "keep": "MIN_N=20 / TAIL_MIN=3 / RESAMPLES=10000 / SEED (analyze_stats.py:111-113), rank_span (:302-325), min_n_for, every refusal message",
+      "breaks_first": "percentile-bootstrap tie/interpolation convention; a p95 CI moving by 1e-3 would move a frozen claim",
+      "proof_experiment": "offline: recompute every reported CI from existing rows with both implementations, require identical (point, lo, hi) to 1e-12 on 100% of analyses; adopt SciPy only where it matches, statsmodels only where exact McNemar p matches",
+      "owner_card": "ADOPT-STATS-EQUIV"
+    },
+    {
+      "rank": 2,
+      "proposal": "retry policy -> tenacity",
+      "decision": "adapt",
+      "delete": "hand-rolled backoff/attempt loop in client.py (~47 retry|backoff|attempt|STOP_REASON sites)",
+      "keep": "STOP_REASON_* taxonomy (client.py:101), first-token TTFT latch (client.py:25), stream errors are classified not retried into a different row",
+      "breaks_first": "a retry that changes the request count moves G1's arithmetic; tenacity must use a fixed stop_after_attempt that the ledger already budgets",
+      "proof_experiment": "offline: replay recorded streams under the new policy, assert byte-identical rows (request_sha256, row_seq, stop_reason) on 100% of replayed turns",
+      "owner_card": "ADOPT-RETRY-REPLAY"
+    },
+    {
+      "rank": 3,
+      "proposal": "row schema -> pydantic (strict)",
+      "decision": "adapt",
+      "delete": "hand-rolled row-shape assertions in the writer/readers (ROW-SCHEMA card), once the model is the single definition of a row",
+      "keep": "row_seq monotonicity and request_sha256 presence as required fields; poisoned-row semantics - a schema must not coerce a poisoned row into a valid one",
+      "breaks_first": "coercion: pydantic v2 lax mode turns \"3\" into 3 on a field whose type is the finding; strict=True required",
+      "proof_experiment": "offline: validate the pinned rows.jsonl corpus with the model, require accept/reject identical to today including every poisoned row",
+      "owner_card": "ADOPT-ROWSCHEMA-STRICT"
+    }
+  ],
+  "avoidable_arithmetic": {
+    "units_total": 1097,
+    "layer_family_union": 135,
+    "family_sum_with_overlap": 154,
+    "commodity_subject_cards": 7,
+    "borderline_commodity_cards": 10,
+    "avoidable_share_of_layer_batch": "17/135 = 12.6%",
+    "scaled_to_200_rounds": "~25 avoidable, ~175 not avoidable",
+    "one_sentence": "About one round in eight: 17 of the 135 layer cards are pure reimplementations of library features (7 outright, 10 borderline), which is ~12.6% of the layer batch and ~25 of ~200 rounds - and those bought lines, not rules, because no fetched library implements the ledger, the gates, the freeze or the verdict."
+  },
+  "unverified": [
+    "litellm proxy and inspect_ai verified as projects + doc pages from registries/own docs; not installed or exercised, so their behaviour claims are vendor-doc level",
+    "vLLM bench serve flags (--request-rate, --num-prompts) seen on a sub-page whose body returned empty to this fetch; subcommand existence verified on the CLI index only",
+    "no claim in this survey is a measurement of :8012; 0 live requests made"
+  ],
+  "claims": [
+    {
+      "id": "C1",
+      "status": "verified",
+      "claim": "the latency statistics primitives have an off-the-shelf equivalent: scipy.stats.bootstrap exists (SciPy 1.18.1, BSD-3-Clause) and statsmodels.stats.contingency_tables.mcnemar exists (0.15.0, BSD-3-Clause)",
+      "source": "scipy-bootstrap"
+    },
+    {
+      "id": "C2",
+      "status": "verified",
+      "claim": "no candidate does pre-flight quota reservation: litellm's documented substitute is post-hoc spend tracking per key/user/team",
+      "source": "litellm-spend"
+    },
+    {
+      "id": "C3",
+      "status": "verified",
+      "claim": "vLLM ships bench serve/throughput/latency/forward subcommands; SGLang ships a benchmark tree and a Prometheus /metrics endpoint",
+      "source": "vllm-cli"
+    },
+    {
+      "id": "C4",
+      "status": "verified",
+      "claim": "lakeFS's SDK is BUSL-1.1, not an OSI-approved licence, so it is a licence blocker regardless of fit",
+      "source": "pypi-lakefs"
+    },
+    {
+      "id": "C5",
+      "status": "inferred",
+      "claim": "zenodo-style: adopting any of these on the frozen instruments would move the era-B measurement and therefore waits for adjudication",
+      "source": "pypi-scipy"
+    },
+    {
+      "id": "C6",
+      "status": "verified",
+      "claim": "the layer batch is 135 of 1097 unit cards (union of ten family greps) and only 7 have a pure-commodity subject",
+      "source": "pypi-scipy"
+    }
+  ],
+  "open_questions": [
+    "would SciPy's percentile bootstrap reproduce every frozen (point, lo, hi) to 1e-12 on the existing rows? (ADOPT-STATS-EQUIV, offline)",
+    "does tenacity's fixed stop_after_attempt leave the ledger's request arithmetic unchanged? (ADOPT-RETRY-REPLAY, offline)",
+    "would a strict pydantic row model accept exactly the pinned corpus, poisoned rows included? (ADOPT-ROWSCHEMA-STRICT, offline)",
+    "how many of the 135 layer cards a library would have made unnecessary: provable for 7, judgement for the rest"
+  ],
+  "changes_plan": [
+    {
+      "owner_card": "ADOPT-STATS-EQUIV",
+      "change": "replace the 218-line statistical primitives with scipy.stats.bootstrap + statsmodels mcnemar",
+      "precondition": "era-B grid adjudicated; offline equivalence on every existing CI to 1e-12",
+      "files_after_grid": [
+        "experiments/ptr-engine/longrun/analyze_stats.py"
+      ]
+    },
+    {
+      "owner_card": "ADOPT-RETRY-REPLAY",
+      "change": "route client.py retry/attempt policy through tenacity with a fixed stop_after_attempt",
+      "precondition": "offline replay of recorded streams yields byte-identical rows",
+      "files_after_grid": [
+        "experiments/ptr-engine/longrun/client.py"
+      ]
+    },
+    {
+      "owner_card": "ADOPT-ROWSCHEMA-STRICT",
+      "change": "define the row once as a strict pydantic model (row_seq, request_sha256 required; no coercion)",
+      "precondition": "pinned rows.jsonl corpus accept/reject identical, poisoned rows included",
+      "files_after_grid": [
+        "experiments/ptr-engine/longrun/run_longrun.py"
+      ]
+    },
+    {
+      "owner_card": "ADOPT-TRANSPORT-POSTGRID",
+      "change": "adopt the openai client for HTTP/SSE transport behind a thin wrapper keeping ttft_ms latch and STOP_REASON map",
+      "precondition": "era-B adjudicated; instrument wrapper preserves both measured semantics",
+      "files_after_grid": [
+        "experiments/ptr-engine/longrun/client.py",
+        "experiments/ptr-engine/longrun/run_longrun.py"
+      ]
+    },
+    {
+      "owner_card": "ADOPT-LEDGER-RATIONALE",
+      "change": "record in docs that no candidate does pre-flight quota reservation, so the ledger is not re-surveyed",
+      "precondition": "none",
+      "files_after_grid": []
+    }
+  ]
+}

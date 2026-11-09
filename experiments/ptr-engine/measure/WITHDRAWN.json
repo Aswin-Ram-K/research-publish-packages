@@ -1,0 +1,462 @@
+{
+ "register": "WITHDRAWN.json",
+ "unit": "WITHDRAWN-INDEX",
+ "generated_date": "2026-10-26",
+ "rule": "Additive register. Every historical document, board post and cell report is left byte-identical; each row states a claim AS PUBLISHED, the artefact that decides it, and the number that replaces it. A 'none — no replacement exists' row is a real outcome, not a gap: nothing measured replaces the withdrawn figure.",
+ "how_to_use": [
+  "python3 experiments/ptr-engine/tools/withdrawn_index.py --check <file>  # exit 1 = a withdrawn claim is quoted without its correction",
+  "python3 experiments/ptr-engine/tools/withdrawn_index.py --self-test  # every decided_by path exists, every superseded_by artefact opens"
+ ],
+ "kinds": {
+  "wrong_denominator": "a proportion over the wrong population (usually 64 turn rows printed as checkpoint accuracy)",
+  "wrong_unit": "a count of a different thing than the one named (turn rows read as requests; a column sum read as an endpoint)",
+  "unsound_rule": "a rule applied to a number whose evidence does not support it (dedupe by response hash)",
+  "retracted_finding": "a published finding withdrawn by later measurement or superseded by an adjudication",
+  "overstated_mechanism": "a true reading of one field published as a claim about the whole population"
+ },
+ "status": {
+  "withdrawn": "no replacement exists or the claim is false as stated",
+  "superseded": "a newer artefact carries the correct number",
+  "disputed": "two records disagree and neither is authoritative"
+ },
+ "still_citable": {
+  "never": "do not repeat this number in any new document",
+  "only with the correction attached": "the number may appear only beside its correction, instrument and sha"
+ },
+ "counts": {
+  "total": 15,
+  "seeded": 8,
+  "found": 7,
+  "by_kind": {
+   "wrong_unit": 1,
+   "unsound_rule": 1,
+   "wrong_denominator": 3,
+   "retracted_finding": 8,
+   "overstated_mechanism": 2
+  },
+  "by_status": {
+   "withdrawn": 9,
+   "superseded": 6
+  },
+  "no_replacement": 1,
+  "with_discrepancy": 3
+ },
+ "entries": [
+  {
+   "id": "WI-001",
+   "claim": "≈466 of 4,320 requests used",
+   "claim_ref": "docs/REQUEST-LEDGER.md:9 (six rounds of status lines); retired at docs/OPERATOR-BRIEF.md:131-133",
+   "kind": "wrong_unit",
+   "status": "withdrawn",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+    "number": "1,101 requests used (raw); 3,219 remaining of 4,320",
+    "note": "466 counted turn rows only, not requests: the turn-row count is 801 and the artefact has no row set that yields 466. Measured understatement 2.36x (1,101/466)."
+   },
+   "decided_by": {
+    "card": "REQUEST-LEDGER",
+    "handoff": "orchestration/handoffs/V-DUPLICATE-RULE.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "never",
+   "quote": "≈466",
+   "markers": [
+    "retired",
+    "1,101",
+    "1101",
+    "2.36"
+   ],
+   "discrepancy": ""
+  },
+  {
+   "id": "WI-002",
+   "claim": "requests 1,071 · remaining 3,249",
+   "claim_ref": "experiments/ptr-engine/measure/REQUEST-LEDGER.json (requests_deduplicated 1071, remaining_deduplicated 3249); propagated to docs/REQUEST-LEDGER.md:9ff",
+   "kind": "unsound_rule",
+   "status": "superseded",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+    "number": "1,101 requests used · 3,219 remaining (both already present as requests_raw / remaining_raw)",
+    "note": "The 30-row deduction is visible but NOT applied: deduction.applied false, deducted_requests 0. The rule is unsound because content_sha256 hashes the assistant response, not the request."
+   },
+   "decided_by": {
+    "card": "V-DUPLICATE-RULE",
+    "handoff": "orchestration/handoffs/V-DUPLICATE-RULE.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "only with the correction attached",
+   "quote": "3,249",
+   "markers": [
+    "3,219",
+    "3219",
+    "raw",
+    "deduction",
+    "unsound",
+    "1,101",
+    "1101"
+   ],
+   "discrepancy": "SEED CITES run_longrun.py:1493; the artefact does NOT say that. REQUEST-LEDGER.json evidence_note records that the card's line number drifted and the assignment is run_longrun.py:1555 (`\"content_sha256\": (sha256_text(recorded_content)`), re-measured 869/869 rows. The live line number is 1555, not 1493."
+  },
+  {
+   "id": "WI-003",
+   "claim": "accuracy 55/64 wilson95 n=64 0.8594 [0.7538, 0.9242] (undecidable: 0)",
+   "claim_ref": "experiments/ptr-engine/measure/cell-transcript-grow-20261026T144452Z.md:36 (registered as PN-001 at docs/PUBLISHED-NUMBERS.md:57)",
+   "kind": "wrong_denominator",
+   "status": "superseded",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/cell-transcript-grow-20261026T144452Z.grade-v5.json",
+    "number": "checkpoint_accuracy 3/3 (decidable 3)",
+    "note": "55/64 is a proportion over the run transcript's 64 TURN ROWS, printed as if it were checkpoint accuracy. The instrument grades checkpoints, of which 3 are decidable in this fixture."
+   },
+   "decided_by": {
+    "card": "PUBLISHED-NUMBER-AUDIT",
+    "handoff": "orchestration/handoffs/PUBLISHED-NUMBER-AUDIT.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "only with the correction attached",
+   "quote": "0.8594 [0.7538, 0.9242]",
+   "markers": [
+    "3/3",
+    "row",
+    "checkpoint",
+    "wrong_denominator",
+    "superseded"
+   ],
+   "discrepancy": ""
+  },
+  {
+   "id": "WI-004",
+   "claim": "p95 318.14 [235.00, 526.41] n=68  (G7 V4-TOOLS pointer-stable)",
+   "claim_ref": "docs/LATENCY-REPORT.md:45 (still worded '…… stands'); withdrawn at docs/LATENCY-REPORT.md:35, :90, :100, :153 and in measure/LATENCY-REPORT.json p95_withheld",
+   "kind": "retracted_finding",
+   "status": "withdrawn",
+   "superseded_by": {
+    "path": "none — no replacement exists",
+    "number": "none — no replacement exists",
+    "note": "Withdrawn on two independent grounds: the de-duplicated sample is 51 < the n>=60 order-statistic floor for p95 (n*(1-q)=2.6 < 3), and dedupe rule R is disputed by V-DUPLICATE-RULE. G7 is single-arm, so no comparison exists to publish in its place."
+   },
+   "decided_by": {
+    "card": "LATENCY-UNDER-DISPUTE",
+    "handoff": "orchestration/handoffs/LATENCY-UNDER-DISPUTE.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "never",
+   "quote": "318.14",
+   "markers": [
+    "WITHDRAWN",
+    "withdrawn",
+    "REFUSED",
+    "n=51",
+    "51 < 60",
+    "refused"
+   ],
+   "discrepancy": "SEED SAYS WITHDRAWN; docs/LATENCY-REPORT.md:45 still reads '`318.14 [235.00, 526.41]` **stands**.' — a stale remnant contradicted by :35/:90/:100/:153 of the same file. Not edited here (additive register); recorded as a live inconsistency in that document."
+  },
+  {
+   "id": "WI-005",
+   "claim": "5/43 mixes grader eras",
+   "claim_ref": "the era-mixing charge against docs/OPERATOR-BRIEF.md:45; answered at docs/QUALITY-ERAS.md:14 ('is **not** era-mixed') and :69-72",
+   "kind": "retracted_finding",
+   "status": "withdrawn",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/QUALITY-ERAS.json",
+    "number": "5/43 reproduced identically under det_verify.py sha256 12ccc74e… (pass 5, fail 38, missing 36, undecidable 13)",
+    "note": "The charge is false: 5/43 is det_verify's PARTIAL-GRID figure and re-derives identically. What survives is a labelling demand, not a number change - the 5/43 must be published WITH its instrument name and sha."
+   },
+   "decided_by": {
+    "card": "QUALITY-ERA-TABLE",
+    "handoff": "orchestration/handoffs/QUALITY-ERA-TABLE.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "never",
+   "quote": "mixes grader eras",
+   "markers": [
+    "not era-mixed",
+    "det_verify",
+    "12ccc74e",
+    "era",
+    "instrument"
+   ],
+   "discrepancy": "The charge itself is false, not merely unproven: no artefact supports 'mixes grader eras'. The number 5/43 is NOT withdrawn; only the accusation is. A reader may cite 5/43 only with the det_verify sha attached (caveat recorded in 'caveat').",
+   "caveat": "5/43 = 11.6% is citable as det_verify.py sha256 12ccc74e… on a partial grid (missing 36, undecidable 13 of 92 declared cells). Era table: docs/QUALITY-ERAS.md."
+  },
+  {
+   "id": "WI-006",
+   "claim": "pointer-stable grows like a transcript … reaches 217k at turn 48",
+   "claim_ref": "board ws:78cead56-384a-4d9c-b974-02b454c6d3d5 seq 891 (ARM-INTEGRITY 2ae53b51 mid-run F0); retracted by board seq 893",
+   "kind": "retracted_finding",
+   "status": "withdrawn",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/ARM-RECONCILE.json",
+    "number": "max prompt_tokens on any arm/grid = 34,279; pointer-stable turn 48 = 2,197; G4 pointer-stable slope 4.4433 tok/turn",
+    "note": "216,951 is not an endpoint: it is the SUM of 68 turn rows of a DIFFERENT arm in a DIFFERENT grid (G7 V4-TOOLS). No arm reaches 217k; corpus-wide max is 51,216."
+   },
+   "decided_by": {
+    "card": "V-ARM-RECONCILE",
+    "handoff": "orchestration/handoffs/V-ARM-RECONCILE.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "never",
+   "quote": "217k",
+   "markers": [
+    "34,279",
+    "34279",
+    "216,951",
+    "216951",
+    "retracted",
+    "sum",
+    "2,197"
+   ],
+   "discrepancy": ""
+  },
+  {
+   "id": "WI-007",
+   "claim": "0 of 66 are wrong values",
+   "claim_ref": "docs/QUALITY-REASON-MIX.md:125-126 ('63 of 66 non-passes (95.5 %) are never_answered; 0 of 66 are wrong values')",
+   "kind": "overstated_mechanism",
+   "status": "superseded",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/NEVER-ANSWERED-ROOT.json",
+    "number": "0 of 66 on the ANSWER: line only; 5 cells assert a value in prose, 4 of them wrong (asserted_wrong 4, asserted_right 1)",
+    "note": "True only of the graded ANSWER: line. The widened asserted_value extractor finds five prose cells stating a value; four are wrong. The claim's scope, not its arithmetic, is the error."
+   },
+   "decided_by": {
+    "card": "NEVER-ANSWERED-ROOT-2",
+    "handoff": "orchestration/handoffs/NEVER-ANSWERED-ROOT-2.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "only with the correction attached",
+   "quote": "0 of 66",
+   "markers": [
+    "ANSWER:",
+    "prose",
+    "prose_asserts_value",
+    "asserted_wrong",
+    "ANSWER line"
+   ],
+   "discrepancy": ""
+  },
+  {
+   "id": "WI-008",
+   "claim": "the gate chain has no surviving hole  (the V-GATE-CHAIN-3 closure PASS)",
+   "claim_ref": "closure PASS of card 4e7e8017 / exec 0884f187, resting on the attack script embedded in orchestration/units/V-GATE-CHAIN-3.md; adjudicated at experiments/ptr-engine/measure/VERDICT-DISPUTE.md:63-75",
+   "kind": "retracted_finding",
+   "status": "superseded",
+   "superseded_by": {
+    "path": "orchestration/handoffs/V-GATE-CHAIN-3.json",
+    "number": "overall: fail — 6 bypasses survive; 0 of 3 decision expressions fully validated",
+    "note": "6 of 26 assertions encoded the bypasses as their pass condition, so a green run is compatible with the holes surviving (it demands they survive). PASS is supportable only as 'the attack script ran green'."
+   },
+   "decided_by": {
+    "card": "VERDICT-DISPUTE",
+    "handoff": "orchestration/handoffs/VERDICT-DISPUTE.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "never",
+   "quote": "no surviving hole",
+   "markers": [
+    "fail",
+    "bypass",
+    "not supportable",
+    "VERDICT-DISPUTE",
+    "ran green"
+   ],
+   "discrepancy": ""
+  },
+  {
+   "id": "WI-009",
+   "claim": "starts at 1,867 tokens",
+   "claim_ref": "board seq 891 / experiments/ptr-engine/measure/ARM-RECONCILE.md:47",
+   "kind": "retracted_finding",
+   "status": "withdrawn",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/ARM-RECONCILE.json",
+    "number": "pointer-stable G4 turn 1 = 967 prompt tokens",
+    "note": "No row on disk has prompt_tokens 1,867. Nearest are 1,864 (1 row) and 1,870 (13 rows), all G1 transcript-compact/transcript-grow turn 1."
+   },
+   "decided_by": {
+    "card": "V-ARM-RECONCILE",
+    "handoff": "orchestration/handoffs/V-ARM-RECONCILE.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "never",
+   "quote": "1,867",
+   "markers": [
+    "967",
+    "retracted",
+    "no row",
+    "refuted"
+   ],
+   "discrepancy": "",
+   "extra": true
+  },
+  {
+   "id": "WI-010",
+   "claim": "a slope of 1.21x per turn (r = 0.9799)",
+   "claim_ref": "board seq 891 / experiments/ptr-engine/measure/ARM-RECONCILE.md:49-50",
+   "kind": "retracted_finding",
+   "status": "withdrawn",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/ARM-RECONCILE.json",
+    "number": "1.017614x/turn, i.e. 4.4433 tok/turn; OLS r = 0.3265 (log-linear 0.3113)",
+    "note": "Self-inconsistent as well: 1,867->217,000 implies 1.1065x/turn at n=48 and 1.2297x at n=24, so 1.21x only coheres at n~23 intervals."
+   },
+   "decided_by": {
+    "card": "V-ARM-RECONCILE",
+    "handoff": "orchestration/handoffs/V-ARM-RECONCILE.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "never",
+   "quote": "1.21x",
+   "markers": [
+    "1.0176",
+    "4.4433",
+    "0.3265",
+    "refuted",
+    "retracted"
+   ],
+   "discrepancy": "",
+   "extra": true
+  },
+  {
+   "id": "WI-011",
+   "claim": "pointer-stable's p50 advantage is explained by 98.7 % prefix cache hit",
+   "claim_ref": "board seq 891 / experiments/ptr-engine/measure/ARM-RECONCILE.md:44",
+   "kind": "overstated_mechanism",
+   "status": "withdrawn",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/ARM-RECONCILE.json",
+    "number": "measured cached share 0.871157 (not 0.987)",
+    "note": "Unsupported rather than arithmetically wrong: the arm's cached share measures 0.871157, so 98.7 % is not a rounding of it."
+   },
+   "decided_by": {
+    "card": "V-ARM-RECONCILE",
+    "handoff": "orchestration/handoffs/V-ARM-RECONCILE.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "never",
+   "quote": "98.7 % prefix",
+   "markers": [
+    "0.871157",
+    "unsupported",
+    "98.7 % prefix",
+    "retracted"
+   ],
+   "discrepancy": "",
+   "extra": true,
+   "quote_note": "Narrowed 2026-10-26 (card WITHDRAWN-REGISTER-FIX) from the bare 3-char string '98.7', which fired on every citable p50 in the 198.7 ms range (198.72, 198.7230, 198.74). The withdrawn claim is the prefix-cache mechanism, so the phrase is the quote; the decimal rendering 0.987 stays recorded in superseded_by.number as the rejected value."
+  },
+  {
+   "id": "WI-012",
+   "claim": "run_longrun.py:436 reset at 6,000 vs :441 reset at 8,000",
+   "claim_ref": "board seq 891 / experiments/ptr-engine/measure/ARM-RECONCILE.md:51",
+   "kind": "retracted_finding",
+   "status": "withdrawn",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/ARM-RECONCILE.json",
+    "number": "0 resets exist: :436 is `value = int(raw)` and :441 a CapUsageError line, both in allocation_for(); the only 8000 is TOOL_READ_CAP_CHARS at :209, and wall_tokens is 65536 from the fixture",
+    "note": "A false code citation, so the 9,000-token compaction span it claimed does not exist. Not edited in the source file; recorded here."
+   },
+   "decided_by": {
+    "card": "V-ARM-RECONCILE",
+    "handoff": "orchestration/handoffs/V-ARM-RECONCILE.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "never",
+   "quote": "reset at 6,000",
+   "markers": [
+    "no 6,000",
+    "allocation_for",
+    "refuted",
+    "TOOL_READ_CAP_CHARS",
+    "0 resets exist"
+   ],
+   "discrepancy": "",
+   "extra": true
+  },
+  {
+   "id": "WI-013",
+   "claim": "transcript-grow 0.85x/turn, reaching ~620k",
+   "claim_ref": "board seq 891 / experiments/ptr-engine/measure/ARM-RECONCILE.md:52",
+   "kind": "retracted_finding",
+   "status": "withdrawn",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/ARM-RECONCILE.json",
+    "number": "1.061068x/turn (676.9636 tok/turn), 2,114 -> 34,279; the 901,109 figure is a 48-turn SUM (mean 18,773.1), not a prompt size",
+    "note": "Same unit error as WI-006: a column sum read as an endpoint."
+   },
+   "decided_by": {
+    "card": "V-ARM-RECONCILE",
+    "handoff": "orchestration/handoffs/V-ARM-RECONCILE.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "never",
+   "quote": "0.85x",
+   "markers": [
+    "1.061068",
+    "676.96",
+    "34,279",
+    "sum",
+    "refuted"
+   ],
+   "discrepancy": "",
+   "extra": true
+  },
+  {
+   "id": "WI-014",
+   "claim": "accuracy 3/27 = 11.1 % (the stored grade_v5 headline)",
+   "claim_ref": "docs/QUALITY-ERAS.md:74 ('the stored **3/27 = 11.1 %** form is withdrawn')",
+   "kind": "wrong_denominator",
+   "status": "superseded",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/QUALITY-ERAS.json",
+    "number": "3/25 current (pointer-stable 3/10 after the one drifted grid); as-recorded form was 3/27 with pointer-stable 3/12",
+    "note": "One grid of 23 regraded pairs drifted (cell-pointer-stable-20261026T145722Z.grade-v5.json, 22 paths, 2 cells moved), so two cells left the decidable population."
+   },
+   "decided_by": {
+    "card": "V-ARM-RECONCILE",
+    "handoff": "orchestration/handoffs/V-ARM-RECONCILE.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "only with the correction attached",
+   "quote": "3/27",
+   "markers": [
+    "3/25",
+    "withdrawn",
+    "drifted",
+    "pointer-stable 3/10"
+   ],
+   "discrepancy": "",
+   "extra": true
+  },
+  {
+   "id": "WI-015",
+   "claim": "accuracy  55/64  wilson95 n=64  0.8594 [0.7538, 0.9242]  (undecidable: 0)",
+   "claim_ref": "experiments/ptr-engine/measure/cell-transcript-grow-20261026T144540Z.md:36",
+   "kind": "wrong_denominator",
+   "status": "superseded",
+   "superseded_by": {
+    "path": "experiments/ptr-engine/measure/cell-transcript-grow-20261026T144540Z.grade-v5.json",
+    "number": "3/3 (decidable implied by grade-v5)",
+    "note": "Row proportion (64 rows) published as checkpoint accuracy; registered in PUBLISHED-NUMBERS.json as PN-002. arm transcript-grow"
+   },
+   "decided_by": {
+    "card": "PUBLISHED-NUMBER-AUDIT",
+    "handoff": "orchestration/handoffs/PUBLISHED-NUMBER-AUDIT.json"
+   },
+   "date": "2026-10-26",
+   "still_citable": "only with the correction attached",
+   "quote": "0.8594 [0.7538, 0.9242]",
+   "markers": [
+    "3/3",
+    "row",
+    "checkpoint",
+    "wrong_denominator",
+    "superseded"
+   ],
+   "discrepancy": "",
+   "extra": true,
+   "pn_id": "PN-002"
+  }
+ ]
+}

@@ -1,0 +1,173 @@
+{
+ "schema": "consonance.launch-package/1",
+ "unit": "LAUNCH-PACKAGE-AUDIT",
+ "audited_at": "2026-10-26T19:05:00Z",
+ "offline": {
+  "requests_sent": 0,
+  "network_events": 0
+ },
+ "ready_to_launch": false,
+ "blocking": [
+  {
+   "gate": "G6 pin",
+   "why": "HARNESS-PIN.json harness_sha256 1f7c67914e5b76680616f08c16708635060a81ab3932c20806e597a5343f3285 != tree 2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871",
+   "fix": "re-pin, then launch with the matching --expect-harness"
+  },
+  {
+   "gate": "G3 price",
+   "why": "1,016 appears in no measure artefact; RUN-A-STAR-2 prompt says 964/2,228 while its description says 1,016/2,176",
+   "fix": "publish 1,016 with arithmetic, or launch against 964 and count canary+warm-ups separately"
+  },
+  {
+   "gate": "G5 canary",
+   "why": "docs/TRANCHE-CANARY.md:23 and docs/FETCH-BUDGET-48.md:166 still prescribe N=5",
+   "fix": "fix both to N=12 + answer_verified>=1 + finish_reason before the canary runs"
+  },
+  {
+   "gate": "G8 command",
+   "why": "GRID-SHAPE.json cell_py_flags carry --budget 67 and --fetch-followup-allowance 24",
+   "fix": "launch from GRID-PARAMS.json values only (108 / 48)"
+  }
+ ],
+ "gates": [
+  {
+   "gate": "G1 pool",
+   "artefact": "measure/GRID-PARAMS.json :: fetch_followup_allowance.value",
+   "value": "48 = run_longrun.py:230 TOOL_FETCH_ROUNDS_PER_ARM (was 24 at :226); override flag now exists, run_longrun.py:2857 --fetch-rounds-per-arm",
+   "verdict": "agree",
+   "action": "launch as-is; do not trust the 'no override' sentence in GRID-PARAMS.json:75 \u2014 it predates the 19:04:32Z edit"
+  },
+  {
+   "gate": "G2 budget",
+   "artefact": "measure/GRID-PARAMS.json :: per_cell_budget.value",
+   "value": "108 = run_a_star.py:181 argv '--budget','108' and run_a_star.py:280 default 108; driver grid == 108",
+   "verdict": "agree",
+   "action": "pass 108; ignore GRID-SHAPE.json cells[*].cell_py_flags[6] '--budget 67'"
+  },
+  {
+   "gate": "G3 price",
+   "artefact": "measure/GRID-PARAMS.json :: price.total",
+   "value": "964 = 480 turns + 480 rounds + 4 digests; the loaded 1,016 (964 + 48 canary + 4 warm-ups) is quoted by NO measure artefact",
+   "verdict": "disagree",
+   "action": "do not launch until 1,016 arrives in a measure artefact with its own arithmetic; card prompt says 964/2,228 while card description says 1,016/2,176"
+  },
+  {
+   "gate": "G4 remaining",
+   "artefact": "measure/REQUEST-LEDGER.json :: budget.remaining_raw",
+   "value": "3,192 (requests 1128) = LEDGER-GRID-BASELINE-2.json :: remaining 3192 (source_ledger_sha256 matches the current ledger)",
+   "verdict": "agree",
+   "action": "quote 3,192; 2,228 is only the 964-price remainder and 2,176 exists in no artefact"
+  },
+  {
+   "gate": "G5 canary",
+   "artefact": "measure/CANARY-ERA-B-FIX.json :: gate_recommendation",
+   "value": "N=12, shape_ok, answer_verified>=1, stop_signal_source=finish_reason",
+   "verdict": "disagree",
+   "action": "docs/TRANCHE-CANARY.md:23 still defaults N=5 and docs/FETCH-BUDGET-48.md:166 still asserts N=5; gate text must be fixed to N=12 before launch"
+  },
+  {
+   "gate": "G6 pin",
+   "artefact": "measure/HARNESS-PIN.json :: harness_sha256",
+   "value": "recorded 1f7c6791\u2026 but the tree now hashes to 2b4d4808\u2026 (one file moved: run_longrun.py 0d581d1f\u2026 -> b2003038\u2026, mtime 2026-10-26T19:04:32Z)",
+   "verdict": "moved",
+   "action": "RE-PIN FIRST: the launch must re-pin and pass --expect-harness 2b4d4808\u2026 (or later) or it dies at cell.py stage 2/7"
+  },
+  {
+   "gate": "G7 baseline",
+   "artefact": "measure/LEDGER-GRID-BASELINE-2.json",
+   "value": "label pre_grid_era_b, frozen_at 2026-10-26T19:04:18Z, requests 1128 / remaining 3192, source_ledger_sha256 6da0c1f19b7c\u2026 == current REQUEST-LEDGER.json",
+   "verdict": "agree",
+   "action": "quote spend against LEDGER-GRID-BASELINE-2.json; LEDGER-GRID-BASELINE.json (1101/3219) is frozen-but-superseded and must not be the delta base"
+  },
+  {
+   "gate": "G8 command",
+   "artefact": "experiments/ptr-engine/tools/run_a_star.py:177-205 cell_argv + run_cell",
+   "value": "per-cell argv assembled below; two tokens differ between documents (allowance 24 vs 48, budget 67 vs 108)",
+   "verdict": "disagree",
+   "action": "run the assembled argv only; the GRID-SHAPE flag list is stale in positions 6 and 8"
+  }
+ ],
+ "contradictions": [
+  {
+   "field": "allowance",
+   "a": "48 (measure/GRID-PARAMS.json :: fetch_followup_allowance.value; experiments/ptr-engine/tools/run_a_star.py:44 FETCH_ALLOWANCE = 48)",
+   "b": "24 (experiments/ptr-engine/measure/GRID-SHAPE.json :: cells[*].cell_py_flags[8] '--fetch-followup-allowance 24'; also cells[*].projection.followup_allowance 24)",
+   "ruling": "stale: GRID-PARAMS.json :: supersedes declares this exact field superseded"
+  },
+  {
+   "field": "per-cell budget",
+   "a": "108 (measure/GRID-PARAMS.json :: per_cell_budget.value; experiments/ptr-engine/tools/run_a_star.py:181 argv and :280 default)",
+   "b": "67 (experiments/ptr-engine/measure/GRID-SHAPE.json :: cells[*].cell_py_flags[6] '--budget 67')",
+   "ruling": "stale: 67 refuses at exit 3 stage 3/7 before any request (runner projects 72, +10% = 79 > 67)"
+  },
+  {
+   "field": "runner pool constant",
+   "a": "48 at experiments/ptr-engine/longrun/run_longrun.py:230, with --fetch-rounds-per-arm at :2857",
+   "b": "24 'at run_longrun.py:226, a module constant with no override' (measure/GRID-PARAMS.json :: per_arm_round_cap.declared_at; docs/DRYRUN-TOOLS-SHAPE.md:70 says :2228)",
+   "ruling": "disagree: the document is right for the bytes it read and wrong for the tree at 19:04:32Z; line numbers shifted :226 -> :230"
+  },
+  {
+   "field": "price",
+   "a": "964 (measure/GRID-PARAMS.json :: price.total; docs/GRID-PARAMS.md:43; docs/FETCH-BUDGET-48.md:132)",
+   "b": "724 (experiments/ptr-engine/measure/GRID-SHAPE.json :: grid.requests_incl_digests; docs/GRID-SHAPE.md:130) and 1,016 (RUN-A-STAR-2 card description dd2b\u2026 only)",
+   "ruling": "724 is labelled 'previous' where GRID-PARAMS speaks and stale where GRID-SHAPE speaks; 1,016 has NO artefact \u2014 964+48+4 is the card's own arithmetic"
+  },
+  {
+   "field": "remaining",
+   "a": "3,192 (measure/REQUEST-LEDGER.json :: budget.remaining_raw = 3192; measure/LEDGER-GRID-BASELINE-2.json :: remaining = 3192)",
+   "b": "2,228 (measure/GRID-PARAMS.json :: price.remaining_after) / 2,468 (measure/GRID-SHAPE.json :: grid.remaining_after_incl_digests) / 2,176 (RUN-A-STAR-2 card description and title only) / 3,219 (measure/LEDGER-GRID-BASELINE.json :: budget.remaining, frozen at 1101)",
+   "ruling": "2,228 re-derives (3192-964); 2,468 re-derives only from the retired 724 price; 2,176 re-derives only from the un-artefacted 1,016; 3,219 is the known-stale frozen baseline, superseded by -2 at 19:04:18Z"
+  },
+  {
+   "field": "canary N",
+   "a": "N=12 with answer_verified>=1 and stop_signal_source=finish_reason (measure/CANARY-ERA-B-FIX.json :: gate_recommendation; RUN-A-STAR-2 card description)",
+   "b": "N=5 (docs/TRANCHE-CANARY.md:23 'default N = 5'; docs/FETCH-BUDGET-48.md:166 'It runs 5 turns per arm (docs/TRANCHE-CANARY.md:24, N=5)')",
+   "ruling": "stale: docs/TRANCHE-CANARY.md:140-142 says in the same file that era B's gate cannot be N=5 and must be N=12"
+  },
+  {
+   "field": "fixture",
+   "a": "LR-01.v8.json sha256 0804b515\u2026 (measure/HARNESS-PIN.json :: files[5]; experiments/ptr-engine/tools/run_a_star.py:36 FIX)",
+   "b": "LR-01.v6 (LIVE-SMOKE-8 card 0821ef12-a414-4ce3-90c0-9069c0f7618d, title, 8-turn pointer-stable)",
+   "ruling": "disagree: the smoke card's fixture and its 24-request allocation predate era B and pool 48; do not copy them into a grid cell"
+  },
+  {
+   "field": "pin",
+   "a": "1f7c67914e5b76680616f08c16708635060a81ab3932c20806e597a5343f3285 (measure/HARNESS-PIN.json :: harness_sha256; docs/HARNESS-PIN.md)",
+   "b": "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871 (recomputed this audit over HARNESS_FILES+fixture in stage_harness order)",
+   "ruling": "moved: run_longrun.py 0d581d1f\u2026 -> b2003038\u2026 at 2026-10-26T19:04:32Z, 14 s after LEDGER-GRID-BASELINE-2 froze; every other harness input still matches its pinned sha"
+  }
+ ],
+ "pin": {
+  "recorded": "1f7c67914e5b76680616f08c16708635060a81ab3932c20806e597a5343f3285",
+  "recomputed": "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871",
+  "verdict": "moved",
+  "moved_file": {
+   "path": "experiments/ptr-engine/longrun/run_longrun.py",
+   "pinned_sha256": "0d581d1f2ef90b1c3667c5cffcbe2088c60e6892188d4f643248a06b2fd32eb3",
+   "current_sha256": "b20030386610c58bd278681c8c365935336960513787b8380892e276ba42965e",
+   "mtime_utc": "2026-10-26T19:04:32Z"
+  },
+  "verdict_row_bound_to": "2b4d4808cf906582a378c47c340113022588284fc2b58640e83a95fc6bc23871"
+ },
+ "command": "python3 <CELL=experiments/ptr-engine/longrun/cell.py> --arm <pointer-stable|transcript-grow|transcript-compact|lease-reopen> --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 48 --reps 1 --thinking off --max-wall 2880 --turn-wall-cap 180 --runaway-turns 2 --budget 108 --hypothesis H2 --no-cell-handoff --out-dir experiments/ptr-engine/measure --endpoint <ENDPOINT> [--dry-run] --fetch-followup-allowance 48   # tools-on only; env CELL_RUNNER_PATH=<shim appending --tools read_file>",
+ "ledger": {
+  "current_sha256": "6da0c1f19b7cd37203c9d99de5e5d8a9db879e002f389a2b525a776624c27806",
+  "requests": 1128,
+  "remaining": 3192,
+  "baseline_to_quote": "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-2.json",
+  "superseded_baseline": "experiments/ptr-engine/measure/LEDGER-GRID-BASELINE.json (1101/3219)"
+ },
+ "cannot_prove": [
+  "cell behaviour (CELL-PY-BEHAVIOUR-CERTIFY owns it)",
+  "the runner's edited state if the tree is moving: run_longrun.py was written at 2026-10-26T19:04:32Z, after the pin",
+  "that any launcher passes --fetch-rounds-per-arm",
+  "whether warm-ups bill"
+ ],
+ "write_paths": [
+  "docs/LAUNCH-PACKAGE.md",
+  "experiments/ptr-engine/measure/LAUNCH-PACKAGE.json",
+  "orchestration/units/LAUNCH-PACKAGE-AUDIT.md",
+  "orchestration/handoffs/LAUNCH-PACKAGE-AUDIT.json",
+  "orchestration/journals/LAUNCH-PACKAGE-AUDIT.jsonl"
+ ]
+}

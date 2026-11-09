@@ -1,0 +1,61 @@
+{
+ "unit": "G1-FIXTURE",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/longrun/tasks-v6/LR-01.v9.json",
+  "experiments/ptr-engine/longrun/tasks-v6/LR-02.v9.json",
+  "experiments/ptr-engine/longrun/tasks-v6/LR-03.v9.json",
+  "experiments/ptr-engine/longrun/tasks-v6/LR-04.v9.json",
+  "experiments/ptr-engine/longrun/tasks-v6/LR-05.v9.json",
+  "experiments/ptr-engine/longrun/tasks-v6/LR-06.v9.json",
+  "experiments/ptr-engine/longrun/check_wall_reachability.py",
+  "orchestration/handoffs/G1-FIXTURE.json"
+ ],
+ "evidence": {
+  "measured_growth_command": "python3 - <<'PY'\nimport json,glob,collections\nfiles=sorted(glob.glob('experiments/ptr-engine/measure/rows-cell-*.jsonl'))\nagg=collections.defaultdict(list); live=collections.defaultdict(list)\nfor f in files:\n  rows=sorted((json.loads(l) for l in open(f) if l.strip()), key=lambda r:r['turn'])\n  arm=rows[0]['arm']; total=rows[-1]['prompt_tokens']-rows[0]['prompt_tokens']; span=rows[-1]['turn']-rows[0]['turn']\n  agg[arm].append(total/span)\n  if '20261028' in f: live[arm].append(total/span)\nfor a in sorted(agg): print(a, 'all n=%d mean=%.3f min=%.3f max=%.3f'%(len(agg[a]),sum(agg[a])/len(agg[a]),min(agg[a]),max(agg[a])), 'live n=%d mean=%.3f min=%.3f max=%.3f'%(len(live[a]),sum(live[a])/len(live[a]),min(live[a]),max(live[a])))\nPY",
+  "measured_growth_live_base_mean_tok_per_turn": {
+   "lease-reopen": 3.213,
+   "pointer-stable": 27.757,
+   "transcript-compact": 86.702,
+   "transcript-grow": 64.979
+  },
+  "measured_growth_all_files_min_max_tok_per_turn": {
+   "lease-reopen": [2.383, 510.500],
+   "pointer-stable": [25.255, 242.200],
+   "transcript-compact": [59.468, 113.936],
+   "transcript-grow": [54.766, 575.182]
+  },
+  "prompt_tokens_turn1_live_base": {
+   "lease-reopen": 1097,
+   "pointer-stable": 3987,
+   "transcript-compact": 5134,
+   "transcript-grow": 5134
+  },
+  "checker_command": "python3 experiments/ptr-engine/longrun/check_wall_reachability.py --glob 'experiments/ptr-engine/longrun/tasks-v6/*.v9.json'",
+  "checker_result": "ALL_REACHABLE=true (turns_to_wall < N for every arm in all six files)",
+  "turn_counts_verified": {"LR-01":48,"LR-02":64,"LR-03":56,"LR-04":40,"LR-05":72,"LR-06":60},
+  "v8_untouched_mtime": "2026-10-26 12:02:46 -0500",
+  "json_parse": "6 v9 files parse OK",
+  "cells_15_reachability": {
+   "LR-01": {"10": false, "30": true, "60": "n/a"},
+   "LR-02": {"10": false, "30": false, "60": true},
+   "LR-03": {"10": false, "30": true, "60": "n/a"},
+   "LR-04": {"10": false, "30": true, "60": "n/a"},
+   "LR-05": {"10": false, "30": false, "60": true},
+   "LR-06": {"10": false, "30": false, "60": true}
+  },
+  "reachable_cells_count": 6
+ },
+ "blocker": "",
+ "next_unit_hint": "G3Runner: consume wall_tokens_by_arm per arm instead of single wall_tokens; G2Scorer: answer-marker contract unchanged.",
+ "write_paths": [
+  "experiments/ptr-engine/longrun/tasks-v6/LR-01.v9.json",
+  "experiments/ptr-engine/longrun/tasks-v6/LR-02.v9.json",
+  "experiments/ptr-engine/longrun/tasks-v6/LR-03.v9.json",
+  "experiments/ptr-engine/longrun/tasks-v6/LR-04.v9.json",
+  "experiments/ptr-engine/longrun/tasks-v6/LR-05.v9.json",
+  "experiments/ptr-engine/longrun/tasks-v6/LR-06.v9.json",
+  "experiments/ptr-engine/longrun/check_wall_reachability.py",
+  "orchestration/handoffs/G1-FIXTURE.json"
+ ]
+}

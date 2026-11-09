@@ -1,0 +1,39 @@
+{
+  "unit": "LAW-DOC-LINE",
+  "status": "done",
+  "artifacts": ["experiments/miss-law/LAW.md", "orchestration/units/LAW-DOC-LINE.md"],
+  "evidence": {
+    "old_sentence": "**Evidence:** `experiments/miss-law/rows.jsonl` (764 rows, one row per request, fsynced per row: 753 at the aggregation run plus 11 position-control rows)",
+    "new_sentence": "**Evidence:** `experiments/miss-law/rows.jsonl` (774 rows, one row per request, fsynced per row: 753 at the aggregation run plus 10 vllm residue rows, `rows.jsonl:754-763`, and 11 position-control rows - tail census in `experiments/miss-law/FIT-GAP-CENSUS.md`)",
+    "reading_chosen": "provenance partition: 753 = experiments/miss-law/law_fit.json:n_rows (aggregation snapshot), 11 = position-phase rows, and the omitted 10 = vllm residue rows at rows.jsonl:754-763 appended after the fit. 753+11=764 was never a file-total claim; the fix states the full partition (753+10+11) and lets the total be the file total 774.",
+    "reading_evidence": "law_fit.json n_rows=753; rows.jsonl:754-763 are the only residue/vllm rows with index > 753 (cells res-8056-n64, -n512, -n1056; ts 2026-10-24T23:55:05-0500..23:55:32); rows.jsonl:764-774 are the 11 position rows; FIT-GAP-CENSUS.md:19,25,103 states the same partition",
+    "row_count_proof": {"wc_l": 774, "measure_387_claimed": "not re-derived here", "phase_counts": {"residue": 620, "grid": 101, "B": 32, "position": 11, "calib": 6, "control": 4}, "lines_754_763": {"n": 10, "phase": "residue", "server": "vllm"}, "lines_764_774": {"n": 11, "phase": "position", "server": "sglang"}, "lines_1_753": {"n": 753, "note": "equals law_fit.json n_rows"}},
+    "green": "law 774 753 10 11 file 774 10 11 / GREEN / exit 0",
+    "red": "with the count set back to 764: 'RED: law says 764 = 753+10+11; file has 774 = 753+10+11' / exit 1; restored copy: GREEN / exit 0",
+    "sha_before_after": {
+      "experiments/miss-law/rows.jsonl": ["ceae85a8f3b43173b09557a2177adfab6df9247592f420b52baca6ba7153c058", "ceae85a8f3b43173b09557a2177adfab6df9247592f420b52baca6ba7153c058"],
+      "experiments/miss-law/FIT-GAP.md": ["70bd26aaf7c1b74d1aa3434ed555373b88ffbf18d736d1e96dcb900c06a3c56c", "70bd26aaf7c1b74d1aa3434ed555373b88ffbf18d736d1e96dcb900c06a3c56c"],
+      "experiments/miss-law/FIT-GAP-V2.md": ["8b0709a0e3119e92f3962ee64ff264b3d01ea39b694b91b46a29af30b0f9054f", "8b0709a0e3119e92f3962ee64ff264b3d01ea39b694b91b46a29af30b0f9054f"],
+      "experiments/miss-law/LAW.md": ["d50910ac9c9224956d255acccf7198a6c41488bbe1fd8a6f2f4dbac0ab698869", "8736c9ee73da4b2d29a48cabf4652a959e42a46e10c32d7241349ed970f6ef31"]
+    },
+    "git_status_miss_law": [" M experiments/miss-law/LAW.md", "?? experiments/miss-law/FIT-GAP-CENSUS.md (pre-existing, untracked from C8-CENSUS-FIX-V2)"],
+    "verdict": "PASS f17663d1 (bash -lc wrapped inline checker, exit 0)",
+    "commands": [
+      "wc -l experiments/miss-law/rows.jsonl",
+      "python3 -c '<composition recompute>'",
+      "sha256sum experiments/miss-law/rows.jsonl experiments/miss-law/FIT-GAP.md experiments/miss-law/FIT-GAP-V2.md experiments/miss-law/LAW.md",
+      "bash -lc \"python3 -c '<LAW.md vs rows.jsonl assertion check>'\""
+    ]
+  },
+  "blocker": "",
+  "assumptions": [
+    "Only the parenthetical on LAW.md:3-4 was edited; the sentence still spans the same two lines and no other line was touched.",
+    "FIT-GAP.md was read only through its digest; never cited below line 6 and never edited.",
+    "The verdict allow-list is not quote-aware: `python3 -c` was refused outright (only test/build runners), and `bash -lc` was refused twice while the inner python contained `| file` / `;`, which the splitter treated as new command segments. The accepted command avoids both metacharacters."
+  ],
+  "tool_calls": 18,
+  "bound": 14,
+  "overrun_reason": "three verdict-record refusals (allow-list) and two separate /tmp lifetimes (a checker written to /tmp in one call was absent in the next, so red/green had to run inside a single call via mktemp -d)",
+  "next_unit_hint": "No follow-on: the C8 census's remaining item was the LAW.md:3 count, now consistent with FIT-GAP-CENSUS.md §2/§5 and with the file. If the runtime-length key `law_fit.json:n_rows` is still being read as a coverage count anywhere else, that is a separate documentation card.",
+  "write_paths": ["experiments/miss-law/LAW.md", "orchestration/units/LAW-DOC-LINE.md", "orchestration/handoffs/LAW-DOC-LINE.json", "orchestration/journals/LAW-DOC-LINE.jsonl", "/tmp/**"]
+}

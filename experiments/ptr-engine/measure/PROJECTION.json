@@ -1,0 +1,158 @@
+{
+ "amended_by": "PROJECTION-MODE",
+ "arithmetic": {
+  "default_60": {
+   "12": {
+    "admitted_under_3600": true,
+    "projected": 720,
+    "worst_case": 2160
+   },
+   "48": {
+    "admitted_under_3600": true,
+    "projected": 2880,
+    "worst_case": 8640
+   },
+   "60": {
+    "admitted_under_3600": true,
+    "projected": 3600,
+    "worst_case": 10800
+   }
+  },
+  "measured_p90_live_six_427.7": {
+   "12": {
+    "admitted_under_3600": false,
+    "projected": 5132
+   },
+   "48": {
+    "admitted_under_3600": false,
+    "projected": 20530
+   },
+   "60": {
+    "admitted_under_3600": false,
+    "projected": 25662
+   }
+  },
+  "measured_p90_thinking_off_38.1": {
+   "12": {
+    "admitted_under_3600": true,
+    "projected": 457
+   },
+   "48": {
+    "admitted_under_3600": true,
+    "projected": 1829
+   },
+   "60": {
+    "admitted_under_3600": true,
+    "projected": 2286
+   }
+  },
+  "operator_4arm_60turn_3rep": {
+   "per_cell_180_requests_s": 10800,
+   "projected_60_s": 43200,
+   "requests_serial": 720
+  },
+  "smoke_12_turn_projected_s": 720
+ },
+ "defaults": {
+  "exit_code_refusal": 8,
+  "max_wall_s": 3600,
+  "measured_p50_s_by_mode": {
+   "auto": 218.2,
+   "off": 2.9,
+   "on": 218.2
+  },
+  "measured_p90_s_by_mode": {
+   "auto": 682.7,
+   "off": 38.1,
+   "on": 682.7
+  },
+  "mode_default_basis": {
+   "absent": "same as off: run_longrun.py's --thinking default is off",
+   "auto": "measured pooled thinking on/auto p50 218.2 s (n=9)",
+   "off": "retained conservative 60 s (PROJECTION-CALIBRATION section 3) - ABOVE the measured off p90 of 38.1 s, so a 60-turn off cell is deliberately over-projected (~20x its 2.9 s p50); the safe direction must not become a false refusal and 60 s keeps the calibration's own 48x60=2880 boundary",
+   "on": "measured pooled thinking on/auto p50 218.2 s (n=9)"
+  },
+  "projected_turn_wall_s": 60.0,
+  "projected_turn_wall_s_by_mode": {
+   "absent": 60.0,
+   "auto": 218.2,
+   "off": 60.0,
+   "on": 218.2
+  },
+  "projected_turn_wall_s_p90_by_mode": {
+   "absent": 38.1,
+   "auto": 682.7,
+   "off": 38.1,
+   "on": 682.7
+  },
+  "projected_turn_wall_s_status": "LEGACY pooled scalar, kept readable for one release; cell.py reads projected_turn_wall_s_by_mode and _p90_by_mode instead",
+  "projection_modes_allowed": [
+   "absent",
+   "off",
+   "auto",
+   "on"
+  ],
+  "turn_wall_cap_s": 180
+ },
+ "defect": "preflight projected projected_requests x --turn-wall-cap (worst case) instead of the expected per-turn wall",
+ "files_excluded_no_wall": [
+  "experiments/ptr-engine/measure/rows-baseline-2026-10-26.jsonl",
+  "experiments/ptr-engine/measure/rows-live-2026-10-26.jsonl"
+ ],
+ "files_measured": [
+  "experiments/ptr-engine/measure/rows-baseline-2026-10-26.jsonl",
+  "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T145758Z.jsonl",
+  "experiments/ptr-engine/measure/rows-equalinfo-2026-10-26.jsonl",
+  "experiments/ptr-engine/measure/rows-live-2026-10-26.jsonl",
+  "experiments/ptr-engine/measure/rows-longrun-2026-10-26-fix.jsonl",
+  "experiments/ptr-engine/measure/rows-longrun-2026-10-26-policy.jsonl",
+  "experiments/ptr-engine/measure/rows-longrun-2026-10-26.jsonl",
+  "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl",
+  "experiments/ptr-engine/measure/rows-longrun-v3-2026-10-26.jsonl",
+  "experiments/ptr-engine/measure/rows-longrun-v4-2026-10-26.jsonl",
+  "experiments/ptr-engine/measure/rows-longrun-v4-tools-2026-10-26.jsonl",
+  "experiments/ptr-engine/measure/rows-longrun-v5-tools.jsonl",
+  "experiments/ptr-engine/measure/rows-longrun-v6-tools.jsonl",
+  "experiments/ptr-engine/measure/rows-pilot-thinking-2026-10-26.jsonl"
+ ],
+ "generated_from": "existing row files only; zero inference requests",
+ "groups": [
+  {
+   "label": "live rows, thinking auto: 6 rows, one arm, one day (thin evidence, not a distribution)",
+   "mean_s": 190.9,
+   "n": 6,
+   "p50_s": 129.1,
+   "p90_s": 427.7,
+   "ratio_s_per_completion_token": 0.0288
+  },
+  {
+   "label": "pooled thinking on/auto (per-row classification)",
+   "mean_s": 286.5,
+   "n": 9,
+   "p50_s": 218.2,
+   "p90_s": 682.7,
+   "ratio_s_per_completion_token": 0.0349
+  },
+  {
+   "label": "pooled thinking off/absent (per-row classification)",
+   "mean_s": 27.5,
+   "n": 960,
+   "p50_s": 2.9,
+   "p90_s": 38.1,
+   "ratio_s_per_completion_token": 0.0338
+  }
+ ],
+ "live_rows_file": "experiments/ptr-engine/measure/rows-cell-pointer-stable-20261026T145758Z.jsonl",
+ "method": "wall = wall_ms/1000 when present else latency_s; rows with error excluded; percentiles linear-interpolated; grouped by each row's own thinking field",
+ "mode_selector": {
+  "flag": "--thinking (default absent = off, the runner's own default)",
+  "override": "--projected-turn-wall is recorded as gate manifest field projection_override = {value, mode, calibrated_s, direction, reason_required}",
+  "p90_flag": "--projected-from p90",
+  "refusal": "unknown or unmapped mode: exit 8 naming the mode and the allowed spellings; never a silent fallback to the pooled scalar"
+ },
+ "tests": {
+  "test_guards.py": "6/6 GREEN",
+  "test_projection_calibration.py": "4/4 passed"
+ },
+ "unit": "PROJECTION-CALIBRATION"
+}

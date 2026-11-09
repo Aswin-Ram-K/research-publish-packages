@@ -1,0 +1,507 @@
+{
+ "artefact_edits": {
+  "BUDGET_SCHEDULE": 0,
+  "PARM_1": 0,
+  "RUN_A_star": 0,
+  "rows_or_grade_files": 0
+ },
+ "budget": {
+  "cap": 4320,
+  "max_share_of_remaining_if_promoted_pct": 32.8,
+  "max_share_of_remaining_tranche_1_pct": 20.5,
+  "remaining_deduplicated_note": "3,249 if the unsound 30-row dedupe were applied; LEDGER-CONSERVATIVE (f505519f) says do NOT deduct it, and this card prices against the raw 3,219",
+  "remaining_raw": 3219,
+  "spent_raw": 1101,
+  "total_if_promoted": 1056,
+  "total_if_promoted_remaining": 2163,
+  "tranche_1": 660,
+  "tranche_1_remaining": 2559,
+  "tranche_2_if_promoted": 396
+ },
+ "decision_rule": {
+  "inputs": "the v8 grid's rows for arms pointer-stable (C) and transcript-grow (A); estimator = quantile_ci(...,q=0.95) from experiments/ptr-engine/longrun/analyze_stats.py:187-247 with resamples=10000, seed=20261020 (PARM-1 frozen)",
+  "magnitude_gate_note": "the 100 ms rep-level gate is a SCHEDULING predicate, not an adjudication threshold: it gates spending, never a verdict, and failing it asserts nothing about the model. It is set between the two measured gap families - 315.29 ms p50 / 530.0 ms p95 on rows-longrun-c vs 32.39 / 11.99 ms p50 and -2.35 / -57.65 ms p95 on rows-longrun-v3 / -v4 (docs/P95-POWER.md:127-131) - so an effect 10x smaller than the one claimed cannot promote a second tranche.",
+  "no_cross_era_comparison": "rows-longrun-c is the v2-fixture era; the run this card prices is the v8 era. same_provenance() refuses a cross-fixture comparison by name (card 9f2e8259), so the 315.29 ms reference is quoted as the historical effect, never as a comparator in the rule.",
+  "step_0_admissibility": "if either pair arm's usable_n < 60 -> H1 REFUSED with the estimator's own message; STOP, do not promote (S2)",
+  "step_1_P2_pooled": "P2 := CI_C.hi < CI_A.lo on the pooled per-arm population (n=144) - PARM-1's frozen disjointness rule, in the C-lower direction",
+  "step_2_P1_recurrence": "for each rep r in 1..3: d_r := p50_C(r) - p50_A(r). p50 at n=48 is admissible (n*(1-q)=24 >= 3) while p95 at n=48 is refused. P1 := all three d_r >= 100 ms",
+  "step_3_promote": "promote iff P1 and P2 -> run tranche 2 (396 requests)",
+  "step_4_stop_no_replication": "if not P2 -> STOP. Do NOT run the 792-request grid. Publish H1 as refused/null on this era and report that the C-grid effect did not recur.",
+  "step_5_hold_mixed": "if P2 and not P1 -> HOLD: no tranche 2, no 792 grid, report the pooled separation as a single-grid result"
+ },
+ "default_revision": {
+  "card_that_must_be_edited": {
+   "execution_carrier": "RUN-A* card ad214412-c39c-4a47-afb1-2be328e03b1e (title, description, hard cap 900, conditional-launch tags all encode '4 arms x 48 turns x 3 reps = 12 cells / ~792 requests')",
+   "record_text_that_goes_stale": "experiments/ptr-engine/measure/BUDGET-SCHEDULE.md \u00a77 'Default: A*' (artefact of card 21254578-7b0e-4150-9c8f-3f89d31abdd8, which PARM-1:140 cites as 'PENDING: BUDGET-SCHEDULE') and PARM-1:140's 'Reps: PENDING'",
+   "rule_carrier_needs_additive_errata": "PARM-1 is FROZEN: the reps split (3 pair / 2 context) must land as an additive errata card in the PARM-1-ERRATA style (docs/PARM-1-ERRATA.md precedent), not as an edit to docs/PREREG-ARM-RUN.md"
+  },
+  "default_is_now": "PAIR-3+CTX-2 - 4 arms, pair at 3 reps, context arms at 2 reps = 480 turns / 660 requests, promoting to PAIR-6+CTX-2 (768 turns / 1,056 requests) only if the replication rule fires",
+  "form_was": "default was A* (4 arms x 48 turns x 3 reps = 792 requests) because PARM-1:137 fixes 48 turns and A* is the exact frozen grid shape, giving 144 raw timings per arm with 84 exclusions of headroom and 36 paired checkpoints (experiments/ptr-engine/measure/BUDGET-SCHEDULE.md \u00a73, \u00a75, \u00a77)",
+  "measurement": "P95-POWER (PASS f17663d1) says the H1 pair already separates at n=48 - 100 % disjoint at 48/60/144 with a 254 ms observed margin (docs/P95-POWER.md:88-90,127-137) - that effective n is ~1/3 of raw (median lag-1 0.417, Fisher-z pooled 0.37: raw 144 -> effective 66.2, raw 48 -> 22.1; docs/P95-POWER.md:164-171), that under the noisier H1 arm's own lag-1 (0.6423) 144 raw timings are worth only 31.4, and that 2 of the 3 grids holding the pair do not separate it at all (p50 32.39 / 11.99 ms; p95 -2.35 / -57.65 ms; docs/P95-POWER.md:127-131)"
+ },
+ "effective_n_curve": {
+  "clears_raw_floor_60": {
+   "comfortable_90_under_binding_arm": "raw >= 414 (9 reps: 94.09)",
+   "pooled": "raw >= 60 (PARM-1's own floor, met by every admissible option)",
+   "under_binding_arm": "raw >= 276 (6 reps: 62.73)"
+  },
+  "formula": "n_eff = n*(1-r)/(1+r)  (docs/P95-POWER.md:164)",
+  "rows": [
+   {
+    "binding_arm_r_0_6423": 10.45,
+    "other_arm_r_0_1071": 38.71,
+    "pooled_r_0_37": 22.07,
+    "raw": 48
+   },
+   {
+    "binding_arm_r_0_6423": 20.91,
+    "other_arm_r_0_1071": 77.43,
+    "pooled_r_0_37": 44.15,
+    "raw": 96
+   },
+   {
+    "binding_arm_r_0_6423": 31.36,
+    "other_arm_r_0_1071": 116.14,
+    "pooled_r_0_37": 66.22,
+    "raw": 144
+   },
+   {
+    "binding_arm_r_0_6423": 41.82,
+    "other_arm_r_0_1071": 154.85,
+    "pooled_r_0_37": 88.29,
+    "raw": 192
+   },
+   {
+    "binding_arm_r_0_6423": 52.27,
+    "other_arm_r_0_1071": 193.57,
+    "pooled_r_0_37": 110.36,
+    "raw": 240
+   },
+   {
+    "binding_arm_r_0_6423": 62.73,
+    "other_arm_r_0_1071": 232.28,
+    "pooled_r_0_37": 132.44,
+    "raw": 288
+   },
+   {
+    "binding_arm_r_0_6423": 94.09,
+    "other_arm_r_0_1071": 348.42,
+    "pooled_r_0_37": 198.66,
+    "raw": 432
+   }
+  ]
+ },
+ "generated_utc": "2026-10-26T17:39:34Z",
+ "inputs": {
+  "fisher_z_pooled_lag1": 0.37,
+  "h1_floor_source": "docs/PREREG-ARM-RUN.md:37 (n*(1-q) >= TAIL_MIN=3 at q=0.95)",
+  "h1_raw_n_floor": 60,
+  "lag1_binding_arm": 0.6423,
+  "lag1_binding_arm_name": "rows-longrun-c::pointer-stable",
+  "lag1_other_arm": 0.1071,
+  "lag1_other_arm_name": "rows-longrun-c::transcript-grow",
+  "ledger_source": "experiments/ptr-engine/measure/REQUEST-LEDGER.json -> budget.{cap,spent,remaining}",
+  "median_lag1": 0.417,
+  "per_turn_wall_s": {
+   "mean_off": 27.5,
+   "p50_off": 2.9,
+   "p90_off": 38.1,
+   "policy": 60
+  },
+  "power_source": "docs/P95-POWER.md + experiments/ptr-engine/measure/P95-POWER.json (P95-POWER-FROM-ROWS, PASS f17663d1)",
+  "quota_cap": 4320,
+  "remaining_raw": 3219,
+  "request_factor": 1.374532,
+  "request_factor_source": "experiments/ptr-engine/measure/BUDGET-SCHEDULE.md \u00a71 (= REQUEST-LEDGER.json total.requests / 801 turn rows)",
+  "spent_raw": 1101,
+  "turns_per_arm_per_rep": 48,
+  "turns_source": "docs/PREREG-ARM-RUN.md:137 (PARM-1, fixture N=48, 12 checkpoints at turns 6,8,12,14,18,20,24,26,32,36,42,46)",
+  "wall_source": "experiments/ptr-engine/measure/BUDGET-SCHEDULE.md \u00a72 (PROJECTION.json groups[2], defaults.projected_turn_wall_s)"
+ },
+ "not_admissible": [
+  {
+   "reason": "PARM-1:150-152 defines the adjudicating grid as all four arms with identical fixture_sha256 and reasoning policy; a pair grid is descriptive only",
+   "shape": "any 2-arm grid (PAIR-3, PAIR-6, PAIR-9, SMOKE-1R)",
+   "would_need": "a PARM-1 relaxation of the four-arm clause"
+  },
+  {
+   "reason": "PARM-1:137 fixes turns per arm = 48 (fixture N=48); a 60-turn cell needs a new fixture and a re-frozen rule hash",
+   "shape": "any 60-turn shape (B 330, A 990)",
+   "would_need": "a fixture re-freeze and a PARM-1 amendment"
+  },
+  {
+   "reason": "n=48 per arm -> 48 x 0.05 = 2.4 < TAIL_MIN 3, so p95 is REFUSED not caveated (PARM-1:37); PARM-1:142 requires reps >= 2",
+   "shape": "any reps = 1 shape as an H1 read (C 264, SMOKE-1R 132)",
+   "would_need": "lowering TAIL_MIN - forbidden"
+  },
+  {
+   "reason": "docs/P95-POWER.md:56-64 refuses pooling across grids; every n>48 there is an ECDF extrapolation, not an observation",
+   "shape": "pooling the same arm across grid files to reach n=144",
+   "would_need": "a pooling rule that does not exist"
+  },
+  {
+   "reason": "PARM-1:151 - thinking must be off in the adjudicating grid; a thinking-on run can never support H1 whatever it costs",
+   "shape": "any thinking-on grid",
+   "would_need": "a new PARM-1"
+  }
+ ],
+ "options": [
+  {
+   "adjudicates": "H1 (yes, but see effective n), H2 (both limbs), H3 (36 paired checkpoints, 12/12 decidable v8 truths)",
+   "admissible_under_PARM_1": true,
+   "arms": 4,
+   "cannot_adjudicate": "a 12-32 ms p50 difference at any n<=384 (docs/P95-POWER.md:127-131); the C-grid effect's generalisation - it is one grid, and 2 of 3 existing grids disagree (docs/P95-POWER.md:88-90)",
+   "card_price_note": "RUN-A* card ad214412 prices the same 576 turns at ~800 requests because the v8 fixture adds 6 digest rows; 576x1.374532 = 792 is the turn-only floor.",
+   "effective_n_pair_arm": {
+    "binding_arm_pointer_stable_r_0_6423": 31.36,
+    "other_arm_transcript_grow_r_0_1071": 116.14,
+    "pooled_r_0_37": 66.22
+   },
+   "h3_paired_checkpoints_C_vs_A": 36,
+   "id": "A*",
+   "model_turns": 576,
+   "raw_timings_per_context_arm": 144,
+   "raw_timings_per_pair_arm": 144,
+   "remaining_after": 2427,
+   "reps_context": 3,
+   "reps_pair": 3,
+   "requests": 792,
+   "requests_at_measured_factor_1_000": 576,
+   "role": "the standing default; frozen-compatible 4-arm shape",
+   "wall_frozen_thinking_off": {
+    "mean_h": 4.4,
+    "p90_h": 6.1,
+    "policy60_h": 9.6
+   }
+  },
+  {
+   "admissible_under_PARM_1": false,
+   "arms": 2,
+   "effective_n_pair_arm": {
+    "binding_arm_pointer_stable_r_0_6423": 31.36,
+    "other_arm_transcript_grow_r_0_1071": 116.14,
+    "pooled_r_0_37": 66.22
+   },
+   "h3_paired_checkpoints_C_vs_A": 36,
+   "id": "PAIR-3",
+   "model_turns": 288,
+   "not_admissible_reason": "PARM-1:150-152 names the adjudicating grid as 'all four arms in the same grid with identical fixture_sha256 and identical reasoning policy'. A 2-arm grid omits transcript-compact (B) and lease-reopen (D); admitting it as an H1 adjudication requires relaxing that clause. It is admissible only as a DESCRIPTIVE replication, never as the H1 verdict.",
+   "raw_timings_per_context_arm": null,
+   "raw_timings_per_pair_arm": 144,
+   "remaining_after": 2823,
+   "reps_context": null,
+   "reps_pair": 3,
+   "requests": 396,
+   "requests_at_measured_factor_1_000": 288,
+   "role": "the power card's own recommendation (docs/P95-POWER.md:196-199)",
+   "wall_frozen_thinking_off": {
+    "mean_h": 2.2,
+    "p90_h": 3.05,
+    "policy60_h": 4.8
+   }
+  },
+  {
+   "admissible_under_PARM_1": false,
+   "arms": 2,
+   "effective_n_pair_arm": {
+    "binding_arm_pointer_stable_r_0_6423": 62.73,
+    "other_arm_transcript_grow_r_0_1071": 232.28,
+    "pooled_r_0_37": 132.44
+   },
+   "h3_paired_checkpoints_C_vs_A": 72,
+   "id": "PAIR-6",
+   "model_turns": 576,
+   "not_admissible_reason": "PARM-1:150-152 names the adjudicating grid as 'all four arms in the same grid with identical fixture_sha256 and identical reasoning policy'. A 2-arm grid omits transcript-compact (B) and lease-reopen (D); admitting it as an H1 adjudication requires relaxing that clause. It is admissible only as a DESCRIPTIVE replication, never as the H1 verdict.",
+   "raw_timings_per_context_arm": null,
+   "raw_timings_per_pair_arm": 288,
+   "remaining_after": 2427,
+   "reps_context": null,
+   "reps_pair": 6,
+   "requests": 792,
+   "requests_at_measured_factor_1_000": 576,
+   "role": "smallest pair-only N that crosses effective n>=60 under the binding arm's own lag-1",
+   "wall_frozen_thinking_off": {
+    "mean_h": 4.4,
+    "p90_h": 6.1,
+    "policy60_h": 9.6
+   }
+  },
+  {
+   "admissible_under_PARM_1": false,
+   "arms": 2,
+   "effective_n_pair_arm": {
+    "binding_arm_pointer_stable_r_0_6423": 94.09,
+    "other_arm_transcript_grow_r_0_1071": 348.42,
+    "pooled_r_0_37": 198.66
+   },
+   "h3_paired_checkpoints_C_vs_A": 108,
+   "id": "PAIR-9",
+   "model_turns": 864,
+   "not_admissible_reason": "PARM-1:150-152 names the adjudicating grid as 'all four arms in the same grid with identical fixture_sha256 and identical reasoning policy'. A 2-arm grid omits transcript-compact (B) and lease-reopen (D); admitting it as an H1 adjudication requires relaxing that clause. It is admissible only as a DESCRIPTIVE replication, never as the H1 verdict.",
+   "raw_timings_per_context_arm": null,
+   "raw_timings_per_pair_arm": 432,
+   "remaining_after": 2031,
+   "reps_context": null,
+   "reps_pair": 9,
+   "requests": 1188,
+   "requests_at_measured_factor_1_000": 864,
+   "role": "pair-only N that reaches effective n>=90 (comfortable) under the binding arm",
+   "wall_frozen_thinking_off": {
+    "mean_h": 6.6,
+    "p90_h": 9.14,
+    "policy60_h": 14.4
+   }
+  },
+  {
+   "adjudicates": "H1 in a conformant 4-arm grid; H2; H3 36 paired checkpoints; rep-level recurrence of the p50 gap (n=48 per rep, p50 admissible)",
+   "admissible_under_PARM_1": true,
+   "arms": 4,
+   "cannot_adjudicate": "effective n>=60 under pointer-stable's own lag-1 (31.36); any cross-era comparison with rows-longrun-c (v2 ids vs v8 - refused by provenance, docs/WIRE-PROVENANCE-INTO-STATS card 9f2e8259)",
+   "effective_n_pair_arm": {
+    "binding_arm_pointer_stable_r_0_6423": 31.36,
+    "other_arm_transcript_grow_r_0_1071": 116.14,
+    "pooled_r_0_37": 66.22
+   },
+   "h3_paired_checkpoints_C_vs_A": 36,
+   "id": "PAIR-3+CTX-2",
+   "model_turns": 480,
+   "raw_timings_per_context_arm": 96,
+   "raw_timings_per_pair_arm": 144,
+   "remaining_after": 2559,
+   "reps_context": 2,
+   "reps_pair": 3,
+   "requests": 660,
+   "requests_at_measured_factor_1_000": 480,
+   "role": "RECOMMENDED TRANCH 1: pair at 3 reps, B/D at the minimum 2 reps that admits their own estimate",
+   "wall_frozen_thinking_off": {
+    "mean_h": 3.67,
+    "p90_h": 5.08,
+    "policy60_h": 8.0
+   }
+  },
+  {
+   "admissible_under_PARM_1": true,
+   "arms": 4,
+   "effective_n_pair_arm": {
+    "binding_arm_pointer_stable_r_0_6423": 41.82,
+    "other_arm_transcript_grow_r_0_1071": 154.85,
+    "pooled_r_0_37": 88.29
+   },
+   "h3_paired_checkpoints_C_vs_A": 48,
+   "id": "PAIR-4+CTX-2",
+   "model_turns": 576,
+   "raw_timings_per_context_arm": 96,
+   "raw_timings_per_pair_arm": 192,
+   "remaining_after": 2427,
+   "reps_context": 2,
+   "reps_pair": 4,
+   "requests": 792,
+   "requests_at_measured_factor_1_000": 576,
+   "role": "like-for-like swap at A*'s exact price: same 792 requests, +33% raw pair timings, -66% context timings",
+   "wall_frozen_thinking_off": {
+    "mean_h": 4.4,
+    "p90_h": 6.1,
+    "policy60_h": 9.6
+   }
+  },
+  {
+   "admissible_under_PARM_1": true,
+   "arms": 4,
+   "effective_n_pair_arm": {
+    "binding_arm_pointer_stable_r_0_6423": 62.73,
+    "other_arm_transcript_grow_r_0_1071": 232.28,
+    "pooled_r_0_37": 132.44
+   },
+   "h3_paired_checkpoints_C_vs_A": 72,
+   "id": "PAIR-6+CTX-2",
+   "model_turns": 768,
+   "raw_timings_per_context_arm": 96,
+   "raw_timings_per_pair_arm": 288,
+   "remaining_after": 2163,
+   "reps_context": 2,
+   "reps_pair": 6,
+   "requests": 1056,
+   "requests_at_measured_factor_1_000": 768,
+   "role": "TRANCH 2 target = T1 + 3 more pair reps; smallest admissible shape that crosses effective n>=60 under the binding arm (62.73)",
+   "wall_frozen_thinking_off": {
+    "mean_h": 5.87,
+    "p90_h": 8.13,
+    "policy60_h": 12.8
+   }
+  },
+  {
+   "admissible_under_PARM_1": true,
+   "arms": 4,
+   "effective_n_pair_arm": {
+    "binding_arm_pointer_stable_r_0_6423": 94.09,
+    "other_arm_transcript_grow_r_0_1071": 348.42,
+    "pooled_r_0_37": 198.66
+   },
+   "h3_paired_checkpoints_C_vs_A": 108,
+   "id": "PAIR-9+CTX-2",
+   "model_turns": 1056,
+   "raw_timings_per_context_arm": 96,
+   "raw_timings_per_pair_arm": 432,
+   "remaining_after": 1767,
+   "reps_context": 2,
+   "reps_pair": 9,
+   "requests": 1452,
+   "requests_at_measured_factor_1_000": 1056,
+   "role": "the comfortable ceiling: effective n>=90 under the binding arm; spends 45.1% of the remaining budget on H1 alone",
+   "wall_frozen_thinking_off": {
+    "mean_h": 8.07,
+    "p90_h": 11.18,
+    "policy60_h": 17.6
+   }
+  },
+  {
+   "admissible_under_PARM_1": true,
+   "arms": 4,
+   "effective_n_pair_arm": {
+    "binding_arm_pointer_stable_r_0_6423": 20.91,
+    "other_arm_transcript_grow_r_0_1071": 77.43,
+    "pooled_r_0_37": 44.15
+   },
+   "h3_paired_checkpoints_C_vs_A": 24,
+   "id": "A*-LITE",
+   "model_turns": 384,
+   "raw_timings_per_context_arm": 96,
+   "raw_timings_per_pair_arm": 96,
+   "remaining_after": 2691,
+   "reps_context": 2,
+   "reps_pair": 2,
+   "requests": 528,
+   "requests_at_measured_factor_1_000": 384,
+   "role": "minimum frozen-compliant shape (reps=2 is PARM-1:142's floor); meets every frozen rule, fails the power card's effective-n overlay (44.15 pooled)",
+   "wall_frozen_thinking_off": {
+    "mean_h": 2.93,
+    "p90_h": 4.06,
+    "policy60_h": 6.4
+   }
+  },
+  {
+   "admissible_under_PARM_1": false,
+   "arms": 4,
+   "effective_n_pair_arm": {
+    "binding_arm_pointer_stable_r_0_6423": 10.45,
+    "other_arm_transcript_grow_r_0_1071": 38.71,
+    "pooled_r_0_37": 22.07
+   },
+   "h3_paired_checkpoints_C_vs_A": 12,
+   "id": "C",
+   "model_turns": 192,
+   "not_admissible_reason": "reps=1 leaves n=48 per arm, which PARM-1:37 refuses by name (48 x 0.05 = 2.4 < TAIL_MIN 3), and H3 is unadjudicable because the historical grid carried v2 checkpoint ids (PARM-1:160-165). experiments/ptr-engine/measure/BUDGET-SCHEDULE.md \u00a73.",
+   "raw_timings_per_context_arm": 48,
+   "raw_timings_per_pair_arm": 48,
+   "remaining_after": 2955,
+   "reps_context": 1,
+   "reps_pair": 1,
+   "requests": 264,
+   "requests_at_measured_factor_1_000": 192,
+   "role": "the config-C shape already on disk",
+   "wall_frozen_thinking_off": {
+    "mean_h": 1.47,
+    "p90_h": 2.03,
+    "policy60_h": 3.2
+   }
+  },
+  {
+   "admissible_under_PARM_1": false,
+   "arms": 2,
+   "effective_n_pair_arm": {
+    "binding_arm_pointer_stable_r_0_6423": 10.45,
+    "other_arm_transcript_grow_r_0_1071": 38.71,
+    "pooled_r_0_37": 22.07
+   },
+   "h3_paired_checkpoints_C_vs_A": 12,
+   "id": "SMOKE-1R",
+   "model_turns": 96,
+   "not_admissible_reason": "reps=1 violates PARM-1:142 (reps>=2) and leaves n=48/arm -> p95 refused. A smoke test, not an adjudication.",
+   "raw_timings_per_context_arm": null,
+   "raw_timings_per_pair_arm": 48,
+   "remaining_after": 3087,
+   "reps_context": null,
+   "reps_pair": 1,
+   "requests": 132,
+   "requests_at_measured_factor_1_000": 96,
+   "role": "cheapest possible wire check",
+   "wall_frozen_thinking_off": {
+    "mean_h": 0.73,
+    "p90_h": 1.02,
+    "policy60_h": 1.6
+   }
+  }
+ ],
+ "question": "Re-price the arm-comparison schedule against P95-POWER's measured power and say what the next 288-792 requests should buy.",
+ "recommendation": {
+  "effective_n_at_tranche_1": {
+   "binding_arm": 31.36,
+   "pooled": 66.22
+  },
+  "effective_n_at_tranche_2_target": {
+   "binding_arm": 62.73,
+   "pooled": 132.44
+  },
+  "first_tranche": "PAIR-3+CTX-2",
+  "total_if_promoted_remaining": 2163,
+  "total_if_promoted_requests": 1056,
+  "tranche_1_cells": 10,
+  "tranche_1_remaining_after": 2559,
+  "tranche_1_requests": 660,
+  "tranche_1_turns": 480,
+  "tranche_2": "add 3 pair reps (288 turns / 396 requests) -> PAIR-6+CTX-2",
+  "tranche_2_requests": 396,
+  "why": "H1 separation is already reached at raw 48 on the only grid that shows the effect (100 % disjoint at 48/60/144, 254 ms observed margin: docs/P95-POWER.md:127-137), so turns are not what A* buys - runs are. The next requests must buy independent RUNS of the pair, not depth in a cell, and they must buy them inside a four-arm grid because PARM-1:150-152 defines the adjudicating grid that way. 3 pair reps is the smallest number that gives a between-run replication read plus 36 H3 pairs; 2 context reps is the smallest that lets B and D be estimated at all."
+ },
+ "requests_in_this_card": 0,
+ "stop_rules_requests": [
+  {
+   "cost_avoided": "all further spend",
+   "id": "S0",
+   "rule": "hard ledger ceiling: before any cell, remaining >= 264 (one 4-arm 48-turn cell at factor 1.374532). Tranche 1 + tranche 2 cap at 660 + 396 = 1,056 requests, leaving 2,163 of 3,219."
+  },
+  {
+   "cost_avoided": "396",
+   "id": "S1",
+   "rule": "refuse to start tranche 2 unless remaining >= 396 (288 turns). At 1,767 left after the comfortable ceiling, still true; at <396 the tranche cannot be funded and H1 stays a one-grid result."
+  },
+  {
+   "cost_avoided": "396",
+   "id": "S2",
+   "rule": "after exclusions (E1-E4), if either pair arm's usable n < 60 -> H1 refused, STOP; do not buy reps for a read that cannot print. At 3 reps the headroom is 84 exclusions per arm (58.3 %)."
+  },
+  {
+   "cost_avoided": "396",
+   "id": "S3",
+   "rule": "H3 veto on rep 1 (b+c >= 6 with exact two-sided p < 0.05 and C worse, or C loses more than 2 of 12 checkpoints) -> abandon the remaining 6 cells. Spent after 4 cells = 264; saves 396 of the 660."
+  },
+  {
+   "cost_avoided": "132+ per cell",
+   "id": "S4",
+   "rule": "either arm's grade_v5 decidable < 8 of 12 -> H3 unadjudicable (PARM-1:113); do not buy further reps (132 requests per arm-cell)."
+  },
+  {
+   "cost_avoided": "open-ended retries",
+   "id": "S5",
+   "rule": "any turn wall_ms/1000 > 180 (--turn-wall-cap) is excluded, never retried past the cap; exclusion-induced n < 60 falls through to S2."
+  },
+  {
+   "cost_avoided": "remaining cells",
+   "id": "S6",
+   "rule": "ATTACK or V-GATE-CHAIN reports a defect after the run starts -> halt at the next cell boundary, no further cells."
+  },
+  {
+   "cost_avoided": "396-792",
+   "id": "S7",
+   "rule": "if tranche 1 stops for any of S2-S6, freeze spend and re-price on a new card; no automatic tranche 2, no fallback to the 792 grid."
+  }
+ ],
+ "unit": "PRICE-REPLICATION",
+ "writes": [
+  "docs/PRICE-REPLICATION.md",
+  "experiments/ptr-engine/measure/price-replication.json",
+  "orchestration/units/PRICE-REPLICATION.md",
+  "orchestration/handoffs/PRICE-REPLICATION.json",
+  "orchestration/journals/PRICE-REPLICATION.jsonl"
+ ]
+}

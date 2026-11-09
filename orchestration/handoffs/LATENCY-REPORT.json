@@ -1,0 +1,68 @@
+{
+ "unit": "LATENCY-REPORT",
+ "status": "partial",
+ "artifacts": [
+  "docs/LATENCY-REPORT.md",
+  "experiments/ptr-engine/measure/LATENCY-REPORT.json",
+  "orchestration/units/LATENCY-REPORT.md",
+  "orchestration/journals/LATENCY-REPORT.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "zero inference requests; analyze_stats.py invoked 0 times against network, 10 times offline (one per grid); 14 row files / 1101 rows hashed; 24 cells reported",
+  "commands": [
+   "python3 experiments/ptr-engine/longrun/analyze_stats.py --rows <grid rows.jsonl> --json <out>  # x10, one grid per invocation",
+   "sha256sum experiments/ptr-engine/measure/rows-*.jsonl",
+   "python3 -c '<grid inventory + MATRIX-HONESTY join + report generation>'"
+  ],
+  "counts": {
+   "row_files": 14,
+   "rows": 1101,
+   "longrun_rows": 863,
+   "grids": 10,
+   "cells": 24,
+   "p50_available": 12,
+   "p95_available": 3,
+   "p50_refused": 12,
+   "p95_refused": 21,
+   "within_grid_comparable_pairs": 8,
+   "pairs_with_p95": 0,
+   "quality_measured": 13,
+   "quality_undecidable": 10,
+   "quality_not_graded": 1,
+   "tokens_to_verified_success": "NOT PRODUCED (n_verified_success = 0 in every grid)"
+  },
+  "live_requests": 0,
+  "network": false,
+  "integrity": {
+   "rows-longrun-2026-10-26.jsonl": "bc61d38192d4e4316021ec8d3d0e21dcb8e6153f463260a0138da21969d0b21e (unchanged)",
+   "rows_files_modified": 0,
+   "grade_files_modified": 0,
+   "code_files_modified": 0
+  }
+ },
+ "blocker": "",
+ "next_unit_hint": "A cell with n >= 60 turn rows per arm in ONE grid, transcript-grow run with tools ON on the same fixture as pointer-stable, ttft_ms populated on every row with ttft_source=first_delta, one max_tokens and one fixture per rows file, and a decidable repair.t30. Until repair.t30 is decided (or dropped from the declared space), tokens_to_verified_success has a zero denominator and no rep count fixes it.",
+ "write_paths": [
+  "docs/LATENCY-REPORT.md",
+  "experiments/ptr-engine/measure/LATENCY-REPORT.json",
+  "orchestration/units/LATENCY-REPORT.md",
+  "orchestration/handoffs/LATENCY-REPORT.json",
+  "orchestration/journals/LATENCY-REPORT.jsonl"
+ ],
+ "assumptions": [
+  {
+   "what": "grid axis `harness era`",
+   "why": "rows carry no harness/commit field; era was inferred from ttft column shape, ttft_source presence, run_id and ts window per file, and stated per grid in docs/LATENCY-REPORT.md \u00a72. Where the inference is load-bearing the pair is marked NOT COMPARABLE."
+  },
+  {
+   "what": "quality denominator = 3 truth checkpoints",
+   "why": "repair.t30 is judge-undecidable in all 13 run/arm pairs (MATRIX-HONESTY cells), so including it would make every cell undecidable for an instrument reason rather than an arm result. Every measured cell therefore carries full_run=false and is a PARTIAL GRID by matrix_audit's own marker."
+  },
+  {
+   "what": "brief said 13 files/1095 rows; measured 14/1101",
+   "why": "rows-cell-pointer-stable-20261026T145758Z.jsonl (6 rows) was written at 10:41 local, after the brief was composed; the brief's 863 long-run rows reproduce exactly."
+  }
+ ],
+ "tool_calls": 24,
+ "bound": 28
+}

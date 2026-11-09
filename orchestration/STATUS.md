@@ -17,7 +17,9 @@ lessons: [`docs/LESSONS.md`](../docs/LESSONS.md) · handoff contract: [`AGENTS.m
 > evidence**, so every docket verdict is **`UNVERIFIED`**); and, separately, the **context-cache
 > mechanism batch has settled** — 6 live cells, 12 additional units of verification/repair, and 4
 > licensed manuscript facts (§7); and the **R2-VLLM instrument repair batch has closed** (§8) — the
-> instrument is repaired and verified (`V-R2-VLLM-RERUN`, partial), with no arm-policy fact licensed.
+> instrument is repaired and verified (`V-R2-VLLM-RERUN`, partial), with no arm-policy fact licensed; and
+> the **Consonance bounded-context research batch is filed** (2026-11-03) — a report and a prospective
+> protocol, both verifier-**PASS** after one repair each, **0 live calls**, no run and no build.
 
 ## 1. Goal, and the two external blockers
 
@@ -106,6 +108,8 @@ copies that are not handoffs). **`json.load` failures: 0.**
 - **Both shapes coexist at scale**: 522 unit-shaped vs 126 verdict-shaped handoffs. §7 is the first
   batch where the two shapes are cleanly paired — one author/repair unit per verifier unit, no shape
   mixing inside a unit.
+
+- **`orchestration/DRIVER_LOG.md`** — the driver log (append-only): **23 lines**, newest entry **2026-10-26**, epoch 5. Registered, and its owed handover line written, by **`DRIVER-LOG-LINE`**; every line carries the artefact path that proves it, and disagreement with the driver's figures is marked in place (`DRIVER_LOG` is a record artefact, not a verdict).
 
 ## 5. The two known record defects and their repairs
 
@@ -372,3 +376,143 @@ requests, 0 measurements of its own**.
 - **Owed:** an independent verifier. `PAPER-FINAL` wrote the close and repaired the three defects; it did not
   verify itself, and by `VERDICTS.md`'s own rule this row is the **author's report, not a verdict**.
 
+
+---
+
+## 8. Current programme
+
+**Objective, in five lines.** (1) Measure whether a pointer-stable context layout beats a growing transcript on the
+long-run agent workload, on the project's own instrument, at a cost the ledger can fund. (2) Every number comes from a
+named instrument at a named commit and regenerates offline. (3) Nothing is cited that the withdrawn register has
+retired. (4) A claim is separated from a verdict, and a verdict from its command. (5) The programme stops when the grid
+is measured, not when the argument is won.
+
+**Operator thesis — verdict: `not adjudicable`** (`experiments/ptr-engine/measure/OPERATOR-BRIEF.json` `verdict.overall`; its `verdict.missing_measurement`, verbatim: *"one grid holding all four arms with >=60 usable timings per arm and the 12 declared checkpoint ids in its rows"*).
+
+- **H1 latency — undecidable.** No grid holds both arms at n ≥ 60 usable timings: `P95-POWER.json` `largest_n_set.n_max_usable` is 48 (*"no single rows file carries more than 48 usable timings for any arm"*), and `per_grid_summary[*].n_a`/`n_b` read 47/48, 47/48, 40/48.
+- **H2 cache cost — undecidable.** `OPERATOR-BRIEF.json` `hypotheses.H2_cache_cost.why`, verbatim: *"the uncached limb changes sign between grids; the frozen gate needs both limbs on one grid"* — the pointer-vs-grow gaps those grids carry flip sign too: p95 **+529.99** / **−2.35** / **−57.65** ms and p50 **+315.29** / **+32.39** / **+11.99** ms in `rows-longrun-c` / `rows-longrun-v3` / `rows-longrun-v4` (`P95-POWER.json` `per_grid_summary[*].p95_gap_ms`, `.p50_gap_ms`).
+- **H3 quality — not evaluable at this n.** `OPERATOR-BRIEF.json` `hypotheses.H3_quality.min_decidable_to_verdict` is *"8 of 12"*; `docs/PARM-1-ERRATA.md:223` `h3_unadjudicable_below` repeats `"8 of 12"` over `h3_denominator` 12. H3 grades checkpoint answers (`docs/PREREG-ARM-RUN.md:95`, `accuracy_from_grade`), so it measures answer production, not pointer mechanics.
+
+**The missing measurement:** one four-arm grid with ≥ 60 usable timings per arm. **Do not** read the batch aggregate (134 rows: PASS / FAIL / partial / author-report / pending) as the thesis verdict. Spend and quality figures live in `measure/REQUEST-LEDGER.json`, `measure/QUALITY-ERAS.json`, `measure/TVS-CENSORED.json`.
+
+**The three pillars.**
+
+- **P1 — the instrument.** `experiments/ptr-engine/longrun/` (`cell.py`, `run_longrun.py`, `analyze_stats.py`) plus the
+  guards under `experiments/ptr-engine/longrun/tests/`. Everything else is downstream of it being honest.
+- **P2 — the record.** `orchestration/VERDICTS.md` (verdicts and withdrawals), `orchestration/journals/` (92 journals,
+  the batch's event log) and the withdrawn register — the three places a later reader trusts.
+- **P3 — the spend.** `experiments/ptr-engine/measure/REQUEST-LEDGER.json`, which decides what may still be run.
+
+**Current blocker chain** — each link blocks the next; do not skip to the last:
+
+1. **gate precondition.** The gate chain must have no surviving hole before any grid number may be called measured.
+   **Not discharged:** `VERDICT-DISPUTE` found the closure PASS rested on 26 assertions, 6 of which encoded the bypass
+   as their pass condition, and the card's own `overall` was `fail` (`WI-008`).
+2. **claim stamp.** Until the gate is sound every published figure carries an unverified stamp; `V-STAMP-NEUTRAL`
+   settled `partial` — stamp additive, published numbers unchanged, F1/F2 still open in the regrade path.
+3. **v8 provenance.** The v8 arm's numbers are not admissible until provenance is clean: `V-FIXTURE-V8` PASS on the
+   fixture and `V8-DRYRUN-REFREEZE` on the freeze, but a fixture that passes is not yet a measurement.
+4. **the 800-request grid.** The only step that produces the result, and it sits behind 1–3.
+
+**Live spend.** **1,101 of 4,320** requests used; **3,219 remaining**. The deduplicated figure **1,071** is visible and
+**is not deducted** — raw is what the ledger bills. Both the retired `≈466` and the `1,071 / 3,249` pairing are in the
+withdrawn register (`WI-001`, `WI-002`): print `1,101 / 3,219` only.
+
+**Board thread.** `ws:78cead56-384a-4d9c-b974-02b454c6d3d5` — the dispatch discussion this batch came from. The
+per-batch verdict table and the withdrawal paste live in [`orchestration/VERDICTS.md`](VERDICTS.md) under
+`## Batch: ptr-engine longrun (2026-10-26)`.
+
+### Withdrawn numbers — do not cite
+
+**The single paste lives in** [`orchestration/VERDICTS.md`](VERDICTS.md) `### Withdrawn numbers — do not cite`, pasted
+from `experiments/ptr-engine/measure/WITHDRAWN.json`: **15 entries** (8 seeded + 7 found), self-test 0 problems.
+Nothing is re-derived here — one register, one paste. Screen any draft with the register's own guard:
+
+```
+python3 experiments/ptr-engine/tools/withdrawn_index.py --check <file>   # exit 1 = withdrawn claim without its correction
+```
+
+The 15 ids by status — `withdrawn` (9): `WI-001`, `WI-004`, `WI-005`, `WI-006`, `WI-009`, `WI-010`, `WI-011`, `WI-012`, `WI-013`; `superseded` (6): `WI-002`, `WI-003`, `WI-007`, `WI-008`, `WI-014`, `WI-015`. `WI-004` has **no replacement** (nothing
+measured replaces the retracted p95); `WI-002`, `WI-004` and `WI-005` each carry a recorded discrepancy — read the row,
+not the headline.
+
+## PATH-REFS-BATCH-FIX — wrong-directory citations repaired (2026-10-26)
+
+`path_refs.py` census after the pass: **ok 26034 · wrong_dir 645 · missing 266 · ignored 236**, and
+`python3 experiments/ptr-engine/tools/path_refs.py --check` exits **0** (was 1). **150 citations in 68 files** were
+substituted so they resolve — 54 distinct cited tokens, all `wrong_dir`→`ok`, `docs/**/*.md` and
+`orchestration/**/*.md` only. Proof that only tokens moved: every edited file, normalised by replacing each citation
+token with `<P>`, is **byte-identical to its pre-edit normalisation (68/68)**. The forward-only baseline shrank with the
+population: **752 anchors / 1,057 occurrences → 641 / 911** (`state/logs/path-refs-baseline.json`; `frozen_by` now
+`PATH-REFS-BATCH-FIX`, `prior_frozen_by` `PHANTOM-PATH-FIX`). Residual `wrong_dir` **645**: 130 in-scope ambiguous
+(≥2 candidates — a judgement per token), 464 `orchestration/handoffs/*.json`, 51 `experiments/ptr-engine/measure/*`;
+`missing` unchanged at **266** and not this card's. In `docs/**/*.md`, **95.20 %** of citations (1,863/1,957) now
+resolve to a file that exists. Evidence: [`orchestration/units/PATH-REFS-BATCH-FIX.md`](units/PATH-REFS-BATCH-FIX.md),
+handoff [`orchestration/handoffs/PATH-REFS-BATCH-FIX.json`](handoffs/PATH-REFS-BATCH-FIX.json).
+
+## Batch: Consonance bounded-context research (2026-11-03)
+
+**What it is.** A research batch, not a measurement batch: two prospective deliverables for Consonance's
+intended bounded recoverable context view (BRCV) — an evidence-traced **report** and a **protocol** whose
+E1/E2 envelopes are draft. **Nothing ran**: 0 endpoint requests, 0 model calls, no target-repo write, no
+Rust kernel or omp build, ledger unchanged at **2,591 / 1,729 of 4,320**. The heading carries its name
+rather than a number because this file already has two `## 8` and two `## 9` headings (§8.1
+"needs_correction" of the 2026-10-26 batch records that defect; it is owed a numbering pass, not another
+duplicate).
+
+| Unit | Shape | What it settled | Bound |
+|---|---|---|---|
+| `V-CONSONANCE-BC-REPORT` | verdict `partial` | 8+ headlines traced to originals, all 10 claim corrections present, no live call — but the report's E2 limb overstated ≤120 calls as deciding the premise | 35 / 60 |
+| `CONSONANCE-BC-REPORT-FIX` | unit `done` | the four corrections applied; evidence rows untouched (23 changed lines) | — |
+| `V-CONSONANCE-BC-REPORT-RECHECK` | verdict **`pass`** | E2 now "one-rep descriptive (123 actual)"; 369–450 adjudicable with owner approval; M1 attribution and the 1.8441 caveat fixed; checker fails on a `123→120` mutant | 16 / 20 |
+| `V-CONSONANCE-BC-EVAL` | verdict `partial` | 12/13 structural criteria, 59/59 invariants — one material arithmetic defect (`6,300` vs `7,560`) plus four minor ones | 37 / 60 |
+| `CONSONANCE-BC-EVAL-FIX` | unit `done` | §6.3 → 7,560 / 4.37×; per-arm caps `A 147 / B 150 / C 153`; E1 control thresholds; falsifier cells; arm C's t40 | — |
+| `V-CONSONANCE-BC-EVAL-RECHECK` | verdict **`pass`** | 7,560 / 4.37× and 147/150/153 verified; checker 67/67, mutant `7,560→6,300` fails | 25 / 20 (**over**) |
+| `SESSION-CLOSE-BC-2026-11-03` | unit `done` | this section, the journal entry, `docs/STATE.md` §2a/§8, `journal/INDEX.md`, the VERDICTS batch section and the handoff | recorded in its card |
+
+**Gate call: `advance — accepted; no live run`.** Both artifacts ship as research recommendation and
+preregistered protocol. The two `partial` verdicts mean *"a statement corrected against its arithmetic"*,
+not a rejected artifact; each was closed by a recheck that wrote none of the artifact.
+
+**Evidence commands** (offline, re-runnable): `.venv/bin/python papers/context-cache/recompute.py C53` →
+`PASS 18/18 values match`, exit 0; the independent G5 pass over
+`experiments/context-cache/cells/G5/rows.jsonl` (192 rows, sha `8fd7f9d2…`) → mean **6.744331504** of
+eight per-fan-out ratios, ratio of totals **6.063360882**; `python3 tools/doc_check.py` exit 0;
+`.venv/bin/python -m pytest tests/test_agent_context.py tests/test_orchestration_handoffs.py -q` →
+**30 passed**.
+
+**Next step.** `E1-CACHE-BOUNDARY-SWEEP` at ≤60 calls (reconcile the ledger first), then
+`E2-CHECKPOINT-COST` at an owner-approved budget — **123 descriptive**, **369** adjudicable, **450** with
+the 12-checkpoint fixture. The full comparative is **7,560 against 1,729 ⇒ `UNFUNDED`**; the funded
+alternative is the **185-call pilot**. Quality arms stay blocked on the fixture/grader owner
+(`PATH-CANNOT-SAY-YES`, E-17), and no eligible fixture carries multi-hop or stale/revoked classes.
+
+## 2026-11-09 — CELLTX01 (TX-01 cell 1)
+
+Cell `CELLTX01`: three conditions on `TX-01.v1.json` — masking-no-fetch (masking on) 0/12; masking-no-fetch (masking off, control) 12/12; bounded-context-fetch (masking on + fetch) 12/12. Requests 111 (2867→2978) plus control 48 (2978→3026); all rows `task_id=TX-01`, single fixture sha `44a1b435…`. Verifier `V-CELL01` overall `partial`. Full results: `experiments/ptr-engine/research-seed-concepts/RESULTS-TX01-CELL1.md`. Plan (pre-registered, unchanged): `experiments/ptr-engine/research-seed-concepts/JOINT-SERVING-CONTEXT-PLAN.md`.
+
+Replicate 2: 205 rows (48 + 48 + 109), all `task_id: TX-01`, same sha; checkpoints 0/12, 12/12, 12/12 — zero variance across reps.
+Stack B (8014 qwen3.5-9b): masking-no-fetch masking ON 0/12; masking-no-fetch masking OFF 8/12; bounded-context-fetch masking ON 0/12 (blocked at T1, no tool-call support).
+
+## 2026-11-09 — CELLTX02 (TX-02 cell 1, dose-response)
+
+Cell `CELLTX02`: TX-02.v1.json, two arms × two reps. Masking-no-fetch: d2 12/12, d8/d20/d32 0/12 in both reps (monotone). Bounded-context-fetch: rep1 d2 12/12, d8 4/12, d20 7/12, d32 5/12; rep2 d2 0/12, d8 0/12, d20 0/12, d32 1/12 (answer-format drift to TEXT). Requests 400 (masking 88+88, fetch 110+114); cap 3328 -> 3728; global cap 12094, 8366 remaining. All rows `task_id=TX-02`, single fixture sha `dd267a04…`. Activation: masking masked_rows>0=12 turns each, fetch_rows=0; fetch rep1 masked_rows>0=13, fetch_rows=47, outcomes ['NOT_FOUND','OK']; fetch rep2 masked_rows>0=16, fetch_rows=55, outcomes ['NOT_FOUND','OK']. cached_tokens present 86/88, 86/88, 108/110, 111/114. Full results: `experiments/ptr-engine/research-seed-concepts/RESULTS-TX02-CELL1.md`.
+
+## 2026-11-09 — CELLTX03 (TX-03 cell 1, distance dose-response)
+
+Cell `CELLTX03`: TX-03.v1.json, two arms × two reps, six distances {2,5,6,8,20,32} (8 checkpoints each). Masking-no-fetch: d=2 8/8 per rep, 0/8 at every d≥5 in both reps (transition between d=2 and d=5, the policy window boundary 5). Bounded-context-fetch: rep1 (6,1,2,1,1,1)/8 per bucket; rep2 (6,1,0,0,0,0)/8. d=2 is a policy-inside control (fact verbatim); d≥5 are treatment points (pointer marker). Requests 406 (masking 100+100, fetch 105+101); cap 3728 -> 4134; global cap 12094, 7960 remaining. All rows `task_id=TX-03`, single fixture sha `f0a636fea0…`. Activation: masking masked_rows>0=8 turns each, fetch_rows=0; fetch r1 masked_rows>0=9, fetch_rows=8, outcomes ['OK']; fetch r2 masked_rows>0=8, fetch_rows=1, outcomes ['OK']; cached_tokens present 98/100, 98/100, 104/105, 99/101. Full results: `experiments/ptr-engine/research-seed-concepts/RESULTS-TX03-CELL1.md`.
+
+## 2026-11-09 — HOP8014R2 (TX-HOP re-run on :8014)
+
+- 2026-11-09 — HOP8014R2: re-ran TX-HOP bounded-context-fetch on `:8014` (vLLM, qwen3.5-9b) with `--temperature 0 --seed 42 --tools fetch`; output `experiments/ptr-engine/measure/rows-hop-8014-r2.jsonl` (191 rows).
+- 2026-11-09 — HOP8014R2: OOV flood reproduces — 45 → 41 `out_of_vocabulary`, NONE 123 → 105, fetch turns 15 → 11, fetch calls 21 → 17; scorer (`--answer-contract`) 3/48 contract, 3/48 value, 32 ungradeable, 8 abstained.
+- 2026-11-09 — HOP8014R2: diagnosis — model emits `ANSWER: CALL(fetch(...))` with no space after `CALL` (malformed contract line), not an ignored contract or bad instruction; `no_answer_line` cases are empty tool-call turns.
+- 2026-11-09 — HOP8014R2: results document written by unit DOCSTACK8014 at `experiments/ptr-engine/research-seed-concepts/RESULTS-STACK-8014.md`.
+- 2026-11-09 — HOP8014R2: multi-fact failure is both model-specific and stack-specific (retrieval transfers; compliance does not); 191 requests spent, 4,472 remaining against cap 12,094.
+
+## 2026-11-09 — DEDUPGRADE (checkpoint grading repair)
+
+- Repaired checkpoint grading: one graded answer per checkpoint id (last non-interim); interim rows marked `interim=true` reason `fetch_followup`; duplicate non-interim answers fail loudly; denominator mismatch reported when graded count != fixture count (48 for TX-HOP).
+- Re-scored `rows-hop-8014-r3.jsonl`: 9/48 contract, 9/48 value, 3 ungradeable, 32 abstained; fetch turns 20; 35 interim checkpoint rows.
+- Re-scored `rows-tx03-8014-fetch-r1.jsonl`: 42/48 (unchanged); `rows-tx03-8014-masking-r1.jsonl`: 8/48 (unchanged).
+- Corrected `RESULTS-STACK-8014.md`: r3 9/59 -> 9/48 contract, 10/59 -> 9/48 value.

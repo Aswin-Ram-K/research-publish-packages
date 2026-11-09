@@ -1,0 +1,54 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/tools/regrade.py",
+  "experiments/ptr-engine/longrun/tests/test_regrade_stamp.py",
+  "experiments/ptr-engine/measure/REGRADE-STAMP-WIRE.json",
+  "docs/REGRADE-STAMP-WIRE.md",
+  "orchestration/units/REGRADE-STAMP-WIRE.md"
+ ],
+ "assumptions": [
+  "The resolver compares against an EXPECTED digest rather than refusing by default, because the card requires a future grade_v5.py edit not to invalidate the tool; --sha256 remains the strict reproducibility gate.",
+  "Proof 1's clean case uses a document made by stripping only the stamp keys from a fresh regrade output (in /tmp); the stored grids additionally predate GRADE-V5-REPAIR, which is recorded as a finding."
+ ],
+ "blocker": "",
+ "evidence": {
+  "command_or_count": "6 passed / 8 passed / 6 passed; historical grid exit 1 with only decidable_source differing; red exit 3 quoted; green exit 0 IDENTICAL",
+  "commands": [
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_regrade_stamp.py -q",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_regrade.py -q",
+   "python3 -m pytest experiments/ptr-engine/longrun/tests/test_grader_stamp.py -q",
+   "python3 experiments/ptr-engine/tools/regrade.py --rows experiments/ptr-engine/measure/rows-longrun-2026-10-26.jsonl --check --grade experiments/ptr-engine/measure/cell-longrun-base-20261026T1556Z.grade-v5.json",
+   "PYTHONPATH=$PWD/experiments/ptr-engine/tools python3 /tmp/regrade-red/regrade.py --rows ... --sha256 6893d559518168e3ba4fc4a9f5d7642d213d61e2e3c3d0b0a8f01e3379af3077",
+   "PYTHONPATH=$PWD/experiments/ptr-engine/tools python3 experiments/ptr-engine/tools/regrade.py --rows ... --grader /tmp/grader-edit/grade_v5.py --sha256 056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772"
+  ],
+  "real_output": {
+   "differing_paths_base": [
+    "arms.lease-reopen.decidable_source",
+    "arms.pointer-stable.decidable_source",
+    "arms.transcript-compact.decidable_source",
+    "arms.transcript-grow.decidable_source"
+   ],
+   "edited_grader_resolved": "NOTE grader sha256 drift: resolved=114e60a23e0bc03a12016690e91ff2d8680690a64c361d3197606b938090884a expected-pin=056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772 (identity resolved at run time; pass --sha256 to require a digest)",
+   "edited_grader_strict": "ERROR grader sha256 mismatch: file=114e60a23e0bc03a12016690e91ff2d8680690a64c361d3197606b938090884a expected=056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+   "green": "IDENTICAL rows-longrun-2026-10-26.jsonl (grader_sha256=056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772)",
+   "red": "ERROR grader sha256 mismatch: file=056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772 expected=6893d559518168e3ba4fc4a9f5d7642d213d61e2e3c3d0b0a8f01e3379af3077",
+   "stamps": {
+    "grader_sha256": "056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec55a917a52d9f26772",
+    "grader_version": "5.1",
+    "rows_sha256": "bc61d38192d4e4316021ec8d3d0e21dcb8e6153f463260a0138da21969d0b21e"
+   }
+  }
+ },
+ "next_unit_hint": "If the pointer-stable grid must reproduce, card it separately: its stored document predates grade_v5's undecidable handling. No stamp or regrade change fixes that.",
+ "status": "done",
+ "unit": "REGRADE-STAMP-WIRE",
+ "write_paths": [
+  "experiments/ptr-engine/tools/regrade.py",
+  "experiments/ptr-engine/longrun/tests/test_regrade_stamp.py",
+  "experiments/ptr-engine/measure/REGRADE-STAMP-WIRE.json",
+  "docs/REGRADE-STAMP-WIRE.md",
+  "orchestration/units/REGRADE-STAMP-WIRE.md",
+  "orchestration/handoffs/REGRADE-STAMP-WIRE.json",
+  "orchestration/journals/REGRADE-STAMP-WIRE.jsonl"
+ ]
+}

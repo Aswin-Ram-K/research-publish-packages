@@ -1,0 +1,82 @@
+{
+ "unit": "V-FIXTURE-V8",
+ "status": "done",
+ "overall": "pass",
+ "verdict_word": "PASS",
+ "artifacts": [
+  "experiments/ptr-engine/measure/V-FIXTURE-V8.json",
+  "docs/V-FIXTURE-V8.md",
+  "orchestration/units/V-FIXTURE-V8.md",
+  "orchestration/handoffs/V-FIXTURE-V8.json",
+  "orchestration/journals/V-FIXTURE-V8.jsonl"
+ ],
+ "checks": [
+  "truth independence: 12/12 agree (0 disagree, 0 ambiguous); kinds NUM 5 / CALL 4 / NONE 3; each of the 12 re-derived by executing its answer_spec.derive rule against resolve.py / errors.py after a fixture-blind AST census",
+  "source pins match v8 sources[]: resolve.py 71a14c2c1dd1b6e97b3fdf2a666ea459d093adcd0f813676cf787271a48da563, errors.py 402dc9589d8e8fd5de82ed6c8f3364390e105bf8285eb7c326b799f8200fdba0, ledger.py 4c40f11b29cbda9dfdc752f7d47549cf083349cfa8a583c96437a8133e00967e",
+  "delta: checkpoints[] byte-identical v7 vs v8, per-checkpoint field diffs NONE; 32 changed doc paths all treatment-layer (wall_tokens 65536->3838, wall_tokens_by_arm 10616 all arms, wall_tokens_basis.*, lease_reopen_turns [23,40], treatments.*, expected_digests integer->derived string)",
+  "delta: CRITICAL paths changed: NONE - no checkpoint id, expected value, turn, system_prompt or answer contract moved; N/turns/items/checkpoint_turns/answer_budget/sources/acceptance unchanged",
+  "NONE by construction: resolve() body calls {block,encode,enumerated,get,record_resolution,resolved_count} -> no record_refusal (cp.3.t14); _refuse() body calls {record_refusal} -> no resolved_count (cp.5.t20), no block (cp.10.t42); same 3 ids and same 'ANSWER: NONE' contract as v7",
+  "loadability: 12 ids, 12 unique, none absent, every id carries id/question/expected/answer_form/answer_spec/source; turns 6,8,12,14,18,20,24,26,32,36,42,46",
+  "CALL arg sets EXACT not subsets: record_resolution 5/5, scope.block() 0/0, resolved_count() 0/0, record_refusal 3/3",
+  "encoding: no literal \\u003d escape in raw v8; '\\u003d' decodes to '='",
+  "mutant A: /tmp/LR-01.v8.mut64.json cp.2.t12 64->65 => {agree:11,disagree:1,ambiguous:0} EXIT=1, red '[disagree] cp.2.t12 [ours=64 fixture=65]'",
+  "mutant B: /tmp/LR-01.v8.mutkw.json record_refusal 'code' dropped => {agree:11,disagree:1,ambiguous:0} EXIT=1, red named cp.11.t46",
+  "green: untouched v8 => {agree:12,disagree:0,ambiguous:0} EXIT=0",
+  "containment: v7 and v8 unmodified (sha256 42b4df00.../0804b515... before and after); mutants in /tmp only; 0 network requests",
+  "independence: no code imported from CHECKPOINT-ITEMS-V2, grade_v5 or det_verify; the source census was recorded in the journal before the checkpoints array was opened"
+ ],
+ "measurements": {
+  "subject": "experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json",
+  "fixture_sha256": "0804b51575cce3454a1c628a9a2447a01856321e67ac3fd1ff8c9baa48467641",
+  "fixture_bytes": 57242,
+  "v7_sha256": "42b4df007352d9397778d9e2b50b1b64ef451190e54ea2c6d1992f9f77bd8392",
+  "source_sha256": {
+   "resolve.py": "71a14c2c1dd1b6e97b3fdf2a666ea459d093adcd0f813676cf787271a48da563",
+   "errors.py": "402dc9589d8e8fd5de82ed6c8f3364390e105bf8285eb7c326b799f8200fdba0",
+   "ledger.py": "4c40f11b29cbda9dfdc752f7d47549cf083349cfa8a583c96437a8133e00967e"
+  },
+  "verdict_counts": {"agree": 12, "disagree": 0, "ambiguous": 0},
+  "per_id": {
+   "cp.0.t06": "agree", "cp.1.t08": "agree", "cp.2.t12": "agree", "cp.3.t14": "agree",
+   "cp.4.t18": "agree", "cp.5.t20": "agree", "cp.6.t24": "agree", "cp.7.t26": "agree",
+   "cp.8.t32": "agree", "cp.9.t36": "agree", "cp.10.t42": "agree", "cp.11.t46": "agree"
+  },
+  "call_arg_sets": {
+   "cp.0.t06": {"callee": "ledger.record_resolution", "source": 5, "fixture": 5, "verdict": "exact"},
+   "cp.1.t08": {"callee": "scope.block", "source": 0, "fixture": 0, "verdict": "exact"},
+   "cp.9.t36": {"callee": "ledger.resolved_count", "source": 0, "fixture": 0, "verdict": "exact"},
+   "cp.11.t46": {"callee": "ledger.record_refusal", "source": 3, "fixture": 3, "verdict": "exact"}
+  },
+  "red_green": {
+   "red_64_to_65": "counts {agree:11, disagree:1, ambiguous:0}, EXIT=1, disagree exactly cp.2.t12 (ours 64 / mutant 65)",
+   "red_kwarg_drop": "record_refusal 'code' removed -> counts {agree:11, disagree:1}, EXIT=1, cp.11.t46",
+   "green_original": "counts {agree:12, disagree:0, ambiguous:0}, EXIT=0"
+  },
+  "delta_changed_paths": 32,
+  "critical_paths_changed": 0,
+  "tool_calls": 12,
+  "bound": 20,
+  "requests": 0
+ },
+ "findings": [
+  "F1 (carried) value elision is the false-pass surface: cp.0.t06 elides 2/5 kwarg values and cp.11.t46 elides 1/3 - the elided scope is the value distinguishing scope=scope_name from scope=scope.name; 3 of 8 substantive CALL values can be answered '...' and still pass",
+  "F2 (carried) both CALL expected strings are in source order rather than the contract's alphabetical order and cp.11.t46 appends ', before re-raising'; order/suffix are ungraded, so documentation drift not a truth error",
+  "F3 (new, v8-specific) top-level wall_tokens=3838 is 10 tokens below v8's own first prompt (3848) by the fixture's own admission in wall_tokens_basis.transcript-compact_v5_era, so it would fire at T2; the live grading wall is wall_tokens_by_arm=10616 for all four arms - F3 only bites a runner that reads the top-level field"
+ ],
+ "can_800_be_graded": "Yes - 800 requests can be graded against v8's twelve truths.",
+ "blocker": "",
+ "next_unit_hint": "RUN-A* may grade on v8: checkpoint layer is byte-identical to audited v7 and only the treatment layer moved. If a runner reads top-level wall_tokens instead of wall_tokens_by_arm, fix that (F3) before collecting the 800-request grid.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/V-FIXTURE-V8.json",
+  "docs/V-FIXTURE-V8.md",
+  "orchestration/units/V-FIXTURE-V8.md",
+  "orchestration/handoffs/V-FIXTURE-V8.json",
+  "orchestration/journals/V-FIXTURE-V8.jsonl"
+ ],
+ "not_reproduced": [],
+ "overstated": [],
+ "unverified": [
+  "Whether grade_v5's live-tree truth derivation is isolated per arm under RUN-A* was not measured here (carried from V-FIXTURE-V7)",
+  "The fixture's three NONE truths remain collectible free by a constant-NONE arm (PARM-1-ERRATA E1, 3/12 = 25% of the H3 denominator); this audit confirms the truths are correct, not that they are hard"
+ ]
+}

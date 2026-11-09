@@ -1,0 +1,44 @@
+{
+  "unit": "TOOL-CHANNEL-ROOT-CAUSE",
+  "status": "done",
+  "artifacts": [
+    "docs/TOOL-CHANNEL-ROOT-CAUSE.md",
+    "measure/TOOL-CHANNEL-ROOT-CAUSE.json",
+    "experiments/ptr-engine/measure/probe-tool-channel-raw.json",
+    "experiments/ptr-engine/tools/tool_channel_root_cause_check.py",
+    "experiments/ptr-engine/tests/test_tool_channel_root_cause.py",
+    "orchestration/units/TOOL-CHANNEL-ROOT-CAUSE.md",
+    "orchestration/handoffs/TOOL-CHANNEL-ROOT-CAUSE.json",
+    "orchestration/journals/TOOL-CHANNEL-ROOT-CAUSE.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "cause=client_never_sends_tools; 2 live probe requests (cap 6) to http://192.168.2.168:8012/v1/chat/completions; offline gate 17 assertions exit 0",
+    "verdict_row": "PASS f17663d1 bash -lc '/usr/bin/python3 -m pytest experiments/ptr-engine/tests/test_tool_channel_root_cause.py -q' (execution a59f8a0a)",
+    "divergence_step": "client.py:317-346 request_body() / client.py:658-661 send_chat() — the wire body is {model, messages, temperature, max_tokens, stream[, stream_options][, chat_template_kwargs]} and the only body mutations in the file are client.py:340 and client.py:343",
+    "probe_with_tools": "HTTP 200, finish_reason='tool_calls', tool_calls[0].function={'name':'read_file','arguments':'{\"path\": \"ptr_engine/resolve.py\", \"start_line\": 66, \"end_line\": 110}'}, content_len=0, completion_tokens=56, prompt_tokens=344",
+    "probe_without_tools": "HTTP 200, finish_reason='stop', tool_calls=null, content 237 chars: 'I cannot read specific lines of a file without its content being provided in the context...'",
+    "runner_is_text_protocol": "run_longrun.py:605-645 parse_tool_calls scans resp['content'] for '<tool_call>' then a JSON object with a 'path' key; gated by run_longrun.py:262-263 tools_enabled",
+    "prompt_never_teaches_it": "fixture tasks-v6/LR-01.v8.json: 0 occurrences of '<tool_call>'; exactly 1 of 'read_file', a negative ('no read_file, no fetch'); index_lines run_longrun.py:190-192 renders '@knowledge:<id>@1', the notation transcript-grow t1 echoed",
+    "endpoint_supports_tools": "/v1/models 200 id occamy-1.0 owned_by sglang max_model_len 131072; no tool metadata advertised, but the served engine parses tool calls correctly"
+  },
+  "blocker": "",
+  "next_unit_hint": "A fix card, written by someone who has read docs/TOOL-CHANNEL-ROOT-CAUSE.md §5: the fix is TWO coupled changes, not one. (a) client.py request_body() must carry tools (and tools_mode-driven tool_choice) gated on tools_enabled(cfg) so tools-off bodies keep their exact bytes and request sha; (b) client.send_chat must surface message.tool_calls (client.py:766 currently flattens it to tool_calls_present) and run_longrun.py:2426 must consume it instead of resp['content'], because a tools-on reply has content_len=0 and parse_tool_calls would find nothing. Note two provenance traps: request_digest covers exact bytes (every tools-on row sha moves), and tools_mode (client.py:862) already mislabels existing tools-on rows 'on:read_file' although no schema was ever sent. Then re-run the 4-arm canary unchanged. Also still open from CANARY-ERA-B-3: launcher precondition 10 stops cell 15 (lease-reopen) and _shape_era() misgrades era-B rows.",
+  "write_paths": [
+    "docs/TOOL-CHANNEL-ROOT-CAUSE.md",
+    "measure/TOOL-CHANNEL-ROOT-CAUSE.json",
+    "experiments/ptr-engine/measure/probe-tool-channel-raw.json",
+    "experiments/ptr-engine/tools/tool_channel_root_cause_check.py",
+    "experiments/ptr-engine/tests/test_tool_channel_root_cause.py",
+    "orchestration/units/TOOL-CHANNEL-ROOT-CAUSE.md",
+    "orchestration/handoffs/TOOL-CHANNEL-ROOT-CAUSE.json",
+    "orchestration/journals/TOOL-CHANNEL-ROOT-CAUSE.jsonl"
+  ],
+  "assumptions": [
+    "probe prompt was written for this card (not read from the fixture) per the card's 'no fixture' rule; it paraphrases the fixture's turn-1 shape ('read resolve.py lines 66-110, list raise sites')",
+    "no tools_choice='required' was used: tool_choice='auto' already produced the call, so the cause does not depend on coercion strength",
+    "the verdict command is wrapped in 'bash -lc' because orchestration_verdict's allow-list refuses a bare absolute interpreter; the interpreter inside the shell is still absolute (/usr/bin/python3), which is what the card asked for",
+    "measure/TOOL-CHANNEL-ROOT-CAUSE.json is written at the card-named path; the probe's raw bytes stay beside the runner under experiments/ptr-engine/measure/"
+  ],
+  "diagnose_only": true,
+  "files_modified_forbidden": []
+}

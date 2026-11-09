@@ -1,0 +1,41 @@
+{
+  "unit": "ARM-INTEGRITY",
+  "status": "partial",
+  "artifacts": ["docs/ARM-INTEGRITY.md", "experiments/ptr-engine/measure/arm-integrity.json", "orchestration/units/ARM-INTEGRITY.md"],
+  "evidence": {
+    "command_or_count": "PROBE PASS (exit 0); 788 rows over 7 rows files, 7 runtime fixtures, 92 manifests; 0 inference requests",
+    "commands": [
+      "python3 /tmp/arm_integrity_probe.py",
+      "sha256sum experiments/ptr-engine/longrun/run_longrun.py experiments/ptr-engine/longrun/client.py experiments/ptr-engine/longrun/analyze_stats.py experiments/ptr-engine/longrun/cell.py"
+    ],
+    "probe_checks": {
+      "pointer_grew_like_transcript_in_any_grid": false,
+      "pointer_slopes_tok_per_turn": {"stage1": 4.07, "G4-RUN-C-V2": 4.44, "v3": 4.68, "v4": 4.85, "v4-tools": 2.72, "v5-tools": -14.35, "v6-tools": -24.25},
+      "transcript_grow_slopes_tok_per_turn": {"stage1": 38.79, "G4-RUN-C-V2": 676.96, "v3": 60.89, "v4": 61.01},
+      "transcript_compact_slopes": {"stage1": 119.88, "G4-RUN-C-V2": 74.98},
+      "lease_reopen_slopes": {"stage1": -0.01, "G4-RUN-C-V2": -0.01},
+      "digest_rows": "0 of 788",
+      "evicted_gt0_rows": "0 of 192 transcript-grow turn rows",
+      "lease_values": [1],
+      "lease_rows": 96,
+      "pointer_transcript_shared_prompt_sha256": 0,
+      "grow_compact_shared_prompt_sha256": {"stage1": 6, "G4": 1},
+      "max_prompt_tokens_any_grid": 34279,
+      "wall_tokens": 65536
+    }
+  },
+  "finding": "No mislabel. Four distinct code paths. pointer-stable is genuinely the pointer engine (0 shared prompt bytes with any transcript arm, slope 2.72-4.85 tok/turn vs 38.79-676.96). BUT the 64k wall is never reached: transcript-grow never evicted (0/192), transcript-compact never digested (0/788), and lease-reopen never reopened (lease_reopen_turns absent from all 7 fixtures, lease==1 on 96/96 rows). grow x compact is distinct-in-code-only; the rows cannot show its mechanism.",
+  "invalidates": [
+    "unlicensed: any transcript-compact digest effect (P4)",
+    "unlicensed: any transcript-grow FIFO eviction effect (P2 'hits the wall at N=60')",
+    "unlicensed: all lease-reopen latency/accuracy numbers incl. P3",
+    "survives: every pointer-stable vs transcript-* comparison, incl. P95-POWER pointer x grow disjointness"
+  ],
+  "blocker": "Cross-grid implementation identity is not provable from the record: no row carries harness_sha256/code_sha and none of the 92 manifests carries any sha-shaped key. v5-tools and v6-tools share fixture_sha256 5bf5f639 yet pointer T1 is 3515 vs 3520 tok -> the label spans at least two renderings, unattributable to a build. Also the pointer arm's own identity field prefix_sha256 is computed (run_longrun.py:1098) but dropped from make_row (0/788 rows).",
+  "next_unit_hint": "Re-run the arm grid with wall_tokens lowered below the observed 34,279-token max (or N raised) and with lease_reopen_turns declared in the fixture, so eviction/digest/reopen actually fire; and add prefix_sha256 + harness_sha256 to make_row and the manifest. Until then P2/P3/P4 are untested, not refuted.",
+  "assumptions": [
+    "Rows files not named in the audit (fix/policy/pilot fragments, rows.jsonl, baseline/equalinfo/live) are out of scope for slope claims; only their arm counts were read.",
+    "The probe lives at /tmp/arm_integrity_probe.py, an allowed write path; it is read-only over the repo."
+  ],
+  "write_paths": ["docs/ARM-INTEGRITY.md", "experiments/ptr-engine/measure/arm-integrity.json", "orchestration/units/ARM-INTEGRITY.md", "orchestration/handoffs/ARM-INTEGRITY.json", "orchestration/journals/ARM-INTEGRITY.jsonl", "/tmp/arm_integrity_probe.py"]
+}

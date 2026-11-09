@@ -1,0 +1,137 @@
+{
+ "unit": "V-GATE-OPERAND",
+ "generated_at": "2026-10-26T12:35:00-05:00",
+ "requests": 0,
+ "verdict": "partial",
+ "pins": {
+  "claimed_sha256": "6b0ca83a209433479e119323bc20a84588196cd002e72ba3639162455aea8b4e",
+  "first_pin": {
+   "sha256": "0136052e4ed9d8c9f5a86ead4f23abe985b96fd373c9ef717bc70d97bdb38a7b",
+   "size": 104536,
+   "mtime": "2026-10-26 12:16:20"
+  },
+  "final_pin": {
+   "sha256": "24627d7b648262f901825e87459b41a3ce7185539e46ccd3dda01c3002233253",
+   "size": 104869,
+   "mtime": "2026-10-26 12:23:43"
+  },
+  "moved_under_probe": true,
+  "note": "cell.py moved twice during the check (12:16:20 WIRE-CLAIM-MODE, then 12:23:43). The probe was re-run end-to-end against the final pin and its sha was identical before and after the run."
+ },
+ "oracle": {
+  "spawns": "subprocess.Popen monkeypatched BEFORE cell import; every process recorded; live = invokes the runner stub without --dry-run",
+  "positive_control": {
+   "legal_cell_live_spawns": 1,
+   "exit": 10,
+   "proves": "the instrumentation sees the stage_run spawn (cell.py:1501 subprocess.run)"
+  },
+  "author_oracle_defect": "tests/test_gate_operand_validation.py:83-88 counts cell._run only; gate_attack.py docstring claims _run is 'the only process primitive', but the live path is subprocess.run at cell.py:1501, and the F-case harness replaces stage_run outright"
+ },
+ "rows": {
+  "total": 246,
+  "argv_rows": 132,
+  "artefact_rows": 36,
+  "unit_rows": 114,
+  "hostile_end_to_end": 100,
+  "hostile_admitted": 0,
+  "refused_with_zero_live_spawns": 100,
+  "admitted_detail": [],
+  "false_positive_note": "two rows in the author-independent table (budget.reserve 0 and -0.0) were labelled hostile by me but are legal per the requirement (reserve >= 0); both were admitted and reached the runner, exit 10. Excluding them: 0 hostile admitted."
+ },
+ "f_cases": {
+  "F1": {
+   "actual_exit": 8,
+   "live_spawns": 0
+  },
+  "F2": {
+   "actual_exit": 8,
+   "live_spawns": 0
+  },
+  "F3": {
+   "actual_exit": 8,
+   "live_spawns": 0
+  },
+  "F4": {
+   "actual_exit": 4,
+   "live_spawns": 0
+  },
+  "F5": {
+   "actual_exit": 4,
+   "live_spawns": 0
+  },
+  "F8": {
+   "actual_exit": 8,
+   "live_spawns": 0
+  }
+ },
+ "f_claim": "8,8,8,4,4,8",
+ "f_measured": "8,8,8,4,4,8",
+ "suites_final_pin": {
+  "test_gate_operand_validation": "9/9 OK",
+  "test_cell_gates": "15/15 OK",
+  "test_gate_override": "7/7 OK",
+  "test_exit_codes": "16/16 OK",
+  "test_guards": "1 passed (checks a-e inside)",
+  "test_projection_calibration": "1 passed (checks a-d inside)"
+ },
+ "transient_red": {
+  "when": "12:20, on sha 0136052e",
+  "suite": "test_cell_gates 14/15",
+  "failure": "test_red_green_every_gate (gate='G3-silence') -- 'mutation anchor drifted for G3-silence'",
+  "cause": "concurrent WIRE-CLAIM-MODE edit of cell.py at 12:16:20; the 12:23:43 edit restored the anchor and the suite is 15/15 on the final pin. Not caused by the operand repair."
+ },
+ "disputed_suites_fix": {
+  "legitimate_claim_path": true,
+  "evidence": [
+   "tests/test_guards.py:318-319 'the claim it would make. This cell (n=48) can honestly declare H2.' + '--hypothesis','H2'",
+   "tests/test_projection_calibration.py:64-67 'GATE-CHAIN-FIX D2: an absent --hypothesis is refused ... --hypothesis H2'"
+  ],
+  "file_mtime": "both 11:07:59, i.e. BEFORE GATE-OPERAND-VALIDATION's 12:08/12:09 work",
+  "other_cause": "their earlier 'no request reached the fake server' red tracked run_longrun.py mid-edit (mtime 12:02 then, 12:23:36 now), not a gate change",
+  "weakened": false
+ },
+ "red_green": {
+  "mutation": "/tmp copy only: --turn-wall-cap lo=1 -> lo=0 in validate_g2",
+  "baseline_on_copy": "9/9 OK",
+  "after_mutation": "FAILED (failures=4)",
+  "quoted": [
+   "hostile operands ADMITTED: [('G2','turn_wall_cap','0'), ('G2','turn_wall_cap','1e-09'), ('G2','turn_wall_cap','0')]",
+   "F8: expected exit 8, got 1"
+  ],
+  "bites": true
+ },
+ "nothing_relaxed": {
+  "bounds": [
+   "MAX_WALL_S=2592000",
+   "MAX_TURN_WALL_S=86400",
+   "MAX_LEDGER_CAP=1000000",
+   "MAX_TURNS=100000",
+   "MAX_REPS=10000"
+  ],
+  "thresholds": [
+   "PROJECT_QUOTA=4320",
+   "BUDGET_HEADROOM=0.10",
+   "FETCH_FOLLOWUP_RATIO=68/801",
+   "analyze_stats.min_n_for(0.95)=60",
+   "PROJECTION defaults.max_wall_s=3600",
+   "per-mode 60.0/218.2",
+   "H3 checkpoint_min=8"
+  ],
+  "exit_codes": "0..12 unchanged; gate codes {2,3,4,8,12} agree",
+  "carve_out": "validate_g3(smoke=True) sets min_n=0 for a DECLARED claim=none cell; added by WIRE-CLAIM-MODE at 12:16, postdates the card, and cannot admit a hostile numeric operand because turns/reps are validated before the smoke branch",
+  "loosened": false
+ },
+ "reconstruction": {
+  "honest_label": true,
+  "independently_verifiable": false,
+  "quoted_idioms": [
+   "int(args.turns or 0)",
+   "int(budget.get(\"cap\") or 0)",
+   "max(0, int(allowance))",
+   "ok = max_wall > 0 and projected <= max_wall",
+   "ok = checkpoints >= 8"
+  ],
+  "finding": "no copy with sha1 f53d7bfe or sha256 6b0ca83a exists anywhere in the workspace (searched every cell.py copy), so the 'before: 100 admitted' column is the output of before_decision(), a hand-written model, not an executed baseline. Honest as labelled, but the 100->0 improvement is a model result; only the 'after: 0' half is measured."
+ },
+ "can_spend_800": "yes on operand evidence for sha256 24627d7b: 100/100 hostile operands refused end-to-end with 0 Popen-recorded live spawns, 1/1 legal control reached the runner; the pin must be re-taken because cell.py moved twice in 7 minutes."
+}

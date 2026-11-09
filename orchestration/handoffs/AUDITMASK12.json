@@ -1,0 +1,52 @@
+{
+  "unit": "AUDITMASK12",
+  "status": "complete",
+  "scope": "read-only audit of masking-no-fetch TX-02 cell; no HTTP, no fixture/row/scorer/runner edits",
+  "inputs": [
+    "experiments/ptr-engine/measure/rows-tx02-masking-r1.jsonl",
+    "experiments/ptr-engine/measure/rows-tx02-masking-r2.jsonl",
+    "experiments/ptr-engine/longrun/tasks-v7/TX-02.v1.json",
+    "experiments/ptr-engine/longrun/arm_cd.py",
+    "experiments/ptr-engine/longrun/run_longrun.py"
+  ],
+  "recomputation": {
+    "command_r1": "/home/zer0null/research extractor/.venv/bin/python experiments/ptr-engine/longrun/score_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v7/TX-02.v1.json --run experiments/ptr-engine/measure/rows-tx02-masking-r1.jsonl",
+    "output_r1": "checkpoint_accuracy 12/48, verified_success false, exit_code 1",
+    "command_r2": "/home/zer0null/research extractor/.venv/bin/python experiments/ptr-engine/longrun/score_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v7/TX-02.v1.json --run experiments/ptr-engine/measure/rows-tx02-masking-r2.jsonl",
+    "output_r2": "checkpoint_accuracy 12/48, verified_success false, exit_code 1",
+    "independent_recompute": "answer_of + match_answer per checkpoint: r1/r2 d=2 12/12 pass, d=8 0/12, d=20 0/12, d=32 0/12"
+  },
+  "per_bucket": {
+    "r1": {"2": "12/12", "8": "0/12", "20": "0/12", "32": "0/12", "total": "12/48"},
+    "r2": {"2": "12/12", "8": "0/12", "20": "0/12", "32": "0/12", "total": "12/48"}
+  },
+  "leak_test": {
+    "note": "Rows store no prompt text (only prompt_sha256). Prompt reconstructed with Planner.build() from fixture + recorded answers; fragment quoted below.",
+    "d2_checkpoints_r1": [
+      {"turn": 3, "intro_turn": 1, "masked_rows_row": 0, "value_present_in_prompt": true, "leak_vector": "intro turn still inside 4-turn window: tool output body rendered + prior answer"},
+      {"turn": 4, "intro_turn": 2, "masked_rows_row": 0, "value_present_in_prompt": true, "leak_vector": "intro turn still inside 4-turn window: tool output body rendered + prior answer"},
+      {"turn": 7, "intro_turn": 5, "masked_rows_row": 0, "value_present_in_prompt": true, "leak_vector": "intro turn still inside 4-turn window: tool output body rendered"},
+      {"turn": 8, "intro_turn": 6, "masked_rows_row": 0, "value_present_in_prompt": true, "leak_vector": "intro turn still inside 4-turn window: tool output body rendered"},
+      {"turn": 17, "intro_turn": 15, "masked_rows_row": 0, "value_present_in_prompt": true, "leak_vector": "intro turn still inside 4-turn window: tool output body rendered"},
+      {"turn": 18, "intro_turn": 16, "masked_rows_row": 0, "value_present_in_prompt": true, "leak_vector": "intro turn still inside 4-turn window: tool output body rendered"},
+      {"turn": 43, "intro_turn": 41, "masked_rows_row": 0, "value_present_in_prompt": true, "leak_vector": "intro turn still inside 4-turn window: tool output body rendered"},
+      {"turn": 44, "intro_turn": 42, "masked_rows_row": 0, "value_present_in_prompt": true, "leak_vector": "intro turn still inside 4-turn window: tool output body rendered"},
+      {"turn": 53, "intro_turn": 51, "masked_rows_row": 0, "value_present_in_prompt": true, "leak_vector": "intro turn still inside 4-turn window: tool output body rendered"},
+      {"turn": 54, "intro_turn": 52, "masked_rows_row": 0, "value_present_in_prompt": true, "leak_vector": "intro turn still inside 4-turn window: tool output body rendered"},
+      {"turn": 57, "intro_turn": 55, "masked_rows_row": 0, "value_present_in_prompt": true, "leak_vector": "intro turn still inside 4-turn window: tool output body rendered"},
+      {"turn": 58, "intro_turn": 56, "masked_rows_row": 0, "value_present_in_prompt": true, "leak_vector": "intro turn still inside 4-turn window: tool output body rendered"}
+    ],
+    "representative_fragment": "QUESTION (T1): Work turn 1.\\nTOOL OUTPUTS:\\nTOOL_OUTPUT (doc-fact-01@1): # doc-fact-01\\nVAL_A = 2000\\nVAL_B = 2001\\nVAL_C = 2002\\nVAL_D = 2003\\n\\nANSWER (T1): ANSWER: NUM 2000\\n\\nQUESTION (T2): Work turn 2. ...",
+    "expected_present_row_field": "expected_present is False on all 48 checkpoints in both runs (it only probes reasoning_raw for the value, not the prompt), so it does not detect this leak"
+  },
+  "masking_rule_citations": {
+    "window_turns": "experiments/ptr-engine/longrun/arm_cd.py:32 WINDOW_TURNS = 4",
+    "cutoff": "experiments/ptr-engine/longrun/arm_cd.py:166 cutoff = int(t) - WINDOW_TURNS",
+    "mask_loop": "experiments/ptr-engine/longrun/arm_cd.py:170 for i in range(1, cutoff + 1)",
+    "masked_turns_add": "experiments/ptr-engine/longrun/arm_cd.py:207-210 (only turns carrying tool_outputs get added)",
+    "current_turn_render": "experiments/ptr-engine/longrun/run_longrun.py:1570-1574 (current turn tool outputs rendered in full)",
+    "prior_turn_unmasked": "experiments/ptr-engine/longrun/run_longrun.py:1563-1566 (masked turn with no tool_outputs still emits its answer)",
+    "masked_turn_body": "experiments/ptr-engine/longrun/run_longrun.py:1558-1562 (body replaced by [MASKED ...] only when turn is in masked_turns)"
+  },
+  "verdict": "instrument leak (b): all 12 correct checkpoints occur at distance 2, which is inside the 4-turn unmasked window, so the fact's tool output body (and for turns 3-4 also the prior model answer) is still in the prompt. masked_rows=0 at every one of those turns, so they fail the arm's own activation predicate (masked_rows>0) and are not masked-fact successes. The scorer counts them because answer_of matches the expected value, but they are unmasked-window reads, not recall of a masked fact. This explains the 0/12 on TX-01 (single checkpoint at turn 20, outside the window) vs 12/48 on TX-02 (d=2 bucket inside the window)."
+}

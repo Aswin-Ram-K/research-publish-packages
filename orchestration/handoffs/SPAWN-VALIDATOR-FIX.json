@@ -1,0 +1,51 @@
+{
+ "artifacts": [
+  "experiments/ptr-engine/longrun/spawn_record.py",
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/tests/test_spawn_classification.py",
+  "experiments/ptr-engine/measure/PREFLIGHT-SPAWN-DECLARE.json",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/SPAWN-VALIDATOR-FIX.md",
+  "orchestration/journals/SPAWN-VALIDATOR-FIX.log",
+  "/tmp/svf/replay.py"
+ ],
+ "assumptions": [
+  "write_paths listed cell.py but validate_refusal() lives only in spawn_record.py; hardening the function required editing spawn_record.py (task 1 names the function, so this is the intended target, recorded here as a declared deviation)",
+  "the card's five invocations no longer map to exits {2,3,4,8,12} on this tree: replay produced {8,8,12,12,8}; per-exit pairs agree with the record for 8 and 12, and 2/3/4 remain reproduced by test_a (missing fixture / silent runner / tight ledger). Recorded in PREFLIGHT-SPAWN-DECLARE.current_tree."
+ ],
+ "blocker": "",
+ "bound": 24,
+ "containment": "no write outside the declared paths and /tmp/svf; tree_freeze.py, docs/VERDICT-RITUAL.md and other cards' artefacts untouched",
+ "evidence": {
+  "command_or_count": "10 passed in 0.70s; 52 passed, 21 subtests; verdict row PASS at f17663d1",
+  "commands": [
+   "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_spawn_classification.py -> 10 passed",
+   "python3 -m pytest -q test_spawn_classification.py test_cell_gates.py test_gate_override.py test_exit_codes.py -> 52 passed, 21 subtests",
+   "python3 experiments/ptr-engine/longrun/spawn_record.py --validate <no-spawns mutant> --exit-code 4 -> exit 1",
+   "python3 /tmp/svf/replay.py -> exits {8,8,12,12,8}, runner_launch 0, declared preflight 1, instrumented 1 on every record"
+  ]
+ },
+ "next_unit_hint": "Re-verify independently: delete spawns+counts from a real refusal record and confirm spawn_record.py --validate exits 1 with 'empty claim'; then delete only `spawns` and confirm the counts disagreement is named. Cell.py's observed= hook only fires when SPAWN_ORACLE_LOG is set.",
+ "not_weakened": "test_a/b/c byte-identical in intent and assertions; nothing was edited away.",
+ "red_green": "V-SPAWN-DECLARE attack3c measured the red: a record with the declaration block deleted returned validate_refusal -> {ok: True, failures: []}. The new tests 1-5 assert the opposite; with the pre-fix validator they fail (test_1 would get ok=True, no 'no `spawns` key' failure), and they pass only through the new recomputation/oracle/empty-claim code paths. No existing assertion was weakened: the original test_a/b/c bodies are unchanged and all still pass.",
+ "status": "done",
+ "tool_calls": 15,
+ "unit": "SPAWN-VALIDATOR-FIX",
+ "verdict_row": {
+  "command": "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_spawn_classification.py",
+  "exitCode": 0,
+  "result": "PASS",
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3"
+ },
+ "write_paths": [
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/longrun/spawn_record.py",
+  "experiments/ptr-engine/longrun/tests/test_spawn_classification.py",
+  "experiments/ptr-engine/measure/PREFLIGHT-SPAWN-DECLARE.json",
+  "docs/GATE-CHAIN.md",
+  "orchestration/units/SPAWN-VALIDATOR-FIX.md",
+  "orchestration/handoffs/SPAWN-VALIDATOR-FIX.json",
+  "orchestration/journals/SPAWN-VALIDATOR-FIX.log",
+  "/tmp/svf"
+ ]
+}

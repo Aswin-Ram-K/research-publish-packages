@@ -1,0 +1,39 @@
+{
+  "unit": "V-LEDGER-VERDICT-ROW",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/V-LEDGER-VERDICT-ROW.json",
+    "orchestration/units/V-LEDGER-VERDICT-ROW.md",
+    "orchestration/handoffs/V-LEDGER-VERDICT-ROW.json",
+    "orchestration/journals/V-LEDGER-VERDICT-ROW.jsonl"
+  ],
+  "evidence": {
+    "reproduce_quoted": "bash -c \"PATH=.venv/bin:$PATH python -m pytest tests/test_ledger_delta.py tests/test_grid_resume.py -q\" (16 passed, exit 0) plus the offline recount in experiments/ptr-engine/measure/V-LEDGER-BASELINE.json :: check_1_row_count",
+    "rerun": "16 passed in 0.32s, exit 0",
+    "row_recorded": "recorded verdict for 5c76ff79-e431-422d-aed2-cdaf1257c559 [6ef278ec-6182-4ea4-a5e4-6d0974dc2b26]: PASS f17663d1 bash -c \"PATH=.venv/bin:$PATH python -m pytest tests/test_ledger_delta.py tests/test_grid_resume.py -q\"",
+    "own_row": "recorded verdict for d98aac41-b1c7-4830-9ddd-6bf7639abf47 [a1d8bf9b-8aa5-4c65-8a17-02e197f831bf]: PASS f17663d1",
+    "class_size": "pass_without_row=19 of_which_runner_refused=0 total_settled_scanned=1062; separate exit-127 family=4 (f5debfd9, 16957dac, 11bf5265, 5c76ff79)",
+    "method": "join ledger-v2.json settled executions to handoff overall by unit name and to verdict.jsonl/closure.jsonl by taskId:executionId; classification of runner-refusal requires persisted refusal text",
+    "commands": [
+      "bash -c \"PATH=.venv/bin:$PATH python -m pytest tests/test_ledger_delta.py tests/test_grid_resume.py -q\""
+    ]
+  },
+  "blocker": "",
+  "findings": [
+    "the row was NOT missing: verdict.jsonl already held 5c76ff79:6ef278ec with exitCode 0 (commandHash b817fec33809911d); my record call re-recorded the identical command and was accepted as a retry, not refused",
+    "the failed column comes from the closure's own measured re-run, not from the row: closure verdictRow.exitCode=127, output 'bash: line 1: python: command not found', claimedExitCode 0",
+    "127 was not the allow-list: the command starts with bash (allowed); it failed because PATH prefix '.venv/bin' is RELATIVE and the judge's scratch cwd has no .venv/bin — so the frozen command is not portable, which is the real defect",
+    "19 settled cards report overall pass with no verdict row and none of them carries a runner-refusal text on disk (18 reason null, 1 no-verdict), so the card's 'exit-127 class' as defined is empty; the exit-127 family is a different set of 4"
+  ],
+  "columns_untouched": "Do not use task_board_manage on 5c76ff79. A retroactive row is a record about a past execution, not a re-judgement of it, and it does not move a column.",
+  "answer": "a retroactive row makes only the ledger tell the truth, not the failed column",
+  "next_unit_hint": "any card whose verify: command prefixes PATH with a relative .venv/bin will settle exit-127 under the judge's scratch cwd; rewrite such commands to an absolute interpreter path or omit the PATH prefix and check the 4-member exit-127 family for re-carding",
+  "tool_calls": 17,
+  "bound": 14,
+  "write_paths": [
+    "experiments/ptr-engine/measure/V-LEDGER-VERDICT-ROW.json",
+    "orchestration/units/V-LEDGER-VERDICT-ROW.md",
+    "orchestration/handoffs/V-LEDGER-VERDICT-ROW.json",
+    "orchestration/journals/V-LEDGER-VERDICT-ROW.jsonl"
+  ]
+}

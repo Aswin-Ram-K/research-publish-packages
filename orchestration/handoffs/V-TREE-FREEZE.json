@@ -1,0 +1,63 @@
+{
+  "unit": "V-TREE-FREEZE",
+  "overall": "partial",
+  "checks": [
+    "1 real move x2: append 1 byte -> row 'moved', both digests printed (b6a98d9c... -> d88a4f37...), moved_or_deleted=1, rc=13 -- pass",
+    "2 bytes-not-mtime x2: touch -> 'same (touched)' rc=0 ; one-byte edit alpha->alphz with size 6 and mtime_ns restored to the recorded value -> 'moved' rc=13 -- pass (the oracle hashes bytes, not mtime)",
+    "3 phantom x2: delete after freeze -> '..., <absent>, deleted' rc=13, no traceback, no match claimed -- pass",
+    "4 CLI exit codes x2: moved rc=13 vs unparseable freeze rc=2 ; caller testing only rc!=0 maps both to FAIL, but grep finds no in-repo caller of the wrapper today (only tool, tests, docs, exit_codes) -- pass",
+    "5 --wrap x2: pass(0,0,0) / moved_during_run(0,1,rc13) / failed(7,0,rc1) / failed_and_moved(7,1,rc1) -- all four induced deliberately and reproduced",
+    "6 exit 13 present (exit_codes.py:39, :213, :74) and baseline green (34 passed, 14 subtests); mutant copies: dropping EXTERNAL_CODES[13] makes the scan test red (7 failed), undeclared sys.exit(17) caught, but dropping EXIT_TABLE[13] alone leaves the set-equality scan test GREEN (3 other tests red) -- claim partly overstated",
+    "7 scope x2: new file after freeze -> rc=0 same; new file DURING --wrap -> verdict=pass with tree_sha256_before==after while the new file exists; outside-set edit rc=0; directory refused rc=2; symlink followed (different bytes -> moved, identical bytes -> same) -- gap confirmed"
+  ],
+  "evidence": {
+    "measure": "experiments/ptr-engine/measure/TREE-FREEZE-ATTACK.json",
+    "journal": "orchestration/journals/V-TREE-FREEZE.log",
+    "verdict_row": "python3 -m pytest experiments/ptr-engine/longrun/tests/test_tree_freeze.py experiments/ptr-engine/longrun/tests/test_exit_codes.py -q -> rc 0, 34 passed / 14 subtests, HEAD f17663d1",
+    "commands": [
+      "python3 experiments/ptr-engine/tools/tree_freeze.py freeze --out /tmp/vtreefreeze/a1/f.json /tmp/vtreefreeze/a1/tree/a.txt /tmp/vtreefreeze/a1/tree/b.txt",
+      "python3 experiments/ptr-engine/tools/tree_freeze.py verify /tmp/vtreefreeze/a1/f.json",
+      "python3 experiments/ptr-engine/tools/tree_freeze.py --wrap /tmp/vtreefreeze/e1/r_a.json /tmp/vtreefreeze/e1/tree/a.txt -- python3 /tmp/vtreefreeze/e1/cmd.py /tmp/vtreefreeze/e1/tree/a.txt 0",
+      "python3 experiments/ptr-engine/tools/tree_freeze.py --wrap /tmp/vtreefreeze/cw1/r.json /tmp/vtreefreeze/cw1/tree/a.txt -- python3 /tmp/vtreefreeze/cw1/del.py /tmp/vtreefreeze/cw1/tree/a.txt",
+      "cd /tmp/vtreefreeze/mut && python3 -m pytest experiments/ptr-engine/longrun/tests/test_exit_codes.py -q",
+      "python3 -m pytest experiments/ptr-engine/longrun/tests/test_tree_freeze.py experiments/ptr-engine/longrun/tests/test_exit_codes.py -q"
+    ],
+    "defects": [
+      "D1 (high): a file DELETED by the wrapped command is not classified at all -- after=freeze(paths) refuses the missing path, --wrap exits 2 (usage) and writes NO record (reproduced twice). moved_during_run/failed_and_moved only ever describe changed bytes, never deletions.",
+      "D2 (medium): verify() on a parseable-but-structurally-invalid freeze document raises KeyError('files') as an unhandled traceback and exits 1, the same number as EXIT_CMD_FAILED ('a genuinely failing verification yields a different code' fails in this sub-case).",
+      "D3 (low): the set-equality scan test is vacuous for an external code removed from EXIT_TABLE (declared = EXIT_TABLE - EXTERNAL_CODES, raised never contained 13); other tests in the file still catch the removal."
+    ],
+    "scope_gaps": [
+      "new files created after the freeze are invisible (verify rc=0 on a tree that grew)",
+      "a new file created by the wrapped command still yields verdict=pass and identical tree_sha256 before/after -- a 'pass' / 'the tree did not move' can be true while a new file appeared",
+      "files outside the declared path set are never observed",
+      "directories are refused (exit 2), not covered",
+      "symlinks are followed: the target's bytes are judged, the link's own target identity is not (retarget to byte-identical file -> 'same')"
+    ]
+  },
+  "not_reproduced": [
+    "'removing 13 makes the source-scan set-equality test RED' -- removing EXIT_TABLE[13] alone, or both the entry and the excuse, leaves test_source_scan_equals_declared_table green; the file still goes red via ExternalCodeTests, so the guard set is intact but that specific claim is not reproducible as stated"
+  ],
+  "overstated": [
+    "handoff evidence 'scan_test_balance: set-equality holds both ways' -- the equality is vacuous when an external code disappears from EXIT_TABLE while its excuse remains (mutant A: 3 failed, scan test passing)",
+    "the four-verdict table's implied coverage of 'the tree moved': --wrap cannot observe a deletion at all (D1), so its moved-detection is strictly bytes-changed, not moved-or-deleted"
+  ],
+  "unverified": [
+    "currency of the author's frozen pins (cell.py 5a812a98..., run_longrun.py 9e8c30df..., grade_v5.py 056eb605...): I recorded the shas at attack time but did not re-measure against the author's timestamp or claim they still match",
+    "any external (outside-repo) consumer of the wrapper or of exit 13",
+    "the claim that a settle-time consumer should read `verdict` rather than the status -- no such consumer exists in-repo to exercise"
+  ],
+  "blocker": "",
+  "next_unit_hint": "Fix D1 first: after the wrapped command, classify against the BEFORE freeze (classify(before)) and refuse only if the pre-freeze itself was bad; a deleted path must become a 'deleted' row in moved_detail and the verdict moved_during_run/failed_and_moved, not exit 2. Then make verify() validate the freeze schema (files list present, dict entries) and return a stable non-13 non-1 code (2) instead of a KeyError traceback. Add both cases to tests/test_tree_freeze.py; the harness cannot certify the four-verdict claim as complete until a mid-run deletion is classified.",
+  "write_paths": [
+    "orchestration/units/V-TREE-FREEZE.md",
+    "orchestration/handoffs/V-TREE-FREEZE.json",
+    "orchestration/journals/V-TREE-FREEZE.log",
+    "experiments/ptr-engine/measure/TREE-FREEZE-ATTACK.json",
+    "/tmp/vtreefreeze"
+  ],
+  "tool_calls": 16,
+  "bound": 24,
+  "requests": 0,
+  "offline": true
+}

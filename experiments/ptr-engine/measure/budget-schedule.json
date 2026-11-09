@@ -1,0 +1,132 @@
+{
+ "unit": "BUDGET-SCHEDULE",
+ "generated_utc": "2026-10-26T15:50:00Z",
+ "requests_in_this_card": 0,
+ "rule": "PARM-1 (docs/PREREG-ARM-RUN.md, rule_sha256 21cb85511b78dc4046f0f8f1449b68a7de2fd8bd8f659985efd63c9651398ec8) - consumed, not re-opened",
+ "sources": {
+  "ledger": {
+   "path": "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+   "budget": {"cap": 4320, "reserve": 0, "spent": 1101, "remaining": 3219},
+   "total": {"rows": 1101, "requests": 1101, "assumed_billed": 232},
+   "corpus_kind_counts": {"turn": 801, "tool-followup": 68, "unmarked_assumed_billed": 232},
+   "per_turn_request_factor": 1.374532,
+   "factor_arithmetic": "1101 requests / 801 turn rows = 1.374532; decomposition 1.000 turn + 0.0849 tool-followup + 0.2897 unmarked per turn row (68/801 and 232/801)",
+   "factor_conservatism": "the four controlled longrun grids ran at exactly 1.000 request per turn (rows-longrun-c-2026-10-26.jsonl: 192 rows / 192 turns). The factor above 1 comes from agentic rows carrying tool follow-ups and unmarked rows. Pricing at 1.374532 is the conservative number measured today; a scripted cell prices 27% cheaper."
+  },
+  "projection": {
+   "path": "experiments/ptr-engine/measure/PROJECTION.json",
+   "groups": {"off_n": 960, "off_p50_s": 2.9, "off_p90_s": 38.1, "off_mean_s": 27.5, "on_auto_n": 9, "on_auto_p50_s": 218.2, "on_auto_p90_s": 682.7, "on_auto_mean_s": 190.9, "live_six_p90_s": 427.7},
+   "seconds_per_completion_token": {"off": 0.0338, "live": 0.0288, "on_auto": 0.0349},
+   "policy_turn_wall_s": 60,
+   "turn_wall_cap_s": 180,
+   "operator_4arm_60turn_3rep": {"requests_serial": 720, "projected_60_s": 43200, "per_cell_180_requests_s": 10800}
+  },
+  "parm1": {
+   "path": "docs/PREREG-ARM-RUN.md",
+   "H1_n": {"lines": "36-37", "text": "n >= 60 required; a p95 at n=48 is refused, not caveated"},
+   "turns_per_arm": {"line": 137, "text": "Turns per arm: 48 - fixture N=48 (LR-01.v6.json)"},
+   "reps": {"lines": "142-144", "text": "H1 needs reps >= 2 at N=48; a settled rep=1 makes H1 undecided by construction"},
+   "thinking": {"line": 151, "text": "adjudicating grid: thinking = off"},
+   "H3_margin": {"line": 99, "text": "2 of the 12 declared checkpoints = 16.7 pp, fixed"},
+   "H3_mcnemar": {"line": 108, "text": "secondary veto only when b + c >= 6"},
+   "H3_unadjudicable": {"line": 113, "text": "either arm decidable below 8 of 12 -> no verdict"},
+   "checkpoint_ids": {"lines": "156-163", "text": "12 v6 ids; every row file on disk carries the 3 v2 ids, so no existing row file can adjudicate H3"}
+  }
+ },
+ "wall_mode": "All wall hours assume the adjudicating grid's frozen thinking=off policy (PARM-1 line 151). The 60 s/turn column is the harness --projected-turn-wall default. on/auto columns are descriptive only: a thinking-on run can never support H1.",
+ "schedules": [
+  {
+   "id": "A",
+   "label": "full PARM-1 as the card states it (4 arms x 60 turns x 3 reps)",
+   "shape": {"arms": 4, "turns_per_arm": 60, "reps": 3, "model_turns": 720},
+   "requests": 990,
+   "requests_remaining_after": 2229,
+   "pct_of_remaining": 30.8,
+   "wall": {"off_p50_h": 0.58, "off_mean_h": 5.5, "off_p90_h": 7.62, "policy60_h": 12.0, "on_mean_h": 38.18, "on_p90_h": 136.54},
+   "H1": {"status": "evaluable", "n_raw_per_arm": 180, "n_needed": 60, "headroom_per_arm": 120},
+   "H2": {"status": "evaluable"},
+   "H3": {"status": "evaluable", "paired_items": 36, "discordant_reachable": "yes: b+c >= 6 at 16.7% discordance"},
+   "defect": "NOT RUNNABLE AS FROZEN: PARM-1 line 137 fixes Turns per arm = 48 (fixture N=48). A 60-turn cell needs the fixture extended and the rule hash re-frozen, which this card forbids. Priced for completeness; see A*.",
+   "verdict": "priced, not recommended (voids the frozen design)"
+  },
+  {
+   "id": "A*",
+   "label": "full PARM-1 on the frozen grid (4 arms x 48 turns x 3 reps)",
+   "shape": {"arms": 4, "turns_per_arm": 48, "reps": 3, "model_turns": 576, "cells": 12, "turns_per_cell": 48},
+   "requests": 792,
+   "requests_remaining_after": 2427,
+   "pct_of_remaining": 24.6,
+   "wall": {"off_p50_h": 0.464, "off_mean_h": 4.4, "off_p90_h": 6.096, "policy60_h": 9.6, "on_mean_h": 30.544, "on_p90_h": 109.232},
+   "H1": {"status": "evaluable", "n_raw_per_arm": 144, "n_needed": 60, "exclusions_tolerated_per_arm": 84},
+   "H2": {"status": "evaluable"},
+   "H3": {"status": "evaluable", "paired_items": 36, "per_rep_items": 12, "discordant_reachable": "yes: 6 of 36 pairs (16.7%), or 6 of 12 inside one rep"},
+   "cell_wall": {"at_60s_default_s": 2880, "admitted_under_3600": true, "at_off_p90_s": 1828.8, "at_live_p90_s": 20529.6, "admitted_at_live_p90_under_3600": false, "at_turn_cap_180_s": 8640},
+   "verdict": "RECOMMENDED"
+  },
+  {
+   "id": "B",
+   "label": "H1-only (4 arms x 60 turns x 1 rep)",
+   "shape": {"arms": 4, "turns_per_arm": 60, "reps": 1, "model_turns": 240},
+   "requests": 330,
+   "requests_remaining_after": 2889,
+   "wall": {"off_p50_h": 0.193, "off_mean_h": 1.833, "off_p90_h": 2.54, "policy60_h": 4.0, "on_mean_h": 12.727, "on_p90_h": 45.513},
+   "H1": {"status": "evaluable only at zero exclusions", "n_raw_per_arm": 60, "n_needed": 60, "knife_edge": "60*0.05 = 3.0 exactly equals TAIL_MIN; one dropped ttft (ttft_source unavailable) or one excluded turn -> 59 usable -> quantile_ci raises InsufficientSamples and H1 is refused, not caveated", "frozen_fixture_conflict": "at the frozen N=48 this shape is 48 turns/arm -> n=48 -> refused outright (48*0.05 = 2.4 < 3)"},
+   "H2": {"status": "evaluable"},
+   "H3": {"status": "evaluable (margin only)", "paired_items": 12, "between_rep_variance": "none: 1 rep", "standard_error_on_quality": "none", "discordant_reachable": "arithmetically yes (max 12) but needs >= 6 of 12 checkpoints to flip, i.e. a 50% discordance rate"},
+   "verdict": "fundable, but H1 is hinge-level and non-replicable; not recommended"
+  },
+  {
+   "id": "C",
+   "label": "reconnaissance (4 arms x 48 turns x 1 rep) - the historical config-C shape",
+   "shape": {"arms": 4, "turns_per_arm": 48, "reps": 1, "model_turns": 192},
+   "requests": 264,
+   "requests_remaining_after": 2955,
+   "wall": {"off_p50_h": 0.155, "off_mean_h": 1.467, "off_p90_h": 2.032, "policy60_h": 3.2, "on_mean_h": 10.181, "on_p90_h": 36.411},
+   "corroboration": "rows-longrun-c-2026-10-26.jsonl is exactly this shape: 192 rows / 192 turns / 1 request per turn",
+   "H1": {"status": "not evaluable at this n", "reason": "n=48, 48*0.05 = 2.4 < 3; PARM-1 line 37 refuses it by name, not with a caveat"},
+   "H2": {"status": "evaluable"},
+   "H3": {"status": "not evaluable", "reason": "the closest run used the v2 fixture with 3 checkpoint ids (cp.t12, cp.t24, cp.t46); the 2-of-12 denominator does not exist, and b+c <= 3 < 6 makes the McNemar veto unreachable by construction"},
+   "verdict": "cheapest calibration; cannot touch H1"
+  }
+ ],
+ "discordant_pair_arithmetic": {
+  "formula": "paired items = 12 declared v6 checkpoints x reps; b+c >= 6 is the license threshold for the secondary veto (PARM-1 line 108)",
+  "A": 36, "A*": 36, "B": 12, "C": 3,
+  "reachable": {"A": "yes", "A*": "yes", "B": "only at a 50% checkpoint flip rate", "C": "no - max 3 < 6"},
+  "note": "the fixed 2-of-12 margin does not pool across reps: it is stated on the 12-item denominator, so each rep is its own 12-item read; pooling 36 pairs widens the McNemar veto, not the margin"
+ },
+ "recommendation": {
+  "id": "A*", "requests": 792, "wall_off_mean_h": 4.4, "wall_off_p90_h": 6.096, "wall_policy60_h": 9.6, "remaining_after": 2427,
+  "why": "the only schedule that yields n >= 60 usable timings per adjudicating arm with 84 exclusions of headroom, evaluates H2, and gives 36 paired checkpoints, while leaving 2,427 requests for a replication or a retry; the literal 60-turn A costs +198 requests and voids the frozen rule hash",
+  "stop_rule": [
+   "stop if requests_remaining < requests_for_next_cell  (next cell = 4 arms x 48 turns = 192 turns = 264 requests at factor 1.374532)",
+   "stop if any turn wall_ms/1000 > 180  (--turn-wall-cap; the aborted turn is excluded, and if the arm then has < 60 usable timings H1 is reported refused with the estimator message verbatim)",
+   "stop if ATTACK or V-GATE-CHAIN reports a defect after the run starts  (halt at the next cell boundary, no further cells)",
+   "stop if after rep 1 H3 vetos (b+c >= 6 and exact two-sided p < 0.05 with C worse, or C loses more than 2 of 12 checkpoints) - abandon reps 2-3, saving 528 requests",
+   "stop if either arm's grade_v5 decidable < 8 of 12  (H3 unadjudicable per PARM-1 line 113; do not buy more reps for a quality-blind read)"
+  ],
+  "operator_decision": {
+   "question": "run A* on the frozen 48-turn grid, or extend LR-01.v6.json to 60 turns and re-freeze PARM-1?",
+   "default": "A* on the frozen grid (no re-freeze; keeps comparability with the 48-turn grids already on disk)",
+   "cost_of_the_alternative": "+198 requests, +1.6 h at the 60 s policy, and the prior 48-turn grids become non-comparable"
+  }
+ },
+ "cannot_fund": {
+  "ceiling": "3,219 requests / 1.374532 = 2,341 model turns (3,218 requests, 1 left)",
+  "by_shape": {"N48": {"reps_per_arm": 12.19, "max_whole_reps": 12, "turns": 2304, "requests": 3167}, "N60": {"reps_per_arm": 9.75, "max_whole_reps": 9, "turns": 2160, "requests": 2969}},
+  "independent_grids": "4 independent 4-arm x 48-turn x 3-rep grids fit exactly (4 x 792 = 3,168 requests, 51 left). A 5th grid (3,960) does not.",
+  "never_at_this_quota": [
+   "a 20-rep-per-arm power grid at N=48 (3,840 turns = 5,278 requests; exceeds the remaining budget by 2,059)",
+   "a fifth independent adjudicating grid at 3 reps (needs 3,960; 3,219 remain)",
+   "a paired quantile test for H1 at ANY budget - analyze_stats.py carries no paired quantile test (PARM-1 lines 38-40); 3,219 requests cannot buy a test that does not exist, only narrower disjoint CIs",
+   "between-rep quality variance for any 1-rep schedule (B and C) - variance needs reps >= 2 by definition",
+   "any thinking-on H1 adjudication: wall at on/auto mean for A* is 30.5 h (p90 109.2 h), and PARM-1 line 151 excludes thinking-on grids from H1 regardless of spend"
+  ]
+ },
+ "refusals": [
+  "a 48-turn cell at the measured live p90 (427.7 s/turn) projects 20,529.6 s and exits 8 under --max-wall 3600; only a 60 s/turn projection (2,880 s) or an arm/rep-level --max-wall >= 20530 admits it",
+  "the 180 s cap is not a per-turn wall (PROJECTION.json defaults.turn_wall_cap_s is an abort cap); using it as a per-turn wall inflates A* to 28.8 h"
+ ],
+ "artefact_edits": 0,
+ "writes": ["experiments/ptr-engine/measure/BUDGET-SCHEDULE.md", "experiments/ptr-engine/measure/budget-schedule.json", "orchestration/units/BUDGET-SCHEDULE.md", "orchestration/handoffs/BUDGET-SCHEDULE.json", "orchestration/journals/BUDGET-SCHEDULE.jsonl"]
+}

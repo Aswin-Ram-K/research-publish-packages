@@ -1,0 +1,59 @@
+{
+ "answer": {
+  "evidence": "grep -n 'usable_for' experiments/ptr-engine/tools/run_a_star.py -> 0 matches before this card; run_a_star.py:run_cell read the manifest for design_cap_tokens/tools but never wrote the stamp. No call to analyze_stats.write_cell_manifest_usable_for existed in the launcher.",
+  "note": "RUN-A-STAR-2 made stamping a prose step; prose was not a mechanism.",
+  "verdict": "not-stamped"
+ },
+ "offline": true,
+ "pin_observation": {
+  "detail": "HARNESS-PIN.json is generation 5 (harness_sha256 35ff41b7bbf37f0df28b4307da8d514fea7d324ef22f719b61ee036b73cb5adb, unit HARNESS-PIN-GEN5) while run_a_star.HARNESS_PIN is gen 4 (fa6fd8cc...). This card did not re-pin. Consequence: a real --dry-run (and every launch) currently stops at pinned_digest() with 'HARNESS-PIN record disagrees'; tests/test_launch_contract_diff.py already fails on the same condition, independently of this card.",
+  "reported_not_repinned": true
+ },
+ "premise_check": {
+  "conclusion": "premise CONFIRMED: usable_for: [] is excluded by name; the missing key is INCLUDED and merely printed as unstamped.",
+  "consumer_line": "experiments/ptr-engine/longrun/analyze_stats.py:749 excluded = analyses is not None and len(analyses) == 0",
+  "demo_command": ".venv/bin/python experiments/ptr-engine/longrun/analyze_stats.py --rows /tmp/gsw/rows-stamped.jsonl /tmp/gsw/rows-unstamped.jsonl --manifest /tmp/gsw/man-stamped.json --manifest /tmp/gsw/man-unstamped.json --no-census",
+  "demo_exit": 0,
+  "demo_stdout": [
+   "usable_for EXCLUDED  rows-stamped.jsonl  20 row(s) NOT analysed  source=manifest  usable_for=[]  reason=fixture: rejected cell",
+   "usable_for unstamped  rows-unstamped.jsonl  (included: no usability stamp on disk -- not a certification)"
+  ]
+ },
+ "question": "does the grid launcher (tools/run_a_star.py) stamp each cell's usable_for after that cell's run?",
+ "refusal": {
+  "also_refuses": "a previous cell with no rows file / no manifest at all, naming that fact",
+  "exit_code": 4,
+  "exit_constant": "EXIT_UNSTAMPED_CELL",
+  "function": "check_previous_stamp(rec, next_cell) called at the top of the grid loop when `results` is non-empty",
+  "message": "REFUSED to start cell 4: previous cell's manifest /tmp/gsw/cell-prev.json lacks the usable_for key -- an unstamped cell is INCLUDED by analyze_stats.py:749, so the grid stops rather than spend a request that could enter H1/H2/H3",
+  "proven_allow_after_stamp": true,
+  "proven_exit": 4
+ },
+ "requests": 0,
+ "residual": {
+  "mitigation_not_done_here": "one line in docs/GRID-RUNBOOK.md: 'Never launch cell.py by hand; a hand-launched cell carries no usable_for stamp and analyze_stats includes it as unstamped.'",
+  "risk": "a cell launched by hand outside run_a_star.py (cell.py directly) still bypasses the stamp",
+  "runbook_edited": false
+ },
+ "status": "done",
+ "tests": {
+  "command": "PYTHONPATH=src .venv/bin/python -m pytest tests/test_grid_stamp_wiring.py -q",
+  "count": 10,
+  "dry_run_requests": 0,
+  "file": "tests/test_grid_stamp_wiring.py",
+  "red_green": "removing the line 'rec[\"usable_for_stamp\"] = stamp_cell(rec)' makes the source guard False (red); present -> True (green)",
+  "result": "10 passed"
+ },
+ "unit": "GRID-STAMP-WIRING",
+ "verdict_word": "not-stamped",
+ "wiring": {
+  "abandoned_cell": "usable_for [] with reason 'abandoned: ...' (nonzero rc, short/absent turn rows)",
+  "complete_cell": "usable_for ['h1','h2','h3'] with reason 'complete: <turns>/<expected> turn rows, markers={...}'",
+  "decision_function": "cell_stamp(rec) -> (usable_for, reason); no manifest field is constructed locally",
+  "file": "experiments/ptr-engine/tools/run_a_star.py",
+  "helper_called": "analyze_stats.write_cell_manifest_usable_for(rows_path, usable_for, reason=..., manifest_path=...) [analyze_stats.py:777]",
+  "stop_reason_degenerate": "usable_for [] with reason 'stop_reason-degenerate: N turn(s) ended runaway_turn/turn_wall_cap'",
+  "write_point": "run_cell(), inside `if os.path.exists(man)` and `if not dry_run:` -> rec['usable_for_stamp'] = stamp_cell(rec)",
+  "zero_marker_cell": "usable_for [] with reason 'zero-marker: <marker>=0 for arm <arm>' (per-arm marker map, pointer-stable exempt)"
+ }
+}

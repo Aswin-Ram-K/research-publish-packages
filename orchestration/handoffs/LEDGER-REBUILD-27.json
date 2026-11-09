@@ -1,0 +1,58 @@
+{
+ "unit": "LEDGER-REBUILD-27",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+  "experiments/ptr-engine/measure/REQUEST-LEDGER.rebuild-2026-10-26.json",
+  "orchestration/units/LEDGER-REBUILD-27.md",
+  "experiments/ptr-engine/tests/test_request_ledger_dedup.py",
+  "experiments/ptr-engine/tests/test_request_ledger_sound.py"
+ ],
+ "evidence": {
+  "builder": "experiments/ptr-engine/tools/request_ledger.py:build_report(paths, cap=4320, reserve=0, would_spend=0) called directly, no hand-edit",
+  "rebuilt": "requests_raw 1128 | requests 1128 | requests_deduplicated 1098 | duplicate_excess 30 | remaining 3192 | remaining_raw 3192 | diagnostic.deducted false | files 15 | rows 1128 | files_deduped 12 | files_not_applicable 3",
+  "delta": "1128 - 1101 = 27 (exact)",
+  "attribution": "rows-cell-pointer-stable-20261026T182535Z.jsonl lines 1-27, 27 rows, sha256 46afc892480ae1dbe4b20d13fd4dacb983653a9f0a04b6a42a6283b3c55ca3b1, ts 2026-10-26T18:25:56.773Z..2026-10-26T18:31:25.300Z; that file's per_file.requests = 27 and every other file's requests is unchanged (0 sha mismatches against the superseded artefact's 14 per_file entries)",
+  "superseded_artefact_sha256_at_read": "2f60b831a8439a9ba4ba5fafb8f6ca1ba4fb40cdaf1ccff4f29182c0d6e4c1e5",
+  "rebuilt_artefact_sha256": "6da0c1f19b7cd37203c9d99de5e5d8a9db879e002f389a2b525a776624c27806",
+  "snapshot_sha256": "6da0c1f19b7cd37203c9d99de5e5d8a9db879e002f389a2b525a776624c27806",
+  "tests_before": "2 failed, 39 passed in 1.12s -- FAILED test_request_ledger_dedup.py::TestRealCorpus::test_6_real_corpus_raw_1101_deduplicated_1071 (AssertionError: 1128 != 1101) and test_request_ledger_sound.py::TestPublishedArtefact::test_11_artefact_matches_a_fresh_scan (AssertionError: 1101 != 1128 : artefact drifted from the rows: requests)",
+  "tests_intermediate": "2 failed, 39 passed in 1.22s -- after the artefact rebuild, test_11 went green and two artefact-reading assertions stayed red: test_10_artefact_publishes_raw_1101_and_keeps_1071 (line 223 raw 1101 != 1128) and test_12_rows_files_still_drive_the_count (line 267 AssertionError: 12 != 11)",
+  "tests_after": "41 passed in 1.09s",
+  "red_assertions_updated": [
+   "test_request_ledger_dedup.py:311 assertEqual(report['requests_raw'], 1101) -> 1128",
+   "test_request_ledger_sound.py:223 assertEqual(doc['requests'], 1101) -> 1128 (+ remaining 3219->3192, dedup 1071->1098, remaining_deduplicated 3249->3222)",
+   "test_request_ledger_sound.py:267 decided 11 -> 12"
+  ],
+  "test_11_flipped_without_edit": "test_11 asserts artefact == fresh scan; it was red because the artefact was stale and green because the artefact was rebuilt -- no assertion touched",
+  "commands": [
+   "PYTHONPATH=src python3 -m pytest tests/test_ledger_delta.py experiments/ptr-engine/tests/test_request_ledger_{dedup,sound}.py experiments/ptr-engine/longrun/tests/test_request_ledger.py -q"
+  ],
+  "ledger_grid_baseline": "STALE relative to the corpus, correct at its own capture: measure/LEDGER-GRID-BASELINE.json captured_utc 2026-10-26T18:24:48Z, source ledger sha 2f60b831…, spent 1101 / remaining 3219; the omitted cell's first row is 2026-10-26T18:25:56.773Z, 68 s AFTER that capture, so 1101 was right when pinned and understates spend by 27 today. Left byte-identical per instruction."
+ },
+ "blocker": "",
+ "next_unit_hint": "G1 in the grid now compares cap-reserve against spent 1128 / remaining 3192; re-read measure/REQUEST-LEDGER.json (sha 6da0c1f19b7c) rather than the 3219 in FETCH-BUDGET-48 assumptions or LEDGER-GRID-BASELINE.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/REQUEST-LEDGER.json",
+  "experiments/ptr-engine/measure/REQUEST-LEDGER.rebuild-2026-10-26.json",
+  "orchestration/units/LEDGER-REBUILD-27.md",
+  "orchestration/handoffs/LEDGER-REBUILD-27.json",
+  "orchestration/journals/LEDGER-REBUILD-27.jsonl"
+ ],
+ "assumptions": [],
+ "tool_calls": 21,
+ "bound": 18,
+ "bound_overrun": "21 tool calls against a bound of 18: the first pass found 4 red ledger assertions in 2 files (the card expected 2), and a failed edit (file not yet read) plus a re-read cost 2 calls. Every figure above is re-derived, none estimated.",
+ "not_touched": [
+  "measure/rows-*.jsonl (all 15 sha-verified unchanged by the builder run)",
+  "measure/GRID-SHAPE.json",
+  "measure/GRID-PARAMS.json",
+  "measure/LEDGER-GRID-BASELINE.json",
+  "cell.py",
+  "run_longrun.py",
+  "PARM-1*",
+  "any grade file",
+  "any published number in docs/"
+ ],
+ "requests_zero": true
+}

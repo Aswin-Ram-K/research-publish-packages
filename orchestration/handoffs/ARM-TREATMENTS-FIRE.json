@@ -1,0 +1,59 @@
+{
+ "unit": "ARM-TREATMENTS-FIRE",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/measure/ARM-TREATMENTS.json",
+  "experiments/ptr-engine/measure/ARM-TREATMENTS.md",
+  "experiments/ptr-engine/tools/arm_treatments_probe.py",
+  "experiments/ptr-engine/longrun/tests/test_arm_treatments.py",
+  "orchestration/units/ARM-TREATMENTS-FIRE.md"
+ ],
+ "evidence": {
+  "command_or_count": "PROBE PASS (exit 0); 7/7 tests pass; 576 turn rows over 4 controlled grids; 0 markers today; 3/3 forced simulations produced a live marker; 0 inference requests",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/arm_treatments_probe.py",
+   "python3 experiments/ptr-engine/longrun/tests/test_arm_treatments.py"
+  ],
+  "predicates": {
+   "grow_eviction": "run_longrun.py:1063 while len(parts)>1 and est_tokens(...)>self.wall_tokens: parts.pop(0); evicted+=1 -> row field evicted",
+   "compact_digest": "run_longrun.py:1080 if t>1 and est_tokens(window,self.bpt)>self.wall_tokens -> row field NONE on turn row; only kind=='digest' row at :2027",
+   "lease_reopen": "run_longrun.py:1113 if t in self.walls and self.lease_start<=t -> row field lease; self.walls = fixture['lease_reopen_turns'] (:1004), NOT a token predicate"
+  },
+  "markers_today": {"rows": 576, "evicted_gt0": 0, "lease_gt1": 0, "digest_rows": 0},
+  "forced_proofs": {
+   "transcript-grow": {"wall_tokens": 4762, "row": {"turn": 12, "kind": "turn", "evicted": 1}},
+   "transcript-compact": {"wall_tokens": 4762, "row": {"turn": 12, "kind": "digest"}},
+   "lease-reopen": {"lease_reopen_turns": [12], "row": {"turn": 12, "kind": "turn", "lease": 2}}
+  },
+  "observed_max_prompt": {"prompt_tokens": 34279, "file": "experiments/ptr-engine/measure/rows-longrun-c-2026-10-26.jsonl", "turn": 48, "arm": "transcript-grow", "run_id": "longrun-c-v2-2026-10-26-transcript-grow-r1"},
+  "observed_max_prompt_corpus_wide": {"prompt_tokens": 51216, "file": "experiments/ptr-engine/measure/rows-longrun-2026-10-26-policy.jsonl", "turn": 14, "arm": "transcript-grow"},
+  "unreachable_at_48_turns": {
+   "G4-RUN-C-V2/transcript-grow": 94, "G4-RUN-C-V2/transcript-compact": 847,
+   "stage1/transcript-grow": 1654, "stage1/transcript-compact": 571,
+   "v3/transcript-grow": 1046, "v4/transcript-grow": 1010,
+   "all/lease-reopen": "any N -- lease_reopen_turns absent from all 12 fixtures"
+  },
+  "parameters": {"N": 48, "wall_tokens": 3838, "lease_reopen_turns": [23, 40], "bytes_per_token": 4.0914,
+   "kinds": {"wall_tokens": "fixture", "lease_reopen_turns": "fixture", "N": "fixture (frozen by PARM-1)", "expected_digests": "runner constant 2 at run_longrun.py:1133-1135"}},
+  "price": {"a_star_published": 792, "a_star_recomputed": 792, "firing_grid_48": 798, "delta_48": 6,
+   "firing_grid_56": 930, "delta_56": 138, "ledger_remaining": 3219,
+   "grids_affordable_48": 4, "grids_affordable_56": 3, "factor": 1.374532}
+ },
+ "blocker": "At the FROZEN parameters every growth arm is unreachable at 48 turns (G4 grow needs T94, G4 compact T847, stage1 grow T1654, stage1 compact T571, v3 grow T1046, v4 grow T1010) and lease-reopen is unreachable at any N because lease_reopen_turns is absent from all 12 runtime fixtures. Fix is fixture fields plus a fixture-derived expected_digests, not a longer run. Secondary: compaction has no turn-row marker, so a reader filtering turn rows cannot see it; within G4 the grow cell's answers ran ~9x longer than compact's, so observed slopes conflate treatment with answer verbosity and a wall must be calibrated per cell, not copied across reps.",
+ "next_unit_hint": "Declare lease_reopen_turns=[23,40] and wall_tokens=3838 in the versioned fixture, make expected_digests fixture-derived (currently hardcoded 2; a 3rd digest aborts the cell at exit 4), and add a digest_request marker to the turn row. Then require every cell's --dry-run to print 'first FIFO truncation' / 'first wall at T' / a lease step before launching. A live grid may then claim a treatment effect for grow, compact and reopen rather than only pointer-vs-transcript; at 798 requests (+6 vs 792) four firing grids still fit in the 3219-request ledger, so the 48-turn horizon does NOT need to change.",
+ "assumptions": [
+  "Envelope slopes are linear fits T1->T48 over the four controlled grids; the fragments (fix/policy/pilot, baseline/equalinfo/live, rows.jsonl) were used only for the corpus-wide prompt ceiling, matching ARM-INTEGRITY's out-of-scope note.",
+  "The forced simulations drive the real Planner in dry_run=True (the run_dry path at run_longrun.py:1778) so compaction's post-digest state is the placeholder offline; rows are built by the real make_row but written to the probe's output only, never appended to the corpus.",
+  "No fixture, arm, PARM-1 or grader file was edited; the variant fixture lives in memory."
+ ],
+ "write_paths": [
+  "experiments/ptr-engine/measure/ARM-TREATMENTS.json",
+  "experiments/ptr-engine/measure/ARM-TREATMENTS.md",
+  "experiments/ptr-engine/tools/arm_treatments_probe.py",
+  "experiments/ptr-engine/longrun/tests/test_arm_treatments.py",
+  "orchestration/units/ARM-TREATMENTS-FIRE.md",
+  "orchestration/handoffs/ARM-TREATMENTS-FIRE.json",
+  "orchestration/journals/ARM-TREATMENTS-FIRE.jsonl"
+ ],
+ "requests_spent": 0
+}

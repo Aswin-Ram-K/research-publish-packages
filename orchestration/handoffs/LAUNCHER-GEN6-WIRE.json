@@ -1,0 +1,91 @@
+{
+ "unit": "LAUNCHER-GEN6-WIRE",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/tools/launch_contract_diff.py",
+  "experiments/ptr-engine/measure/GRID-PARAMS.json",
+  "docs/GRID-RUNBOOK.md",
+  "experiments/ptr-engine/tests/test_pin_propagation.py",
+  "orchestration/units/LAUNCHER-GEN6-WIRE.md"
+ ],
+ "verdict": {
+  "result": "PASS f17663d1",
+  "command": "PATH=.venv/bin:$PATH pytest -q experiments/ptr-engine/tests/test_pin_propagation.py",
+  "exit": 0,
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3"
+ },
+ "evidence": {
+  "launcher_pin": {
+   "PIN_EXPECTED_GENERATION": 6,
+   "PIN_EXPECTED_DIGEST": "efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3",
+   "pinned_digest()": "efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3",
+   "argv_fragment": "\"--expect-harness\", pinned_digest()"
+  },
+  "wrong_pin_refusal": {
+   "command": "RUN_A_STAR_PIN=/tmp/HARNESS-PIN-BAD.json python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --hypothesis smoke --max-wall 900 --dry-run",
+   "exit": 1,
+   "message": "HARNESS-PIN record disagrees with the launcher: record generation=6 digest='0000000000000000000000000000000000000000000000000000000000000000', launcher signed-off generation=6 digest='efefd8859c3fdeeac288157ba5bceba1bbe4144947af441721a5f4c4369579b3'"
+  },
+  "contract_check": {
+   "exit": 1,
+   "summary": "22 numbers: ABSENT=3, AGREES=10, DISAGREES=5, STALE-BY-DESIGN=4",
+   "rows": {
+    "harness_pin_digest": "STALE-BY-DESIGN -- efefd885... on both sides (pin record, PIN_EXPECTED_DIGEST run_a_star.py:73, recomputed recorded-file digest, recomputed bytes-on-disk digest, GRID-PARAMS harness_pin, runbook :68/:119); the gen-5 pointer at runbook :381 is stale-by-design",
+    "price_total": "DISAGREES 1056 | 1016 (1056 at GRID-PARAMS.json, 1016 at docs/GRID-PARAMS.md:56) + ABSENT price.components -- STALE-BY-DESIGN: rev-2 record dropped the components block; owner = a GRID-PARAMS price-regeneration card. Not edited here (price forbidden).",
+    "price_remaining_after": "DISAGREES 2136 | 2176 | 2468 | 2228 (2136 at GRID-PARAMS.json, rest at docs/GRID-PARAMS.md) -- STALE-BY-DESIGN, same owner.",
+    "ledger_spent": "DISAGREES 1176 | 1128 | 1101 (1176 at REQUEST-LEDGER.json, 1128 at LEDGER-GRID-BASELINE-2.json, 1101 elsewhere) -- REAL: two ledger records disagree. Owner = ledger reconciliation card; both files forbidden here.",
+    "ledger_remaining": "DISAGREES 3144 (REQUEST-LEDGER.json) | 3192 (LEDGER-GRID-BASELINE-2.json) -- REAL, same owner. This is what blocks the launcher dry run.",
+    "floor_n60": "DISAGREES -- single value 60, probe broken: docs/GATE-CHAIN.md:292 drifted ('expected H1 n>=60, found ... smoke claim row'). Owner = docs/GATE-CHAIN.md line renumbering.",
+    "per_cell_budget": "STALE-BY-DESIGN 108 | 67",
+    "fetch_allowance": "STALE-BY-DESIGN 48 | 24",
+    "per_arm_round_cap": "STALE-BY-DESIGN 48 | 24",
+    "ABSENT": "price_tranche (price.components.tranche), canary_requests (price.canary_identity/price.components.canary), grid_turns (price.tranche_identity) -- GRID-PARAMS rev 2 carries no components/identity keys; owner = the same GRID-PARAMS price-regeneration card"
+   },
+   "scoped": {
+    "--pin-generation 6": "exit 1, ABSENT=3 AGREES=11 DISAGREES=5 STALE-BY-DESIGN=3, MOVED absent -- 'the tree matches the named scope'",
+    "--pin-generation 5": "exit 13, MOVED harness_pin_digest; moved input: client.py 5aa23bb5... -> 9b12b2ea...; moved input: run_longrun.py 30dfa9e9... -> 4f40dde1..."
+   }
+  },
+  "launcher_dry_run": {
+   "command": "python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --canary --budget 108 --hypothesis smoke --max-wall 900 --dry-run",
+   "exit": "1 (SystemExit REFUSED at run_a_star.py:233) -- TARGET 0 NOT ACHIEVED",
+   "stdout_before_refusal": [
+    "RUN-A canary arms=4 cells=1,7,13,15 turns=12 requests=48 claim=smoke",
+    "RUN-A tools=read_file shim=/tmp/grid-shape-shim/runner_read_file.py"
+   ],
+   "refusal": "REFUSED: ledger records disagree on `remaining`: {'baseline-2': 3192, 'request-ledger': 3144} -- the launcher will not choose between them",
+   "note": "the pin gate fires before the plan (run_a_star.py:785-787) and did not fire; the DRY END line (which carries refused= and canary_arms=) is never printed because remaining_basis() refuses first. Not repairable inside this card: REQUEST-LEDGER.json and LEDGER-GRID-BASELINE-2.json are forbidden write paths and the disagreement is a number, not a checker.",
+   "grid_path": "same refusal before any cell line is printed; GRID-PARAMS shape.arms = 10 and the checker row grid_cells AGREES 10 (docs/runbook's old 16-cell expectation is pre-existing drift, reported not fixed)"
+  },
+  "offline": {
+   "subprocess_run_calls": 0,
+   "popen_calls": 0,
+   "requests_sent": 0,
+   "live_cells": 0,
+   "how": "the canary dry run was re-run in-process with subprocess.run and subprocess.Popen replaced by recording wrappers; it refused at the ledger gate and recorded 0 calls of either"
+  },
+  "suites": {
+   "new": "experiments/ptr-engine/tests/test_pin_propagation.py: 6 passed",
+   "ptr_engine": "9 failed, 20 passed (test_launcher_pin_and_cells 6 -- all dead at the ledger refusal; test_launch_contract_diff 2 -- one asserts scoped exit 0 impossible with 5 stale rows + 3 ABSENT, one expects 'run_a_star.py:241' where the occurrence now sits at :635; test_embedded_digests_match_pin 1 -- HARNESS-PIN.json attribution/epoch blocks embed pre-change digests, none written by this card)",
+   "repo_root": "17 failed, 24 passed (Suites assert the pre-change symbols: tests/test_launch_contract_diff.py greps HARNESS_PIN, tests/test_run_a_star_pin.py mutants patch it, tests/test_launcher_dryrun_refusal.py needs a dry run that reaches a cell). Quoted, not fixed."
+  }
+ },
+ "assumptions": [
+  "gen 5's full digest is kept in HARNESS-PIN.json and GRID-PARAMS.json harness_pin.supersedes_generation_6; the runbook's dated epoch line names it as '35ff41b7...' so the no-foreign-digest guard sees no new foreign 64-hex in a current-only page"
+ ],
+ "blocker": "launcher dry run cannot exit 0: REQUEST-LEDGER.json remaining=3144 vs LEDGER-GRID-BASELINE-2.json remaining=3192 is refused by run_a_star.py:233 before the dry-run plan prints. Both files are forbidden write paths for this card, and the disagreement is a data reconciliation, not a number this card may edit.",
+ "next_unit_hint": "(1) a ledger reconciliation card must settle remaining 3144 vs 3192 in REQUEST-LEDGER.json / LEDGER-GRID-BASELINE-2.json, then re-run the canary dry run for the promised exit 0 + refused=0 line; (2) a GRID-PARAMS price-regeneration card owns price_total/price_remaining_after and the three ABSENT rows; (3) docs/GATE-CHAIN.md:292 renumbering owns floor_n60; (4) repo-root tests asserting HARNESS_PIN must be retargeted at PIN_EXPECTED_DIGEST like the checker was.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/tools/launch_contract_diff.py",
+  "experiments/ptr-engine/measure/GRID-PARAMS.json",
+  "docs/GRID-RUNBOOK.md",
+  "experiments/ptr-engine/tests/test_pin_propagation.py",
+  "orchestration/units/LAUNCHER-GEN6-WIRE.md",
+  "orchestration/handoffs/LAUNCHER-GEN6-WIRE.json",
+  "orchestration/journals/LAUNCHER-GEN6-WIRE.jsonl"
+ ],
+ "tool_calls": 31,
+ "bound": 30
+}

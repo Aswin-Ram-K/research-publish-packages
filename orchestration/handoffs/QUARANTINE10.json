@@ -1,0 +1,23 @@
+{
+  "unit": "QUARANTINE10",
+  "status": "withdrawn",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/tasks-v6/LR-01.v10.json (deleted, absent)",
+    "experiments/ptr-engine/longrun contrast test for LR-01.v10 (deleted)",
+    "experiments/ptr-engine/longrun/WITHDRAWN-LR01-V10.md",
+    "orchestration/handoffs/QUARANTINE10.json"
+  ],
+  "evidence": [
+    "cd /home/zer0null/research extractor && ls experiments/ptr-engine/longrun/tasks-v6/ | grep -c v10 -> 0",
+    "grep -rn \"LR-01\\.v10\" experiments/ptr-engine/longrun --include=*.py --include=*.json -> no matches (grep_exit=1)",
+    ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests -q 2>&1 | tail -5 -> collection ERROR in test_verdict_semantics.py: RuntimeError: exit-code partition drift: unclassified in exit_codes.EXIT_TABLE=[14] (pre-existing, unrelated to v10); 1 error in 0.19s",
+    "cd experiments/ptr-engine/longrun && python3 check_pointer_fixtures.py; echo exit=$? -> files checked: 0, all four outcomes per file: True, exit=0",
+    "python3 -c \"import json;json.load(open('orchestration/handoffs/QUARANTINE10.json'))\" -> parses OK"
+  ],
+  "blocker": "No fixture in this repo currently supports a discriminating mask-versus-fetch contrast.",
+  "next_unit_hint": "New fixture work must hide evidence behind the pointer under the masked arm and prove the self-check detects plaintext leaks; see WITHDRAWN-LR01-V10.md.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/WITHDRAWN-LR01-V10.md",
+    "orchestration/handoffs/QUARANTINE10.json"
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "unit": "CACHE-CREDIT-CHAT",
+  "status": "done",
+  "task_id": "590e5b76-f373-4fc3-b5dd-d554590f1bf8",
+  "execution_id": "e782f10c-8bc8-4160-9a1d-55a7ddd4eefe",
+  "artifacts": [
+    "experiments/ptr-engine/measure/CACHE-CREDIT-CHAT.json",
+    "docs/CACHE-CREDIT-CHAT.md",
+    "experiments/ptr-engine/tools/cache_credit_probe.py",
+    "orchestration/units/CACHE-CREDIT-CHAT.md",
+    "orchestration/handoffs/CACHE-CREDIT-CHAT.json",
+    "orchestration/journals/CACHE-CREDIT-CHAT.jsonl"
+  ],
+  "requests_used": 2,
+  "request_cap": 4,
+  "stop_rule": "second non-stream response reported cached_tokens=2048 and the cumulative counter moved by exactly +2048, so the streamed pair (requests 3-4) was not spent",
+  "evidence": {
+    "provenance_file_line": {
+      "runner_endpoint": "experiments/ptr-engine/longrun/client.py:661 -> url = cfg.base_url.rstrip('/') + '/chat/completions'",
+      "field_reader": "experiments/ptr-engine/longrun/client.py:604 usage_cached_tokens() reads usage.prompt_tokens_details.cached_tokens, returns None (never 0) when absent",
+      "stream_usage": "experiments/ptr-engine/longrun/client.py:339-340 -> body['stream_options'] = {'include_usage': True}",
+      "row_key_writer": "experiments/ptr-engine/longrun/run_longrun.py:1755-1757 -> row keys prompt_tokens / cached_tokens / uncached_tokens",
+      "cached_value": "experiments/ptr-engine/longrun/run_longrun.py:1699 cached = resp.get('cached_tokens')",
+      "row_provenance_stamp": "experiments/ptr-engine/longrun/run_longrun.py:1776 token_source = 'usage.prompt_tokens;usage.prompt_tokens_details.cached_tokens'",
+      "cached_share_definition": "experiments/ptr-engine/measure/TVS.json definition.cached_share = sum(cached_tokens)/sum(prompt_tokens) over rows whose cached_tokens is non-null"
+    },
+    "published_0_8523_reproducible": "yes from the rows key cached_tokens/prompt_tokens: TVS numerator 93568 / denominator 109780 = 0.852323 -> 0.8523 (rows-longrun-v6-tools, pointer-stable, cp.0.t12). Window sums themselves were not independently re-derived from the .jsonl.",
+    "pair_usage_verbatim": {
+      "request1": {"prompt_tokens": 2106, "total_tokens": 2110, "completion_tokens": 4, "prompt_tokens_details": null, "reasoning_tokens": 4},
+      "request2": {"prompt_tokens": 2106, "total_tokens": 2110, "completion_tokens": 4, "prompt_tokens_details": {"cached_tokens": 2048}, "reasoning_tokens": 4}
+    },
+    "metric_deltas": {
+      "sglang:cached_tokens_total": "req1 +0 ; req2 +2048",
+      "sglang:cache_hit_rate": "req1 0.0 ; req2 0.9724596391263058",
+      "sglang:uncached_prompt_tokens_histogram_sum": "req1 +2106 ; req2 +58",
+      "sglang:realtime_tokens_total": "req1 +2110 ; req2 +2109"
+    },
+    "answers": {
+      "a": "YES - request 2 of a byte-identical pair on /v1/chat/completions reports prompt_tokens_details.cached_tokens=2048 (request 1 prompt_tokens_details=null) and accrues +2048 on sglang:cached_tokens_total",
+      "b": "BOTH keys - response field usage.prompt_tokens_details.cached_tokens (client.py:604) and metric delta sglang:cached_tokens_total; the response field IS already written into rows as cached_tokens by run_longrun.py:1756",
+      "c": "YES - H2's cache limb is measurable on the frozen runner as it stands; no patch needed and none applied"
+    },
+    "endpoint_caveat_replacement": ":8012's /v1/chat/completions does report cache credit per request - usage.prompt_tokens_details.cached_tokens (null on a cold request, 2048 of 2106 on the second of a byte-identical pair) - and /metrics carries the cumulative counter sglang:cached_tokens_total, whose delta equals the reported figure exactly, with sglang:cache_hit_rate as a 0.0-when-idle corroborating gauge; the missing field and missing counter on /v1/completions are properties of that endpoint, not of the engine.",
+    "commands": [
+      "python3 experiments/ptr-engine/tools/cache_credit_probe.py  (2 POST /v1/chat/completions + 4 GET /metrics)",
+      "curl -s http://192.168.2.168:8012/health  (free)",
+      "curl -s http://192.168.2.168:8012/metrics | grep -i cache  (free; showed sglang:cached_tokens_total exists)",
+      "bash -c 'set -eu; f=experiments/ptr-engine/measure/CACHE-CREDIT-CHAT.json; grep -q \"\\\"requests_used\\\": 2\" \"$f\"; grep -q \"cached_tokens\\\": 2048\" \"$f\"; test -s docs/CACHE-CREDIT-CHAT.md; test -s orchestration/units/CACHE-CREDIT-CHAT.md; echo CACHE-CREDIT-CHAT-OK' -> exit 0"
+    ],
+    "verdict_row": "PASS f17663d1 (recorded before this handoff write)"
+  },
+  "patch_needed": null,
+  "patch_diff": "",
+  "residual_gap": "the streamed pair was not spent (stop rule); streamed usage on /v1/chat/completions is inferred from client.py:339-340 plus existing stream:true rows carrying cached_reported:true, not re-measured by this probe. A fresh 2-request unit sending the same byte-identical pair with stream:true and stream_options.include_usage=true would close it.",
+  "assumptions": [
+    "prompt length was targeted at ~1400 words, which tokenised to 2106 prompt_tokens on the server (above the 1,200-token floor); no client tokenizer was used to verify the count in advance, the server's own prompt_tokens is the record",
+    "the two sends reused one serialised body object, so byte-identity is by construction and prompt_chars is equal (9189) on both journal rows"
+  ],
+  "blocker": "",
+  "next_unit_hint": "No patch to client.py/run_longrun.py is required for H2's cache limb: run_longrun.py:1756 already writes the chat-path cached_tokens field into rows and probe requests 1-2 proved the field is live on 192.168.2.168:8012. If a verifier insists on streamed usage being re-measured live rather than inferred from existing stream:true rows, spend a fresh 2-request unit on stream:true + stream_options.include_usage=true with the same byte-identical >1,200-token pair (tools/cache_credit_probe.py already supports it via pair(True)). Do NOT patch client.py/run_longrun.py for cache credit; that would invalidate every published p50 written by the old writer.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/CACHE-CREDIT-CHAT.json",
+    "docs/CACHE-CREDIT-CHAT.md",
+    "experiments/ptr-engine/tools/cache_credit_probe.py",
+    "orchestration/units/CACHE-CREDIT-CHAT.md",
+    "orchestration/handoffs/CACHE-CREDIT-CHAT.json",
+    "orchestration/journals/CACHE-CREDIT-CHAT.jsonl"
+  ],
+  "tool_calls": 15,
+  "bound": 18
+}

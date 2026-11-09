@@ -1,0 +1,117 @@
+{
+  "unit": "VERDICT-DISPUTE",
+  "generated_at_utc": "2026-10-26T16:5x",
+  "requests_spent": 0,
+  "inference_requests": 0,
+  "role": "adjudicate three closure records that disagree with the cards they settle; re-run the frozen commands; name the winner per claim. No existing document was edited.",
+  "tree": {
+    "head": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+    "porcelain_entries": 345,
+    "note": "porcelain count only; no diff pasted. analyze_stats.py is UNTRACKED at this HEAD (git show HEAD:experiments/ptr-engine/longrun/analyze_stats.py -> 'path ... exists on disk, but not in HEAD'), which is why a digest of it can drift without any commit.",
+    "sha256_before_and_after": {
+      "experiments/ptr-engine/longrun/cell.py": "fd4f2b01a6bfdeea425a92de428f770bf9f07fbe3bdc3b1d8cfd1f4a17ee2ec6",
+      "experiments/ptr-engine/longrun/analyze_stats.py": "0a9a786102ca870edb3ff714538a512e0ea59534e4ced2f3d012aec0e39b493b",
+      "experiments/ptr-engine/tools/fixture_v7_audit.py": "ae07f2da94b878f104aecbd36a2cb55c75434d38d09b33623cd6ddbe5f251f8f",
+      "experiments/ptr-engine/measure/p95-power-verify.sh": "e7a12ef473ff6a51b0e7d75042398a9401496e48e561c5b7e80efd706b3a18d8",
+      "orchestration/units/V-GATE-CHAIN-3.md": "6c3ddd6d1f6630001224177d13010e4cfd4e976bb733bbc4d31c4b5ceaf9afbb"
+    },
+    "tree_unchanged_mid_run": true,
+    "pinned_files_identical_at_end": true,
+    "porcelain_count_at_end": 352,
+    "porcelain_note": "345 -> 352 across this run: 5 entries are this unit's own deliverables, the other 2 are concurrent writes by other sessions. All five pinned files hash identically before and after, and HEAD did not move, so no pinned artefact moved under the verdict."
+  },
+  "records_side_by_side": [
+    {
+      "claim": 1,
+      "card": "V-GATE-CHAIN-3",
+      "task": "4e7e8017-e1fa-4cf7-b528-b50dd3917135",
+      "execution": "0884f187",
+      "closure_verdict": {"verdict": "PASS", "sha": "f17663d1", "reason": "verdict row exitCode 0"},
+      "handoff_overall": {"value": "fail", "quote": "8/8 numeric flags attacked, 0 of 3 decision expressions fully validated; SIX BYPASSES SURVIVE; failed_assertions: []"},
+      "board_post": "no separate pass claim disputed; card ships overall=fail",
+      "recomputed_exit": 0,
+      "recomputed_command": "python3 -c 'exec(open(\"orchestration/units/V-GATE-CHAIN-3.md\").read().split(\"<!--ATTACK-SCRIPT-START-->\")[-1].split(\"<!--ATTACK-SCRIPT-END-->\")[0])'",
+      "recomputed_stdout_tail": "{\"out\": \"/tmp/vgc3-...\", \"failed\": [], \"cases\": 33}",
+      "recomputed_stderr_tail": "",
+      "winner": "the handoff (overall=fail). The closure PASS is true of the exit code and false of the claim it is read as."
+    },
+    {
+      "claim": 2,
+      "card": "P95-POWER-FROM-ROWS",
+      "task": "3ef6e0e3-b1b8-41e1-9d2d-8e316b0ff12a",
+      "execution": "b03377d6",
+      "closure_verdict": {"verdict": "FAIL", "reason": "exit-1", "sha": "f17663d1"},
+      "handoff_overall": {"status": "done", "verdict_computed": "A* sufficient", "evidence_claim": "bash experiments/ptr-engine/measure/p95-power-verify.sh -> exit 0, 'P95-POWER.json regenerated identically'"},
+      "board_post": "claims PASS (exit 0, 14 rows files sha-pinned, unchanged)",
+      "recomputed_exit": 1,
+      "recomputed_exit_run2": 1,
+      "recomputed_command": "bash experiments/ptr-engine/measure/p95-power-verify.sh",
+      "recomputed_stdout_tail": "Files /tmp/p95-power-regen.YGO1t6.json and experiments/ptr-engine/measure/P95-POWER.json differ",
+      "recomputed_stderr_tail": "",
+      "winner": "both are true at their own tree: the card's PASS was correct when analyze_stats.py hashed 2c9756, and the closure FAIL is correct today because that untracked file now hashes 0a9a78. On substance the card's verdict survives; the closure FAIL is provenance drift, not a broken power claim."
+    },
+    {
+      "claim": 3,
+      "card": "V-FIXTURE-V7",
+      "task": "c87b53ae",
+      "closure_verdict": {"verdict": "PASS", "sha": "f17663d1"},
+      "recomputed_exit": 0,
+      "recomputed_command": "python3 experiments/ptr-engine/tools/fixture_v7_audit.py",
+      "recomputed_stdout_tail": "encoding: raw has \\u003d escape = False; decode roundtrip = True / counts: {\"agree\": 12, \"disagree\": 0, \"ambiguous\": 0}",
+      "winner": "no dispute; closure PASS confirmed by re-run."
+    }
+  ],
+  "attack_script_analysis": {
+    "what_it_asserts": "26 named assertions over 33 end-to-end cell invocations plus 11 direct gate evaluations: refusal exit codes and zero-live-spawn conditions for bad ledgers/prereg/fixtures, crash-vs-refuse for inf/nan, live-spawn and argv inspection for the allow cases, docs code-table coverage, and byte-identity of cell.py before/after.",
+    "what_exit_0_means": "All 26 assertions evaluated true and cell.py was byte-identical (cell_pinned). It is NOT merely 'the script completed' - the script ends with sys.exit(1 if bad else 0) and failed_assertions was [].",
+    "does_it_encode_the_card_overall": false,
+    "why_not": "Six of the 26 assertions assert the surviving bypasses AS the pass condition: B2_max_wall_1e308_allows (exit==6), G_tiny_override_allows (exit==6), H_artefact_zero_allows (exit==6), D_turns0_H3_runs_full_no_maxturns (exit==6), D2_turns_neg_runs_full (exit==6), I2b_cap_zero_passed_to_runner (exit==6). That is exactly F1, F2, F3, F4, F5, F8 of the card's own class findings. The script's green is compatible with the holes surviving because it requires them to.",
+    "decision_expressions_validated": {"G1": "partially (would_spend==0 for turns 0, would_spend<0 for turns -48, allowance clamp) and those are asserted as ALLOW", "G2": "not at all - EXPR['G2_decision'] is a description string; the 11 DIRECT['G2_*'] results are written to result.json but no assertion references any of them", "G3": "not at all - no assertion touches min_n or n = turns*reps"},
+    "smallest_assertion_that_would_have_caught_it": "assert by['B2_max_wall_1e308']['exit'] == 8  (the script currently asserts == 6, i.e. it asserts the bypass)"
+  },
+  "adjudication": [
+    {
+      "claim": 1,
+      "question": "is PASS supportable as 'the gate chain has no surviving hole'?",
+      "answer": "No. It is supportable only as 'the attack script ran green'.",
+      "detail": "The command's exit code cannot distinguish 'no hole' from 'the script asserts the holes as expected behaviour', because the assertion set was written from observed behaviour rather than from the gate requirement. For the PASS to carry the card's verdict the command would have to assert, for every operand of G1/G2/G3, that a value which makes the gate expression true while the priced work exceeds the real bound is refused with the gate's exit code and zero live spawns - in particular --max-wall 1e308 and inf, --projected-turn-wall 1e-9, artefact proj_turn in {0, -12, 1e-9, NaN}, --turns 0 and -48, --fetch-followup-allowance -100, --turn-wall-cap 0. The command is NOT rewritten here.",
+      "consequence": "closure PASS on this command is a paper precondition for RUN-A*."
+    },
+    {
+      "claim": 2,
+      "question": "is 'A* sufficient' still supported on today's tree?",
+      "answer": "supported",
+      "detail": "Both re-runs exit 1, stably, from the same single byte: method.analyze_stats_sha256_atimport, regen 0a9a7861... vs committed 2c9756f3.... Every computed number - p95 interval widths, paired disjoint percentages, observed gaps, autocorrelation, the verdict string itself - regenerates identically, so the only failing byte is a digest of a file the generator does not import (p95_power_gen.py:271 records the hash; :272 sets analyze_stats_imported=false). The cause is tree-state, not flakiness and not a missing fixture: analyze_stats.py is untracked at HEAD and was edited between the card's run and now.",
+      "quoted_failing_assertion": "diff -q \"$OUT\" experiments/ptr-engine/measure/P95-POWER.json  ->  Files /tmp/p95-power-regen.YGO1t6.json and experiments/ptr-engine/measure/P95-POWER.json differ",
+      "residual": "The evidence command is red today, so the card's PASS cannot be re-earned from the frozen command until the committed digest is refreshed or the equality gate stops covering an unused provenance field. A* sufficient is supported on the numbers, not currently on the command."
+    },
+    {
+      "claim": 3,
+      "question": "does fixture_v7_audit.py still exit 0?",
+      "answer": "yes, exit 0, counts {\"agree\": 12, \"disagree\": 0, \"ambiguous\": 0}; no dispute."
+    }
+  ],
+  "downstream_artefacts_that_lean_on_these_verdicts": [
+    {"path": "orchestration/VERDICTS.md", "leans_on": "claim 1 PASS as the gate-chain precondition; the row needs re-derivation from the handoff rather than the exit code"},
+    {"path": "experiments/ptr-engine/measure/BUDGET-SCHEDULE.md", "leans_on": "A* grid priced at 4 arms x 48 turns x 3 reps = 792 requests; also line 98 'stop if ATTACK or V-GATE-CHAIN reports a defect after the run starts'"},
+    {"path": "docs/P95-POWER.md", "leans_on": "'A* sufficient' at section 6 (line 185) and the table row at line 21; its scope qualifier ('the C-grid pair is already disjoint at n = 47/48') is what keeps it true"},
+    {"path": "experiments/ptr-engine/measure/P95-POWER.json", "leans_on": "carries the stale digest 2c9756f3... at method.analyze_stats_sha256_atimport"},
+    {"path": "orchestration/handoffs/P95-POWER-FROM-ROWS.json", "leans_on": "claims exit 0 for a command that exits 1 on this tree"},
+    {"path": "docs/GATE-CHAIN.md", "leans_on": "section 4 'there is no unlimited mode' and section 5 hypothesis-refusal claims, both already falsified by V-GATE-CHAIN-3"},
+    {"path": "experiments/ptr-engine/longrun/cell.py", "leans_on": "the operand validation whose absence makes claim 1 unsatisfiable (F1-F8)"},
+    {"path": "docs/PARM-1-ERRATA.md", "leans_on": "n>=60 H1 floor; contains no n=144 citation (checked: no 144/n_raw hit) - not affected by claim 2"},
+    {"path": "docs/PRICE-REPLICATION.md", "leans_on": "does not exist on this tree; nothing to change"}
+  ],
+  "consequences": [
+    "RUN-A* precondition 2 ('V-GATE-CHAIN = pass') is met ON PAPER ONLY: the closure PASS rests on a command that asserts the bypasses as expected results, while the card's own overall is fail with six surviving bypasses.",
+    "do not spend the 792-request grid on the strength of the V-GATE closure; a repair unit on cell.py operand validation must land first, with an assertion set derived from the requirement, not from observed behaviour.",
+    "the power claim survives: A* sufficient is supported by numbers that regenerate identically at f17663d1; only its evidence command is red on an unimported file's digest.",
+    "the p95 evidence command must either refresh method.analyze_stats_sha256_atimport in P95-POWER.json or stop covering a provenance field the computation never reads - a command that fails on provenance cannot testify to power, and one that passes on it cannot either.",
+    "orchestration/VERDICTS.md, docs/GATE-CHAIN.md, docs/P95-POWER.md, BUDGET-SCHEDULE.md and the P95-POWER handoff each need a correction, and none of them was edited by this unit."
+  ],
+  "what_the_verdict_row_can_and_cannot_prove": {
+    "class_of_bug": "A verdict row binds PASS to an exit code, and an exit code is only as strong as the assertion behind it. Two failures of the same class appear here, in opposite directions: (a) the V-GATE command exits 0 because its assertions encode the observed behaviour, so the row proves 'the script agreed with the conductor as it is', not 'the requirement holds' - a script can be green and the system broken; (b) the p95 command exits 1 because it asserts byte-equality over a provenance digest of a file it never imports, so the row proves 'an unused input changed', not 'the result changed' - a script can be red and the claim intact. In both, the exit code is not a function of the proposition the card asserted. The frozen-command rule protects the command from being edited to fit the answer; it does not protect the answer from being indexed to the wrong proposition.",
+    "smallest_assertion_that_would_have_caught_it": "For (a): assert the requirement, not the observation - assert by['B2_max_wall_1e308']['exit'] == 8 where the script currently asserts == 6; one assertion, flipped, would have made the closure FAIL and matched the handoff. For (b): split the equality gate into the payload that carries the claim and the provenance that does not - compare the generated numbers, report the imported-module digest separately, so a stale hash of an unimported file cannot turn 'A* sufficient' red.",
+    "cannot_prove": "A row cannot show what a command would have caught, only that it exited 0 at a sha; it cannot distinguish a requirement from a regression snapshot, and it cannot see whether the command's assertions were written before or after the behaviour they measure."
+  }
+}

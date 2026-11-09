@@ -1,0 +1,76 @@
+{
+ "unit": "CONTRACT-DIFF-RESIDUAL",
+ "status": "partial",
+ "artifacts": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "docs/GRID-PARAMS.md",
+  "experiments/ptr-engine/tests/test_launch_text_agrees_with_code.py",
+  "orchestration/units/CONTRACT-DIFF-RESIDUAL.md",
+  "orchestration/handoffs/CONTRACT-DIFF-RESIDUAL.json",
+  "orchestration/journals/CONTRACT-DIFF-RESIDUAL.jsonl"
+ ],
+ "evidence": {
+  "command_or_count": "--check before: exit 1, AGREES=15 DISAGREES=2 STALE-BY-DESIGN=5. --check after: exit 0, AGREES=15 DISAGREES=0 STALE-BY-DESIGN=7. New guard 5 passed; red under two /tmp mutations (help 108->67, doc pool 48->24).",
+  "code_quotes": [
+   "experiments/ptr-engine/tools/run_a_star.py:366 ap.add_argument(\"--budget\", type=int, default=108,",
+   "experiments/ptr-engine/tools/run_a_star.py:241 \"--turn-wall-cap\", \"180\", \"--runaway-turns\", \"2\", \"--budget\", \"108\",",
+   "experiments/ptr-engine/longrun/run_longrun.py:230 TOOL_FETCH_ROUNDS_PER_ARM = 48",
+   "experiments/ptr-engine/longrun/run_longrun.py:2857 ap.add_argument(\"--fetch-rounds-per-arm\", type=int, default=TOOL_FETCH_ROUNDS_PER_ARM,",
+   "experiments/ptr-engine/longrun/run_longrun.py:2891 print(f\"--fetch-rounds-per-arm must be a positive integer \"",
+   "experiments/ptr-engine/longrun/run_longrun.py:463 budget += fetch_rounds_per_arm(cfg)"
+  ],
+  "commands": [
+   "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check  # exit 1 before: DISAGREES per_cell_budget 108|67, per_arm_round_cap 48|24",
+   "python3 experiments/ptr-engine/tools/launch_contract_diff.py --check  # exit 0 after: 22 numbers AGREES=15, STALE-BY-DESIGN=7",
+   "python3 -m pytest experiments/ptr-engine/tests/test_launch_text_agrees_with_code.py -q  # 5 passed",
+   "LTA_ROOT=/tmp/lta-red/tree pytest .../test_launch_text_agrees_with_code.py -q  # red A help mutate: 'help says default 67 but default= is 108'",
+   "LTA_ROOT=/tmp/lta-red/tree pytest .../test_launch_text_agrees_with_code.py -q  # red B doc mutate: 'first TOOL_FETCH_ROUNDS_PER_ARM figure is 24 but the runner constant is 48'",
+   "PYTHONPATH=src python3 -m pytest tests/test_launch_contract_diff.py -q  # 3 failed, 5 passed (residual 1+2)"
+  ]
+ },
+ "diff_help_string": "- help=\"per-cell ledger allocation handed to cell.py (default 67)\"\n+ help=\"per-cell ledger allocation handed to cell.py (default 108); the stage 3/7 gate compares ceil(would_send_total x 1.10) against it, so this is a ledger allocation, not a request ceiling\"",
+ "diff_doc": [
+  "docs/GRID-PARAMS.md:9-12 intro superseded: 'keeps its channel open only to 24 ... module constant with no flag' -> 'on the pre-RUNNER-ROUNDS-48 wiring ... kept ... Superseded 2026-10-26 (generation 1 -> 48): the pool is 48 and --fetch-rounds-per-arm sets it'",
+  "docs/GRID-PARAMS.md:90 table row: 'run_longrun.py:226 is TOOL_FETCH_ROUNDS_PER_ARM = 24, a module constant with no override' -> 'run_longrun.py:230 is TOOL_FETCH_ROUNDS_PER_ARM = 48, overridable by --fetch-rounds-per-arm (:2857, default :2856); :961 tests rounds_used + fresh >= fetch_rounds_per_arm(cfg). Generation 1 was 24 with no override - superseded 2026-10-26, because v5 spent all 24 inside turn 3 (21 in one recon burst) and starved the T46 checkpoint'",
+  "docs/GRID-PARAMS.md:93-94 'The only fetch flag the runner has is --fetch-rounds-per-turn ... not per arm' -> 'The runner has two fetch flags: --fetch-rounds-per-turn (run_longrun.py:2852, default TOOL_FETCH_ROUNDS_PER_TURN = 3 at :232) caps rounds per turn; --fetch-rounds-per-arm (:2857) sets the per-arm pool'",
+  "docs/GRID-PARAMS.md:100-102 'blocked on the frozen run_longrun.py:226 and needs its own card' -> 'Superseded 2026-10-26 (generation 1 -> 48): ... it now reaches the runner - TOOL_FETCH_ROUNDS_PER_ARM = 48 at run_longrun.py:230, overridable by --fetch-rounds-per-arm (:2857). Nothing is blocked.'",
+  "docs/GRID-PARAMS.md:106-109 projection '48 turns + 24 rounds = 72 ... ceil(72 x 1.10) = 80' -> '48 turns + 48 rounds = 96 (pool added at :463) ... ceil(96 x 1.10) = 106 and --budget 67 refuses at exit 3, stage 3/7'"
+ ],
+ "check_before": "exit 1 / DISAGREES per_cell_budget 108 | 67 / DISAGREES per_arm_round_cap 48 | 24 / 22 numbers: AGREES=15, DISAGREES=2, STALE-BY-DESIGN=5",
+ "check_after": "exit 0 / STALE-BY-DESIGN per_cell_budget 108 | 67 / STALE-BY-DESIGN per_arm_round_cap 48 | 24 / 22 numbers: AGREES=15, STALE-BY-DESIGN=7",
+ "red_green": {
+  "green": "5 passed on the real tree and on an unmutated /tmp copy",
+  "red_a": "help text mutated to (default 67) -> AssertionError: --budget help says 'default 67' but default= is 108",
+  "red_b": "docs pool figure mutated to 24 -> AssertionError: docs/GRID-PARAMS.md's first TOOL_FETCH_ROUNDS_PER_ARM figure is 24 but the runner's constant is 48"
+ },
+ "residual": [
+  "tests/test_launch_contract_diff.py: _single_valued() mutates 'handed to cell.py (default 67)' and 'TOOL_FETCH_ROUNDS_PER_ARM = 24', anchors the fix removed -> test_check_mode_zero_on_single_valued_tree and test_check_mode_one_on_disagreement now fail on the mutation anchor assert. Not this card's write path.",
+  "measure/LAUNCH-CONTRACT-DIFF.json records summary.check_exit = 1 while the tree now exits 0 -> test_artefact_and_check_mode_agree fails. Needs 'launch_contract_diff.py --write' by the artefact's owner card."
+ ],
+ "prose_only_numbers": "None: all 22 tracked numbers keep a code or JSON occurrence; the two rows this card touched are carried by run_a_star.py:366/:241 and run_longrun.py:230/:2857, and the 4 residual STALE-BY-DESIGN rows sit behind written supersedes pointers.",
+ "assumptions": [
+  "The card's 'run_longrun.py:231' names the comment block's last line; the constant is at :230 (diff JSON values array also said :230). Text cites :230.",
+  "docs/GRID-PARAMS.md edits were kept line-count-neutral because launch_contract_diff.py pins line probes at :43, :46, :56, :58 and :125; file stayed 151 lines and :125 still carries 'budget 108'."
+ ],
+ "blocker": "",
+ "next_unit_hint": "One card for the LAUNCH-CONTRACT-DIFF owner: make the two _single_valued() anchors tolerant and re-run 'launch_contract_diff.py --write' to re-record check_exit=0, then tests/test_launch_contract_diff.py is green again (6+ passed). Do not touch run_a_star.py:367 or docs/GRID-PARAMS.md \u2014 both now agree with the code and are guarded.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "docs/GRID-PARAMS.md",
+  "experiments/ptr-engine/tests/test_launch_text_agrees_with_code.py",
+  "orchestration/units/CONTRACT-DIFF-RESIDUAL.md",
+  "orchestration/handoffs/CONTRACT-DIFF-RESIDUAL.json",
+  "orchestration/journals/CONTRACT-DIFF-RESIDUAL.jsonl"
+ ],
+ "tool_calls": 17,
+ "bound": 26,
+ "bound_note": "within bound; the two extra calls over the 8-call handoff guideline were the codex verification greps and the two red-proof runs the card requires.",
+ "verdict_command": "python3 -m pytest experiments/ptr-engine/tests/test_launch_text_agrees_with_code.py -q && python3 experiments/ptr-engine/tools/launch_contract_diff.py --check",
+ "verdict_exit": 0,
+ "head_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+ "offline": {
+  "requests_sent": 0,
+  "network_events": 0,
+  "live_cells": 0
+ }
+}

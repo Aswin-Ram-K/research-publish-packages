@@ -1,0 +1,64 @@
+{
+ "unit": "V-SPAWN-ATTACK-2",
+ "overall": "partial",
+ "status": "partial",
+ "checks": [
+  "attack1_own_oracle: strace execve around real cell.py (no sitecustomize) -> spawns 0/1/1/1/1 at exits {2,3,4,8,12}; record declares 0/1/1/1/1; record counts preflight 0/1/1/1/1 runner_launch 0; validator --observed <mine> exits 0 at all five; every child is `/usr/bin/python3 <runner> --dry-run`",
+  "attack2_listed_five: 1 no `spawns` key, 2 `spawns: []` no declaration, 3 declaration with no phase, 4 counts off by one (2 vs 1), 5 runner_launch on exit 4 -> all exit 1, each naming the part",
+  "attack2_unlisted_6: record whose per_exit_code names only exits 0 and 7 (no refusal exit) -> `spawn_record: OK exit=4 spawns=1 runner_launch=0` (exit 0); single-exit coverage is also enough, so coverage of {2,3,4,8,12} is never checked",
+  "attack2_unlisted_7: duplicate `counts` keys disagreeing (first preflight 9, last 1) -> json last-wins, validator OK exit=0; declaration can be rewritten by key order",
+  "attack3_stale_record: validate_refusal has no sha/tree input; in a /tmp code copy one gate made permissive (G1 returns ok=True over-cap), same argv moves exit 4 -> exit 12, historical exit-4 record still validates OK -> (b) a record can outlive its tree",
+  "attack4_truncation: truncated mid-JSON -> CLI exit 2 'cannot read ... Unterminated string'; validation.ok=true with counts declared 3 vs recomputed 1 -> refused 'self-reported validation.ok=true contradicted by recomputation'",
+  "attack5_non_vacuous: real record exit 4 OK; deleting the single preflight entry flips to exit 1 with 'counts[preflight_self_check]: declared 1 vs recomputed 0' -> the entry and declaration are really read",
+  "attack6_blind_spots: cell.py spawns only via subprocess.run at cell.py:207 (_run) and cell.py:1548 (runner launch); no os.system/os.exec*/posix_spawn/fork/threading/multiprocessing present. os.system('/bin/true') wrapper on an exit-2 refusal: strace counts 2 execve (/bin/sh,/bin/true), record declares 0, validator OK exit=2 -> instrumentation covers subprocess.Popen only",
+  "pytest -q experiments/ptr-engine/longrun/tests/test_spawn_classification.py -> 10 passed, exit 0 (verdict row PASS @ f17663d1)",
+  "doc code agree: docs/GATE-CHAIN.md:336-353 states the same one-sentence rule validate_refusal implements"
+ ],
+ "artifacts": [
+  "orchestration/units/V-SPAWN-ATTACK-2.md",
+  "orchestration/journals/V-SPAWN-ATTACK-2.log",
+  "experiments/ptr-engine/measure/SPAWN-ATTACK-2.json"
+ ],
+ "evidence": {
+  "command_or_count": "strace: 0/1/1/1/1 real spawns at exits {2,3,4,8,12}; validator --observed -> exit 0 at all five; 5/5 listed rejections exit 1; 2/2 unlisted rejection probes wrong -> exit 0; truncated record exit 2; ok:true mismatch exit 1; deleted-entry flip exit 0 -> 1",
+  "commands": [
+   "strace -f -e trace=execve python3 experiments/ptr-engine/longrun/cell.py <five refusal argv> (env without SPAWN_ORACLE_LOG)",
+   "python3 experiments/ptr-engine/longrun/spawn_record.py --validate <mutant> --exit-code 4 [--observed N]",
+   "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_spawn_classification.py -> 10 passed"
+  ]
+ },
+ "blocker": "",
+ "next_unit_hint": "Bind the record to the tree before RUN-A*: give validate_refusal a required tree identity (argv to cell.py + spawn_record.py sha) and refuse when the record's cell_sha differs; require per-exit coverage of {2,3,4,8,12}; reject duplicate JSON keys (object_pairs_hook); and make the acceptance oracle syscall-level (strace/execve or an LD_PRELOAD shim) rather than a Popen subclass, or the os.system/execv/threads blind spot stays.",
+ "write_paths": [
+  "orchestration/units/V-SPAWN-ATTACK-2.md",
+  "orchestration/handoffs/V-SPAWN-ATTACK-2.json",
+  "orchestration/journals/V-SPAWN-ATTACK-2.log",
+  "experiments/ptr-engine/measure/SPAWN-ATTACK-2.json",
+  "/tmp/vsa2/**"
+ ],
+ "not_reproduced": [],
+ "overstated": [
+  "an undeclared spawn is a failure: true only for spawns that go through subprocess.Popen; os.system/exec*/posix_spawn/threads are invisible to both the record and its sitecustomize oracle",
+  "spawns are declared for every refusal: the declaration is only checked for the one exit code passed on the command line; coverage of {2,3,4,8,12} is never verified and a per_exit_code naming only exits 0 and 7 validates OK",
+  "the record describes the tree it is validated against: nothing binds them; a historical record validates OK after the gate it recorded has been made permissive (exit 4 -> exit 12)"
+ ],
+ "unverified": [
+  "whether a mutated G3 as well as G1 would let the same argv reach stage 4/7 and actually launch a runner: not attempted (time bound), so the strongest case ('record says zero launches while a launch happened') rests on the os.system demo and on exit drift, not on a live runner_launch",
+  "spawns raised inside a third-party library or a thread are argued from the instrumentation design, not exercised (cell.py has no such callsite)"
+ ],
+ "tool_calls": 22,
+ "bound": 24,
+ "containment": "audited files only read (cell.py, spawn_record.py, PREFLIGHT record unmodified); all mutation in /tmp and the declared write paths",
+ "scope": "validate_refusal(), PREFLIGHT-SPAWN-DECLARE record schema, five refusal exits, spawn primitives, docs/GATE-CHAIN.md \u00a711",
+ "red_green": "deleting the single preflight spawn entry flips exit 0 -> exit 1; the five listed mutants flip OK -> FAIL; the two unlisted probes and the /tmp gate mutation stay GREEN (the findings)",
+ "tree_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+ "cell_sha": "b549e45e12beacbd11cd41a523087d2f6f327f608380528bc6b566c296937488",
+ "spawn_record_sha": "04db083e7180250e984e9bc59acf0001ce7938d074e8a80975106a752c7c9dc3",
+ "gate_precondition": "NOT fully met on this tree: met for runner_launch==0 and declared==observed at all five refusals on cell.py b549e45e for subprocess.Popen-shaped spawns, but the record is not tree-bound, coverage of {2,3,4,8,12} is unchecked, and os.system/exec*/fork/threads are outside the instrumentation \u2014 record D2/D3/D5 before RUN-A* relies on it",
+ "verdict_row": {
+  "command": "python3 -m pytest -q experiments/ptr-engine/longrun/tests/test_spawn_classification.py",
+  "exitCode": 0,
+  "sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "result": "PASS"
+ }
+}

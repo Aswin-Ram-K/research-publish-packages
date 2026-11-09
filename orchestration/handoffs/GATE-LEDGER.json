@@ -1,0 +1,50 @@
+{
+ "unit": "GATE-LEDGER",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/GATE-LEDGER.json",
+  "docs/GATE-LEDGER.md",
+  "experiments/ptr-engine/tools/gate_ledger.py",
+  "experiments/ptr-engine/longrun/tests/test_gate_ledger.py"
+ ],
+ "evidence": {
+  "command_or_count": "check exit 0: 4 gates, 21 cards, 15 defects, 0 requests, 468 rounds (estimate); test_gate_ledger.py 12/12 OK. Offline dry run at RUN-A* flags: G1 1154/4320, G2 2880/2880 admitted (worst case 8640 printed), G3 n=48 < 60 WOULD-REFUSE. 0 requests, cell.py untouched.",
+  "commands": [
+   "python3 experiments/ptr-engine/tools/gate_ledger.py --check",
+   "python3 experiments/ptr-engine/longrun/tests/test_gate_ledger.py",
+   "python3 experiments/ptr-engine/longrun/cell.py --dry-run --arm pointer-stable --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json --turns 48 --reps 1 --thinking off --turn-wall-cap 180 --runaway-turns 2 --max-wall 2880 --hypothesis H1 --out-dir /tmp/gl"
+  ]
+ },
+ "decisions": {
+  "G1": "keep",
+  "G2": "keep",
+  "G3": "keep",
+  "SPAWN-RECORD": "keep"
+ },
+ "totals": {
+  "cards": 21,
+  "defects": 15,
+  "requests": 0,
+  "rounds_estimate": 468
+ },
+ "most_expensive_gate": "G2 - three attack rounds (V-GATE-CHAIN, -2, -3), two repairs (GATE-CHAIN-FIX, GATE-OVERRIDE-FIX) and one class repair (GATE-OPERAND-VALIDATION); 7 cards, ~75 measured tool calls plus 4 unrecorded cards.",
+ "unreconstructible": [
+  "SPAWN-RECORD-BIND is running: no handoff, no journal, no unit card - cost uncounted, defect D5 taken from the two verifier handoffs.",
+  "EXIT-CODE-TABLE-2: Host board execution cancelled ('no verdict was recorded'), card still todo, while a done handoff exists - cost known from the handoff, verdict not on the board.",
+  "Nine cards record no tool_calls (WIRE-GATES, EXIT-CODE-TABLE-2, GATE-OPERAND-VALIDATION, PREFLIGHT-SPAWN-DECLARE, SPAWN-RECORD-BIND, PROJECTION-MODE, PROJECTION-CALIBRATION, WIRE-CAP-GATE, GATE-OVERRIDE-FIX); their rounds are the 22-per-card estimate."
+ ],
+ "assumptions": [
+  "Requests are 0 on every card: 6 handoffs declare 0, 15 carry no field but every card contract is OFFLINE/zero requests, and no live row exists for any card in the population. The count is contract-backed, not field-backed, and the ledger says which."
+ ],
+ "blocker": "",
+ "next_unit_hint": "Implement the decision in a separate card: G2 follow-up prices turns+ceil(turns*68/801) and prints turns x --turn-wall-cap as the bound. Do not lower G2's calibrated 60 s/turn for thinking off. RUN-A* must raise its cap from 900 to the ledger's 4,320 (G1 refuses 1154 > 900) and either run 60 turns or declare H2 (G3 refuses H1 at n=48); precondition 2 stays unmet while D5 is open.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/GATE-LEDGER.json",
+  "docs/GATE-LEDGER.md",
+  "experiments/ptr-engine/tools/gate_ledger.py",
+  "experiments/ptr-engine/longrun/tests/test_gate_ledger.py",
+  "orchestration/units/GATE-LEDGER.md",
+  "orchestration/handoffs/GATE-LEDGER.json",
+  "orchestration/journals/GATE-LEDGER.jsonl"
+ ]
+}

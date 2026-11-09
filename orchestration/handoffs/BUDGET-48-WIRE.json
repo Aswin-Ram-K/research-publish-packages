@@ -1,0 +1,75 @@
+{
+  "unit": "BUDGET-48-WIRE",
+  "status": "done",
+  "conclusion": "parameters_written_with_wiring_divergence",
+  "artifacts": [
+    "experiments/ptr-engine/measure/GRID-PARAMS.json",
+    "docs/GRID-PARAMS.md",
+    "orchestration/units/BUDGET-48-WIRE.md",
+    "orchestration/handoffs/BUDGET-48-WIRE.json",
+    "orchestration/journals/BUDGET-48-WIRE.jsonl"
+  ],
+  "evidence": {
+    "command_or_count": "2 artefacts written; 0 requests; 0 network events; 20 tool calls",
+    "demand_regimes": "v6 20 of 24 billed rounds, closes never, last billed T16, 0 fetch_budget_exhausted in 371 tool calls | v5 24 of 24 by T3 (21 in one turn), closes T3, then 45 post-closure turns / 41 with tool calls / 226 refusals / 1 cap-length completion at T29 (4096/4096, finish_reason length, 130 refused calls); 43 of 45 post-closure turns still invite a read, model acted 41 of 45",
+    "chosen_allowance": "fetch_followup_allowance 48 (was 24)",
+    "per_cell_budget": "raw 96 = 48 turns + 48 rounds (non-compact); 98 with 2 derived digests on transcript-compact cells 7-8; cell.py applies +10% headroom -> ceil(96*1.1)=106 and ceil(98*1.1)=108; recommended uniform --budget 108",
+    "price": "480 turns + 480 rounds + 4 digests = 964; remaining 3192 - 964 = 2228; delta vs 724 = +240",
+    "ledger_caveat": "artefact 1101 spent / 3219 remaining vs fresh scan 1128 / 3192; 27-request gap settled by LEDGER-REBUILD-27; 3192 used as the conservative figure",
+    "wiring_check": "DIVERGENT: (1) --fetch-followup-allowance does NOT set per-arm rounds - run_longrun.py:226 TOOL_FETCH_ROUNDS_PER_ARM = 24 is a module constant with no override; :940 tests against it; the flag is cell.py's G1 reserve (cell.py:1882-1887, consumed :1160-1165) and never reaches the runner (cell.py:1550 argv). Only --fetch-rounds-per-turn (run_longrun.py:2830, default 3 at :232) exists, capping rounds PER TURN. (2) --budget IS the per-cell request budget but as a preflight gate: stage_budget takes the runner dry-run would_send_total, multiplies by 1.10 (cell.py:140) and Abort(3,'3/7 budget') at cell.py:388-392; BudgetExhausted is a separate runtime error (run_longrun.py:272, raised :984, caught :2469) against the internally computed budget projected_requests = turns + digests + 24 (run_longrun.py:436-443). (3) path correction: the runner is experiments/ptr-engine/longrun/run_longrun.py; experiments/ptr-engine/measure/run_longrun.py does not exist.",
+    "budget_67_behaviour": "today's wiring: runner projection 72 (non-compact) / 74 (compact) -> gate requires 80 / 82 -> --budget 67 refuses at exit 3 stage 3/7 BEFORE any request. It would look like a runner failure; it is a preflight refusal.",
+    "commands": [
+      "sed -n '218,232p;930,975p' experiments/ptr-engine/longrun/run_longrun.py (exit 0): TOOL_FETCH_ROUNDS_PER_ARM = 24, TOOL_FETCH_ROUNDS_PER_TURN = 3, refusal at :940 billed=false error=fetch_budget_exhausted",
+      "grep -n 'add_argument' experiments/ptr-engine/longrun/run_longrun.py (exit 0): no per-arm rounds flag; --fetch-rounds-per-turn at :2830",
+      "sed -n '353,395p' experiments/ptr-engine/longrun/cell.py (exit 0): required = ceil(would * (1+BUDGET_HEADROOM)); Abort(3, '3/7 budget') when required > args.budget",
+      "sed -n '1495,1535p' experiments/ptr-engine/longrun/cell.py (exit 0): stage_run argv carries no fetch allowance",
+      "grep -n 'budget|FETCH_ALLOWANCE|cell_argv' experiments/ptr-engine/tools/run_a_star.py (exit 0): FETCH_ALLOWANCE = 24 at :43, appended to the CELL argv at :201; cell_argv :176-183 hardcodes --budget 67",
+      "python3 -c 'import json; json.load(open(\"experiments/ptr-engine/measure/GRID-PARAMS.json\"))' -> json ok (exit 0)"
+    ]
+  },
+  "verdict_row": {
+    "recorded": false,
+    "reason": "orchestration_verdict refused twice: first 'unknown-task: no card BUDGET-48-WIRE on the board', then 'command-not-allowed: verdict command \"sed\" is not allowed: only test/build runners may be recorded'. This unit writes no code, so it has no test/build command to freeze; the check is a source-reading audit. Refusal reported rather than worked around."
+  },
+  "cards_that_must_read_this_file": [
+    "orchestration/units/RUN-A-STAR.md",
+    "orchestration/units/DRYRUN-TOOLS-SHAPE.md",
+    "orchestration/units/GRID-SHAPE-TOOLS.md",
+    "orchestration/units/FETCH-BUDGET-48.md",
+    "orchestration/units/ANALYSIS-PATH-DRYRUN.md",
+    "orchestration/units/CANARY-FALSE-POSITIVE.md"
+  ],
+  "what_48_does_not_fix": [
+    "the burst: 21 rounds in one turn is still 21 of 48; only the per-turn cap TOOL_FETCH_ROUNDS_PER_TURN = 3 (run_longrun.py:232) bounds the rate, and v5 predates it",
+    "structure: only B=144 (3 x 48, the per-turn-cap ceiling) makes closure impossible; it costs 1,924 and leaves 1,268",
+    "wiring: 48 rounds cannot be enabled at all through an existing flag; run_longrun.py:226 must change in a separate card (this unit is forbidden to edit it)"
+  ],
+  "answer": "No, not with today's wiring: a 48-turn tools-on cell keeps its channel open only to 24 billed rounds (run_longrun.py:226), and the flag this unit was asked to set is an accounting reserve that never reaches the runner. With that constant raised to 48 it would carry 48 rounds - 28 more than v6's observed 20 - which is a demand margin, not a structural guarantee.",
+  "blocker": "",
+  "next_unit_hint": "RUNNER-ROUNDS-48: change TOOL_FETCH_ROUNDS_PER_ARM at experiments/ptr-engine/longrun/run_longrun.py:226 from 24 to 48 (its own card - run_longrun.py is frozen here), and while there add a --fetch-rounds-per-arm override so the pool is priced and capped by one flag; then raise cell_argv's hardcoded --budget 67 (experiments/ptr-engine/tools/run_a_star.py:180) to 108 and run_a_star.py:43 FETCH_ALLOWANCE to 48. Separate card: LEDGER-REBUILD-27 to settle 1101/3219 vs 1128/3192. Never quote 964 without the 3,192 remaining line.",
+  "assumptions": [
+    "the card's 'remaining 3,192' (fresh scan) is used rather than the frozen artefact's 3,219; the 27-request difference is unsettled and LEDGER-REBUILD-27 owns it",
+    "expected_digests for transcript-compact is 2 per cell, taken from GRID-SHAPE.json cells 7-8 projection.digest_rows_derived",
+    "48 rounds per arm is recorded as a REQUIREMENT (price + budget arithmetic), not as a runnable command, because no flag sets it",
+    "no live cell was run and no request was made; every figure is a count over rows already on disk"
+  ],
+  "requests": 0,
+  "not_touched": [
+    "GRID-SHAPE.json",
+    "PARM-1*",
+    "cell.py",
+    "run_longrun.py",
+    "every row file",
+    "every published number",
+    "REQUEST-LEDGER.json"
+  ],
+  "write_paths": [
+    "experiments/ptr-engine/measure/GRID-PARAMS.json",
+    "docs/GRID-PARAMS.md",
+    "orchestration/units/BUDGET-48-WIRE.md",
+    "orchestration/handoffs/BUDGET-48-WIRE.json",
+    "orchestration/journals/BUDGET-48-WIRE.jsonl"
+  ],
+  "tool_calls": 20,
+  "bound": 20
+}
