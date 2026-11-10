@@ -1,0 +1,94 @@
+{
+  "unit": "U-SPCC-67",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/U-SPCC-67.md",
+    "orchestration/handoffs/U-SPCC-67.json"
+  ],
+  "evidence": {
+    "scope": "read-only analysis of experiments/ptr-engine/measure/rows-e3-retain-2026-11-10.jsonl; zero model requests spent; no code, prompt, fixture, manifest or rows file changed",
+    "reconstruction": {
+      "method": "both arms rebuilt through the runner's own Planner (experiments/ptr-engine/longrun/run_longrun.py:1562) with send_chat replaced by a recorder; each row's content replayed through Planner.record; checkpoint_prompt applied on the 48 checkpoint turns exactly as the run loop does (run_longrun.py:3555-3567)",
+      "prompt_sha256_matches": 200,
+      "prompt_sha256_mismatches": 0,
+      "turns_per_arm": 100,
+      "arms": ["masking-no-fetch", "spcc"],
+      "statement": "the reconstruction is the prompt the model actually saw, verified byte-for-byte against every row's prompt_sha256"
+    },
+    "structural_diff": {
+      "masking-no-fetch": {
+        "shape": "flat transcript replay: WORKING SET (INDEX + BODY item-1), then one block per prior turn, then the current turn block, then the CHECKPOINT TURN contract",
+        "turn_block": "QUESTION (Tt): <question> / TOOL OUTPUTS: / TOOL_OUTPUT (doc@rev): <body> / ANSWER (Tt): <value>",
+        "t30_lines": 158,
+        "t30_prompt_tokens": 1611,
+        "layer_tokens": null,
+        "replays_prior_answers": true,
+        "system_prompt_in_user_content": false
+      },
+      "spcc": {
+        "shape": "layered compiler: L0 system prompt + answer contract + RUN line; L1 world index (5 refs, no fact values); L2 append-only journal, one line per prior turn; L3 current question + current delivery; L4 contract line",
+        "journal_line": "T{n}|user|QUESTION (Tt): <question>\\u23ce<body>",
+        "t30_lines": 69,
+        "t30_prompt_tokens": 1465,
+        "layer_tokens": {"L0": 80, "L1": 20, "L2": 215, "L3": 21, "L4": 2},
+        "replays_prior_answers": false,
+        "system_prompt_in_user_content": true
+      },
+      "the_one_difference_that_matters": "the masking arm replays an ANSWER (Tt): line after every turn's tool-output block; the spcc journal replays no answers at all. The pinned index, the current turn's delivery appended after the question, and the checkpoint contract are shared."
+    },
+    "value_locations": [
+      {"checkpoint": "cp.TX-04.f09.d2", "turn": 30, "expected": "4091", "answered": "4011", "masking_expected": "L132, 32 tok before question", "masking_answered": "L145, 27 tok after", "spcc_expected": "L49, 21 before", "spcc_answered": "L54, 17 after"},
+      {"checkpoint": "cp.TX-04.f02.d8", "turn": 10, "expected": "4021", "answered": "4061", "masking_expected": "L19, 112 tok before", "masking_answered": "L50, 27 tok after", "spcc_expected": "L23, 73 before", "spcc_answered": "L34, 17 after"},
+      {"checkpoint": "cp.TX-04.f07.d8", "turn": 39, "expected": "4072", "answered": "4102", "masking_expected": "L156, 171 tok before", "masking_answered": "L194, 30 tok after", "spcc_expected": "L52, 115 before", "spcc_answered": "L64, 20 after"},
+      {"checkpoint": "cp.TX-04.f08.d20", "turn": 31, "expected": "4083", "answered": "4073", "masking_expected": "L62, 428 tok before", "masking_answered": "L157, 33 tok after", "spcc_expected": "L32, 283 before", "spcc_answered": "L57, 23 after"},
+      {"checkpoint": "cp.TX-04.f12.d20", "turn": 73, "expected": "4123", "answered": "4124", "masking_expected": "L251, 336 tok before", "masking_answered": "L252, adjacent line", "spcc_expected": "L74, same line", "spcc_answered": "L74"},
+      {"checkpoint": "cp.TX-04.f02.d32", "turn": 34, "expected": "4023", "answered": "4022", "masking_expected": "L21, 693 tok before", "masking_answered": "L20, adjacent line", "spcc_expected": "L23, same line", "spcc_answered": "L23"}
+    ],
+    "expected_value_present_in_both_arms": "yes at all six turns; the masking arm carries strictly more information than the spcc arm because it also replays every prior answer",
+    "mechanism": {
+      "option_a_proximity_refuted": "at T30 the masking arm has the expected value 32 tokens before the question and the answered value 27 tokens after; the spcc arm has 21 before and 17 after. Both arms have the answered value closer to the question than the expected one, and spcc answers correctly. Proximity alone is not the mechanism.",
+      "option_c_no_document_anchor_refuted": "the masking arm does anchor the body: TOOL_OUTPUT (doc-fact-07@1): # doc-fact-07. The anchor is present and the model ignores it.",
+      "actual_mechanism": "the answer slot binds to the adjacent tool-output block. The transcript teaches a positional rule - the ANSWER line takes its value from the tool-output block immediately above it - because that is the shape of all 29 prior turn blocks it replays. On a checkpoint turn the fixture delivers a body for a different document, and that body is the block immediately above the answer slot.",
+      "delivery_turns": {
+        "count": 5,
+        "delivered_doc_differs_from_asked_doc": 5,
+        "masking_answered_with_delivered_body_value": 4,
+        "spcc_answered_with_delivered_body_value": 0,
+        "table": [
+          {"turn": 10, "checkpoint": "cp.TX-04.f02.d8", "asked": "doc-fact-02", "delivered": "doc-fact-06", "masking": "4061 wrong", "spcc": "4021"},
+          {"turn": 12, "checkpoint": "cp.TX-04.f06.d2", "asked": "doc-fact-06", "delivered": "doc-fact-04", "masking": "4061 right", "spcc": "4061"},
+          {"turn": 30, "checkpoint": "cp.TX-04.f09.d2", "asked": "doc-fact-09", "delivered": "doc-fact-01", "masking": "4011 wrong", "spcc": "4091"},
+          {"turn": 31, "checkpoint": "cp.TX-04.f08.d20", "asked": "doc-fact-08", "delivered": "doc-fact-07", "masking": "4073 wrong", "spcc": "4083"},
+          {"turn": 39, "checkpoint": "cp.TX-04.f07.d8", "asked": "doc-fact-07", "delivered": "doc-fact-10", "masking": "4102 wrong", "spcc": "4072"}
+        ]
+      },
+      "quoted_prompt_text": "masking T31 lines 152-158: 'QUESTION (T31): What is VAL_C of doc-fact-08?' / 'TOOL OUTPUTS:' / 'TOOL_OUTPUT (doc-fact-07@1): # doc-fact-07' / 'VAL_A = 4071' / 'VAL_B = 4072' / 'VAL_C = 4073' / 'VAL_D = 4074' -> answered 4073. The expected 4083 sits at line 62 inside 'TOOL_OUTPUT (doc-fact-08@1)' delivered at T11, 90 lines and 428 tokens above the question, and is the only occurrence of that value in the prompt.",
+      "single_masking_pass_is_answer_replay": "T12 is the one delivery turn the masking arm gets right, and it is the one where the expected value had already been echoed as a prior answer: masking T12 line 55 reads 'ANSWER (T10): ANSWER: NUM 4061'. T10's wrong answer (4061, taken from doc-fact-06's body) is T12's correct answer (doc-fact-06 VAL_A). The value appears twice - in the T10 body at line 50 and in the T10 answer line at line 55. At T31 the expected 4083 appears once.",
+      "within_document_failures": {
+        "note": "neither T34 nor T73 has a current-turn delivery, so there is no adjacent block to bind to; these are a different, smaller error",
+        "t34": "answered 4022, which is exactly 'ANSWER (T22): ANSWER: NUM 4022' - the replayed answer for the same document (doc-fact-02) but a different symbol (VAL_B for a VAL_C question). The replayed answers act as a stale same-document value cache.",
+        "t73": "answered 4124, the line immediately below the expected 'VAL_C = 4123' in the same body ('VAL_D = 4124', masking L252 vs L251). A within-body symbol slip."
+      }
+    },
+    "verdict": {
+      "fixable_vs_intrinsic": "intrinsic to a transcript replay that replays answers",
+      "rationale": "the answer replay is load-bearing for the masking treatment: the masking branch masks prior answers on masked turns precisely so an earlier checkpoint's value cannot be copied without recovering the fact (run_longrun.py masking branch comment: 'Mask prior answers on masked turns so an earlier checkpoint's value cannot be copied without recovering the fact'). The ANSWER (Tt): lines are the thing masking acts on. Delete them and the arm is no longer a transcript replay - it is the spcc journal, i.e. the other arm. The binding is a consequence of that replay, not of a tunable formatting choice: in a transcript the answer necessarily follows the turn's tool output, and the current turn's delivery necessarily follows the question. Both arms already share that ordering; only the masking arm attaches an answer slot to it."
+    },
+    "consequence_for_comparison": {
+      "verdict": "the 6/48 gap is a format artefact and must be excluded from any retention comparison",
+      "why": "at this cell neither arm loses information: masked_rows = 0, compactions = 0, evicted = 0 on all 200 rows, and expected_present is True on 96/96 checkpoint rows with expected_present_source = prompt-digit-boundary. The cell is a format control, not a retention measurement.",
+      "correct_reading": "both arms retain everything; the masking arm's transcript format costs 6/48 on checkpoint accuracy through answer-slot binding, independent of distance",
+      "where_retention_claims_must_come_from": "cells where the treatment actually fires - masking window below 100 turns, or compaction interval below 100 turns. Pooling this 12.5 pp with the distance cliff would attribute a prompt-format artefact to memory."
+    },
+    "tree_clean": {
+      "doc_check": "python3 tools/doc_check.py exits 0",
+      "note": "no rows, fixtures, manifests, ptr_engine/layers.py, longrun/arm_cd.py, longrun/claim_mode.py, longrun/cell.py, prereg, FINDINGS-LEDGER.md, docs/STATE.md, journal/2026-11-10.md or orchestration/STATUS.md was written"
+    }
+  },
+  "blocker": null,
+  "next_unit_hint": "The 6/48 gap is closed as a format artefact: do not pool it with the distance cliff, and do not use the masking arm as a retention control at a window that never fires. Two follow-ups remain separable. (1) The answer-slot binding predicts that the masking arm's cross-document errors occur exactly on turns where the fixture delivers a body for a document other than the one asked - 5 such turns exist in TX-04 and 4 fail. A fixture with more delivery/ask mismatches would test that prediction directly, offline, with no requests. (2) The d64 result is still a single rep at a noise floor of +/-4.2 pp; a second rep at d64 only (9 probes x 2 arms = 18 requests) would put the 9/9 on firmer ground. Do not re-run the full 200-request cell for either.",
+  "write_paths": [
+    "orchestration/units/U-SPCC-67.md",
+    "orchestration/handoffs/U-SPCC-67.json"
+  ]
+}
