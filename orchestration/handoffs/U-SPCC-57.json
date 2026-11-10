@@ -1,0 +1,57 @@
+{
+  "unit": "U-SPCC-57",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "docs/STATE.md",
+    "journal/2026-11-10.md",
+    "orchestration/STATUS.md",
+    "orchestration/units/U-SPCC-57.md",
+    "orchestration/handoffs/U-SPCC-57.json"
+  ],
+  "evidence": {
+    "rows_file": "experiments/ptr-engine/measure/rows-e1-indexfix-2026-11-10.jsonl",
+    "rows_commit": "2e22310",
+    "rows": 343,
+    "failed": 0,
+    "truncated": 0,
+    "reconciliation_delta": 0,
+    "programme_spend": "9367 of 12094",
+    "headroom": 2727,
+    "arms": {
+      "spcc": {"value": 20, "contract": 19, "NONE": 27, "wrong": 1, "unparsed": 0, "requests": 100, "billed_tokens": 17187},
+      "masking-no-fetch": {"value": 8, "contract": 8, "NONE": 30, "wrong": 10, "unparsed": 0, "requests": 100, "billed_tokens": 18724},
+      "bounded-context-fetch": {"value": 48, "contract": 48, "NONE": 0, "wrong": 0, "unparsed": 0, "requests": 143, "billed_tokens": 51715}
+    },
+    "buckets_sum_to_48": true,
+    "central_finding": "The fetch arm's 48/48 is a lookup score, not a retention score. 41 of its 48 checkpoints were answered by fetching the fact body in the same turn the question was asked (initial response carries the question, emits the fetch, follow-up answers from the body). Prefetch is 0. Only 7 checkpoints are genuine retention successes: f01.d2, f03.d2, f01.d32, f03.d20, f05.d2, f07.d2, f07.d8. Therefore spcc-vs-fetch is not a retention comparison and must not be reported as one; when lookup is available on the question turn, retention is unnecessary, and the fetch arm answers everything at 3.0x spcc's billed tokens (51,715 vs 17,187).",
+    "fetch_answer_paths": {"same_turn_lookup": 41, "retention_only": 7, "prefetch": 0},
+    "secondary_findings": [
+      "NOT_FOUND collapsed 12 -> 0: every fetch attempt used an advertised doc-fact-NN@r1, so the index fix (b38db8a) reached the model",
+      "masking wrong answers went 0 -> 10 (turns 6, 7, 9, 13, 14, 22, 23, 25, 29, 30) while its value score stayed 8: the index now advertises 13 refs where it advertised 1, so an arm that cannot fetch sees fact names it cannot address and confabulates values instead of abstaining; advertising addressable refs to an arm that cannot address them converts abstention into confabulation",
+      "the multi-round loop is dead code in practice: max(fetch_rounds_this_turn) == 1 because the model batches all calls into one response; multi-REF servicing does work (fetch_rows reaches 3 at turn 21, 2 at turn 28); cp.TX-03.f04.d8 (turn 32) is now serviced and correct (NUM 3303)",
+      "billed rose on every arm because the index is 13 lines instead of 1: spcc +15.9%, masking +33.7%, fetch +26.2% - a prompt-size effect, not a treatment effect",
+      "the index fix changed the prompt bytes for all three arms, so no cell before b38db8a is comparable to this one; the spcc 21 and fetch 17 from c73dfc4 are superseded, not replicated"
+    ],
+    "verdicts": {
+      "spcc_gt_masking_aggregate": "survives - 20 vs 8, +12, outside the band",
+      "billed_le_masking": "FALSIFIED - spcc 17,187 vs masking 18,724 is now below, but the direction flipped between cells (+2,868, +820, -1,537), so the billing comparison is unstable and no direction is established",
+      "spcc_ge_fetch": "falsified on the number, void as a retention claim - fetch 48 vs spcc 20, but by lookup",
+      "falsifier": "fired in the earlier cells on billing; in this cell spcc bills less than masking, so it does not fire here - record the instability rather than picking a cell"
+    },
+    "ledger_column_check": "19 rows at 7 columns before, 20 after; 10-column and 3-column tables unchanged",
+    "prereg_edited": false,
+    "endpoint_requests": 0,
+    "model_calls": 0
+  },
+  "blocker": null,
+  "next_unit_hint": "The retention question is settled for this fixture: fetch answers by lookup, not retention, so spcc-vs-fetch cannot be read as a retention comparison. Next is to decide whether a powered E1 (4-6 reps, 1,200-1,800 requests) is worth amending the 200-500 ceiling for, and whether the masking arm should stop being shown the 13-ref index it cannot address (the 0->10 confabulation is a prompt-design defect, not an arm property).",
+  "write_paths": [
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "docs/STATE.md",
+    "journal/2026-11-10.md",
+    "orchestration/STATUS.md",
+    "orchestration/units/U-SPCC-57.md",
+    "orchestration/handoffs/U-SPCC-57.json"
+  ]
+}
