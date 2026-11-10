@@ -64,6 +64,7 @@ if _PTR_ENGINE_ROOT not in sys.path:
     sys.path.insert(0, _PTR_ENGINE_ROOT)
 from ptr_engine.pointer_table import make_ref  # noqa: E402
 from ptr_engine.fetch_tool import extract_marker_refs  # noqa: E402
+from ptr_engine.layers import COMPACT_EVERY  # noqa: E402
 
 # STREAMING (WIRE-CLIENT): the ONE streaming implementation. Imported as a module, not
 # as bare names, so the measured path provably calls client.send_chat and a test can
@@ -1561,10 +1562,13 @@ def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messag
 class Planner:
     """Builds the next prompt for one arm from the answers already recorded."""
 
-    def __init__(self, arm: str, fixture: dict, dry_run: bool):
+    def __init__(self, arm: str, fixture: dict, dry_run: bool,
+                 compact_every: int = COMPACT_EVERY):
         self.arm = arm
         self.fixture = fixture
         self.dry_run = dry_run
+        # E2's cell dimension: the fold distance this cell's spcc arm runs at.
+        self.compact_every = int(compact_every)
         self.answers: list[str] = []
         self.bpt = float(fixture["bytes_per_token"])
         self.wall_tokens = int(fixture["wall_tokens"])
@@ -1574,7 +1578,8 @@ class Planner:
         self.raw: list[str] = []
         self.arm_cd = arm_cd.ArmCDState(fixture=fixture) if arm in (arm_cd.ARM_C, arm_cd.ARM_D) else None
         # spcc: stable-prefix compiler state (own journal, epoch and compaction count).
-        self.spcc = (arm_cd.SpccArmState(fixture=fixture)
+        self.spcc = (arm_cd.SpccArmState(fixture=fixture,
+                                         compact_every=self.compact_every)
                      if arm in (arm_cd.ARM_SPCC, "spcc") else None)
         # D state
         self.walls = list(fixture.get("lease_reopen_turns") or [])
@@ -3183,7 +3188,7 @@ def prune_stale_previews(arm_root: str, written: set[str], n_turns: int) -> list
     return removed
 
 
-def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]],
+def run_dry(cfg, fixture: dict, cells: list[tuple[str, int, int]],
             root: Optional[str] = None) -> int:
     # PREVIEW-PRESERVATION: never clear the task directory.  See prune_stale_previews:
     # a read-only-sounding --dry-run that rmtree'd this tree deleted committed evidence
@@ -3193,12 +3198,22 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]],
     os.makedirs(root, exist_ok=True)
     order: list[str] = []
     reps_by_arm: dict[str, int] = {}
-    for arm, _rep in cells:
-        if arm not in reps_by_arm:
-            order.append(arm)
-            reps_by_arm[arm] = 0
-        reps_by_arm[arm] += 1
-    previews: dict[str, list[str]] = {arm: [] for arm in order}
+    # A variant label is the arm name for the default interval (so a run without
+    # --compact-every writes the same preview paths as before) and ``arm@cN`` for
+    # any other interval, so two variants of one arm never overwrite each other.
+    variants: dict[str, tuple[str, int]] = {}
+    for cell in cells:
+        # A 2-tuple is the pre-change cell shape (arm, rep); the interval defaults
+        # to COMPACT_EVERY, so an old caller previews exactly what it used to.
+        arm, _rep = cell[0], cell[1]
+        interval = cell[2] if len(cell) > 2 else COMPACT_EVERY
+        label = arm if interval == COMPACT_EVERY else "%s@c%d" % (arm, interval)
+        if label not in reps_by_arm:
+            order.append(label)
+            reps_by_arm[label] = 0
+            variants[label] = (arm, interval)
+        reps_by_arm[label] += 1
+    previews: dict[str, list[str]] = {label: [] for label in order}
     counts: dict[str, dict] = {}
 
     # TREATMENTS LAUNCH PRECONDITION — printed FIRST, before a single preview body is
@@ -3206,8 +3221,8 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]],
     # is the announcement that the cell would measure its control path for 48 turns.
     print("TREATMENT REACHABILITY AT THE FROZEN HORIZON (offline, from the fixture)")
     unreachable = 0
-    for arm in order:
-        rc, lines = check_treatments(fixture, arm, HORIZON_TURNS)
+    for label in order:
+        rc, lines = check_treatments(fixture, variants[label][0], HORIZON_TURNS)
         for line in lines:
             print(line)
         unreachable = unreachable or rc
@@ -3226,12 +3241,13 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]],
     # prices 48 turns for a `--max-turns 12` cell gates a cell that cannot exist.
     n_turns = cell_turns(cfg, fixture)
 
-    for arm in order:
+    for label in order:
+        arm, interval = variants[label]
         fx = fixture_for_arm(fixture, arm)
-        planner = Planner(arm, fx, dry_run=True)
-        c = {"reps": reps_by_arm[arm], "digest_requests": 0, "wall_turn": None,
+        planner = Planner(arm, fx, dry_run=True, compact_every=interval)
+        c = {"reps": reps_by_arm[label], "digest_requests": 0, "wall_turn": None,
              "trunc_turn": None, "post_wall": None}
-        counts[arm] = c
+        counts[label] = c
         written: set[str] = set()
         for t in range(1, n_turns + 1):
             info = planner.build(t)
@@ -3247,40 +3263,40 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]],
                                          indent=2, ensure_ascii=False)
                 if c["wall_turn"] is None:
                     c["wall_turn"] = t
-                    dpath = os.path.join(root, arm, f"wall-{t:02d}-digest-request.json")
+                    dpath = os.path.join(root, label, f"wall-{t:02d}-digest-request.json")
                     dbytes, dsha = preview_write(dpath, digest_body)
                     written.add(os.path.abspath(dpath))
-                    print(f"  [{arm}] first wall at T{t}: digest request {dbytes} B sha256={dsha} ({dpath})")
-            if len(previews[arm]) < 3:
-                previews[arm].append(sha256_text(body))
-                path = os.path.join(root, arm, f"turn-{t:02d}.json")
+                    print(f"  [{label}] first wall at T{t}: digest request {dbytes} B sha256={dsha} ({dpath})")
+            if len(previews[label]) < 3:
+                previews[label].append(sha256_text(body))
+                path = os.path.join(root, label, f"turn-{t:02d}.json")
                 nbytes, digest = preview_write(path, body)
                 written.add(os.path.abspath(path))
                 user0 = info["prompt"].replace("\n", " ")[:100]
-                print(f"  [{arm}] T{t}: {nbytes} B sha256={digest} user=\"{user0}\"")
+                print(f"  [{label}] T{t}: {nbytes} B sha256={digest} user=\"{user0}\"")
                 if cfg.show_prompts:
                     print(body)
             if arm == "transcript-grow" and c["trunc_turn"] is None and info["evicted"]:
                 c["trunc_turn"] = t
-                print(f"  [{arm}] first FIFO truncation at T{t}: evicted {info['evicted']} history block(s)")
+                print(f"  [{label}] first FIFO truncation at T{t}: evicted {info['evicted']} history block(s)")
             if arm == "transcript-compact" and c["wall_turn"] is not None and c["post_wall"] is None:
                 c["post_wall"] = (t, sha256_text(body))
-                ppath = os.path.join(root, arm, f"post-wall-{t:02d}.json")
+                ppath = os.path.join(root, label, f"post-wall-{t:02d}.json")
                 pbytes, psha = preview_write(ppath, body)
                 written.add(os.path.abspath(ppath))
-                print(f"  [{arm}] post-wall body at T{t}: {pbytes} B sha256={psha} "
+                print(f"  [{label}] post-wall body at T{t}: {pbytes} B sha256={psha} "
                       "(digest text is a placeholder offline; the digest REQUEST above is exact)")
             # simulate the answer the model would have produced
             planner.record(t, f"<<answer from turn {t}: not produced in dry-run>>")
         # Only after rendering this arm: drop artefacts of THIS arm at turns this run
         # covers but no longer produces.  Other arms' previews are never considered.
-        for gone in prune_stale_previews(os.path.join(root, arm), written, n_turns):
-            print(f"  [{arm}] removed stale preview {gone} (superseded by this run)")
+        for gone in prune_stale_previews(os.path.join(root, label), written, n_turns):
+            print(f"  [{label}] removed stale preview {gone} (superseded by this run)")
 
     print("\nREQUEST COUNTS (what --dry-run would send)")
     total = 0
-    for arm in order:
-        c = counts[arm]
+    for label in order:
+        c = counts[label]
         turns = n_turns * c["reps"]
         extra = c["digest_requests"] * c["reps"]
         cell_total = turns + extra
@@ -3289,7 +3305,7 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]],
         # Full cell (n_turns == fixture N): the line is byte-identical to before this unit.
         scope = (f"N={fixture['N']} x reps={c['reps']}" if n_turns == int(fixture["N"])
                  else f"N={fixture['N']} --max-turns={n_turns} x reps={c['reps']}")
-        print(f"  {arm:19s} turn_requests={turns} ({scope})  "
+        print(f"  {label:19s} turn_requests={turns} ({scope})  "
               f"digest_requests={extra}  cell_total={cell_total}")
     print(f"  would_send_total={total}")
     if tools_enabled(cfg):
@@ -3364,7 +3380,8 @@ def refuse_arm_without_tools(cfg, arm: str) -> int:
     return EXIT_ARM_REQUIRES_TOOLS
 
 
-def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str) -> int:
+def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str,
+             compact_every: int = COMPACT_EVERY) -> int:
     assert_repeat_identity(run_id, rep, getattr(cfg, 'generation', 'gen-7'))
     # BEFORE the ARM_C copy below clears cfg.tools: the guard reads the launch's own
     # --tools, and C is allowed to be tool-less while D is not.
@@ -3435,7 +3452,7 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
           f"spent_at_start={gate.spent_at_start} headroom={gate.headroom} "
           f"files={len(gate.paths)} (per-request brake armed before the first send)")
 
-    planner = Planner(arm, fixture, dry_run=False)
+    planner = Planner(arm, fixture, dry_run=False, compact_every=compact_every)
     start = 1
     if rows:
         start = resume_start(rows) + 1
@@ -4276,6 +4293,12 @@ def build_parser():
     ap.add_argument("--task", default=None)
     ap.add_argument("--arms", default=",".join(ARMS))
     ap.add_argument("--reps", type=int, default=1)
+    ap.add_argument("--compact-every", default=None, dest="compact_every", metavar="LIST",
+                    help="E2's cell dimension: comma-separated compaction intervals "
+                         "(e.g. 12,24,48). Each interval is one arm-variant of the "
+                         "spcc arm inside the SAME cell, so G3's n = turns x variants "
+                         "x reps. Omitted = the module default (%d), one variant, "
+                         "byte-identical to a run without this flag." % COMPACT_EVERY)
     ap.add_argument("--generation", default="gen-7",
                     help="recorded validity generation of this run; gen-7 asserts hard, "
                          "gen-6 and earlier are labelled LEGACY-NONCONFORMING")
@@ -4397,6 +4420,52 @@ def build_parser():
     return ap
 
 
+def compact_intervals(cfg) -> list:
+    """The cell's compaction intervals, in declared order.
+
+    ``--compact-every`` is a comma list (``12,24,48``).  Omitted means the module
+    default as a SINGLE variant, so a run without the flag is one variant at
+    ``COMPACT_EVERY`` and its prompts are byte-identical to the pre-change run.
+    Duplicates collapse (two identical variants would be the same cell twice).
+    """
+    cached = getattr(cfg, "compact_intervals", None)
+    if cached is not None:
+        return list(cached)
+    raw = getattr(cfg, "compact_every", None)
+    if raw is None or not str(raw).strip():
+        return [COMPACT_EVERY]
+    out: list = []
+    for part in str(raw).split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            value = int(part)
+        except ValueError:
+            raise ValueError("--compact-every %r is not an integer list" % (raw,))
+        if value < 1:
+            raise ValueError("--compact-every %r: intervals must be >= 1" % (raw,))
+        if value not in out:
+            out.append(value)
+    if not out:
+        raise ValueError("--compact-every %r names no interval" % (raw,))
+    return out
+
+
+def expand_cells(arms, reps, intervals) -> list:
+    """One cell per ``(arm, rep, interval)`` -- the interval is a cell dimension.
+
+    A single interval reproduces the pre-change cell list exactly (one variant
+    per arm/rep), so a run without ``--compact-every`` is unchanged.  With three
+    intervals the same cell carries three arm-variants, which is what makes G3's
+    ``n = turns x variants x reps`` see 300 for a 100-turn E2 cell.
+    """
+    return [(arm, rep, int(interval))
+            for arm in arms
+            for rep in range(1, int(reps) + 1)
+            for interval in intervals]
+
+
 def prereg_gate_args(cfg, fixture: dict):
     """G3's operand surface, built from the runner's own flag names.
 
@@ -4421,10 +4490,15 @@ def prereg_gate_args(cfg, fixture: dict):
     # (``--arms``, comma-separated), so the count is the number of arms this run will
     # actually execute -- never a default of 1.
     import cell as _cell  # noqa: E402 - ONE arms-count rule, never a second copy
+    # E2's cell dimension: each compaction interval is one arm-variant of the same
+    # arm inside the same cell, so the arm term G3 multiplies by is
+    # (declared arms x interval variants).  With one interval this is exactly the
+    # pre-change count, so a run without --compact-every gates as it always did.
+    variants = len(compact_intervals(cfg))
     return argparse.Namespace(hypothesis=hypothesis,
                               turns=cell_turns(cfg, fixture),
                               reps=int(getattr(cfg, "reps", 1) or 1),
-                              arms=_cell._arms_count(getattr(cfg, "arms", None)))
+                              arms=_cell._arms_count(getattr(cfg, "arms", None)) * variants)
 
 
 def enforce_prereg_gate(cfg, fixture: dict) -> int:
@@ -4537,20 +4611,30 @@ def main(argv=None) -> int:
     date = utc_now().strftime("%Y-%m-%d")
     rows_path = cfg.rows or f"experiments/ptr-engine/measure/rows-longrun-{date}.jsonl"
     run_base = cfg.run_id or f"longrun-{date}T{utc_now().strftime('%H%M%S')}Z"
-    cells = [(arm, rep) for arm in arms for rep in range(1, int(cfg.reps) + 1)]
+    # E2's cell dimension: one cell per (arm, rep, compaction interval).  A single
+    # interval (the default) reproduces the pre-change cell list exactly.
+    try:
+        intervals = compact_intervals(cfg)
+    except ValueError as exc:
+        print("COMPACT-EVERY USAGE: %s" % (exc,), file=sys.stderr)
+        return 2
+    cfg.compact_intervals = intervals
+    cells = expand_cells(arms, cfg.reps, intervals)
     # WALL-KEY PREFLIGHT: resolve every requested arm's wall BEFORE a manifest is frozen or
     # a body is rendered, so a fixture that declares `wall_tokens_by_arm` but omits an arm
     # refuses here (exit 2) instead of running that arm at the top-level wall.
     try:
-        for _arm, _rep in cells:
+        for _arm, _rep, _iv in cells:
             wall_for_arm(fixture, _arm)
     except FixtureError as exc:
         print(f"FIXTURE ERROR: {exc}", file=sys.stderr)
         return 2
 
     if cfg.dry_run:
-        for arm, rep in cells:
+        for arm, rep, interval in cells:
             rid = f"dryrun-{fixture['task_id']}-{arm}-r{rep}"
+            if interval != COMPACT_EVERY:
+                rid += f"-c{interval}"
             mid = cfg.manifest_path or os.path.join(cfg.manifest_dir, rid + ".json")
             # the manifest freezes the wall the CELL runs at: per arm, never the top-level
             doc = build_manifest(cfg, fixture_for_arm(fixture, arm), arm, rep, rid, rows_path)
@@ -4597,9 +4681,11 @@ def main(argv=None) -> int:
         return rc
     print(f"rows: {rows_path}  run_id base: {run_base}")
     print(f"FIXTURE: {fixture['_path']}  task_id={fixture['task_id']}  sha256={fixture['_sha256']}")
-    for arm, rep in cells:
+    for arm, rep, interval in cells:
         rid = f"{run_base}-{arm}-r{rep}"
-        rc = run_cell(cfg, fixture, arm, rep, rid, rows_path)
+        if interval != COMPACT_EVERY:
+            rid += f"-c{interval}"
+        rc = run_cell(cfg, fixture, arm, rep, rid, rows_path, compact_every=interval)
         if rc != 0:
             return rc
     return report_run(rows_path, run_base, cfg, smoke=bool(cfg.smoke))

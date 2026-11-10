@@ -28,7 +28,7 @@ from ptr_engine.fetch_tool import (  # noqa: E402
 )
 from ptr_engine.layers import (  # noqa: E402
     compile_prompt, CompactionState, format_journal_line, RETURN_SYMBOL,
-    escape_journal_content, reset_prefix_state,
+    escape_journal_content, reset_prefix_state, COMPACT_EVERY,
 )
 from ptr_engine.quantise import StubTokenizer  # noqa: E402  real counter
 
@@ -487,12 +487,17 @@ class SpccArmState:
     """
 
     def __init__(self, fixture: Optional[dict] = None, tokenizer=None,
-                 run: Optional[dict] = None, index_lines: Optional[List[str]] = None):
+                 run: Optional[dict] = None, index_lines: Optional[List[str]] = None,
+                 compact_every: int = COMPACT_EVERY):
         self.fixture = fixture or {}
         self.tokenizer = _spcc_tokenizer(tokenizer)
         self.index_lines = (list(index_lines) if index_lines is not None
                             else spcc_world_index(self.fixture, self.tokenizer))
-        self.state = CompactionState(index_lines=list(self.index_lines))
+        # The fold distance is a per-cell parameter (E2 varies it); the default is
+        # the module constant, so an unparameterised arm folds exactly as before.
+        self.compact_every = int(compact_every)
+        self.state = CompactionState(index_lines=list(self.index_lines),
+                                     compact_every=self.compact_every)
         self.run = run if run is not None else spcc_run(self.fixture)
         self.fetched: List[str] = []
         self.delivered: List[str] = []
@@ -531,6 +536,7 @@ class SpccArmState:
         prompt = compile_prompt(
             self.run, self.state,
             epoch=self.state.epoch, journal=new_lines, work=l3,
+            compact_every=self.compact_every,
         )
         content = str(work)
         if self.delivered:

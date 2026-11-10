@@ -40,6 +40,11 @@ class CompactionState:
     compactions: int = 0
     prefix_sha256: str = ""
     layer_tokens: dict = field(default_factory=dict)
+    # The compaction interval this state folds at.  It is a per-state field, not a
+    # module global, so two cells in one process can run different intervals (E2
+    # varies it) without either one rewriting the other's fold distance.  The
+    # default is the module constant, so a caller that never names it is unchanged.
+    compact_every: int = COMPACT_EVERY
     # Per-run L0 stability state.  It lives on the state object (one per run),
     # never in a module global, so two runs that happen to share a ``run_id``
     # in one process cannot raise a false PtrPrefixDrift against each other.
@@ -161,14 +166,15 @@ def format_journal_line(n: int, role: str, content: Any) -> str:
     return "T%d|%s|%s" % (n, role, escape_journal_content(content))
 
 
-def compile_prompt(run: Any, state: CompactionState, *, epoch: int, journal: list, work: str) -> str:
+def compile_prompt(run: Any, state: CompactionState, *, epoch: int, journal: list, work: str,
+                   compact_every: int | None = None) -> str:
     """Render one prompt from a live ``CompactionState``.
 
     Journal lifecycle (owned by this function, not by the caller):
       * ``journal`` carries only the lines for the current compile (normally one
         ``T{n}|{role}|{content}`` line for the turn).  They are APPENDED to
         ``state.journal``; the caller must not re-pass lines already folded.
-      * When the accumulated journal reaches ``COMPACT_EVERY`` lines, the whole
+      * When the accumulated journal reaches the compaction interval, the whole
         journal is DROPPED -- no content survives the fold -- and a single
         deterministic marker ``[compacted: N turns dropped at epoch E]`` is
         appended to ``state.index_lines``.  ``state.epoch`` is incremented,
@@ -180,6 +186,11 @@ def compile_prompt(run: Any, state: CompactionState, *, epoch: int, journal: lis
         the state has already advanced past a compaction.
       * Compaction happens at the start of a compile, never between layers, so it
         can never fire mid-turn.
+
+    ``compact_every`` is the fold distance.  ``None`` (the default) means "use the
+    state's own interval", which itself defaults to ``COMPACT_EVERY``; a caller
+    that names it overrides the state and the state records the new value, so the
+    interval a run folds at is always readable from the state it folded.
 
     ``prefix_sha256`` is the hash of the CACHEABLE prefix: ``L0+L1``.  ``L2`` is
     the append-only journal tail -- growing it extends the cached prefix without
@@ -195,6 +206,7 @@ def compile_prompt(run: Any, state: CompactionState, *, epoch: int, journal: lis
                 epoch=int(state.get("epoch", epoch)),
                 journal=list(state.get("journal", [])),
                 compactions=int(state.get("compactions", 0)),
+                compact_every=int(state.get("compact_every", COMPACT_EVERY)),
                 l0_hash=state.get("l0_hash", "") or "",
                 l0_run_id=state.get("l0_run_id"),
             )
@@ -225,9 +237,15 @@ def compile_prompt(run: Any, state: CompactionState, *, epoch: int, journal: lis
     # already-advanced epoch must never be regressed by a stale caller value.
     st.epoch = max(int(st.epoch or 0), int(epoch or 0))
 
+    # The fold distance: an explicit argument wins and is recorded on the state;
+    # otherwise the state's own interval (default COMPACT_EVERY) is authoritative.
+    if compact_every is not None:
+        st.compact_every = int(compact_every)
+    every = int(st.compact_every)
+
     # compaction (start of compile only -- never mid-turn)
     compacted_now = False
-    if len(st.journal) >= COMPACT_EVERY:
+    if len(st.journal) >= every:
         # The journal is DROPPED, not summarised: no content survives the fold.
         # The marker states exactly that, so nothing downstream can read it as a
         # claim that the folded turns are still available.
@@ -282,6 +300,7 @@ def compile_prompt(run: Any, state: CompactionState, *, epoch: int, journal: lis
         mapping_state["epoch"] = st.epoch
         mapping_state["journal"] = st.journal
         mapping_state["compactions"] = st.compactions
+        mapping_state["compact_every"] = st.compact_every
         mapping_state["prefix_sha256"] = prefix_sha
         mapping_state["layer_tokens"] = lt
         mapping_state["l0_hash"] = st.l0_hash
