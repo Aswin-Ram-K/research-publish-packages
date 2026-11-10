@@ -4318,6 +4318,10 @@ def build_parser():
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--manifest-dir", default="experiments/ptr-engine/longrun/manifests")
     ap.add_argument("--manifest-path", default=None)
+    ap.add_argument("--preview-root", default=None, dest="preview_root",
+                    help="redirect the dry-run preview tree (default: the tracked "
+                         "state/previews/<task_id> tree). Tests MUST pass a temp dir so a "
+                         "dry run never overwrites committed evidence.")
     ap.add_argument("--rows", default=None)
     ap.add_argument("--base-url", default=DEFAULT_BASE_URL)
     ap.add_argument("--model", default=DEFAULT_MODEL)
@@ -4693,7 +4697,7 @@ def main(argv=None) -> int:
               f"sha256={fixture['_sha256']}")
         print("(offline: zero requests; exact request bodies under state/previews/)")
         print("\nFIRST THREE REQUEST BODIES PER ARM")
-        return run_dry(cfg, fixture, cells)
+        return run_dry(cfg, fixture, cells, root=cfg.preview_root)
 
     # CLAIM-ROW-STAMP: ONE parse of the claim decision, BEFORE the first row is
     # written and before any request. The resolved record is threaded on cfg and

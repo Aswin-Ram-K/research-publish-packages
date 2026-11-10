@@ -157,6 +157,7 @@ def test_dry_run_manifest_records_the_per_arm_wall_not_the_top_level_one():
         argv = ["--dry-run", "--temperature", "0", "--fixture", V8,
                 "--arms", "pointer-stable,transcript-compact",
                 "--reps", "1", "--manifest-dir", tmp,
+                "--preview-root", os.path.join(tmp, "previews"),
                 "--rows", os.path.join(tmp, "rows.jsonl")]
         rc = R.main(argv)
         assert rc == 0, rc

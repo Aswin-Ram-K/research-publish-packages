@@ -89,6 +89,7 @@ def _dry_run(tmpdir, extra_args=()):
     """Run the runner's real offline dry-run and return its stdout."""
     cmd = [PY, RUNNER, "--fixture", FIXTURE_ARGV, "--arm", ARM, "--reps", "1",
            "--dry-run", "--manifest-dir", os.path.join(tmpdir, "manifests"),
+           "--preview-root", os.path.join(tmpdir, "previews"),
            "--temperature", "0"]
     cmd += list(extra_args)
     env = dict(os.environ)
