@@ -1,0 +1,47 @@
+{
+  "unit": "U-SPCC-52",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/ptr_engine/fetch_tool.py",
+    "experiments/ptr-engine/longrun/arm_cd.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_fetch_call_names.py",
+    "experiments/ptr-engine/longrun/tests/test_tool_call_capture.py",
+    "orchestration/units/U-SPCC-52.md",
+    "orchestration/handoffs/U-SPCC-52.json"
+  ],
+  "evidence": {
+    "defect": "fetch_tool.py:96-99 kept only function.name == 'fetch'; the wire schema declares read_file (TOOL_NAMES, run_longrun.py:468), so a read_file call was filtered out, _calls was empty, no follow-up was bought, and the checkpoint scored unparsed",
+    "stranded_checkpoints": [9, 13, 25, 51, 56, 58, 60, 67, 74, 76],
+    "serviced_checkpoints": [21, 73, 84],
+    "rows_file": "experiments/ptr-engine/measure/rows-e1-tools-2026-11-10.jsonl",
+    "fix": {
+      "ptr_engine/fetch_tool.py": "parse_fetch_calls(assistant_message, tool_names=None); DEFAULT_FETCH_TOOL_NAMES = ('fetch', 'read_file'); _accepted_tool_names(); filter is `name not in accepted`; read_file's `path` maps to `ref`; start_line/end_line are NOT mapped to `range` (line numbers vs byte offsets)",
+      "longrun/arm_cd.py": "parse_fetch_calls_from_response(resp, tool_names=None) forwards the declared set",
+      "longrun/run_longrun.py": "new fetch_call_tool_names(cfg) = client.tool_names(cfg) + 'fetch'; call site at :3699 passes it"
+    },
+    "red": "3 failed, 3 passed, 1 subtests passed — test_read_file_call_is_serviced: AssertionError: 'tool_call_unserviced' is not None : a declared tool name must not be labelled unserviced: protocol_violation='tool_call_unserviced' tool_calls=[{'id': 'call_c1985245fd5c457d83111c74', 'name': 'read_file', ...}]",
+    "green": "24 passed, 2 subtests passed in 0.56s over test_fetch_call_names.py test_tool_call_capture.py test_fetch_arm_row_persistence.py test_arm_cd_wiring.py test_fetch_rounds_accounting.py",
+    "doc_check": "OK docs clean under /home/zer0null/research extractor, exit 0",
+    "read_file_serviced": "follow-up bought (calls == CP_TURN+1), one fetch round billed (fetch_rounds_used == 1 on a work turn), retrieval_outcomes == ['OK'], answer_kind == 'TEXT'",
+    "fetch_serviced": "unchanged: follow-up bought, tool_call_ids == [FETCH_ID], answer_kind == 'TEXT'",
+    "undeclared_name": "rejected by the parser (no follow-up, no round) and preserved verbatim on the row with protocol_violation='tool_call_unserviced' and unserviced_tool_call_ids",
+    "label_no_longer_fires": "protocol_violation is None for both read_file and fetch on checkpoint and work turns",
+    "unchanged": ["answer contract", "scoring", "fetch budget", "per-turn cap"],
+    "test_contract_update": "test_tool_call_capture.py's two capture tests now use an UNDECLARED name (write_file); the U-SPCC-49 guarantee (nothing signalled is dropped silently) still holds",
+    "preexisting_failures": "71 failures in the wider experiments/ptr-engine/{tests,longrun/tests} sweep, all pre-existing and unrelated: repeat-identity rep=1 not in run_id='run-offline' (run_longrun.py:2705), treatments contract not declared by this fixture, global cap spent=8699 cap=4320, ledger/pin/digest/verbosity families (rows file missing from corpus)",
+    "endpoint_requests": 0,
+    "model_calls": 0
+  },
+  "blocker": null,
+  "next_unit_hint": "Re-run the bounded-context-fetch arm on the corrected parser: the 10 stranded checkpoints at turns 9/13/25/51/56/58/60/67/74/76 should now buy a follow-up and grade, lifting the 22/48 floor. Expect fetch_rounds_used to rise above 18 of 48 — the round pool, not the parser, becomes the binding constraint.",
+  "write_paths": [
+    "experiments/ptr-engine/ptr_engine/fetch_tool.py",
+    "experiments/ptr-engine/longrun/arm_cd.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_fetch_call_names.py",
+    "experiments/ptr-engine/longrun/tests/test_tool_call_capture.py",
+    "orchestration/units/U-SPCC-52.md",
+    "orchestration/handoffs/U-SPCC-52.json"
+  ]
+}

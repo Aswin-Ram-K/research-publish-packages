@@ -22,6 +22,11 @@ call the fetch parser did not consume is preserved on the row and labelled
 fetch budget are untouched: the call is RECORDED, not serviced, so no request is bought
 and no round is spent.
 
+SUPERSEDED IN PART BY U-SPCC-52.  ``read_file`` is now a DECLARED name the parser
+services (``tests/test_fetch_call_names.py``), so the two capture tests below exercise
+the guarantee with an UNDECLARED name (``write_file``).  The guarantee itself -- nothing
+the server signalled is dropped silently -- is unchanged.
+
 Offline.  ZERO inference requests, no network, no git.  The transport is a fake that
 returns the exact dict ``client.send_chat`` returns for a tool-call turn (built with the
 client's own ``structured_tool_calls``), so the shape under test is the wire shape.
@@ -61,6 +66,9 @@ READ_FILE_ARGS = '{"path": "doc-live", "start_line": 1, "end_line": 1}'
 READ_FILE_ID = "call_c1985245fd5c457d83111c74"
 FETCH_ARGS = '{"ref": "doc-live@r1"}'
 FETCH_ID = "call_8c0b282c75e64c6f9bc4c12e"
+#: A name the run never declared.  U-SPCC-52 made the DECLARED names (`read_file`,
+#: `fetch`) serviced, so the capture guarantee is exercised with this one.
+UNDECLARED_NAME = "write_file"
 
 
 class _Cfg:
@@ -186,9 +194,14 @@ class ToolCallCaptureTest(unittest.TestCase):
         assert len(hits) == 1, [(r.get("turn"), r.get("kind")) for r in rows]
         return hits[0]
 
-    # -- (1) the defect: a read_file call on a checkpoint turn is DROPPED ------
-    def test_read_file_call_on_checkpoint_turn_is_recorded_not_dropped(self):
-        res = self._scenario(tool_call_on=CP_TURN)
+    # -- (1) an UNDECLARED call on a checkpoint turn is RECORDED, not dropped --
+    # FETCH-NAME-DRIFT (U-SPCC-52) superseded the original subject of this test: a
+    # `read_file` call is now SERVICED (see tests/test_fetch_call_names.py), so the
+    # capture guarantee is exercised with a name the run never declared.  The guarantee
+    # itself is unchanged: nothing the server signalled is dropped silently.
+    def test_undeclared_call_on_checkpoint_turn_is_recorded_not_dropped(self):
+        res = self._scenario(tool_call_on=CP_TURN, name=UNDECLARED_NAME,
+                             arguments=READ_FILE_ARGS, call_id=READ_FILE_ID)
         self.assertEqual(res["rc"], 0, res["stderr"][-1200:])
         row = self._turn_row(res["rows"], CP_TURN)
 
@@ -201,7 +214,7 @@ class ToolCallCaptureTest(unittest.TestCase):
         # ... and the call itself must survive on the row, verbatim.
         preserved = row.get("tool_calls") or []
         self.assertEqual(len(preserved), 1, f"the call was not preserved: {preserved!r}")
-        self.assertEqual(preserved[0].get("name"), "read_file")
+        self.assertEqual(preserved[0].get("name"), UNDECLARED_NAME)
         self.assertEqual(preserved[0].get("id"), READ_FILE_ID)
         self.assertEqual(preserved[0].get("arguments"), READ_FILE_ARGS)
         self.assertEqual(row.get("unserviced_tool_call_ids"), [READ_FILE_ID])
@@ -217,14 +230,15 @@ class ToolCallCaptureTest(unittest.TestCase):
         self.assertFalse([r for r in res["rows"] if r.get("fetch_followup")],
                          "no follow-up row may exist for a recorded-only call")
 
-    # -- (2) a read_file call on a WORK turn is recorded the same way ----------
-    def test_read_file_call_on_work_turn_is_recorded(self):
-        res = self._scenario(max_turns=2, tool_call_on=1)
+    # -- (2) an undeclared call on a WORK turn is recorded the same way --------
+    def test_undeclared_call_on_work_turn_is_recorded(self):
+        res = self._scenario(max_turns=2, tool_call_on=1, name=UNDECLARED_NAME,
+                             arguments=READ_FILE_ARGS, call_id=READ_FILE_ID)
         self.assertEqual(res["rc"], 0, res["stderr"][-1200:])
         row = self._turn_row(res["rows"], 1)
         self.assertEqual(row.get("protocol_violation"), "tool_call_unserviced",
                          f"work-turn drop: tool_calls={row.get('tool_calls')!r}")
-        self.assertEqual((row.get("tool_calls") or [{}])[0].get("name"), "read_file")
+        self.assertEqual((row.get("tool_calls") or [{}])[0].get("name"), UNDECLARED_NAME)
         self.assertEqual(res["calls"], 2, "no follow-up may be bought for a recorded call")
 
     # -- (3) the working path is untouched: a fetch call is still SERVICED -----

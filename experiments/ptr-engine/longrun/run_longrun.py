@@ -1051,6 +1051,22 @@ def unserviced_structured_calls(resp, calls) -> list[dict]:
     return [c for c in raw if c.get("id") is not None and c.get("id") not in served]
 
 
+def fetch_call_tool_names(cfg=None) -> tuple:
+    """The tool names a fetch-arm reply may use: the run's DECLARED tools + ``fetch``.
+
+    FETCH-NAME-DRIFT (U-SPCC-52): the fetch parser used to hardcode ``"fetch"`` while
+    the wire schema declared ``read_file`` (``TOOL_NAMES``), so every ``read_file`` call
+    was filtered out and its checkpoint scored ``unparsed``.  The parser now takes the
+    declared set; this is where the run hands it over.  ``fetch`` is always included
+    because the ARM_D prompt still teaches ``fetch(ref=...)``, and a run that declared
+    neither name (``cfg is None``) falls back to ``TOOL_NAMES``.
+    """
+    names = list(client.tool_names(cfg)) if cfg is not None else list(TOOL_NAMES)
+    if client.FETCH_TOOL_NAME not in names:
+        names.append(client.FETCH_TOOL_NAME)
+    return tuple(names)
+
+
 def limit_calls(calls: list[dict], per_turn: int = TOOL_CALLS_PER_TURN):
     """Split one turn's calls into (executed batch, refused overflow). Hard 2-per-turn."""
     return list(calls[:per_turn]), list(calls[per_turn:])
@@ -3677,13 +3693,17 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
         if arm == arm_cd.ARM_D and (fetch_tools_enabled(cfg) or tools_enabled(cfg)):
             _fetch_budget = arm_cd.resolve_fetch_budget(planner.arm_cd, fixture)
             extras["fetch_budget_tokens"] = _fetch_budget
-            _calls = arm_cd.parse_fetch_calls_from_response(resp)
-            # TOOL-CALL-CAPTURE (U-SPCC-49): the fetch parser keeps only `fetch`-named
-            # calls, but the schema on the wire is `read_file`.  A call it did not consume
-            # is RECORDED here -- preserved verbatim on the row and labelled -- instead of
-            # being dropped into a bare `unparsed`.  Recording buys no request and spends
-            # no round, so the answer contract, the scoring and the fetch budget are
-            # untouched; the row simply stops lying about what the server signalled.
+            # FETCH-NAME-DRIFT (U-SPCC-52): hand the parser the names this run actually
+            # DECLARED, so a `read_file` call -- the name the wire schema carries -- is
+            # serviced exactly as a `fetch` call is, instead of being filtered out.
+            _calls = arm_cd.parse_fetch_calls_from_response(
+                resp, tool_names=fetch_call_tool_names(cfg))
+            # TOOL-CALL-CAPTURE (U-SPCC-49): a structured call the parser did not consume
+            # -- an UNDECLARED name, now that declared names are serviced -- is RECORDED
+            # here, preserved verbatim on the row and labelled, instead of being dropped
+            # into a bare `unparsed`.  Recording buys no request and spends no round, so
+            # the answer contract, the scoring and the fetch budget are untouched; the
+            # row simply stops lying about what the server signalled.
             _unserviced = unserviced_structured_calls(resp, _calls)
             if _unserviced:
                 extras["tool_calls"] = _unserviced

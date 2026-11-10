@@ -276,13 +276,20 @@ def parse_text_call(content):
     }]
 
 
-def parse_fetch_calls_from_response(resp: Any) -> List[Dict[str, Any]]:
-    """Detect fetch tool calls in a model response (structured or text)."""
+def parse_fetch_calls_from_response(resp: Any,
+                                    tool_names: Any = None) -> List[Dict[str, Any]]:
+    """Detect fetch tool calls in a model response (structured or text).
+
+    ``tool_names`` is the set of tool names the run DECLARED (``--tools``); it is
+    forwarded to :func:`ptr_engine.fetch_tool.parse_fetch_calls` so a call named
+    ``read_file`` -- the name the wire schema actually declares -- is serviced instead
+    of being filtered out.  ``None`` keeps the parser's own default set.
+    """
     resp = resp or {}
     calls: List[Dict[str, Any]] = []
     if isinstance(resp.get("tool_calls"), list):
         try:
-            calls.extend(parse_fetch_calls(resp))
+            calls.extend(parse_fetch_calls(resp, tool_names=tool_names))
         except (TypeError, AttributeError):
             pass
     content = resp.get("content") or resp.get("content_raw") or ""

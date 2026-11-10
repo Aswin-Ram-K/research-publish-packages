@@ -79,13 +79,45 @@ def marker_to_fetch_message(marker: str) -> Dict[str, Any]:
                                         "arguments": {"ref": ref}}}]}
 
 
-def parse_fetch_calls(assistant_message: Any) -> List[Dict[str, Any]]:
+#: Tool names a fetch-arm reply may use when the caller does not supply the set the run
+#: actually DECLARED.  ``fetch`` is what the ARM_D prompt teaches (``fetch(ref=...)``);
+#: ``read_file`` is what the wire schema declares (``TOOL_NAMES`` in ``run_longrun``).
+#: Keeping both here is what stops the parser and the wire schema drifting apart again:
+#: a ``read_file`` call used to be filtered out at the name check, so ``_calls`` came
+#: back empty, no follow-up was bought, and the checkpoint scored ``unparsed``.
+DEFAULT_FETCH_TOOL_NAMES: Tuple[str, ...] = ("fetch", "read_file")
+
+
+def _accepted_tool_names(tool_names: Any) -> Tuple[str, ...]:
+    """The names this parse accepts: the caller's declared set, else the default."""
+    if tool_names is None:
+        return DEFAULT_FETCH_TOOL_NAMES
+    if isinstance(tool_names, str):
+        tool_names = (tool_names,)
+    try:
+        names = tuple(str(n) for n in tool_names if n)
+    except TypeError:
+        return DEFAULT_FETCH_TOOL_NAMES
+    return names or DEFAULT_FETCH_TOOL_NAMES
+
+
+def parse_fetch_calls(assistant_message: Any,
+                      tool_names: Any = None) -> List[Dict[str, Any]]:
+    """Structured fetch calls in one assistant message.
+
+    ``tool_names`` is the set of tool names the run DECLARED (``--tools``); a call whose
+    name is outside it is rejected -- not silently rewritten into a fetch.  ``None``
+    falls back to :data:`DEFAULT_FETCH_TOOL_NAMES`, so a caller that does not know the
+    declared set still services both the prompt-taught ``fetch`` and the wire's
+    ``read_file``.  A call with no name at all is still parsed, as it always was.
+    """
     out: List[Dict[str, Any]] = []
     if not isinstance(assistant_message, dict):
         return out
     calls = assistant_message.get("tool_calls")
     if not isinstance(calls, list):
         return out
+    accepted = _accepted_tool_names(tool_names)
     for c in calls:
         if not isinstance(c, dict):
             continue
@@ -93,10 +125,10 @@ def parse_fetch_calls(assistant_message: Any) -> List[Dict[str, Any]]:
         if not isinstance(fn, dict):
             continue
         name = fn.get("name")
-        if name != "fetch":
-            # still parse? spec says fetch calls; filter by name
-            if name is not None and name != "fetch":
-                continue
+        if name is not None and name not in accepted:
+            # An undeclared name is REJECTED here and reported by the caller
+            # (`run_longrun.unserviced_structured_calls`), never dropped silently.
+            continue
         args_raw = fn.get("arguments", "{}")
         args: Dict[str, Any] = {}
         invalid = False
@@ -116,9 +148,17 @@ def parse_fetch_calls(assistant_message: Any) -> List[Dict[str, Any]]:
             args = {}
         ref = args.get("ref")
         if ref is None:
-            # maybe nested
+            # A `read_file` call carries no `ref`; its `path` is the only ref-bearing
+            # field the wire schema gives it, so that is what the table is asked for.
+            ref = args.get("path")
+        if ref is None:
             ref = ""
         ref = str(ref) if ref is not None else ""
+        # `range` stays BYTE offsets into the stored body, exactly as before.  A
+        # `read_file` call's `start_line`/`end_line` are LINE numbers and are
+        # deliberately NOT mapped onto it: the pointer table has no line index, so
+        # passing them as bytes would slice the wrong text (or refuse the range)
+        # instead of returning the body the model asked about.
         rng = _coerce_range(args.get("range"))
         call_id = c.get("id")
         if call_id is None and isinstance(c.get("tool_call"), dict):
