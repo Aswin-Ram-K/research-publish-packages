@@ -1,0 +1,34 @@
+{
+  "unit": "U-SPCC-37",
+  "status": "complete",
+  "artifacts": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/run_longrun.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_runner_prereg_gate.py",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-37.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-37.json"
+  ],
+  "evidence": {
+    "gap": "run_longrun.py had zero references to eval_gate_prereg, validate_g3 or GATE_PREREG; its only contact with cell was 'import cell as _cell' at run_longrun.py:2369 for a file list. The E1 cell of 2026-11-10 spent 100 requests against PREREG-SPCC's 200-500 floor and nothing refused it.",
+    "change": "prereg_gate_args(cfg, fixture) at run_longrun.py:4020 adapts the runner's --claim-mode / --max-turns / --reps onto the gate's args.hypothesis / args.turns / args.reps (hypothesis is the ALREADY-RESOLVED cfg.claim, never a second parse). enforce_prereg_gate(cfg, fixture) at run_longrun.py:4042 calls cell.eval_gate_prereg, prints cell._gate_message(verdict) verbatim plus 'PREREG REFUSED (exit N): no row was written and no request was sent', and returns the gate's own code. Called at run_longrun.py:4185, after claim_mode.resolve_claim (run_longrun.py:4169) and before the first run_cell. cell.py and claim_mode.py untouched; no bypass flag.",
+    "red": "RED: exit=0 sends=100 rows=100 | GREEN: exit=12 sends=0 rows=0  (red = the call site neutered, i.e. the pre-change runner; the below-floor E1 cell proceeds and sends 100 requests)",
+    "green_below_floor": "EXIT 12 | G3 prereg REFUSED: computed n=100 over 48 checkpoint(s) | limit n in [200, 500] and >= 48 checkpoint(s) | artefact experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.json (sha256 3a01b3e4130dd6d4d2e9db2bbb0e16558847ebd65e46c1991a1696cd2eda7af8) | to change this decision pass --hypothesis / --turns / --reps | PREREG-SPCC's E1 is budgeted at 200-500 requests over 48 checkpoints; this cell would spend n=100 over 48 checkpoint(s), so its own allocation cannot support the claim it would state",
+    "cases": {
+      "a_e1_below_floor": {"operands": "E1, reps=1, TX-03 N=100 -> n=100", "exit": 12, "sends": 0, "rows": 0},
+      "b_e1_at_floor": {"operands": "E1, reps=2, TX-03 N=100 -> n=200", "exit": 0, "sends": 200, "rows": 200},
+      "c_h1_below_60": {"operands": "H1, reps=1, max-turns=10 -> n=10", "exit": 12, "sends": 0, "rows": 0},
+      "d_smoke": {"operands": "smoke, reps=1, max-turns=3", "exit": 0, "sends": 3, "rows": 3, "row_stamp": "claim=none, comparison_eligible=false"}
+    },
+    "tests": "TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_runner_prereg_gate.py experiments/ptr-engine/longrun/tests/test_spcc_claim.py experiments/ptr-engine/longrun/tests/test_claim_rows.py experiments/ptr-engine/longrun/tests/test_cap_gate.py -q -> 35 passed in 4.85s",
+    "full_sweep": "experiments/ptr-engine/longrun/tests -> 855 passed, 7 failed. All 7 are on-disk corpus/artefact state and none touches the gate: test_journal_lint (handoff JSONs missing journal entries), test_layers_compiler::test_compaction, test_request_ledger (spent=8081 > cap=4320), test_stop_reason (stale STOP-REASON.json), test_verbosity x3 (rows files missing from the report corpus).",
+    "docs_gate": "python3 tools/doc_check.py -> 'OK docs clean under /home/zer0null/research extractor', exit=0",
+    "checkout_note": "The session cwd /home/zer0null/.omp/wt/wt-20261109-055629-bd8df5c is a stale worktree at f17663d with no cell.py or claim_mode.py under longrun/. All work was done in /home/zer0null/research extractor on research/next-candidates-2026-10-24."
+  },
+  "blocker": null,
+  "next_unit_hint": "The gate now refuses an under-floor E* cell before the wire, so the E1 result in U-SPCC-35 stands as a single-rep under-ceiling observation and cannot be re-run at n=100. Re-run E1 at its own floor (reps=2 on TX-03 gives n=200, the bottom of 200-500) to get an admissible adjudication, and note that --max-turns now participates in n: a shortened cell is refused rather than silently priced low. The same wiring should be checked for the dry-run path, which still returns before claim resolution and therefore prints no G3 verdict.",
+  "write_paths": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/run_longrun.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_runner_prereg_gate.py",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-37.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-37.json"
+  ]
+}

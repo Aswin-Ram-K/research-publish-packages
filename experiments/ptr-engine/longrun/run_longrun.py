@@ -4017,6 +4017,52 @@ def build_parser():
     return ap
 
 
+def prereg_gate_args(cfg, fixture: dict):
+    """G3's operand surface, built from the runner's own flag names.
+
+    ``cell.eval_gate_prereg`` reads ``args.hypothesis``, ``args.turns`` and ``args.reps``;
+    the runner spells those ``--claim-mode``, ``--max-turns`` (0 = the fixture's N) and
+    ``--reps``.  The adapter lives HERE, at the call site, so the gate keeps its own
+    contract and is not weakened to fit the runner's spelling.  ``hypothesis`` is the
+    ALREADY-RESOLVED claim (``cfg.claim``), so the gate adjudicates the same decision the
+    rows will be stamped with -- never a second parse of the flag.
+    """
+    claim = getattr(cfg, "claim", None)
+    if claim is not None and claim.get("mode") == claim_mode.MODE_SMOKE:
+        hypothesis = claim_mode.MODE_SMOKE
+    elif claim is not None:
+        hypothesis = claim.get("claim")
+    else:
+        hypothesis = getattr(cfg, "claim_mode", None)
+    return argparse.Namespace(hypothesis=hypothesis,
+                              turns=cell_turns(cfg, fixture),
+                              reps=int(getattr(cfg, "reps", 1) or 1))
+
+
+def enforce_prereg_gate(cfg, fixture: dict) -> int:
+    """G3 before the first request: refuse a cell whose n cannot support its claim.
+
+    Same shape as the cap gate -- the gate's own refusal text, verbatim, its own exit
+    code (12), no row written and no request sent.  There is no bypass flag: the
+    operands are the run's own ``--claim-mode`` / ``--max-turns`` / ``--reps`` and the
+    fixture's checkpoint count, and the decision is ``cell.eval_gate_prereg``'s.
+    """
+    import cell as _cell  # noqa: E402 - the gate's own implementation, never a copy
+    try:
+        verdict = _cell.eval_gate_prereg(prereg_gate_args(cfg, fixture), fixture)
+    except _cell.Abort as exc:
+        print("%s" % (exc.message,), file=sys.stderr)
+        print("PREREG REFUSED (exit %d): no row was written and no request was sent"
+              % exc.code, file=sys.stderr)
+        return exc.code
+    if verdict.get("ok"):
+        return 0
+    print("%s" % (_cell._gate_message(verdict),), file=sys.stderr)
+    print("PREREG REFUSED (exit %d): no row was written and no request was sent"
+          % verdict.get("exit", 12), file=sys.stderr)
+    return verdict.get("exit", 12)
+
+
 def main(argv=None) -> int:
     cfg = build_parser().parse_args(argv)
 
@@ -4136,6 +4182,12 @@ def main(argv=None) -> int:
             print("CLAIM REFUSED (exit %d): no row was written and no request was "
                   "sent" % exc.code, file=sys.stderr)
             return exc.code
+    # G3 PREREG GATE: the cell's own n must support the claim it declares, and the
+    # decision is made BEFORE the first request -- same shape as the cap gate: the
+    # gate's own text, its own code (12), no row written, no request sent.
+    rc = enforce_prereg_gate(cfg, fixture)
+    if rc != 0:
+        return rc
     print(f"rows: {rows_path}  run_id base: {run_base}")
     print(f"FIXTURE: {fixture['_path']}  task_id={fixture['task_id']}  sha256={fixture['_sha256']}")
     for arm, rep in cells:
