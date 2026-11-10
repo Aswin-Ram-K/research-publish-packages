@@ -1026,6 +1026,31 @@ def calls_from_response(resp) -> tuple[list[dict], list[dict]]:
     return calls, refusals
 
 
+def unserviced_structured_calls(resp, calls) -> list[dict]:
+    """Structured calls the fetch parser did NOT consume, verbatim.
+
+    TOOL-CALL-CAPTURE (U-SPCC-49): ``arm_cd.parse_fetch_calls_from_response`` delegates to
+    ``ptr_engine.fetch_tool.parse_fetch_calls``, which keeps ONLY calls whose
+    ``function.name`` is ``"fetch"``.  The schema actually on the wire is ``read_file``
+    (``TOOL_NAMES``), so a ``read_file`` call is filtered out and -- before this helper --
+    vanished: no follow-up was bought, the empty content parsed as ``no_answer_line``, and
+    nothing on the row said a call had ever been signalled.  Ten of the fetch arm's 48
+    checkpoints in the corrected E1 cell died that way.
+
+    A call is reported here when the parser consumed nothing at all, or when its ``id`` is
+    absent from the ids the parser did consume.  An id-less call is assumed consumed once
+    anything was consumed: the wire always carries ids (``call_…``), so this can only
+    under-report, never invent a call.
+    """
+    raw = [c for c in ((resp or {}).get("tool_calls") or []) if isinstance(c, dict)]
+    if not raw:
+        return []
+    if not calls:
+        return raw
+    served = {c.get("tool_call_id") for c in calls if c.get("tool_call_id")}
+    return [c for c in raw if c.get("id") is not None and c.get("id") not in served]
+
+
 def limit_calls(calls: list[dict], per_turn: int = TOOL_CALLS_PER_TURN):
     """Split one turn's calls into (executed batch, refused overflow). Hard 2-per-turn."""
     return list(calls[:per_turn]), list(calls[per_turn:])
@@ -2976,7 +3001,10 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
                 # ROW-ATTRIBUTION: which HTTP request of the turn this row measured.
                 "send_index", "initial_send", "row_measurement_source",
                 "fetch_round_final", "final_round_billed", "final_round_prompt_served",
-                "next_request_kind"):
+                "next_request_kind",
+                # TOOL-CALL-CAPTURE (U-SPCC-49): the ids of the calls the fetch parser
+                # did not consume, so a row's `tool_calls` can be joined to the wire.
+                "unserviced_tool_call_ids"):
         if extra.get(key) is not None:
             row[key] = extra[key]
     if extra.get("runaway_abort"):
@@ -3650,6 +3678,17 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
             _fetch_budget = arm_cd.resolve_fetch_budget(planner.arm_cd, fixture)
             extras["fetch_budget_tokens"] = _fetch_budget
             _calls = arm_cd.parse_fetch_calls_from_response(resp)
+            # TOOL-CALL-CAPTURE (U-SPCC-49): the fetch parser keeps only `fetch`-named
+            # calls, but the schema on the wire is `read_file`.  A call it did not consume
+            # is RECORDED here -- preserved verbatim on the row and labelled -- instead of
+            # being dropped into a bare `unparsed`.  Recording buys no request and spends
+            # no round, so the answer contract, the scoring and the fetch budget are
+            # untouched; the row simply stops lying about what the server signalled.
+            _unserviced = unserviced_structured_calls(resp, _calls)
+            if _unserviced:
+                extras["tool_calls"] = _unserviced
+                extras["unserviced_tool_call_ids"] = [c.get("id") for c in _unserviced]
+                extras["protocol_violation"] = "tool_call_unserviced"
             if _calls and any(c.get("text_call") or c.get("protocol_variant") == "text_call" for c in _calls):
                 _tc0 = next((c for c in _calls if c.get("text_call") or c.get("protocol_variant") == "text_call"), _calls[0])
                 extras["protocol_variant"] = "text_call"
@@ -3927,8 +3966,17 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
             row_extra["final_round_prompt_served"] = last.get("prompt_served")
         if is_answer_turn:
             row_extra.update(checkpoint_answer_fields(resp))
+            # TOOL-CALL-CAPTURE (U-SPCC-49): the answer fields above are derived from the
+            # (empty) content, so they would erase a violation the RESPONSE itself proved.
+            # The response-level fact wins; the answer fields stay exactly as parsed.
+            if extras.get("protocol_violation") is not None:
+                row_extra["protocol_violation"] = extras["protocol_violation"]
         if tools_enabled(cfg) and not is_answer_turn:
-            row_extra["tool_calls"] = turn_calls
+            # TOOL-CALL-CAPTURE (U-SPCC-49): `turn_calls` is the SERVICED/refused list and
+            # is empty on the D arm, whose calls are parsed by `arm_cd`.  Never let it
+            # erase the unserviced calls the response itself carried.
+            if turn_calls or row_extra.get("tool_calls") is None:
+                row_extra["tool_calls"] = turn_calls
             row_extra["fetch_rounds_used"] = fetch_rounds_used
             row_extra["fetch_rounds_this_turn"] = rounds_this_turn
             row_extra["fetch_prompt_serves"] = prompt_serves
@@ -3962,6 +4010,10 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                 next_request_kind="tool-followup")
             if is_answer_turn:
                 initial_extra.update(checkpoint_answer_fields(initial_resp))
+                # TOOL-CALL-CAPTURE (U-SPCC-49): same precedence as the turn row -- the
+                # response-level violation survives the answer-field derivation.
+                if extras.get("protocol_violation") is not None:
+                    initial_extra["protocol_violation"] = extras["protocol_violation"]
             append_row(rows_path, make_row(
                 cfg, fixture, arm, rep, run_id, t, initial_resp,
                 initial_resp.get("content") if initial_resp else None,

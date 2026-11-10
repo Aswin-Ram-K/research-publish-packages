@@ -1,0 +1,19 @@
+{
+  "unit": "U-SPCC-49",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_tool_call_capture.py",
+    "orchestration/units/U-SPCC-49.md",
+    "orchestration/handoffs/U-SPCC-49.json"
+  ],
+  "evidence": "Ten stranded checkpoints in experiments/ptr-engine/measure/rows-e1-tools-2026-11-10.jsonl (arm bounded-context-fetch, finish_reason tool_calls, checkpoint non-null, tool_call_ids null): turns 9, 13, 25, 51, 56, 58, 60, 67, 74, 76. All have content '' (turn 21-style '\\n\\n' absent), tool_calls key absent, tool_call_ids null, reasoning '', answer_kind null, answer_parse_error no_answer_line, and first_token_kind tool_call with completion_tokens 33/57/53/57/53/33/57/53/57/34 -- so the server signalled a call and client.collect_stream assembled it. Three other checkpoint turns (21, 73, 84) ended on tool_calls and WERE serviced (turn-initial + graded turn row). Cause: run_longrun.py:3677 calls arm_cd.parse_fetch_calls_from_response -> ptr_engine/fetch_tool.py:82 parse_fetch_calls, which keeps only function.name == 'fetch' (fetch_tool.py:96-99 'if name != \"fetch\": ... continue'); the schema on the wire is read_file (TOOL_NAMES, tools_mode on:read_file, tools_schema_sent true on all ten rows), so a read_file call is filtered out, _calls is empty, no follow-up is bought, and the empty content parses as no_answer_line. The generic path (calls_from_response, run_longrun.py:990) is unaffected because _call_from_arguments reads path/start_line/end_line. Fix in run_longrun.py only: new unserviced_structured_calls(resp, calls) helper; the ARM_D block preserves every unconsumed structured call on the row (tool_calls, unserviced_tool_call_ids) and labels protocol_violation='tool_call_unserviced'; the label is re-applied after checkpoint_answer_fields on both the turn row and the turn-initial row; row_extra['tool_calls'] = turn_calls no longer overwrites a preserved list. No request is bought and no round is spent, so the answer contract, the scoring and the fetch budget are unchanged. Red: 3 failed, 1 passed with 'AssertionError: None != tool_call_unserviced : a tool call the server signalled was dropped silently: protocol_violation=None tool_calls=None answer_parse_error=no_answer_line' -- the ten real rows reproduced field for field. Green: 4 passed. Required trio test_tool_call_capture.py + test_fetch_arm_row_persistence.py + test_arm_cd_wiring.py: 15 passed. tools/doc_check.py exit 0.",
+  "blocker": null,
+  "next_unit_hint": "The ten checkpoints still score unparsed because the model emitted no ANSWER: line; the row now carries the call and the violation, so the loss is attributable. If the arm should recover them, the next unit must decide between (a) servicing read_file on a checkpoint turn -- which buys a follow-up request and spends a fetch round, i.e. a budget change -- and (b) making the ARM_D checkpoint prompt and the declared tool schema agree, since the prompt teaches fetch(ref=...) while the wire declares read_file(path, start_line, end_line). Option (b) costs no requests and removes the mismatch that produced the 10 drops.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_tool_call_capture.py",
+    "orchestration/units/U-SPCC-49.md",
+    "orchestration/handoffs/U-SPCC-49.json"
+  ]
+}
