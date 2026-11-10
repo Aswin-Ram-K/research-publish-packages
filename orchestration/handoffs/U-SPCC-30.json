@@ -1,0 +1,36 @@
+{
+  "unit": "U-SPCC-30",
+  "status": "complete",
+  "artifacts": [
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-30.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-30.json",
+    "/home/zer0null/research extractor/experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "/home/zer0null/research extractor/state/logs/lost-fixture-baseline.json",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_lost_fixture.py"
+  ],
+  "evidence": {
+    "reproduction": "Independent script: 53 distinct on-disk fixture digests under experiments/ptr-engine/longrun; 7,734 pinned rows across 93 measure/rows-*.jsonl files (7,969 rows total, 235 unpinned); 1,368 rows in 13 files pin a digest with no on-disk match (17.7%). Six missing digests: 2b416d82 (278), 09157d80 (450), 12f46fcd (269), 72c3832d (259), 5a5f8c4b (96), db497435 (16). Parent table reproduced exactly.",
+    "classification": "13 of 13 files overwritten in place; 0 never committed; 0 unexplained. Every path exists, every current digest differs, every mtime is later than the last consuming run. git log --all --format=%H -- <path> returns >=1 commit for all six paths (9fadcc9 for the four tasks-v7 fixtures and LR-01.v4; f17663d1 for LR-01 and LR-01.v4).",
+    "blob_check": "git show 9fadcc9:experiments/ptr-engine/longrun/tasks-v7/TX-HOP.v1.json exits 0 with 95,742 bytes sha256 860aad56... (git ls-tree 9fadcc9 -> 100644 blob 30f75ee0...), so the path WAS committed and the pin 09157d80 is not in it: overwritten in place, not never-committed. TX-SUP identical: 55,018 bytes, 75ab558b..., 100644 blob 94b7ffc3....",
+    "recoverability": "12 files / 1,272 rows unrecoverable (pinned bytes never committed). 1 file / 96 rows recoverable: f17663d1fed0:experiments/ptr-engine/longrun/tasks-v4/runtime-v4/LR-01.v4.json hashes 5a5f8c4be2027c53038ae31b4db60ebbae03996a5a650d8fb4fe6d872df5e235, verified by hashing the blob. No other fixture is claimed recoverable.",
+    "scope": "80 of 93 rows-*.jsonl files have zero missing pins. All 13 affected files are first-generation AGG/HOP/SUP runs dated 2026-11-09 (plus three 2026-10-26 LR-01 files and rows-smoke-tx01-20261109), each superseded by a later generation pinning an on-disk digest: agg-8014/agg2/agg3, hop-8014/hop2/hop3, sup2-fetch/sup2-masking, tx01-real/smoke2/contrast24/control-nomask, longrun-c/v3/v4-tools/v5-tools/v6-tools. rows-tx02-*, all eight rows-tx03-* (incl. :8014) and rows-spcc-billedproof-2026-11-10 are 0 missing, so every headline ledger claim is reproducible.",
+    "recorded_defect": "The 20 manifests that consumed LR-01 record the absolute path /home/zer0null/reserach extarctor/experiments/ptr-engine/longrun/runtime/LR-01.json (repo root misspelled). That path never existed; a naive path-existence check reports those 259 rows as path-missing rather than digest-differs.",
+    "ledger": "FINDINGS-LEDGER.md: one new table row 'Corpus-wide fixture provenance loss' (7 cells; table now 12 lines at 7 cells) plus a new '### Corpus-wide fixture provenance' subsection with the per-file table (15 lines at 10 cells), scoping table (7 lines at 3 cells), three-way classification, blob check, recoverability split, LR-01 path typo, and may/may-not-support statements. awk -F'|' '/^\\|/ {print NF-2}' -> 12x7, 15x10, 7x3.",
+    "guard": "state/logs/lost-fixture-baseline.json rewritten to schema consonance.lost-fixture-baseline/2: frozen_at 2026-11-10T00:00:00Z, audit U-SPCC-30, dated note, digests map (6 entries with fixture/path/current sha256/current mtime/rows/recoverable), 1,368 {file,line,digest} rows. test_lost_fixture.py keeps set equality on (file,line), not a count; also fails on a vanished frozen row and on a frozen digest that is not recorded or is on disk.",
+    "guard_durability": ".gitignore:7 ignores /state/ root-only on purpose, so the baseline is force-added (git add -f) to keep the path every existing doc names (docs/LOST-FIXTURE.md:6,170; measure/LOST-FIXTURE.json:2557; orchestration/handoffs/LOST-FIXTURE.json:7,24; orchestration/units/LOST-FIXTURE.md:5). Without the force-add the guard ships without its baseline and a fresh clone fails on a missing file rather than on a lost fixture. A re-freeze must be force-added again; the test docstring says so.",
+    "guard_message": "Failure text: 'A new miss means a fixture was destroyed after 2026-11-10T00:00:00Z (the dated freeze in state/logs/lost-fixture-baseline.json). Restore the fixture, or re-freeze deliberately with a new dated note naming the audit - never widen the baseline silently.'",
+    "perf_fix": "Pre-existing defect: misses() called fixture_digests() once per pin (8,310 tree walks, ~5.5 min). Digest set hoisted and computed once; assertions unchanged. Test now runs in 0.18s.",
+    "tests": ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_lost_fixture.py -q -> 1 passed in 0.18s",
+    "red_proof": "Temporary experiments/ptr-engine/measure/zzz-synthetic-probe.jsonl with fixture_sha256 0000...0000 -> 1 failed, 'NEW row(s) pin a fixture_sha256 with no file on disk: experiments/ptr-engine/measure/zzz-synthetic-probe.jsonl:1. A new miss means a fixture was destroyed after 2026-11-10T00:00:00Z ...'. Probe removed; green re-confirmed.",
+    "doc_check": "python3 tools/doc_check.py -> OK docs clean under /home/zer0null/research extractor; exit=0"
+  },
+  "blocker": null,
+  "next_unit_hint": "The 1,368 lost rows are frozen, not repaired. Only rows-longrun-v4-2026-10-26.jsonl (96 rows) is recoverable, from git blob f17663d1fed0; restoring it would require writing the blob back to a versioned path and re-freezing the baseline with a new dated note. Any future rows file pinning a digest with no on-disk fixture re-reds test_lost_fixture.py by design. The LR-01 manifest path typo (reserach extarctor) is recorded but not repaired, because manifests are append-only run records.",
+  "write_paths": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "/home/zer0null/research extractor/state/logs/lost-fixture-baseline.json",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_lost_fixture.py",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-30.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-30.json"
+  ]
+}

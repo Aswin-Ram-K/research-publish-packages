@@ -1,8 +1,16 @@
 """Forward-only guard: every ``fixture_sha256`` a row pins must have a file on disk.
 
-The lost digest ``72c3832d95f9c7966b4358eda10fa2882775a416ee8a663d57b1c871ed19c44d`` is pinned by 259
-rows and by no file. That loss is recorded, not repaired, so the 259 known misses are frozen in
-``state/logs/lost-fixture-baseline.json``. This test passes on those and fails on any *new* miss.
+1,368 rows across 13 ``rows-*.jsonl`` files pin a digest that no on-disk document carries. Those losses
+are recorded, not repaired, and frozen in ``state/logs/lost-fixture-baseline.json`` as a **dated freeze**
+(``frozen_at`` 2026-11-10, audit ``U-SPCC-30``). This test passes on exactly those and fails on any
+*new* miss. ``state/`` is gitignored, so the baseline is force-added (``git add -f``); a re-freeze must be
+force-added again or the guard ships without its baseline.
+
+A new miss means a fixture was destroyed after 2026-11-10.
+
+The assertion is set equality on ``(file, line)``, not a count: a new miss fails, and so does swapping
+one frozen lost row for another. See ``experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md``
+§Corpus-wide fixture provenance.
 
 Run: python3 -m pytest experiments/ptr-engine/longrun/tests/test_lost_fixture.py -q
 """
@@ -70,24 +78,44 @@ def row_pins() -> list[tuple[str, int, str]]:
     return pins
 
 
-def load_baseline() -> tuple[str, set[str]]:
+def load_baseline() -> tuple[set[str], dict[str, dict], str]:
+    """(frozen ``file:line`` keys, recorded lost digests, freeze date)."""
     doc = json.loads(BASELINE.read_text(encoding="utf-8"))
     frozen = {f"{r['file']}:{r['line']}" for r in doc["rows"]}
-    return doc["lost_digest"], frozen
+    return frozen, doc["digests"], doc["frozen_at"]
 
 
-def misses() -> list[tuple[str, int, str]]:
-    return [pin for pin in row_pins() if pin[2] not in fixture_digests()]
+def misses(on_disk: set[str] | None = None) -> list[tuple[str, int, str]]:
+    """Pins with no matching on-disk fixture. ``on_disk`` is hoisted: hashing the tree per pin is O(n) walks."""
+    if on_disk is None:
+        on_disk = fixture_digests()
+    return [pin for pin in row_pins() if pin[2] not in on_disk]
 
 
 def test_no_new_row_pins_a_missing_fixture() -> None:
-    lost_digest, frozen = load_baseline()
-    known = {(pin[0], pin[1]) for pin in misses() if pin[2] == lost_digest}
-    reported = {f"{path}:{line}" for path, line, _ in misses()}
+    frozen, lost_digests, frozen_at = load_baseline()
+    on_disk = fixture_digests()
+    reported_pins = misses(on_disk)
+    reported = {f"{path}:{line}" for path, line, _ in reported_pins}
 
-    assert len(frozen) == 259, f"baseline should freeze 259 rows, has {len(frozen)}"
-    assert reported == frozen, (
-        "new row(s) pin a fixture_sha256 with no file on disk: "
-        + ", ".join(sorted(reported - frozen))
+    new = sorted(reported - frozen)
+    assert not new, (
+        f"NEW row(s) pin a fixture_sha256 with no file on disk: {', '.join(new)}. "
+        f"A new miss means a fixture was destroyed after {frozen_at} (the dated freeze in "
+        f"{BASELINE.relative_to(ROOT)}). Restore the fixture, or re-freeze deliberately with a new "
+        f"dated note naming the audit — never widen the baseline silently."
     )
-    assert known == {(p, int(l)) for p, l in (s.rsplit(":", 1) for s in frozen)}
+
+    vanished = sorted(frozen - reported)
+    assert not vanished, (
+        f"frozen lost row(s) no longer miss: {', '.join(vanished)}. A fixture came back or a rows file "
+        f"changed; re-freeze deliberately with a new dated note rather than leaving a stale baseline."
+    )
+
+    # Every frozen row must still pin a digest the baseline records as lost, and that digest must still
+    # be absent from disk — otherwise the freeze is describing a fixture that exists.
+    for path, line, digest in reported_pins:
+        assert digest in lost_digests, (
+            f"{path}:{line} pins {digest}, which is not a recorded lost digest"
+        )
+        assert digest not in on_disk, f"{path}:{line} pins {digest}, which is on disk"
