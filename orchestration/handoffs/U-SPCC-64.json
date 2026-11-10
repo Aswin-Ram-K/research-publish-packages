@@ -1,0 +1,112 @@
+{
+  "unit": "U-SPCC-64",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/rows-e3-retain-2026-11-10.jsonl",
+    "experiments/ptr-engine/longrun/manifests/e3-retain-2026-11-10-spcc-r1-c200-w200.json",
+    "experiments/ptr-engine/longrun/manifests/e3-retain-2026-11-10-masking-no-fetch-r1-c200-w200.json",
+    "orchestration/units/U-SPCC-64.md",
+    "orchestration/handoffs/U-SPCC-64.json"
+  ],
+  "evidence": {
+    "cell": {
+      "fixture": "experiments/ptr-engine/longrun/tasks-v7/TX-04.v1.json",
+      "fixture_sha256": "0c836872225fc0d6198aa86b3c72ec3dfada0b23f2541cde49adc53429703885",
+      "arms": ["spcc", "masking-no-fetch"],
+      "window_turns": 200,
+      "compact_every": 200,
+      "reps": 1,
+      "temperature": 0,
+      "seed": 42,
+      "model": "occamy-1.0",
+      "base_url": "http://192.168.2.168:8012/v1",
+      "claim_mode": "E3",
+      "budget_cap": 12094,
+      "run_id": "e3-retain-2026-11-10",
+      "rows": "experiments/ptr-engine/measure/rows-e3-retain-2026-11-10.jsonl",
+      "checkpoints": 48,
+      "distance_distribution": {"2": 10, "8": 10, "20": 10, "32": 9, "64": 9},
+      "deepest_probe_turn": 99
+    },
+    "acceptance": {
+      "rows": 200,
+      "requests": 200,
+      "failed_turns": 0,
+      "truncated": 0,
+      "errors": 0,
+      "finish_reason": {"stop": 200},
+      "reconcile_delta_total": 0,
+      "reconcile_within_tolerance": true,
+      "claim": {"E3": 200},
+      "comparison_eligible": true,
+      "budget_spend_before": 9667,
+      "budget_spend_after": 9867,
+      "budget_cap": 12094
+    },
+    "control_check": {
+      "verdict": "HOLDS",
+      "masked_rows_nonzero_rows": {"spcc": 0, "masking-no-fetch": 0},
+      "compactions_nonzero_rows": {"spcc": 0, "masking-no-fetch": 0},
+      "evicted_nonzero_rows": {"spcc": 0, "masking-no-fetch": 0},
+      "masked_entry_nonempty_rows": 0,
+      "masked_marker_rows": 0,
+      "expected_present": {"true": 96, "none_no_checkpoint": 104},
+      "expected_present_source": "prompt-digit-boundary on all 96 checkpoint rows",
+      "note": "no masking fired, no compaction fired; the body was in the prompt at every probe including all nine d64 probes"
+    },
+    "per_arm": {
+      "spcc": {
+        "value_correct": 48, "contract_correct": 48, "NONE": 0, "wrong": 0,
+        "unparsed": 0, "graded": 48, "total": 48, "requests": 100,
+        "billed_tokens": 17129, "prompt_tokens": 200885,
+        "cached_tokens": 183296, "completion_tokens": 740
+      },
+      "masking-no-fetch": {
+        "value_correct": 42, "contract_correct": 42, "NONE": 0, "wrong": 6,
+        "unparsed": 0, "graded": 48, "total": 48, "requests": 100,
+        "billed_tokens": 16265, "prompt_tokens": 234953,
+        "cached_tokens": 218688, "completion_tokens": 755
+      }
+    },
+    "per_distance_contract_correct": {
+      "spcc": {"2": "10/10", "8": "10/10", "20": "10/10", "32": "9/9", "64": "9/9"},
+      "masking-no-fetch": {"2": "9/10", "8": "8/10", "20": "8/10", "32": "8/9", "64": "9/9"}
+    },
+    "noise_band": "temperature 0 + seed 42 is not reproducible on this endpoint; +/-2/48 = +/-4.2 pp on every accuracy figure",
+    "verdict": {
+      "outcome": "cliff_vanishes",
+      "position_vs_eviction": "eviction",
+      "falsifier_triggered": false,
+      "statement": "At d64 with the body present both arms score 9/9, including the deepest probe at turn 99 (cp.TX-04.f05.d64, expected 4054, got 4054, body present). The cliff does not persist; it vanishes. The distance cliff is a property of eviction, not of position. The headline may be stated as 'cannot retrieve what was taken away', not 'cannot retrieve what it was given'.",
+      "d64_detail": {
+        "spcc": "9/9 correct, all expected_present true",
+        "masking-no-fetch": "9/9 correct, all expected_present true"
+      }
+    },
+    "second_result_arms_differ": {
+      "gap": "6/48 = 12.5 pp (48/48 vs 42/48), outside the +/-4.2 pp band",
+      "distance_gradient": "none - failures at d2, d8, d20, d32; d64 perfect in both arms",
+      "interpretation": "an arm-format effect on attribution, not a residual cliff; the masking arm's WORKING SET INDEX format costs attribution accuracy at all distances and must not be pooled with the distance cliff",
+      "failures": [
+        {"checkpoint": "cp.TX-04.f09.d2", "distance": 2, "turn": 30, "expected": "4091", "answered": "4011", "kind": "cross-document (f01 VAL_A)"},
+        {"checkpoint": "cp.TX-04.f02.d8", "distance": 8, "turn": 10, "expected": "4021", "answered": "4061", "kind": "cross-document (f06 VAL_A)"},
+        {"checkpoint": "cp.TX-04.f07.d8", "distance": 8, "turn": 39, "expected": "4072", "answered": "4102", "kind": "cross-document (f10 VAL_B)"},
+        {"checkpoint": "cp.TX-04.f08.d20", "distance": 20, "turn": 31, "expected": "4083", "answered": "4073", "kind": "cross-document (f07 VAL_C)"},
+        {"checkpoint": "cp.TX-04.f12.d20", "distance": 20, "turn": 73, "expected": "4123", "answered": "4124", "kind": "within-document (VAL_C -> VAL_D)"},
+        {"checkpoint": "cp.TX-04.f02.d32", "distance": 32, "turn": 34, "expected": "4023", "answered": "4022", "kind": "within-document (VAL_C -> VAL_B)"}
+      ],
+      "all_failures_well_formed": "every failure is a well-formed ANSWER: NUM with a plausible wrong value; no abstentions, no unparsed"
+    },
+    "scoring_note": "score_longrun.score_answer_contract_rows returns denominator_mismatch on a multi-arm rows file: it sums distinct checkpoint ids across every (arm, rep) key and compares that total to the fixture checkpoint count (96 vs 48). The cell was graded per arm, the only reading that satisfies the function's own denominator rule.",
+    "ledger_or_doc_writes": "none - numbers reported to the main agent for recording"
+  },
+  "blocker": null,
+  "next_unit_hint": "E3 is closed and the headline is decided: eviction, not position. Two follow-ups are now separable. (1) The 6/48 attribution gap between spcc and masking-no-fetch is a prompt-format effect with no distance gradient - if the masking arm is to be used as a retention control anywhere, that 12.5 pp format penalty has to be characterised or the arm retired from retention comparisons. (2) The d64 result is a single rep at a noise floor of +/-4.2 pp; a second rep at d64 only (9 probes x 2 arms = 18 requests) would cost almost nothing and would put the 9/9 on firmer ground than one draw. Do not re-run the full 200-request cell for that.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/rows-e3-retain-2026-11-10.jsonl",
+    "experiments/ptr-engine/longrun/manifests/e3-retain-2026-11-10-spcc-r1-c200-w200.json",
+    "experiments/ptr-engine/longrun/manifests/e3-retain-2026-11-10-masking-no-fetch-r1-c200-w200.json",
+    "orchestration/units/U-SPCC-64.md",
+    "orchestration/handoffs/U-SPCC-64.json"
+  ]
+}
