@@ -1,0 +1,33 @@
+{
+  "unit": "U-SPCC-40",
+  "status": "complete",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/cell.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_gate_arm_count.py",
+    "orchestration/units/U-SPCC-40.md"
+  ],
+  "evidence": {
+    "red": "pre-change code: test_three_arms_two_reps_is_refused_at_600 -> AssertionError: True is not false : {... 'n': 200, 'claim': 'E1' ...}; 6 failed, 1 passed in 2.21s",
+    "green": "7 passed in 3.39s (test_gate_arm_count.py)",
+    "required_suite": "42 passed in 8.19s (test_gate_arm_count, test_runner_prereg_gate, test_spcc_claim, test_claim_rows, test_cap_gate)",
+    "doc_check": "python3 tools/doc_check.py -> OK docs clean, exit 0",
+    "shapes": {
+      "3 arms x 1 rep x 100 turns": {"baseline_n": 300, "gate": "admitted", "runner_would_send": 300},
+      "3 arms x 2 reps x 100 turns": {"baseline_n": 600, "gate": "refused (ceiling 500)"},
+      "1 arm x 2 reps x 100 turns": {"baseline_n": 200, "gate": "admitted"},
+      "1 arm x 1 rep x 100 turns": {"baseline_n": 100, "gate": "refused (floor 200)"}
+    },
+    "h1_unchanged": "arms omitted -> n = turns x reps exactly as before; threshold still 60 (n=59 refused, n=60 admitted)",
+    "brake": "3 arms x 1 rep x 100 turns, fetch rounds per turn 10, per arm 200: baseline 300 admitted, brake stopped the run at 500 actual sends (CAP REFUSED ... over the prereg request ceiling: prereg_ceiling=500 run_sends=500)"
+  },
+  "blocker": null,
+  "next_unit_hint": "A mid-turn CapRefusal loses the follow-up rows already bought in that turn, so the exit reconciliation reports delta<0 and the cell exits 9 instead of 4. The run still stops at the ceiling and the ledger is not trusted, so it is safe but noisy; a follow-up unit could persist the in-flight follow-up rows before the refusal propagates.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/cell.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_gate_arm_count.py",
+    "orchestration/units/U-SPCC-40.md",
+    "orchestration/handoffs/U-SPCC-40.json"
+  ]
+}

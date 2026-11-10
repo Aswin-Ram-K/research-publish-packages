@@ -596,7 +596,8 @@ class RequestCapGate:
     """Per-request brake: one in-memory authority, decided before the send."""
 
     def __init__(self, ledger, paths, cap: int, reserve: int, allocation,
-                 own_rows: str | None = None):
+                 own_rows: str | None = None, ceiling: int | None = None,
+                 run_counter: dict | None = None):
         self.ledger = ledger
         self.paths = list(dict.fromkeys(os.path.abspath(p) for p in paths))
         # the run's OWN row file, added to the exit scan once the writer has created it
@@ -604,6 +605,13 @@ class RequestCapGate:
         self.cap = int(cap)
         self.reserve = int(reserve)
         self.allocation = allocation
+        # PREREG-CEILING-ON-THE-BRAKE (U-SPCC-40): the ceiling the declared claim was
+        # admitted under, enforced on ACTUAL sends.  ``run_counter`` is the run-scoped
+        # send tally shared by every cell of the run, so the ceiling is a RUN budget
+        # (the scope PREREG-SPCC states it in), not a per-cell one that three arms could
+        # each spend in full.  ``None`` ceiling = no prereg claim: nothing changes.
+        self.ceiling = None if ceiling is None else int(ceiling)
+        self.run_counter = run_counter if run_counter is not None else {"n": 0}
         if self.cap < 0 or self.reserve < 0 or (allocation is not None and allocation < 0):
             raise CapUsageError("--budget-cap, --budget-reserve and --request-allocation "
                                 "must all be >= 0")
@@ -633,19 +641,25 @@ class RequestCapGate:
         projected = spent + 1
         over_cap = projected > self.headroom
         over_alloc = self.allocation is not None and would > self.allocation
-        if over_cap or over_alloc:
+        run_sends = int(self.run_counter.get("n", 0))
+        over_ceiling = self.ceiling is not None and (run_sends + 1) > self.ceiling
+        if over_cap or over_alloc or over_ceiling:
             limits = ", ".join(name for name, hit in
-                               (("global cap", over_cap), ("run allocation", over_alloc)) if hit)
+                               (("global cap", over_cap), ("run allocation", over_alloc),
+                                ("prereg request ceiling", over_ceiling)) if hit)
             over_by = (projected - self.headroom if over_cap
+                       else run_sends + 1 - self.ceiling if over_ceiling
                        else would - int(self.allocation))
             raise CapRefusal(
                 f"CAP REFUSED at T{turn} ({kind}) — over the {limits}: "
                 f"spent={spent} would_spend={would} cap={self.cap} reserve={self.reserve} "
                 f"headroom={self.headroom} allocation={self.allocation} "
+                f"prereg_ceiling={self.ceiling} run_sends={run_sends} "
                 f"used_in_run={self.used_in_run} turn={turn} kind={kind} "
                 f"projected={projected} over_by={over_by} — nothing sent",
                 self)
         self.used_in_run += 1
+        self.run_counter["n"] = run_sends + 1
         return would
 
     # -- exit accounting ---------------------------------------------------------
@@ -676,6 +690,8 @@ class RequestCapGate:
             "headroom": self.headroom,
             "spent_at_start": self.spent_at_start,
             "allocation": self.allocation,
+            "prereg_ceiling": self.ceiling,
+            "run_sends": int(self.run_counter.get("n", 0)),
             # written before the first request (None) and again at exit (the count).
             "used_in_run": None if reconciled is None else self.used_in_run,
             "final_used_in_run": None if reconciled is None else self.used_in_run,
@@ -742,9 +758,18 @@ def build_cap_gate(cfg, fixture: dict, arm: str, rows_path: str) -> RequestCapGa
         paths.append(rows_path)
     cap = getattr(cfg, "budget_cap", None)
     cap = int(ledger.DEFAULT_CAP if cap is None else cap)
+    # PREREG-CEILING-ON-THE-BRAKE (U-SPCC-40): the ceiling G3 admitted the claim under
+    # (armed by enforce_prereg_gate) and the run-scoped send tally every cell shares, so
+    # the ceiling is spent ONCE per run rather than once per arm.
+    counter = getattr(cfg, "prereg_sends", None)
+    if counter is None:
+        counter = {"n": 0}
+        cfg.prereg_sends = counter
     return RequestCapGate(ledger, paths, cap,
                           int(getattr(cfg, "budget_reserve", 0) or 0),
-                          allocation_for(cfg, fixture, arm), own_rows=rows_path)
+                          allocation_for(cfg, fixture, arm), own_rows=rows_path,
+                          ceiling=getattr(cfg, "prereg_request_ceiling", None),
+                          run_counter=counter)
 
 
 def _gate_finish(gate: RequestCapGate, manifest_path: str | None, manifest_sha: str | None,
@@ -4034,9 +4059,17 @@ def prereg_gate_args(cfg, fixture: dict):
         hypothesis = claim.get("claim")
     else:
         hypothesis = getattr(cfg, "claim_mode", None)
+    # ARM-COUNT (U-SPCC-40): G3's n is turns x arms x reps -- the quantity the runner
+    # prices per arm (run_longrun.py:3105) and sums into would_send_total (:3113).  The
+    # adapter used to omit the arm term entirely, so a three-arm two-rep 100-turn cell
+    # was admitted at n=200 while sending 600.  ``cfg.arms`` is the run's own arm list
+    # (``--arms``, comma-separated), so the count is the number of arms this run will
+    # actually execute -- never a default of 1.
+    import cell as _cell  # noqa: E402 - ONE arms-count rule, never a second copy
     return argparse.Namespace(hypothesis=hypothesis,
                               turns=cell_turns(cfg, fixture),
-                              reps=int(getattr(cfg, "reps", 1) or 1))
+                              reps=int(getattr(cfg, "reps", 1) or 1),
+                              arms=_cell._arms_count(getattr(cfg, "arms", None)))
 
 
 def enforce_prereg_gate(cfg, fixture: dict) -> int:
@@ -4056,6 +4089,18 @@ def enforce_prereg_gate(cfg, fixture: dict) -> int:
               % exc.code, file=sys.stderr)
         return exc.code
     if verdict.get("ok"):
+        # PREREG-CEILING-ON-THE-BRAKE (U-SPCC-40): G3's n is a BASELINE (turns x arms x
+        # reps).  Fetch follow-ups are real requests the baseline cannot see
+        # (run_longrun.py:500-501), so an admitted baseline is not a promise about
+        # sends.  The ceiling the claim was admitted under is handed to the per-request
+        # brake, which counts ACTUAL sends before each one and stops the run at the
+        # ceiling -- a fetch-heavy cell is refused at 500 real requests, not admitted on
+        # a predicted 300.  The brake only ever gains a limit here; the global cap and
+        # the run allocation keep their existing semantics.
+        ceiling = (verdict.get("thresholds") or {}).get("request_ceiling")
+        if (isinstance(ceiling, (list, tuple)) and len(ceiling) == 2
+                and isinstance(ceiling[1], int)):
+            cfg.prereg_request_ceiling = int(ceiling[1])
         return 0
     print("%s" % (_cell._gate_message(verdict),), file=sys.stderr)
     print("PREREG REFUSED (exit %d): no row was written and no request was sent"

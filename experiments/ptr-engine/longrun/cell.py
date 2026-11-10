@@ -1218,11 +1218,13 @@ def validate_g2(max_wall, turn_wall_cap, proj_turn, requests):
 
 
 def validate_g3(hypothesis, turns, reps, checkpoints, known, min_n_h1=None,
-                h1_basis=None, checkpoint_min=8, smoke=False, spcc=None):
+                h1_basis=None, checkpoint_min=8, smoke=False, spcc=None, arms=None):
     """G3's operands and thresholds, derived from the requirement. PURE: no I/O.
 
     Requirement: a live run declares a hypothesis or smoke; silence is a refusal (12);
-    turns/reps are positive integers. ``known`` is the prereg artefact's hypotheses map.
+    turns/reps/arms are positive integers. ``known`` is the prereg artefact's hypotheses
+    map. ``arms`` is the number of arms the cell will run (``None`` = 1, the single-arm
+    default every pre-existing caller had).
 
     ``spcc`` is the SPCC entry for an ``E*`` claim (``None`` for every other claim).
     When it is given, the claim is adjudicated against THAT document's own terms --
@@ -1231,7 +1233,8 @@ def validate_g3(hypothesis, turns, reps, checkpoints, known, min_n_h1=None,
     fixture carrying fewer than 48 checkpoints, and for nothing PARM-1 says.
     """
     facts = {"gate": GATE_PREREG, "ok": True, "branch": None, "hypothesis": hypothesis,
-             "operands": {}, "refusals": [], "n": 0, "min_n": None, "thresholds": {}}
+             "operands": {}, "refusals": [], "n": 0, "min_n": None, "thresholds": {},
+             "arms": None, "n_basis": None}
     bad = facts["refusals"]
     if isinstance(checkpoints, bool) or not isinstance(checkpoints, int) or checkpoints < 0:
         facts["ok"] = False
@@ -1253,10 +1256,24 @@ def validate_g3(hypothesis, turns, reps, checkpoints, known, min_n_h1=None,
 
     t = take("--turns", turns, "--turns", lo=1, hi=MAX_TURNS, integral=True, code=12)
     r = take("--reps", reps, "--reps", lo=1, hi=MAX_REPS, integral=True, code=12)
+    a = take("--arm (count)", 1 if arms is None else arms, "--arm", lo=1, hi=MAX_REPS,
+             integral=True, code=12)
     if bad:
         facts.update(ok=False, branch="operand")
         return False, facts
-    facts["n"] = int(t["value"]) * int(r["value"])
+    # ARM-COUNT (U-SPCC-40): n is the cell's BASELINE request count -- turns x arms x
+    # reps, the same quantity G1 computes (cell.py:1130) and the runner prices per arm
+    # (run_longrun.py:3105).  Without the arm term a three-arm two-rep 100-turn cell was
+    # admitted at n=200 while sending 600, and the only three-arm shape that fits the
+    # ceiling (one rep, 300) was refused for being under the floor at n=100.
+    #
+    # The baseline is a FLOOR test and a first ceiling test, never the ceiling's
+    # enforcement point: fetch follow-ups are real requests the baseline cannot see
+    # (run_longrun.py:500-501), so the ceiling itself is enforced on ACTUAL sends by the
+    # runner's per-request brake (RequestCapGate.acquire).
+    facts["n"] = int(t["value"]) * int(a["value"]) * int(r["value"])
+    facts["arms"] = int(a["value"])
+    facts["n_basis"] = "turns x arms x reps (baseline; fetch follow-ups are extra)"
     if smoke:
         # WIRE-CLAIM-MODE: a DECLARED smoke/plumbing cell makes no PARM-1 claim, so no
         # admissibility threshold applies to it -- but its operands were still validated
@@ -1278,8 +1295,12 @@ def validate_g3(hypothesis, turns, reps, checkpoints, known, min_n_h1=None,
     entry = known.get(name) or {}
     if spcc is not None:
         # SPCC NAMESPACE (U-SPCC-34): the claim is adjudicated by PREREG-SPCC's own
-        # terms. ``n`` is the cell's request allocation -- the same turns x reps G3
-        # already computes -- and the ceiling is the document's, not PARM-1's.
+        # terms. ``n`` is the cell's BASELINE request count -- turns x arms x reps, the
+        # quantity the runner prices -- and the ceiling is the document's, not PARM-1's.
+        # A baseline outside [lo, hi] is a refusal on its own: below the floor the cell
+        # cannot support the claim whatever it fetches, and above the ceiling it is
+        # already over before a single follow-up.  A baseline INSIDE the window is not a
+        # promise: the runner's per-request brake enforces ``hi`` on actual sends.
         ceiling = spcc.get("request_ceiling") or {}
         lo, hi = ceiling.get("min"), ceiling.get("max")
         need = spcc.get("checkpoints_required")
@@ -1694,16 +1715,18 @@ def eval_gate_prereg(args, fixture):
                             getattr(args, "reps", None), checkpoints, hyps,
                             min_n_h1=min_n_h1, h1_basis=h1_basis,
                             smoke=claim.is_smoke,
-                            spcc=(hyps.get(spcc_id) or {}) if spcc_id else None)
+                            spcc=(hyps.get(spcc_id) or {}) if spcc_id else None,
+                            arms=getattr(args, "arms", None))
     n = facts.get("n") or 0
     verdict = {
         "gate": GATE_PREREG, "what": "prereg", "rule_id": doc.get("rule_id"),
         "rule_sha256": doc.get("rule_sha256"),
         "hypothesis": name, "hypothesis_source": source, "n": n,
+        "arms": facts.get("arms"), "n_basis": facts.get("n_basis"),
         "claim": claim.claim, "comparison_eligible": claim.comparison_eligible,
         "mode": claim.mode,
         "artefact": _repo_rel(artefact_path), "artefact_sha256": digest,
-        "flag": "--hypothesis / --turns / --reps",
+        "flag": "--hypothesis / --turns / --reps / --arms",
         "thresholds": facts.get("thresholds") or {},
     }
     branch = facts.get("branch")
@@ -1748,15 +1771,19 @@ def eval_gate_prereg(args, fixture):
         need = th["checkpoints_required"]
         verdict.update({
             "ok": ok,
-            "computed": "n=%d over %d checkpoint(s)" % (n, checkpoints),
+            "computed": "baseline n=%d (turns x arms x reps) over %d checkpoint(s)"
+                        % (n, checkpoints),
             "limit": "n in [%s, %s] and >= %s checkpoint(s)" % (lo, hi, need),
             "short": "%s n=%d %s [%s, %s]" % (GATE_PREREG, n,
                                               "in" if ok else "outside", lo, hi),
             "consequence": (
                 "PREREG-SPCC's %s is budgeted at %s-%s requests over %s checkpoints; "
-                "this cell would spend n=%d over %d checkpoint(s), so its own "
-                "allocation cannot support the claim it would state"
-                % (name, lo, hi, need, n, checkpoints)),
+                "this cell's BASELINE is n=%d (turns x arms x reps) over %d "
+                "checkpoint(s) -- fetch follow-ups are extra requests the baseline "
+                "cannot see, and the runner's per-request brake stops the run at %s "
+                "actual sends -- so a baseline outside the window cannot support the "
+                "claim it would state"
+                % (name, lo, hi, need, n, checkpoints, hi)),
         })
         return verdict
 
