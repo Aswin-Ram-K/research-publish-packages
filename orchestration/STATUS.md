@@ -876,6 +876,50 @@ none is unparsed. The masking arm's `WORKING SET INDEX` prompt format costs attr
 accuracy at *all* distances, which is a different mechanism from the distance cliff and must
 not be pooled with it.
 
+**The 6/48 gap is answer-slot binding (U-SPCC-67).** Both arms' prompts were rebuilt
+through the runner's own `Planner` (`experiments/ptr-engine/longrun/run_longrun.py:1562`)
+with `send_chat` replaced by a recorder; `prompt_sha256` matched **200/200** rows. The
+masking arm is a flat transcript replay — `WORKING SET`, then 29 turn blocks each shaped
+`QUESTION (Tt) / TOOL OUTPUTS: / TOOL_OUTPUT (doc@rev): body / ANSWER (Tt): value`, then the
+current turn block, then the checkpoint contract (T30: 158 lines, 1,611 prompt tokens); the
+spcc arm is the layered compiler L0/L1/L2/L3/L4 (T30: 69 lines, 1,465 prompt tokens,
+`layer_tokens` L0=80 L1=20 L2=215 L3=21 L4=2). The one difference that matters: **the
+masking arm replays an `ANSWER (Tt):` line after every turn's tool-output block; the spcc
+journal replays no answers at all.** The transcript teaches a positional rule — the answer
+slot takes its value from the block immediately above it — because that is the shape of all
+29 prior turn blocks. On a checkpoint turn the fixture delivers a body for a *different*
+document, and that body is the block immediately above the answer slot: five checkpoint
+turns deliver a body, in all five the delivered document differs from the asked one, and
+the masking arm answers with the delivered body's value on **4 of 5**, spcc on **0 of 5**.
+Quoted, masking T31 lines 152-158: `QUESTION (T31): What is VAL_C of doc-fact-08?` /
+`TOOL OUTPUTS:` / `TOOL_OUTPUT (doc-fact-07@1): # doc-fact-07` / `VAL_A = 4071` /
+`VAL_B = 4072` / `VAL_C = 4073` / `VAL_D = 4074` → answered 4073, while the expected 4083
+sits at line 62 inside `TOOL_OUTPUT (doc-fact-08@1)` delivered at T11, 90 lines and 428
+tokens above the question and the only occurrence of that value. Proximity is refuted (at
+T30 both arms have the answered value closer to the question than the expected one —
+masking 32 before / 27 after, spcc 21 before / 17 after — and spcc answers correctly);
+document anchoring is refuted (the masking arm does print `TOOL_OUTPUT (doc-fact-07@1): #
+doc-fact-07` and the model ignores it). The masking arm's one correct delivery-turn answer
+(T12) is the turn where the expected value had already been echoed as a prior answer:
+masking T12 line 55 reads `ANSWER (T10): ANSWER: NUM 4061`. The two within-document
+failures have no delivery: T34 answered 4022 = `ANSWER (T22): ANSWER: NUM 4022`, the
+replayed answer for the same document but a different symbol; T73 answered 4124, the line
+immediately below `VAL_C = 4123` in the same body.
+
+**Verdict and exclusion rule.** The binding is intrinsic to a transcript replay that
+replays answers — not fixable without changing what the arm measures, because the answer
+replay is load-bearing (the masking branch masks prior answers on masked turns precisely so
+an earlier checkpoint's value cannot be copied without recovering the fact; delete the
+`ANSWER` lines and the arm is the spcc journal). **The 6/48 gap is therefore a format
+artefact and must be excluded from any retention comparison.** At this cell neither arm
+loses information (`masked_rows` 0, `compactions` 0, `evicted` 0 on all 200 rows;
+`expected_present` true on 96/96 with `expected_present_source = prompt-digit-boundary`):
+the cell is a format control, not a retention measurement, and pooling this 12.5 pp with
+the distance cliff would attribute a prompt-format artefact to memory. Recorded in
+`experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md` §The 6/48 gap is
+answer-slot binding; unit `orchestration/units/U-SPCC-67.md`, handoff
+`orchestration/handoffs/U-SPCC-67.json`, commit `dcc9b65`.
+
 **Scoring note.** `score_longrun.score_answer_contract_rows` returns `denominator_mismatch`
 when handed a multi-arm rows file: it sums distinct checkpoint ids across every `(arm, rep)`
 key and compares that total to the fixture's checkpoint count (96 vs 48 here). The cell was

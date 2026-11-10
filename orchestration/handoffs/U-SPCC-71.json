@@ -1,0 +1,56 @@
+{
+  "unit": "U-SPCC-71",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "docs/STATE.md",
+    "journal/2026-11-10.md",
+    "orchestration/STATUS.md",
+    "orchestration/units/U-SPCC-71.md",
+    "orchestration/handoffs/U-SPCC-71.json"
+  ],
+  "evidence": {
+    "scope": "documentation only; zero model requests spent; no rows, fixture, manifest, ptr_engine/, longrun/, code, prompt or prereg file written",
+    "source_unit": "U-SPCC-67 (commit dcc9b65) — analysis card and handoff, no ledger row",
+    "ledger_row": {
+      "file": "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+      "columns": 7,
+      "column_count_check": "awk -F'|' '/^\\|/ {print NF-2}' before: 24 seven-column, 15 ten-column, 7 three-column; after: 25 seven-column, 15 ten-column, 7 three-column, plus 7 six-column rows from the new delivery table (header + separator + 5 rows)",
+      "status": "RECORDED",
+      "headline": "the 6/48 E3 gap is answer-slot binding, a transcript-replay artefact — not a retention difference; the gap must be excluded from any retention comparison"
+    },
+    "subsection": {
+      "heading": "### The 6/48 gap is answer-slot binding",
+      "location": "under the E3 material, immediately after the main findings table and before '### The TX-03 cliff is content absence'",
+      "contains": [
+        "reconstruction method: both arms rebuilt through the runner's own Planner (experiments/ptr-engine/longrun/run_longrun.py:1562) with send_chat replaced by a recorder; checkpoint_prompt applied as the run loop does (run_longrun.py:3555-3567); prompt_sha256 matched 200/200 rows",
+        "structural diff: masking T30 158 lines / 1,611 prompt tokens vs spcc 69 lines / 1,465 prompt tokens, layer_tokens L0=80 L1=20 L2=215 L3=21 L4=2",
+        "the one difference that matters: the masking arm replays an ANSWER (Tt): line after every turn's tool-output block; the spcc journal replays no answers at all",
+        "quoted masking T31 lines 152-158 (QUESTION (T31): What is VAL_C of doc-fact-08? / TOOL OUTPUTS: / TOOL_OUTPUT (doc-fact-07@1): # doc-fact-07 / VAL_A = 4071 / VAL_B = 4072 / VAL_C = 4073 / VAL_D = 4074) answered 4073 while the expected 4083 sits at line 62 inside TOOL_OUTPUT (doc-fact-08@1) delivered at T11, 90 lines and 428 tokens above the question and the only occurrence of that value",
+        "delivery table: 5 turns, delivered document differs from asked document in 5/5, masking answers with the delivered body's value on 4/5, spcc 0/5",
+        "refutations: proximity (at T30 masking 32 tokens before / 27 after, spcc 21 before / 17 after, and spcc answers correctly) and document anchoring (the masking arm prints TOOL_OUTPUT (doc-fact-07@1): # doc-fact-07 and the model ignores it)",
+        "T12 answer replay: masking T12 line 55 reads ANSWER (T10): ANSWER: NUM 4061 — T10's wrong answer is T12's correct answer, so the value appears twice",
+        "within-document failures: T34 answered 4022 = ANSWER (T22): ANSWER: NUM 4022 (same document, different symbol); T73 answered 4124, the line immediately below VAL_C = 4123 in the same body",
+        "verdict: intrinsic to a transcript replay that replays answers — the answer replay is load-bearing, so deleting the ANSWER lines turns the arm into the spcc journal",
+        "consequence: the 6/48 gap is a format artefact and must be excluded from any retention comparison"
+      ]
+    },
+    "doc_updates": {
+      "docs/STATE.md": "finding and exclusion rule added to the E3 section before the scoring note; header attribution moved to U-SPCC-71",
+      "journal/2026-11-10.md": "finding and exclusion rule added to the E3 entry before the scoring note",
+      "orchestration/STATUS.md": "finding and exclusion rule added to the E3 section before the scoring note"
+    },
+    "exclusion_rule": "the 6/48 gap is a format artefact and must be excluded from any retention comparison; at this cell neither arm loses information (masked_rows 0, compactions 0, evicted 0 on all 200 rows; expected_present true on 96/96 with expected_present_source = prompt-digit-boundary), so the cell is a format control, not a retention measurement, and pooling this 12.5 pp with the distance cliff would attribute a prompt-format artefact to memory",
+    "doc_check": "python3 tools/doc_check.py exits 0 (OK docs clean under /home/zer0null/research extractor)"
+  },
+  "blocker": null,
+  "next_unit_hint": "The 6/48 gap is now recorded and excluded from retention comparisons. Two follow-ups remain separable and both are offline. (1) The answer-slot binding predicts that the masking arm's cross-document errors occur exactly on turns where the fixture delivers a body for a document other than the one asked — 5 such turns exist in TX-04 and 4 fail; a fixture with more delivery/ask mismatches would test that prediction directly with no requests. (2) The d64 result is still a single rep at a noise floor of ±4.2 pp; a second rep at d64 only (9 probes × 2 arms = 18 requests) would put the 9/9 on firmer ground. Do not re-run the full 200-request cell for either.",
+  "write_paths": [
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "docs/STATE.md",
+    "journal/2026-11-10.md",
+    "orchestration/STATUS.md",
+    "orchestration/units/U-SPCC-71.md",
+    "orchestration/handoffs/U-SPCC-71.json"
+  ]
+}
