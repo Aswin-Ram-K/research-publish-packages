@@ -1,0 +1,40 @@
+{
+  "unit": "U-SPCC-19",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/score-spcc-billedproof-2026-11-10.json",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/score_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_billed_tokens.py",
+    "experiments/ptr-engine/longrun/tests/test_scorecard_guards.py",
+    "orchestration/units/U-SPCC-18.md",
+    "orchestration/handoffs/U-SPCC-18.json",
+    "orchestration/units/U-SPCC-19.md"
+  ],
+  "evidence": {
+    "pytest": "................... [100%]\n19 passed in 0.09s",
+    "regen_exit": "exit=1 (score_longrun.py exits 1 on failed answer-shape checks: checkpoint_accuracy 8/48, failed_required 40 — expected, not a regeneration failure)",
+    "billing_block": "{\"prompt_tokens\": 174047, \"cached_tokens\": 159744, \"uncached_tokens\": 13746, \"billed_tokens\": 14007, \"billed_tokens_known\": 14007, \"billed_upper_bound_tokens\": 14303, \"billed_unknown_rows\": 1, \"billed_unknown_turns\": [5], \"billed_source\": \"mixed\", \"cached_fraction_of_prompt\": 0.917821048337518, \"cached_fraction_of_accounted\": 0.920767767594674, \"coverage\": 0.98, \"billed_coverage\": 0.99, \"attribution\": \"partial\", \"reconcile_delta_total\": 557, \"reconcile_tolerance_tokens\": 1740, \"reconcile_within_tolerance\": true}",
+    "stale_zero_grep": "0",
+    "git_log": "d4da7b4 spcc: billing keeps absent separate from zero; report a bound, not a single charge\n3fb39e6 U-SPCC-17: ignore longrun scratch residue, delete the untracked run leftovers",
+    "ls_remote": "d4da7b4177cf5b9a5d47a1a7bcdd673362c73091\trefs/heads/research/next-candidates-2026-10-24\n5554d82bb355ea709032f46cc7444da342329246\trefs/heads/main",
+    "status_porcelain_count": "0",
+    "doc_check": "OK docs clean under /home/zer0null/research extractor\nexit=0",
+    "push": "3fb39e6..d4da7b4  HEAD -> research/next-candidates-2026-10-24"
+  },
+  "blocker": null,
+  "next_unit_hint": "The bill is now 14,007 established / 14,303 upper bound at coverage 0.99, landed and pushed. The remaining gap is not billing: checkpoint_accuracy is 8/48 required fact checks (only the d2 probes pass; every d5/d6/d8/d20/d32 probe returns answer kind NONE). Next unit should attack the answer-shape failure — retrieval returns no numeric answer at the retention distances — rather than the accounting.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/score-spcc-billedproof-2026-11-10.json",
+    "orchestration/units/U-SPCC-19.md",
+    "orchestration/handoffs/U-SPCC-19.json"
+  ],
+  "commands": [
+    ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_billed_tokens.py experiments/ptr-engine/longrun/tests/test_scorecard_guards.py -q",
+    ".venv/bin/python experiments/ptr-engine/longrun/score_longrun.py experiments/ptr-engine/longrun/tasks-v7/TX-03.v1.json experiments/ptr-engine/measure/rows-spcc-billedproof-2026-11-10.jsonl --pretty --out experiments/ptr-engine/measure/score-spcc-billedproof-2026-11-10.json",
+    "grep -c '\"billed_tokens\": 0' experiments/ptr-engine/measure/score-spcc-billedproof-2026-11-10.json",
+    "git push origin HEAD:research/next-candidates-2026-10-24",
+    "git ls-remote --heads origin",
+    "python3 tools/doc_check.py"
+  ]
+}
