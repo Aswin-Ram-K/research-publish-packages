@@ -772,6 +772,39 @@ def build_cap_gate(cfg, fixture: dict, arm: str, rows_path: str) -> RequestCapGa
                           run_counter=counter)
 
 
+def _observed_tools(rows_path: str, available: int | None) -> dict:
+    """The `tools` block's OBSERVED totals, read from the cell's own rows.
+
+    FETCH-ROUNDS-ACCOUNTING (U-SPCC-50): the `tools` block was frozen at launch and never
+    updated, so a finished cell reported launch POLICY (`fetch_rounds_used: 0`) instead of
+    what the arm did.  At finalisation the block is rewritten from the durable ledger:
+
+    * `fetch_rounds_used` -- `fetch_rounds_spent`, the same derivation `--resume` uses, so
+      a resumed cell and a fresh one report the same number for the same spend;
+    * `fetch_rounds_available` -- the pool the rounds were drawn from (the frozen
+      `max_fetch_rounds_per_arm`, carried through unchanged);
+    * `tools_schema_sent` -- the WIRE fact: did any request of this cell actually carry
+      the tool schema?  A `--tools` run whose schema never reached the wire is a
+      different experiment from one where it did.
+    """
+    rows: list[dict] = []
+    if os.path.exists(rows_path):
+        with open(rows_path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rows.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    return {
+        "fetch_rounds_used": fetch_rounds_spent(rows),
+        "fetch_rounds_available": available,
+        "tools_schema_sent": any(r.get("tools_schema_sent") is True for r in rows),
+    }
+
+
 def _gate_finish(gate: RequestCapGate, manifest_path: str | None, manifest_sha: str | None,
                  rows_path: str) -> tuple[dict, int]:
     """Reconcile at exit, write the final counts into the run manifest, return (rec, rc)."""
@@ -794,6 +827,12 @@ def _gate_finish(gate: RequestCapGate, manifest_path: str | None, manifest_sha: 
             # --resume can still verify the frozen manifest it started from.
             block["frozen_sha256"] = prior or manifest_sha
             doc["cap_gate"] = block
+            # FETCH-ROUNDS-ACCOUNTING (U-SPCC-50): the `tools` block is frozen at launch
+            # and was never updated, so a finished cell reported launch policy rather than
+            # what happened.  Rewrite it with the OBSERVED totals from the cell's rows.
+            if isinstance(doc.get("tools"), dict):
+                doc["tools"].update(_observed_tools(
+                    rows_path, doc["tools"].get("max_fetch_rounds_per_arm")))
             data, final_sha = write_manifest(manifest_path, doc)
             print(f"cap-gate: final counts recorded in {manifest_path} "
                   f"({len(data)} B) sha256={final_sha}", file=sys.stderr)
@@ -1461,6 +1500,9 @@ def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messag
             dict(extras, prompt_sha256=sha256_text(next_messages[-1]["content"]),
                  fetch_followup=True, tool_calls=round_calls,
                  billed_round=bool(fresh), prompt_served=int(served_now),
+                 # FETCH-ROUNDS-ACCOUNTING (U-SPCC-50): the cumulative count AFTER this
+                 # round, so a follow-up row states the spend it belongs to.
+                 fetch_rounds_used=rounds_used,
                  send_index=int(rounds_this_turn),
                  fetch_rounds_cap_per_turn=cap)))
         # TOOL-CHANNEL-WIRE: the follow-up reply is read the same way (structured first,
@@ -3588,6 +3630,15 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
         followup_rows: list[dict] = []
         rounds_this_turn = 0
         prompt_serves = 0
+        # FETCH-ROUNDS-ACCOUNTING (U-SPCC-50): the cumulative round count as it stood
+        # BEFORE this turn bought anything.  Every row of the turn inherits it from
+        # `extras`; the follow-up rows and the turn row override it with their own
+        # cumulative value, so the file order of a turn's rows (initial, follow-ups,
+        # turn) is monotonically non-decreasing.  A tools-off run never stamps it: the
+        # concept does not apply there, and `null` is the honest value.
+        _rounds_before_turn = fetch_rounds_used
+        if tools_enabled(cfg):
+            extras["fetch_rounds_used"] = _rounds_before_turn
         # ROW-ATTRIBUTION (docs/ROW-MODEL.md): hold the INITIAL send's own response
         # object.  `fetch_rounds` rebinds `resp` to the last follow-up, so without this
         # reference the turn's first request would leave no measurement of its own --
@@ -3701,6 +3752,12 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                     print(f"TURN FAILED (fetch follow-up wall) T{t}", file=sys.stderr)
                     return 4
                 sent += 1
+                # FETCH-ROUNDS-ACCOUNTING (U-SPCC-50): the D arm's inline follow-up IS a
+                # billed round -- it read fresh lines off disk -- so the cumulative
+                # counter advances HERE.  Before this the counter was initialised and
+                # never incremented on this path, so the arm stamped 0 on every turn row
+                # while spending 18 of its 48-round pool.
+                fetch_rounds_used += 1
                 resp = _resp2
                 _retrieval_stamp = {
                     "fetch_rows": len(_calls),
@@ -3716,6 +3773,7 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                     cfg, fixture, arm, rep, run_id, t, _resp2, _resp2.get("content"), "tool-followup", manifest_sha,
                     dict(extras, prompt_sha256=sha256_text(_followup_msgs[-1]["content"]),
                          fetch_followup=True, tool_calls=[{"ref": c.get("ref")} for c in _calls],
+                         fetch_rounds_used=fetch_rounds_used,
                          send_index=1)))
                 _d_fetch_done = True
         if tools_enabled(cfg) and not is_answer_turn and arm not in (arm_cd.ARM_C, arm_cd.ARM_D, arm_cd.ARM_SPCC):

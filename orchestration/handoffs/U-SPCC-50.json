@@ -1,0 +1,19 @@
+{
+  "unit": "U-SPCC-50",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_fetch_rounds_accounting.py",
+    "orchestration/units/U-SPCC-50.md",
+    "orchestration/handoffs/U-SPCC-50.json"
+  ],
+  "evidence": "RED against pre-fix run_longrun.py (git show HEAD:...): test_tools_on_counter_is_monotonic_and_final -> 'AssertionError: None unexpectedly found in [None, 0, None, 0, 0]' with rows [('turn-initial',1,None),('turn',1,0),('turn-initial',2,None),('turn',2,0),('turn',3,0)] i.e. the counter stuck at 0 while 2 fetch rounds were spent; test_manifest_tools_block_is_finalised -> 'AssertionError: 0 != 1 : the finalised block must report the observed total, not the launch default 0: 0'. GREEN after the fix: 3 passed; the tools-on counter is [0,1,1,2,2] (non-decreasing) and ends at 2 == the 2 fetch_followup rows; tools-off stamps None on every row and never 0; the finalised manifest reports tools.fetch_rounds_used=1 for a 1-round cell, fetch_rounds_available=48, tools_schema_sent a bool. Acceptance suite: TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_fetch_rounds_accounting.py experiments/ptr-engine/longrun/tests/test_fetch_arm_row_persistence.py experiments/ptr-engine/longrun/tests/test_arm_cd_wiring.py -q -> 14 passed. Regression net test_tool_channel{,2,3}.py + test_row_attribution.py + test_cap_gate.py + test_row_count_guard_gen7.py -> 20 passed. .venv/bin/python tools/doc_check.py -> exit 0. Zero model requests: send_chat is a canned function and arm_cd.service_fetches reads the fixture's own documents.",
+  "blocker": null,
+  "next_unit_hint": "The E1 rows on disk (experiments/ptr-engine/measure/rows-e1-tools-2026-11-10.jsonl) still carry the pre-fix stamps (0 on 52 rows, null on 66) and must not be rewritten; the corrected counter only appears on the next cell. The third defect from the E1 review (16 rows with protocol_violation=answer_wrapped_tool_call on fetch-arm turn-initial rows) is still open.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_fetch_rounds_accounting.py",
+    "orchestration/units/U-SPCC-50.md",
+    "orchestration/handoffs/U-SPCC-50.json"
+  ]
+}
