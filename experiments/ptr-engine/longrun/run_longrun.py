@@ -364,12 +364,16 @@ def resolve_fixture_path(task: str) -> str | None:
 
 
 def index_lines(fixture: dict) -> str:
-    """Frozen pointer index: id, hash8, body length — no fact values (no AUD-/lumen leak)."""
-    lines = []
-    for item in fixture["items"]:
-        body = item["body"]
-        lines.append(f"- @knowledge:{item['id']}@1 {sha256_text(body)[:8]} {len(body.encode('utf-8'))}")
-    return "\n".join(lines) + "\n"
+    """Frozen pointer index: fetchable ref, hash8, body length — no fact values.
+
+    INDEX-REF-COHERENCE (U-SPCC-55): the refs are the ones the fetch tool
+    accepts (``make_ref`` form, ``doc-<name>@r<rev>``), derived from the same
+    pointer entries the fetch table is built from, so the index cannot
+    advertise a ref that resolves to NOT_FOUND.  The SPCC arm's L1 is built by
+    ``arm_cd.spcc_world_index`` from the same helper, so both arms read the
+    same index.
+    """
+    return "\n".join(arm_cd.world_index_lines(fixture)) + "\n"
 
 
 def body_block(item: dict) -> str:

@@ -30,7 +30,7 @@ from ptr_engine.layers import (  # noqa: E402
     compile_prompt, CompactionState, format_journal_line, RETURN_SYMBOL,
     escape_journal_content, reset_prefix_state,
 )
-from ptr_engine.quantise import token_len, StubTokenizer  # noqa: E402  real counter
+from ptr_engine.quantise import StubTokenizer  # noqa: E402  real counter
 
 ARM_C = "masking-no-fetch"
 ARM_D = "bounded-context-fetch"
@@ -413,30 +413,43 @@ def _spcc_tokenizer(tokenizer):
     return tokenizer if tokenizer is not None else StubTokenizer()
 
 
+def world_index_lines(fixture: Optional[dict], turn: int = 1) -> List[str]:
+    """L1 world-index lines: one per ref the fetch tool accepts at ``turn``.
+
+    INDEX-REF-COHERENCE (U-SPCC-55).  The refs are the ``make_ref`` form
+    (``doc-<name>@r<rev>``) taken from the SAME pointer entries
+    ``service_fetches`` builds its fetch table from, filtered to
+    ``state == "live"``.  A ref the fetch tool would answer NOT_FOUND /
+    STALE_OR_REVOKED / SCOPE_UNGRANTED is not part of the addressable world, so
+    the index must not advertise it: the index is the only place the model
+    learns which refs exist, and an index that names unfetchable refs teaches
+    it to guess at a namespace it was never shown.
+
+    Line shape is ``- {ref} {hash8} {bytes}``: the ref, a short digest and the
+    body size in bytes, and no body text (no fact-value leak).
+    """
+    state = ArmCDState(fixture=fixture, tokenizer=StubTokenizer())
+    lines: List[str] = []
+    for entry in state._doc_entries(int(turn)):
+        if getattr(entry, "state", None) != "live":
+            continue
+        body = getattr(entry, "body", None)
+        body = "" if body is None else str(body)
+        digest = hashlib.sha256(body.encode("utf-8")).hexdigest()[:8]
+        lines.append("- %s %s %d" % (entry.ref, digest, len(body.encode("utf-8"))))
+    return lines
+
+
 def spcc_world_index(fixture: Optional[dict], tokenizer=None) -> List[str]:
-    """L1 world-index lines: sorted ``@kind:id@rev~tokens scope=default``."""
-    fx = fixture or {}
-    tok = _spcc_tokenizer(tokenizer)
-    out: List[str] = []
-    for item in (fx.get("items") or []):
-        if not isinstance(item, dict) or not item.get("id"):
-            continue
-        body = item.get("body") or ""
-        n = token_len(str(body), tok)
-        out.append("@knowledge:%s@r1~%d scope=default" % (item.get("id"), n))
-    for doc in (fx.get("documents") or []):
-        if not isinstance(doc, dict) or not doc.get("doc_id"):
-            continue
-        revs = doc.get("revisions") or []
-        for rev in revs:
-            if not isinstance(rev, dict):
-                continue
-            rnum = rev.get("revision")
-            body = rev.get("value")
-            n = token_len(str(body if body is not None else ""), tok)
-            out.append("@doc:%s@r%s~%d scope=default"
-                       % (doc.get("doc_id"), rnum, n))
-    return out
+    """L1 world-index lines for the stable-prefix arm.
+
+    Byte-identical to the masking/fetch arm's index (``run_longrun.index_lines``
+    renders the same lines): both arms read the same L1, so neither may be
+    handed a ref list the other lacks.  ``tokenizer`` is accepted for the L1
+    call site and is unused -- the line carries the body's byte length, not a
+    token count.
+    """
+    return world_index_lines(fixture)
 
 
 def spcc_run(fixture: Optional[dict] = None, model: str = "offline-model") -> dict:

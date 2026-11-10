@@ -1,0 +1,35 @@
+{
+  "unit": "U-SPCC-55",
+  "status": "COMPLETE",
+  "artifacts": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/run_longrun.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/arm_cd.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_index_refs_are_fetchable.py",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-55.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-55.json"
+  ],
+  "evidence": {
+    "red_before_fix": "PRE-FIX index lines (1):\n    - @knowledge:item-1@1 5021bb84 33\n   fetch('@knowledge:item-1@1') -> NOT_FOUND\nRESULT: 1/1 advertised refs are NOT fetchable: [('@knowledge:item-1@1', 'NOT_FOUND')]\nfetchable refs the index never mentions: 15",
+    "green_after_fix": "....                                                                     [100%]\n4 passed in 0.03s",
+    "five_file_suite": "24 passed, 2 subtests passed in 0.45s",
+    "command": "TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_index_refs_are_fetchable.py experiments/ptr-engine/longrun/tests/test_layers_compaction.py experiments/ptr-engine/longrun/tests/test_layers_compiler.py experiments/ptr-engine/longrun/tests/test_fetch_multi_round.py experiments/ptr-engine/longrun/tests/test_fetch_call_names.py -q",
+    "regression_set": "44 passed in 0.66s (test_spcc_arm, test_spcc_delivery, test_arm_cd_wiring, test_fetch_policy, test_tx03_distance, test_arm_treatments, test_contract_presence)",
+    "index_format_before": "- @knowledge:item-1@1 5021bb84 33  (1 line, 0 fetchable)",
+    "index_format_after": "- doc-config@r1 e89a5778 85 ... - doc-fact-08@r1 bd174684 92  (13 lines, 13 fetchable)",
+    "fetchable_refs_count": 13,
+    "both_arms_share_index": "YES. run_longrun.index_lines(fixture).splitlines() == arm_cd.spcc_world_index(fixture, StubTokenizer()) == list(SpccArmState(fixture=...).index_lines); asserted by test_both_arms_share_the_index.",
+    "invariant": "Every ref in the index of tasks-v7/TX-03.v1.json fetches OK through the real path (ArmCDState.all_entries(1) -> build_table -> fetch). Index refs are the make_ref form doc-<name>@r<rev>, derived from the same pointer entries the fetch table is built from and filtered to state == 'live', so the index cannot advertise a ref that resolves to NOT_FOUND.",
+    "layers_contract": "UNCHANGED. ptr_engine/layers.py joins and sorts index_lines and never parses the line text; no layer-contract change was needed.",
+    "comparability": "This changes the prompt bytes for BOTH arms (the index is L1 and shared). No result measured before this commit is comparable to one measured after it.",
+    "doc_check": "OK docs clean under /home/zer0null/research extractor (exit 0)"
+  },
+  "blocker": null,
+  "next_unit_hint": "Re-run the E1 fetch arm and count NOT_FOUND outcomes: the 12 bad refs were guesses at an unadvertised namespace, so the NOT_FOUND rate should collapse. Then check whether advertising doc-fact-01..08 at turn 1 lets the model prefetch facts before their delivery turn and whether the per-turn cap and per-arm pool still bind; if prefetching makes the masking arm's recovery trivial, the index may need to advertise only refs live at the current turn rather than at turn 1.",
+  "write_paths": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/run_longrun.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/arm_cd.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_index_refs_are_fetchable.py",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-55.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-55.json"
+  ]
+}
