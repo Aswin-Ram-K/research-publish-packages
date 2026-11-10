@@ -169,11 +169,15 @@ def compile_prompt(run: Any, state: CompactionState, *, epoch: int, journal: lis
         ``T{n}|{role}|{content}`` line for the turn).  They are APPENDED to
         ``state.journal``; the caller must not re-pass lines already folded.
       * When the accumulated journal reaches ``COMPACT_EVERY`` lines, the whole
-        journal is folded into one summary block appended to ``state.index_lines``,
-        ``state.epoch`` is incremented, ``state.compactions`` is incremented and
-        ``state.journal`` is reset to ``[]``.  The post-compaction state is what
-        the caller must use on the next turn (read it back from ``state`` or from
-        the returned prompt).
+        journal is DROPPED -- no content survives the fold -- and a single
+        deterministic marker ``[compacted: N turns dropped at epoch E]`` is
+        appended to ``state.index_lines``.  ``state.epoch`` is incremented,
+        ``state.compactions`` is incremented and ``state.journal`` is reset to
+        ``[]``.  The post-compaction state is what the caller must use on the
+        next turn (read it back from ``state`` or from the returned prompt).
+      * ``state.epoch`` is authoritative: the ``epoch`` argument is a
+        convenience only, and a stale caller value can never regress an epoch
+        the state has already advanced past a compaction.
       * Compaction happens at the start of a compile, never between layers, so it
         can never fire mid-turn.
 
@@ -224,13 +228,20 @@ def compile_prompt(run: Any, state: CompactionState, *, epoch: int, journal: lis
     # compaction (start of compile only -- never mid-turn)
     compacted_now = False
     if len(st.journal) >= COMPACT_EVERY:
-        summary = "[summary: %d turns folded into epoch %d]" % (len(st.journal), st.epoch + 1)
-        st.index_lines = st.index_lines + [summary]
+        # The journal is DROPPED, not summarised: no content survives the fold.
+        # The marker states exactly that, so nothing downstream can read it as a
+        # claim that the folded turns are still available.
+        marker = "[compacted: %d turns dropped at epoch %d]" % (len(st.journal), st.epoch + 1)
+        st.index_lines = st.index_lines + [marker]
         st.epoch = st.epoch + 1
         st.compactions = st.compactions + 1
         st.journal = []
-        epoch = st.epoch
         compacted_now = True
+
+    # The state is authoritative for the epoch.  A caller that keeps passing a
+    # stale ``epoch`` (e.g. 0 every turn) must never regress an epoch the state
+    # has already advanced past a compaction.
+    epoch = st.epoch
 
     # contract line (L4)
     contract_line = _get(run, "contract_line", "answer_contract_line", default=None)
@@ -264,7 +275,7 @@ def compile_prompt(run: Any, state: CompactionState, *, epoch: int, journal: lis
     # write back to state
     st.prefix_sha256 = prefix_sha
     st.layer_tokens = lt
-    st.epoch = epoch
+    # ``st.epoch`` is already authoritative (see above); ``epoch`` mirrors it.
 
     if mapping_state is not None:
         mapping_state["index_lines"] = st.index_lines

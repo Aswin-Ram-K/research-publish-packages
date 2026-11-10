@@ -36,6 +36,24 @@ E1–E5 are each 200–500 requests. E6 costs GPU hours, not requests.
 - **Falsifier:** `spcc` below fetch on single-fact, or `spcc` not strictly above masking on any checkpoint class, or billed tokens above masking.
 - **Budget ceiling (requests):** 200–500.
 
+### Deviation note — 2026-11-10, instrument observation before E1 ran
+
+Measured against the real module, before any E1 request was spent: `compile_prompt`
+drops the journal at `COMPACT_EVERY = 24` and retains only a marker line; no
+content survives the fold (`ptr_engine/layers.py:226-231`). A fact introduced at
+turn 1 is present in the prompt at turns 1–23 and absent from turn 24 onward.
+
+Consequence for the prediction above, stated as a prediction about the outcome:
+E1's prediction that `spcc` beats masking **everywhere** is expected to FAIL on
+any probe taken after the first compaction following that fact's introduction,
+and the falsifier ("`spcc` not strictly above masking on any checkpoint class")
+is expected to fire there. That is a result E1 will produce, not a reason to
+soften the claim.
+
+The prediction and falsifier above remain binding and unedited. This note
+records an instrument property discovered before the run, not a post-hoc
+revision of the hypothesis.
+
 ## E2 — What does compaction cost?
 
 - **Hypothesis:** Larger compaction interval lowers rewrite cost with no accuracy loss until the interval exceeds the distance at which facts stop being refetched.

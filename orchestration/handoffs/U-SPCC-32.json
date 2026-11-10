@@ -1,0 +1,35 @@
+{
+  "unit": "U-SPCC-32",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/ptr_engine/layers.py",
+    "experiments/ptr-engine/longrun/tests/test_layers_compaction.py",
+    "experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.md",
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "orchestration/units/U-SPCC-32.md",
+    "orchestration/handoffs/U-SPCC-32.json"
+  ],
+  "evidence": {
+    "D1_marker": "layers.py:226-231 now appends '[compacted: %d turns dropped at epoch %d]' instead of '[summary: ...]'; docstring says the journal is DROPPED and only a marker is retained.",
+    "D1_measured": "fact 'doc-fact-01 value 3001' present in prompt at turns 1-23, absent from turn 24 onward; turn-26 prompt contains '[compacted: 24 turns dropped at epoch 1]' and no 'summary'.",
+    "D2_epoch": "after the compaction block, epoch = st.epoch unconditionally; trailing 'st.epoch = epoch' write-back removed. st.epoch, _Prompt.epoch, run.epoch and mapping_state['epoch'] all agree and are non-decreasing.",
+    "D2_measured": "28 turns with caller always epoch=0: epoch 0..0, 1 at turn 24, stays 1 at turns 25-28 (was 0 at turn 25 before the fix).",
+    "compactions": "increments exactly once over 28 turns (turn 24).",
+    "red_output": "FAILED test_marker_states_dropped_not_summary (prompt carried '[summary: 24 turns folded into epoch 1]'); FAILED test_epoch_monotonic_and_agrees_everywhere (epoch regressed: [0,...,0,1,0,0,0,0]); 2 failed, 2 passed.",
+    "green_output": "4 passed in 0.02s",
+    "suite": "test_layers_compaction.py + test_spcc_arm.py + test_arm_cd_wiring.py -> 14 passed in 2.70s",
+    "prereg": "E1 prediction and falsifier unedited and binding; dated deviation note '### Deviation note — 2026-11-10, instrument observation before E1 ran' added under E1 stating the consequence as a prediction about the outcome.",
+    "ledger": "one 7-column row added; column-count histogram before 12x7 / 7x3 / 15x10, after 13x7 / 7x3 / 15x10.",
+    "doc_check": "exit=0"
+  },
+  "blocker": null,
+  "next_unit_hint": "E1 can now run: the arm's eviction is stated honestly and every row's epoch is monotonic. Expect the E1 falsifier to fire on probes taken after the first compaction following a fact's introduction; E2 measures that cost.",
+  "write_paths": [
+    "experiments/ptr-engine/ptr_engine/layers.py",
+    "experiments/ptr-engine/longrun/tests/test_layers_compaction.py",
+    "experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.md",
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "orchestration/units/U-SPCC-32.md",
+    "orchestration/handoffs/U-SPCC-32.json"
+  ]
+}
