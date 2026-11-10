@@ -1,0 +1,34 @@
+{
+  "unit": "U-SPCC-33",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/arm_cd.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_spcc_delivery.py",
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "orchestration/units/U-SPCC-33.md",
+    "orchestration/handoffs/U-SPCC-33.json"
+  ],
+  "evidence": {
+    "defect": "SpccArmState.add_fetch appended the body to self.fetched; build rendered self.fetched into L3 for that turn only and cleared it, and the queued journal line carried only the question. A fixture delivery therefore appeared in exactly one prompt.",
+    "measured": "rows-smoke-spcc-2026-11-10.jsonl: body 3000 delivered turn 1, expected_present=False at turn 3; body 3001 delivered turn 4, expected_present=False at turn 6; model emitted CALL get_doc(doc_id=\"doc-fact-01\") at turns 4-5.",
+    "fix": "arm_cd.py: new add_delivery(body) appends to self.fetched (L3 this turn) AND self.delivered; build() appends self.delivered to the journal-line content before format_journal_line, so deliveries persist in L2 until compaction. add_fetch unchanged: L3 only, cleared each turn, never L0/L1/L2. run_longrun.py spcc branch now calls add_delivery for _turn_tool_outputs bodies.",
+    "invariant": "fetches never enter L0/L1/L2 is preserved and now proven by test_model_fetch_never_enters_l0_l1_l2, which asserts on the compiled prompt's own layer split (reconstructed byte-exact against the prompt string).",
+    "red_output": "FAILED test_delivery_persists_in_l2_until_compaction: delivery missing from L2 at turn 2; FAILED test_journal_line_carries_the_delivery: journal line dropped the delivery; FAILED test_l2_grows_when_a_delivery_arrives: L2 did not grow: plain=5 delivered=5; 3 failed (run against HEAD arm_cd.py with add_delivery aliased to add_fetch, i.e. the pre-fix call path).",
+    "green_output": "5 passed in 0.04s",
+    "suite": "test_spcc_delivery.py + test_spcc_arm.py + test_layers_compaction.py + test_arm_cd_wiring.py -> 19 passed in 0.86s",
+    "checkpoint_id": "NOT a defect. score_longrun.py:1036 _checkpoint_id_of reads row['checkpoint'] first and returns cp.get('id', row.get('checkpoint_id')); both spcc and masking-no-fetch rows carry checkpoint_id=None with a populated checkpoint dict, so the scorecard keys on the dict and both arms resolve identically. No change made.",
+    "ledger": "one 7-column row added; column-count histogram before 13x7 / 7x3 / 15x10, after 14x7 / 7x3 / 15x10.",
+    "doc_check": "exit=0"
+  },
+  "blocker": null,
+  "next_unit_hint": "Re-run the 6-turn spcc smoke cell: the delivery should now be present at turns 2-4 and the model should stop issuing CALL get_doc for a body it was already given. Then re-run the billed spcc cell to see whether the arm's retention now exceeds masking-no-fetch's four-turn window.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/arm_cd.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_spcc_delivery.py",
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "orchestration/units/U-SPCC-33.md",
+    "orchestration/handoffs/U-SPCC-33.json"
+  ]
+}

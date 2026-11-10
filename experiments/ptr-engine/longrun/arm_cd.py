@@ -452,9 +452,18 @@ class SpccArmState:
     ``state.journal`` is append-only.  The current turn's question lives in L3;
     the journal carries PRIOR turns (one ``T{n}|{role}|{content}`` line each), so
     the 24th pending line is appended on the 25th compile and compaction fires
-    there -- exactly ``COMPACT_EVERY`` turns after the previous fold.  Fetched
-    bodies are appended to ``fetched`` and rendered in L3 only; they never touch
-    L1 or L2.
+    there -- exactly ``COMPACT_EVERY`` turns after the previous fold.
+
+    Two kinds of body arrive in L3, and they are NOT the same thing:
+
+    * **Fixture deliveries** (``add_delivery``) are part of the task transcript:
+      the world the fixture hands the model, the same bodies the masking arm
+      renders inline on their delivery turn.  They are rendered in L3 on the
+      delivery turn AND carried in that turn's journal line, so they persist in
+      L2 until compaction.  They never touch L1.
+    * **Model-initiated fetches** (``add_fetch``) are the fetch mechanism.  They
+      are rendered in L3 for their own turn only and are cleared at the end of
+      it; they never touch L0, L1 or L2.
     """
 
     def __init__(self, fixture: Optional[dict] = None, tokenizer=None,
@@ -466,6 +475,7 @@ class SpccArmState:
         self.state = CompactionState(index_lines=list(self.index_lines))
         self.run = run if run is not None else spcc_run(self.fixture)
         self.fetched: List[str] = []
+        self.delivered: List[str] = []
         self.last_refs: List[str] = []
         self._pending_line: Optional[str] = None
         self.last_turn = 0
@@ -475,9 +485,20 @@ class SpccArmState:
         self.last_refs = [str(r) for r in (refs or [])]
 
     def add_fetch(self, body) -> None:
-        """Queue a fetched body for L3 arrival order (never L1/L2)."""
+        """Queue a MODEL-INITIATED fetch for L3 this turn only (never L0/L1/L2)."""
         if body is not None:
             self.fetched.append(str(body))
+
+    def add_delivery(self, body) -> None:
+        """Queue a FIXTURE-DELIVERED body: L3 this turn, then L2 until compaction.
+
+        Deliveries are transcript content, not fetches, so they ride the turn's
+        journal line and survive every later compile until the journal folds.
+        """
+        if body is not None:
+            text = str(body)
+            self.fetched.append(text)     # L3 on the delivery turn
+            self.delivered.append(text)   # L2 from the next compile onward
 
     def build(self, t: int, work: str, *, role: str = "user"):
         """Render turn ``t``; returns the ``_Prompt`` with stamping metadata."""
@@ -492,10 +513,15 @@ class SpccArmState:
             epoch=self.state.epoch, journal=new_lines, work=l3,
         )
         content = str(work)
+        if self.delivered:
+            # Fixture deliveries are transcript, not fetches: they ride the
+            # journal line so they persist in L2 until compaction.
+            content = content + "\n" + "\n".join(self.delivered)
         if self.last_refs:
             content = content + " refs=" + ",".join(self.last_refs)
         self._pending_line = format_journal_line(int(t), role, content)
         self.last_turn = int(t)
         self.fetched = []
+        self.delivered = []
         self.last_refs = []
         return prompt

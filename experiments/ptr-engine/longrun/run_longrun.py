@@ -1538,14 +1538,15 @@ class Planner:
 
         if arm == arm_cd.ARM_SPCC:
             # spcc: stable-prefix compiler.  The question leads L3; any tool output
-            # delivered this turn follows it in arrival order and enters L3 ONLY.
-            # The journal line carries the question, never a fetched body.
+            # the FIXTURE delivers this turn follows it in arrival order, enters L3
+            # now and rides the journal line so it persists in L2 until compaction.
+            # Model-initiated fetches stay on add_fetch (L3 only, never L0/L1/L2).
             state = self.spcc
             question = turn_user(t, turn)
             for to in _turn_tool_outputs(turn):
                 body = to.get("body")
                 if body is not None:
-                    state.add_fetch(str(body))
+                    state.add_delivery(str(body))
             prompt = state.build(t, question)
             info["prompt"] = str(prompt)
             info["prefix_sha256"] = prompt.prefix_sha256
