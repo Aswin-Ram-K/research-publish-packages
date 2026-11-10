@@ -2964,12 +2964,50 @@ def preview_body(cfg, planner: Planner, prompt: str) -> str:
                       ensure_ascii=False)
 
 
-def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]]) -> int:
-    root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                       "state", "previews", fixture["task_id"])
-    import shutil as _shutil
-    if os.path.exists(root):
-        _shutil.rmtree(root)
+def preview_root(task_id: str) -> str:
+    """Where a task's committed previews live (`state/previews/<task_id>`)."""
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "state", "previews", task_id)
+
+
+_PREVIEW_TURN_RE = re.compile(r"-(\d+)")
+
+
+def prune_stale_previews(arm_root: str, written: set[str], n_turns: int) -> list[str]:
+    """Delete preview files of a re-rendered arm that this run's turn scope supersedes.
+
+    PREVIEW-PRESERVATION: `state/previews/<task_id>` holds COMMITTED evidence — the
+    request bodies each arm would send are tracked files.  A dry run therefore deletes
+    nothing up front: it overwrites the files it renders and calls this only for the arm
+    it just re-rendered.  Even there it removes a file only when the file's turn lies
+    inside this run's scope (`<= n_turns`) and this run did not write it — i.e. a naming
+    the previous config produced at a turn this one no longer produces.  Files belonging
+    to arms this run does not render, and files beyond this run's turn scope, are never
+    touched.  Invariant: a dry run never leaves the working tree with fewer tracked
+    files than it found.
+    """
+    removed: list[str] = []
+    if not os.path.isdir(arm_root):
+        return removed
+    for name in sorted(os.listdir(arm_root)):
+        path = os.path.join(arm_root, name)
+        if not os.path.isfile(path) or os.path.abspath(path) in written:
+            continue
+        match = _PREVIEW_TURN_RE.search(name)
+        if match is None or int(match.group(1)) > n_turns:
+            continue
+        os.remove(path)
+        removed.append(path)
+    return removed
+
+
+def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]],
+            root: Optional[str] = None) -> int:
+    # PREVIEW-PRESERVATION: never clear the task directory.  See prune_stale_previews:
+    # a read-only-sounding --dry-run that rmtree'd this tree deleted committed evidence
+    # (LR-01/transcript-compact) twice.  `root` is injectable so tests can point a dry
+    # run at a temp directory instead of the tracked tree.
+    root = root or preview_root(fixture["task_id"])
     os.makedirs(root, exist_ok=True)
     order: list[str] = []
     reps_by_arm: dict[str, int] = {}
@@ -3012,6 +3050,7 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]]) -> int:
         c = {"reps": reps_by_arm[arm], "digest_requests": 0, "wall_turn": None,
              "trunc_turn": None, "post_wall": None}
         counts[arm] = c
+        written: set[str] = set()
         for t in range(1, n_turns + 1):
             info = planner.build(t)
             if t in checkpoint_turns(fixture):
@@ -3028,11 +3067,13 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]]) -> int:
                     c["wall_turn"] = t
                     dpath = os.path.join(root, arm, f"wall-{t:02d}-digest-request.json")
                     dbytes, dsha = preview_write(dpath, digest_body)
+                    written.add(os.path.abspath(dpath))
                     print(f"  [{arm}] first wall at T{t}: digest request {dbytes} B sha256={dsha} ({dpath})")
             if len(previews[arm]) < 3:
                 previews[arm].append(sha256_text(body))
                 path = os.path.join(root, arm, f"turn-{t:02d}.json")
                 nbytes, digest = preview_write(path, body)
+                written.add(os.path.abspath(path))
                 user0 = info["prompt"].replace("\n", " ")[:100]
                 print(f"  [{arm}] T{t}: {nbytes} B sha256={digest} user=\"{user0}\"")
                 if cfg.show_prompts:
@@ -3044,10 +3085,15 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]]) -> int:
                 c["post_wall"] = (t, sha256_text(body))
                 ppath = os.path.join(root, arm, f"post-wall-{t:02d}.json")
                 pbytes, psha = preview_write(ppath, body)
+                written.add(os.path.abspath(ppath))
                 print(f"  [{arm}] post-wall body at T{t}: {pbytes} B sha256={psha} "
                       "(digest text is a placeholder offline; the digest REQUEST above is exact)")
             # simulate the answer the model would have produced
             planner.record(t, f"<<answer from turn {t}: not produced in dry-run>>")
+        # Only after rendering this arm: drop artefacts of THIS arm at turns this run
+        # covers but no longer produces.  Other arms' previews are never considered.
+        for gone in prune_stale_previews(os.path.join(root, arm), written, n_turns):
+            print(f"  [{arm}] removed stale preview {gone} (superseded by this run)")
 
     print("\nREQUEST COUNTS (what --dry-run would send)")
     total = 0

@@ -119,9 +119,18 @@ probes pass and nothing after them does.
 | unclassified | 0 |
 | **total** | **40** |
 
-- Cause 2 is excluded by data: all 40 failing prompts contain 0 occurrences of the value, while the 8 passing
-  probes retrieve correctly at prompt fractions up to **0.74** of the request (f08.d2, token offset 1809 of
-  2455 request tokens), so depth alone is not the limiter.
+The non-`d2` buckets are five widths (`d5`/`d6`/`d8`/`d20`/`d32`) × 8 probes = **40**, consistent with
+`d2`'s 8. Bucket 2 is zero because no failing prompt contained the value at all: that is content absence,
+not evidence that position has no effect. This run never holds a present value at two distances, so
+position remains untested here — E3 (`experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.md`) is the
+arm that keeps the body present and varies distance.
+
+- Cause 2 is not observed in this run, and is **not excluded as a mechanism**: all 40 failing prompts contain
+  0 occurrences of the value, so they cannot exhibit present-but-unretrieved content. The 8 passing probes do
+  retrieve at prompt fractions up to **0.74** of the request (f08.d2, token offset 1809 of 2455 request
+  tokens), so a present value at depth is recoverable on this arm — but every passing probe is pre-mask `d2`,
+  and no probe here holds the value present at two distances. Position therefore stays untested; see the note
+  above the bucket table and E3 (`experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.md`).
 - Cause 3 is excluded: all 40 answers are the literal well-formed line `ANSWER: NONE`, parsed to
   `answer_kind=NONE` with `answer_parse_error=null`. Nothing was mis-parsed.
 - Cause 4 is excluded: the source text was surfaced verbatim in the tool output at each fact's intro turn, and
