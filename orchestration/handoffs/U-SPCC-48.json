@@ -1,0 +1,20 @@
+{
+  "unit": "U-SPCC-48",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/rows-e1-tools-2026-11-10.jsonl",
+    "experiments/ptr-engine/longrun/manifests/e1-tools-2026-11-10-spcc-r1.json",
+    "experiments/ptr-engine/longrun/manifests/e1-tools-2026-11-10-masking-no-fetch-r1.json",
+    "experiments/ptr-engine/longrun/manifests/e1-tools-2026-11-10-bounded-context-fetch-r1.json",
+    "orchestration/units/U-SPCC-48.md",
+    "orchestration/handoffs/U-SPCC-48.json"
+  ],
+  "evidence": "Cell ran as specified with --tools read_file; the U-SPCC-46 guard did not fire. rows=318 requests=318 truncated=0 failed_turns=0; finish_reason {stop:304, tool_calls:14}. Cap-gate reconciliation delta 0 on all three arms: spcc 8381->8481 (100), masking-no-fetch 8481->8581 (100), bounded-context-fetch 8581->8699 (118). Programme spend 8699/12094, headroom 3395. tools_mode is on:read_file and tools_schema_sent true on all 100 spcc rows and all 118 fetch rows (masking-no-fetch is off/false by design, run_cell clears cfg.tools for ARM_C); the manifest has no tools_mode key, the wire fact is per-row. Scores (score_answer_contract_rows, one call per arm): spcc value 22 contract 21 NONE 26 wrong 0 unparsed 0 graded 48 total 48 requests 100; masking-no-fetch 8/8/40/0/0/48/48/100; bounded-context-fetch 22/22/11/4/10/48/48/118. Fetch arm: 18 of 48 fetch rounds used (sum fetch_rounds_this_turn=18; 18 turn rows with fetch_rows>=1 and retrieval_attempt outcome OK), 20 fetch rows returned (one round returned 3), 18 checkpoints answered on a follow-up whose prompt carried a fetched body (fetch_tokens 20 x17, 60 x1), 15 of those 18 correct, fetch_prompt_serves=0 so no round was served from the pinned prompt. 16 rows carry protocol_violation=answer_wrapped_tool_call, all on fetch-arm turn-initial rows, each with a matching turn row that did fetch. 10 checkpoints ended on finish_reason=tool_calls with empty content, tool_calls [], tool_call_ids null and no follow-up -> unparsed; cp.TX-03.f02.d8 (turn 16) has only an interim row -> ungradeable. Noise band +/-2/48 = +/-4.17 pp: spcc-masking +14/48 value (+29.2 pp) and +13/48 contract (+27.1 pp) exceed; fetch-masking +14/48 both (+29.2 pp) exceed; fetch-spcc 0 value and +1/48 contract (+2.1 pp) are inside the band. Two stamping defects found and NOT fixed: fetch_rounds_used is initialised at run_longrun.py:3359 and never incremented (stamps 0 or null on every row; manifest tools.fetch_rounds_used stays 0), and the manifest tools block is frozen at launch and never updated at finalisation.",
+  "blocker": null,
+  "next_unit_hint": "The fetch arm is now non-degenerate but not separable from spcc (22/48 value, 22/48 contract, inside the +/-2/48 band) while costing 18 extra requests and 10 unparsed checkpoints. Two follow-ups: (a) fix the dead fetch_rounds_used counter at run_longrun.py:3359 and the never-updated manifest tools block, then re-run to confirm the counter reads 18; (b) diagnose why 10 turns emit a native tool call that turn_calls does not capture (finish_reason=tool_calls, content empty, tool_calls [], tool_call_ids null) - that is the fetch arm's largest single loss and it is a harness capture bug, not model behaviour. Do not report the fetch arm as a win over spcc on this cell.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/rows-e1-tools-2026-11-10.jsonl",
+    "orchestration/units/U-SPCC-48.md",
+    "orchestration/handoffs/U-SPCC-48.json"
+  ]
+}
