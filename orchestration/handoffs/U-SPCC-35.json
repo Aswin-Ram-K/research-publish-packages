@@ -9,6 +9,12 @@
     "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-35.json"
   ],
   "evidence": {
+    "correction_2026_11_10": {
+      "why": "The first version of this handoff reported one accuracy column and a fetch denominator of 48 without saying what 48 counted. Both were corrected by re-scoring the rows already on disk; no request was spent and the cell was not re-run.",
+      "error_1_denominator": "The fetch arm's 53 is a ROW count, not a checkpoint denominator: of the 53 rows carrying a non-null `expected`, 14 are interim rows (row-level split: 12 value-correct + 14 interim + 16 NONE + 10 unparsed + 1 wrong = 53). The checkpoint-identity denominator is 48 for all three arms, and all three files contain only the fixture's 48 ids, so restricting to the shared 48 is a no-op (rows kept: spcc 48, masking 48, fetch 53 -> 48 identities). The real comparability gap is elsewhere: fetch has 9 checkpoints with no final answer, so its GRADED denominator is 39, not 48.",
+      "error_2_contract_vs_value": "`spcc` is 20/48 value-correct but 19/48 contract-correct: cp.TX-03.f08.d2 (turn 70) answered kind=TEXT with the correct value 3700 where the contract requires NUM. Both columns are now reported for every arm.",
+      "error_3_same_build": "Same endpoint and model is proven (`:8012`, `occamy-1.0` in all three manifests). Same BUILD is not: `image_digest` and `exact_argv` are `UNSOURCEABLE` in all three manifests, so no image or sglang version is comparable. The claim is now stated as 'same endpoint and model', never 'same build'."
+    },
     "precondition": "resolve_claim('E1') -> mode=hypothesis claim=E1 comparison_eligible=True. The first attempt against the committed resolver raised ClaimRefusal at claim_mode.py:222 (CLAIM_IDS = ('H1','H2','H3') at :95); the claim-namespace unit landed SPCC_CLAIM_IDS = ('E1','E2','E3','E4','E5','E6') at claim_mode.py:102 while this unit was open, and the gate then passed. No smoke/plumbing/H1/H2/H3 substitution was used and the cap was not raised.",
     "cell": "run_longrun.py --fixture tasks-v7/TX-03.v1.json --arms spcc --reps 1 --temperature 0 --seed 42 --model occamy-1.0 --base-url http://192.168.2.168:8012/v1 --claim-mode E1 --budget-cap 12094 --run-id e1-spcc-2026-11-10 --rows measure/rows-e1-spcc-2026-11-10.jsonl -> exit 0, wall 30.55s.",
     "cell_summary": "rows=100 requests=100 truncated=0 failed_turns=0; finish_reason {'stop': 100}; answer_source {'content': 100}; token_dist {'n':100,'mean':4.6,'p95':7.0,'max':7.0}; tok_method=tiktoken:cl100k_base.",
@@ -17,25 +23,35 @@
     "row_stamp": "every row: claim=E1, comparison_eligible=True, model=occamy-1.0, temperature=0.0, seed=42, fixture_sha256=f0a636fea0f82b152e8d23f0f51a9fb0f38479eabd40290e73bd98ebd3e620c3",
     "scorer": "longrun/score_longrun.py:score_answer_contract_rows(fixture, rows) -- the repo's own entry point, not a hand-rolled counter.",
     "arm_table": {
-      "spcc": {"rows_file": "experiments/ptr-engine/measure/rows-e1-spcc-2026-11-10.jsonl", "checkpoint_accuracy": "20/48", "answered_correctly": 20, "abstained_after_mask": 0, "answered_wrong": 0, "unparsed": 0, "total": 48, "contract_correct": 19, "value_correct": 20},
-      "masking-no-fetch": {"rows_file": "experiments/ptr-engine/measure/rows-tx03-masking-r1.jsonl", "checkpoint_accuracy": "8/48", "answered_correctly": 8, "abstained_after_mask": 40, "answered_wrong": 0, "unparsed": 0, "total": 48},
-      "bounded-context-fetch": {"rows_file": "experiments/ptr-engine/measure/rows-tx03-fetch-r1.jsonl", "checkpoint_accuracy": "12/48", "answered_correctly": 12, "abstained_after_mask": 16, "answered_wrong": 1, "unparsed": 10, "total": 48}
+      "spcc": {"rows_file": "experiments/ptr-engine/measure/rows-e1-spcc-2026-11-10.jsonl", "value_correct": 20, "contract_correct": 19, "answered_correctly": 20, "abstained_after_mask": 0, "answered_wrong": 0, "unparsed": 0, "ungradeable": 0, "graded": 48, "total": 48, "checkpoint_accuracy_value": "20/48", "checkpoint_accuracy_contract": "19/48"},
+      "masking-no-fetch": {"rows_file": "experiments/ptr-engine/measure/rows-tx03-masking-r1.jsonl", "value_correct": 8, "contract_correct": 8, "answered_correctly": 8, "abstained_after_mask": 40, "answered_wrong": 0, "unparsed": 0, "ungradeable": 0, "graded": 48, "total": 48, "checkpoint_accuracy_value": "8/48", "checkpoint_accuracy_contract": "8/48"},
+      "bounded-context-fetch": {"rows_file": "experiments/ptr-engine/measure/rows-tx03-fetch-r1.jsonl", "value_correct": 12, "contract_correct": 12, "answered_correctly": 12, "abstained_after_mask": 16, "answered_wrong": 1, "unparsed": 10, "ungradeable": 19, "graded": 39, "total": 48, "checkpoint_accuracy_value": "12/48 (12/39 graded)", "checkpoint_accuracy_contract": "12/48 (12/39 graded)", "no_final_answer_ids": ["cp.TX-03.f01.d5", "cp.TX-03.f02.d5", "cp.TX-03.f02.d8", "cp.TX-03.f03.d6", "cp.TX-03.f03.d20", "cp.TX-03.f04.d6", "cp.TX-03.f04.d20", "cp.TX-03.f07.d5", "cp.TX-03.f08.d8"]}
     },
-    "arm_provenance": "all three files are :8012 -- manifests/celltx03-masking-r1-masking-no-fetch-r1.json and celltx03-fetch-r1-bounded-context-fetch-r1.json both record endpoint http://192.168.2.168:8012/v1, engine sglang, id occamy-1.0. rows-tx03-8014-* (qwen3.5-9b) was NOT used.",
+    "fetch_denominator_reconciliation": {
+      "rows_with_expected": 53,
+      "interim_rows": 14,
+      "final_rows": 39,
+      "distinct_checkpoint_ids": 48,
+      "ids_with_no_final_answer": 9,
+      "row_level_split": {"value_correct": 12, "interim": 14, "NONE": 16, "unparsed": 10, "wrong": 1, "sum": 53},
+      "restriction_to_shared_48": "no-op: all three files contain only the fixture's 48 ids (rows kept spcc 48, masking 48, fetch 53 -> 48 identities); the arms already share one checkpoint set"
+    },
+    "arm_provenance": "same endpoint and model, NOT proven same build: manifests/celltx03-masking-r1-masking-no-fetch-r1.json and celltx03-fetch-r1-bounded-context-fetch-r1.json both record endpoint http://192.168.2.168:8012/v1, engine sglang, id occamy-1.0, and the spcc manifest records the same endpoint and id; but image_digest and exact_argv are UNSOURCEABLE in all three, so no image or sglang version is comparable. rows-tx03-8014-* (qwen3.5-9b) was NOT used.",
     "by_distance_contract_over_n": {
       "spcc": {"2": "6/8", "5": "3/8", "6": "5/8", "8": "3/8", "20": "2/8", "32": "0/8"},
       "masking-no-fetch": {"2": "8/8", "5": "0/8", "6": "0/8", "8": "0/8", "20": "0/8", "32": "0/8"},
       "bounded-context-fetch": {"2": "6/8", "5": "1/8", "6": "2/8", "8": "1/8", "20": "1/8", "32": "1/8"}
     },
     "spcc_passes": {
-      "count": 20,
+      "count_value_correct": 20,
+      "count_contract_correct": 19,
       "pre_compaction_turns": [3, 6, 7, 9, 10, 13, 14, 16, 19, 21, 22, 23],
       "post_compaction_turns": [47, 54, 58, 63, 67, 69, 70, 72],
       "post_compaction_note": "every post-compaction pass is for a fact introduced AFTER the most recent compaction (f05@45, f06@52, f07@61, f08@68); f06.d20 at turn 72 is a probe on the compaction turn itself",
       "passes_crossing_a_compaction_boundary": 0,
-      "boundary_test": "intro < c < probe for c in {24, 48, 72, 96} -> 0 hits across all 20 passes",
+      "boundary_test": "intro < c < probe for c in {24, 48, 72, 96} -> 0 hits across all 20 value-correct passes",
       "f04_never_passes": "f04 is delivered at turn 24, the compaction turn; d2@26, d5@29, d6@30, d8@32, d20@44, d32@56 all fail",
-      "kind_note": "cp.TX-03.f08.d2 (turn 70) answered kind=TEXT with the correct value 3700, so it is answered_correctly but not a NUM-contract pass (contract_correct=19, value_correct=20)"
+      "kind_note": "cp.TX-03.f08.d2 (turn 70) answered kind=TEXT with the correct value 3700, so it is value-correct but not contract-correct (contract_correct=19, value_correct=20)"
     },
     "billing_spcc": {"prompt_tokens": 47594, "cached_tokens": 37632, "billed_tokens_known": 9962, "billed_upper_bound_tokens": 9962, "billed_unknown_rows": 0, "coverage": 1.0, "billed_source": "reported", "cached_fraction_of_prompt": 0.790687901836366, "reconcile_delta_total": 0, "reconcile_within_tolerance": true},
     "billing_other_arms": {"masking-no-fetch": {"prompt_tokens": 80905, "cached_tokens": 68416, "billed_tokens_known": 12489, "coverage": 1.0}, "bounded-context-fetch": {"prompt_tokens": 100104, "cached_tokens": 76480, "billed_tokens_known": 23624, "coverage": 1.0}},
@@ -44,19 +60,20 @@
       "falsifier_quoted": "spcc below fetch on single-fact, or spcc not strictly above masking on any checkpoint class, or billed tokens above masking",
       "prediction": "FAILED",
       "falsifier": "DID NOT FIRE",
-      "why": "spcc >= fetch on single-fact holds (20/48 vs 12/48; 6/8 vs 6/8 at d2, 3/8 vs 1/8 at d5, 5/8 vs 2/8 at d6, 3/8 vs 1/8 at d8) and billed tokens <= masking holds (9,962 <= 12,489), but '> masking everywhere' fails: at d2 masking scores 8/8 and spcc 6/8, and at d32 both score 0/8 which is not '>'. spcc is strictly above masking only on d5 (3>0), d6 (5>0), d8 (3>0) and d20 (2>0). No falsifier clause fires: spcc is not below fetch, it IS strictly above masking on four classes, and it bills below masking. The prereg's own deviation note predicted the falsifier 'is expected to fire' on post-compaction probes -- it did not; the 'everywhere' conjunct broke at d2, which is pre-compaction."
+      "why": "spcc >= fetch on single-fact holds (20/48 vs 12/48 by value, 19/48 vs 12/48 by contract; 6/8 vs 6/8 at d2, 3/8 vs 1/8 at d5, 5/8 vs 2/8 at d6, 3/8 vs 1/8 at d8) and billed tokens <= masking holds (9,962 <= 12,489), but '> masking everywhere' fails: at d2 masking scores 8/8 and spcc 6/8, and at d32 both score 0/8 which is not '>'. spcc is strictly above masking only on d5 (3>0), d6 (5>0), d8 (3>0) and d20 (2>0). No falsifier clause fires: spcc is not below fetch, it IS strictly above masking on four classes, and it bills below masking. The prereg's own deviation note predicted the falsifier 'is expected to fire' on post-compaction probes -- it did not; the 'everywhere' conjunct broke at d2, which is pre-compaction."
     },
     "limitations": [
       "The cell is below E1's own request floor: PREREG-SPCC.md:25 says 'E1-E5 are each 200-500 requests'; this cell spent 100. run_longrun.py contains no reference to eval_gate_prereg, validate_g3 or GATE_PREREG, so nothing refused the shortfall. The result is a single-rep, under-ceiling observation, not a full E1 adjudication.",
-      "One rep per arm, :8012 only. spcc has never been run on :8014; no cross-build claim is made (ledger rule 9).",
-      "d2 is the only class where masking is non-zero, so 'spcc > masking everywhere' was always decided at d2 alone, and spcc loses there."
+      "One rep per arm; same endpoint and model, but same build is unproven (image_digest and exact_argv UNSOURCEABLE). spcc has never been run on :8014; no cross-build claim is made (ledger rule 9).",
+      "d2 is the only class where masking is non-zero, so 'spcc > masking everywhere' was always decided at d2 alone, and spcc loses there.",
+      "The fetch arm has 9 checkpoints with no final answer, so its graded denominator is 39 while spcc's and masking's are 48; the 12/48 figure counts those 9 as failures."
     ],
-    "ledger": "FINDINGS-LEDGER.md gained one 7-column row. Column counts before: 15x10, 7x3, 14x7; after: 15x10, 7x3, 15x7 -- the 7-column table went 14 -> 15, nothing else moved.",
+    "ledger": "FINDINGS-LEDGER.md row corrected in place (not duplicated): it now carries value-correct and contract-correct separately, the fetch graded denominator (12/39) and the 48-identity denominator, and a Status note recording the correction. Column counts before: 15x10, 7x3, 14x7; after: 15x10, 7x3, 15x7 -- the 7-column table went 14 -> 15, nothing else moved.",
     "docs_gate": "python3 tools/doc_check.py -> 'OK docs clean under /home/zer0null/research extractor', exit=0",
-    "checkout_note": "The session cwd /home/zer0null/.omp/wt/wt-20261109-055629-bd8df5c is a stale worktree at f17663d (an ancestor of the branch tip) with 58 unrelated dirty entries and no claim_mode.py. The branch of record research/next-candidates-2026-10-24 is checked out at /home/zer0null/research extractor at 997df58, which carries both the spcc repair (997df58 'U-SPCC-33: spcc keeps fixture deliveries in L2; fetches stay L3-only') and claim_mode.py. All work was done in that checkout."
+    "checkout_note": "The session cwd /home/zer0null/.omp/wt/wt-20261109-055629-bd8df5c is a stale worktree at f17663d (an ancestor of the branch tip) with 58 unrelated dirty entries and no claim_mode.py. The branch of record research/next-candidates-2026-10-24 is checked out at /home/zer0null/research extractor, which carries both the spcc repair (997df58 'U-SPCC-33: spcc keeps fixture deliveries in L2; fetches stay L3-only') and claim_mode.py. All work was done in that checkout."
   },
   "blocker": null,
-  "next_unit_hint": "E1's 'everywhere' conjunct is decided entirely at d2, where masking is 8/8 and spcc 6/8 -- the two spcc d2 misses are f04.d2 (turn 26, fact delivered on the turn-24 compaction) and one other. A follow-up should (a) run the cell at E1's own 200-500 request floor with >=2 reps so the d2 gap is not a single-rep artefact, and (b) wire run_longrun.py through cell.eval_gate_prereg so an E* cell below PREREG-SPCC's request floor is refused rather than silently run. E2 (COMPACT_EVERY in {12,24,48}) is the natural next experiment: this cell shows zero passes cross a compaction boundary, which is exactly the distance E2 varies.",
+  "next_unit_hint": "E1's 'everywhere' conjunct is decided entirely at d2, where masking is 8/8 and spcc 6/8. A follow-up should (a) run the cell at E1's own 200-500 request floor with >=2 reps so the d2 gap is not a single-rep artefact, (b) wire run_longrun.py through cell.eval_gate_prereg so an E* cell below PREREG-SPCC's request floor is refused rather than silently run, and (c) re-run the fetch arm so all 48 checkpoints carry a final answer -- 9 currently do not, which is why its graded denominator is 39. E2 (COMPACT_EVERY in {12,24,48}) is the natural next experiment: this cell shows zero passes cross a compaction boundary, which is exactly the distance E2 varies.",
   "write_paths": [
     "/home/zer0null/research extractor/experiments/ptr-engine/measure/rows-e1-spcc-2026-11-10.jsonl",
     "/home/zer0null/research extractor/experiments/ptr-engine/longrun/manifests/e1-spcc-2026-11-10-spcc-r1.json",

@@ -35,19 +35,34 @@ Every row carries `claim=E1`, `comparison_eligible=True`, `model=occamy-1.0`,
 ## 2. Three-arm table
 
 Scored by `longrun/score_longrun.py:score_answer_contract_rows(fixture, rows)` — the
-repo's own entry point, not a hand-rolled counter. All three files are `:8012`
-(`manifests/celltx03-*.json` → `endpoint http://192.168.2.168:8012/v1`, `id
-occamy-1.0`), same fixture, seed 42, temperature 0. `rows-tx03-8014-*` was not used.
+repo's own entry point, not a hand-rolled counter. All three files are the **same
+endpoint and model** (`manifests/celltx03-*.json` → `endpoint
+http://192.168.2.168:8012/v1`, `id occamy-1.0`), same fixture, seed 42, temperature 0.
+**Same build is not proven**: `image_digest` and `exact_argv` are `UNSOURCEABLE` in all
+three manifests, so no container image or `sglang` version is comparable.
+`rows-tx03-8014-*` was not used.
 
-| arm | rows file | checkpoint_accuracy | answered_correctly | abstained_after_mask | answered_wrong | unparsed | total |
-|---|---|---|---|---|---|---|---|
-| `spcc` | `rows-e1-spcc-2026-11-10.jsonl` | **20/48** | 20 | 0 | 0 | 0 | 48 |
-| `masking-no-fetch` | `rows-tx03-masking-r1.jsonl` | 8/48 | 8 | 40 | 0 | 0 | 48 |
-| `bounded-context-fetch` | `rows-tx03-fetch-r1.jsonl` | 12/48 | 12 | 16 | 1 | 10 | 48 |
+Two accuracy columns, because they differ: **value-correct** (the number is right) and
+**contract-correct** (the number is right *and* the answer form is `NUM`).
 
-`spcc` also reports `contract_correct=19` / `value_correct=20`: one pass
-(`cp.TX-03.f08.d2`, turn 70) answered `kind=TEXT` with the right value `3700`, so it
-counts as `answered_correctly` but not as a NUM-contract pass.
+| arm | rows file | value-correct | contract-correct | answered_correctly | abstained_after_mask | answered_wrong | unparsed | ungradeable | graded | total |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `spcc` | `rows-e1-spcc-2026-11-10.jsonl` | **20/48** | **19/48** | 20 | 0 | 0 | 0 | 0 | 48 | 48 |
+| `masking-no-fetch` | `rows-tx03-masking-r1.jsonl` | 8/48 | 8/48 | 8 | 40 | 0 | 0 | 0 | 48 | 48 |
+| `bounded-context-fetch` | `rows-tx03-fetch-r1.jsonl` | 12/48 (12/39 graded) | 12/48 (12/39 graded) | 12 | 16 | 1 | 10 | 19 | 39 | 48 |
+
+`spcc`'s one value/contract gap is `cp.TX-03.f08.d2` (turn 70): it answered
+`kind=TEXT` with the right value `3700` where the contract requires `NUM`.
+
+**The fetch denominator.** `rows-tx03-fetch-r1.jsonl` has 53 rows carrying a non-null
+`expected`, but that is a *row* count, not a checkpoint count: 14 of those rows are
+interim (row-level split 12 value-correct + 14 interim + 16 `NONE` + 10 unparsed + 1
+wrong = 53). The file carries exactly the fixture's 48 checkpoint identities, so
+restricting all three arms to the shared 48 is a no-op — they already share one
+checkpoint set. The real gap is that **9 of fetch's 48 checkpoints have no final
+answer** (`f01.d5`, `f02.d5`, `f02.d8`, `f03.d6`, `f03.d20`, `f04.d6`, `f04.d20`,
+`f07.d5`, `f08.d8`), so its graded denominator is 39 while `spcc`'s and masking's are
+48. `12/48` counts those 9 as failures; `12/39` is the graded figure.
 
 By distance (`contract`/`n`):
 
@@ -59,7 +74,8 @@ By distance (`contract`/`n`):
 
 ## 3. Per-checkpoint breakdown for `spcc`
 
-20 of 48 checkpoints passed. `COMPACT_EVERY = 24`, so compactions fall at turns
+20 of 48 checkpoints are value-correct (19 contract-correct; the table below lists the
+20 value-correct ones). `COMPACT_EVERY = 24`, so compactions fall at turns
 24, 48, 72, 96. Fact delivery turns: `f01`@1, `f02`@8, `f03`@17, `f04`@24, `f05`@45,
 `f06`@52, `f07`@61, `f08`@68.
 
@@ -125,8 +141,9 @@ Quoted from `experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.md` §E1:
 
 **The prediction FAILED. The falsifier did NOT fire.**
 
-- `spcc` ≥ fetch on single-fact: **holds** — 20/48 vs 12/48 overall, and 6/8 vs 6/8 at
-  `d2`, 3/8 vs 1/8 at `d5`, 5/8 vs 2/8 at `d6`, 3/8 vs 1/8 at `d8`.
+- `spcc` ≥ fetch on single-fact: **holds** — 20/48 vs 12/48 by value and 19/48 vs
+  12/48 by contract overall, and 6/8 vs 6/8 at `d2`, 3/8 vs 1/8 at `d5`, 5/8 vs 2/8 at
+  `d6`, 3/8 vs 1/8 at `d8`.
 - `spcc` > masking **everywhere**: **fails.** At `d2` masking scores 8/8 and `spcc`
   6/8; at `d32` both score 0/8, which is not ">". `spcc` is strictly above masking on
   `d5` (3>0), `d6` (5>0), `d8` (3>0) and `d20` (2>0) only.
@@ -148,8 +165,12 @@ which is pre-compaction.
   `cell.eval_gate_prereg` (no reference to `eval_gate_prereg`, `validate_g3` or
   `GATE_PREREG` in the file), so nothing refused the shortfall. The result is a
   single-rep, under-ceiling observation, not a full E1 adjudication.
-- **One rep per arm, `:8012` only.** `spcc` has never been run on `:8014`; no
-  cross-build claim is made (ledger rule 9).
+- **One rep per arm; same endpoint and model, not proven same build.** `image_digest`
+  and `exact_argv` are `UNSOURCEABLE` in all three manifests. `spcc` has never been run
+  on `:8014`; no cross-build claim is made (ledger rule 9).
+- **The fetch arm's graded denominator is 39, not 48.** 9 of its 48 checkpoints carry
+  no final answer, so `12/48` counts them as failures while `12/39` is the graded
+  figure. `spcc` and masking are graded on all 48.
 - **`d2` is the only class where masking is non-zero**, so "`spcc` > masking
   everywhere" was always going to be decided at `d2` alone. `spcc` loses there.
 
