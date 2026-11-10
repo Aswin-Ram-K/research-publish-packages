@@ -1,0 +1,31 @@
+{
+  "unit": "U-SPCC-17",
+  "status": "done",
+  "artifacts": [
+    "/home/zer0null/research extractor/.gitignore",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-17.md"
+  ],
+  "evidence": {
+    "before_count_size": "60 untracked entries (all 60 dirs, 60x fx.json) under experiments/ptr-engine/longrun/state/scratch/u11; 260 fx.json total on disk (200 already tracked); du -sh u11 = 8.2M",
+    "after_count_size": "0 untracked under experiments/ptr-engine/longrun/state; 200 fx.json on disk left (all tracked); du -sh u11 = 6.3M",
+    "grep_input_or_output": "grep -rn 'state/scratch' experiments/ptr-engine --include=*.py --include=*.md --include=*.json --include=*.sh -> NO hits. Broader grep found the only producer: experiments/ptr-engine/longrun/tests/test_fixture_schema.py:14 SCRATCH = os.path.join(LONGRUN, 'state', 'scratch', 'u11') and :19 d = tempfile.mkdtemp(dir=SCRATCH) with _write() dumping fx.json -> OUTPUT root, nothing reads fx.json back from that path",
+    "check_ignore_before": "git check-ignore -v --no-index experiments/ptr-engine/longrun/state/scratch/u11/tmp1/fx.json -> (no output) exit=1 i.e. NOT ignored",
+    "check_ignore_after": ".gitignore:45:experiments/ptr-engine/longrun/state/scratch/\texperiments/ptr-engine/longrun/state/scratch/u11/tmp1/fx.json (exit=0)",
+    "gitignore_diff": "@@ -39,3 +39,7 @@ __pycache__/\n **/*.tmp\n+\n+# ptr-engine longrun fixture-run residue: run residue, not inputs (written by\n+# tempfile.mkdtemp(dir=SCRATCH) in experiments/ptr-engine/longrun/tests/test_fixture_schema.py).\n+experiments/ptr-engine/longrun/state/scratch/",
+    "git_status_after": "git status --porcelain | wc -l -> 1 (' M .gitignore'); git status --porcelain | grep 'state/scratch' | wc -l -> 0; tracked files under experiments/ptr-engine/longrun/state unchanged at 204 (state/previews-style tracked scratch dumps were not deleted)",
+    "commands": [
+      "find experiments/ptr-engine/longrun/state/scratch/u11 -name fx.json | wc -l",
+      "du -sh experiments/ptr-engine/longrun/state/scratch/u11",
+      "grep -rn 'state/scratch' experiments/ptr-engine --include=*.py --include=*.md --include=*.json --include=*.sh",
+      "git check-ignore -v --no-index experiments/ptr-engine/longrun/state/scratch/u11/tmp1/fx.json",
+      "git ls-files --others --exclude-standard experiments/ptr-engine/longrun/state | xargs -r rm -f",
+      "git status --porcelain | wc -l"
+    ]
+  },
+  "blocker": null,
+  "next_unit_hint": "Optionally propose untracking the 200 committed state/scratch/u11/tmp*/fx.json dumps (git rm --cached) in a future unit; they are test residue from the same test_fixture_schema.py path.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/state/scratch/u11/tmp* (deleted untracked dumps)",
+    ".gitignore"
+  ]
+}
