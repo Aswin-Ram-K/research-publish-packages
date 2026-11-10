@@ -1,0 +1,66 @@
+{
+  "unit": "U-SPCC-56",
+  "status": "COMPLETE",
+  "artifacts": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/measure/rows-e1-indexfix-2026-11-10.jsonl",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-56.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-56.json"
+  ],
+  "evidence": {
+    "cell": "TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python experiments/ptr-engine/longrun/run_longrun.py --fixture experiments/ptr-engine/longrun/tasks-v7/TX-03.v1.json --arms spcc,masking-no-fetch,bounded-context-fetch --reps 1 --temperature 0 --seed 42 --model occamy-1.0 --base-url http://192.168.2.168:8012/v1 --tools read_file --claim-mode E1 --budget-cap 12094 --run-id e1-indexfix-2026-11-10 --rows experiments/ptr-engine/measure/rows-e1-indexfix-2026-11-10.jsonl",
+    "exit": "0",
+    "requests": 343,
+    "requests_by_arm": {"spcc": 100, "masking-no-fetch": 100, "bounded-context-fetch": 143},
+    "fetch_arm_row_breakdown": "143 = 100 turn rows + 43 follow-up rows",
+    "budget": "9,024 spent before + 343 = 9,367 of 12,094; headroom 2,727; brake did not fire",
+    "acceptance_1_integrity": "failed_turn=0, truncated=0, error={} on all three arms; reconcile_delta_tokens nonzero=0 (99/99/142 rows carry a delta; first turn of each arm has none)",
+    "acceptance_2_buckets": {
+      "spcc": {"value_correct": 20, "contract_correct": 19, "NONE": 27, "wrong": 1, "unparsed": 0, "graded": 48, "rows": 100, "requests": 100, "billed_tokens": 17187},
+      "masking-no-fetch": {"value_correct": 8, "contract_correct": 8, "NONE": 30, "wrong": 10, "unparsed": 0, "graded": 48, "rows": 100, "requests": 100, "billed_tokens": 18724},
+      "bounded-context-fetch": {"value_correct": 48, "contract_correct": 48, "NONE": 0, "wrong": 0, "unparsed": 0, "graded": 48, "rows": 143, "requests": 143, "billed_tokens": 51715}
+    },
+    "acceptance_2_sum_check": "20+27+1+0=48; 8+30+10+0=48; 48+0+0+0=48. All equal graded=48. No discrepancy.",
+    "acceptance_3_prefetch": {
+      "prefetch_count": 0,
+      "on_delivery_turn": 0,
+      "after_delivery": 43,
+      "fetched_on_the_checkpoint_turn_itself": 41,
+      "fetched_on_an_earlier_turn_than_the_checkpoint": 0,
+      "fetched_on_a_work_turn_no_checkpoint": 2,
+      "checkpoints_answered_with_no_fetch": 7,
+      "no_fetch_checkpoints": ["cp.TX-03.f01.d2", "cp.TX-03.f03.d2", "cp.TX-03.f01.d32", "cp.TX-03.f03.d20", "cp.TX-03.f05.d2", "cp.TX-03.f07.d2", "cp.TX-03.f07.d8"],
+      "meaning": "Prefetch is 0, so the specific prefetch concern is not triggered. But 41 of 48 checkpoints were answered by fetching the fact body IN THE SAME TURN the question was asked: the turn's initial response carries the question, emits the fetch call, the harness services it, and the follow-up answers from the returned body. The model never has to retain anything. The fetch arm's 48/48 therefore measures LOOKUP, not retention, and the spcc-vs-fetch comparison is NOT a retention comparison. The 7 no-fetch checkpoints are the only genuine retention successes."
+    },
+    "acceptance_4_not_found": {
+      "count": 0,
+      "previous_cell": 12,
+      "ok_count": 43,
+      "invented_refs": {},
+      "note": "Every one of the 43 attempts used a doc-fact-NN@r1 ref the index advertises. The index fix reached the model."
+    },
+    "acceptance_5_rounds": {
+      "max_fetch_rounds_this_turn": 1,
+      "fetch_rounds_this_turn_dist": {"0": 50, "1": 45, "null": 48},
+      "max_fetch_rounds_used": 42,
+      "fetch_rows_dist": {"null": 100, "1": 41, "2": 1, "3": 1},
+      "multi_round_fix_reaches_above_1": "NO. The per-turn loop is never exercised above one round: the model emits all its calls in a single response, so one round services them all. Multi-REF servicing does work -- fetch_rows reaches 3 (turn 21) and 2 (turn 28), i.e. the per-turn cap of 3 is reached by batching, not by a second round.",
+      "cp_TX-03_f04_d8_turn_32": "SERVICED. ANSWER: NUM 3303, verified, via doc-fact-04@r1 -> OK. The last harness loss U-SPCC-54 named is closed."
+    },
+    "acceptance_6_gaps": {
+      "band": "+/-2/48 = +/-4.2 pp on value and contract; +/-4.2% on billed",
+      "spcc": {"value": "21->20 (-1, in band)", "contract": "20->19 (-1, in band)", "billed": "14827->17187 (+15.9%, OUT)"},
+      "masking-no-fetch": {"value": "8->8 (0, in band)", "contract": "8->8 (0, in band)", "billed": "14007->18724 (+33.7%, OUT)"},
+      "bounded-context-fetch": {"value": "17->48 (+31, OUT)", "contract": "17->48 (+31, OUT)", "billed": "40965->51715 (+26.2%, OUT)"},
+      "note": "The fetch arm's +31 is the index fix removing 12 NOT_FOUND guesses and 12 unparsed answers -- a real effect, but a lookup effect. Billed is out of band on all three arms because the index is 13 lines instead of 1. The masking arm's wrong moved 0->10 (turns 6,7,9,13,14,22,23,25,29,30), cross-fact confusions where it previously abstained with NONE."
+    },
+    "comparability": "b38db8a changed the prompt bytes for both arms. Nothing measured before it is comparable to this cell.",
+    "no_writes": "No ledger, no doc, no source, no fixture was written. Only the rows file, this card and this handoff."
+  },
+  "blocker": null,
+  "next_unit_hint": "The fetch arm's 48/48 is a lookup score: it fetches the fact body on the checkpoint turn itself. To make spcc-vs-fetch a retention comparison, the fetch arm must be barred from fetching a ref on the turn that asks about it (or the checkpoint question must be asked on a turn where fetching is not permitted), so the model has to carry the body forward. Separately, the multi-round loop is dead code in practice -- the model batches all calls into one response -- so either drop it or construct a fixture that forces a second round. The masking arm's 0->10 wrong is a new cross-fact confusion worth its own unit.",
+  "write_paths": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/measure/rows-e1-indexfix-2026-11-10.jsonl",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-56.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-56.json"
+  ]
+}
