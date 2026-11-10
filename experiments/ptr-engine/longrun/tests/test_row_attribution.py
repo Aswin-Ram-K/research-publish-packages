@@ -113,6 +113,11 @@ def _drive(k: int):
     cfg = _Cfg()
     cfg.manifest_dir = tmp
     cfg.manifest_path = os.path.join(tmp, "manifest.json")
+    # The cap gate reads the machine-global ledger by default (spend 7869 > cap 4320 on
+    # this box): a refusal there is a true statement about spend, not about this arm's
+    # row attribution, so the test declares its own cap over its own scratch rows.
+    cfg.budget_cap = 64
+    cfg.budget_glob = os.path.join(tmp, "rows-*.jsonl")
     run_id = "offline-row-attr-k%d-r1" % k
 
     state = {"sends": 0, "turn1": 0, "first_user": None}
@@ -260,6 +265,8 @@ def test_red_without_attribution_reproduces_the_defect():
 
     buf, old_stdout = io.StringIO(), sys.stdout
     real_send, real_socket, real_guard = R.send_chat, socket.socket, R.attribute_initial_send
+    cfg.budget_cap = 64
+    cfg.budget_glob = os.path.join(tmp, "rows-*.jsonl")
     R.send_chat = fake_send_chat
     R.attribute_initial_send = lambda: False        # IN MEMORY: the pre-fix writer
     socket.socket = _no_network()

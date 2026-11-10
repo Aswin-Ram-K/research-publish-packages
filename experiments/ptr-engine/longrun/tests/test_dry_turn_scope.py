@@ -88,7 +88,8 @@ def _fixture() -> dict:
 def _dry_run(tmpdir, extra_args=()):
     """Run the runner's real offline dry-run and return its stdout."""
     cmd = [PY, RUNNER, "--fixture", FIXTURE_ARGV, "--arm", ARM, "--reps", "1",
-           "--dry-run", "--manifest-dir", os.path.join(tmpdir, "manifests")]
+           "--dry-run", "--manifest-dir", os.path.join(tmpdir, "manifests"),
+           "--temperature", "0"]
     cmd += list(extra_args)
     env = dict(os.environ)
     # a copy under RUNNER_UNDER_TEST still needs the sibling modules to import

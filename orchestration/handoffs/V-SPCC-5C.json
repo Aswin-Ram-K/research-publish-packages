@@ -1,0 +1,32 @@
+{
+  "unit": "V-SPCC-5C",
+  "status": "done",
+  "artifacts": [
+    "/home/zer0null/research extractor/orchestration/units/V-SPCC-5C.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/V-SPCC-5C.json"
+  ],
+  "evidence": {
+    "check1_suite": ".................. [100%]  18 passed in 8.62s  (.venv/bin/python -m pytest experiments/ptr-engine/serving/tests/test_spcc_supervisor.py -q)",
+    "check2_decision_table": "spcc_supervisor.py:543-548. 10 reachable combinations match the claim: killed non-null -> UNVERIFIED (3 shapes); aborted non-null -> UNVERIFIED (3 shapes); u naccounted null -> UNVERIFIED (unreachable from run since a failed close read also sets aborted); unaccounted<0 -> UNVERIFIED (unaccounted_reason=mem-available-rose); unaccounted>=0 with no kill/abort -> VERIFIED. An 11th row is a DEFECT: cgroup_peak_gb 62.0 (> 60 GiB cap) + returncode -9 + unaccounted 4.0 + killed null -> allowance VERIFIED, reproduced 3/3.",
+    "check2_driven": "A normal/peak 4/unacc 2.0 -> VERIFIED (rc 0). B cap-kill peak 64/unacc 4.0/killed cgroup-peak -> UNVERIFIED (rc 1). C both closing reads fail -> cgroup_peak_gb null, unaccounted_gb null, unaccounted_reason close-read-failed, UNVERIFIED (rc 1). D MemAvailable rose -> unaccounted -14.0 kept, unaccounted_reason mem-available-rose, UNVERIFIED (rc 0). G sampler aborted, closing reads fine, unacc 2.0 -> UNVERIFIED (rc 1). E kernel-style SIGKILL at peak 62.0 -> VERIFIED (rc 247/-9) = defect.",
+    "check3_null_not_zero": "{\"job\": \"C\", ..., \"cgroup_peak_gb\": null, \"unaccounted_gb\": null, \"killed\": null, \"aborted\": \"sample-unreadable\", \"aborted_path\": \"/tmp/spccv/work/C/peak\", \"unaccounted_reason\": \"close-read-failed\", \"allowance\": \"UNVERIFIED\"}",
+    "check4_owner_liveness": "a) wrapper shell owns window, run from another process -> rc=0 accepted; owners=[[3973557,142022878],[3973548,142022877]] (opener + parent). b) owner exited, window still open -> rc=3 'refusing to run: window owner pid 3987838 start_time 142025303 no longer alive (pid reuse or owner exited)'. c) live pid 3986305 with real start 142024920, recorded start 1 -> rc=3 same refusal naming pid and start_time.",
+    "check5_refusals": "'refusing: declared peak 61.0 GB exceeds cap 60 GB (over by 1.0 GB)' rc=2; 'refusing: MemAvailable 60.0 GB < 68.0 GB reserve (short by 8.0 GB)' rc=2; 'refusing to run: cgroup root not writable: [Errno 13] Permission denied: ...ro/spcc-test-write' rc=3.",
+    "check6_cap": "35:CAP_BYTES = 64424509440  # 60 GiB; 307/308/312 test-write probe; 321 memory.max write; 385 memory.max read-back; 405 cgroup.procs write. Single cap constant.",
+    "check7_hygiene": "ls -a serving/ -> . .. MEM-WINDOW.schema.md REMOTE-ROOT.md __pycache__ launch-sglang-spcc.sh spcc_supervisor.py tests. No MEM-WINDOW.json / .jsonl, no scratch files. MEM-WINDOW.schema.md is 113 lines, header '# MEM-WINDOW — memory-window record schema', file table, Invariants 1-2, field table, decision table at :88-92.",
+    "check8_neighbours": "'.venv/bin/python -m pytest experiments/ptr-engine/serving/tests/ -q' -> 18 passed in 8.54s. launch-sglang-spcc.sh:12-15 still refuses when \"$HERE/MEM-WINDOW.json\" exists; HERE is the script's own dir, which is the supervisor's default _base_dir(), so the guard is correct for windows opened in place. Caveat: a window opened with SPCC_BASE_DIR elsewhere is invisible to the launcher.",
+    "commands": [
+      ".venv/bin/python -m pytest experiments/ptr-engine/serving/tests/test_spcc_supervisor.py -q",
+      ".venv/bin/python -m pytest experiments/ptr-engine/serving/tests/ -q",
+      "SPCC_BASE_DIR=<tmp> SPCC_CGROUP_ROOT=<tmp> SPCC_MEMINFO_PATH=<tmp>/meminfo SPCC_PEAK_FILE=<tmp>/peak .venv/bin/python experiments/ptr-engine/serving/spcc_supervisor.py open-window --job <J> --declared-peak-gb 20",
+      "... spcc_supervisor.py run --grace 0.2 -- sh -c '<child that rewrites meminfo / deletes peak+meminfo / kill -9 $$>'",
+      "grep -n '64424509440|memory.max|cgroup.procs' experiments/ptr-engine/serving/spcc_supervisor.py"
+    ]
+  },
+  "blocker": "spcc_supervisor.py:543-548 and MEM-WINDOW.schema.md:88-92 both omit two UNVERIFIED conditions, so a window measured at cgroup_peak_gb 62.0 GiB (above the 60 GiB cap) that died by SIGKILL with a non-negative remainder records allowance=VERIFIED (driven 3/3): add 'elif cgroup_peak_gb is None or cgroup_peak_gb > CAP_GB: UNVERIFIED' and 'elif rc is not None and rc < 0: UNVERIFIED' before the VERIFIED branch, plus the matching schema rows.",
+  "next_unit_hint": "U-SPCC-5D: add the peak>CAP_GB and returncode<0 UNVERIFIED branches, update MEM-WINDOW.schema.md:88-92, correct the schema's '--base-dir' mention (CLI exposes SPCC_BASE_DIR only), and add a test asserting a SIGKILLed child at peak>cap never yields VERIFIED; then V-SPCC-5D re-drives case E.",
+  "write_paths": [
+    "/home/zer0null/research extractor/orchestration/units/V-SPCC-5C.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/V-SPCC-5C.json"
+  ]
+}

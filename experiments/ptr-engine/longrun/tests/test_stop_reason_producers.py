@@ -113,7 +113,7 @@ def _row(cfg, resp, content, **extra):
     base = dict(is_checkpoint=False, checkpoint=None, answer_turn=False, lease=None,
                 evicted=None, prompt_sha256="0" * 64)
     base.update(extra)
-    return run_longrun.make_row(cfg, _fixture(), ARM, 1, "run-stop-holes", 1, resp,
+    return run_longrun.make_row(cfg, _fixture(), ARM, 1, "run-stop-holes-r1", 1, resp,
                                 content, "turn", "f" * 64, base)
 
 
@@ -286,7 +286,9 @@ def _run_runner(tmp, url, turns, runaway, wall_cap, rows_name):
             "--max-turns", str(turns), "--turn-wall-cap", str(wall_cap),
             "--runaway-turns", str(runaway), "--rows", rows,
             "--manifest-path", os.path.join(tmp, "manifest-%s.json" % rows_name),
-            "--base-url", url, "--no-metrics-scrape", "--max-tokens", "4096"]
+            "--base-url", url, "--no-metrics-scrape", "--max-tokens", "4096",
+            "--temperature", "0",
+            "--budget-cap", "1000", "--budget-glob", os.path.join(tmp, "*.jsonl")]
     proc = subprocess.run(argv, capture_output=True, text=True, cwd=LONG, timeout=180)
     parsed = []
     if os.path.exists(rows):

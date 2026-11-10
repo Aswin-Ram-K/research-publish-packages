@@ -15,7 +15,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 BASELINE = ROOT / "state" / "logs" / "lost-fixture-baseline.json"
-FIXTURE_SCHEMA = "consonance.longrun-fixture/1"
+FIXTURE_SCHEMAS = frozenset({
+    "consonance.longrun-fixture/1",
+    "consonance.longrun-fixture/2",
+})
 CORPUS_DIRS = (
     ROOT / "experiments" / "ptr-engine" / "measure",
     ROOT / "experiments" / "ptr-engine" / "longrun",
@@ -40,7 +43,7 @@ def fixture_digests() -> set[str]:
             doc = json.loads(path.read_bytes())
         except (OSError, ValueError):
             continue
-        if isinstance(doc, dict) and doc.get("schema") == FIXTURE_SCHEMA:
+        if isinstance(doc, dict) and doc.get("schema") in FIXTURE_SCHEMAS:
             digests.add(hashlib.sha256(path.read_bytes()).hexdigest())
     return digests
 

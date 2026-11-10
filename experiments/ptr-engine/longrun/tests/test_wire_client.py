@@ -63,8 +63,54 @@ def _no_socket(*_a, **_k):
     raise _NoSocket("offline test: a socket was opened")
 
 
-socket.socket = _no_socket
+# The offline guard is NOT installed at import.  `socket.socket` is process-global,
+# and import happens during pytest COLLECTION, i.e. before any test runs: an
+# import-time patch outlived this module and was then captured by other modules
+# that save `_REAL_SOCKET = socket.socket` at import (test_request_identity.py:86),
+# so their `finally` restored the GUARD instead of the real constructor and every
+# later test in the session saw `_NoSocket`.  The guard is armed where it is
+# needed instead: setup_module for the collected tests below, and main() for the
+# case list — each restored unconditionally.
+_REAL_SOCKET_SOCKET = socket.socket
 
+
+def _restore_socket():
+    import socket as _socket_mod
+    _socket_mod.socket = _REAL_SOCKET_SOCKET
+
+
+def setup_module(module=None):
+    # Re-arm the guard for a pytest process: collection may have imported
+    # this module while the socket was still real (or already restored).
+    import socket as _socket_mod
+    _socket_mod.socket = _no_socket
+
+
+def teardown_module(module=None):
+    # The point of the fix: the global monkeypatch is undone when the module
+    # is done, irrespective of how it was reached.
+    _restore_socket()
+
+
+def test_socket_guard_restores_after_module():
+    """pytest entry point so the xunit teardown actually fires.
+
+    This module has no natural pytest tests (its cases run via main()); without
+    one collected test, setup_module/teardown_module never fire, leaving the
+    import-time socket.socket patch in place for every later module in the
+    same process.  This single test marks the module's pytest boundary: the
+    offline guard must be active for main()'s cases and undone afterwards.
+    """
+    import socket as _socket_mod
+    assert _socket_mod.socket is _no_socket, (
+        "offline guard not armed: socket.socket=%r" % (_socket_mod.socket,))
+
+
+def test_socket_guard_is_restored_after_this_module():
+    """Runs under the guard; proof of restore is the teardown running for
+    every following module in this process."""
+    import socket as _socket_mod
+    assert _socket_mod.socket is _no_socket
 
 _failures = []
 _checks = 0
@@ -94,8 +140,12 @@ def _cfg(**kw):
 
 
 def _fixture():
+    # wall_tokens is required by the fixture guard (run_longrun "FIXTURE ERROR: fixture
+    # declares no wall for arm ..."), which refuses before the manifest is built; the
+    # stub predated that guard.
     return {"task_id": "LR-01", "_sha256": "offline", "_path": "offline",
             "bytes_per_token": 4.0, "checkpoints": [], "N": 1, "items": [],
+            "wall_tokens": 65536,
             "turns": [{"turn": 1, "question": "q", "kind": "neutral"}]}
 
 
@@ -119,7 +169,11 @@ def _resp(**kw):
 
 
 def _row(resp):
-    return R.make_row(_cfg(engine="vllm"), _fixture(), "transcript-grow", 1, "rid", 1,
+    # run_id must carry the repeat: run_longrun.assert_repeat_identity (:2475) refuses
+    # any gen-7 run_id that does not contain str(rep), and production builds
+    # `f"{run_base}-{arm}-r{rep}"` (:4014).  The literal "rid" here was the test-side
+    # omission, not a guard defect.
+    return R.make_row(_cfg(engine="vllm"), _fixture(), "transcript-grow", 1, "rid-r1", 1,
                       resp, resp.get("content") if resp else None, "neutral", "msha", {})
 
 
@@ -291,7 +345,8 @@ def case_e():
     old_env = os.environ.get(client.METRICS_SCRAPE_ENV)
     try:
         os.environ[client.METRICS_SCRAPE_ENV] = "1"   # the flag must still win
-        rc = R.main(["--dry-run", "--manifest-dir", tmpdir, "--no-metrics-scrape"])
+        rc = R.main(["--dry-run", "--manifest-dir", tmpdir, "--no-metrics-scrape",
+                     "--temperature", "0", "--fixture", "LR-01"])
     finally:
         R.load_fixture, R.build_manifest, R.write_manifest, R.run_dry = saved
         if old_env is None:
@@ -334,21 +389,25 @@ CASES = (case_a, case_b, case_c, case_d, case_e)
 def main(argv):
     global RED_MODE
     RED_MODE = "--red" in argv
-    print("parser: %s\n" % ("PRE-FIX artefacts (red mode)" if RED_MODE
-                            else "run_longrun.py -> client.send_chat (measured path)"))
-    for case in CASES:
-        case()
-    if RED_MODE:
-        print("\nRED CONFIRMED: %d/%d pre-fix assertions failed as intended"
-              % (_checks - len(_failures), _checks))
-    else:
-        print("\n%d/%d assertions passed" % (_checks - len(_failures), _checks))
-    if _failures:
-        print("FAILED: %s" % ", ".join(_failures))
-        return 1
-    if not RED_MODE:
-        print("WIRE-CLIENT: the runner is on the client's streaming path; no inline latch remains")
-    return 0
+    try:
+        print("parser: %s\n" % ("PRE-FIX artefacts (red mode)" if RED_MODE
+                                else "run_longrun.py -> client.send_chat (measured path)"))
+        socket.socket = _no_socket
+        for case in CASES:
+            case()
+        if RED_MODE:
+            print("\nRED CONFIRMED: %d/%d pre-fix assertions failed as intended"
+                  % (_checks - len(_failures), _checks))
+        else:
+            print("\n%d/%d assertions passed" % (_checks - len(_failures), _checks))
+        if _failures:
+            print("FAILED: %s" % ", ".join(_failures))
+            return 1
+        if not RED_MODE:
+            print("WIRE-CLIENT: the runner is on the client's streaming path; no inline latch remains")
+        return 0
+    finally:
+        _restore_socket()
 
 
 if __name__ == "__main__":

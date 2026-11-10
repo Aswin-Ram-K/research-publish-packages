@@ -126,7 +126,7 @@ def _extras(**kw):
 def _row(cfg, resp, content, kind="turn", fixture=None, **extra):
     """The runner's only row writer, called exactly the way the runner calls it."""
     fx = _fixture() if fixture is None else fixture
-    return run_longrun.make_row(cfg, fx, "transcript-grow", 1, "run-stop-reason", 1,
+    return run_longrun.make_row(cfg, fx, "transcript-grow", 1, "run-stop-reason-r1", 1,
                                resp, content, kind, "f" * 64, _extras(**extra))
 
 

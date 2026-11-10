@@ -3,7 +3,8 @@
 
 WHAT IT GUARDS
   1. every code in `exit_codes.EXIT_TABLE` is classified -- and a code added to the
-     table without being classified is RED (proved on a /tmp copy with a fake 14, not
+     table without being classified is RED (proved on a /tmp copy with a fake `99`,
+     not
      asserted by hand);
   2. `4` (ledger cap) is a refusal and `0` is a pass;
   3. the markdown table in docs/VERDICT-SEMANTICS.md and the code's partition agree, so
@@ -65,6 +66,11 @@ class TestPartition(unittest.TestCase):
     def test_zero_is_a_pass_and_four_is_a_refusal(self):
         self.assertEqual(verdict_semantics.classify(0), verdict_semantics.VERIFIED_PASS)
         self.assertTrue(verdict_semantics.is_refusal(4))
+        # CAPGATE-CELL-LABEL's 14 is the cell-level cap-gate reconciliation refusal: the
+        # ledger and the rows disagree, so no artefact was measured. Refusal, not failure.
+        self.assertTrue(verdict_semantics.is_refusal(exit_codes.EXIT_CAPGATE_UNRECORDED))
+        self.assertEqual(verdict_semantics.classify(14),
+                         verdict_semantics.UNSTAMPED_REFUSAL)
         self.assertFalse(verdict_semantics.is_refusal(0))
         self.assertFalse(verdict_semantics.is_refusal(11))
 
@@ -78,8 +84,9 @@ class TestPartition(unittest.TestCase):
         self.assertNotIn(0, codes)
 
     def test_unknown_code_raises_instead_of_defaulting(self):
+        # 99 is in no table: an unknown code must raise, never default to a verdict.
         with self.assertRaises(verdict_semantics.UnclassifiedExitCode):
-            verdict_semantics.classify(14)
+            verdict_semantics.classify(99)
         with self.assertRaises(verdict_semantics.UnclassifiedExitCode):
             verdict_semantics.is_refusal("not-a-code")
 
@@ -125,7 +132,7 @@ class TestDocAgreesWithCode(unittest.TestCase):
 class TestRedOnAnUnclassifiedCode(unittest.TestCase):
     """A code added to the table but not classified must turn this guard RED."""
 
-    def test_fake_fourteen_on_a_copy_is_red(self):
+    def test_fake_ninety_nine_on_a_copy_is_red(self):
         tmpdir = tempfile.mkdtemp(prefix="vrs-red-")
         try:
             table_path = os.path.join(tmpdir, "exit_codes.py")
@@ -133,14 +140,14 @@ class TestRedOnAnUnclassifiedCode(unittest.TestCase):
             with open(table_path, "a", encoding="utf-8") as handle:
                 handle.write(
                     "\n\n# RED PROOF: a fake code the partition does not classify.\n"
-                    "EXIT_TABLE[14] = dict(EXIT_TABLE[EXIT_PREREG], name='fake-14')\n"
+                    "EXIT_TABLE[99] = dict(EXIT_TABLE[EXIT_PREREG], name='fake-99')\n"
                 )
             env = dict(os.environ)
             env["VERDICT_SEMANTICS_EXIT_CODES_DIR"] = tmpdir
             env["PYTHONDONTWRITEBYTECODE"] = "1"
             script = (
                 "import sys; sys.path.insert(0, %r); import verdict_semantics; "
-                "print(verdict_semantics.classify(14))" % TOOLS
+                "print(verdict_semantics.classify(99))" % TOOLS
             )
             proc = subprocess.run(
                 [sys.executable, "-c", script],
@@ -148,9 +155,9 @@ class TestRedOnAnUnclassifiedCode(unittest.TestCase):
             )
             self.assertNotEqual(
                 proc.returncode, 0,
-                "a fake 14 in the table was accepted; the guard is blind to new codes",
+                "a fake 99 in the table was accepted; the guard is blind to new codes",
             )
-            self.assertIn("14", proc.stderr + proc.stdout)
+            self.assertIn("99", proc.stderr + proc.stdout)
 
             # control: the same script against the real table succeeds
             env.pop("VERDICT_SEMANTICS_EXIT_CODES_DIR")

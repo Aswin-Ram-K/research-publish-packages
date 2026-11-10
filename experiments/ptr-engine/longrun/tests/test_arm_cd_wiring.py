@@ -42,6 +42,12 @@ class _Cfg:
         self.manifest_dir = None
         self.fetch_rounds_per_turn = 0
         self.turn_wall_cap = 0
+        # BUDGET: the cap gate reads a machine-global ledger by default. This test asserts
+        # WIRING, so it declares its own cap and its own row-glob (the scratch dir): a
+        # refusal because the corpus ledger is already past the cap is a correct refusal
+        # about spend, not evidence about the arm, and must never decide this test.
+        self.budget_cap = 64
+        self.budget_glob = None
 
 
 def _resp(text, send_id):
@@ -66,6 +72,7 @@ def _run(arm, fake_send, max_turns=8, fixture_path=None):
     cfg.max_turns = max_turns
     cfg.manifest_dir = tmp
     cfg.manifest_path = os.path.join(tmp, "manifest.json")
+    cfg.budget_glob = os.path.join(tmp, "rows-*.jsonl")
     run_id = "offline-armcd-%s-r1" % arm
     real_send, real_socket = R.send_chat, socket.socket
     R.send_chat = fake_send
@@ -116,6 +123,14 @@ def test_d_fetch_rows_and_outcomes():
     assert any((r.get("fetch_rows") or 0) > 0 for r in rows), "no fetch row"
     outs = [o for r in rows for o in (r.get("retrieval_outcomes") or [])]
     assert len(outs) > 0, "no retrieval outcomes"
+    # The D arm itself was reached, not merely an arm-shaped string: every row carries the
+    # D arm id and the fetch row carries the arm_cd.ARM_D dispatch's own extras.
+    import arm_cd
+    assert arm_cd.ARM_D == "bounded-context-fetch"
+    assert {r["arm"] for r in rows} == {arm_cd.ARM_D}, {r["arm"] for r in rows}
+    fetched = [r for r in rows if (r.get("fetch_rows") or 0) > 0][0]
+    assert fetched["rep"] == 1 and fetched["run_id"].endswith("-r1")
+    assert fetched["retrieval_outcomes"], fetched["retrieval_outcomes"]
 
 
 def test_d_two_fetches_two_model_calls():

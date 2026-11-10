@@ -97,7 +97,7 @@ Rate: **2 cap-length turns in 27 = 0.0741 per turn**; expected **3.56 per 48-tur
 | Option | What aborts | P(48-turn cell aborts) | Consequence |
 |---|---|---|---|
 | **A — keep the counter** | 2nd cap-length completion | **0.8796** | only **12.04%** of cells complete; a ten-cell tranche completes with probability **6.4e-10**. Damage is not random: truncation is a property of the *question*, so aborts cluster on the arms whose questions invite long answers — the arms under adjudication. |
-| **B — separate the events** | 2nd **wall-time** runaway (>=2 turns past 180 s) | **0.0 observed** (0/27 turns). Sensitivities: wall rate 1-in-27 → 0.5349; rule-of-three 95% upper bound (3/27) → 0.9755; exponential tail fit through the observed p90 → ~1e-19. | `length` becomes data; nothing is discarded to punish a truncated answer. The replacing bound is the per-turn wall cap (§4.1) — the quantity the counter is *named* for. |
+| **B — separate the events** | 2nd **wall-time** runaway (>=2 turns past 180 s) | **0.0 observed** (0/27 turns). Sensitivities: wall rate 1-in-27 → 0.5349; rule-of-three 95% upper bound (three events in twenty-seven turns) → 0.9755; exponential tail fit through the observed p90 → ~1e-19. | `length` becomes data; nothing is discarded to punish a truncated answer. The replacing bound is the per-turn wall cap (§4.1) — the quantity the counter is *named* for. |
 | **C — raise the threshold** | k-th cap-length completion | k=4: 0.4799 (52.0% complete); k=5: 0.2817 (71.8%); k=6: 0.1421 (85.8%); k=7: 0.0621 (93.8%); k=8: 0.0237 (97.6%); k=10: 0.0024 (99.8%) | cheapest, keeps the shape — but the number is chosen to make cells pass, the counter still hides what it counts, and 48 turns are still discarded to punish one bad answer. At k=10 the guard is nearly inert while still calling itself a runaway guard. |
 
 ## 6. Decision: option B
@@ -167,7 +167,8 @@ with a server that ignores the ceiling caught by `ceiling_violations`.**
 ## 9. What this policy does *not* claim
 
 - Option B's completion figure rests on **0 wall-time runaways in 27 turns** — a small sample. The
-  rule-of-three 95% upper bound on the per-turn wall rate (3/27) would still abort 97.6% of cells.
+  rule-of-three 95% upper bound on the per-turn wall rate (three events in twenty-seven turns,
+  written out to avoid confusion with the withdrawn accuracy grade) would still abort 97.6% of cells.
   What makes B safe is not the point estimate but the failure mode: *bounded cost* (every runaway
   turn is closed at 180 s and priced at the cap) instead of *lost cells*.
 - Truncated turns are kept and counted but they are **not** good answers. Downstream analysis must

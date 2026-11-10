@@ -23,6 +23,10 @@ from .adapter import build_prompt, fetch_tool_spec
 from .fetch_batch import batch_fetches, FetchRequest
 from .outcomes import RETRIEVAL_OUTCOMES, OK, NOT_FOUND, STALE_OR_REVOKED, SCOPE_UNGRANTED
 from .resume import RunState, run_items
+from .layers import (
+    compile_prompt, CompactionState, PtrPrefixDrift, COMPACT_EVERY,
+    escape_journal_content, format_journal_line, RETURN_SYMBOL, reset_prefix_state,
+)
 from .annotate import (
     DEPTH_LEAF,
     DEPTH_ROOT,
@@ -160,6 +164,15 @@ __all__ = [
     # adapter
     "build_prompt",
     "fetch_tool_spec",
+    # layers (stable-prefix compiler)
+    "compile_prompt",
+    "CompactionState",
+    "PtrPrefixDrift",
+    "COMPACT_EVERY",
+    "escape_journal_content",
+    "format_journal_line",
+    "RETURN_SYMBOL",
+    "reset_prefix_state",
     # errors
     "PtrError",
     "PtrSyntaxError",

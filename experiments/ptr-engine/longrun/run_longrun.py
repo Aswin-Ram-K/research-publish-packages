@@ -70,7 +70,7 @@ from ptr_engine.fetch_tool import extract_marker_refs  # noqa: E402
 # monkeypatch that exact function to prove the client is on the path.
 import client  # noqa: E402
 
-ARMS = ("transcript-grow", "transcript-compact", "pointer-stable", "lease-reopen", "masking-no-fetch", "bounded-context-fetch")
+ARMS = ("transcript-grow", "transcript-compact", "pointer-stable", "lease-reopen", "masking-no-fetch", "bounded-context-fetch", "spcc")
 DEFAULT_BASE_URL = "http://192.168.2.168:8012/v1"
 DEFAULT_MODEL = "occamy-1.0-NVFP4"
 DEFAULT_ENGINE = "sglang"
@@ -86,6 +86,8 @@ PREDICTIONS = {
                      "<=400-token state line carries the turn-2 fact and the turn-24 correction."),
     "masking-no-fetch": ("C: masking without fetch; masked bodies recoverable only via pointer."),
     "bounded-context-fetch": ("D: bounded-recoverable with fetch; 2 requests per turn."),
+    "spcc": ("Stable-prefix compiler: byte-stable L0+L1 prefix, append-only L2 journal, "
+             "scheduled compaction every 24 turns, fetch into L3 only."),
 }
 
 
@@ -1393,6 +1395,9 @@ class Planner:
         self.digest: str | None = None
         self.raw: list[str] = []
         self.arm_cd = arm_cd.ArmCDState(fixture=fixture) if arm in (arm_cd.ARM_C, arm_cd.ARM_D) else None
+        # spcc: stable-prefix compiler state (own journal, epoch and compaction count).
+        self.spcc = (arm_cd.SpccArmState(fixture=fixture)
+                     if arm in (arm_cd.ARM_SPCC, "spcc") else None)
         # D state
         self.walls = list(fixture.get("lease_reopen_turns") or [])
         self.lease_state = ""
@@ -1524,6 +1529,24 @@ class Planner:
                 text += f"[WORK NOTE {note.get('id', 'n' + str(t))}]\n{note['body']}\n"
             text += f"QUESTION (T{t}): {turn['question']}"
             info["prompt"] = text
+            return info
+
+        if arm == arm_cd.ARM_SPCC:
+            # spcc: stable-prefix compiler.  The question leads L3; any tool output
+            # delivered this turn follows it in arrival order and enters L3 ONLY.
+            # The journal line carries the question, never a fetched body.
+            state = self.spcc
+            question = turn_user(t, turn)
+            for to in _turn_tool_outputs(turn):
+                body = to.get("body")
+                if body is not None:
+                    state.add_fetch(str(body))
+            prompt = state.build(t, question)
+            info["prompt"] = str(prompt)
+            info["prefix_sha256"] = prompt.prefix_sha256
+            info["epoch"] = prompt.epoch
+            info["compactions"] = prompt.compactions
+            info["layer_tokens"] = dict(prompt.layer_tokens)
             return info
 
         if arm in (arm_cd.ARM_C, arm_cd.ARM_D):
@@ -2674,6 +2697,10 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
         "tool_call_ids": extra.get("tool_call_ids"),
         "checkpoint": extra.get("checkpoint"),
         "prompt_sha256": extra.get("prompt_sha256"),
+        "prefix_sha256": extra.get("prefix_sha256"),
+        "epoch": extra.get("epoch"),
+        "compactions": extra.get("compactions"),
+        "layer_tokens": extra.get("layer_tokens"),
         "http_status": extra.get("http_status"), "error": extra.get("error"),
     }
     # ANSWER-CONTRACT (v5): the five contracted fields are ALWAYS present, so a
@@ -3185,7 +3212,11 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                   # TREATMENTS: compaction is visible on the TURN row it happened on; the
                   # `kind == "digest"` rows stay exactly as they were (this adds, never
                   # replaces), so a reader filtering turn rows can still see the wall.
-                  "digest_at": t if info["digest_request"] is not None else None}
+                  "digest_at": t if info["digest_request"] is not None else None,
+                  "prefix_sha256": info.get("prefix_sha256"),
+                  "epoch": info.get("epoch"),
+                  "compactions": info.get("compactions"),
+                  "layer_tokens": info.get("layer_tokens")}
         digest_attempts = 0
         while info["digest_request"] is not None and digest_attempts < 2:
             if sent >= budget:
@@ -3412,7 +3443,7 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                          fetch_followup=True, tool_calls=[{"ref": c.get("ref")} for c in _calls],
                          send_index=1)))
                 _d_fetch_done = True
-        if tools_enabled(cfg) and not is_answer_turn and arm not in (arm_cd.ARM_C, arm_cd.ARM_D):
+        if tools_enabled(cfg) and not is_answer_turn and arm not in (arm_cd.ARM_C, arm_cd.ARM_D, arm_cd.ARM_SPCC):
             # ANSWER-CONTRACT (v5): tools are unavailable on a checkpoint turn, so no
             # <tool_call> is executed and no follow-up request is bought.
             pinned = pinned_views(fixture, info["prompt"])
@@ -3886,7 +3917,7 @@ def main(argv=None) -> int:
         if not cfg.rows or cfg.rows.endswith("rows-longrun-2026-10-26.jsonl"):
             cfg.rows = "experiments/ptr-engine/measure/rows-longrun-2026-10-26-policy.jsonl"
         cfg.run_id = cfg.run_id or f"smoke-{utc_now().strftime('%Y%m%dT%H%M%SZ')}"
-        print(f"SMOKE: {len(ARMS)} arms x 3 turns = 12 requests, max_tokens={cfg.max_tokens}")
+        print(f"SMOKE: {len(ARMS)} arms x 3 turns = {len(ARMS) * 3} requests, max_tokens={cfg.max_tokens}")
         print(f"POLICY: {_REASONING_POLICY}")
     arms = [a.strip() for a in cfg.arms.split(",") if a.strip()]
     bad = [a for a in arms if a not in ARMS]

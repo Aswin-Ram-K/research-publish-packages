@@ -66,7 +66,7 @@ def _fixture() -> dict:
 
 
 def _row(cfg=None, fixture=None, arm="transcript-grow"):
-    return R.make_row(cfg or _Cfg(), fixture or _fixture(), arm, 1, "run-provenance", 1,
+    return R.make_row(cfg or _Cfg(), fixture or _fixture(), arm, 1, "run-provenance-r1", 1,
                       None, None, None, "manifest-sha", {})
 
 
@@ -94,7 +94,7 @@ def test_a_written_row_carries_every_provenance_field():
 
 def test_a_run_manifest_publishes_the_same_block():
     manifest = R.build_manifest(_Cfg(), _fixture(), "transcript-grow", 1,
-                                "run-provenance", "rows-x.jsonl")
+                                "run-provenance-r1", "rows-x.jsonl")
     prov = manifest["provenance"]
     row = _row()
     for name in client.PROVENANCE_FIELDS:
@@ -164,7 +164,7 @@ def test_e_a_bare_cfg_still_stamps_unknowns_rather_than_null():
         tools = ""
         thinking = None
 
-    row = R.make_row(Bare(), _fixture(), "pointer-stable", 1, "run-provenance", 1,
+    row = R.make_row(Bare(), _fixture(), "pointer-stable", 1, "run-provenance-r1", 1,
                      None, None, None, "manifest-sha", {})
     assert row["model"] == "unknown"
     assert row["endpoint"] == "unknown"

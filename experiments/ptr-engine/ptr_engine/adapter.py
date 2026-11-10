@@ -150,4 +150,6 @@ def fetch_tool_spec() -> dict[str, Any]:
     return copy.deepcopy(FETCH_TOOL)
 
 
+# Legacy arm only: marker masking stays in pointer_table.mask_output. The new stable-prefix
+# path lives in ptr_engine.layers and must not call mask_output.
 __all__ = ["build_prompt", "fetch_tool_spec", "FETCH_TOOL"]

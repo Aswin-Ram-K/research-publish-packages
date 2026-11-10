@@ -60,7 +60,7 @@ def _resp():
 
 def _row(cfg, kind, resp=True):
     fixture = run_longrun.load_fixture(FX)
-    return run_longrun.make_row(cfg, fixture, ARM, 1, "rid-claimrows", 1,
+    return run_longrun.make_row(cfg, fixture, ARM, 1, "rid-claimrows-r1", 1,
                                 _resp() if resp else None, "ANSWER: NUM 7", kind,
                                 "0" * 64, {})
 
@@ -91,7 +91,8 @@ def test_h2_rows_comparable():
 def test_omitted_flag_exit_12_verbatim():
     """No --claim-mode, corpus-shaped rows target -> exit 12, module sentence verbatim."""
     proc = subprocess.run([sys.executable, os.path.join(LONGRUN, "run_longrun.py"),
-                           "--fixture", FX, "--arms", ARM, "--rows", CORPUS_ROWS],
+                           "--fixture", FX, "--arms", ARM, "--rows", CORPUS_ROWS,
+                           "--temperature", "0"],
                           cwd=LONGRUN, capture_output=True, text=True, timeout=120)
     exact = claim_mode.refusal_message(None)
     assert proc.returncode == 12, (proc.returncode, proc.stderr[-1200:])
@@ -141,7 +142,7 @@ def test_red_green_stamp_removed_from_make_row():
                                          "--rows", os.path.join(tmp, "rows.jsonl")])
     cfg.claim = claim_mode.resolve_claim("smoke")
     fixture = mod.load_fixture(FX)
-    row = mod.make_row(cfg, fixture, ARM, 1, "rid-red", 1, _resp(), "x", "turn",
+    row = mod.make_row(cfg, fixture, ARM, 1, "rid-red-r1", 1, _resp(), "x", "turn",
                        "0" * 64, {})
     missing = [f for f in claim_mode.ROW_FIELDS if f not in row]
     assert missing == ["claim", "comparison_eligible"], (

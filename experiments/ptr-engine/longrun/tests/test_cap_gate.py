@@ -165,7 +165,7 @@ class CapGateTest(unittest.TestCase):
         out, err = io.StringIO(), io.StringIO()
         try:
             with redirect_stdout(out), redirect_stderr(err):
-                rc = R.run_cell(cfg, fixture_obj, "pointer-stable", 1, "capgate-run",
+                rc = R.run_cell(cfg, fixture_obj, "pointer-stable", 1, "capgate-run-r1",
                                 rows_path)
         finally:
             R.send_chat, R.RequestCapGate.acquire = real_send, real_acquire
@@ -290,7 +290,8 @@ class CapGateTest(unittest.TestCase):
             _write_rows(corpus, corpus_rows)
         argv = [sys.executable, RUNNER, "--fixture", FIXTURE, "--arms", "pointer-stable",
                 "--max-turns", "1", "--rows", self.rows_path,
-                "--manifest-path", self.manifest_path, "--budget-glob", self.glob] + extra
+                "--manifest-path", self.manifest_path, "--budget-glob", self.glob,
+                "--temperature", "0"] + extra
         proc = subprocess.run(argv, cwd=REPO, capture_output=True, text=True, timeout=120)
         return proc
 

@@ -26,10 +26,16 @@ from ptr_engine.pointer_table import (  # noqa: E402
 from ptr_engine.fetch_tool import (  # noqa: E402
     FETCH_TOOL, parse_fetch_calls, render_fetch_result, batched_fetch,
 )
+from ptr_engine.layers import (  # noqa: E402
+    compile_prompt, CompactionState, format_journal_line, RETURN_SYMBOL,
+    escape_journal_content, reset_prefix_state,
+)
 from ptr_engine.quantise import token_len, StubTokenizer  # noqa: E402  real counter
 
 ARM_C = "masking-no-fetch"
 ARM_D = "bounded-context-fetch"
+ARM_SPCC = "spcc"
+SPCC = ARM_SPCC
 WINDOW_TURNS = 4
 
 
@@ -388,3 +394,108 @@ def fetch_tokens_for(results) -> int:
 
 def tokenizer_calls() -> int:
     return _pt_tokenizer_calls()
+
+
+# ---------------------------------------------------------------- arm spcc ----
+# Stable-prefix context compiler.  This is a REAL arm, not a label: every turn
+# appends one journal line, every prompt is rendered by layers.compile_prompt
+# with the live CompactionState, fetched bodies enter L3 only, and compaction is
+# the only prefix break.
+
+def _spcc_tokenizer(tokenizer):
+    return tokenizer if tokenizer is not None else StubTokenizer()
+
+
+def spcc_world_index(fixture: Optional[dict], tokenizer=None) -> List[str]:
+    """L1 world-index lines: sorted ``@kind:id@rev~tokens scope=default``."""
+    fx = fixture or {}
+    tok = _spcc_tokenizer(tokenizer)
+    out: List[str] = []
+    for item in (fx.get("items") or []):
+        if not isinstance(item, dict) or not item.get("id"):
+            continue
+        body = item.get("body") or ""
+        n = token_len(str(body), tok)
+        out.append("@knowledge:%s@r1~%d scope=default" % (item.get("id"), n))
+    for doc in (fx.get("documents") or []):
+        if not isinstance(doc, dict) or not doc.get("doc_id"):
+            continue
+        revs = doc.get("revisions") or []
+        for rev in revs:
+            if not isinstance(rev, dict):
+                continue
+            rnum = rev.get("revision")
+            body = rev.get("value")
+            n = token_len(str(body if body is not None else ""), tok)
+            out.append("@doc:%s@r%s~%d scope=default"
+                       % (doc.get("doc_id"), rnum, n))
+    return out
+
+
+def spcc_run(fixture: Optional[dict] = None, model: str = "offline-model") -> dict:
+    """A run-shaped mapping for layers.compile_prompt (L0 fields + run_id)."""
+    fx = fixture or {}
+    return {
+        "system": fx.get("system_prompt", ""),
+        "tool_schema": None,
+        "answer_grammar": None,
+        "model": model,
+        "fixture": fx.get("task_id", "offline-fixture"),
+        "generation": "gen-7",
+        "run_id": "spcc:%s" % fx.get("task_id", "offline-fixture"),
+    }
+
+
+class SpccArmState:
+    """Per-cell state for the stable-prefix arm.
+
+    ``state.journal`` is append-only.  The current turn's question lives in L3;
+    the journal carries PRIOR turns (one ``T{n}|{role}|{content}`` line each), so
+    the 24th pending line is appended on the 25th compile and compaction fires
+    there -- exactly ``COMPACT_EVERY`` turns after the previous fold.  Fetched
+    bodies are appended to ``fetched`` and rendered in L3 only; they never touch
+    L1 or L2.
+    """
+
+    def __init__(self, fixture: Optional[dict] = None, tokenizer=None,
+                 run: Optional[dict] = None, index_lines: Optional[List[str]] = None):
+        self.fixture = fixture or {}
+        self.tokenizer = _spcc_tokenizer(tokenizer)
+        self.index_lines = (list(index_lines) if index_lines is not None
+                            else spcc_world_index(self.fixture, self.tokenizer))
+        self.state = CompactionState(index_lines=list(self.index_lines))
+        self.run = run if run is not None else spcc_run(self.fixture)
+        self.fetched: List[str] = []
+        self.last_refs: List[str] = []
+        self._pending_line: Optional[str] = None
+        self.last_turn = 0
+
+    def note_refs(self, refs) -> None:
+        """Record refs emitted this turn; they ride the next journal line."""
+        self.last_refs = [str(r) for r in (refs or [])]
+
+    def add_fetch(self, body) -> None:
+        """Queue a fetched body for L3 arrival order (never L1/L2)."""
+        if body is not None:
+            self.fetched.append(str(body))
+
+    def build(self, t: int, work: str, *, role: str = "user"):
+        """Render turn ``t``; returns the ``_Prompt`` with stamping metadata."""
+        new_lines: List[str] = []
+        if self._pending_line is not None:
+            new_lines.append(self._pending_line)
+        l3 = str(work)
+        if self.fetched:
+            l3 = l3 + "\n" + "\n".join(self.fetched)
+        prompt = compile_prompt(
+            self.run, self.state,
+            epoch=self.state.epoch, journal=new_lines, work=l3,
+        )
+        content = str(work)
+        if self.last_refs:
+            content = content + " refs=" + ",".join(self.last_refs)
+        self._pending_line = format_journal_line(int(t), role, content)
+        self.last_turn = int(t)
+        self.fetched = []
+        self.last_refs = []
+        return prompt

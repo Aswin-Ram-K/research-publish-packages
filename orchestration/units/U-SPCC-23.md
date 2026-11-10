@@ -1,0 +1,3 @@
+# U-SPCC-23 — Stable-prefix context compiler (layers)
+
+Created `/home/zer0null/research extractor/experiments/ptr-engine/ptr_engine/layers.py` exporting `compile_prompt`, `CompactionState`, `PtrPrefixDrift`, `COMPACT_EVERY`, plus helpers `escape_journal_content`/`format_journal_line`. Created `/home/zer0null/research extractor/experiments/ptr-engine/research-seed-concepts/PROMPT-ENGINE-V1.md`. Added tests `/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_layers_compiler.py` (5 tests, all pass). `run_longrun.py` already stamps prefix_sha256/epoch/compactions/layer_tokens and billed fields via the prior unit's per-row extras edit. `adapter.py` legacy `build_prompt` signature unchanged.

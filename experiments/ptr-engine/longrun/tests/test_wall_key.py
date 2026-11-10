@@ -154,7 +154,8 @@ def test_dry_run_manifest_records_the_per_arm_wall_not_the_top_level_one():
     """build_manifest must be handed the arm's fixture, or provenance says 3838 at 10616."""
     tmp = tempfile.mkdtemp(prefix="wallkey-manifest-")
     try:
-        argv = ["--dry-run", "--fixture", V8, "--arms", "pointer-stable,transcript-compact",
+        argv = ["--dry-run", "--temperature", "0", "--fixture", V8,
+                "--arms", "pointer-stable,transcript-compact",
                 "--reps", "1", "--manifest-dir", tmp,
                 "--rows", os.path.join(tmp, "rows.jsonl")]
         rc = R.main(argv)

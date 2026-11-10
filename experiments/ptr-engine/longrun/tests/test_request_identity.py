@@ -186,9 +186,9 @@ def case_a():
           r1["request_identity_complete"] and r2["request_identity_complete"])
 
     # RED: the ledger's tuple would call this pair a duplicate although it is two sends.
-    row1 = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run", 1, r1, r1["content"],
+    row1 = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run-r1", 1, r1, r1["content"],
                        "turn", "m" * 64, dict(_EXTRAS))
-    row2 = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run", 2, r2, r2["content"],
+    row2 = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run-r1", 2, r2, r2["content"],
                        "turn", "m" * 64, dict(_EXTRAS))
     old_tuple = lambda r: (r["content_sha256"], r["prompt_tokens"], r["completion_tokens"])  # noqa: E731
     check_red("legacy tuple (without ts) equates the two sends", old_tuple(row1) == old_tuple(row2))
@@ -204,9 +204,9 @@ def case_b():
     check("re-send gets the SAME request_sha256",
           r1["request_sha256"] == r2["request_sha256"],
           "%s vs %s" % (r1["request_sha256"], r2["request_sha256"]))
-    row1 = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run", 1, r1, r1["content"],
+    row1 = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run-r1", 1, r1, r1["content"],
                        "turn", "m" * 64, dict(_EXTRAS))
-    row2 = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run", 1, r2, r2["content"],
+    row2 = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run-r1", 1, r2, r2["content"],
                        "turn", "m" * 64, dict(_EXTRAS))
     _path, rows = _write_rows([row1, row2])
     check("row_seq is 1 then 2 (a re-send is a new write position)",
@@ -221,11 +221,11 @@ def case_b():
 def case_c():
     print("\n(c) ONE request whose row is written twice")
     r = _send("the turn that gets written twice")
-    follow = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run", 1, r, r["content"],
+    follow = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run-r1", 1, r, r["content"],
                          "tool-followup", "m" * 64,
                          dict(_EXTRAS, fetch_followup=True,
                               prompt_sha256=rl.sha256_text("follow-up user message")))
-    turn = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run", 1, r, r["content"],
+    turn = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run-r1", 1, r, r["content"],
                        "turn", "m" * 64, dict(_EXTRAS))
     check("the two rows measure one response",
           follow["content_sha256"] == turn["content_sha256"]
@@ -250,21 +250,21 @@ def case_c():
 def case_d():
     print("\n(d) reproduce the 30 historical pairs with the real writer functions")
     r = _send("turn one's last follow-up")
-    follow = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run", 1, r, r["content"],
+    follow = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run-r1", 1, r, r["content"],
                          "tool-followup", "m" * 64,
                          dict(_EXTRAS, fetch_followup=True,
                               prompt_sha256=rl.sha256_text("follow-up user message")))
-    turn = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run", 1, r, r["content"],
+    turn = rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run-r1", 1, r, r["content"],
                        "turn", "m" * 64, dict(_EXTRAS))
     check("turn-row content_sha256 == follow-up-row content_sha256 (rows 1..30)",
           follow["content_sha256"] == turn["content_sha256"])
     check("and both name ONE send by request_sha256 (the detector fires)",
           follow["request_sha256"] == turn["request_sha256"])
     check("the failed row keeps request_sha256='unknown' and complete=false",
-          rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run", 1, None, None,
+          rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run-r1", 1, None, None,
                       "turn", "m" * 64, dict(_EXTRAS))["request_sha256"]
           == client.REQUEST_SHA_UNKNOWN
-          and rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run", 1, None, None,
+          and rl.make_row(FakeCfg(), _FIXTURE, "arm", 1, "run-r1", 1, None, None,
                           "turn", "m" * 64, dict(_EXTRAS))["request_identity_complete"]
           is False)
 

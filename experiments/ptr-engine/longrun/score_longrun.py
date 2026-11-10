@@ -129,6 +129,56 @@ def tokens_of(record):
         return int(prompt + completion)
     return None
 
+def billing_block(records):
+    """Aggregate billed accounting over the given turn records.
+
+    Null cached_tokens are excluded (never counted as 0) for cached_fraction
+    and coverage; sums treat a missing value as 0.
+    """
+    records = [r for r in (records or []) if isinstance(r, dict)]
+    prompt_total = cached_total = uncached_total = billed_total = 0
+    reported = []
+    for r in records:
+        p = r.get("prompt_tokens")
+        c = r.get("cached_tokens")
+        u = r.get("uncached_tokens")
+        b = r.get("billed_tokens")
+        if isinstance(p, (int, float)):
+            prompt_total += int(p)
+        if isinstance(c, (int, float)):
+            cached_total += int(c)
+        if isinstance(u, (int, float)):
+            uncached_total += int(u)
+        if isinstance(b, (int, float)):
+            billed_total += int(b)
+        if c is not None:
+            reported.append(r)
+    coverage = (len(reported) / len(records)) if records else None
+    if not reported:
+        cached_fraction = None
+        attribution = "unavailable"
+    else:
+        rep_prompt = 0
+        rep_cached = 0
+        for r in reported:
+            pp = r.get("prompt_tokens")
+            cc = r.get("cached_tokens")
+            if isinstance(pp, (int, float)):
+                rep_prompt += int(pp)
+            if isinstance(cc, (int, float)):
+                rep_cached += int(cc)
+        cached_fraction = (rep_cached / rep_prompt) if rep_prompt else None
+        attribution = "available"
+    return {
+        "prompt_tokens": prompt_total,
+        "cached_tokens": cached_total,
+        "uncached_tokens": uncached_total,
+        "billed_tokens": billed_total,
+        "cached_fraction": cached_fraction,
+        "coverage": coverage,
+        "attribution": attribution,
+    }
+
 
 def artifact_map(record):
     found = {}
@@ -896,9 +946,9 @@ def score_answer_contract_rows(fixture, rows):
     # collect checkpoint-bearing rows in file order, grouped by (arm, rep, id)
     # collect ALL checkpoint-bearing rows (interim or not) so missing
     # answers are still graded as failures and counted in the denominator
-    all_rows_by_key = {}   # (arm, rep) -> {cid: {"all":[], "final":[]}}
+    all_rows_by_key = {}   # (arm, rep) -> {cid: {"all":[], "final":[], "final_idx":[]}}
     arm_rep_order = []
-    for row in (rows or []):
+    for idx, row in enumerate(rows or []):
         cid = _checkpoint_id_of(row)
         if cid is None:
             continue
@@ -909,10 +959,11 @@ def score_answer_contract_rows(fixture, rows):
         if key not in all_rows_by_key:
             all_rows_by_key[key] = {}
             arm_rep_order.append(key)
-        bucket = all_rows_by_key[key].setdefault(cid, {"all": [], "final": []})
+        bucket = all_rows_by_key[key].setdefault(cid, {"all": [], "final": [], "final_idx": []})
         bucket["all"].append(row)
         if not _is_interim_row(row):
             bucket["final"].append(row)
+            bucket["final_idx"].append(idx)
 
     distinct_ids = 0
     for by_id in all_rows_by_key.values():
@@ -921,17 +972,21 @@ def score_answer_contract_rows(fixture, rows):
     if fixture_count and distinct_ids != fixture_count:
         return {"status": "denominator_mismatch",
                 "graded_checkpoints": distinct_ids,
-                "fixture_checkpoints": fixture_count}
+                "fixture_checkpoints": fixture_count,
+                "exit_code": EXIT_FAIL}
 
     # fail loudly on duplicated non-interim answers for the same checkpoint id
-    dup_ids = []
+    dup_details = []
     for by_id in all_rows_by_key.values():
         for cid, bucket in by_id.items():
             if len(bucket["final"]) > 1:
-                dup_ids.append(cid)
-    if dup_ids:
-        raise ValueError("duplicate non-interim checkpoint answers: %s"
-                         % ", ".join(sorted(set(dup_ids))))
+                dup_details.append((cid, list(bucket["final_idx"])))
+    if dup_details:
+        msg = "duplicate non-interim checkpoint answers: " + ", ".join(
+            "%s (rows %s)" % (cid, ", ".join(str(i) for i in idxs))
+            for cid, idxs in dup_details)
+        print(msg, file=sys.stderr)
+        raise ValueError(msg)
 
     out = {}
     for key in arm_rep_order:
@@ -944,6 +999,7 @@ def score_answer_contract_rows(fixture, rows):
         kind_mismatch = 0
         total = 0
         by_distance = {}
+        graded_rows = []
         for cid, bucket in by_id.items():
             finals = bucket["final"]
             if finals:
@@ -951,6 +1007,8 @@ def score_answer_contract_rows(fixture, rows):
             else:
                 final = None
             total += 1
+            if final is not None:
+                graded_rows.append(final)
             if final is None:
                 # no non-interim answer -> graded as a failure (turn_missing)
                 ungradeable += 1
@@ -999,7 +1057,7 @@ def score_answer_contract_rows(fixture, rows):
             if value_ok:
                 value_correct += 1
                 bd["value"] += 1
-            if ak is None or final.get("answer_parse_error"):
+            if ak == "OOV" or ak is None or final.get("answer_parse_error"):
                 ungradeable += 1
             if ak == "NONE":
                 abstained += 1
@@ -1017,6 +1075,7 @@ def score_answer_contract_rows(fixture, rows):
             "graded_checkpoints": total,
             "fixture_checkpoints": fixture_count,
             "by_distance": by_distance,
+            "billing": billing_block(graded_rows),
         }
     return out
 
@@ -1228,6 +1287,8 @@ def score(fixture, run, fixture_sha):
         "checks": checks.items,
         "verified_success": verified,
         "tokens_to_verified_success": tokens_total,
+        "payload_tokens": tokens_total,
+        "billing": billing_block(list(run.get("turns", {}).values())),
         "repair_turns": repair_turns,
         "checkpoint_accuracy": accuracy,
         "constraint_violations": violations,
@@ -1301,6 +1362,8 @@ def main(argv=None):
         except OSError as exc:
             print("score_longrun: cannot write --out: %s" % exc, file=sys.stderr)
     if args.answer_contract:
+        if isinstance(scorecard, dict) and scorecard.get("status") == "denominator_mismatch":
+            return int(scorecard.get("exit_code", EXIT_FAIL))
         return 0
     return scorecard["exit_code"]
 

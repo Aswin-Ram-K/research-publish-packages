@@ -793,6 +793,44 @@ def build_report(paths: list[str], cap: int, reserve: int, would_spend: int,
     }
 
 
+def reconcile(paths=None, pattern=None, cap=DEFAULT_CAP, reserve=DEFAULT_RESERVE,
+          would_spend=0):
+    """Reconcile row count on disk with ledger spend.
+
+    Counts non-empty lines in rows-*.jsonl (how longrun/cell.py computes spend)
+    and compares with build_report()["budget"]["spent"]. Returns
+    {rows_on_disk, ledger_spent, delta, verdict}; verdict is "agree" only when
+    they match. Prints a warning naming both numbers on disagreement; never
+    auto-corrects either side.
+    """
+    if isinstance(paths, str):
+        # allow a glob pattern to be passed positionally
+        pattern = paths
+        paths = None
+    if paths is None:
+        pat = resolve_pattern(pattern)
+        paths = sorted(globmod.glob(pat), key=lambda p: os.path.basename(p))
+    paths = list(paths or [])
+    rows_on_disk = 0
+    for path in paths:
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as handle:
+                for line in handle:
+                    if line.strip():
+                        rows_on_disk += 1
+        except OSError:
+            raise
+    report = build_report(paths, cap, reserve, would_spend)
+    ledger_spent = report["budget"]["spent"]
+    delta = rows_on_disk - ledger_spent
+    verdict = "agree" if delta == 0 else "disagree"
+    if verdict == "disagree":
+        print("WARNING: rows_on_disk=%d != ledger_spent=%d (delta=%d)"
+              % (rows_on_disk, ledger_spent, delta), file=sys.stderr)
+    return {"rows_on_disk": rows_on_disk, "ledger_spent": ledger_spent,
+            "delta": delta, "verdict": verdict}
+
+
 def print_table(report: dict, stream=sys.stdout) -> None:
     files = report["files"]
     width = max([len("file")] + [len(f["file"]) for f in files]) if files else 4
@@ -854,6 +892,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--write", default=None, help="write the JSON report to this path (and only this)")
     parser.add_argument("--json", action="store_true", help="print the JSON report to stdout too")
     parser.add_argument("--quiet", action="store_true", help="print nothing on the within-budget path")
+    parser.add_argument("--reconcile", action="store_true",
+                        help="print reconcile() JSON (rows_on_disk vs ledger_spent) and exit")
     return parser.parse_args(argv)
 
 
@@ -890,6 +930,10 @@ def main(argv: list[str] | None = None) -> int:
         print("nothing counted: an unreadable row file makes the total unknowable", file=sys.stderr)
         return EXIT_ROWS
 
+    if getattr(args, "reconcile", False):
+        rec = reconcile(paths, cap=args.cap, reserve=args.reserve, would_spend=args.would_spend)
+        print(json.dumps(rec, indent=2, sort_keys=False, ensure_ascii=False))
+        return EXIT_OK
     payload = json.dumps(report, indent=2, sort_keys=False, ensure_ascii=False) + "\n"
 
     if args.write:

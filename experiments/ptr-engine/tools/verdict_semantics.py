@@ -7,8 +7,9 @@ RECORD-REFRESH (exec b0b2ccf1) settled `failed exit-4` while its handoff showed
 insertions-only edits, prefix sha256 equality on both files, guard exit 0 before and
 after, and a clean self-test; RECLAIM-ACCEPTANCE (exec 83f801aa) settled `failed
 no-verdict` with `command: null`. Exit 4 is the ledger cap and pytest's usage error; exit
-2 preflight and argparse; 3 budget; 8 projection; 12 prereg; 13 tree-moved. None of them
-can be evidence that a card's artefact is wrong.
+2 preflight and argparse; 3 budget; 8 projection; 12 prereg; 13 tree-moved; 14 the cell's
+cap-gate reconciliation (the ledger and the rows disagree, so no artefact was measured).
+None of them can be evidence that a card's artefact is wrong.
 
 CONTRACT
   * the numbers are NOT copied here: `exit_codes.EXIT_TABLE` is the one table, imported,
@@ -49,7 +50,10 @@ MEASURING = {
     10: VERIFIED_FAIL,  # grade stage ran and did not pass
     11: VERIFIED_FAIL,  # analyse stage ran and did not pass
 }
-REFUSING = frozenset({2, 3, 4, 7, 8, 12, 13})
+# 14 is the cell-level cap-gate refusal (`capgate-unrecorded`): the runner's exit
+# reconciliation found the ledger and the rows disagree, so the spend is untrustworthy and
+# nothing about the artefact was measured. It is a refusal for the same reason 4 is.
+REFUSING = frozenset({2, 3, 4, 7, 8, 12, 13, 14})
 
 CLASSIFICATION = dict(MEASURING)
 CLASSIFICATION.update({code: UNSTAMPED_REFUSAL for code in REFUSING})

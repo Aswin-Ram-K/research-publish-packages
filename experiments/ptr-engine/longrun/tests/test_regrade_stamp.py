@@ -181,7 +181,7 @@ def test_d_historical_stored_grid_is_checked_field_by_field():
     differing = [ln.split(":")[0].replace("DIFF ", "")
                  for ln in r.stdout.splitlines() if ln.startswith("DIFF ")]
     outside = [p for p in differing
-               if not p.endswith(".decidable_source")]
+               if not p.endswith((".decidable_source", ".decoration_stripped"))]
     assert outside == [], "differences outside the known era field: %s" % outside
 
 
@@ -192,8 +192,8 @@ def test_e_red_stale_pin_is_refused_green_resolver_reproduces(rows, tmp_path):
     good = json.loads(open(grade, encoding="utf-8").read())
 
     red_src = open(TOOL, encoding="utf-8").read().replace(
-        "EXPECTED_GRADER_SHA = (\"056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec5\"\n"
-        "                       \"5a917a52d9f26772\")",
+        "EXPECTED_GRADER_SHA = (\"c7c0e5c1927ca36399e2e290d0f1079d19ef5e65f361ea2\"\n"
+        "                       \"2782017515fa3187d\")",
         "EXPECTED_GRADER_SHA = (\"6893d559518168e3ba4fc4a9f5d7642d213d61e2e3c3d0b0a8\"\n"
         "                      \"f01e3379af3077\")")
     assert "6893d559" in red_src

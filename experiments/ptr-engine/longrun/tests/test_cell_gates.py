@@ -289,6 +289,14 @@ def check_dry_run_touches_no_network(tmp):
     """
     ledger, _rows = _fake_ledger(tmp, cap=4320, spent=0)
     runner, marker = _fake_runner(tmp)
+    # The fixture env vars must not outlive this check: os.environ is shared
+    # process state, and later test modules that spawn cell.py as a subprocess
+    # (e.g. test_guards._projection_run) inherit whatever is set here.  Leaving
+    # CELL_LEDGER_ARTEFACT pointing at this tmp tree would make their G1 gate
+    # refuse at stage 3a for a ledger that no longer exists.
+    _saved_env = {k: os.environ.get(k) for k in
+                  ("CELL_LEDGER_ARTEFACT", "CELL_PROJECTION_ARTEFACT",
+                   "CELL_PREREG_ARTEFACT", "CELL_RUNNER_PATH", "CELL_MARKER")}
     os.environ.update(_env(tmp, ledger, runner, marker))
 
     spec = importlib.util.spec_from_file_location("cell_gates_under_test", CELL)
@@ -316,6 +324,11 @@ def check_dry_run_touches_no_network(tmp):
     finally:
         (socket.socket, socket.create_connection, http.client.HTTPConnection,
          urllib.request.urlopen, subprocess.run, subprocess.Popen) = saved
+        for _k, _v in _saved_env.items():
+            if _v is None:
+                os.environ.pop(_k, None)
+            else:
+                os.environ[_k] = _v
 
     log = buf.getvalue()
     assert rc == 0, "dry run must exit 0, got %r\n%s" % (rc, log)

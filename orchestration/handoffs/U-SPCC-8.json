@@ -1,0 +1,53 @@
+{
+  "unit": "U-SPCC-8",
+  "status": "partial",
+  "artifacts": [
+    "experiments/ptr-engine/tools/verdict_semantics.py",
+    "docs/VERDICT-SEMANTICS.md",
+    "experiments/ptr-engine/longrun/tests/test_verdict_semantics.py",
+    "experiments/ptr-engine/longrun/tests/test_arm_cd_wiring.py",
+    "experiments/ptr-engine/longrun/tests/test_arm_treatments.py",
+    "experiments/ptr-engine/longrun/tests/test_treatments_fire.py",
+    "experiments/ptr-engine/tools/arm_treatments_probe.py",
+    "experiments/ptr-engine/longrun/tests/test_cap_gate.py",
+    "experiments/ptr-engine/longrun/tests/test_claim_rows.py",
+    "experiments/ptr-engine/longrun/tests/test_record_stop_reason.py",
+    "experiments/ptr-engine/longrun/tests/test_row_provenance.py",
+    "experiments/ptr-engine/longrun/tests/test_stop_reason_producers.py",
+    "experiments/ptr-engine/longrun/tests/test_request_identity.py",
+    "experiments/ptr-engine/longrun/tests/test_runaway_policy.py",
+    "experiments/ptr-engine/longrun/tests/test_dry_turn_scope.py",
+    "experiments/ptr-engine/longrun/tests/test_wall_key.py",
+    "experiments/ptr-engine/longrun/tests/test_row_attribution.py",
+    "experiments/ptr-engine/longrun/tests/test_guards.py",
+    "orchestration/units/U-SPCC-8.md"
+  ],
+  "evidence": {
+    "verdict_before": "ERROR collecting experiments/ptr-engine/longrun/tests/test_verdict_semantics.py\nE   RuntimeError: exit-code partition drift: unclassified in exit_codes.EXIT_TABLE=[14]; classified but absent from EXIT_TABLE=[]. Add the code to MEASURING or REFUSING in experiments/ptr-engine/tools/verdict_semantics.py and to docs/VERDICT-SEMANTICS.md.\n1 error in 0.06s",
+    "verdict_after": "9 passed in 0.04s",
+    "verdict_red_green": "RED (REFUSING reverted by hand to {2,3,4,7,8,12,13}): RuntimeError: exit-code partition drift: unclassified in exit_codes.EXIT_TABLE=[14] ... 1 error in 0.05s; GREEN (re-applied): 9 passed in 0.04s",
+    "armcd_before": "CAP REFUSED at T1 (turn) - over the global cap: spent=7869 would_spend=1 cap=4320 reserve=0 headroom=4320 allocation=56 used_in_run=0 turn=1 kind=turn projected=7870 over_by=3550 - nothing sent\n3 failed, 3 passed in 0.85s",
+    "armcd_after": "6 passed in 0.13s; D-arm row reached: {\"arm\": \"bounded-context-fetch\", \"rep\": 1, \"run_id\": \"offline-armcd-bounded-context-fetch-r1\", \"turn\": 1, \"kind\": \"turn\", \"fetch_rows\": 1, \"retrieval_outcomes\": [\"NOT_FOUND\"]}",
+    "treatments_before": "FAILED test_arm_treatments.py::test_grow_evicts_and_the_row_says_so - AssertionError: repeat-identity: rep=1 not present in run_id='arm-treatments-forced'\n5 failed, 11 passed in 0.37s",
+    "treatments_after": "16 passed in 0.15s",
+    "full_before": "86 failed, 723 passed, 31 subtests passed in 361.00s (0:06:01)",
+    "full_after": "23 failed, 786 passed, 1 warning, 31 subtests passed in 383.68s (0:06:23)",
+    "remaining_failures": "test_build_fixture::test_e_spec_parses_and_every_variant_builds (v4 spec drift)\ntest_false_pass::test_real_tree_passes (E_STATUS_WORD_CONTRADICTION : 19)\ntest_guards::test_guards_all (_NoSocket: a socket was opened; passes in isolation)\ntest_handoff_lint::test_W_NO_COMMANDS_warns_not_fails (lint emits W_NO_COMMAND)\ntest_handoff_lint::test_partial_and_stub_unchanged_and_exit_code_always_defined\ntest_journal_lint::test_census_over_the_live_corpus_is_reported\ntest_lost_fixture::test_no_new_row_pins_a_missing_fixture\ntest_matrix_audit::test_declared_population_comes_from_outside_the_rows\ntest_projection_calibration (5; each passes in isolation)\ntest_regrade_stamp (2)\ntest_request_ledger::test_g_real_corpus_total_and_delta_from_466 (spent=7869 > cap=4320)\ntest_stop_reason::OnDiskArtefact::test_stop_reason_json_matches_a_fresh_scan (STALE)\ntest_verbosity (3)\ntest_verdict_ritual::test_no_new_unverdicted_closure_since_the_baseline (6 handoffs)\ntest_withdrawn_screen (2; docs/RUNAWAY-POLICY.md trips WI-014)",
+    "commands": [
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_verdict_semantics.py -q",
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_arm_cd_wiring.py -q",
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_arm_treatments.py experiments/ptr-engine/longrun/tests/test_treatments_fire.py -q",
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/ -q"
+    ]
+  },
+  "blocker": "Two clusters remain, both outside this card's ownership and neither editable without fabricating a measurement: (a) live-corpus/orchestration guards correctly red about facts on this box (ledger spent 7869 > cap 4320; rows-abs2-2026-11-09.jsonl:1 pins a fixture file that does not exist; stale STOP-REASON.json/report artefacts; 6 done handoffs with no verdict row; docs/RUNAWAY-POLICY.md from another unit trips WI-014; W_NO_COMMAND vs W_NO_COMMANDS tool/doc drift); (b) full-directory-only cross-test socket interference reddening test_guards and test_projection_calibration, both of which pass in isolation - the leaking monkeypatch lives in test_wire_client/test_client_ttft/test_cell_gates, which this card does not own.",
+  "next_unit_hint": "Open a unit for test isolation: make every `socket.socket = _no_network()` restore from a single fixture (conftest.py) instead of per-test try/finally, then re-run the directory. Separately, reconcile the live artefacts (STOP-REASON.json, verbosity report, docs/RUNAWAY-POLICY.md, handoff verdict rows) in the unit that owns those files, and decide W_NO_COMMAND vs W_NO_COMMANDS in tools/handoff_lint.py against its test.",
+  "write_paths": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/tools/verdict_semantics.py",
+    "/home/zer0null/research extractor/docs/VERDICT-SEMANTICS.md",
+    "/home/zer0null/research extractor/experiments/ptr-engine/tools/arm_treatments_probe.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-8.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-8.json"
+  ]
+}

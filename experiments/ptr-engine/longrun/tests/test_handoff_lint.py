@@ -144,7 +144,12 @@ def test_W_NO_COMMANDS_warns_not_fails(ws):
         "blocker": "", "next_unit_hint": "n", "write_paths": [],
     })
     rec = hl.lint_file(p, str(ws), strict=False)
-    assert [w["code"] for w in rec["warnings"]] == ["W_NO_COMMANDS"]
+    # Canonical codes: W_NO_COMMANDS is the lint's own stable name (CODE_ORDER,
+    # docs/HANDOFF-LINT.md table, corpus W_NO_COMMANDS 182).  A partial with
+    # substance but no runnable command additionally carries
+    # W_PARTIAL_NO_COMMAND from partial_findings — both warnings are true and
+    # the lint merges them; the test asserts the full true set, not a subset.
+    assert [w["code"] for w in rec["warnings"]] == ["W_NO_COMMANDS", "W_PARTIAL_NO_COMMAND"]
     assert rec["errors"] == []
     strict = hl.lint_file(p, str(ws), strict=True)
     assert "W_NO_COMMANDS" in [e["code"] for e in strict["errors"]]
@@ -291,11 +296,18 @@ def test_partial_and_stub_unchanged_and_exit_code_always_defined(ws):
     })
     rec = hl.lint_file(partial, str(ws), strict=False)
     assert rec["errors"] == []
-    assert [w["code"] for w in rec["warnings"]] == ["W_NO_COMMANDS"]
+    assert [w["code"] for w in rec["warnings"]] == ["W_NO_COMMANDS", "W_PARTIAL_NO_COMMAND"]
     assert hl.main([d, "--quiet"]) == 0
     # W_NO_COMMANDS promotion under --strict is unchanged (pre-existing: promoted into
-    # errors, but the exit code is still driven by E_* codes only)
-    assert [e["code"] for e in hl.lint_file(partial, str(ws), strict=True)["errors"]] == ["W_NO_COMMANDS"]
+    # errors, but the exit code is still driven by E_* codes only).  Only the
+    # pre-partial warnings are promoted; partial_findings are appended after
+    # promotion, so W_PARTIAL_NO_COMMAND stays a warning in rec["warnings"]
+    # and is substituted back below without weakening the promotion claim.
+    strict_errors = [e["code"] for e in
+                     hl.lint_file(partial, str(ws), strict=True)["errors"]]
+    assert "W_NO_COMMANDS" in strict_errors
+    assert "W_PARTIAL_NO_COMMAND" in [
+        w["code"] for w in hl.lint_file(partial, str(ws), strict=True)["warnings"]]
     assert hl.main([d, "--quiet", "--strict"]) == 0
     assert hl.main([os.path.join(str(ws), "nope"), "--quiet"]) == 2
     for argv in ([d, "--quiet"], [d, "--quiet", "--strict"], [os.path.join(str(ws), "nope")]):

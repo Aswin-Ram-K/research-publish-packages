@@ -173,6 +173,17 @@ def _window_tokens(planner, info, fixture):
 ANS = "x" * 400  # the same recorded answer in the probe pass and the real pass
 
 
+def run_id_for(rep, tag="arm-treatments-forced"):
+    """A run id in the shape production builds: `f"{run_base}-{arm}-r{rep}"`.
+
+    `run_longrun.py:4014` (and the dry-run builder at :3972) always append `-r{rep}`, and
+    `assert_repeat_identity` refuses a row whose id cannot name its repeat -- that guard
+    exists because a cell once ran twice under one stamp. A hand-written id that omits the
+    rep token is not an id production can produce, so the probe must not invent one.
+    """
+    return "%s-r%s" % (tag, rep)
+
+
 def force(arm, fire_at, wall=None, lease_turns=None):
     """Drive the REAL Planner turn by turn and return the first row with a live marker.
 
@@ -199,7 +210,7 @@ def force(arm, fire_at, wall=None, lease_turns=None):
         if info["digest_request"] is not None:
             kind = "digest"
         resp = _fake_resp(tok)
-        row = R.make_row(cfg, fx, arm, 1, "arm-treatments-forced", t, resp,
+        row = R.make_row(cfg, fx, arm, 1, run_id_for(1), t, resp,
                          "<offline fake answer>", kind, "off" * 20, extra)
         planner.record(t, ANS)
         if first is None:

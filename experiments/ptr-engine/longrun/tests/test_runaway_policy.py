@@ -121,7 +121,11 @@ def _run(tmp, url, turns, runaway, wall_cap, max_tokens, name):
             "--max-turns", str(turns), "--turn-wall-cap", str(wall_cap),
             "--runaway-turns", str(runaway), "--rows", rows,
             "--manifest-path", os.path.join(tmp, "manifest-%s.json" % name),
-            "--base-url", url, "--no-metrics-scrape", "--max-tokens", str(max_tokens)]
+            "--base-url", url, "--no-metrics-scrape", "--max-tokens", str(max_tokens),
+            "--temperature", "0",
+            # own cap over own rows: the corpus ledger's 7869 > 4320 refusal is about
+            # spend, not about the runaway contract this test pins.
+            "--budget-cap", "1000", "--budget-glob", os.path.join(tmp, "*.jsonl")]
     proc = subprocess.run(argv, capture_output=True, text=True, cwd=LONG, timeout=180)
     parsed = []
     if os.path.exists(rows):

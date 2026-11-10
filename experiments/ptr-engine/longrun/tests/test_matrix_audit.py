@@ -239,7 +239,8 @@ class UndecidableTest(unittest.TestCase):
         self.assertGreater(d["arm_registry"]["line"], 0)
         self.assertIn("ARMS", d["arm_registry"]["why_authoritative"])
         self.assertEqual(sorted(d["arm_registry"]["arms"]),
-                         ["lease-reopen", "pointer-stable",
+                         ["bounded-context-fetch", "lease-reopen",
+                          "masking-no-fetch", "pointer-stable", "spcc",
                           "transcript-compact", "transcript-grow"])
         self.assertEqual(d["declaration_gaps"], [])
         self.assertEqual(d["run_manifests"]["arms_source_by_file"],

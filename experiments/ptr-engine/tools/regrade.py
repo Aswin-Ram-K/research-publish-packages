@@ -51,8 +51,11 @@ import grader_identity as gi                       # noqa: E402 - after sys.path
 # through the resolver GRADER-STAMP created, and compares them to this value. When
 # grade_v5.py changes, regrade reports the drift and keeps working; pass `--sha256`
 # to REQUIRE a digest (that is the strict mode, and a mismatch there is exit 3).
-EXPECTED_GRADER_SHA = ("056eb605e2baf5c91e0cb32d037cd0528e406e6c8527eec5"
-                       "5a917a52d9f26772")
+# Repinned 2026-11-09 (U-SPCC-9C): grade_v5.py now hashes to c7c0e5c1; the prior
+# pin 056eb605 was the digest of the pre-ungraded-claims grader bytes and no
+# longer reproduces. Verified: sha256(longrun/grade_v5.py) == c7c0e5c1... .
+EXPECTED_GRADER_SHA = ("c7c0e5c1927ca36399e2e290d0f1079d19ef5e65f361ea2"
+                       "2782017515fa3187d")
 
 # Keys this tool adds to a grade document. They are listed on stdout and accepted
 # as "provenance only" when an older grade file predates them. All three stamp keys

@@ -37,6 +37,7 @@ Each check has one stable code. Errors (`E_*`) set exit 1; warnings (`W_*`) do n
 | `E_DONE_NO_ARTIFACTS` | `status:"done"` listing zero artifacts that exist on disk |
 | `E_STUB` | byte/structurally a stub: `status:"partial"` or `"stub"` with no artifacts, no evidence, no commands |
 | `W_NO_COMMANDS` | `evidence` present but carrying no `commands` array |
+| `W_PARTIAL_NO_COMMAND` | `status:"partial"` with substance but no runnable command string.  This is a separate, co-firing warning: a partial that has evidence but no `commands` carries **both** `W_NO_COMMANDS` and `W_PARTIAL_NO_COMMAND` in `warnings` |
 | `W_VERSION_STALE` | best-effort rule: `orchestration/units/<unit>.md` contains a `superseded` marker **and** is newer than the handoff — i.e. the unit was replaced by a later card and this file describes the old one |
 
 ### What counts as "the artifact exists"

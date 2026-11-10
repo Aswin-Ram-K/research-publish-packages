@@ -1,0 +1,24 @@
+{
+  "unit": "V-SPCC-23",
+  "status": "done",
+  "artifacts": ["orchestration/units/V-SPCC-23.md"],
+  "evidence": {
+    "author_tests": "5 passed in 0.03s",
+    "determinism": "str equal True; prefix_sha256 equal True",
+    "drift": "PtrPrefixDrift raised on model id mutation and on system byte mutation",
+    "prefix_stability": "unique prefixes 1; L3 grows 3",
+    "compaction": "compactions 1; epoch 1; journal []; all index lines present; 1 summary block",
+    "fetch_isolation": "prefix_sha256 equal True",
+    "format_rules": "journal line T3|assistant|T⏎second line (no trailing space); index sorted; mask_output absent from layers.py",
+    "wiring_grep": "compile_prompt/CompactionState/layers imported nowhere in run_longrun.py; layer_tokens always None; prefix_sha256 only pointer-stable arm via sha256_text",
+    "cached_tokens_null": "row cached_tokens None when unreported; cached_tokens_normalized sglang None->0, vllm None->None",
+    "surrounding_suite": "test_layers_compiler+test_cell+test_cell_gates: 27 passed, 13 subtests; test_verdict_semantics collection error pre-existing (exit code 14 unclassified)",
+    "commands": [
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_layers_compiler.py -q",
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_layers_compiler.py experiments/ptr-engine/longrun/tests/test_cell.py experiments/ptr-engine/longrun/tests/test_cell_gates.py -q"
+    ]
+  },
+  "blocker": "layers.compile_prompt is never imported or called in run_longrun.py (or anywhere outside tests/docs); layer_tokens is always None in rows and prefix_sha256 comes only from the pointer-stable arm's sha256_text, so the stable-prefix compiler is unwired on the measurement path; _L0_HASHES is module-global with no reset, risking false PtrPrefixDrift across runs sharing a run_id; compaction's journal reset is only observable via state.journal (the journal param overrides it each call); __init__.py omits escape_journal_content/format_journal_line/RETURN_SYMBOL from layers' __all__.",
+  "next_unit_hint": null,
+  "write_paths": ["orchestration/units/V-SPCC-23.md", "orchestration/handoffs/V-SPCC-23.json"]
+}

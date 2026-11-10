@@ -1,0 +1,30 @@
+{
+  "unit": "U-SPCC-9C",
+  "status": "complete",
+  "artifacts": [
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-9C.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-9C.json"
+  ],
+  "evidence": {
+    "four_file_before": "test_matrix_audit 16 pass 1 fail (4 arms expected, 7 actual); test_build_fixture 4 pass 1 fail (v4 disk byte-mismatch); test_regrade_stamp 4 pass 2 fail (pin 056eb605 vs c7c0e5c1, decoration_stripped era); test_lost_fixture collector /1-only (abs2 242 pins read as lost)",
+    "three_suites_after": "28 passed in 1.25s (test_matrix_audit + test_build_fixture + test_regrade_stamp)",
+    "build_fixture_check": "build_fixture.py --check: ok v1 b7e303a6, v2 0a07db1b, v3 07abab0b, v4 8bdb58ae, v4.tools a592a48f, v4.tools2 5bf5f639, v5 967cef03, v6 ff89625d, v7 42b4df00, v8 0804b515",
+    "abs2_resolution": "digests 53; abs2 pins 242 resolve 242 unresolvable 0 (rows-abs2-2026-11-09.jsonl, pin dacd814b18f3... -> tasks-v7/TX-ABS.v1.json)",
+    "regrade_recompute": "sha256(longrun/grade_v5.py) = c7c0e5c1927ca36399e2e290d0f1079d19ef5e65f361ea22782017515fa3187d; 056eb605 is GRADER_SHA_BEFORE (test_grade_v5_decoration.py:57), the documented pre-repair digest; repin is a stale-pin fix, not a silent alteration",
+    "commands": [
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_matrix_audit.py experiments/ptr-engine/longrun/tests/test_build_fixture.py experiments/ptr-engine/longrun/tests/test_regrade_stamp.py -q",
+      ".venv/bin/python experiments/ptr-engine/tools/build_fixture.py --check"
+    ]
+  },
+  "blocker": "test_lost_fixture.py full pytest exceeds 280s (row_pins over 8210 pins via rglob) and full longrun/tests suite re-runs that scan; both left as background jobs. test_request_ledger::test_g remains red by design (spent 7869 > cap 4320, untouched).",
+  "next_unit_hint": "Speed up test_lost_fixture row_pins (cache fixture_digests result / skip row re-parse) or split it from the full suite; then re-run the full longrun/tests suite for the final count. The 48 disk-pinning v4 rows vs 96 spec-pinning rows note: spec now describes disk (8bdb58ae), so the 48-row provenance is consistent; the old 5a5f8c4b generation is no longer reproducible by design.",
+  "write_paths": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_matrix_audit.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_lost_fixture.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_regrade_stamp.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/tools/regrade.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/fixtures-spec/LR-01.spec.json",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-9C.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-9C.json"
+  ]
+}

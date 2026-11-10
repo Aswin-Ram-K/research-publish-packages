@@ -54,7 +54,7 @@ def _rows(fixture, arm, upto):
         digest = info["digest_request"] is not None
         extra = {"lease": info.get("lease"), "evicted": info.get("evicted"),
                  "digest_at": t if digest else None}
-        row = R.make_row(cfg, fx, arm, 1, "fixture-treatments-forced", t,
+        row = R.make_row(cfg, fx, arm, 1, P.run_id_for(1, "fixture-treatments-forced"), t,
                          P._fake_resp(R.est_tokens(info["prompt"], planner.bpt)),
                          "<offline fake answer>", "digest" if digest else "turn",
                          "off" * 20, extra)

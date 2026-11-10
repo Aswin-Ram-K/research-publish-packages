@@ -1,0 +1,29 @@
+{
+  "unit": "V-SPCC-5B",
+  "status": "done",
+  "artifacts": [
+    "/home/zer0null/research extractor/orchestration/units/V-SPCC-5B.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/V-SPCC-5B.json"
+  ],
+  "evidence": {
+    "suite": "12 passed in 7.53s  (.venv/bin/python -m pytest experiments/ptr-engine/serving/tests/test_spcc_supervisor.py -q)",
+    "check2_window_removal": "normal: run_rc=0 window_exists=false exit_code=0; nonzero: run_rc=7 window_exists=false exit_code=7; SIGTERM: child_pids=[3797756] child_alive_after=[] window_exists=false child_signal=15. All in /tmp bases; real serving/MEM-WINDOW.json absent before and after.",
+    "check3_kill_path": "peak=64424509441 grace=0.2 -> killed='cgroup-peak', child_returncode=-15; child ignoring SIGTERM -> child_returncode=-9 after 0.23s, killed='cgroup-peak', window removed",
+    "check4_read_failure": "peak file unlinked mid-run -> stdout 'aborted: sample-unreadable /tmp/spccbase-6loxvz_5/peak', record aborted='sample-unreadable', aborted_path named, child_returncode=-15, window removed, allowance=UNVERIFIED",
+    "check5_admission": "declared 61 -> rc=2 no window; MemAvailable 0.95 -> rc=2 no window; run no window -> rc=3 marker absent; cgroup root=regular file -> rc=3 'cgroup root not writable: [Errno 20] Not a directory', marker absent, 0 record lines",
+    "check6_cap": "22:CAP_BYTES = 64424509440  # 60 GiB (== 60*1024**3); 228 memory.max write; 289 read-back; 309 cgroup.procs write (only post-launch failure, SIGKILLs child, returns 3); 361 if peak > CAP_BYTES",
+    "check7_accounting": "unaccounted_gb = (opened_ma - close_ma) - cgroup_peak_gb (line 424); positive -> UNVERIFIED (441); BUT killed window (3a) recorded allowance='VERIFIED' with killed='cgroup-peak'; no-op window also VERIFIED with peak 0 unaccounted 0",
+    "commands": [
+      ".venv/bin/python -m pytest experiments/ptr-engine/serving/tests/test_spcc_supervisor.py -q",
+      "SPCC_BASE_DIR=<tmp> SPCC_CGROUP_ROOT=<tmp> SPCC_MEMINFO_PATH=<tmp>/meminfo .venv/bin/python experiments/ptr-engine/serving/spcc_supervisor.py open-window --job X --declared-peak-gb 1",
+      "SPCC_PEAK_FILE=<tmp>/peak ... spcc_supervisor.py run --grace 0.2 -- sleep 30",
+      "grep -n '64424509440|memory.max|cgroup.procs' experiments/ptr-engine/serving/spcc_supervisor.py"
+    ]
+  },
+  "blocker": "1) spcc_supervisor.py:439-444 stamps allowance='VERIFIED' on a cap-killed window (proven: killed='cgroup-peak' with allowance='VERIFIED') — force UNVERIFIED whenever killed_reason is not None. 2) spcc_supervisor.py:414/:424 substitute 0.0 for the cgroup peak and for unaccounted_gb when the closing reads fail, so a row can carry cgroup_peak_gb: 0.0 beside aborted='sample-unreadable' — emit null or omit the field instead of a fabricated zero. 3) spcc_supervisor.py:424,441 treat a negative unaccounted_gb (MemAvailable rising mid-run) exactly like a measured zero and still mark VERIFIED — clamp it and mark UNVERIFIED (or flag measurement noise). 4) spcc_supervisor.py cmd_open_window records 'pid': os.getppid(), the window opener's parent rather than the job or supervisor, so a window opened from a short-lived wrapper is permanently unusable (run returns 3 'recorded pid not alive') until close-window.",
+  "next_unit_hint": "V-SPCC-5C: re-drive checks 3a and 4 after the allowance/zero-substitution fixes; assert killed != null implies allowance == 'UNVERIFIED' and that no row contains a numeric field sourced from a failed read.",
+  "write_paths": [
+    "/home/zer0null/research extractor/orchestration/units/V-SPCC-5B.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/V-SPCC-5B.json"
+  ]
+}
