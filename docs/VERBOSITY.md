@@ -1,6 +1,6 @@
 # VERBOSITY — does the grow arm's longer answer explain the TTFT gap?
 
-_Generated offline by `experiments/ptr-engine/longrun/tests/test_verbosity.py` (sha256 `9f6aa0e984b6595d`) at 2026-11-10T14:57:01Z from 96 rows files. Zero inference requests._
+_Generated offline by `experiments/ptr-engine/longrun/tests/test_verbosity.py` (sha256 `9f6aa0e984b6595d`) at 2026-11-10T18:58:42Z from 103 rows files. Zero inference requests._
 
 **Verdict: `confound_immaterial`.** holding completion length equal leaves 86.7% of the TTFT gap in which arm a (pointer-stable) is 0.37x the first-token latency of arm b (transcript-grow), i.e. b is 2.67x slower; the fitted b_completion is +0.0720 per ln-token and completion length differs 0.19x between the arms, so verbosity covers only 13.3% of it
 
@@ -52,7 +52,14 @@ Scope: p95 TTFT is refused corpus-wide at arm level (no cell reaches n>=60), so 
 | `rows-compliance-diag-2026-11-08.jsonl` | 3 | 0 | `c89dece49389c7903f584b396c59279374c6b2b6071525f34ef4832bbc3f65bd` |
 | `rows-contrast24-tx01-20261109.jsonl` | 51 | 48 | `e74d1edee409eb55b4b0b06b8625bfd082f30139203a3612ddb121b4899cd4ed` |
 | `rows-control-nomask-tx01-20261109.jsonl` | 48 | 48 | `96a66ea4646ee136a968ddff0700efc4ef7ad3c840e0f7ed75774147aa6856f5` |
+| `rows-e1-final-2026-11-10.jsonl` | 300 | 300 | `0c50aa25acdaf380e12590a65c0e1ccb6ccb021e3af21bf305bec97d0629e8bd` |
+| `rows-e1-indexfix-2026-11-10.jsonl` | 343 | 300 | `c76173b156c7cc751d3bf2def0dd71554b8bce66c67b5254112e98d9ff62c3a0` |
+| `rows-e1-parserfix-2026-11-10.jsonl` | 325 | 287 | `53377e69f5c027a6e4c58e04037bb9a0d57fa122371b1ccff69711399d02348e` |
 | `rows-e1-spcc-2026-11-10.jsonl` | 100 | 100 | `65febf07d8561bd6adc0c97015b4e07a302387a5ff5a10ce574170d0c1762216` |
+| `rows-e1-tools-2026-11-10.jsonl` | 318 | 289 | `691b72ed6e06f4065268d026f2b7b02fbc6e480714d45324c89da7f3d4c3d056` |
+| `rows-e2-compact-2026-11-10.jsonl` | 300 | 300 | `9e27d730252c5f4ff4308d5d5dd2befd848575c8ec05e5f4b679f1e613634faf` |
+| `rows-e2-turnover-2026-11-10.jsonl` | 300 | 300 | `ca9fb1cb6a1ae39de275df1a23e85e51a8f00ef2c57f7c842dcc9201c54837cf` |
+| `rows-e3-retain-2026-11-10.jsonl` | 200 | 200 | `8870d1f5624ce2dd88967f3f8648edb385ededf4cfd96faed941a6cdb2612108` |
 | `rows-equalinfo-2026-10-26.jsonl` | 100 | 61 | `c01c7b4a477fe24bc55370ceddf26d885a1fe827e7135023cdde48b271e8c934` |
 | `rows-fetchall-c-20261109.jsonl` | 48 | 48 | `eed2a44094bb683bc1ebf94b472c19d167f37070f4079cc10db7ba575be0a225` |
 | `rows-fetchall-d-20261109.jsonl` | 53 | 48 | `885ee23678f29d252b9498564e80d8b53850f92eeb28caa181528f21138825be` |
@@ -156,7 +163,23 @@ Scope: p95 TTFT is refused corpus-wide at arm level (no cell reaches n>=60), so 
 | `rows-contrast24-tx01-20261109.jsonl` | bounded-context-fetch | 24 | 10.5 / 11.0 / 11.0 / 18.0 | 30.4 / 30.0 / 30.0 | 0.3471 | 857.5 / 1342.9 | 103.0 / 104.3 / 117.1 | refused (n=24<60) |
 | `rows-contrast24-tx01-20261109.jsonl` | masking-no-fetch | 24 | 5.0 / 5.0 / 5.0 / 5.0 | 12.0 / 12.0 / 12.0 | 0.4167 | 475.5 / 765.7 | 93.5 / 92.2 / 114.6 | refused (n=24<60) |
 | `rows-control-nomask-tx01-20261109.jsonl` | masking-no-fetch | 48 | 5.8 / 5.0 / 9.0 / 9.0 | 13.4 / 12.0 / 17.0 | 0.4346 | 970.0 / 1459.8 | 130.8 / 112.9 / 209.3 | refused (n=48<60) |
+| `rows-e1-final-2026-11-10.jsonl` | bounded-context-fetch | 100 | 10.8 / 5.0 / 18.0 / 18.0 | 24.2 / 12.0 / 40.0 | 0.4458 | 2279.5 / 3461.5 | 172.0 / 180.7 / 223.6 | 234.6 |
+| `rows-e1-final-2026-11-10.jsonl` | masking-no-fetch | 100 | 5.9 / 5.0 / 5.5 / 52.0 | 13.1 / 12.0 / 12.4 | 0.4529 | 1765.0 / 2855.5 | 131.8 / 127.6 / 160.9 | 203.5 |
+| `rows-e1-final-2026-11-10.jsonl` | spcc | 100 | 6.2 / 5.0 / 10.0 / 10.0 | 13.0 / 12.0 / 16.0 | 0.4804 | 935.5 / 1252.8 | 116.0 / 116.6 / 127.7 | 132.6 |
+| `rows-e1-indexfix-2026-11-10.jsonl` | bounded-context-fetch | 100 | 7.6 / 10.0 / 10.0 / 10.0 | 14.1 / 16.0 / 16.0 | 0.5398 | 2745.5 / 3784.5 | 145.9 / 133.3 / 200.9 | 206.5 |
+| `rows-e1-indexfix-2026-11-10.jsonl` | masking-no-fetch | 100 | 6.0 / 5.0 / 10.0 / 10.0 | 12.8 / 12.0 / 16.0 | 0.4663 | 2065.0 / 3155.5 | 134.2 / 133.6 / 157.5 | 159.9 |
+| `rows-e1-indexfix-2026-11-10.jsonl` | spcc | 100 | 6.9 / 5.0 / 10.0 / 86.0 | 13.8 / 12.0 / 16.0 | 0.4957 | 1302.5 / 1619.8 | 124.4 / 124.0 / 139.6 | 149.6 |
+| `rows-e1-parserfix-2026-11-10.jsonl` | bounded-context-fetch | 88 | 6.2 / 5.0 / 10.0 / 10.0 | 13.0 / 12.0 / 16.0 | 0.4808 | 2426.0 / 3304.3 | 145.2 / 131.0 / 194.2 | 198.4 |
+| `rows-e1-parserfix-2026-11-10.jsonl` | masking-no-fetch | 100 | 5.4 / 5.0 / 5.0 / 10.0 | 12.3 / 12.0 / 12.0 | 0.4383 | 1765.0 / 2855.5 | 125.1 / 123.7 / 146.2 | 152.2 |
+| `rows-e1-parserfix-2026-11-10.jsonl` | spcc | 99 | 10.8 / 5.0 / 10.0 / 467.0 | 13.9 / 12.0 / 16.0 | 0.7782 | 1289.0 / 1607.6 | 121.8 / 122.0 / 135.4 | 140.5 |
 | `rows-e1-spcc-2026-11-10.jsonl` | spcc | 100 | 6.0 / 5.0 / 10.0 / 10.0 | 12.7 / 12.0 / 16.0 | 0.4720 | 935.5 / 1252.8 | 114.2 / 115.1 / 127.6 | 137.4 |
+| `rows-e1-tools-2026-11-10.jsonl` | bounded-context-fetch | 89 | 6.7 / 5.0 / 10.0 / 18.0 | 13.6 / 12.0 / 16.0 | 0.4950 | 2278.0 / 3376.0 | 243.2 / 144.2 / 219.2 | 230.3 |
+| `rows-e1-tools-2026-11-10.jsonl` | masking-no-fetch | 100 | 5.4 / 5.0 / 5.0 / 10.0 | 12.3 / 12.0 / 12.0 | 0.4383 | 1765.0 / 2855.5 | 123.1 / 122.9 / 142.6 | 148.7 |
+| `rows-e1-tools-2026-11-10.jsonl` | spcc | 100 | 6.2 / 5.0 / 10.0 / 10.0 | 12.9 / 12.0 / 16.0 | 0.4756 | 1288.5 / 1605.8 | 123.0 / 122.9 / 134.8 | 147.2 |
+| `rows-e2-compact-2026-11-10.jsonl` | spcc | 300 | 6.4 / 5.0 / 10.0 / 10.0 | 13.1 / 12.0 / 16.0 | 0.4881 | 945.5 / 1621.8 | 160.0 / 129.9 / 165.3 | 202.9 |
+| `rows-e2-turnover-2026-11-10.jsonl` | spcc | 300 | 7.1 / 5.0 / 10.0 / 10.0 | 13.7 / 12.0 / 16.0 | 0.5212 | 1521.5 / 2650.7 | 137.4 / 129.0 / 198.0 | 216.5 |
+| `rows-e3-retain-2026-11-10.jsonl` | masking-no-fetch | 100 | 7.5 / 10.0 / 10.0 / 10.0 | 14.0 / 16.0 / 16.0 | 0.5377 | 2483.0 / 3742.0 | 131.3 / 133.5 / 154.3 | 158.9 |
+| `rows-e3-retain-2026-11-10.jsonl` | spcc | 100 | 7.4 / 5.0 / 10.0 / 10.0 | 13.9 / 12.0 / 16.0 | 0.5316 | 2119.5 / 3037.4 | 135.5 / 135.6 / 160.0 | 164.2 |
 | `rows-equalinfo-2026-10-26.jsonl` | C0F | 15 | 4.0 / 2.0 / 7.0 / 7.0 | 4.4 / 2.0 / 8.0 | 0.9091 | 22575.0 / 22594.0 | 1004.9 / 183.8 / 3152.0 | refused (n=15<60) |
 | `rows-equalinfo-2026-10-26.jsonl` | C0FT | 18 | 96.5 / 4.5 / 283.0 / 283.0 | 3.0 / 2.0 / 8.0 | 32.1667 | 22617.5 / 22700.0 | 3115.8 / 192.5 / 9130.2 | refused (n=18<60) |
 | `rows-equalinfo-2026-10-26.jsonl` | R | 28 | 78.8 / 7.0 / 249.7 / 298.0 | 9.9 / 2.0 / 22.0 | 7.9675 | 2578.0 / 12937.6 | 2697.8 / 603.1 / 7722.1 | refused (n=28<60) |
@@ -279,7 +302,14 @@ Regression pooled across arms **within one file**, so no slope crosses a file bo
 | `rows-cell-transcript-grow-20261028T032058Z.jsonl` | 53 | +1.2747 | +0.0964 | 0.152 | +0.0881 | -0.038 |
 | `rows-contrast24-tx01-20261109.jsonl` | 51 | +0.2431 | +0.2538 | 0.504 | +0.3869 | 0.654 |
 | `rows-control-nomask-tx01-20261109.jsonl` | 48 | -0.3947 | +0.3237 | 0.264 | -0.0018 | 0.406 |
+| `rows-e1-final-2026-11-10.jsonl` | 300 | +0.0688 | +0.2874 | 0.342 | +0.3023 | 0.174 |
+| `rows-e1-indexfix-2026-11-10.jsonl` | 343 | +0.1018 | +0.4857 | 0.748 | +0.5027 | 0.243 |
+| `rows-e1-parserfix-2026-11-10.jsonl` | 325 | +0.1545 | +0.3909 | 0.676 | +0.4072 | 0.161 |
 | `rows-e1-spcc-2026-11-10.jsonl` | 100 | +0.2513 | +0.1064 | 0.215 | +0.1709 | 0.379 |
+| `rows-e1-tools-2026-11-10.jsonl` | 318 | +0.1277 | +0.3709 | 0.365 | +0.3964 | 0.225 |
+| `rows-e2-compact-2026-11-10.jsonl` | 300 | -0.0356 | +0.0699 | 0.005 | +0.0608 | 0.273 |
+| `rows-e2-turnover-2026-11-10.jsonl` | 300 | +0.0552 | +0.1287 | 0.056 | +0.1364 | 0.114 |
+| `rows-e3-retain-2026-11-10.jsonl` | 200 | +0.0605 | +0.2739 | 0.493 | +0.2962 | 0.204 |
 | `rows-equalinfo-2026-10-26.jsonl` | 67 | -0.0244 | +0.6549 | 0.693 | +0.6610 | -0.397 |
 | `rows-fetchall-c-20261109.jsonl` | 48 | +0.4636 | +0.6249 | 0.571 | +1.9982 | — |
 | `rows-fetchall-d-20261109.jsonl` | 53 | +0.4485 | +0.2808 | 0.665 | +0.3578 | 0.425 |
@@ -335,6 +365,19 @@ A positive `b_prompt` is prefill cost — more prompt tokens, later first token.
 | `rows-abs2-2026-11-09.jsonl` | bounded-context-fetch − masking-no-fetch | 0.97x | 1.28x | +0.006 | +0.097 | -0.134 | -20% / -316% / 436% | 416.0% | 100.0% |
 | `rows-agg2-2026-11-09.jsonl` | bounded-context-fetch − masking-no-fetch | 1.35x | 1.76x | +0.006 | +0.058 | +0.234 | 2% / 19% / 79% | 80.6% | 67.9% |
 | `rows-contrast24-tx01-20261109.jsonl` | bounded-context-fetch − masking-no-fetch | 1.11x | 2.05x | +0.146 | +0.182 | -0.228 | 145% / 181% / -227% | -81.5% | -176.6% |
+| `rows-e1-final-2026-11-10.jsonl` | bounded-context-fetch − masking-no-fetch | 1.28x | 1.64x | +0.016 | +0.143 | +0.087 | 6% / 58% / 35% | 41.8% | 38.8% |
+| `rows-e1-final-2026-11-10.jsonl` | bounded-context-fetch − spcc | 1.43x | 1.50x | +0.048 | +0.117 | +0.190 | 13% / 33% / 53% | 67.0% | 65.3% |
+| `rows-e1-final-2026-11-10.jsonl` | masking-no-fetch − spcc | 1.12x | 0.92x | +0.032 | -0.025 | +0.104 | 29% / -23% / 94% | 122.7% | 100.0% |
+| `rows-e1-indexfix-2026-11-10.jsonl` | bounded-context-fetch − masking-no-fetch | 1.07x | 1.26x | +0.032 | +0.111 | -0.076 | 48% / 165% / -112% | -64.6% | -70.3% |
+| `rows-e1-indexfix-2026-11-10.jsonl` | bounded-context-fetch − spcc | 1.16x | 1.20x | +0.066 | +0.091 | -0.012 | 46% / 62% / -8% | 37.6% | -368.1% |
+| `rows-e1-indexfix-2026-11-10.jsonl` | masking-no-fetch − spcc | 1.08x | 0.96x | +0.034 | -0.021 | +0.064 | 44% / -26% / 83% | 126.5% | 100.0% |
+| `rows-e1-parserfix-2026-11-10.jsonl` | bounded-context-fetch − masking-no-fetch | 1.14x | 1.13x | +0.053 | +0.046 | +0.034 | 40% / 35% / 25% | 65.4% | 63.9% |
+| `rows-e1-parserfix-2026-11-10.jsonl` | bounded-context-fetch − spcc | 1.17x | 0.97x | +0.074 | -0.012 | +0.097 | 47% / -8% / 61% | 107.7% | 100.0% |
+| `rows-e1-parserfix-2026-11-10.jsonl` | masking-no-fetch − spcc | 1.03x | 0.86x | +0.021 | -0.058 | +0.063 | 82% / -225% / 244% | 325.1% | 100.0% |
+| `rows-e1-tools-2026-11-10.jsonl` | bounded-context-fetch − masking-no-fetch | 1.33x | 1.19x | +0.044 | +0.066 | +0.173 | 16% / 23% / 61% | 76.8% | 75.2% |
+| `rows-e1-tools-2026-11-10.jsonl` | bounded-context-fetch − spcc | 1.33x | 1.08x | +0.062 | +0.027 | +0.196 | 22% / 10% / 69% | 90.5% | 89.8% |
+| `rows-e1-tools-2026-11-10.jsonl` | masking-no-fetch − spcc | 1.00x | 0.90x | +0.018 | -0.039 | +0.022 | 1059% / -2299% / 1340% | 2398.6% | 100.0% |
+| `rows-e3-retain-2026-11-10.jsonl` | masking-no-fetch − spcc | 0.97x | 1.02x | +0.006 | +0.006 | -0.047 | -18% / -16% / 134% | 116.5% | 116.5% |
 | `rows-equalinfo-2026-10-26.jsonl` | C0F − C0FT | 0.48x | 0.26x | +0.000 | -0.890 | +0.165 | -0% / 123% / -23% | -22.7% | -813.7% |
 | `rows-equalinfo-2026-10-26.jsonl` | C0F − R | 0.40x | 0.26x | -0.051 | -0.881 | +0.011 | 6% / 96% / -1% | 4.3% | 3.4% |
 | `rows-equalinfo-2026-10-26.jsonl` | C0FT − R | 0.82x | 1.01x | -0.051 | +0.008 | -0.153 | 26% / -4% / 78% | 104.2% | 64.1% |
@@ -413,7 +456,23 @@ On the **p50** basis the gap is **0.35x** (prompt -0.672, completion -0.142, res
 | `rows-contrast24-tx01-20261109.jsonl` | bounded-context-fetch | 24 | 11 | 30 | 1.00 | 0.04 |
 | `rows-contrast24-tx01-20261109.jsonl` | masking-no-fetch | 24 | 5 | 12 | 1.00 | 0.00 |
 | `rows-control-nomask-tx01-20261109.jsonl` | masking-no-fetch | 48 | 5 | 12 | 1.00 | 0.25 |
+| `rows-e1-final-2026-11-10.jsonl` | bounded-context-fetch | 100 | 5 | 12 | 1.00 | 0.05 |
+| `rows-e1-final-2026-11-10.jsonl` | masking-no-fetch | 100 | 5 | 12 | 1.00 | 0.08 |
+| `rows-e1-final-2026-11-10.jsonl` | spcc | 100 | 5 | 12 | 1.00 | 0.22 |
+| `rows-e1-indexfix-2026-11-10.jsonl` | bounded-context-fetch | 100 | 10 | 16 | 1.00 | 0.48 |
+| `rows-e1-indexfix-2026-11-10.jsonl` | masking-no-fetch | 100 | 5 | 12 | 1.00 | 0.08 |
+| `rows-e1-indexfix-2026-11-10.jsonl` | spcc | 100 | 5 | 12 | 0.99 | 0.20 |
+| `rows-e1-parserfix-2026-11-10.jsonl` | bounded-context-fetch | 88 | 5 | 12 | 1.00 | 0.19 |
+| `rows-e1-parserfix-2026-11-10.jsonl` | masking-no-fetch | 100 | 5 | 12 | 1.00 | 0.08 |
+| `rows-e1-parserfix-2026-11-10.jsonl` | spcc | 99 | 5 | 12 | 0.98 | 0.21 |
 | `rows-e1-spcc-2026-11-10.jsonl` | spcc | 100 | 5 | 12 | 0.98 | 0.20 |
+| `rows-e1-tools-2026-11-10.jsonl` | bounded-context-fetch | 89 | 5 | 12 | 1.00 | 0.25 |
+| `rows-e1-tools-2026-11-10.jsonl` | masking-no-fetch | 100 | 5 | 12 | 1.00 | 0.08 |
+| `rows-e1-tools-2026-11-10.jsonl` | spcc | 100 | 5 | 12 | 1.00 | 0.22 |
+| `rows-e2-compact-2026-11-10.jsonl` | spcc | 300 | 5 | 12 | 1.00 | 0.25 |
+| `rows-e2-turnover-2026-11-10.jsonl` | spcc | 300 | 5 | 12 | 1.00 | 0.41 |
+| `rows-e3-retain-2026-11-10.jsonl` | masking-no-fetch | 100 | 10 | 16 | 1.00 | 0.42 |
+| `rows-e3-retain-2026-11-10.jsonl` | spcc | 100 | 5 | 12 | 1.00 | 0.48 |
 | `rows-equalinfo-2026-10-26.jsonl` | C0F | 15 | 2 | 2 | 0.00 | 0.00 |
 | `rows-equalinfo-2026-10-26.jsonl` | C0FT | 18 | 4 | 2 | 0.00 | 0.00 |
 | `rows-equalinfo-2026-10-26.jsonl` | R | 28 | 7 | 2 | 0.00 | 0.00 |
@@ -487,7 +546,7 @@ On the **p50** basis the gap is **0.35x** (prompt -0.672, completion -0.142, res
 
 ## 6. Limits
 
-- No p95 is published for any cell: the largest per-(file,arm) completed-turn cell is 221 rows, below the 60 floor. Mean/median/p90 published with n.
+- No p95 is published for any cell: the largest per-(file,arm) completed-turn cell is 300 rows, below the 60 floor. Mean/median/p90 published with n.
 - TTFT is clocked to the first streamed delta; completion tokens are produced after that instant, so completion length cannot mechanically delay TTFT. b_completion is the load-bearing test of that.
 - Answer length remains a real confound for quality and for ANSWER:-line production, which is a different dependent variable from TTFT.
 - No field in these rows separates prefill *compute* from server queueing/wait: `ttft_ms` is one client-side first-delta clock. The prompt-side share is therefore a **proxy** (fitted on prompt tokens), not measured prefill FLOPs. A server-side `prefill_ms` (or per-request `queue_wait_ms`) is what would split them.
