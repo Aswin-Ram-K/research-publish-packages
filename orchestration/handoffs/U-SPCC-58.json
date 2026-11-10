@@ -1,0 +1,46 @@
+{
+  "unit": "U-SPCC-58",
+  "status": "done",
+  "artifacts": [
+    "orchestration/units/U-SPCC-58.md",
+    "orchestration/handoffs/U-SPCC-58.json"
+  ],
+  "evidence": {
+    "rows_file": "experiments/ptr-engine/measure/rows-e1-indexfix-2026-11-10.jsonl",
+    "baseline_file": "experiments/ptr-engine/measure/rows-e1-parserfix-2026-11-10.jsonl",
+    "method": "rebuilt all 100 masking-no-fetch prompts through longrun/run_longrun.py Planner.build plus checkpoint_prompt (run_longrun.py:2348) on the 48 checkpoint turns, replaying recorded content as each turn's answer; all 100 reconstructed prompts hash byte-identically to the row prompt_sha256 (0 mismatches)",
+    "prompt_sha_matches": 100,
+    "prompt_sha_mismatches": 0,
+    "rows": [
+      {"turn": 6, "checkpoint": "cp.TX-03.f01.d5", "expected": "3001", "answered": "4000", "kind": "NUM", "prompt_sha256": "e25423130ee3ff09176d3e4e4df0aaf6eaa00f19058f086d56c7f2e7409699ee", "source": "nowhere", "class": "pure confabulation"},
+      {"turn": 7, "checkpoint": "cp.TX-03.f01.d6", "expected": "3002", "answered": "5000", "kind": "NUM", "prompt_sha256": "7e86deac4faae009", "source": "nowhere", "class": "pure confabulation"},
+      {"turn": 9, "checkpoint": "cp.TX-03.f01.d8", "expected": "3003", "answered": "3103", "kind": "NUM", "prompt_sha256": "43cd3bb373005ac4", "source": "doc-fact-02 body in L3 (TOOL_OUTPUT doc-fact-02@1, VAL_D = 3103), delivered T8, unmasked at T9", "class": "cross-fact confusion"},
+      {"turn": 13, "checkpoint": "cp.TX-03.f02.d5", "expected": "3101", "answered": "4100", "kind": "NUM", "prompt_sha256": "71bac924928b289c", "source": "nowhere", "class": "pure confabulation"},
+      {"turn": 14, "checkpoint": "cp.TX-03.f02.d6", "expected": "3102", "answered": "4103", "kind": "NUM", "prompt_sha256": "0d5e2409984801c2", "source": "nowhere", "class": "pure confabulation"},
+      {"turn": 22, "checkpoint": "cp.TX-03.f03.d5", "expected": "3201", "answered": "4200", "kind": "NUM", "prompt_sha256": "9d8b12c4f7886c48", "source": "nowhere", "class": "pure confabulation"},
+      {"turn": 23, "checkpoint": "cp.TX-03.f03.d6", "expected": "3202", "answered": "4203", "kind": "NUM", "prompt_sha256": "f0dfb2a890f66189", "source": "nowhere", "class": "pure confabulation"},
+      {"turn": 25, "checkpoint": "cp.TX-03.f03.d8", "expected": "3203", "answered": "4203", "kind": "NUM", "prompt_sha256": "fdff0ee60717e3b1", "source": "its own T23 answer (ANSWER (T23): ANSWER: NUM 4203) - self-echo of a confabulation", "class": "pure confabulation"},
+      {"turn": 29, "checkpoint": "cp.TX-03.f04.d5", "expected": "3301", "answered": "4300", "kind": "NUM", "prompt_sha256": "ee97a259ad1e594e", "source": "nowhere", "class": "pure confabulation"},
+      {"turn": 30, "checkpoint": "cp.TX-03.f04.d6", "expected": "3302", "answered": "4303", "kind": "NUM", "prompt_sha256": "c241e39f383bfb14", "source": "nowhere", "class": "pure confabulation"}
+    ],
+    "classification_counts": {"cross_fact_confusion": 1, "index_leakage": 0, "pure_confabulation": 9},
+    "index_leakage_check": "none of 4000 5000 4100 4103 4200 4203 4300 4303 occurs in index_lines(fixture); the index carries ref names, hash8 and byte counts only, no fact value",
+    "fixture_body_check": "searching all 22 fixture bodies (documents + every turn tool_outputs) for the eight confabulated numbers returns zero hits; only 3103 occurs, in doc-fact-02",
+    "correct_turns_both_cells": [3, 10, 19, 26, 47, 54, 63, 70],
+    "correct_turns_are_all_d2": true,
+    "parserfix_same_turns": "all ten are answer_kind NONE in rows-e1-parserfix-2026-11-10.jsonl",
+    "index_token_delta": "~250-290 prompt tokens per turn (T6 440->690, T29 1154->1444): 13 index lines instead of 1",
+    "verdict": "The 0->10 shift is an artefact of the index change, not a property of the masking arm. The arm's design (answer from context or NONE) is unchanged and the values it produced are not in the context it was given. The shared L1 now advertises 13 fetchable refs to an arm with no fetch tool, which primes the model to answer with invented numbers instead of abstaining. No value leaked from the index; the index leaked only names the question already states.",
+    "consequence_for_8_of_48": "The 8/48 is still a fair retention measure: the 8 correct are the in-window d2 checkpoints, identical in both cells, untouched by the index change. The 0->10 wrong count is not a measure of the arm: it is measured under a prompt that shows the arm 13 refs it cannot address, and that prompt converts abstention into confabulation. The 8/48 retention score stands; the wrong-answer count is a prompt-design artefact.",
+    "doc_check": "OK docs clean, exit 0",
+    "endpoint_requests": 0,
+    "model_calls": 0,
+    "code_or_prompt_changed": false
+  },
+  "blocker": null,
+  "next_unit_hint": "The masking arm's 0->10 wrong shift is confabulation induced by an index it cannot address, not cross-fact confusion or index leakage. If the masking arm is to be reported as an abstention baseline, either give it the same 1-line index the parserfix cell used, or report its 8/48 retention score alone and drop the wrong-answer count. Do not read the 10 wrong answers as an arm property.",
+  "write_paths": [
+    "orchestration/units/U-SPCC-58.md",
+    "orchestration/handoffs/U-SPCC-58.json"
+  ]
+}
