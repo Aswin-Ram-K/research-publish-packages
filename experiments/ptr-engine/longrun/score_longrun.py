@@ -142,46 +142,66 @@ manufacturing a failure out of ordinary drift.
 
 
 def billed_of(record):
-    """``(billed_tokens, source)`` for one row; ``(None, None)`` when it contributes nothing.
+    """``(billed_tokens, source)`` for one row; ``(None, "unknown")`` when unmeasured.
 
     ``billed_tokens`` is the number of prompt tokens the SERVER charged for. Every token
     it did not report as cached was prefilled and charged, so:
 
     * ``prompt_tokens - cached_tokens`` when the row reports ``cached_tokens``;
-    * ``prompt_tokens`` when ``cached_tokens`` is null — nothing was served from cache,
-      so the whole prompt is billed (per the engine null semantics: SGLang omits the
-      counter when it is 0);
-    * ``None`` only when ``prompt_tokens`` is missing: no prompt, no bill.
+    * ``prompt_tokens`` on the FIRST turn when ``cached_tokens`` is null — the first
+      request of a run has no prior prefix to hit, so ``cached = 0`` follows from the
+      cache MECHANISM, not from an assumption about the missing counter;
+    * ``None`` when ``cached_tokens`` is null on any later turn — ABSENT is not 0: there
+      IS a prior prefix, so the billed quantity is genuinely UNKNOWN and must never be
+      reported as the whole prompt;
+    * ``None`` when ``prompt_tokens`` is missing: no prompt, no bill.
 
     ``billed_tokens`` is NOT ``uncached_tokens``: the server's prefill accounting leaves
     557 tokens (0.32%) unexplained on the 100-turn SGLang billed proof, so summing
     ``uncached`` understates the bill. ``uncached`` is a separate observation and
-    ``reconcile_delta_tokens`` keeps the residual visible.
+    ``reconcile_delta_tokens`` keeps the residual visible. ``uncached`` is also null on
+    exactly the rows where the cache counter is missing, so it cannot settle them.
 
-    Sources: ``"field"`` when the row stamps ``billed_tokens`` itself (rows written by
-    ``run_longrun.make_row``), ``"derived"`` when the consumer computes it from the
-    prompt/cache report (rows written before that stamp existed).
+    Sources: the row's own ``billed_source`` stamp when it carries one (``"reported"``,
+    ``"first-turn-no-cache"``, ``"unknown"``, or the legacy ``"server_cache_report"``);
+    otherwise ``"field"`` for a bare numeric ``billed_tokens`` and the same rule as the
+    stamp for a row written before it existed.
     """
     if not isinstance(record, dict):
-        return None, None
-    b = record.get("billed_tokens")
-    if isinstance(b, (int, float)):
-        return int(b), "field"
+        return None, "unknown"
     prompt = record.get("prompt_tokens")
-    if not isinstance(prompt, (int, float)):
-        return None, None
     cached = record.get("cached_tokens")
+    turn = record.get("turn")
+    stamped = record.get("billed_tokens")
+    stamped_source = record.get("billed_source")
+    # ABSENT is not 0, and it overrides any older stamp that assumed otherwise: a null
+    # cache counter past the first turn leaves the bill unmeasured.
+    if cached is None and turn != 1:
+        return None, "unknown"
+    if isinstance(stamped, (int, float)):
+        return int(stamped), (stamped_source or "field")
+    if not isinstance(prompt, (int, float)):
+        return None, "unknown"
     if isinstance(cached, (int, float)):
-        return int(prompt) - int(cached), "derived"
-    return int(prompt), "derived"
+        return int(prompt) - int(cached), "reported"
+    if turn == 1:
+        return int(prompt), "first-turn-no-cache"
+    return None, "unknown"
 
 
 def billing_block(records):
     """Aggregate billed accounting over the given turn records.
 
-    ``billed_tokens`` sums ``billed_of`` over the rows (see that function for the
-    definition). A sum over zero contributing rows is ``None``, never 0 — an unwritten
-    field and a genuinely free request must not read the same.
+    ``billed_tokens_known`` sums ``billed_of`` over the rows that yielded a value (see
+    that function for the definition); it is the established LOWER bound on what was
+    charged. A sum over zero contributing rows is ``None``, never 0 — an unwritten field
+    and a genuinely free request must not read the same.
+
+    ``billed_upper_bound_tokens`` adds the whole ``prompt_tokens`` of every UNKNOWN row
+    (the worst case: nothing was cached), and ``billed_unknown_rows`` /
+    ``billed_unknown_turns`` name what is missing. ``billed_coverage`` is known rows over
+    all rows, so it is strictly below 1.0 whenever a row is unknown — it must never be
+    read as "every row contributed a billed quantity".
 
     Two cache fractions, each with its denominator in the name, because the same name
     meant two different quantities across artefacts (0.920768 vs 0.917821 for this run):
@@ -205,6 +225,8 @@ def billing_block(records):
     records = [r for r in (records or []) if isinstance(r, dict)]
     prompt_total = cached_total = uncached_total = 0
     billed_total = billed_rows = reported_rows = 0
+    billed_unknown = billed_unknown_prompt = 0
+    billed_unknown_turns = []
     sources = set()
     reconcile_delta = 0
     for r in records:
@@ -228,6 +250,13 @@ def billing_block(records):
             billed_total += b
             billed_rows += 1
             sources.add(src)
+        else:
+            # Unknown, not zero: the row's whole prompt is what the bill COULD be.
+            billed_unknown += 1
+            billed_unknown_turns.append(
+                r.get("turn") if isinstance(r.get("turn"), int) else None)
+            if isinstance(p, (int, float)):
+                billed_unknown_prompt += int(p)
     coverage = (reported_rows / len(records)) if records else None
     billed_coverage = (billed_rows / len(records)) if records else None
     if not records:
@@ -265,7 +294,13 @@ def billing_block(records):
         "prompt_tokens": prompt_total,
         "cached_tokens": cached_total,
         "uncached_tokens": uncached_total,
+        # The bare key is the KNOWN quantity, never the upper bound.
         "billed_tokens": billed_total if billed_rows else None,
+        "billed_tokens_known": billed_total if billed_rows else None,
+        "billed_upper_bound_tokens": ((billed_total + billed_unknown_prompt)
+                                      if records else None),
+        "billed_unknown_rows": billed_unknown,
+        "billed_unknown_turns": billed_unknown_turns,
         "billed_source": billed_source,
         "cached_fraction_of_prompt": cached_fraction_of_prompt,
         "cached_fraction_of_accounted": cached_fraction_of_accounted,

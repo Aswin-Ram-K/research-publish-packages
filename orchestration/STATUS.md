@@ -564,12 +564,17 @@ fabricate history. (4) `test_verdict_ritual::LiveLedgerTest::test_no_new_unverdi
 ran `--claim-mode plumbing --arms masking-no-fetch` on `tasks-v7/TX-03.v1.json`: **100 turns / 100
 requests, 0 failed, 0 truncated, `finish_reason{"stop":100}`**. Bill re-derives: **prompt 174,047 · cached
 159,744 · uncached 13,746 ⇒ cached/prompt 0.917821**; `cached_tokens` null on turns **[1, 5]** only;
-**557** prompt tokens accounted as neither. After the stamping fix (`U-SPCC-11`, no model call):
-`billed_tokens` **14,303** (`billed_source "derived"`; defined as `prompt − cached`, and `= prompt` when
-`cached` is null, never `uncached_tokens`, never `0`); the ambiguous `cached_fraction` was **removed** for
+**557** prompt tokens accounted as neither. The bill is a **BOUND**, not a measurement (`ABSENT ≠ 0`), after
+the stamping fix (`U-SPCC-18`, no model call): `billed_tokens_known` **14,007** (established lower bound),
+`billed_upper_bound_tokens` **14,303**, `billed_unknown_rows` **1**, `billed_unknown_turns` **[5]**,
+`billed_coverage` **0.99** — **at most 14,303, with at least 14,007 established and 296 tokens on turn 5
+unmeasured** (turn 1's 261 are settled by the cache mechanism: the first request has no prior prefix). Per
+row: `prompt − cached` when reported (`"reported"`), the whole prompt on turn 1 only
+(`"first-turn-no-cache"`), and `null`/`"unknown"` past turn 1 — never `uncached_tokens`, never `0`. The
+ambiguous `cached_fraction` was **removed** for
 `cached_fraction_of_prompt` **0.917821048337518** and `cached_fraction_of_accounted` **0.920767767594674**;
 `reconcile_delta_total` **557** against tolerance **1,740** (1 % of prompt) — **within tolerance true**.
-**14,303 is charged; 159,744 is the discount**; the residual is reported, not asserted away. **Open on it:**
+**At most 14,303 is charged; 159,744 is the discount**; the residual is reported, not asserted away. **Open on it:**
 the scorecard exits **1** with **40/50 answer-shape failures (`kind NONE != NUM`)**, so this licenses the
 billing account and **nothing** about accuracy on that arm/fixture pairing. The landed score file
 `experiments/ptr-engine/measure/score-spcc-billedproof-2026-11-10.json` still carries the stale

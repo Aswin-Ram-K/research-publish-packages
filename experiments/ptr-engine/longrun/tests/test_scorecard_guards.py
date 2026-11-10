@@ -73,7 +73,8 @@ def test_null_cached_coverage():
     # use synthetic fixture? Just billing_block directly
     recs = [
         {"prompt_tokens": 100, "cached_tokens": 40, "uncached_tokens": 60, "billed_tokens": None},
-        {"prompt_tokens": 120, "cached_tokens": None, "uncached_tokens": 120, "billed_tokens": None},
+        {"prompt_tokens": 120, "cached_tokens": None, "uncached_tokens": 120,
+         "billed_tokens": None, "turn": 1},
     ]
     b = sl.billing_block(recs)
     assert b["coverage"] == 0.5
@@ -85,12 +86,17 @@ def test_null_cached_coverage():
     assert b["billed_tokens"] == 180
     assert b["attribution"] == "available"
 
-def test_no_cached_counter_bills_the_whole_prompt():
-    # A missing cache counter means nothing was cached: the prompt is billed in full, so
-    # attribution stays "available". Zero attributed rows is the null case, not this one.
-    recs = [{"prompt_tokens": 10, "cached_tokens": None}]
+def test_no_cached_counter_after_turn_one_is_unknown_not_the_whole_prompt():
+    # ABSENT is not 0: past the first turn a prior prefix exists, so a missing cache
+    # counter leaves the billed quantity unknown -- not the full prompt, not zero.
+    recs = [{"prompt_tokens": 10, "cached_tokens": None, "turn": 5}]
     b = sl.billing_block(recs)
     assert b["cached_fraction_of_prompt"] == 0.0
-    assert b["billed_tokens"] == 10
-    assert b["attribution"] == "available"
+    assert b["billed_tokens"] is None
+    assert b["billed_tokens_known"] is None
+    assert b["billed_upper_bound_tokens"] == 10
+    assert b["billed_unknown_rows"] == 1
+    assert b["billed_unknown_turns"] == [5]
+    assert b["billed_coverage"] == 0.0
+    assert b["attribution"] == "unavailable"
     assert b["coverage"] == 0.0

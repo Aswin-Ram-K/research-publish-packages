@@ -15,9 +15,11 @@ The live work is the **serving-context programme (SPCC)**: the layer compiler ex
 the `spcc` arm, the memory allowance is a supervisor decision chain whose `VERIFIED` is only reachable as
 a last resort, and **E1–E6 are pre-registered** (§1a). The **billed-accounting plumbing proof is live**
 (100 turns, 0 failed; prompt 174,047 · cached 159,744 ⇒ **0.917821**), but the arm's answers are **not**:
-that run's scorecard exits **1** with **40/50 answer-shape failures**; the bill itself is settled —
-**billed 14,303 charged** (`billed_source "derived"`) against **159,744 discounted**, with a **557**-token
-residual reported inside a **1,740** tolerance. The gen-6 grid
+that run's scorecard exits **1** with **40/50 answer-shape failures**; the bill itself is **bounded, not
+settled** — **`billed_tokens_known` 14,007, at most 14,303**, `billed_coverage` **0.99**: the **296** tokens
+on turn **5** are unmeasured (`ABSENT ≠ 0`) and turn **1**'s 261 are settled by the cache mechanism (no
+prior prefix), not by assumption — against **159,744 discounted**, with a **557**-token residual reported
+inside a **1,740** tolerance. The gen-6 grid
 verdict stays **`not_adjudicable`**, and the ledger stands at **7,969 spent / 4,125 remaining of 12,094**
 (re-measured 2026-11-10; the 4,320 default cap in the ledger tool is exceeded and that is a decision, §6).
 Two machine changes block the plan's own verification items and both are user decisions: the SGLang
@@ -135,14 +137,20 @@ ran `run_longrun.py --claim-mode plumbing --arms masking-no-fetch --fixture task
 **100 rows / 100 requests, 0 failed, 0 truncated, `finish_reason{"stop":100}`**. Its bill re-derives:
 **prompt 174,047 · cached 159,744 · uncached 13,746 ⇒ cached/prompt 0.917821**; `cached_tokens` is `null`
 on turns **[1, 5]** (`coverage 0.98`), and **557 prompt tokens are accounted as neither** (174,047 −
-159,744 − 13,746). **The bill, after the stamping fix (`U-SPCC-11`, no model call):**
-`billed_tokens` **14,303** with `billed_source "derived"` — defined as `prompt − cached`, and `= prompt`
-when `cached` is null, because SGLang omits the counter when nothing was cached; it is **never**
+159,744 − 13,746). **The bill is a BOUND, not a measurement (`ABSENT ≠ 0`), after the stamping fix
+(`U-SPCC-18`, no model call):** `billed_tokens_known` **14,007** (the established lower bound),
+`billed_upper_bound_tokens` **14,303** (nothing cached on the unknown row), `billed_unknown_rows` **1**,
+`billed_unknown_turns` **[5]**, `billed_coverage` **0.99** — **at most 14,303, with at least 14,007
+established and 296 tokens on turn 5 unmeasured**. Per row: `prompt − cached` when the counter is
+reported (`billed_source "reported"`); the whole prompt on turn 1 only (`"first-turn-no-cache"` — the
+first request has no prior prefix, so `cached = 0` follows from the mechanism); and `null`/`"unknown"`
+past turn 1, because a missing counter is **not** nothing-cached. `billed_tokens` is **never**
 `uncached_tokens` and **never** `0`. The single ambiguous `cached_fraction` was **removed** in favour of
 two named fields: `cached_fraction_of_prompt` **0.917821048337518** and `cached_fraction_of_accounted`
 **0.920767767594674**. `reconcile_delta_total` **557** against tolerance **1,740** (1 % of prompt) —
-**within tolerance true**; the residual is **reported, not asserted away**. **14,303 is charged; 159,744 is
-the discount.** **What it does not prove:** the scorecard exits **1** with **40/50 checks failing on answer
+**within tolerance true**; the residual is **reported, not asserted away**. **The bill is between 14,007 and
+14,303; 159,744 is the discount** — 14,303 is the upper bound, not the charged quantity. **What it does not
+prove:** the scorecard exits **1** with **40/50 checks failing on answer
 shape (`kind NONE != NUM`)**, so this is a billing proof, not evidence that `masking-no-fetch` works on
 `TX-03`. The landed score file `experiments/ptr-engine/measure/score-spcc-billedproof-2026-11-10.json` still
 carries the stale `billed_tokens: 0` block; a landing unit refreshes it and it must not be cited.
@@ -537,10 +545,12 @@ default), `test_lost_fixture` (rows pin a fixture that is not on disk; row files
 
 **Live billed proof — DONE, plumbing only** (`orchestration/handoffs/U-SPCC-LIVE.json`): 100 turns, 0
 failed, 0 truncated; prompt **174,047**, cached **159,744**, uncached **13,746**, cached/prompt
-**0.917821**, billed **14,303**; `null` cached on turns **[1, 5]** only; **557** prompt tokens accounted as
-neither. After the stamping fix (`U-SPCC-11`): `billed_tokens` **14,303** (`billed_source "derived"`),
+**0.917821**, billed **between 14,007 and 14,303**; `null` cached on turns **[1, 5]** only; **557** prompt
+tokens accounted as neither. After the stamping fix (`U-SPCC-18`): `billed_tokens_known` **14,007**,
+`billed_upper_bound_tokens` **14,303**, `billed_unknown_rows` **1** (turn **5**, 296 tokens — turn 1's 261
+follow from the cache mechanism), `billed_coverage` **0.99**,
 `cached_fraction_of_prompt` **0.917821048337518**, `cached_fraction_of_accounted` **0.920767767594674**,
-`reconcile_delta_total` **557** within tolerance **1,740** — **14,303 charged, 159,744 discounted**, 557
-residual reported. **Open on it:** the scorecard exits **1** with 40/50 answer-shape failures, so it
+`reconcile_delta_total` **557** within tolerance **1,740** — **at most 14,303 charged, 159,744
+discounted**, 557 residual reported. **Open on it:** the scorecard exits **1** with 40/50 answer-shape failures, so it
 licenses the billing account and nothing about accuracy. The machine blockers (SGLang relaunch, remote
 root, 68 GB reserve) are unchanged by this proof.

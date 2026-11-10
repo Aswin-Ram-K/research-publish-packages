@@ -1,5 +1,11 @@
 # U-SPCC-11 — make `billed_tokens` mean the tokens the server charged for
 
+> **SUPERSEDED IN PART by `U-SPCC-18`.** This unit billed the WHOLE prompt whenever `cached_tokens` was
+> null, which is `ABSENT = 0` again. The corrected reading is a bound: `billed_tokens_known` **14,007**,
+> `billed_upper_bound_tokens` **14,303**, `billed_unknown_rows` **1** (turn 5, 296 tokens), `billed_coverage`
+> **0.99**. Every `14,303` below is the **upper bound**, not the charged quantity, and `billed_source` is no
+> longer `"server_cache_report"` but `"reported"` / `"first-turn-no-cache"` / `"unknown"`.
+
 **Unit:** U-SPCC-11 · **Status:** done · **Date:** 2026-11-10
 **Inputs:** `measure/rows-spcc-billedproof-2026-11-10.jsonl` (100 rows, 0 failed, 0 truncated),
 `measure/score-spcc-billedproof-2026-11-10.json` (the vacuous block), `orchestration/handoffs/U-SPCC-9A.json`
