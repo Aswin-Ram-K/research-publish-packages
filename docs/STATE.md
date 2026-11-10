@@ -579,3 +579,48 @@ follow from the cache mechanism), `billed_coverage` **0.99**,
 discounted**, 557 residual reported. **Open on it:** the scorecard exits **1** with 40/50 answer-shape failures, so it
 licenses the billing account and nothing about accuracy. The machine blockers (SGLang relaunch, remote
 root, 68 GB reserve) are unchanged by this proof.
+
+## Measured noise floor — temperature 0 + seed 42 is not a reproducibility contract (2026-11-10)
+
+`U-SPCC-45` compared two runs of the **same** arm on **byte-identical** prompts:
+`experiments/ptr-engine/measure/rows-e1-spcc-2026-11-10.jsonl` (commit `e18a587`) against
+the `spcc` rows of `experiments/ptr-engine/measure/rows-e1-final-2026-11-10.jsonl` (commit
+`e4692f8`). `prompt_sha256` and `prompt_tokens` are equal at all 100 turns; `fixture_sha256`
+is identical (`f0a636fe…`). The answers still differ at **6 of 100 turns** — T5, T41, T52,
+T57, T60, T80 — and **2 of those are scored checkpoints**: T57 `cp.TX-03.f06.d5` (A `NONE`,
+B `NUM 3501`) and T60 `cp.TX-03.f06.d8` (A `NONE`, B `NUM 3503`). Those two turns are the
+**entire** 20/48→22/48 value delta and the entire 19/48→21/48 contract delta.
+
+Mechanism: `cached_tokens` differ at **26 of 100 turns** on identical prompts (79,808 vs
+81,024 total; 22 of 26 higher in B), so prefix-cache occupancy and batch composition
+differed between the runs. `git log e18a587..e4692f8` touches only `run_longrun.py`, and no
+hunk is in `Planner` (`run_longrun.py:1474`) or any prompt-construction code; the `run_cell`
+hunks are the `CapRefusal`/`BudgetExhausted` exits and neither fired (`error=None`,
+`cap_refused_mid_turn=None` on all 200 rows).
+
+**The measured band:** per-turn flip rate **6/100 (6 %)**; per-scored-checkpoint flip rate
+**2/48 (4.2 %)**; run-to-run spread on the headline metric **±2/48 = ±4.2 pp**. A
+2-checkpoint gap is **1.41 sd** of a two-run difference (two-sided p ≈ 0.16) — not
+significant.
+
+**Power.** At 48 checkpoints and the measured checkpoint flip rate, 80 % power to resolve a
+2-checkpoint difference needs **4 reps** (1,200 requests for 3 arms × 100 turns); at the
+more conservative turn-level rate it needs **6 reps** (1,800 requests). E1 ran at `reps=1`
+(300 requests), so **`reps=1` is underpowered by construction** and every E1 arm-to-arm
+difference below ~4 pp is inside the noise band.
+
+**E1's clauses re-read against the band** (the prereg's prediction and falsifier are
+unedited; this is a reading, not a revision):
+
+| clause | observed | vs band | verdict |
+|---|---|---|---|
+| `spcc` ≥ fetch on single-fact | fetch arm degenerate (never fetched) | — | **unadjudicable** (unchanged) |
+| `spcc` > masking **everywhere** | `d2` 6/8 vs 8/8 (contract), `d32` 0/8 vs 0/8 | `d2` gap is −2 = exactly the measured flip magnitude | **not adjudicable** — inside the band, not a clean falsification |
+| billed ≤ masking | 9,066 vs 9,730 (answer turns only) | 664-token gap vs 1,216-token cache-driven variation on identical prompts | **not adjudicable** — inside the band |
+| `spcc` > masking on the aggregate | 22/48 vs 8/48 | 14 checkpoints = 7× the band | **survives** |
+| falsifier "not strictly above masking on any class" | `d5` 4>0, `d6` 5>0, `d8` 4>0, `d20` 2>0 | gaps of 4–5, outside the band | **did not fire** (unchanged) |
+
+**Open decision (operator).** Whether E1's 200–500 request ceiling and its `reps=1` shape are
+amended to admit a powered design. A powered E1 costs 1,200–1,800 requests against a live
+ledger headroom of **3,682** (raw; 3,712 deduplicated), so it fits — but it is 2.4–3.6× the
+preregistered ceiling. Not decided here.

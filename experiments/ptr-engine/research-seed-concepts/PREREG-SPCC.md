@@ -54,6 +54,41 @@ The prediction and falsifier above remain binding and unedited. This note
 records an instrument property discovered before the run, not a post-hoc
 revision of the hypothesis.
 
+### Deviation note — 2026-11-10, measured noise floor
+
+Measured after E1 ran, from two runs of the **same** arm on **byte-identical** prompts
+(`experiments/ptr-engine/measure/rows-e1-spcc-2026-11-10.jsonl`, commit `e18a587`, vs the
+`spcc` rows of `experiments/ptr-engine/measure/rows-e1-final-2026-11-10.jsonl`, commit
+`e4692f8`): `prompt_sha256` and `prompt_tokens` are equal at all 100 turns, and the answers
+still differ at 6 of them. Two of the six are scored checkpoints — T57
+`cp.TX-03.f06.d5` and T60 `cp.TX-03.f06.d8` — so the same treatment scored 20/48 and 22/48
+in two runs.
+
+**Temperature 0 plus seed 42 is not a reproducibility contract on
+`http://192.168.2.168:8012/v1`.** The measured band is:
+
+- per-turn flip rate **6/100 (6 %)**; per-scored-checkpoint flip rate **2/48 (4.2 %)**
+- run-to-run spread on the headline metric **±2/48 = ±4.2 percentage points**
+- a 2-checkpoint gap is **1.41 sd** of a two-run difference (two-sided p ≈ 0.16)
+
+Consequence for the design above: **`reps=1` is underpowered by construction.** At 48
+checkpoints and the measured checkpoint flip rate, 80 % power to resolve a 2-checkpoint
+difference needs **4 reps** (1,200 requests for 3 arms × 100 turns); using the more
+conservative turn-level rate it needs **6 reps** (1,800 requests). E1 ran at `reps=1`
+(300 requests), so every E1 arm-to-arm difference smaller than ~4 pp is inside the noise
+band and is not evidence of a treatment effect.
+
+The prediction, falsifier, controls and budget ceiling above remain binding and unedited.
+This note records a property of the serving stack measured after the run, not a post-hoc
+revision of the hypothesis, and it does not license re-reading E1's result against a
+changed prediction.
+
+**Open decision (operator, not this note):** whether E1's ceiling of 200–500 requests and
+its `reps=1` shape are amended to admit a powered design. The arithmetic is that a
+powered E1 costs 1,200–1,800 requests against a live ledger headroom of 3,682, so it
+fits, but it is 2.4–3.6× the preregistered ceiling. Amending the ceiling or the rep count
+is an operator decision and is **not** made here.
+
 ## E2 — What does compaction cost?
 
 - **Hypothesis:** Larger compaction interval lowers rewrite cost with no accuracy loss until the interval exceeds the distance at which facts stop being refetched.

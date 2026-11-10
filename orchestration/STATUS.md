@@ -587,3 +587,44 @@ billing account and **nothing** about accuracy on that arm/fixture pairing. The 
 item 7) or one remote root for the GX10 (item 8); then re-reconcile the ledger and run **E1** in the order
 `PREREG-SPCC.md` prints. Nothing may run E2 before E1, and every quality limb stays void until the
 fixture/grader can say *yes* (`PATH-CANNOT-SAY-YES`).
+
+## U-SPCC-47 — measured noise floor: E1's "everywhere" and billing clauses are not adjudicable
+
+`U-SPCC-45` established that **temperature 0 + seed 42 is not a reproducibility contract** on
+`:8012`. Two runs of the same arm on byte-identical prompts (`prompt_sha256` and
+`prompt_tokens` equal at all 100 turns, `fixture_sha256 f0a636fe…`) differ at **6/100 turns**;
+**2/48 scored checkpoints flip** (T57 `cp.TX-03.f06.d5`, T60 `cp.TX-03.f06.d8`), and those two
+are the entire 20/48→22/48 value delta and the entire 19/48→21/48 contract delta.
+`cached_tokens` differ at 26/100 turns (79,808 vs 81,024) — prefix-cache occupancy, not code.
+
+**Measured band: ±2/48 = ±4.2 pp.** A 2-checkpoint gap is 1.41 sd of a two-run difference
+(p ≈ 0.16).
+
+**Per-distance buckets** (`rows-e1-final-2026-11-10.jsonl`, 8 per bucket, value · contract):
+
+| d | `spcc` | `masking` | `fetch` | gap `spcc`−masking | vs ±2 |
+|---|---|---|---|---|---|
+| 2 | 7/8 · 6/8 | 8/8 · 8/8 | 5/8 · 5/8 | −1 · **−2** | inside |
+| 5 | 4/8 · 4/8 | 0/8 · 0/8 | 0/8 · 0/8 | **+4** | outside |
+| 6 | 5/8 · 5/8 | 0/8 · 0/8 | 0/8 · 0/8 | **+5** | outside |
+| 8 | 4/8 · 4/8 | 0/8 · 0/8 | 0/8 · 0/8 | **+4** | outside |
+| 20 | 2/8 · 2/8 | 0/8 · 0/8 | 0/8 · 0/8 | **+2** | at the edge |
+| 32 | 0/8 · 0/8 | 0/8 · 0/8 | 0/8 · 0/8 | 0 | inside |
+| **Σ** | **22/48 · 21/48** | **8/48 · 8/48** | **5/48 · 5/48** | **+14** | outside |
+
+**Clause survival.** `spcc` ≥ fetch on single-fact — **unadjudicable** (fetch arm degenerate).
+`spcc` > masking **everywhere** — **not adjudicable**: the only failing bucket is `d2` at −2,
+exactly the flip magnitude. Billed ≤ masking — **not adjudicable**: 664-token gap vs
+1,216-token cache-driven variation on identical prompts. `spcc` > masking on the aggregate —
+**survives**: 14 checkpoints, 7× the band. Falsifier — **did not fire** and still does not.
+
+**Power.** 80 % power to resolve 2 checkpoints at 48: **4 reps** (iid checkpoint rate 2/48) =
+**1,200 requests**; **6 reps** (turn-level rate 6/100) = **1,800 requests**. Live ledger
+headroom is **3,682** raw / 3,712 deduplicated (the ticket's 4,013 is stale — it was the
+headroom at `U-SPCC-39` before the E1 cell spent 331). **A powered E1 fits**, at 2.4–3.6× the
+preregistered 200–500 ceiling.
+
+**Open decision (operator).** Amend E1's ceiling and `reps=1` shape to admit a powered design,
+or keep the prereg as written and accept that E1's small-effect clauses stay unadjudicable.
+The prereg's prediction, falsifier and ceiling are **unedited**; the deviation note under E1
+is additions-only.
