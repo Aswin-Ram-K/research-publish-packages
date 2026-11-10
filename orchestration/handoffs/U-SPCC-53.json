@@ -1,0 +1,89 @@
+{
+  "unit": "U-SPCC-53",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/rows-e1-parserfix-2026-11-10.jsonl",
+    "experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.json",
+    "orchestration/units/U-SPCC-53.md",
+    "orchestration/handoffs/U-SPCC-53.json"
+  ],
+  "evidence": {
+    "rows_file": "experiments/ptr-engine/measure/rows-e1-parserfix-2026-11-10.jsonl",
+    "rows": 325,
+    "requests": 325,
+    "failed_turns": 0,
+    "truncated": 0,
+    "reconciliation_delta": 0,
+    "finish_reason": {"stop": 289, "tool_calls": 36},
+    "content_source": {"content": 292, "none": 33},
+    "programme_spend": "9024 of 12094",
+    "headroom": 3070,
+    "prereg_gate": "first invocation refused (exit 2) — PREREG-SPCC.md sha256 2f7790ad... vs companion pin 5b7007ab...; companion re-derived (pin + provenance only, E1 hypothesis/design/controls/falsifier/ceiling re-read and unchanged); .md untouched",
+    "arms": {
+      "spcc": {"value": 21, "contract": 20, "NONE": 26, "wrong": 1, "unparsed": 0, "graded": 48, "requests": 100, "billed_tokens": 14827},
+      "masking-no-fetch": {"value": 8, "contract": 8, "NONE": 40, "wrong": 0, "unparsed": 0, "graded": 48, "requests": 100, "billed_tokens": 14007},
+      "bounded-context-fetch": {"value": 17, "contract": 17, "NONE": 18, "wrong": 1, "unparsed": 12, "graded": 48, "requests": 125, "billed_tokens": 40965}
+    },
+    "bucket_sums": {"spcc": 48, "masking-no-fetch": 48, "bounded-context-fetch": 48},
+    "bucket_sum_note": "21+26+1+0, 8+40+0+0, 17+18+1+12; an independent per-checkpoint tally over the fixture's 48 ids reproduces the scorer exactly",
+    "billed_convention": "sum of billed_tokens over every row of the arm (same as U-SPCC-51); masking-no-fetch is byte-identical at 14007, which is the check that the convention did not move",
+    "ten_stranded_turns": {
+      "9": {"cp": "cp.TX-03.f01.d8", "followup": "doc-fact-01@r1 OK", "outcome": "correct 3003"},
+      "13": {"cp": "cp.TX-03.f02.d5", "followup": "doc-fact-02@r1 OK", "outcome": "correct 3101"},
+      "25": {"cp": "cp.TX-03.f03.d8", "followup": "doc-fact-03@r1 OK", "outcome": "correct 3203"},
+      "51": {"cp": "cp.TX-03.f05.d6", "followup": "none emitted", "outcome": "NONE"},
+      "56": {"cp": "cp.TX-03.f04.d32", "followup": "knowledge/doc-fact-04.md NOT_FOUND", "outcome": "unparsed"},
+      "58": {"cp": "cp.TX-03.f06.d6", "followup": "doc-fact-06@r1 OK", "outcome": "correct 3502"},
+      "60": {"cp": "cp.TX-03.f06.d8", "followup": "doc-fact-06@r1 OK", "outcome": "correct 3503"},
+      "67": {"cp": "cp.TX-03.f07.d6", "followup": "none emitted", "outcome": "NONE"},
+      "74": {"cp": "cp.TX-03.f08.d6", "followup": "none emitted", "outcome": "NONE"},
+      "76": {"cp": "cp.TX-03.f08.d8", "followup": "ptr_engine/resolve.py NOT_FOUND", "outcome": "unparsed"}
+    },
+    "ten_stranded_summary": "5 of 10 buy a follow-up and grade correct; 2 of 10 buy a follow-up that returns NOT_FOUND (invented ref); 3 of 10 never emit a call and answer NONE — never parser casualties",
+    "fetch_rounds_used": "25 of 48",
+    "round_pool_binding": "no — 25/48 rounds, 125 of 148 requests",
+    "per_turn_cap": "fetch_rounds_cap_per_turn stamped 3 on every row but max(fetch_rounds_this_turn)==1 across all 125 fetch rows: the loop sends exactly one follow-up per turn, so the per-turn cap is declared and not implemented",
+    "fetch_attempts": {"total": 25, "OK": 13, "NOT_FOUND": 12},
+    "fetch_refs": {
+      "doc-fact-0N@r1": "13 OK",
+      "ptr_engine/resolve.py": "4 NOT_FOUND",
+      "knowledge/item-1@1": "3 NOT_FOUND",
+      "knowledge/doc-fact-02.txt": "1 NOT_FOUND",
+      "knowledge/doc-fact-02@r1": "1 NOT_FOUND",
+      "knowledge/doc-fact-04.md": "1 NOT_FOUND",
+      "knowledge/doc-fact-06@r1": "1 NOT_FOUND",
+      "knowledge/item-1": "1 NOT_FOUND"
+    },
+    "unparsed_mechanism": "all 12 unparsed checkpoints are turns whose read_file ref does not exist; the one exception is cp.TX-03.f04.d8 (turn 32) where the fetch returned OK and the follow-up response was itself a tool_call that the single-follow-up loop never serviced",
+    "partial_range": "none — no row contains start_line or end_line; every read_file call carried only path, so the whole-body fallback was never exercised",
+    "protocol_violation_tool_call_unserviced": 0,
+    "protocol_violation_answer_wrapped_tool_call": 3,
+    "answer_wrapped_turns": [6, 7, 63],
+    "gaps_vs_band": {
+      "spcc_minus_masking": "+13 value / +12 contract (outside +/-2/48); billed +820, spcc ABOVE masking",
+      "fetch_minus_masking": "+9 / +9 (outside); billed +26958",
+      "spcc_minus_fetch": "+4 value (2.8 sd) / +3 contract (2.1 sd) — outside the band"
+    },
+    "falsifier": "E1 has three falsifier clauses and one fires: spcc billed tokens are above masking (14827 vs 14007). spcc is not below fetch on single-fact (21 vs 17), and spcc is strictly above masking on every distance class (7/4/5/3/2/0 vs 8/0/0/0/0/0).",
+    "claim": "The retention effect from U-SPCC-51 survives and is now measured on a serviced fetch arm: spcc 21 and fetch 17 both beat masking 8 by a wide margin. The 22 was a floor; servicing the calls moved the arm to 17, not up. The arm's remaining loss is ref invention, not parser loss.",
+    "caveats": [
+      "temperature 0 + seed 42 is not reproducible on this endpoint (+/-2/48 measured); every figure is a single-rep point estimate with that band",
+      "the fetch arm's trajectory diverges from the previous cell because the fetched body now enters the context, so 22 -> 17 is not a like-for-like comparison of the same conversation",
+      "fetch_rounds_cap_per_turn=3 is declared but only one follow-up is ever sent per turn; 12 checkpoints are unparsed because of that, not because of the parser",
+      "3 rows carry protocol_violation=answer_wrapped_tool_call (turns 6, 7, 63); each has a matching turn row that did fetch, so none stranded"
+    ],
+    "prereg_edited": false,
+    "prereg_companion_edited": true,
+    "prereg_companion_change": "doc_sha256 5b7007ab... -> 2f7790ad... plus a provenance sentence; E1 hypothesis/design/controls/falsifier/ceiling re-read against the prose and unchanged",
+    "ledger_written": false,
+    "docs_written": false
+  },
+  "blocker": null,
+  "next_unit_hint": "The per-turn fetch cap is declared 3 and implemented 1 (run_longrun.py sends a single _resp2 follow-up). Implementing the loop would service the second call on 12 checkpoints and is the only remaining harness loss in this arm. Separately, the arm's real failure is ref invention: 12 of 25 attempts used a ref that does not exist (ptr_engine/resolve.py, knowledge/item-1@1, knowledge/doc-fact-02.txt). A prompt that teaches the ref grammar, or a NOT_FOUND retry, is the lever — not the parser.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/rows-e1-parserfix-2026-11-10.jsonl",
+    "experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.json",
+    "orchestration/units/U-SPCC-53.md",
+    "orchestration/handoffs/U-SPCC-53.json"
+  ]
+}
