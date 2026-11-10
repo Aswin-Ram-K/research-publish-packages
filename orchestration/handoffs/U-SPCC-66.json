@@ -1,0 +1,67 @@
+{
+  "unit": "U-SPCC-66",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/rows-e2-turnover-2026-11-10.jsonl",
+    "orchestration/units/U-SPCC-66.md",
+    "orchestration/handoffs/U-SPCC-66.json"
+  ],
+  "evidence": {
+    "run": {
+      "rows": 300,
+      "requests": 300,
+      "truncated": 0,
+      "failed_turns": 0,
+      "wall_seconds": 108.65,
+      "reconcile_delta": 0,
+      "spent_at_start": 10067,
+      "spent_after": 10167,
+      "cap": 12094,
+      "headroom": 1927,
+      "fixture_sha256": "f0a636fea0f82b152e8d23f0f51a9fb0f38479eabd40290e73bd98ebd3e620c3",
+      "fixture_checkpoints": 48,
+      "fixture_distances": [2, 5, 6, 8, 20, 32],
+      "fixture_max_distance": 32
+    },
+    "per_interval": {
+      "48": {"value_correct": 36, "contract_correct": 35, "NONE": 12, "wrong": 0, "unparsed": 0, "graded": 48, "total": 48, "requests": 100, "billed_tokens": 14679, "billed_unknown_rows": 0, "compactions": 2, "fire_turns": [49, 97], "sum_prompt_tokens": 133463, "mean_prompt_tokens": 1334.6, "max_prompt_tokens": 2059},
+      "64": {"value_correct": 39, "contract_correct": 38, "NONE": 9, "wrong": 0, "unparsed": 0, "graded": 48, "total": 48, "requests": 100, "billed_tokens": 15063, "billed_unknown_rows": 0, "compactions": 1, "fire_turns": [65], "sum_prompt_tokens": 142295, "mean_prompt_tokens": 1423.0, "max_prompt_tokens": 2581},
+      "96": {"value_correct": 47, "contract_correct": 47, "NONE": 1, "wrong": 0, "unparsed": 0, "graded": 48, "total": 48, "requests": 100, "billed_tokens": 14684, "billed_upper_bound_tokens": 15275, "billed_unknown_rows": 1, "billed_coverage": 0.99, "compactions": 1, "fire_turns": [97], "sum_prompt_tokens": 200939, "mean_prompt_tokens": 2009.4, "max_prompt_tokens": 3314}
+    },
+    "value_pct": {"48": 75.0, "64": 81.3, "96": 97.9},
+    "contract_pct": {"48": 72.9, "64": 79.2, "96": 97.9},
+    "accuracy_band_pp": 4.17,
+    "accuracy_deltas_pp": {"48_to_64": 6.25, "64_to_96": 16.7, "48_to_96": 22.9},
+    "accuracy_monotonic_rising": true,
+    "accuracy_plateau": false,
+    "cost_prompt_tokens": {"48": 133463, "64": 142295, "96": 200939},
+    "cost_prompt_deltas_pct": {"48_to_64": 6.62, "64_to_96": 41.2, "total": 50.6},
+    "cost_billed": {"48": 14679, "64": 15063, "96": 15275},
+    "cost_billed_note": "c96 known sum 14684 over 99 rows; turn 97 has cached_tokens null so billed_of returns None; upper bound 15275 (prompt 591). c48/c64 coverage 1.0.",
+    "cost_turns_back_up": true,
+    "cost_minimum_interval": 48,
+    "deepest_passing_distance": {"48": 32, "64": 32, "96": 32},
+    "deepest_passing_note": "32 is the fixture ceiling; the informative quantity is the fraction passing at d32: 4/8, 5/8, 7/8.",
+    "by_distance_value": {
+      "48": {"2": 8, "5": 5, "6": 7, "8": 6, "20": 6, "32": 4},
+      "64": {"2": 8, "5": 7, "6": 7, "8": 7, "20": 5, "32": 5},
+      "96": {"2": 8, "5": 8, "6": 8, "8": 8, "20": 8, "32": 7}
+    },
+    "kind_mismatch_value_correct": {"48": 1, "64": 1, "96": 0},
+    "turnover": {
+      "accuracy_turnover_inside_48_64_96": false,
+      "cost_turnover_inside_48_64_96": true,
+      "cost_turnover_at": 48,
+      "verdict": "No accuracy turnover exists inside {48,64,96}: accuracy rises monotonically 75.0 -> 81.3 -> 97.9 with every step outside the +/-4.17 pp band, and residual failures are abstentions shrinking 12 -> 9 -> 1. A cost turnover does exist and sits at C=48: prompt tokens are minimised there and rise 50.6% by C=96. The curves cross at C=48 — past it you pay more prompt tokens for more accuracy, and accuracy is still climbing at the top of the sweep."
+    },
+    "mid_turn_compaction": false,
+    "cross_run_note": "c48 bills 14679 here vs 15703 in E2 for byte-identical prompts (prompt_tokens match on every turn); the gap is prefix-cache warmth (turn 1 missed cache: 636 vs 124 billed, plus 20 turns hitting one 64-token block more). Cross-run billed comparisons are confounded by cache state; only within-run comparisons are valid. Prompt tokens are the cache-independent measure."
+  },
+  "blocker": null,
+  "next_unit_hint": "Accuracy is still rising at C=96 (47/48) and the only remaining failure is one abstention at the fixture's deepest probe (d32, turn 100). The sweep cannot see past d32 because TX-03's max distance is 32 — a turnover in accuracy, if it exists, needs either a fixture with deeper probes (TX-04 has d64) or C beyond 96. Cost is already rising 50.6% in prompt tokens by C=96 while billed stays nearly flat because of prefix caching, so the cost side of the trade is nearly free at these intervals; the binding constraint is the fixture's distance ceiling, not the budget (1927 requests of headroom remain).",
+  "write_paths": [
+    "experiments/ptr-engine/measure/rows-e2-turnover-2026-11-10.jsonl",
+    "orchestration/units/U-SPCC-66.md",
+    "orchestration/handoffs/U-SPCC-66.json"
+  ]
+}
