@@ -1,0 +1,35 @@
+{
+  "unit": "U-SPCC-22",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "experiments/ptr-engine/research-seed-concepts/RESULTS-TX02-CELL1.md",
+    "experiments/ptr-engine/research-seed-concepts/RESULTS-TX03-CELL1.md",
+    "experiments/ptr-engine/research-seed-concepts/RESULTS-STACK-8014.md",
+    "orchestration/units/U-SPCC-22.md"
+  ],
+  "evidence": {
+    "appended_row": "| TX-03 masking cliff is presence, not position | 8/48 on `:8012` (SGLang, `occamy-1.0`; all 8 at `d2`); 40 failures each with 0 occurrences of the expected value, 8 passes each with exactly 1 occurrence + 1 anchor hit | score out of 48 checkpoints; prompt occurrences of the expected value | `experiments/ptr-engine/measure/answer-shape-diagnosis-TX03.md` (per-checkpoint table, presence/absence split, bucket counts 40/0/0/0); `orchestration/handoffs/U-SPCC-20.json` | gen-7 (`TX-03.v1`, `longrun/tasks-v7/TX-03.v1.json`) | not comparable — same arm/fixture pattern reproduced on two stacks: 3/3 runs on `:8012` (r1, r2, billed proof) at 8/48 with 8/8 at `d2` and 40/40 abstentions; `:8014` (vLLM) also 8/48 with 8/8 at `d2` but 39 abstentions + 1 substitution, `cp.TX-03.f07.d8` answered `3703` vs expected `3603` (a same-column constant from a different document); cross-build comparison not claimed (rule line 9) | VERIFIED (100/100 materialised prompts byte-identical to the recorded `prompt_sha256`; cause = content evicted at `intro+4`, not depth, not attention, not contract, not fixture) |",
+    "appended_subsection": "### The TX-03 cliff is presence, not position — four exclusions (presence binary and complete: 8/8 passes 1 hit + 1 anchor hit, 40/40 failures 0 hits, digit-boundary regex `(?<![\\d.])3001(?![\\d.])`; position excluded: passes retrieved at 1809/2455 = 0.74 of request and 1809/2009 = 0.90 of user content; contract excluded: all 40 are literal `ANSWER: NONE` with `answer_parse_error: null`; fixture excluded: source text verbatim at intro turn and d2 probe answers) plus turn-6 verbatim `QUESTION (T1): Work turn 1.\\nTOOL OUTPUTS:\\n[MASKED doc-fact-01@r1]\\nANSWER (T1):` where 3001 occurs 0 times, and mask turns [5,12,21,28,49,56,65,72] vs intro turns [1,8,17,24,45,52,61,68] = intro+4.",
+    "replication": "Same arm/fixture pattern on two stacks, not the same measurement. :8012 — rows-tx03-masking-r1.jsonl 8/48, 8/8 at d2, 40/40 abstentions; rows-tx03-masking-r2.jsonl 8/48, 8/8 at d2, 40/40 abstentions; rows-spcc-billedproof-2026-11-10.jsonl 8/48, 8/8 at d2, 40/40 abstentions. :8014 (vLLM) — rows-tx03-8014-masking-r1.jsonl 8/48, 8/8 at d2, 39 abstentions + 1 substitution at cp.TX-03.f07.d8: answered 3703, expected 3603 (VAL_C of doc-fact-07 reported as a VAL_C-shaped constant from the later doc-fact-08 family, not a random number). No cross-build performance comparison claimed.",
+    "degenerate_fields_recorded": "evicted = recorded defect (init 0 at longrun/run_longrun.py:1453, assigned only in the `if arm == \"transcript-grow\":` branch at :1476, so 0 on all 100 rows including T5 with masked_rows=1); expected_present = recorded defect (computed at longrun/run_longrun.py:2581 from reasoning_raw, empty with thinking off, so False on all 48 including the 8 correct answers).",
+    "cell_counts": "awk -F'|' '/^\\|/ {print NR\": \"NF-2}' experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md -> 11:7 12:7 13:7 14:7 15:7 16:7 17:7 18:7 19:7 20:7 22:7 (header, all 9 prior rows, new row all 7 cells)",
+    "depth_grep": "34 hits for depth|distance|attention across FINDINGS-LEDGER.md and RESULTS-*.md. Four causal hits acted on: FINDINGS-LEDGER.md open question -> marked closed (presence); RESULTS-TX02-CELL1.md:42 -> labelled 'not a depth or attention gradient; step is the eviction boundary at intro+4', superseded; RESULTS-TX03-CELL1.md:46 -> 'policy window boundary of 5' corrected to mask firing at intro+4; RESULTS-STACK-8014.md:35-36 -> 'eviction boundary at 5 turns' corrected to d=5 being the first checkpoint past the intro+4 mask. Remaining 30 hits are descriptive distance axes/buckets or already attribute the step to masking/eviction; no change needed. No history deleted.",
+    "doc_check": "python3 tools/doc_check.py -> 'OK docs clean under /home/zer0null/research extractor'; exit=0",
+    "commands": [
+      "awk -F'|' '/^\\|/ {print NR\": \"NF-2}' experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+      "grep -rn \"depth\\|distance\\|attention\" experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md experiments/ptr-engine/research-seed-concepts/RESULTS-*.md",
+      "python3 tools/doc_check.py; echo exit=$?"
+    ]
+  },
+  "blocker": null,
+  "next_unit_hint": "Any downstream use of the TX-03 masking rows must treat ANSWER: NONE at a probe whose fact was masked before the probe as expected arm behaviour; and must not read the evicted or expected_present columns of pre-repair rows as evidence.",
+  "write_paths": [
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "experiments/ptr-engine/research-seed-concepts/RESULTS-TX02-CELL1.md",
+    "experiments/ptr-engine/research-seed-concepts/RESULTS-TX03-CELL1.md",
+    "experiments/ptr-engine/research-seed-concepts/RESULTS-STACK-8014.md",
+    "orchestration/units/U-SPCC-22.md",
+    "orchestration/handoffs/U-SPCC-22.json"
+  ]
+}

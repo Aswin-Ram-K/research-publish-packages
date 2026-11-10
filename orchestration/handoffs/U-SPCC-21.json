@@ -1,0 +1,50 @@
+{
+  "unit": "U-SPCC-21",
+  "status": "done",
+  "requirements": {
+    "evicted_semantics": "done — initialised to null at run_longrun.py:1453; masking arms (masking-no-fetch, bounded-context-fetch) assign evicted = masked_rows at :1610; transcript-grow keeps its FIFO/byte-wall count; transcript-compact / pointer-stable / lease-reopen / spcc stamp null, never 0",
+    "expected_present_from_rendered_prompt": "done — expected_value_in_prompt() (:2112-2138) searches the rendered prompt with the digit-boundary guard (?<![\\d.])<expected>(?![\\d.]) plus the VAL_<X> = <value> anchor; no checkpoint -> null + 'no-checkpoint'; no retained prompt -> null + 'no-prompt-retained'; non-numeric expectation -> null + 'expected-non-numeric'; make_row consumes extra['prompt_text'] (wired at the extras literal :3286 and overridden at both digest call sites) and also stamps expected_present_source",
+    "four_scorecard_counters": "done — score_longrun.score_answer_contract_rows reports answered_correctly / abstained_after_mask / answered_wrong / unparsed beside checkpoint_accuracy ('%d/%d' correct/total, meaning unchanged); abstained_after_mask is decided from the arm's own masked_entry events via mask_turn_by_doc + _checkpoint_doc, and is never counted as correct",
+    "real_file_reproduction": "done — reproduced from the rows file with zero model calls, numbers below"
+  },
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/score_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_degenerate_fields.py",
+    "experiments/ptr-engine/longrun/tests/test_arm_treatments.py",
+    "orchestration/units/U-SPCC-21.md"
+  ],
+  "evidence": {
+    "rescored_block_main_command": "$ .venv/bin/python experiments/ptr-engine/longrun/score_longrun.py --answer-contract experiments/ptr-engine/longrun/tasks-v7/TX-03.v1.json experiments/ptr-engine/measure/rows-spcc-billedproof-2026-11-10.jsonl --pretty -> masking-no-fetch__rep1 {'checkpoint_accuracy': '8/48', 'answered_correctly': 8, 'abstained_after_mask': 40, 'answered_wrong': 0, 'unparsed': 0, 'total': 48, 'abstained': 40} ; exit=0",
+    "mask_turn_by_doc": "{'doc-fact-01': 5, 'doc-fact-02': 12, 'doc-fact-03': 21, 'doc-fact-04': 28, 'doc-fact-05': 49, 'doc-fact-06': 56, 'doc-fact-07': 65, 'doc-fact-08': 72}",
+    "pytest_touched": "test_degenerate_fields + test_arm_treatments + test_arm_cd_wiring + test_h1_conditioning + test_treatments_fire + test_answer_contract + test_checkpoint_grading -> 45 passed in 0.26s",
+    "pytest_new_file_green": "pytest experiments/ptr-engine/longrun/tests/test_degenerate_fields.py -q -> 10 passed in 0.10s",
+    "pytest_main_reported": "pytest test_scorecard_guards.py test_billed_tokens.py -q -> 19 passed in 0.10s (run by Main)",
+    "red_before_fix": "pre-fix copies of run_longrun.py and score_longrun.py restored from HEAD into /tmp/rg, same test file -> 8 failed, 2 passed. Demonstrated reds: test_masking_turn_with_one_masked_row_stamps_evicted_one -> 'AssertionError: turn 5 masked 1 tool-output entry but evicted=0 / assert 0 == 1'; test_d2_probe_with_the_value_in_the_prompt_stamps_true -> \"AssertionError: prompt carries '3000' but expected_present=False / assert False is True\". Also red: no-eviction arm 'assert 0 is None', no-checkpoint 'assert False is None', masked prompt KeyError 'expected_present_source', real-file block KeyError 'answered_correctly'",
+    "green_after_fix": "same file against the fixed modules -> 10 passed",
+    "writer_on_real_fixture": "Planner('masking-no-fetch', TX-03) replayed over all 100 turns with answers recorded, then expected_value_in_prompt asked of every checkpoint prompt -> d=2: True prompt-digit-boundary x8; d=5/6/8/20/32: False prompt-absent x8 each; mismatches []; mask/evict turns [(5,1,1),(12,1,1),(21,1,1),(28,1,1),(49,1,1),(56,1,1),(65,1,1),(72,1,1)] as (turn, masked_rows, evicted). Permanent test: test_every_rendered_prompt_of_the_fixture_splits_eight_true_forty_false",
+    "full_suite": "827 passed, 7 failed, 31 subtests passed in 408.81s. The 7 failures are PRE-EXISTING and not on this change's path: with HEAD versions of both modules restored in place the same 7 fail identically ('7 failed, 29 deselected' via --lf), and all 7 are corpus/manifest consistency checks over rows files created by other lanes today (test_verbosity.py rows-file coverage of rows-spcc-billedproof-2026-11-10.jsonl, test_journal_lint census, test_lost_fixture, test_request_ledger totals, test_stop_reason on-disk artefact). My modules were restored afterwards and verified by sha256sum -c",
+    "grep_evicted": "1453 # EVICTED-ABSENT ... | 1458 info: dict = {..., \"evicted\": None, | 1465 evicted = 0 | 1474 evicted += 1 | 1481 info[\"evicted\"] = evicted | 1608 # `evicted` no longer stays at its (removed) 0 default | 1610 info[\"evicted\"] = masked_rows | 1611 info[\"masked_entry\"] = masked_entry",
+    "grep_expected_present": "2112 # EXPECTED-PRESENT-PROMPT ... | 2602 # RULE 2: the row field `expected_present` is about the PROMPT, never the response. | 2603 expected_present, expected_present_source = expected_value_in_prompt( | 2738 \"expected_present\": expected_present, | 2741 \"expected_present_source\": expected_present_source,",
+    "doc_check": ".venv/bin/python tools/doc_check.py -> OK docs clean under /home/zer0null/research extractor ; exit=0",
+    "commands": [
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_degenerate_fields.py -q",
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_degenerate_fields.py experiments/ptr-engine/longrun/tests/test_arm_treatments.py experiments/ptr-engine/longrun/tests/test_arm_cd_wiring.py experiments/ptr-engine/longrun/tests/test_h1_conditioning.py experiments/ptr-engine/longrun/tests/test_treatments_fire.py experiments/ptr-engine/longrun/tests/test_answer_contract.py experiments/ptr-engine/longrun/tests/test_checkpoint_grading.py -q",
+      "PYTHONPATH=<repo>/experiments/ptr-engine/tools:<repo>/experiments/ptr-engine .venv/bin/python -m pytest tests/test_degenerate_fields.py -q   # run inside pre-fix copy /tmp/rg/longrun for the RED proof",
+      ".venv/bin/python experiments/ptr-engine/longrun/score_longrun.py --answer-contract experiments/ptr-engine/longrun/tasks-v7/TX-03.v1.json experiments/ptr-engine/measure/rows-spcc-billedproof-2026-11-10.jsonl --pretty",
+      "grep -n \"evicted\" experiments/ptr-engine/longrun/run_longrun.py | head -8",
+      "grep -n \"expected_present\" experiments/ptr-engine/longrun/run_longrun.py | head -8",
+      ".venv/bin/python tools/doc_check.py; echo exit=$?"
+    ]
+  },
+  "blocker": null,
+  "next_unit_hint": "No live arm has been re-run with the fixed writer: on-disk rows keep their old degenerate values, and the fix is only provable on NEW rows. The next unit that spends requests should assert on its own output that evicted == masked_rows on masking rows, that expected_present is True on every pre-mask probe and False on every post-mask one, and that expected_present_source is one of the six documented values. If any of that is not true, the writer regressed, because the reading is now prompt-derived.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/score_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_degenerate_fields.py",
+    "experiments/ptr-engine/longrun/tests/test_arm_treatments.py",
+    "orchestration/units/U-SPCC-21.md",
+    "orchestration/handoffs/U-SPCC-21.json"
+  ]
+}

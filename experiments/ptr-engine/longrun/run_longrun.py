@@ -1450,7 +1450,12 @@ class Planner:
     def build(self, t: int) -> dict:
         turn = self.fixture["turns"][t - 1]
         arm = self.arm
-        info: dict = {"t": t, "turn": turn, "digest_request": None, "evicted": 0,
+        # EVICTED-ABSENT: `evicted` is the number of tool-output entries THIS turn's
+        # prompt no longer carries that it otherwise would.  An arm that has no eviction
+        # concept must leave it null: 0 asserts a measurement nobody made, and on the
+        # masking arm 0 was stamped on the very turn its only fact was masked away.
+        # Every arm that measures eviction assigns it below; the rest stay None.
+        info: dict = {"t": t, "turn": turn, "digest_request": None, "evicted": None,
                       "lease": None, "prefix_sha256": None}
         if arm == "transcript-grow":
             parts = [working_set_block(self.fixture)]
@@ -1597,6 +1602,12 @@ class Planner:
                     for to in tos_cur)
             text = "\n\n".join(parts + [current])
             info["masked_rows"] = masked_rows
+            # EVICTED-ABSENT (rule 1): for the masking arm a masked entry IS the eviction:
+            # the body the prompt used to carry is gone, replaced by a pointer marker.
+            # The two fields are the same event, so they carry the same number -- and
+            # `evicted` no longer stays at its (removed) 0 default, which reported
+            # "nothing evicted" on the turn the arm's only fact was masked.
+            info["evicted"] = masked_rows
             info["masked_entry"] = masked_entry
             info["checkpoint"] = checkpoint_val
             info["prompt"] = text
@@ -2098,6 +2109,35 @@ def contains_expected(text: str, expected: str | None) -> bool:
     return _squash(expected) in _squash(text)
 
 
+# EXPECTED-PRESENT-PROMPT: `expected_present` answers ONE question -- does the rendered
+# prompt this checkpoint is answered from still carry the checkpoint's expected value?
+# It used to be computed from the RESPONSE's reasoning channel, which is empty whenever
+# thinking is off, so it read False on every checkpoint -- including the ones answered
+# correctly -- and could not support any claim about absence.  ABSENT is not False:
+# no checkpoint -> null; no retained prompt -> null, and the source says why.
+_EXPECTED_NUMERIC_RE = re.compile(r"-?\d+")
+
+
+def expected_value_in_prompt(prompt_text: str | None, expected: str | None):
+    """``(present | None, source)`` for ``expected`` in THIS turn's rendered prompt."""
+    if expected is None or str(expected).strip() == "":
+        return None, "no-checkpoint"
+    if prompt_text is None:
+        return None, "no-prompt-retained"
+    value = str(expected).strip()
+    if not _EXPECTED_NUMERIC_RE.fullmatch(value):
+        # A non-numeric expectation ("NONE" on the absence spine) is not a value a prompt
+        # can carry: searching for that word would match the QUESTION, not an assertion.
+        return None, "expected-non-numeric"
+    # digit-boundary guard: 3001 must not match inside 13001 or 3001.5
+    if re.search(r"(?<![\d.])%s(?![\d.])" % re.escape(value), prompt_text):
+        return True, "prompt-digit-boundary"
+    # the binding anchor: `VAL_A = 3001` survives any prose reformatting of the body
+    if re.search(r"VAL_[A-Za-z0-9_]+\s*=\s*%s(?![\d.])" % re.escape(value), prompt_text):
+        return True, "prompt-val-anchor"
+    return False, "prompt-absent"
+
+
 # ------------------------------------------------------------------ answer contract
 # ANSWER-CONTRACT (v5): at a checkpoint turn the tools are OFF, the checkpoint
 # question is injected, and the reply is parsed into a VALUE (NUM / CALL / NONE /
@@ -2559,6 +2599,12 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
     else:
         billed, billed_source, reconcile_delta = None, "unknown", None
     expected, cp_question = checkpoint_expected(fixture, t)
+    # RULE 2: the row field `expected_present` is about the PROMPT, never the response.
+    expected_present, expected_present_source = expected_value_in_prompt(
+        extra.get("prompt_text"), expected)
+    # The response-side test keeps its own name: it still decides the reasoning fallback
+    # and `answer_verified`, and must not be confused with the prompt field again.
+    expected_in_reasoning = False
     # RECORD-STOP-REASON: WHY this ended, one closed-vocabulary word, and ``truncated``
     # derived FROM it so the two can never disagree.  null only when no response exists.
     stop_reason = stop_reason_for_row(resp, extra)
@@ -2570,7 +2616,7 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
         tok_method = None
         answer_source = "none"
         failed_turn = True
-        expected_present = False
+        expected_in_reasoning = False
         answer_verified = None
     else:
         content_raw = resp.get("content_raw") or ""
@@ -2578,11 +2624,11 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
         bpt = float(fixture.get("bytes_per_token") or 4.0477)
         c_tok, tok_method = count_channel_tokens(content_raw, bpt)
         r_tok, _ = count_channel_tokens(reasoning_raw, bpt)
-        expected_present = bool(contains_expected(reasoning_raw, expected)) if expected else False
+        expected_in_reasoning = bool(contains_expected(reasoning_raw, expected)) if expected else False
         content_has_expected = bool(contains_expected(content_raw, expected)) if expected else False
         if content_raw.strip():
             answer_source = "content"
-        elif reasoning_raw.strip() and (not truncated or expected_present):
+        elif reasoning_raw.strip() and (not truncated or expected_in_reasoning):
             # Reasoning-only completion: usable ONLY when it finished, or when it
             # literally carries the checkpoint's expected value.  Marked, not clean.
             answer_source = "reasoning-fallback"
@@ -2590,8 +2636,8 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
             answer_source = "none"
         # "length" without the expected value is an incomplete answer = failed turn,
         # on either channel; it must never enter a latency average as a success.
-        failed_turn = bool(truncated and not (expected_present or content_has_expected))
-        answer_verified = (bool(content_has_expected or expected_present)
+        failed_turn = bool(truncated and not (expected_in_reasoning or content_has_expected))
+        answer_verified = (bool(content_has_expected or expected_in_reasoning)
                            if expected is not None else None)
     # RECORD-STOP-REASON item 3: when a ceiling/empty/HTTP stop left NO usable content,
     # the row carries the sha of whatever content it has (the EMPTY string's sha when
@@ -2690,6 +2736,9 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
         "expected": expected,
         "expected_question": cp_question,
         "expected_present": expected_present,
+        # null is not False: the source says WHICH search produced the value, or why no
+        # search was possible (no checkpoint / no retained prompt / non-numeric value).
+        "expected_present_source": expected_present_source,
         "answer_verified": answer_verified,
         "reasoning_policy": _REASONING_POLICY,
         "stream": bool(cfg.stream),
@@ -3232,6 +3281,9 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                                  else (turn.get("checkpoint") or declared)),
                   "answer_turn": is_answer_turn,
                   "lease": info.get("lease"), "evicted": info.get("evicted"),
+                  # RULE 2 operand: the rendered prompt THIS row's checkpoint is answered
+                  # from. Not a row field -- make_row consumes it and stamps the verdict.
+                  "prompt_text": info.get("prompt"),
                   "masked_rows": info.get("masked_rows"),
                   "masked_entry": info.get("masked_entry"),
                   "marker_refs": (extract_marker_refs(info.get("prompt_before_checkpoint", info.get("prompt")))
@@ -3279,6 +3331,7 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                 append_row(rows_path, make_row(
                     cfg, fixture, arm, rep, run_id, t, None, None, "digest", manifest_sha,
                     dict(extras, http_status=exc.status, error=str(exc),
+                         prompt_text=msg[1]["content"],
                          prompt_sha256=sha256_text(msg[1]["content"]))))
                 print(f"TURN FAILED (digest) T{t}: {exc} — cell stopped, failure row recorded",
                       file=sys.stderr)
@@ -3286,7 +3339,8 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
             sent += 1
             append_row(rows_path, make_row(
                 cfg, fixture, arm, rep, run_id, t, resp, resp["content"], "digest", manifest_sha,
-                dict(extras, prompt_sha256=sha256_text(msg[1]["content"]))))
+                dict(extras, prompt_text=msg[1]["content"],
+                     prompt_sha256=sha256_text(msg[1]["content"]))))
             print(f"  [T{t}] digest request sent (prompt_tokens={resp['prompt_tokens']})")
             planner.digest = resp["content"]
             planner.raw = planner.raw[-4:]

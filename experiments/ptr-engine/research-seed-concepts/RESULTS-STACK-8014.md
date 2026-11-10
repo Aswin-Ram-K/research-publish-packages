@@ -33,7 +33,7 @@ probe returned a `tool_calls` array with `function.name` and parseable arguments
 Distance axis `{2,5,6,8,20,32}`, 8 checkpoints each.
 
 `TX-03` masking: `:8014` `8,0,0,0,0,0`; `:8012` `8,0,0,0,0,0` — identical, the eviction boundary at 5 turns
-reproduces exactly on a different model, engine and window size.
+reproduces exactly on a different model, engine and window size. *(Corrected wording: the mask fires at `intro+4`, so `d=5` is the first checkpoint past it rather than the boundary value itself. Cause is content evicted, not depth. The presence finding in FINDINGS-LEDGER.md §The TX-03 cliff is presence, not position was measured on `:8012` (SGLang, `occamy-1.0`); this file's own `:8014` (vLLM, `qwen3.5-9b`) numbers above remain `:8014` and are not merged with it.)*
 
 `TX-03` fetch: `:8014` `5,8,8,8,7,6` (42/48); `:8012` `8,8,8,8,6,3` (41/48) — full through distance 8 on
 both, decaying after; the stacks differ only at distance 2 (5 vs 8) and 32 (6 vs 3).

@@ -39,7 +39,7 @@ Full bucket detail (checkpoints=12 each, per rep):
 
 ## Monotonicity statement
 
-- Masking arm: monotone non-increasing in distance — 12/12 at d=2, then 0/12 at d=8/20/32 in both reps.
+- Masking arm: monotone non-increasing in distance — 12/12 at d=2, then 0/12 at d=8/20/32 in both reps. *(Labelled, not rewritten: this is not a depth or attention gradient; the step is the eviction boundary at `intro+4`, as the boundary statement below states. Superseded by the TX-03 presence finding in FINDINGS-LEDGER.md — presence, not position.)*
 - Fetch arm: not flat and not stable across reps — rep 1 varies (12, 4, 7, 5) and rep 2 collapses to (0, 0, 0, 1) because the model drifted to `ANSWER: TEXT VAL_A=…` instead of `ANSWER: NUM …`, so 43 of 48 fetch-rep-2 checkpoints are wrong on format rather than value. Neither "monotone masking + flat fetch" holds; the fetch arm is rep-dependent.
 
 ## Activation evidence (row counts, quoted literally)

@@ -533,7 +533,15 @@ by roughly thirty units (cards and handoffs `orchestration/units/U-SPCC-*.md`,
   3→19) (`U-SPCC-8/9A/9B/9C`).
 
 **Corrections recorded** — masking is **12/48 on `:8012` and 8/48 on `:8014`**, all successes in the d=2
-bucket (**0/36 beyond distance 2**), not "0/48 on both stacks"; D-086's source is `MEASURED_FACTS.md` F3;
+bucket (**0/36 beyond distance 2**), not "0/48 on both stacks". **Why: the mask fires at `intro+4`**
+(`WINDOW_TURNS = 4`), i.e. before every probe at `d5`/`d6`/`d8`/`d20`/`d32`, so those probes ask about a
+fact the prompt no longer carries — the cliff is **presence, not position**, confirmed by re-materialising
+all 100 turns byte-identically and finding **0 occurrences** of the expected value in each of the 40
+failing prompts (`experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md` row 22;
+`experiments/ptr-engine/measure/answer-shape-diagnosis-TX03.md`). The TX-03 scorecard counters are
+`answered_correctly 8`, `abstained_after_mask 40`, `answered_wrong 0`, `unparsed 0`, `total 48`;
+`abstained_after_mask` is **legitimate arm behaviour** and is **not** counted as correct, so
+`checkpoint_accuracy` stays **8/48**; D-086's source is `MEASURED_FACTS.md` F3;
 the ledger is **7,969 spent / 4,125 remaining** (row count over 93 `rows-*.jsonl` files; not the 7,869 /
 4,225 reconciled earlier, and not the 7,953 of a mid-write snapshot); the 5-failure
 suite count is a point-in-time figure (the v4-fixture cluster was closed after it).

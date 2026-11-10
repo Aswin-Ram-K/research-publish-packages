@@ -43,7 +43,7 @@ Scorer (`score_longrun.py --answer-contract`) raw output:
 
 ## Monotonicity statement
 
-- Masking arm: correct only at d=2 (8/8 per rep, 16/16 pooled); 0/8 at every d≥5 in both reps. Transition occurs between d=2 and d=5 (i.e. at the policy window boundary of 5): inside the window the fact is verbatim and answered; outside the window it is a pointer marker and, with no fetch channel, the model abstains (`ANSWER: NONE`). d=2 is a policy-inside control, not a treatment point.
+- Masking arm: correct only at d=2 (8/8 per rep, 16/16 pooled); 0/8 at every d≥5 in both reps. Transition occurs between d=2 and d=5 (i.e. at the mask, which fires at `intro+4` for every fact — see FINDINGS-LEDGER.md §The TX-03 cliff is presence, not position, which shows the failures are presence, not position): inside the window the fact is verbatim and answered; outside the window it is a pointer marker and, with no fetch channel, the model abstains (`ANSWER: NONE`). d=2 is a policy-inside control, not a treatment point.
 - Fetch arm: not flat and not stable across reps — rep 1 varies (6,1,2,1,1,1); rep 2 (6,1,0,0,0,0). Pooled fetch is 12/16 at d=2 falling to 1–2/16 at every d≥5. The fetch arm does not recover the masking arm's d=2 ceiling and shows no clean distance trend; it is rep-dependent (many tool-call turns did not convert to a fetched answer, 10–12 ungradeable per rep).
 
 ## Activation evidence (row counts, quoted literally)

@@ -58,13 +58,22 @@ def test_frozen_fixture_fires_nothing_at_48_turns():
     for arm in ("transcript-grow", "transcript-compact", "lease-reopen"):
         planner = R.Planner(arm, fx, dry_run=True)
         fired = {"evicted": 0, "digest": 0, "lease": 1}
+        evicted_stamps = []
         for t in range(1, HORIZON + 1):
             info = planner.build(t)
-            fired["evicted"] = max(fired["evicted"], info["evicted"])
+            evicted_stamps.append(info["evicted"])
+            if info["evicted"] is not None:
+                fired["evicted"] = max(fired["evicted"], info["evicted"])
             fired["digest"] += 1 if info["digest_request"] is not None else 0
             fired["lease"] = max(fired["lease"], info.get("lease") or 1)
             planner.record(t, P.ANS)
-        assert fired["evicted"] == 0, (arm, fired)
+        if arm == "transcript-grow":
+            # the arm MEASURES eviction: 0 is a measurement here
+            assert fired["evicted"] == 0, (arm, fired)
+        else:
+            # no eviction concept -> null, never 0: 0 would assert a measurement
+            # nobody made (the same ABSENT != 0 rule the masking arm broke)
+            assert evicted_stamps == [None] * len(evicted_stamps), (arm, evicted_stamps)
         assert fired["digest"] == 0, (arm, fired)
         assert fired["lease"] == 1, (arm, fired)
 

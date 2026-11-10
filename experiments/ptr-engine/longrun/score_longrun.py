@@ -1042,6 +1042,26 @@ def _checkpoint_id_of(row):
     return row.get("checkpoint_id")
 
 
+def _checkpoint_doc(cp):
+    """The document a checkpoint's fact lives in, in ``masked_entry``'s own vocabulary.
+
+    ``source == "tool_output:doc-fact-01@r1"`` and a mask event ref is
+    ``"doc-fact-01@r1"``: both name the doc, so the two can be joined without a table.
+    """
+    if not isinstance(cp, dict):
+        return None
+    src = cp.get("source")
+    if isinstance(src, str) and src.startswith("tool_output:"):
+        ref = src.split(":", 1)[1]
+        doc = ref.split("@", 1)[0].strip()
+        if doc:
+            return doc
+    fact_id = cp.get("fact_id")
+    if fact_id:
+        return "doc-%s" % fact_id
+    return None
+
+
 
 
 def _is_interim_row(row):
@@ -1122,6 +1142,26 @@ def score_answer_contract_rows(fixture, rows):
         print(msg, file=sys.stderr)
         raise ValueError(msg)
 
+    # MASK-EVENTS: the arm's own rows say when each fact's body left the prompt.
+    # `masked_entry` is stamped on the turn the mask FIRED, with the ref it removed
+    # (`doc-fact-01@r1`). From that evidence alone a probe is decidable as before-or-
+    # after its fact was masked -- no re-derivation of the window, and no trust in the
+    # fields that used to lie about it.
+    mask_turn_by_doc = {}
+    for row in rows or []:
+        entries = row.get("masked_entry") or []
+        turn = row.get("turn")
+        if turn is None:
+            continue
+        for entry in entries:
+            ref = entry.get("ref") if isinstance(entry, dict) else entry
+            if not isinstance(ref, str) or "@" not in ref:
+                continue
+            doc = ref.split("@", 1)[0]
+            prev = mask_turn_by_doc.get(doc)
+            mask_turn_by_doc[doc] = (int(turn) if prev is None
+                                     else min(prev, int(turn)))
+
     out = {}
     for key in arm_rep_order:
         arm, rep = key
@@ -1132,6 +1172,13 @@ def score_answer_contract_rows(fixture, rows):
         abstained = 0
         kind_mismatch = 0
         total = 0
+        # OUTCOME-SPLIT: the four numbers that stop a mask-abstention from reading as
+        # an answer. None of them overrides `checkpoint_accuracy` (correct/total), and
+        # `abstained_after_mask` is legitimate arm behaviour, NOT a success.
+        answered_correctly = 0
+        abstained_after_mask = 0
+        answered_wrong = 0
+        unparsed = 0
         by_distance = {}
         graded_rows = []
         for cid, bucket in by_id.items():
@@ -1197,6 +1244,28 @@ def score_answer_contract_rows(fixture, rows):
                 abstained += 1
             if ak not in (None, "NUM") and value_ok:
                 kind_mismatch += 1
+            # OUTCOME-SPLIT: one graded checkpoint lands in exactly one of the four.
+            # `abstained_after_mask` requires EVIDENCE that the fact's body was already
+            # gone when the probe was asked; a NONE answer at a probe whose fact was
+            # still in the prompt is neither a mask-abstention nor a wrong value, and it
+            # stays only in `abstained` (all NONE answers) -- never a success.
+            row_doc = _checkpoint_doc(final.get("checkpoint"))
+            mask_turn = mask_turn_by_doc.get(row_doc) if row_doc else None
+            probe_turn = final.get("turn")
+            masked_before_probe = bool(
+                mask_turn is not None and probe_turn is not None
+                and int(probe_turn) >= int(mask_turn))
+            answered_none_expected = (str(expected).strip().upper() == "NONE")
+            correct = bool(value_ok) or (ak == "NONE" and answered_none_expected)
+            if ak in (None, "OOV") or final.get("answer_parse_error"):
+                unparsed += 1
+            elif correct:
+                answered_correctly += 1
+            elif ak == "NONE" and masked_before_probe:
+                abstained_after_mask += 1
+            elif ak != "NONE":
+                # a VALUE was given (NUM / CALL / TEXT) and it does not match
+                answered_wrong += 1
         out_key = "%s__rep%s" % (arm, rep)
         out[out_key] = {
             "arm": arm, "rep": rep,
@@ -1206,6 +1275,21 @@ def score_answer_contract_rows(fixture, rows):
             "abstained": abstained,
             "kind_mismatch_value_correct": kind_mismatch,
             "total": total,
+            # OUTCOME-SPLIT. `checkpoint_accuracy` keeps its existing meaning --
+            # correct / total -- and is NOT redefined upward: an abstention after a
+            # mask is arm behaviour, not a pass, so it stays outside the numerator.
+            "checkpoint_accuracy": "%d/%d" % (answered_correctly, total),
+            "answered_correctly": answered_correctly,
+            "abstained_after_mask": abstained_after_mask,
+            "answered_wrong": answered_wrong,
+            "unparsed": unparsed,
+            "outcome_split_note": (
+                "answered_correctly + abstained_after_mask + answered_wrong + "
+                "unparsed partition GRADED answers; `total` additionally counts "
+                "checkpoints with no answer row (see ungradeable), and `abstained` "
+                "counts every NONE answer, including premature ones that are neither "
+                "a mask-abstention nor a wrong value."),
+            "mask_turn_by_doc": dict(sorted(mask_turn_by_doc.items())),
             "graded_checkpoints": total,
             "fixture_checkpoints": fixture_count,
             "by_distance": by_distance,

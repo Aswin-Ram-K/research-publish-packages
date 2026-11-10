@@ -1,0 +1,32 @@
+{
+  "unit": "U-SPCC-20",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/answer-shape-diagnosis-TX03.md",
+    "orchestration/units/U-SPCC-20.md"
+  ],
+  "evidence": {
+    "prompt_provenance": "100/100 turns byte-identical: materialised sha256(user content) == row prompt_sha256, sha_mismatch_turns: [] (run via run_longrun.run_cell with send_chat recorder, _http_get_json stubbed offline, cap-gate used_in_run=100 delta=0)",
+    "presence_split": "8/8 passing checkpoints: expected value present in prompt, 1 hit + 1 anchor hit. 40/40 failing checkpoints: 0 hits, 0 anchor hits.",
+    "passing_positions": "cp.TX-03.f01.d2 74/268 tok = 0.276 | f02.d2 255/455 = 0.560 | f03.d2 490/684 = 0.716 | f04.d2 677/877 = 0.772 | f05.d2 1194/1388 = 0.860 | f06.d2 1381/1581 = 0.874 | f07.d2 1622/1816 = 0.893 | f08.d2 1809/2009 = 0.900 (user-content tokens); 1809/2455 = 0.74 of full request",
+    "post_mask_prompt_T6": "QUESTION (T1): Work turn 1.\\nTOOL OUTPUTS:\\n[MASKED doc-fact-01@r1]\\nANSWER (T1):\\n  ... 3001 occurs 0 times in this prompt; 3000 survives only via T3 answer line 'ANSWER (T3): ANSWER: NUM 3000'",
+    "mask_turns": "masked_rows>0 at turns 5,12,21,28,49,56,65,72 for facts f01..f08 (intro turns 1,8,17,24,45,52,61,68); WINDOW_TURNS=4, cutoff=t-4 in longrun/arm_cd.py:167-173",
+    "bucket_counts": "cause1 content evicted = 40; cause2 present-not-retrieved = 0; cause3 contract too strict = 0; cause4 fixture unanswerable = 0; unclassified = 0; total = 40",
+    "dominant_cause": "1 - content evicted",
+    "degenerate_expected_present": "longrun/run_longrun.py:2581 expected_present = bool(contains_expected(reasoning_raw, expected)) -- tests the reasoning channel, not the prompt; thinking off => reasoning '' on every row => False on all 48, including 8 correct answers (cp.TX-03.f01.d2 expected 3000, answer 'ANSWER: NUM 3000', expected_present=False)",
+    "degenerate_evicted": "initialised 0 at longrun/run_longrun.py:1453, assigned only inside 'if arm == \"transcript-grow\":' branch at :1476; masking-no-fetch never enters it => evicted=0 on all 100 rows including T5 where masked_rows=1 and masked_entry=[{'ref': 'doc-fact-01@r1', 'since_turn': 1}]",
+    "commands": [
+      ".venv/bin/python /tmp/recon_tx03.py",
+      "python3 /tmp/gen_report_tx03.py",
+      "grep -n 'evicted' longrun/run_longrun.py",
+      "sed -n 167,245p longrun/arm_cd.py"
+    ]
+  },
+  "blocker": null,
+  "next_unit_hint": "Scorecard must treat NONE at a probe whose fact was masked before that probe as valid arm behaviour, not a failed check; or move d5+ probes inside the 4-turn window, or measure retention through the pointer/fetch channel of arm D.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/answer-shape-diagnosis-TX03.md",
+    "orchestration/units/U-SPCC-20.md",
+    "orchestration/handoffs/U-SPCC-20.json"
+  ]
+}
