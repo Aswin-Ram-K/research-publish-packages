@@ -1,0 +1,52 @@
+{
+  "unit": "U-SPCC-26",
+  "status": "complete",
+  "artifacts": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/run_longrun.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_preview_preservation.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/state/previews/LR-01/transcript-compact/turn-01.json",
+    "/home/zer0null/research extractor/experiments/ptr-engine/state/previews/LR-01/transcript-compact/turn-02.json",
+    "/home/zer0null/research extractor/experiments/ptr-engine/state/previews/LR-01/transcript-compact/turn-03.json",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-26.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-26.json"
+  ],
+  "evidence": {
+    "defect": "run_dry() rmtree'd experiments/ptr-engine/state/previews/<task_id> on every --dry-run; that tree is tracked evidence (LR-01 previews are committed request bodies). It had destroyed LR-01/transcript-compact/turn-0{1,2,3}.json twice, the second time removing the whole transcript-compact directory.",
+    "rule_chosen": "delete nothing up front; overwrite rendered previews and record every path written; prune only inside an arm this run just re-rendered and only a file whose turn index is <= this run's n_turns and that this run did not write. Arms not rendered and turns outside scope are never touched. Invariant: a dry run never leaves the working tree with fewer tracked files than it found.",
+    "code_change": "run_longrun.py:2967 preview_root(task_id); :2976 prune_stale_previews(arm_root, written, n_turns); :3004 run_dry(cfg, fixture, cells, root=None) (root injectable); :3010 root = root or preview_root(...), rmtree removed; :3070/:3076/:3088 written.add(os.path.abspath(path)); :3095 prune per arm after its turn loop, printing removals.",
+    "red_proof": "with the old rmtree temporarily restored: FAILED experiments/ptr-engine/longrun/tests/test_preview_preservation.py::test_dry_run_keeps_previews_of_arms_it_does_not_render - AssertionError: the dry run deleted /tmp/preview-preserve-8sn9o3sg/masking-no-fetch/turn-01.json: an arm it never rendered; 1 failed in 0.05s",
+    "green_proof_disk": ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_preview_preservation.py -q -> 1 passed in 0.05s",
+    "green_proof_in_head": "after peer commit 990edc3: 1 passed in 0.03s (run from the committed tree, working tree clean)",
+    "restored_files_sha256": {
+      "turn-01.json": "934c1533e70a80e37a634fa773fc165cea49dc943e004ecde03393cfa6ea8b70",
+      "turn-02.json": "e7f11cdc6c187482791bb5579b508eba3d3a00fa588b850b73f9416f930adad9",
+      "turn-03.json": "d841695713b8032594b43e78f2ca6899b446e61d764c9417c5e3706c2785cec5"
+    },
+    "restore_method": "mkdir -p experiments/ptr-engine/state/previews/LR-01/transcript-compact, then git show HEAD:<path> > <path> per file; every sha256sum matched git show HEAD:<path> | sha256sum. After restore git status --porcelain held only ' M experiments/ptr-engine/longrun/run_longrun.py'.",
+    "landing": "Commit 990edc3 (authored by peer unit U-SPCC-27, which ran git add -A in the shared checkout while this unit's edits were on disk) contains this unit's work: 'experiments/ptr-engine/longrun/run_longrun.py | 58 ++++++++++++++++--' and '.../longrun/tests/test_preview_preservation.py | 71 ++++++++++++++++++++++'. This unit did not author the commit and did not amend or revert it.",
+    "suite": ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests -q --tb=no -rf --ignore=experiments/ptr-engine/longrun/tests/test_lost_fixture.py -> 6 failed, 829 passed, 1 warning, 31 subtests passed in 38.68s",
+    "suite_known_red": [
+      "test_journal_lint.py::test_census_over_the_live_corpus_is_reported (named known-red)",
+      "test_request_ledger.py::TestRealCorpus::test_g_real_corpus_total_and_delta_from_466 (named known-red, OVER BUDGET)",
+      "test_lost_fixture.py (named known-red; EXCLUDED from the run above because it exceeds 280s scanning 8210 pins — see U-SPCC-9C)"
+    ],
+    "suite_other_red_not_named_by_acceptance": [
+      "test_stop_reason.py::OnDiskArtefact::test_stop_reason_json_matches_a_fresh_scan (stale on-disk stop_reason artefact)",
+      "test_verbosity.py::test_every_rows_file_appears_with_its_sha",
+      "test_verbosity.py::test_recomputation_agrees_with_rows",
+      "test_verbosity.py::test_fabricated_mean_fails_recomputation (all three: 'rows file missing from corpus: rows-spcc-billedproof-2026-11-10.jsonl', a peer unit's rows artefact, not this unit's code path)"
+    ],
+    "dry_run_tests": "test_dry_turn_scope.py + test_tranch1_dryrun.py + test_preview_preservation.py -> 22 passed in 3.87s (the injected root parameter breaks no existing preview assertion)",
+    "docs_gate": "python3 tools/doc_check.py -> 'OK docs clean under /home/zer0null/research extractor', exit=0",
+    "working_tree": "git status --porcelain | wc -l -> 0 after landing; then 1 untracked file, orchestration/units/U-SPCC-26.md (this unit's card)."
+  },
+  "blocker": null,
+  "next_unit_hint": "run_dry's preview tree is now safe to exercise repeatedly; a future unit may want a --preview-dir CLI flag wired to the new root parameter so operators can preview into scratch space instead of the tracked tree without touching code.",
+  "write_paths": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/run_longrun.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_preview_preservation.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/state/previews/LR-01/transcript-compact/",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-26.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-26.json"
+  ]
+}

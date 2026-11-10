@@ -1,0 +1,87 @@
+{
+  "unit": "V-SPCC-36",
+  "overall": "fail",
+  "head_tested": "e18a587557bcdef71ff2cec82aae4dcccd96dc02",
+  "tree_stable": true,
+  "tree_stable_evidence": "rev-parse HEAD and status --porcelain (5 untracked) identical before and after the run",
+  "suite": "TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python -m pytest experiments/ptr-engine/longrun/tests -q --tb=short -rf",
+  "suite_result": "7 failed, 850 passed, 1 warning, 31 subtests passed in 48.27s",
+  "counts": {
+    "regression": 1,
+    "corpus_drift": 4,
+    "correctly_red": 2,
+    "environment": 0
+  },
+  "checks": [
+    {
+      "test": "test_layers_compiler.py::test_compaction",
+      "classification": "REGRESSION",
+      "cause_commit": "df1e2c0",
+      "evidence": "tests/test_layers_compiler.py:90 asserts any(\"summary\" in ln.lower() for ln in state.index_lines); ptr_engine/layers.py:234 emits marker = \"[compacted: %d turns dropped at epoch %d]\"; parent ba064ba:experiments/ptr-engine/ptr_engine/layers.py:227 had summary = \"[summary: %d turns folded into epoch %d]\"",
+      "fails_on_parent": false,
+      "fix_file": "experiments/ptr-engine/longrun/tests/test_layers_compiler.py",
+      "fix_line": 90,
+      "fix_should_become": "assert any(\"compacted\" in ln.lower() for ln in state.index_lines)  # or pin \"[compacted: 24 turns dropped at epoch 1]\""
+    },
+    {
+      "test": "test_journal_lint.py::test_census_over_the_live_corpus_is_reported",
+      "classification": "CORRECTLY-RED",
+      "evidence": "5 handoffs lack journals and are absent from the frozen baseline: orchestration/handoffs/{A1-AUTHOR,A2-FIX,A3-FIX,ACCFIX2,ACCRESCOPE}.json; orchestration/journals/<unit>.jsonl MISSING for all five; state/logs/journal-lint-baseline.json frozen 2026-10-26T12:06:27-0500 with 1009 entries, untracked",
+      "fails_on_parent": true,
+      "fails_on_parent_evidence": "9fadcc9 (which added the five handoffs) is an ancestor of ba064ba; baseline unchanged"
+    },
+    {
+      "test": "test_request_ledger.py::TestRealCorpus::test_g_real_corpus_total_and_delta_from_466",
+      "classification": "CORRECTLY-RED",
+      "evidence": "tests/test_request_ledger.py:305 asserts proc.returncode == 0 for --cap 4320; tool exits 4: OVER BUDGET: spent=8081 + would_spend=0 = 8081 > cap=4320 - reserve=0 = 4320 (over by 3761); corpus is 8081 rows",
+      "fails_on_parent": true,
+      "fails_on_parent_evidence": "corpus was 7969 rows at ba064ba, still over the 4320 cap"
+    },
+    {
+      "test": "test_stop_reason.py::OnDiskArtefact::test_stop_reason_json_matches_a_fresh_scan",
+      "classification": "CORPUS-DRIFT",
+      "evidence": "tools/stop_reason_audit.py --check: on disk rows=7969 answered_rows=6665; rescan rows=8081 answered_rows=6777; delta +112 rows = rows-e1-spcc (100) + rows-smoke-spcc (6) + rows-smoke-spcc2 (6); STOP-REASON.json last regenerated in 9c2eceb",
+      "fails_on_parent": false,
+      "fails_on_parent_evidence": "at ba064ba the corpus was 7969 rows and the artefact matched"
+    },
+    {
+      "test": "test_verbosity.py::test_every_rows_file_appears_with_its_sha",
+      "classification": "CORPUS-DRIFT",
+      "evidence": "VERBOSITY.json declares 93 corpus files, 96 on disk; missing rows-e1-spcc-2026-11-10.jsonl, rows-smoke-spcc-2026-11-10.jsonl, rows-smoke-spcc2-2026-11-10.jsonl; VERBOSITY.json last regenerated in 9c2eceb",
+      "fails_on_parent": false,
+      "fails_on_parent_evidence": "the three rows files postdate ba064ba (rows-e1-spcc added in e18a587; two smoke files untracked)"
+    },
+    {
+      "test": "test_verbosity.py::test_recomputation_agrees_with_rows",
+      "classification": "CORPUS-DRIFT",
+      "evidence": "validate_report(VERBOSITY.json) returns 3 errors: rows file missing from corpus: rows-e1-spcc-2026-11-10.jsonl, rows-smoke-spcc-2026-11-10.jsonl, rows-smoke-spcc2-2026-11-10.jsonl",
+      "fails_on_parent": false,
+      "fails_on_parent_evidence": "same cause as test_every_rows_file_appears_with_its_sha"
+    },
+    {
+      "test": "test_verbosity.py::test_fabricated_mean_fails_recomputation",
+      "classification": "CORPUS-DRIFT",
+      "evidence": "assert validate_report(JSON_OUT) == [], \"the real report must still pass\" fails on the same three missing rows files",
+      "fails_on_parent": false,
+      "fails_on_parent_evidence": "same cause as test_every_rows_file_appears_with_its_sha"
+    }
+  ],
+  "verdict": "The red set is NOT entirely explained: test_layers_compiler.py::test_compaction is a real regression from df1e2c0 and must be fixed before any further live run. The other six are 2 genuine repo-state signals and 4 stale derived artefacts over a corpus that grew by 112 rows.",
+  "blocker": null,
+  "next_unit_hint": "Fix experiments/ptr-engine/longrun/tests/test_layers_compiler.py:90 to assert the new [compacted: ...] marker, then regenerate STOP-REASON.json and VERBOSITY.json over the 8081-row corpus (including the two untracked smoke files) and extend state/logs/journal-lint-baseline.json for the five journal-less handoffs.",
+  "write_paths": [
+    "/home/zer0null/research extractor/orchestration/units/V-SPCC-36.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/V-SPCC-36.json"
+  ],
+  "not_reproduced": [
+    "The prior unit's claim that all seven failures are pre-existing corpus/state drift — test_layers_compiler.py::test_compaction is a regression from df1e2c0, not drift."
+  ],
+  "overstated": [
+    "The prior unit's phrase 'untouched layers.py' — layers.py WAS changed by df1e2c0 (experiments/ptr-engine/ptr_engine/layers.py, 29 lines)."
+  ],
+  "unverified": [
+    "Whether the two untracked rows-smoke-spcc* files existed in the working tree at ba064ba; they are untracked so a checkout would not remove them, but their creation time was not established."
+  ],
+  "tool_calls": 14,
+  "bound": 30
+}
