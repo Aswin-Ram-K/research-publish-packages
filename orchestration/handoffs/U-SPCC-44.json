@@ -1,0 +1,46 @@
+{
+  "unit": "U-SPCC-44",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/rows-e1-final-2026-11-10.jsonl",
+    "experiments/ptr-engine/longrun/manifests/e1-final-2026-11-10-spcc-r1.json",
+    "experiments/ptr-engine/longrun/manifests/e1-final-2026-11-10-masking-no-fetch-r1.json",
+    "experiments/ptr-engine/longrun/manifests/e1-final-2026-11-10-bounded-context-fetch-r1.json",
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "orchestration/units/U-SPCC-44.md"
+  ],
+  "evidence": {
+    "gate_prereg_direct": "cell.eval_gate_prereg(Namespace(hypothesis='E1', turns=100, reps=1, arms=3), TX-03.v1.json) -> {'gate': 'G3', 'hypothesis': 'E1', 'n': 300, 'ok': True, 'exit': None, 'thresholds': {'request_ceiling': [200, 500], 'checkpoints_required': 48, 'checkpoints_in_fixture': 48, 'basis': 'PREREG-SPCC E1: 200-500 requests over 48 checkpoints'}, 'rule_id': 'PREREG-SPCC'}; zero requests spent",
+    "cell_summary": "rows=300 requests=300 truncated=0 failed_turns=0 ttft_n=300 max_tokens=4096; content_source {'content': 300}; answer_source {'content': 300, 'none': 0, 'reasoning-fallback': 0}; finish_reason {'stop': 300}; reasoning_fallback=0 timing_usable=300",
+    "reconciliation": "spcc: spent_at_start=8081 used_in_run=100 spent_after=8181 delta=0; masking-no-fetch: 8181->8281 delta=0; bounded-context-fetch: 8281->8381 delta=0; all three 'reconciled - the run's count 100 equals the rows gained 100 (delta 0)'",
+    "scores": {
+      "spcc": {"value_correct": 22, "contract_correct": 21, "NONE": 26, "wrong": 0, "unparsed": 0, "graded": 48, "total": 48, "kind_mismatch_value_correct": 1, "billed_tokens": 9066, "by_distance": {"2": [6, 8], "5": [4, 8], "6": [5, 8], "8": [4, 8], "20": [2, 8], "32": [0, 8]}},
+      "masking-no-fetch": {"value_correct": 8, "contract_correct": 8, "NONE": 40, "wrong": 0, "unparsed": 0, "graded": 48, "total": 48, "abstained_after_mask": 40, "billed_tokens": 9730, "by_distance": {"2": [8, 8], "5": [0, 8], "6": [0, 8], "8": [0, 8], "20": [0, 8], "32": [0, 8]}},
+      "bounded-context-fetch": {"value_correct": 5, "contract_correct": 5, "NONE": 0, "wrong": 0, "unparsed": 0, "graded": 5, "total": 48, "ungradeable": 43, "billed_tokens": 2920, "by_distance": {"2": [5, 5]}}
+    },
+    "spcc_pass_turns": {
+      "pre_compaction_turn_lt_24": [3, 6, 7, 9, 10, 13, 14, 16, 19, 21, 22, 23],
+      "post_compaction_turn_ge_24": [47, 54, 57, 58, 60, 63, 67, 69, 72],
+      "compaction_count_changes_at_turns": [25, 49, 73, 97],
+      "any_pass_crosses_a_boundary": false,
+      "note": "every post-compaction pass is for a fact introduced after the most recent compaction (fact-05 intro 45 -> T47; fact-06 intro 52 -> T54/57/58/60/72; fact-07 intro 61 -> T63/67/69). fact-04 (intro 24, compaction at 25) and fact-08 (intro 68, compaction at 73) have zero passes; the d2 miss at T26 is cp.TX-03.f04.d2 answered 'ANSWER: NONE'."
+    },
+    "fetch_arm_invalid": "manifest records tools_mode='off', tools_schema_sent=false; --tools was not passed, so run_longrun.py:3566's `if arm == arm_cd.ARM_D and (fetch_tools_enabled(cfg) or tools_enabled(cfg))` never entered the fetch service. service_fetches/fetch_rows/fetch_tokens/retrieval_attempt are null on all 300 rows. 43 of 48 checkpoint turns emitted 'ANSWER: CALL fetch(ref=...)' and were stamped interim=true, interim_reason='fetch_followup', protocol_violation='answer_wrapped_tool_call'; send_index is 0 on all 100 rows of that arm, so no follow-up was ever sent. Corrected arm needs --tools fetch.",
+    "fetch_arm_not_rerun": "G3 refuses a single-arm cell (n=100 < 200), so a corrected fetch arm requires all three arms again (~343 requests) -> E1 at 643 requests, over its own 200-500 preregistered ceiling and over this unit's 500-request bound. Not re-run.",
+    "verdict": "Prediction 'spcc >= fetch on single-fact and > masking everywhere; billed tokens <= masking': unadjudicable on the fetch clause (fetch arm degenerate), FAILED on '> masking everywhere' (d2 6/8 vs 8/8; d32 0/8 vs 0/8), HELD on billed tokens (9066 <= 9730). Falsifier 'spcc below fetch on single-fact, or spcc not strictly above masking on any checkpoint class, or billed tokens above masking': DID NOT FIRE - spcc is strictly above masking on d5 (4>0), d6 (5>0), d8 (4>0), d20 (2>0); not below fetch; billed below masking.",
+    "disagreement_with_single_arm": "rows-e1-spcc-2026-11-10.jsonl gave spcc 20/48 value, 19/48 contract; this cell gives 22/48 and 21/48. Same arm/fixture/temperature/seed, so the 2-checkpoint gap is run-to-run non-determinism on the serving stack. This cell is the E1 evidence (preregistered three-arm design, one invocation, one manifest); the single-arm cell was inadmissible (one arm, below the floor) and stays as a replication.",
+    "ledger_columns": "before: 15 rows x 10 cols, 7 x 3, 16 x 7; after: 15 x 10, 7 x 3, 17 x 7 (one 7-column row appended)",
+    "doc_check": "python3 tools/doc_check.py -> 'OK docs clean under /home/zer0null/research extractor', exit 0"
+  },
+  "blocker": null,
+  "next_unit_hint": "Re-run E1 with --tools fetch on all three arms so bounded-context-fetch is a real fetch arm; that costs ~343 requests and needs a fresh budget decision because E1's own 200-500 ceiling is already consumed by the 300 spent here. Separately, run_longrun.py should refuse ARM_D when tools are off rather than silently recording 43 stranded interim rows - the arm's manifest prediction is 'bounded-recoverable with fetch; 2 requests per turn' and nothing enforces that the fetch channel is on.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/rows-e1-final-2026-11-10.jsonl",
+    "experiments/ptr-engine/longrun/manifests/e1-final-2026-11-10-spcc-r1.json",
+    "experiments/ptr-engine/longrun/manifests/e1-final-2026-11-10-masking-no-fetch-r1.json",
+    "experiments/ptr-engine/longrun/manifests/e1-final-2026-11-10-bounded-context-fetch-r1.json",
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "orchestration/units/U-SPCC-44.md",
+    "orchestration/handoffs/U-SPCC-44.json"
+  ]
+}
