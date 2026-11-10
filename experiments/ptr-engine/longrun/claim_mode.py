@@ -83,7 +83,8 @@ if _HERE not in sys.path:                 # imported by path (tests) as well as 
 from exit_codes import EXIT_PREREG        # noqa: E402  the one exit-code table
 
 __all__ = [
-    "CLAIM_IDS", "CLAIM_NONE", "MODE_HYPOTHESIS", "MODE_SMOKE", "SMOKE_SPELLINGS",
+    "CLAIM_IDS", "SPCC_CLAIM_IDS", "ALL_CLAIM_IDS", "CLAIM_NONE", "MODE_HYPOTHESIS",
+    "MODE_SMOKE", "SMOKE_SPELLINGS",
     "ROW_FIELDS", "INCOMPARABLE_CLAIM", "ClaimRecord", "ClaimRefusal",
     "IncomparableClaim", "resolve_claim", "refusal_message", "row_fields", "as_abort",
     "check_prereg_claim", "smoke_prereg_verdict", "assert_comparable",
@@ -92,7 +93,15 @@ __all__ = [
 MODE_SMOKE = "smoke"
 MODE_HYPOTHESIS = "hypothesis"
 CLAIM_NONE = "none"
+#: The PARM-1 claim ids (``experiments/ptr-engine/measure/PREREG-ARM-RUN.json``).
 CLAIM_IDS = ("H1", "H2", "H3")
+#: The PREREG-SPCC experiment ids (``research-seed-concepts/PREREG-SPCC.md``). A cell
+#: that declares one of these makes a claim of its own namespace, so it is
+#: comparison_eligible exactly as an H id is -- but G3 validates it against the SPCC
+#: document's own terms (request ceiling, checkpoint count), never against PARM-1's.
+SPCC_CLAIM_IDS = ("E1", "E2", "E3", "E4", "E5", "E6")
+#: Every id a cell may declare, in the order the refusal message names them.
+ALL_CLAIM_IDS = CLAIM_IDS + SPCC_CLAIM_IDS
 #: The three accepted forms, in the order the refusal message names them.
 SMOKE_SPELLINGS = ("smoke", "plumbing")
 
@@ -166,8 +175,10 @@ def refusal_message(flag_value):
         "claim REFUSED: --hypothesis=%r is not a declaration this run may make. "
         "The three accepted forms are (1) `--hypothesis smoke` and (2) "
         "`--hypothesis plumbing` -- both declare claim=none, so the cell is plumbing "
-        "and its rows are NOT comparison_eligible -- and (3) `--hypothesis H1`, "
-        "`--hypothesis H2` or `--hypothesis H3`, the PARM-1 claim the cell will make. "
+        "and its rows are NOT comparison_eligible -- and (3) a claim id: "
+        "`--hypothesis H1`, `--hypothesis H2` or `--hypothesis H3` for a PARM-1 claim, "
+        "or `--hypothesis E1` ... `--hypothesis E6` for a PREREG-SPCC experiment "
+        "(experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.md). "
         "Silence is not a claim: an absent or empty --hypothesis is refused here, and "
         "so is an explicit `none` -- a run may start without a hypothesis only by "
         "declaring that it makes no claim."
@@ -194,7 +205,7 @@ class ClaimRefusal(Exception):
             "claim": CLAIM_NONE, "comparison_eligible": False,
             "n": 0,
             "computed": "hypothesis=%r (not a declaration)" % (flag_value,),
-            "limit": "smoke | plumbing | H1 | H2 | H3",
+            "limit": "smoke | plumbing | " + " | ".join(ALL_CLAIM_IDS),
             "flag": "--hypothesis",
             "consequence": ("a live cell spends requests on a claim it must name, or "
                             "declares that it makes no claim; silence is not a claim"),
@@ -207,8 +218,11 @@ def resolve_claim(flag_value):
     """Resolve ``--hypothesis`` into a frozen two-shape record, or refuse.
 
     ``smoke``/``plumbing`` -> ``{"mode": "smoke", "claim": "none",
-    "comparison_eligible": False}``. A hypothesis id (case-insensitive) ->
-    ``{"mode": "hypothesis", "claim": "H#", "comparison_eligible": True}``.
+    "comparison_eligible": False}``. A claim id (case-insensitive) ->
+    ``{"mode": "hypothesis", "claim": "H#"|"E#", "comparison_eligible": True}``.
+    ``H1``-``H3`` are PARM-1's claims; ``E1``-``E6`` are PREREG-SPCC's experiments --
+    both are claims the cell makes, so both are comparison_eligible; which document
+    adjudicates the claim is G3's decision, not this resolver's.
     Everything else -- ``None``, ``""``, whitespace, ``"none"``, an unknown spelling --
     raises :class:`ClaimRefusal`. There is no default: the only way to run without a
     hypothesis is to declare that you make no claim.
@@ -217,7 +231,7 @@ def resolve_claim(flag_value):
     if text in SMOKE_SPELLINGS:
         return ClaimRecord(MODE_SMOKE, CLAIM_NONE, False)
     upper = text.upper()
-    if upper in CLAIM_IDS:
+    if upper in ALL_CLAIM_IDS:
         return ClaimRecord(MODE_HYPOTHESIS, upper, True)
     raise ClaimRefusal(flag_value)
 
@@ -398,7 +412,7 @@ def assert_comparable(rows, label=""):
         if claim == CLAIM_NONE or eligible is False:
             offenders.append(dict(ident, reason="claim_free"))
             continue
-        if claim.upper() not in CLAIM_IDS:
+        if claim.upper() not in ALL_CLAIM_IDS:
             offenders.append(dict(ident, reason="unknown_claim"))
             continue
         if eligible is None:
@@ -412,10 +426,10 @@ def assert_comparable(rows, label=""):
             "claim (%s): %s. A smoke/plumbing cell declares claim=%r with "
             "comparison_eligible=false, so its rows can never enter a comparison -- "
             "they are not filtered out silently, they stop the comparison. Compare "
-            "only cells that declare H1|H2|H3, or report the smoke cell's numbers on "
+            "only cells that declare %s, or report the smoke cell's numbers on "
             "their own with its claim named."
             % (INCOMPARABLE_CLAIM, where, len(offenders), ", ".join(kinds), named,
-               CLAIM_NONE),
+               "|".join(ALL_CLAIM_IDS), CLAIM_NONE),
             offenders)
     return {"comparable": True,
             "claims": claims,

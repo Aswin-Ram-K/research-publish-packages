@@ -1,0 +1,40 @@
+{
+  "unit": "U-SPCC-35",
+  "status": "blocked",
+  "artifacts": [
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-35.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-35.json"
+  ],
+  "evidence": {
+    "precondition": "resolve_claim('E1') from experiments/ptr-engine/longrun/claim_mode.py must return comparison_eligible=True and claim='E1' before any request is spent.",
+    "precondition_result": "FAILED. resolve_claim('E1') raises ClaimRefusal at claim_mode.py:222.",
+    "refusal_verbatim": "claim REFUSED: --hypothesis='E1' is not a declaration this run may make. The three accepted forms are (1) `--hypothesis smoke` and (2) `--hypothesis plumbing` -- both declare claim=none, so the cell is plumbing and its rows are NOT comparison_eligible -- and (3) `--hypothesis H1`, `--hypothesis H2` or `--hypothesis H3`, the PARM-1 claim the cell will make. Silence is not a claim: an absent or empty --hypothesis is refused here, and so is an explicit `none` -- a run may start without a hypothesis only by declaring that it makes no claim.",
+    "namespace": "claim_mode.py:95 CLAIM_IDS = (\"H1\", \"H2\", \"H3\"); resolve_claim at claim_mode.py:206-222 accepts only smoke/plumbing (claim='none', comparison_eligible=False) and those three ids (comparison_eligible=True). 'E1' is in neither set.",
+    "namespace_not_landed": [
+      "git log --oneline -- experiments/ptr-engine/longrun/claim_mode.py -> single commit 9fadcc9 'wip(ptr-engine): preserve context x serving instrument, fixtures and measurements'; no commit adds E1.",
+      "grep -n 'E1' experiments/ptr-engine/longrun/tests/test_claim_mode.py -> no matches; the accepted/refused case list at claim_mode.py:427 is ('smoke','plumbing','H1','H3',None,'','none','H4').",
+      "git --no-optional-locks status --porcelain shows no modification to claim_mode.py, so the on-disk resolver is the committed one."
+    ],
+    "requests_spent": 0,
+    "rows_written": 0,
+    "cell_launched": false,
+    "substitutions_refused": "Did not substitute smoke, plumbing, H1, H2 or H3, and did not raise --budget-cap. H1/H2/H3 are the PARM-1 claims; stamping an SPCC cell with one would write rows into a comparison under a claim the cell does not make (claim_mode.py:14-16).",
+    "acceptance_state": {
+      "1_100_turns_100_rows": "not attempted - no cell",
+      "2_arm_table_from_repo_scorer": "not attempted - no spcc rows",
+      "3_per_checkpoint_breakdown": "not attempted",
+      "4_billing_line": "not attempted",
+      "5_verdict_vs_prereg": "not adjudicable - no data",
+      "6_findings_ledger_row": "not written - a ledger row without a measurement would be a fabricated result",
+      "7_doc_check": "python3 tools/doc_check.py -> 'OK docs clean under /home/zer0null/research extractor', exit=0",
+      "8_commit_push": "this card and handoff"
+    },
+    "checkout_note": "The session cwd /home/zer0null/.omp/wt/wt-20261109-055629-bd8df5c is a stale worktree at f17663d (an ancestor of the branch tip) with 58 unrelated dirty entries and no claim_mode.py. The branch of record research/next-candidates-2026-10-24 is checked out at /home/zer0null/research extractor at 997df58, which contains both the spcc repair (997df58 'U-SPCC-33: spcc keeps fixture deliveries in L2; fetches stay L3-only') and claim_mode.py. All work was done in that checkout."
+  },
+  "blocker": "E1 claim id not yet resolvable",
+  "next_unit_hint": "Land E1 in claim_mode.CLAIM_IDS (claim_mode.py:95) plus its resolve_claim docstring, the _REFUSAL text and tests/test_claim_mode.py, then re-issue U-SPCC-35 unchanged: the cell command, TX-03.v1.json fixture, temperature 0, seed 42, occamy-1.0 at http://192.168.2.168:8012/v1 and --budget-cap 12094 were all found valid and were never exercised.",
+  "write_paths": [
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-35.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-35.json"
+  ]
+}

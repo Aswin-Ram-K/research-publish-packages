@@ -150,6 +150,13 @@ PROJECTION_ARTEFACT = (os.environ.get("CELL_PROJECTION_ARTEFACT")
                        or os.path.join(MEASURE, "PROJECTION.json"))
 PREREG_ARTEFACT = (os.environ.get("CELL_PREREG_ARTEFACT")
                    or os.path.join(MEASURE, "PREREG-ARM-RUN.json"))
+#: The SPCC namespace's own prereg (U-SPCC-34). G3 selects the artefact by the claim's
+#: namespace: an ``H*`` claim is adjudicated by PARM-1's card above, an ``E*`` claim by
+#: this one -- an E1 cell may not be measured against PARM-1's thresholds, and an H2
+#: cell may not be measured against E1's request ceiling.
+SPCC_PREREG_ARTEFACT = (os.environ.get("CELL_SPCC_PREREG_ARTEFACT")
+                        or os.path.join(ENGINE, "research-seed-concepts",
+                                        "PREREG-SPCC.json"))
 REQUEST_LEDGER_TOOL = os.path.join(ENGINE, "tools", "request_ledger.py")
 
 # Measured, not guessed: 68 rows of kind "tool-followup" against 801 rows of kind "turn"
@@ -1211,11 +1218,17 @@ def validate_g2(max_wall, turn_wall_cap, proj_turn, requests):
 
 
 def validate_g3(hypothesis, turns, reps, checkpoints, known, min_n_h1=None,
-                h1_basis=None, checkpoint_min=8, smoke=False):
+                h1_basis=None, checkpoint_min=8, smoke=False, spcc=None):
     """G3's operands and thresholds, derived from the requirement. PURE: no I/O.
 
     Requirement: a live run declares a hypothesis or smoke; silence is a refusal (12);
     turns/reps are positive integers. ``known`` is the prereg artefact's hypotheses map.
+
+    ``spcc`` is the SPCC entry for an ``E*`` claim (``None`` for every other claim).
+    When it is given, the claim is adjudicated against THAT document's own terms --
+    its request ceiling and its required checkpoint count -- and never against PARM-1's
+    n thresholds: an E1 cell is refused for spending outside 200-500 requests or for a
+    fixture carrying fewer than 48 checkpoints, and for nothing PARM-1 says.
     """
     facts = {"gate": GATE_PREREG, "ok": True, "branch": None, "hypothesis": hypothesis,
              "operands": {}, "refusals": [], "n": 0, "min_n": None, "thresholds": {}}
@@ -1263,6 +1276,29 @@ def validate_g3(hypothesis, turns, reps, checkpoints, known, min_n_h1=None,
         facts.update(ok=False, branch="unknown")
         return False, facts
     entry = known.get(name) or {}
+    if spcc is not None:
+        # SPCC NAMESPACE (U-SPCC-34): the claim is adjudicated by PREREG-SPCC's own
+        # terms. ``n`` is the cell's request allocation -- the same turns x reps G3
+        # already computes -- and the ceiling is the document's, not PARM-1's.
+        ceiling = spcc.get("request_ceiling") or {}
+        lo, hi = ceiling.get("min"), ceiling.get("max")
+        need = spcc.get("checkpoints_required")
+        cps = checkpoints if isinstance(checkpoints, int) and checkpoints >= 0 else 0
+        facts.update(branch="SPCC", min_n=lo, thresholds={
+            "claim": spcc.get("claim"),
+            "falsifier": spcc.get("falsifier"),
+            "request_ceiling": [lo, hi],
+            "checkpoints_required": need,
+            "checkpoints_in_fixture": cps,
+            "basis": ("PREREG-SPCC %s: %s-%s requests over %s checkpoints"
+                      % (name, lo, hi, need))})
+        ok = isinstance(lo, int) and isinstance(hi, int)
+        if ok and not (lo <= facts["n"] <= hi):
+            ok = False
+        if isinstance(need, int) and cps < need:
+            ok = False
+        facts["ok"] = ok
+        return ok, facts
     if name == "H1":
         mn = int(min_n_h1 if min_n_h1 is not None else 60)
         facts.update(branch="H1", min_n=mn, thresholds={
@@ -1510,6 +1546,46 @@ def _resolved_claim(args):
     return _CLAIM_CACHE[key]
 
 
+def _check_spcc_doc_pin(doc, stage):
+    """The companion must still describe the document it was transcribed from.
+
+    ``PREREG-SPCC.json`` carries ``doc_sha256`` of ``PREREG-SPCC.md``. If the prose moved
+    and the companion did not, the numbers G3 would enforce are no longer the
+    preregistered ones -- so the gate refuses (exit 2, an unreadable limit) rather than
+    adjudicating an E* claim against a stale transcription.
+    """
+    rel = doc.get("doc")
+    want = doc.get("doc_sha256")
+    if not rel or not want:
+        raise Abort(2, stage, "%s prereg: companion does not pin its document (%s)"
+                    % (GATE_PREREG, _repo_rel(SPCC_PREREG_ARTEFACT)))
+    path = os.path.join(ROOT, rel)
+    if not os.path.exists(path):
+        raise Abort(2, stage, "%s prereg: pinned document is missing (%s)"
+                    % (GATE_PREREG, rel))
+    got = _sha256_file(path)
+    if got != want:
+        raise Abort(2, stage,
+                    "%s prereg: %s has changed (sha256 %s) since %s was transcribed "
+                    "from it (pinned %s) — re-derive the companion before an E* claim "
+                    "is adjudicated" % (GATE_PREREG, rel, got,
+                                        _repo_rel(SPCC_PREREG_ARTEFACT), want))
+
+
+def _spcc_claim_id(args, claim):
+    """The SPCC experiment id this invocation declares, or ``None``.
+
+    A resolved ``E*`` claim names its own namespace. A REFUSED claim has no record, so
+    the raw flag text decides: an ``E``-prefixed spelling is an SPCC attempt (``E9`` is
+    an unknown SPCC experiment, not an unknown PARM-1 hypothesis), and its refusal must
+    name the SPCC document. Everything else -- including silence -- is PARM-1's.
+    """
+    if isinstance(claim, Exception):
+        text = str(getattr(args, "hypothesis", None) or "").strip().upper()
+        return text if text.startswith("E") else None
+    return claim.claim if claim.claim in _claim_module().SPCC_CLAIM_IDS else None
+
+
 def _refusal_flag(args):
     """The flag as declared, upper-cased, and whether it named a hypothesis at all."""
     text = str(getattr(args, "hypothesis", None) or "").strip().upper()
@@ -1523,12 +1599,21 @@ def _refusal_computed(args, hyps):
     return "hypothesis=none declared"
 
 
+def _accepted_ids(hyps):
+    """Every id a cell may declare: the artefact's own, plus the SPCC namespace's.
+
+    The refusal names the accepted spellings, so it must name BOTH namespaces even when
+    the artefact it was read from defines only one of them.
+    """
+    ids = set(hyps or ()) | set(_claim_module().SPCC_CLAIM_IDS)
+    return ", ".join(sorted(ids)) or "H1|H2|H3"
+
+
 def _refusal_limit(args, hyps):
     text, named = _refusal_flag(args)
     if named and text not in hyps:
-        return "one of %s" % (", ".join(sorted(hyps)) or "H1|H2|H3")
-    return ("a declared claim (smoke|plumbing, or one of %s)"
-            % (", ".join(sorted(hyps)) or "H1|H2|H3"))
+        return "one of %s" % _accepted_ids(hyps)
+    return ("a declared claim (smoke|plumbing, or one of %s)" % _accepted_ids(hyps))
 
 
 def _refusal_consequence(args, hyps, module_text):
@@ -1540,7 +1625,10 @@ def _refusal_consequence(args, hyps, module_text):
     """
     text, named = _refusal_flag(args)
     if named and text not in hyps:
-        first = "PARM-1 does not define hypothesis %r" % text
+        if text.startswith("E"):
+            first = "PREREG-SPCC does not define experiment %r" % text
+        else:
+            first = "PARM-1 does not define hypothesis %r" % text
     else:
         first = ("a live cell spends requests on a claim it must name; no hypothesis "
                  "was declared, and silence is not a claim you may spend on")
@@ -1557,11 +1645,25 @@ def eval_gate_prereg(args, fixture):
     fewer than 8 checkpoints cannot support it. A cell that declares NO hypothesis is
     refused with exit 12 -- G3's own code, distinct from preflight's 2: silence is not a
     claim you may spend on.
+
+    SPCC NAMESPACE (U-SPCC-34): an ``E1``-``E6`` claim is adjudicated by
+    ``PREREG-SPCC.json`` (the machine-readable companion of ``PREREG-SPCC.md``) against
+    that document's own terms -- E1's request ceiling of 200-500 and its 48 checkpoints
+    -- and never against PARM-1's n thresholds. The ``H*`` path is unchanged: same
+    artefact, same thresholds, same verdicts.
     """
     stage = "3c/7 G3 prereg gate"
-    doc, digest = _load_gate_artefact(PREREG_ARTEFACT, GATE_PREREG, stage, "prereg")
-    hyps = doc.get("hypotheses") or {}
     claim = _resolved_claim(args)
+    # SPCC NAMESPACE: the artefact is selected by the claim's namespace, so an E* claim
+    # is adjudicated by PREREG-SPCC and an H* claim by PARM-1 -- never by the other's
+    # thresholds. An unknown E* spelling still selects SPCC, so its refusal names the
+    # document that would have defined it.
+    spcc_id = _spcc_claim_id(args, claim)
+    artefact_path = SPCC_PREREG_ARTEFACT if spcc_id is not None else PREREG_ARTEFACT
+    doc, digest = _load_gate_artefact(artefact_path, GATE_PREREG, stage, "prereg")
+    if spcc_id is not None:
+        _check_spcc_doc_pin(doc, stage)
+    hyps = doc.get("hypotheses") or {}
     if isinstance(claim, Exception):                 # absent/empty/none/unknown
         # The module's refusal text is the refusal: G3's own code (12), G3's own stage,
         # verbatim -- so no caller can mistake this for a different gate's decision.
@@ -1571,8 +1673,8 @@ def eval_gate_prereg(args, fixture):
             "rule_sha256": doc.get("rule_sha256"),
             "hypothesis": str(getattr(args, "hypothesis", "") or ""),
             "hypothesis_source": "refused:claim_mode.resolve_claim",
-            "n": 0, "artefact": _repo_rel(PREREG_ARTEFACT), "artefact_sha256": digest,
-            "flag": "--hypothesis smoke|plumbing|H1|H2|H3",
+            "n": 0, "artefact": _repo_rel(artefact_path), "artefact_sha256": digest,
+            "flag": "--hypothesis smoke|plumbing|H1|H2|H3|E1..E6",
             "thresholds": {}, "ok": False, "exit": claim.code,
             "claim": None, "comparison_eligible": False, "mode": None,
         # The DECISION is the module's; the refusal still names the same facts it
@@ -1591,7 +1693,8 @@ def eval_gate_prereg(args, fixture):
     ok, facts = validate_g3(claim.claim, getattr(args, "turns", None),
                             getattr(args, "reps", None), checkpoints, hyps,
                             min_n_h1=min_n_h1, h1_basis=h1_basis,
-                            smoke=claim.is_smoke)
+                            smoke=claim.is_smoke,
+                            spcc=(hyps.get(spcc_id) or {}) if spcc_id else None)
     n = facts.get("n") or 0
     verdict = {
         "gate": GATE_PREREG, "what": "prereg", "rule_id": doc.get("rule_id"),
@@ -1599,7 +1702,7 @@ def eval_gate_prereg(args, fixture):
         "hypothesis": name, "hypothesis_source": source, "n": n,
         "claim": claim.claim, "comparison_eligible": claim.comparison_eligible,
         "mode": claim.mode,
-        "artefact": _repo_rel(PREREG_ARTEFACT), "artefact_sha256": digest,
+        "artefact": _repo_rel(artefact_path), "artefact_sha256": digest,
         "flag": "--hypothesis / --turns / --reps",
         "thresholds": facts.get("thresholds") or {},
     }
@@ -1620,7 +1723,7 @@ def eval_gate_prereg(args, fixture):
         verdict.update({
             "ok": False, "n": 0,
             "computed": "hypothesis=none declared",
-            "limit": "a named hypothesis (%s)" % (", ".join(sorted(hyps)) or "H1|H2|H3"),
+            "limit": "a named hypothesis (%s)" % _accepted_ids(hyps),
             "short": "%s n=%d (no hypothesis)" % (GATE_PREREG, n),
             "consequence": ("a live cell spends requests on a claim it must name; no "
                             "hypothesis was declared, and silence is not a claim you may "
@@ -1630,9 +1733,30 @@ def eval_gate_prereg(args, fixture):
     if not ok and branch == "unknown":
         verdict.update({
             "ok": False, "computed": "hypothesis=%s" % name,
-            "limit": "one of %s" % ", ".join(sorted(hyps)),
+            "limit": "one of %s" % _accepted_ids(hyps),
             "short": "%s n=%d (unknown %s)" % (GATE_PREREG, n, name),
-            "consequence": "PARM-1 does not define hypothesis %r" % name,
+            "consequence": ("PREREG-SPCC does not define experiment %r" % name
+                            if spcc_id else
+                            "PARM-1 does not define hypothesis %r" % name),
+        })
+        return verdict
+    if branch == "SPCC":
+        # SPCC NAMESPACE: the refusal names the document's own two terms, so a reader
+        # can see WHICH one the cell missed (allocation vs fixture).
+        th = facts["thresholds"]
+        lo, hi = th["request_ceiling"]
+        need = th["checkpoints_required"]
+        verdict.update({
+            "ok": ok,
+            "computed": "n=%d over %d checkpoint(s)" % (n, checkpoints),
+            "limit": "n in [%s, %s] and >= %s checkpoint(s)" % (lo, hi, need),
+            "short": "%s n=%d %s [%s, %s]" % (GATE_PREREG, n,
+                                              "in" if ok else "outside", lo, hi),
+            "consequence": (
+                "PREREG-SPCC's %s is budgeted at %s-%s requests over %s checkpoints; "
+                "this cell would spend n=%d over %d checkpoint(s), so its own "
+                "allocation cannot support the claim it would state"
+                % (name, lo, hi, need, n, checkpoints)),
         })
         return verdict
 
@@ -2127,9 +2251,11 @@ def main(argv=None):
                     help="requests G1 must also reserve for the tool loop's fetch "
                          "follow-ups (default: ceil(turns x arms x reps x %.4f), measured "
                          "from the ledger's own row corpus)" % FETCH_FOLLOWUP_RATIO)
-    ap.add_argument("--hypothesis", default=None, metavar="H1|H2|H3",
-                    help="the PARM-1 hypothesis this cell will claim; G3 refuses (exit 12) "
-                         "a cell whose n cannot support it (H1 needs n >= 60). There is NO "
+    ap.add_argument("--hypothesis", default=None, metavar="H1|H2|H3|E1..E6",
+                    help="the claim this cell will make: a PARM-1 hypothesis (H1|H2|H3) "
+                         "or a PREREG-SPCC experiment (E1..E6). G3 refuses (exit 12) a "
+                         "cell whose own allocation cannot support it (H1 needs n >= 60; "
+                         "E1 needs 200-500 requests over 48 checkpoints). There is NO "
                          "default: an absent flag is read as 'none' and refused, and an "
                          "unknown name is refused too -- silence is not a claim you may "
                          "spend on")

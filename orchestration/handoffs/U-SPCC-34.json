@@ -1,0 +1,37 @@
+{
+  "unit": "U-SPCC-34",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/claim_mode.py",
+    "experiments/ptr-engine/longrun/cell.py",
+    "experiments/ptr-engine/longrun/tests/test_spcc_claim.py",
+    "experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.json",
+    "orchestration/units/U-SPCC-34.md",
+    "orchestration/handoffs/U-SPCC-34.json"
+  ],
+  "evidence": {
+    "defect": "claim_mode.CLAIM_IDS was (H1,H2,H3) and cell.eval_gate_prereg validated every claim against measure/PREREG-ARM-RUN.json with PARM-1 thresholds, so an E1 cell had no legal declaration: smoke/plumbing marks rows comparison_eligible=False, and H1|H2|H3 would mislabel an SPCC cell as a PARM-1 claim.",
+    "resolver": "claim_mode.resolve_claim('E1') -> {'mode': 'hypothesis', 'claim': 'E1', 'comparison_eligible': True}. New SPCC_CLAIM_IDS=('E1'..'E6'), ALL_CLAIM_IDS=CLAIM_IDS+SPCC_CLAIM_IDS; CLAIM_IDS itself unchanged so H1/H2/H3 records are byte-identical.",
+    "namespace_selection": "cell.SPCC_PREREG_ARTEFACT (env CELL_SPCC_PREREG_ARTEFACT) defaults to experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.json. eval_gate_prereg selects the artefact by claim namespace: H* -> PREREG-ARM-RUN.json (unchanged), E* -> PREREG-SPCC.json. An unknown E9 also selects SPCC so its refusal names the right document.",
+    "spcc_terms": "validate_g3(spcc=entry) adjudicates an E* claim against the document's own terms: n = turns x reps must lie in entry.request_ceiling and the fixture must carry >= entry.checkpoints_required. E1 = 200-500 requests over 48 checkpoints. E6's ceiling is GPU hours (request_ceiling null), so G3 refuses an E6 request allocation instead of inventing a ceiling.",
+    "doc_pin": "_check_spcc_doc_pin refuses (exit 2) when PREREG-SPCC.md's sha256 no longer matches the companion's doc_sha256 (pinned 5b7007abb0a29a9dd25c53676e66346c368df34d36791f1c7a6736c425ffe960), so the prose stays the authority and the companion cannot drift.",
+    "refusal_text": "refusal_message keeps the phrase 'three accepted forms' and names E1..E6 inside form (3); ClaimRefusal.verdict['limit'] and cell._refusal_limit/_accepted_ids name both namespaces; an E-prefixed unknown says 'PREREG-SPCC does not define experiment', an H-prefixed one still says 'PARM-1 does not define hypothesis'.",
+    "red_output": "pre-change claim_mode.py + cell.py from HEAD, test file copied in: FAILED test_e1_resolves_to_a_comparable_hypothesis_record - claim_mode.ClaimRefusal: claim REFUSED: --hypothesis='E1' is not a declaration this run may make; FAILED test_e1_within_ceiling_and_checkpoints_is_accepted - assert False is True; FAILED test_e1_over_its_request_ceiling_is_refused - assert 0 == 600; FAILED test_e1_fixture_below_48_checkpoints_is_refused - KeyError: 'checkpoints_in_fixture'; FAILED test_unknown_e9_is_refused_naming_the_accepted_spellings - assert 'E1' in '...'; 9 failed, 3 passed.",
+    "green_output": "12 passed in 0.05s",
+    "acceptance_suite": "test_spcc_claim.py + test_claim_rows.py + test_cap_gate.py + test_capgate_label.py -> 35 passed in 1.81s",
+    "neighbour_suite": "test_claim_mode.py + test_claim_wiring.py + test_cell_gates.py + test_gate_messages.py + test_verdict_payload.py + test_gate_operand_validation.py -> 60 passed, 7 subtests passed",
+    "full_longrun_suite": "850 passed, 7 failed; all 7 are pre-existing corpus/state drift in the shared checkout (untracked measure/rows-*-spcc-*.jsonl, new orchestration/handoffs/*.json, stale measure/STOP-REASON.json, test_layers_compiler::test_compaction on untouched ptr_engine/layers.py). None of those test files import claim_mode or cell.",
+    "doc_check": "exit=0",
+    "requests_spent": 0
+  },
+  "blocker": null,
+  "next_unit_hint": "E1 can now be declared: run the 48-checkpoint spcc vs masking-no-fetch vs bounded-context-fetch cell with --hypothesis E1 and a request allocation inside 200-500 (e.g. --turns 250 --reps 1), then check the gate manifest records artefact PREREG-SPCC.json. Budget: 4,113 requests remain against the 12,094 cap, so E1's 200-500 fits but E2-E5 do not all fit at their ceilings.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/claim_mode.py",
+    "experiments/ptr-engine/longrun/cell.py",
+    "experiments/ptr-engine/longrun/tests/test_spcc_claim.py",
+    "experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.json",
+    "orchestration/units/U-SPCC-34.md",
+    "orchestration/handoffs/U-SPCC-34.json"
+  ]
+}

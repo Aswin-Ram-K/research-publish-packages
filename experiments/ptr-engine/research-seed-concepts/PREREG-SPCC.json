@@ -1,0 +1,72 @@
+{
+ "rule_id": "PREREG-SPCC",
+ "unit": "U-SPCC-34",
+ "status": "frozen",
+ "doc": "experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.md",
+ "doc_sha256": "5b7007abb0a29a9dd25c53676e66346c368df34d36791f1c7a6736c425ffe960",
+ "doc_sha256_convention": "sha256 of the .md bytes; G3 refuses an E* claim if the companion and the document disagree, so the prose stays the authority and this file cannot drift from it",
+ "namespace": "SPCC",
+ "order": ["E1", "E2", "E3", "E4", "E5", "E6"],
+ "hypotheses": {
+  "E1": {
+   "claim": "the stable-prefix + append-only journal compiler (spcc) matches or beats bounded fetch on single-fact recall and beats masking everywhere, while costing no more billed tokens than masking",
+   "design": "48-checkpoint fixture; arms spcc vs masking-no-fetch vs bounded-context-fetch; temperature 0, seed 42",
+   "falsifier": "spcc below fetch on single-fact, or spcc not strictly above masking on any checkpoint class, or billed tokens above masking",
+   "request_ceiling": {"min": 200, "max": 500},
+   "checkpoints_required": 48,
+   "unit_of_account": "requests",
+   "arms": ["spcc", "masking-no-fetch", "bounded-context-fetch"]
+  },
+  "E2": {
+   "claim": "larger compaction interval lowers rewrite cost with no accuracy loss until the interval exceeds the distance at which facts stop being refetched",
+   "design": "COMPACT_EVERY in {12, 24, 48} on the same 48-checkpoint fixture and arm",
+   "falsifier": "cost does not fall monotonically, or accuracy drops before the predicted distance",
+   "request_ceiling": {"min": 200, "max": 500},
+   "checkpoints_required": 48,
+   "unit_of_account": "requests"
+  },
+  "E3": {
+   "claim": "the observed distance cliff is a property of position, not of eviction (body present)",
+   "design": "fact present at distances {2, 8, 20, 32, 64}, no eviction, both arms",
+   "falsifier": "neither outcome is clean (mixed cliff) -- would require re-running with finer distance grid",
+   "request_ceiling": {"min": 200, "max": 500},
+   "checkpoints_required": 48,
+   "unit_of_account": "requests"
+  },
+  "E4": {
+   "claim": "Nemotron Nano matches or exceeds occamy on contract-level scoring; all three models stay below the fetch ceiling on aggregation",
+   "design": "Nemotron Nano vs occamy-1.0 vs qwen3.5-9b on the same 48 checkpoints",
+   "falsifier": "Nemotron below occamy on contract-level (then keep occamy as measurement model)",
+   "request_ceiling": {"min": 200, "max": 500},
+   "checkpoints_required": 48,
+   "unit_of_account": "requests",
+   "blocked_on": "Nemotron weights on the remote host (serving/REMOTE-ROOT.md authorisation)"
+  },
+  "E5": {
+   "claim": "enabling SGLang hierarchical cache raises cached fraction and lowers billed tokens without hurting latency",
+   "design": "HiCache off vs on at identical prompts and context",
+   "falsifier": "cached fraction does not rise, or billed tokens do not fall, or latency regresses",
+   "request_ceiling": {"min": 200, "max": 500},
+   "checkpoints_required": 48,
+   "unit_of_account": "requests",
+   "blocked_on": "SGLang relaunched with --enable-hierarchical-cache"
+  },
+  "E6": {
+   "claim": "one epoch of LoRA on generated pointer tasks yields a measurable contract-level gain on held-out checkpoints, or the training path is shelved",
+   "design": "LoRA Nano on generated pointer tasks, 1 epoch, evaluate on held-out checkpoints",
+   "falsifier": "no measurable gain -> shelve training path",
+   "request_ceiling": null,
+   "checkpoints_required": null,
+   "unit_of_account": "gpu_hours",
+   "blocked_on": "remote authorisation AND Nano LoRA under the 60 GB cgroup cap"
+  }
+ },
+ "rules": [
+  "No payload-to-savings inference; billed tokens only, from the server's cache report.",
+  "ABSENT != 0.",
+  "No cross-build comparison.",
+  "Every cell records fixture_sha256, generation and prefix_sha256.",
+  "E6 runs only after E1-E5 and only if E1 shows spcc is a real arm."
+ ],
+ "provenance": "transcribed from PREREG-SPCC.md by U-SPCC-34; the .md is the authority and doc_sha256 pins it"
+}
