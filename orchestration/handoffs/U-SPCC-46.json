@@ -1,0 +1,19 @@
+{
+  "unit": "U-SPCC-46",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_arm_d_requires_tools.py",
+    "orchestration/units/U-SPCC-46.md",
+    "orchestration/handoffs/U-SPCC-46.json"
+  ],
+  "evidence": "RED against unpatched run_longrun.py at e4692f8: 'AssertionError: 2 != 0 : a refused launch must send no request, sent 2' (the tools-off bounded-context-fetch cell proceeded and sent 2 requests). GREEN after the patch: '18 passed in 0.34s' for test_arm_d_requires_tools.py + test_arm_cd_wiring.py + test_fetch_arm_row_persistence.py. Refusal: exit code 2 (EXIT_ARM_REQUIRES_TOOLS), stderr 'ARM REFUSED (exit 2): arm \\'bounded-context-fetch\\' is the fetch arm and requires --tools (e.g. --tools read_file); --tools is absent, so tools_mode=\\'off\\' and the fetch service would never run. No row was written and no request was sent.' Guard is called first in run_cell (before the ARM_C copy that clears cfg.tools) and for every requested arm in main() before the first cell, so a multi-arm launch cannot spend earlier arms first. masking-no-fetch and spcc are unaffected with tools off (both exit 0, send, write rows). python3 tools/doc_check.py exits 0 ('OK docs clean'). No fetch semantics changed: the D arm's fetch path, budget, row shape and --tools handling are untouched.",
+  "blocker": null,
+  "next_unit_hint": "Re-run the E1 three-arm cell with --tools read_file on the bounded-context-fetch arm (the launch now refuses without it) and re-measure the D arm's value/contract correctness; the 22/48 spcc number from e4692f8 stands, but the D arm's contribution in that cell was degenerate and must not be reported.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_arm_d_requires_tools.py",
+    "orchestration/units/U-SPCC-46.md",
+    "orchestration/handoffs/U-SPCC-46.json"
+  ]
+}

@@ -3241,8 +3241,46 @@ def self_test() -> int:
 
 
 # --------------------------------------------------------------------------- cell
+# ARM-REQUIRES-TOOLS (U-SPCC-46).  The D arm's treatment IS the fetch channel: its whole
+# difference from C is that a masked body can be bought back with a `fetch` call.  With
+# `--tools` absent the fetch service at the `arm == arm_cd.ARM_D` block never runs, so
+# every checkpoint turn strands as an interim `fetch_followup` row with
+# `protocol_violation=answer_wrapped_tool_call` and `send_index 0` -- a degenerate cell
+# that still exits 0 and reports 0 failed turns.  E1 ran exactly that (43 of 48
+# checkpoint turns stranded) and the arm looked like a real result.  A launch that cannot
+# fire its treatment is refused BEFORE the first request, like the treatments gate: no
+# row, no socket, exit 2 (the same code as the other malformed-launch refusals).
+EXIT_ARM_REQUIRES_TOOLS = 2
+
+
+def arm_requires_tools(arm: str) -> bool:
+    """True for the arms whose treatment cannot fire without the tool channel."""
+    return arm == arm_cd.ARM_D
+
+
+def refuse_arm_without_tools(cfg, arm: str) -> int:
+    """``0`` when the arm may run, else the refusal exit code (nothing sent, no row).
+
+    Only the fetch arm is gated: ``masking-no-fetch`` (C) is DEFINED by having no tool
+    channel -- ``run_cell`` clears ``cfg.tools`` for it -- and ``spcc`` never fetches, so
+    both are unaffected by an absent ``--tools``.
+    """
+    if not arm_requires_tools(arm) or tools_enabled(cfg):
+        return 0
+    print(f"ARM REFUSED (exit {EXIT_ARM_REQUIRES_TOOLS}): arm {arm!r} is the fetch arm and "
+          f"requires --tools (e.g. --tools read_file); --tools is absent, so tools_mode="
+          f"{client.tools_mode_label(tool_names(cfg))!r} and the fetch service would never "
+          f"run. No row was written and no request was sent.", file=sys.stderr)
+    return EXIT_ARM_REQUIRES_TOOLS
+
+
 def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str) -> int:
     assert_repeat_identity(run_id, rep, getattr(cfg, 'generation', 'gen-7'))
+    # BEFORE the ARM_C copy below clears cfg.tools: the guard reads the launch's own
+    # --tools, and C is allowed to be tool-less while D is not.
+    rc_tools = refuse_arm_without_tools(cfg, arm)
+    if rc_tools != 0:
+        return rc_tools
     import copy as _copy
     if arm == arm_cd.ARM_C:
         cfg = _copy.copy(cfg)
@@ -4269,6 +4307,13 @@ def main(argv=None) -> int:
     if bad:
         print(f"unknown arm(s): {bad}; known: {list(ARMS)}", file=sys.stderr)
         return 2
+    # ARM-REQUIRES-TOOLS (U-SPCC-46): checked for EVERY requested arm before the first
+    # cell runs, so a multi-arm launch cannot spend the earlier arms' requests and then
+    # discover the fetch arm was degenerate.  Same refusal, same code, no row, no socket.
+    for _arm in arms:
+        rc_tools = refuse_arm_without_tools(cfg, _arm)
+        if rc_tools != 0:
+            return rc_tools
     # FIXTURE/TASK GUARD: never silently default to LR-01.
     if cfg.fixture is None and cfg.task is None:
         print("no selector: neither --task nor --fixture given", file=sys.stderr)
