@@ -1,6 +1,6 @@
 # VERBOSITY — does the grow arm's longer answer explain the TTFT gap?
 
-_Generated offline by `experiments/ptr-engine/longrun/tests/test_verbosity.py` (sha256 `9f6aa0e984b6595d`) at 2026-11-09T14:05:25Z from 92 rows files. Zero inference requests._
+_Generated offline by `experiments/ptr-engine/longrun/tests/test_verbosity.py` (sha256 `9f6aa0e984b6595d`) at 2026-11-10T13:14:00Z from 93 rows files. Zero inference requests._
 
 **Verdict: `confound_immaterial`.** holding completion length equal leaves 86.7% of the TTFT gap in which arm a (pointer-stable) is 0.37x the first-token latency of arm b (transcript-grow), i.e. b is 2.67x slower; the fitted b_completion is +0.0720 per ln-token and completion length differs 0.19x between the arms, so verbosity covers only 13.3% of it
 
@@ -82,6 +82,7 @@ Scope: p95 TTFT is refused corpus-wide at arm level (no cell reaches n>=60), so 
 | `rows-rep2-masking-no-fetch-maskon-tx01-20261109.jsonl` | 48 | 48 | `21eccf524f6afaaadbffb310b2b70ba71b9968df1550a2560eb6ac46eee3f611` |
 | `rows-smoke-tx01-20261109.jsonl` | 16 | 9 | `921b0232509f131797e086db5c4cd6775ac7ee29b1a67ba1bd1d6e857409216c` |
 | `rows-smoke2-tx01-20261109.jsonl` | 10 | 10 | `fc45132c77d3d9e06ae1cccff20084c6df4cd60dbbcc2c874a4c969c00c4e10f` |
+| `rows-spcc-billedproof-2026-11-10.jsonl` | 100 | 100 | `26ab72817c64f4310cb14e98051aaa2a64fd4712c8805fe93454d300105444d7` |
 | `rows-stack8014-bounded-context-fetch-tx01-20261109.jsonl` | 1 | 0 | `67e6e53722861e741a4d738f89750138901e79e5da304c7461d523a3d8060b3e` |
 | `rows-stack8014-masking-no-fetch-maskoff-tx01-20261109.jsonl` | 48 | 48 | `3f16ad811ad5345cbd5863937844b40bf86df2d5c8dea3e9fec93d12769dbc0b` |
 | `rows-stack8014-masking-no-fetch-maskon-tx01-20261109.jsonl` | 48 | 48 | `faf6984de181caba78bc92bce2b4275e7051434f13d44f3e34829c90d641f9e7` |
@@ -194,6 +195,7 @@ Scope: p95 TTFT is refused corpus-wide at arm level (no cell reaches n>=60), so 
 | `rows-smoke-tx01-20261109.jsonl` | masking-no-fetch | 6 | 10.0 / 10.0 / 10.0 / 10.0 | 16.0 / 16.0 / 16.0 | 0.6250 | 299.5 / 353.5 | 105.2 / 105.4 / 129.3 | refused (n=6<60) |
 | `rows-smoke2-tx01-20261109.jsonl` | bounded-context-fetch | 5 | 265.8 / 212.0 / 444.0 / 562.0 | 986.0 / 787.0 / 1703.8 | 0.2696 | 4808.0 / 5403.0 | 211.5 / 199.4 / 264.3 | refused (n=5<60) |
 | `rows-smoke2-tx01-20261109.jsonl` | masking-no-fetch | 5 | 33.4 / 33.0 / 38.0 / 38.0 | 115.0 / 105.0 / 135.0 | 0.2904 | 4406.0 / 4512.6 | 371.1 / 128.4 / 746.5 | refused (n=5<60) |
+| `rows-spcc-billedproof-2026-11-10.jsonl` | masking-no-fetch | 100 | 5.4 / 5.0 / 5.0 / 10.0 | 12.3 / 12.0 / 12.0 | 0.4383 | 1765.0 / 2855.5 | 128.6 / 130.0 / 149.4 | 164.9 |
 | `rows-stack8014-masking-no-fetch-maskoff-tx01-20261109.jsonl` | masking-no-fetch | 48 | 5.7 / 5.0 / 8.0 / 11.0 | 13.2 / 12.0 / 14.0 | 0.4351 | 970.0 / 1454.4 | 194.8 / 195.4 / 267.6 | refused (n=48<60) |
 | `rows-stack8014-masking-no-fetch-maskon-tx01-20261109.jsonl` | masking-no-fetch | 48 | 5.3 / 5.0 / 5.0 / 21.0 | 13.7 / 12.0 / 12.0 | 0.3891 | 841.0 / 1310.0 | 204.6 / 189.6 / 248.8 | refused (n=48<60) |
 | `rows-sup-2026-11-09.jsonl` | bounded-context-fetch | 100 | 6.5 / 5.0 / 10.0 / 10.0 | 13.2 / 12.0 / 16.0 | 0.4947 | 2786.5 / 3712.1 | 195.7 / 180.7 / 257.3 | 323.8 |
@@ -298,6 +300,7 @@ Regression pooled across arms **within one file**, so no slope crosses a file bo
 | `rows-rep2-masking-no-fetch-maskon-tx01-20261109.jsonl` | 48 | +0.2164 | +1.4105 | 0.274 | +2.0515 | — |
 | `rows-smoke-tx01-20261109.jsonl` | 16 | +0.6062 | +0.1659 | 0.614 | +0.3843 | 0.793 |
 | `rows-smoke2-tx01-20261109.jsonl` | 10 | +0.0209 | -0.1200 | 0.039 | -0.1194 | 0.372 |
+| `rows-spcc-billedproof-2026-11-10.jsonl` | 100 | +0.0493 | -0.0003 | 0.040 | -0.0149 | -0.088 |
 | `rows-stack8014-masking-no-fetch-maskoff-tx01-20261109.jsonl` | 48 | +0.5906 | +0.0281 | 0.952 | +0.5367 | 0.398 |
 | `rows-stack8014-masking-no-fetch-maskon-tx01-20261109.jsonl` | 48 | +0.3618 | -0.0620 | 0.225 | -0.0198 | 0.049 |
 | `rows-sup-2026-11-09.jsonl` | 269 | +0.2235 | +0.2218 | 0.646 | +0.2434 | 0.219 |
@@ -445,6 +448,7 @@ On the **p50** basis the gap is **0.35x** (prompt -0.672, completion -0.142, res
 | `rows-smoke-tx01-20261109.jsonl` | masking-no-fetch | 6 | 10 | 16 | 1.00 | 0.00 |
 | `rows-smoke2-tx01-20261109.jsonl` | bounded-context-fetch | 5 | 212 | 787 | 1.00 | 0.00 |
 | `rows-smoke2-tx01-20261109.jsonl` | masking-no-fetch | 5 | 33 | 105 | 1.00 | 0.00 |
+| `rows-spcc-billedproof-2026-11-10.jsonl` | masking-no-fetch | 100 | 5 | 12 | 1.00 | 0.08 |
 | `rows-stack8014-masking-no-fetch-maskoff-tx01-20261109.jsonl` | masking-no-fetch | 48 | 5 | 12 | 1.00 | 0.19 |
 | `rows-stack8014-masking-no-fetch-maskon-tx01-20261109.jsonl` | masking-no-fetch | 48 | 5 | 12 | 1.00 | 0.00 |
 | `rows-sup-2026-11-09.jsonl` | bounded-context-fetch | 100 | 5 | 12 | 1.00 | 0.22 |
