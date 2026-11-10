@@ -150,6 +150,13 @@ def load_fixture(path: str) -> dict:
         if not isinstance(t.get("question"), str) or not t["question"]:
             raise FixtureError(f"fixture turn {t['turn']} has no question")
     doc["turns"] = turns
+    try:
+        from ptr_engine.pointer_table import reset_bodies
+    except ImportError:
+        import sys as _sys
+        _sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from ptr_engine.pointer_table import reset_bodies
+    reset_bodies(doc.get("task_id"))
     doc["_path"] = os.path.abspath(path)
     doc["_sha256"] = sha256_bytes(raw)
     return doc
@@ -1089,10 +1096,10 @@ def send_chat(cfg, messages: list[dict]) -> dict:
     except urllib.error.HTTPError as exc:
         try:
             detail = exc.read()[:500].decode("utf-8", "replace")
-        except Exception:  # noqa: BLE001
-            detail = ""
+        except (OSError, UnicodeDecodeError, AttributeError, ValueError) as inner_exc:
+            detail = f"<unavailable:{type(inner_exc).__name__}>"
         raise RequestFailure(exc.code, f"HTTP {exc.code}: {detail}") from exc
-    except Exception as exc:  # noqa: BLE001 - recorded, never retried
+    except (urllib.error.URLError, OSError, TimeoutError, ValueError, KeyError, TypeError, UnicodeDecodeError, RuntimeError) as exc:
         raise RequestFailure(None, f"{type(exc).__name__}: {exc}") from exc
 
     # Answer-bearing text: the content channel when the model emitted one, else the
@@ -1162,9 +1169,9 @@ def count_channel_tokens(text: str, fallback_bpt: float = 4.0477) -> tuple[int, 
             import tiktoken  # type: ignore
             _TOKENIZER = tiktoken.get_encoding("cl100k_base")
             _TOKENIZER_METHOD = "tiktoken:cl100k_base"
-        except Exception:  # noqa: BLE001 - fall back, never fail a measurement
+        except (ImportError, OSError, RuntimeError, ValueError, AttributeError, TypeError, LookupError) as exc:
             _TOKENIZER = False
-            _TOKENIZER_METHOD = f"bytes/{fallback_bpt:g} (fixture bytes_per_token)"
+            _TOKENIZER_METHOD = f"bytes/{fallback_bpt:g} (fixture bytes_per_token) [{type(exc).__name__}]" 
     if _TOKENIZER:
         return len(_TOKENIZER.encode(text, disallowed_special=())), _TOKENIZER_METHOD
     return int(ceil(len(text.encode("utf-8")) / float(fallback_bpt or 4.0))), _TOKENIZER_METHOD
@@ -1342,7 +1349,8 @@ def preview_body(cfg, planner: Planner, prompt: str) -> str:
 
 
 def run_dry(cfg, fixture: dict, cells: list[tuple[str, int]]) -> int:
-    root = os.path.join("/tmp/longrun-previews", fixture["task_id"])
+    root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                       "state", "previews", fixture["task_id"])
     order: list[str] = []
     reps_by_arm: dict[str, int] = {}
     for arm, _rep in cells:
@@ -1788,8 +1796,22 @@ def main(argv=None) -> int:
     # completion on the reasoning channel only and no answer.  16384 is 4x that measured
     # truncation ceiling and ~4.5x the largest CLEAN completion (3592 tok), so a reasoning
     # preamble of the observed shape can finish; worst case ~455 s at the measured ~36 tok/s
-    # stays inside --timeout 900.  The cap is NOT the policy on its own: see
-    # _REASONING_POLICY (reasoning-only rows are marked, truncated-without-value rows are
+    if getattr(cfg, "dry_run", False):
+        _fingerprints = {
+            "model": {"id": UNSOURCEABLE, "revision_quantisation_digest": UNSOURCEABLE,
+                      "probe": "dry-run: network probe skipped"},
+            "tokenizer": {"files_hash": UNSOURCEABLE, "chat_template_hash": UNSOURCEABLE,
+                          "probe": "dry-run: network probe skipped"},
+            "renderer": {"content_digest": UNSOURCEABLE,
+                         "probe": "dry-run: network probe skipped"},
+            "engine": {"image_digest": UNSOURCEABLE, "exact_argv": UNSOURCEABLE,
+                       "probe": "dry-run: network probe skipped"},
+            "endpoints": [],
+            "completion_paths_touched": [],
+            "completion_paths_avoided": [],
+        }
+    else:
+        _fingerprints = probe_fingerprints(cfg)
     # failed turns), and it stays configurable via --max-tokens.
     ap.add_argument("--max-tokens", type=int, default=16384)
     ap.add_argument("--max-turns", type=int, default=0,
@@ -1864,7 +1886,7 @@ def main(argv=None) -> int:
             print(f"manifest[{arm} r{rep}]: {mid} ({len(data)} B) sha256={msha}")
         print(f"\nDRY-RUN task={fixture['task_id']} N={fixture['N']} fixture={fixture['_path']} "
               f"sha256={fixture['_sha256']}")
-        print("(offline: zero requests; exact request bodies under /tmp/longrun-previews/)")
+        print("(offline: zero requests; exact request bodies under state/previews/)")
         print("\nFIRST THREE REQUEST BODIES PER ARM")
         return run_dry(cfg, fixture, cells)
 

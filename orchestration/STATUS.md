@@ -372,3 +372,4 @@ requests, 0 measurements of its own**.
 - **Owed:** an independent verifier. `PAPER-FINAL` wrote the close and repaired the three defects; it did not
   verify itself, and by `VERDICTS.md`'s own rule this row is the **author's report, not a verdict**.
 
+- 2026-11-09: restored experiments/ptr-engine/research-seed-concepts/RESULTS-STACK-8014.md (complete cross-stack record, 4689 bytes) after prior truncation to 822 bytes.
