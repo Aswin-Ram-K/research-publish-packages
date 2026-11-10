@@ -1,0 +1,53 @@
+{
+  "unit": "U-SPCC-72",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/measure/STOP-REASON.json",
+    "experiments/ptr-engine/measure/VERBOSITY.json",
+    "docs/VERBOSITY.md",
+    "orchestration/units/U-SPCC-72.md",
+    "orchestration/handoffs/U-SPCC-72.json"
+  ],
+  "evidence": {
+    "generators": {
+      "experiments/ptr-engine/measure/STOP-REASON.json": "experiments/ptr-engine/tools/stop_reason_audit.py (no args writes; --check compares totals to a fresh scan)",
+      "experiments/ptr-engine/measure/VERBOSITY.json": "experiments/ptr-engine/longrun/tests/test_verbosity.py run as a script (__main__ -> build() + validate_report())",
+      "docs/VERBOSITY.md": "same script; build() writes both JSON_OUT and MD_OUT"
+    },
+    "generator_commands": [
+      "TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python experiments/ptr-engine/tools/stop_reason_audit.py",
+      "TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python experiments/ptr-engine/longrun/tests/test_verbosity.py"
+    ],
+    "generator_output": {
+      "stop_reason_audit": "rows 10167, answered 8772, empty 1395, empty-with-tokens 1377, reasoning-with-empty-content 1205; causes {no_answer_text_field: 31, unrecorded_empty_content: 1352, zero_tokens_no_content: 12}",
+      "test_verbosity": "cells=128 p95_ok=50 refused=75 decomp=36 fits=93; VERDICT confound_immaterial; VALIDATE_ERRORS []"
+    },
+    "four_tests_passing": {
+      "command": "TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_stop_reason.py::OnDiskArtefact::test_stop_reason_json_matches_a_fresh_scan experiments/ptr-engine/longrun/tests/test_verbosity.py::test_every_rows_file_appears_with_its_sha experiments/ptr-engine/longrun/tests/test_verbosity.py::test_recomputation_agrees_with_rows experiments/ptr-engine/longrun/tests/test_verbosity.py::test_fabricated_mean_fails_recomputation -q",
+      "result": "4 passed in 1.31s"
+    },
+    "full_directory": {
+      "command": "TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/ -q",
+      "result": "2 failed, 929 passed, 1 warning, 36 subtests passed in 45.72s",
+      "remaining_reds": [
+        "test_journal_lint.py::test_census_over_the_live_corpus_is_reported — 319 real journal misses; authoring journals would fabricate history",
+        "test_request_ledger.py::TestRealCorpus::test_g_real_corpus_total_and_delta_from_466 — spent=10167 > cap=4320 (over by 5847); true over-budget fact awaiting operator decision"
+      ]
+    },
+    "corpus_row_total": 10167,
+    "corpus_row_total_source": "wc -l experiments/ptr-engine/measure/rows-*.jsonl -> 10167 total; matches STOP-REASON.json totals.rows",
+    "side_effect_handled": "the full-directory run rewrote six experiments/ptr-engine/state/previews/LR-01/* files with an emptied INDEX block; restored from HEAD so the commit carries only the three artefacts",
+    "commit": "a8031bd2d142f5e26c1e6a239cba23663d85670f",
+    "push": "env -u GITHUB_TOKEN git push origin HEAD:research/next-candidates-2026-10-24 -> d9268db..a8031bd",
+    "status_porcelain": "empty"
+  },
+  "blocker": null,
+  "next_unit_hint": "The two remaining reds are operator decisions, not code work: (1) test_request_ledger is over budget by 5847 requests (spent=10167 vs cap=4320) and needs a cap re-authorisation or a recorded overrun decision; (2) test_journal_lint reports 319 journal misses that must be either backfilled from real records or accepted as a frozen baseline. Do not regenerate either artefact to make them green.",
+  "write_paths": [
+    "experiments/ptr-engine/measure/STOP-REASON.json",
+    "experiments/ptr-engine/measure/VERBOSITY.json",
+    "docs/VERBOSITY.md",
+    "orchestration/units/U-SPCC-72.md",
+    "orchestration/handoffs/U-SPCC-72.json"
+  ]
+}
