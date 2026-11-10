@@ -1,0 +1,29 @@
+{
+  "unit": "U-SPCC-14",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/ptr_engine/layers.py",
+    "orchestration/units/U-SPCC-14.md"
+  ],
+  "evidence": {
+    "header_sed_1_20": "1:\"\"\"Stable-prefix context compiler.\n\nBuilds a byte-stable prefix ``L0+L1`` from bytes that do not change between\ncompactions, plus an append-only journal ``L2`` that grows after it.\n\n``prefix_sha256`` covers ``L0+L1`` only: hashing the growing ``L2`` tail would\nreport drift on every legitimate append and could not distinguish an append\nfrom a destructive rewrite.  Compaction alone -- at the epoch boundary -- may\nbreak the prefix; it rewrites ``L1``.  Rationale: ``compile_prompt`` below and\n``research-seed-concepts/PROMPT-ENGINE-V1.md`` (lines 48-56).\n\"\"\"",
+    "diff_stat": " experiments/ptr-engine/ptr_engine/layers.py | 11 +++++++---\n 1 file changed, 8 insertions(+), 3 deletions(-)",
+    "pytest_spcc_arm": "4 passed in 0.32s",
+    "sha256_before": "13b608e5d036c6d27ee4aa5b6675f550f262830e1b1602218da73f6cb229e606  experiments/ptr-engine/ptr_engine/layers.py",
+    "sha256_after": "359ca310a07477bee2aecbb7e5bf9fa732dbfed8e3f0dc734ec47cec5d93be86  experiments/ptr-engine/ptr_engine/layers.py",
+    "sha256_note": "Digest necessarily differs from the pinned pre-edit hash; the pin described the old contradictory header and is superseded.",
+    "commands": [
+      "sed -n '1,20p' experiments/ptr-engine/ptr_engine/layers.py",
+      "git -C \"/home/zer0null/research extractor\" diff --stat -- experiments/ptr-engine/ptr_engine/layers.py",
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_spcc_arm.py -q",
+      "sha256sum experiments/ptr-engine/ptr_engine/layers.py"
+    ]
+  },
+  "blocker": null,
+  "next_unit_hint": null,
+  "write_paths": [
+    "experiments/ptr-engine/ptr_engine/layers.py",
+    "orchestration/units/U-SPCC-14.md",
+    "orchestration/handoffs/U-SPCC-14.json"
+  ]
+}

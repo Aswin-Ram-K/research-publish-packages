@@ -77,12 +77,20 @@ def test_null_cached_coverage():
     ]
     b = sl.billing_block(recs)
     assert b["coverage"] == 0.5
-    assert b["cached_fraction"] == 40/100
+    # cached over the WHOLE prompt total: the row with no cache counter contributed 0.
+    assert b["cached_fraction_of_prompt"] == 40/220
+    # cached over what the server accounted for (cached + uncached).
+    assert b["cached_fraction_of_accounted"] == 40/220
+    # both rows are billable: 60, plus the whole 120 prompt when no counter was reported.
+    assert b["billed_tokens"] == 180
     assert b["attribution"] == "available"
 
-def test_no_cached_unavailable():
+def test_no_cached_counter_bills_the_whole_prompt():
+    # A missing cache counter means nothing was cached: the prompt is billed in full, so
+    # attribution stays "available". Zero attributed rows is the null case, not this one.
     recs = [{"prompt_tokens": 10, "cached_tokens": None}]
     b = sl.billing_block(recs)
-    assert b["cached_fraction"] is None
-    assert b["attribution"] == "unavailable"
+    assert b["cached_fraction_of_prompt"] == 0.0
+    assert b["billed_tokens"] == 10
+    assert b["attribution"] == "available"
     assert b["coverage"] == 0.0

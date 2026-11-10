@@ -19,6 +19,7 @@ Status key: `current` = authoritative for its question · `record` = dated findi
 | [docs/OPERATIONS.md](OPERATIONS.md) | how to run the Research Extractor app: config, commands, outputs | current |
 | [docs/PLAN.md](PLAN.md) | the app's spec of record: the repo-to-docket pipeline | current |
 | [STRUCTURE.md](../STRUCTURE.md) | the filesystem map and the paths that must never move (counts are stale; the layout is right) | current |
+| [docs/CURRENT-REPO-STATE.md](CURRENT-REPO-STATE.md) | the branch/HEAD/merge/row-file snapshot taken right after the preservation commit (2026-11-09) | record |
 
 ## Grid & census — did the grid launch, and what do its cells measure
 
@@ -160,6 +161,7 @@ Status key: `current` = authoritative for its question · `record` = dated findi
 | [docs/serving-options/LAUNCH-VLLM.md](serving-options/LAUNCH-VLLM.md) | exact launch guide for vLLM 0.27.1 | current |
 | [docs/serving-options/LAUNCH-SGLANG.md](serving-options/LAUNCH-SGLANG.md) | exact launch guide for SGLang `0.0.0.dev1+g4ccff141d` | current |
 | [docs/serving-options/TRACK-INTERVAL.md](serving-options/TRACK-INTERVAL.md) | does `--mamba-track-interval` move the cache grid | record |
+| [docs/serving-options/FORK-DECISION.md](serving-options/FORK-DECISION.md) | whether to patch SGLang: the three-gap fork gate (each gap to be shown by a failing run), and why the answer today is **no fork** | current |
 | [docs/STACK-RECON.md](STACK-RECON.md) | what our serving stack can actually tell us | record |
 
 ## App governance — the Research Extractor spec, policy and integrity rules

@@ -17,6 +17,26 @@ Rules:
 | Payload cut vs billed cut | −24.2% payload, −2.4% billed | % of tokens | Consonance `EXP#43` — `handoff from consonance/MEASURED_FACTS.md` (F1, line 12); `handoff from consonance/DO_NOT_REDO.md` (line 7) | EXP#43 | n/a (Consonance single build) | VERIFIED (`MEASURED_FACTS.md:12`; `DO_NOT_REDO.md:7`) |
 | Append-only cache hit climb | 0 → 0.489 | cached fraction | `handoff from consonance/MEASURED_FACTS.md` (F2, line 13) | EXP#43 | n/a (Consonance single build) | VERIFIED (`MEASURED_FACTS.md:13`) |
 | Rewrite cost per 48/72-byte handle | D-086 repayment step cost (48 of 72 prefix bytes moved) | prefix bytes moved | `handoff from consonance/MEASURED_FACTS.md` (F3, line 14); `handoff from consonance/DO_NOT_REDO.md` (D-086) | D-086 | n/a | VERIFIED (`MEASURED_FACTS.md:14` — "48 of 72 prefix bytes"; DO_NOT_REDO.md cites D-086) |
+| Pinned fixture overwritten in place | 278 rows across six `rows-agg-*` files pin `2b416d827c36ec958aa50e54db4ec5d52f72f061e7c39e9a417b5f0b2078370c`; the sole on-disk `TX-AGG.v1.json` hashes `178042c254f7b732f57603985de35adf8e3722f80507219103c0f7b259e81b03`; 0 of 56,431 workspace files and no git ref carry the pinned bytes | rows pinned (278/278) / digest copies found on disk (0) | `measure/FIXTURE-MAP-MT36.note` (143 lines: pin inventory, 56,431-file scan, re-serialization probe, `git log --all`); pins in `experiments/ptr-engine/measure/rows-agg-{fetch-mt36,fetch-mt50,fetch-test,fetch-test2,fetch-r1,masking-r1}.jsonl` | gen-7 (identifiers preserved across the rewrite: same `TX-AGG.v1`, N=100, `wall_tokens` 4312) | not comparable — every one of the 278 rows carries `claim: none`, `comparison_eligible: false` | VERIFIED (pin absent, rewrite timestamped; provenance unverifiable) |
+
+### What those 278 rows may and may not support
+
+Timeline, exactly: `experiments/ptr-engine/longrun/tasks-v7/TX-AGG.v1.json` was rewritten **in place** at `2026-11-09T08:57:28Z` (mtime = ctime, a real write), about eight minutes after the last run that consumed the old bytes — `longrun-2026-11-09T084942Z-bounded-context-fetch-r1`, at `08:49:43Z`; the 20 manifests recording `fixture.sha256 = 2b416d82…` for that path run `08:21:44Z` → `08:49:43Z`. The only commit touching that path, `9fadcc9` ("preserve context x serving instrument, fixtures and measurements"), **already carries the rewritten bytes**, so no pre-rewrite blob exists in any ref, and no deletion of the path is recorded anywhere. Identifiers survived the rewrite — same `gen-7`, same `TX-AGG.v1`, same N=100, same `wall_tokens 4312` — while the ground truths changed: `cp.TX-AGG.g00.d2` expected 20786 in the rows versus 156145 on disk, `g01.d2` 60786 vs 210513, `g00.d6` 10131 vs 51443, `g02.d2` 100786 vs 269767, `g01.d6` 30131 vs 84932, `g03.d2` 140786 vs 268509 — 26 of 26 rows embedding a checkpoint agree on id/turn/question/source and disagree on `expected`, 0 identical.
+
+These rows **may** support:
+
+- the per-row measurements they recorded (billed/total/wall tokens, ttft, latency, `content_sha256`, `request_sha256`, arm, rep, turn, run id);
+- that a run carrying the row's run id loaded a TX-AGG document hashing `2b416d82…` at that moment;
+- grading of the answers actually emitted, against each row's **own** recorded `expected`.
+
+These rows **may not** support:
+
+- **reproducibility** — the prompt prefix cannot be rebuilt, so no derived token count can be re-checked;
+- **substitution** of the current on-disk fixture's numbers (different document, different ground truths);
+- **cross-arm comparability** — all rows carry `claim: none` and `comparison_eligible: false`;
+- any **`ABSENT = 0`** reading of the missing fixture.
+
+The procedural rule this produced — a fixture is identified by path **and** digest, so regeneration that changes any byte writes a new versioned path — is recorded in `experiments/ptr-engine/tools/build_fixture.py` (module docstring) and `docs/FIXTURE-GENERATIONS.md` §8.
 
 ## Open questions this ledger does not answer
 

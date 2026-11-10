@@ -123,3 +123,24 @@ python3 experiments/ptr-engine/tools/build_fixture.py --check
 # guard (5 tests: (a) v5 sha, (b) v6 bytes, (c) drift named, (d) frozen refusal + rows, (e) spec/variants)
 python3 -m pytest experiments/ptr-engine/longrun/tests/test_build_fixture.py -q   # 5 passed
 ```
+
+## 8. Fixture identity rule — path **and** digest
+
+**A fixture is identified by its path and its digest.** Rows pin sha256, so a path is only an
+addressing convention: **a regeneration that changes any byte must write a new versioned path
+(`TX-AGG.v2.json`), and must never overwrite the previous version in place**, because rows pin the
+digest and identity-by-path silently becomes false.
+
+This is not hypothetical. `experiments/ptr-engine/longrun/tasks-v7/TX-AGG.v1.json` was rewritten in
+place at `2026-11-09T08:57:28Z` — eight minutes after the last run that consumed the old bytes,
+`longrun-2026-11-09T084942Z-bounded-context-fetch-r1` at `08:49:43Z` — under the same identifiers
+(`gen-7`, `TX-AGG.v1`, N=100, `wall_tokens 4312`) with different checkpoint ground truths. Result:
+278 rows across six `rows-agg-*` files pin `2b416d82…`, a digest that exists in **no** file in the
+workspace (56,431 hashed) and in **no** git ref; the preservation commit `9fadcc9` already carries
+the rewritten bytes, so no pre-rewrite blob survives to recover. Full evidence:
+`measure/FIXTURE-MAP-MT36.note`; finding and its claim limits:
+`experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md`.
+
+The generator already refuses one narrow case of this: `--out` onto a frozen fixture exits `3`
+unless `--force-frozen` is passed, and the refusal prints "prefer writing to a new path". Prefer that
+path — a new version, not a rewrite. Nothing downstream can repair a rewrite after the fact.

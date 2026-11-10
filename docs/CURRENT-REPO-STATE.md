@@ -1,17 +1,20 @@
 # Current repo state
 
 - Branch: `research/next-candidates-2026-10-24`
-- HEAD: `dfba6aa` (revert of `ca9d65e` merge + removal of vendored `.api_server.py`)
-- Working tree: 9 untracked paths from sibling agents (not part of this unit)
+- HEAD: `17182ff` (`backup: screened serving WIP (unverified)`)
+- Pushed as: `origin/backup/screened-dirty-progress-2026-11-10-1348` = `17182ff`
+- `origin/main`: `5554d82` — **an ancestor** of this branch (merge-base = `5554d82`)
+- Working tree: untracked paths from sibling agents (not part of this unit)
 
-## Branches
-- `research/next-candidates-2026-10-24`: active integration branch; preservation commit `9fadcc9`, paper-candidates merge `afe4d78`.
-- `research/paper-candidates-2026-11-04`: 4 commits ahead at merge time, now merged.
-- `origin/main`: a *different* repository (encoder-crossover-190 deposit: second-labeller, results, fixture). Shares no common ancestor with this branch (two roots: `78c01e9`, `b4ea93c`).
+## Branch-only history
+These live only on the research branch; `origin/main` has not moved past `5554d82`:
+- `9fadcc9` — preservation commit (context x serving instrument, fixtures, measurements)
+- `afe4d78` — merge of `research/paper-candidates-2026-11-04`
+- `ca9d65e` — merge of `origin/main` with `--allow-unrelated-histories`, leaking 31 files
+- `1977d30` — `git revert -m 1 ca9d65e`; repair recorded in `59c1c60`. No history rewritten.
 
-## Merge outcome
-- `ca9d65e` merged origin/main with `--allow-unrelated-histories`, leaking 31 unrelated files. Reverted as new commit `1977d30` (`git revert -m 1`). No history rewritten.
-- Vendored vLLM `.api_server.py` (tracked since `f17663d`) removed in `dfba6aa`.
-
-## Row files
-- `experiments/ptr-engine/measure`: 92 `rows-*.jsonl`, 7,869 rows, 0 exact duplicate lines, 123 distinct run manifests -> growth, not corruption.
+## Reading rule
+The work is pushed, but `main` has not moved. Do not read `origin/main` as containing the
+research branch's commits (`9fadcc9`, `afe4d78`, `dfba6aa`, `17182ff`), and do not read this
+branch as a descendant-by-content of `origin/main`: the remote root is a different project
+(encoder-crossover-190 deposit), merged and then reverted.

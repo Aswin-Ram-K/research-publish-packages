@@ -2536,6 +2536,23 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
         cached_normalized = normalize_cached_tokens(resp.get("raw_cached"), cfg.engine)
         prompt = resp.get("prompt_tokens")
         uncached = None if (prompt is None or cached is None) else int(prompt) - int(cached)
+    # BILLED-STAMP: `billed_tokens` is what the SERVER charged for, never the client's
+    # token count and never the server's prefill report. Every prompt token the cache
+    # did not serve was prefilled and billed, so billed = prompt - cached when the cache
+    # counter is reported, and the WHOLE prompt when it is null (per the engine null
+    # semantics above: SGLang omits the counter when it is 0, i.e. nothing was cached).
+    # null only when there is no prompt to bill. `uncached_tokens` stays the server's
+    # own prefill observation beside it: the 557-token gap between the two on the
+    # 100-turn SGLang billed proof is unexplained, so it is RECORDED in
+    # `reconcile_delta_tokens`, never smoothed away by rewriting `uncached`.
+    if prompt is None:
+        billed, reconcile_delta = None, None
+    elif cached is not None:
+        billed = int(prompt) - int(cached)
+        reconcile_delta = (int(prompt) - int(cached) - int(uncached)
+                           if uncached is not None else None)
+    else:
+        billed, reconcile_delta = int(prompt), None
     expected, cp_question = checkpoint_expected(fixture, t)
     # RECORD-STOP-REASON: WHY this ended, one closed-vocabulary word, and ``truncated``
     # derived FROM it so the two can never disagree.  null only when no response exists.
@@ -2600,6 +2617,11 @@ def make_row(cfg, fixture, arm, rep, run_id, t, resp, content, kind, manifest_sh
         "prompt_tokens": prompt,
         "cached_tokens": cached,
         "uncached_tokens": uncached,
+        # billed at source (see BILLED-STAMP above): the charged prompt tokens, with
+        # `reconcile_delta_tokens` keeping prompt/cached/uncached disagreement visible.
+        "billed_tokens": billed,
+        "billed_source": "server_cache_report" if billed is not None else None,
+        "reconcile_delta_tokens": reconcile_delta,
         "ttft_s": round(resp["ttft_s"], 6) if resp and resp.get("ttft_s") is not None else None,
         "latency_s": round(resp["latency_s"], 6) if resp else None,
         "completion_tokens": completion_recorded,

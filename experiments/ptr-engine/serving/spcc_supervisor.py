@@ -35,6 +35,18 @@ RESERVE_GB = 8
 CAP_BYTES = 64424509440  # 60 GiB
 SAMPLE_INTERVAL = 2.0
 
+# The allowance bounds a 121 GB unified pool (GB10 / GX10). A host whose
+# MemTotal is smaller cannot hold the workload the cap is about, so refusing is
+# the only honest answer: enforcing 68 GB of headroom there would bound the
+# wrong machine.
+MIN_TOTAL_GB = 100
+
+# Distinct exit codes: callers must be able to tell "allowance refused" from
+# "this supervisor is pointed at the wrong host".
+EXIT_ALLOWANCE = 2
+EXIT_RUN_REFUSED = 3
+EXIT_WRONG_HOST = 4
+
 
 def _base_dir():
     return Path(os.environ.get("SPCC_BASE_DIR", str(Path(__file__).resolve().parent)))
@@ -46,6 +58,118 @@ def _cgroup_root():
 
 def _meminfo_path():
     return Path(os.environ.get("SPCC_MEMINFO_PATH", "/proc/meminfo"))
+
+
+def parse_meminfo(text):
+    """Parse ``/proc/meminfo`` text into ``{field: kB}``."""
+    fields = {}
+    for line in text.splitlines():
+        key, sep, rest = line.partition(":")
+        if not sep:
+            continue
+        parts = rest.split()
+        if not parts:
+            continue
+        try:
+            fields[key.strip()] = int(parts[0])
+        except ValueError:
+            continue
+    return fields
+
+
+class MemSource:
+    """The memory facts of the host the *workload* runs on.
+
+    The supervisor must read this host's ``MemTotal`` / ``MemAvailable``, not
+    the machine the CLI happens to execute on. A source that cannot be read
+    raises; it never reports zeros.
+    """
+
+    label = "local"
+
+    def meminfo(self):
+        raise NotImplementedError
+
+    def mem_total_gb(self):
+        mem = self.meminfo()
+        if "MemTotal" not in mem:
+            raise RuntimeError("MemTotal not found in meminfo")
+        return mem["MemTotal"] / (1024 * 1024)
+
+    def mem_available_gb(self):
+        mem = self.meminfo()
+        if "MemAvailable" not in mem:
+            raise RuntimeError("MemAvailable not found in meminfo")
+        return mem["MemAvailable"] / (1024 * 1024)
+
+
+class LocalMeminfo(MemSource):
+    """``/proc/meminfo`` on the machine the supervisor runs on.
+
+    Only this source can be cgroup-enforced: the cgroup the supervisor writes
+    is the one that governs the child it spawns here.
+    """
+
+    def __init__(self, path=None):
+        self.path = Path(path) if path is not None else _meminfo_path()
+
+    @property
+    def label(self):
+        return "local"
+
+    def meminfo(self):
+        return parse_meminfo(self.path.read_text())
+
+
+class RemoteMeminfo(MemSource):
+    """``/proc/meminfo`` of another host, read over read-only ``ssh cat``.
+
+    Every failure (non-zero exit, empty or unparseable output, timeout) raises.
+    A remote host whose memory cannot be read must never be recorded as zero,
+    and this supervisor can never write that host's cgroup.
+    """
+
+    def __init__(self, host, runner=None, timeout=15):
+        self.host = host
+        self.runner = runner
+        self.timeout = float(timeout)
+
+    @property
+    def label(self):
+        return f"ssh:{self.host}"
+
+    def _run(self):
+        if self.runner is not None:
+            return self.runner(self.host)
+        proc = subprocess.run(
+            ["ssh", "-o", "BatchMode=yes", "-o", f"ConnectTimeout={int(self.timeout)}",
+             self.host, "cat /proc/meminfo"],
+            capture_output=True, text=True, timeout=self.timeout,
+        )
+        if proc.returncode != 0:
+            detail = (proc.stderr or proc.stdout or "").strip()
+            raise RuntimeError(f"ssh {self.host} exited {proc.returncode}: {detail}")
+        return proc.stdout
+
+    def meminfo(self):
+        text = self._run()
+        if not text or not text.strip():
+            raise RuntimeError(f"ssh {self.host} returned no meminfo")
+        fields = parse_meminfo(text)
+        if "MemTotal" not in fields or "MemAvailable" not in fields:
+            raise RuntimeError(f"ssh {self.host} returned unparseable meminfo")
+        return fields
+
+
+def make_mem_source(target_host=None, meminfo_path=None, remote_runner=None):
+    """Build the memory source for ``--target-host`` (default: local)."""
+    host = target_host
+    if host is None:
+        host = os.environ.get("SPCC_TARGET_HOST") or "local"
+    host = str(host).strip()
+    if host in ("", "local", "localhost", "127.0.0.1", "::1"):
+        return LocalMeminfo(meminfo_path)
+    return RemoteMeminfo(host, runner=remote_runner)
 
 
 def mem_available_gb(path=None):
@@ -204,24 +328,44 @@ def _signal_child(proc, sig):
         pass
 
 
-def cmd_open_window(args):
+def cmd_open_window(args, mem_source=None, base_dir=None, remote_runner=None):
     declared = float(args.declared_peak_gb)
     if declared > CAP_GB:
         print(f"refusing: declared peak {declared:.1f} GB exceeds cap {CAP_GB} GB "
               f"(over by {declared - CAP_GB:.1f} GB)", flush=True)
-        return 2
+        return EXIT_ALLOWANCE
+    src = mem_source if mem_source is not None else make_mem_source(
+        getattr(args, "target_host", None), remote_runner=remote_runner)
+    # The cap is about a 121 GB pool. Reading MemTotal from the *chosen* host
+    # before anything else stops the supervisor silently bounding a laptop.
+    try:
+        total = src.mem_total_gb()
+    except Exception as e:
+        print(f"refusing: mem_source {src.label} MemTotal unreadable: {e}", flush=True)
+        return EXIT_WRONG_HOST
+    if total < MIN_TOTAL_GB:
+        print(f"refusing: mem_source {src.label} reports MemTotal {total:.1f} GB "
+              f"< {MIN_TOTAL_GB} GB minimum; the allowance governs a 121 GB pool "
+              f"and this supervisor would bound the wrong machine", flush=True)
+        return EXIT_WRONG_HOST
     reserve = CAP_GB + RESERVE_GB
-    ma = mem_available_gb()
+    try:
+        ma = src.mem_available_gb()
+    except Exception as e:
+        print(f"refusing: mem_source {src.label} MemAvailable unreadable: {e}", flush=True)
+        return EXIT_WRONG_HOST
     if ma < reserve:
         print(f"refusing: MemAvailable {ma:.1f} GB < {reserve:.1f} GB reserve "
               f"(short by {reserve - ma:.1f} GB)", flush=True)
-        return 2
-    w = read_window()
+        return EXIT_ALLOWANCE
+    base = Path(base_dir) if base_dir is not None else _base_dir()
+    wp = base / "MEM-WINDOW.json"
+    w = json.loads(wp.read_text()) if wp.exists() else None
     if window_owner_alive(w):
         owner = (w.get("owners") or [{}])[0]
         print(f"refusing: memory window already open "
               f"(owner pid {owner.get('pid')} start {owner.get('start_time')} alive)", flush=True)
-        return 2
+        return EXIT_ALLOWANCE
     owners = owner_chain()
     record = {
         "job": args.job,
@@ -232,52 +376,69 @@ def cmd_open_window(args):
         "owner_pid": owners[0]["pid"],
         "owner_start_time": owners[0]["start_time"],
         "owners": owners,
+        "mem_source": src.label,
+        "mem_total_gb": total,
+        "enforcement": "cgroup" if src.label == "local" else "declared-only",
         "mem_available_gb": ma,
     }
-    window_path().write_text(json.dumps(record, indent=2) + "\n")
-    sp = samples_path()
+    wp.write_text(json.dumps(record, indent=2) + "\n")
+    sp = base / "MEM-WINDOW.jsonl"
     if sp.exists():
         sp.unlink()
-    print(f"opened memory window job={args.job} declared_peak={declared}GB mem_available={ma:.2f}GB")
+    print(f"opened memory window job={args.job} declared_peak={declared}GB "
+          f"mem_source={src.label} mem_total={total:.1f}GB mem_available={ma:.2f}GB")
     return 0
 
 
 class Sampler(threading.Thread):
-    def __init__(self, stop_event, cg_path, out_path, meminfo, peak_source=None, interval=None):
+    def __init__(self, stop_event, cg_path, out_path, meminfo, peak_source=None,
+                 interval=None, source=None):
         super().__init__(daemon=True)
         self.stop_event = stop_event
-        self.cg_path = Path(cg_path)
+        # cg_path is None for declared-only (remote) windows: there is no local
+        # cgroup and no kernel peak to sample, only the host's MemAvailable.
+        self.cg_path = Path(cg_path) if cg_path is not None else None
         self.out_path = Path(out_path)
-        self.meminfo = Path(meminfo) if not isinstance(meminfo, Path) else meminfo
+        self.meminfo = Path(meminfo) if meminfo is not None and not isinstance(meminfo, Path) else meminfo
+        self.source = source
         self.peak_source = peak_source
         self.interval = SAMPLE_INTERVAL if interval is None else float(interval)
         self.error = None
         self.error_path = None
         self.samples_written = 0
 
+    def _mem_available(self):
+        if self.source is not None:
+            return self.source.mem_available_gb()
+        return mem_available_gb(self.meminfo)
+
     def _one_sample(self):
+        rec = {"ts": time.time()}
+        if self.cg_path is not None:
+            try:
+                peak = _read_peak(self.cg_path, self.peak_source)
+            except Exception as e:
+                self.error = e
+                self.error_path = str(_peak_path(self.cg_path, self.peak_source))
+                self.stop_event.set()
+                return False
+            try:
+                cur = int((self.cg_path / "memory.current").read_text().strip())
+            except Exception as e:
+                self.error = e
+                self.error_path = str(self.cg_path / "memory.current")
+                self.stop_event.set()
+                return False
+            rec["memory_peak_bytes"] = peak
+            rec["memory_current_bytes"] = cur
         try:
-            peak = _read_peak(self.cg_path, self.peak_source)
+            ma = self._mem_available()
         except Exception as e:
             self.error = e
-            self.error_path = str(_peak_path(self.cg_path, self.peak_source))
+            self.error_path = str(self.source.label if self.source is not None else self.meminfo)
             self.stop_event.set()
             return False
-        try:
-            cur = int((self.cg_path / "memory.current").read_text().strip())
-        except Exception as e:
-            self.error = e
-            self.error_path = str(self.cg_path / "memory.current")
-            self.stop_event.set()
-            return False
-        try:
-            ma = mem_available_gb(self.meminfo)
-        except Exception as e:
-            self.error = e
-            self.error_path = str(self.meminfo)
-            self.stop_event.set()
-            return False
-        rec = {"ts": time.time(), "memory_peak_bytes": peak, "memory_current_bytes": cur, "mem_available_gb": ma}
+        rec["mem_available_gb"] = ma
         try:
             with self.out_path.open("a") as f:
                 f.write(json.dumps(rec) + "\n")
@@ -356,13 +517,24 @@ def _setup_cgroup(job, cgroup_root=None):
 class SpccSupervisor:
     """In-process supervisor with injectable cgroup root and peak source."""
 
-    def __init__(self, cgroup_root=None, peak_source=None, meminfo_path=None, base_dir=None, grace_seconds=10.0, sample_interval=None):
+    def __init__(self, cgroup_root=None, peak_source=None, meminfo_path=None, base_dir=None,
+                 grace_seconds=10.0, sample_interval=None, mem_source=None, remote_runner=None):
         self.cgroup_root = Path(cgroup_root) if cgroup_root is not None else _cgroup_root()
         self.peak_source = peak_source
         self.meminfo_path = Path(meminfo_path) if meminfo_path is not None else _meminfo_path()
         self.base_dir = Path(base_dir) if base_dir is not None else _base_dir()
         self.grace_seconds = float(grace_seconds)
         self.sample_interval = SAMPLE_INTERVAL if sample_interval is None else float(sample_interval)
+        # An injected source wins; otherwise the open window's mem_source is
+        # reconstructed (legacy windows without one are local).
+        self.mem_source = mem_source
+        self.remote_runner = remote_runner
+
+    def _source_for_window(self, w):
+        label = str(w.get("mem_source") or "local")
+        if label.startswith("ssh:"):
+            return RemoteMeminfo(label[4:], runner=self.remote_runner)
+        return LocalMeminfo(self.meminfo_path)
 
     def _window_path(self):
         return self.base_dir / "MEM-WINDOW.json"
@@ -396,44 +568,59 @@ class SpccSupervisor:
         if not cmd:
             print("refusing to run: empty command", flush=True)
             return 3
-        cg_path, err = _setup_cgroup(w["job"], cgroup_root=self.cgroup_root)
-        if err is not None:
-            print(f"refusing to run: {err}", flush=True)
-            return 3
-        try:
-            (cg_path / "memory.max").read_text()
-        except Exception as e:
-            print(f"refusing to run: cgroup not writable: {e}", flush=True)
+        src = self.mem_source if self.mem_source is not None else self._source_for_window(w)
+        # A cgroup written here governs the child spawned here — it can only be
+        # claimed when the memory facts come from this same machine. A remote
+        # host's memory cannot be bounded by a local cgroup.
+        # The mode follows the source actually read on this run: only a local
+        # source can be cgroup-enforced, whatever an earlier window recorded.
+        enforcement = "cgroup" if src.label == "local" else "declared-only"
+        cg_path = None
+        if enforcement == "cgroup":
+            cg_path, err = _setup_cgroup(w["job"], cgroup_root=self.cgroup_root)
+            if err is not None:
+                print(f"refusing to run: {err}", flush=True)
+                return 3
             try:
-                cg_path.rmdir()
-            except Exception:
-                pass
-            return 3
+                (cg_path / "memory.max").read_text()
+            except Exception as e:
+                print(f"refusing to run: cgroup not writable: {e}", flush=True)
+                try:
+                    cg_path.rmdir()
+                except Exception:
+                    pass
+                return 3
+        else:
+            print(f"declared-only: mem_source {src.label}; no cgroup can govern "
+                  f"the remote host (peak is declared, not measured)", flush=True)
         try:
-            opened_ma = float(w["mem_available_gb"]) if "mem_available_gb" in w else mem_available_gb(self.meminfo_path)
+            opened_ma = float(w["mem_available_gb"]) if "mem_available_gb" in w else src.mem_available_gb()
         except Exception as e:
-            print(f"refusing to run: memavailable unreadable: {e}", flush=True)
-            try:
-                cg_path.rmdir()
-            except Exception:
-                pass
+            print(f"refusing to run: memavailable unreadable for {src.label}: {e}", flush=True)
+            if cg_path is not None:
+                try:
+                    cg_path.rmdir()
+                except Exception:
+                    pass
             return 3
 
         proc = subprocess.Popen(cmd, start_new_session=True)
-        try:
-            (cg_path / "cgroup.procs").write_text(str(proc.pid) + "\n")
-        except Exception as e:
-            _signal_child(proc, signal.SIGKILL)
-            print(f"refusing to run: cannot assign process to cgroup: {e}", flush=True)
+        if cg_path is not None:
             try:
-                cg_path.rmdir()
-            except Exception:
-                pass
-            return 3
+                (cg_path / "cgroup.procs").write_text(str(proc.pid) + "\n")
+            except Exception as e:
+                _signal_child(proc, signal.SIGKILL)
+                print(f"refusing to run: cannot assign process to cgroup: {e}", flush=True)
+                try:
+                    cg_path.rmdir()
+                except Exception:
+                    pass
+                return 3
 
         stop_event = threading.Event()
         sampler = Sampler(stop_event, cg_path, self._samples_path(), self.meminfo_path,
-                          peak_source=self.peak_source, interval=self.sample_interval)
+                          peak_source=self.peak_source, interval=self.sample_interval,
+                          source=src)
         sampler.start()
         # Give the child a moment to install its own signal handlers before the
         # first cap evaluation can signal it (bounded by the kill grace).
@@ -467,24 +654,25 @@ class SpccSupervisor:
                     aborted = "sample-unreadable"
                     aborted_path = sampler.error_path
                     break
-                try:
-                    peak = _read_peak(cg_path, self.peak_source)
-                except Exception as e:
-                    aborted = "sample-unreadable"
-                    aborted_path = str(_peak_path(cg_path, self.peak_source))
-                    break
-                # peak is None when the kernel exposes no counter, so the peak
-                # is unknown: it cannot be compared and the window can never be
-                # VERIFIED (decided after the run closes).
-                if peak is not None and peak > CAP_BYTES:
-                    killed_reason = "cgroup-peak"
-                    _signal_child(proc, signal.SIGTERM)
+                if cg_path is not None:
                     try:
-                        proc.wait(timeout=grace)
-                    except subprocess.TimeoutExpired:
-                        _signal_child(proc, signal.SIGKILL)
-                        proc.wait()
-                    break
+                        peak = _read_peak(cg_path, self.peak_source)
+                    except Exception as e:
+                        aborted = "sample-unreadable"
+                        aborted_path = str(_peak_path(cg_path, self.peak_source))
+                        break
+                    # peak is None when the kernel exposes no counter, so the
+                    # peak is unknown: it cannot be compared and the window can
+                    # never be VERIFIED (decided after the run closes).
+                    if peak is not None and peak > CAP_BYTES:
+                        killed_reason = "cgroup-peak"
+                        _signal_child(proc, signal.SIGTERM)
+                        try:
+                            proc.wait(timeout=grace)
+                        except subprocess.TimeoutExpired:
+                            _signal_child(proc, signal.SIGKILL)
+                            proc.wait()
+                        break
                 time.sleep(0.5)
             if aborted:
                 try:
@@ -521,29 +709,36 @@ class SpccSupervisor:
                 aborted = "sample-unreadable"
                 aborted_path = sampler.error_path
             peak_bytes = None
-            try:
-                peak_bytes = _read_peak(cg_path, self.peak_source)
-            except Exception:
-                if aborted is None:
-                    aborted = "sample-unreadable"
-                    aborted_path = str(_peak_path(cg_path, self.peak_source))
+            if cg_path is not None:
+                try:
+                    peak_bytes = _read_peak(cg_path, self.peak_source)
+                except Exception:
+                    if aborted is None:
+                        aborted = "sample-unreadable"
+                        aborted_path = str(_peak_path(cg_path, self.peak_source))
             cgroup_peak_gb = (peak_bytes / (1024 ** 3)) if peak_bytes is not None else None
             close_ma = None
             try:
-                close_ma = mem_available_gb(self.meminfo_path)
+                close_ma = src.mem_available_gb()
             except Exception:
                 if aborted is None:
                     aborted = "sample-unreadable"
-                    aborted_path = str(self.meminfo_path)
+                    aborted_path = src.label
             unaccounted_gb = None
             unaccounted_reason = None
-            if cgroup_peak_gb is None or close_ma is None:
+            if enforcement == "declared-only":
+                # No measured peak exists off-box, so the remainder cannot be
+                # accounted. Recording it as 0 would fabricate a measurement.
+                unaccounted_reason = "remote-host-declared-only"
+            elif cgroup_peak_gb is None or close_ma is None:
                 unaccounted_reason = "close-read-failed"
             else:
                 unaccounted_gb = (opened_ma - close_ma) - cgroup_peak_gb
                 if unaccounted_gb < 0:
                     unaccounted_reason = "mem-available-rose"
             w2 = self._read_window() or w
+            w2["mem_source"] = src.label
+            w2["enforcement"] = enforcement
             w2["cgroup_peak_gb"] = cgroup_peak_gb
             w2["unaccounted_gb"] = unaccounted_gb
             w2["killed"] = killed_reason
@@ -572,14 +767,18 @@ class SpccSupervisor:
                 allowance_reason = "aborted"
             elif rc is not None and rc < 0:
                 allowance_reason = "died-by-signal"
-            elif cgroup_peak_gb is None:
+            elif enforcement == "cgroup" and cgroup_peak_gb is None:
                 allowance_reason = "peak-unknown"
-            elif cgroup_peak_gb > CAP_GB:
+            elif cgroup_peak_gb is not None and cgroup_peak_gb > CAP_GB:
                 allowance_reason = "peak-exceeded-cap"
-            elif unaccounted_gb is None:
+            elif enforcement == "cgroup" and unaccounted_gb is None:
                 allowance_reason = "unaccounted-unknown"
-            elif unaccounted_gb < 0:
+            elif unaccounted_gb is not None and unaccounted_gb < 0:
                 allowance_reason = "mem-available-rose"
+            elif enforcement == "declared-only":
+                # The peak was declared, never measured, and the cgroup that
+                # would prove it lives on another host. Never claim VERIFIED.
+                allowance_reason = "remote-host-declared-only"
             else:
                 allowance = "VERIFIED"
                 allowance_reason = (
@@ -597,10 +796,11 @@ class SpccSupervisor:
                 self._window_path().unlink(missing_ok=True)
             except Exception:
                 pass
-            try:
-                cg_path.rmdir()
-            except Exception:
-                pass
+            if cg_path is not None:
+                try:
+                    cg_path.rmdir()
+                except Exception:
+                    pass
 
         if killed_reason == "cgroup-peak":
             print("killed: cgroup-peak", flush=True)
@@ -618,15 +818,22 @@ MemorySupervisor = SpccSupervisor
 RunSupervisor = SpccSupervisor
 
 
-def cmd_run(args, cgroup_root=None, peak_source=None, meminfo_path=None, base_dir=None, grace_seconds=None):
+def cmd_run(args, cgroup_root=None, peak_source=None, meminfo_path=None, base_dir=None,
+            grace_seconds=None, mem_source=None, remote_runner=None):
     # Constructor defaults read SPCC_CGROUP_ROOT / SPCC_MEMINFO_PATH / SPCC_BASE_DIR.
     grace = grace_seconds if grace_seconds is not None else getattr(args, "grace", 10.0)
+    if mem_source is None and getattr(args, "target_host", None):
+        # An explicit --target-host on `run` overrides the window's mem_source;
+        # otherwise the window's own record decides which host was bounded.
+        mem_source = make_mem_source(args.target_host, remote_runner=remote_runner)
     sup = SpccSupervisor(
         cgroup_root=cgroup_root,
         peak_source=peak_source,
         meminfo_path=meminfo_path,
         base_dir=base_dir,
         grace_seconds=grace,
+        mem_source=mem_source,
+        remote_runner=remote_runner,
     )
     return sup.run(getattr(args, "cmd", None), grace_seconds=grace)
 
@@ -660,6 +867,8 @@ def main():
     ow = sub.add_parser("open-window")
     ow.add_argument("--job", required=True)
     ow.add_argument("--declared-peak-gb", type=float, required=True)
+    ow.add_argument("--target-host", default=None,
+                    help="host the workload runs on; default local (env SPCC_TARGET_HOST)")
     ow.set_defaults(func=cmd_open_window)
 
     rn = sub.add_parser("run")
@@ -671,6 +880,8 @@ def main():
         _default_grace = 10.0
     rn.add_argument("--grace", "--kill-grace", "--grace-seconds", "--kill-grace-seconds", "--grace-period",
                     dest="grace", type=float, default=_default_grace)
+    rn.add_argument("--target-host", default=None,
+                    help="override the memory source recorded by open-window")
     rn.set_defaults(func=cmd_run)
 
     cw = sub.add_parser("close-window")

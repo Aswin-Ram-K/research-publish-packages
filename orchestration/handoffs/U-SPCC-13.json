@@ -1,0 +1,33 @@
+{
+  "unit": "U-SPCC-13",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/serving/spcc_supervisor.py",
+    "experiments/ptr-engine/serving/tests/test_spcc_supervisor.py",
+    "experiments/ptr-engine/serving/MEM-WINDOW.schema.md"
+  ],
+  "evidence": {
+    "grep": "42:MIN_TOTAL_GB = 100\n164:def make_mem_source(target_host=None, meminfo_path=None, remote_runner=None):\n331:def cmd_open_window(args, mem_source=None, base_dir=None, remote_runner=None):\n337:    src = mem_source if mem_source is not None else make_mem_source(\n346:    if total < MIN_TOTAL_GB:\n347:        print(f\"refusing: mem_source {src.label} reports MemTotal {total:.1f} GB \"\n348:              f\"< {MIN_TOTAL_GB} GB minimum; the allowance governs a 121 GB pool \"\n379:        \"mem_source\": src.label,\n381:        \"enforcement\": \"cgroup\" if src.label == \"local\" else \"declared-only\",\n521:                 grace_seconds=10.0, sample_interval=None, mem_source=None, remote_runner=None):\n530:        self.mem_source = mem_source\n534:        label = str(w.get(\"mem_source\") or \"local\")\n571:        src = self.mem_source if self.mem_source is not None else self._source_for_window(w)\n577:        enforcement = \"cgroup\" if src.label == \"local\" else \"declared-only\"\n592:            print(f\"declared-only: mem_source {src.label}; no cgroup can govern \"\n727:            if enforcement == \"declared-only\":\n730:                unaccounted_reason = \"remote-host-declared-only\"\n738:            w2[\"mem_source\"] = src.label\n739:            w2[\"enforcement\"] = enforcement\n768:            elif enforcement == \"cgroup\" and cgroup_peak_gb is None:\n772:            elif enforcement == \"cgroup\" and unaccounted_gb is None:\n776:            elif enforcement == \"declared-only\":\n779:                allowance_reason = \"remote-host-declared-only\"",
+    "pytest_summary": "...........................                                              [100%]\n27 passed in 9.85s",
+    "red_wrong_host": ">       assert r.returncode == 4, r.stdout + r.stderr\nE       AssertionError: refusing: MemAvailable 10.0 GB < 68.0 GB reserve (short by 58.0 GB)\nE         \nE       assert 2 == 4\nE        +  where 2 = CompletedProcess(args=['/home/zer0null/research extractor/.venv/bin/python', '/tmp/spcc_supervisor_prefix.py', 'open-w...ak-gb', '10'], returncode=2, stdout='refusing: MemAvailable 10.0 GB < 68.0 GB reserve (short by 58.0 GB)\\n', stderr='').returncode\nFAILED experiments/ptr-engine/serving/tests/test_spcc_supervisor.py::test_wrong_host_memtotal_29_refused_before_child\n1 failed in 0.06s",
+    "green_wrong_host": ".\n1 passed in 0.07s",
+    "real_local_refusal": "refusing: mem_source local reports MemTotal 29.9 GB < 100 GB minimum; the allowance governs a 121 GB pool and this supervisor would bound the wrong machine\nexit=4",
+    "schema_paragraph_host": "`mem_source` records *where the supervisor read its memory facts*, because the 60 GB allowance is about the host that holds the workload — the 121 GB GB10 / GX10 unified pool — not necessarily the machine the CLI runs on. Two sources exist: `\"local\"` (`LocalMeminfo`, reading `/proc/meminfo` here, `SPCC_MEMINFO_PATH` overrides the path in tests) and `\"ssh:<host>\"` (`RemoteMeminfo`, running `ssh -o BatchMode=yes <host> cat /proc/meminfo`, read-only). A remote read that fails raises and is refused; it never becomes zero. `--target-host` (or `SPCC_TARGET_HOST`) selects the source at `open-window`; `run` reuses the source recorded in the window unless it is given its own `--target-host`.",
+    "schema_paragraph_enforcement": "`enforcement` states what the window can actually prove. `\"cgroup\"` is claimed **only** when `mem_source` is `\"local\"`: the cgroup written by `run` (`spcc-<job>-<pid>`, `memory.max = 60 GiB`) governs the child this supervisor spawned, so `memory.peak` is a real measurement of that child. A remote host can only ever yield **`\"declared-only\"`**: the supervisor cannot write a cgroup on another machine, so there is no measured peak and no kernel-enforced cap — only the declared peak admitted at open time plus the sampled `MemAvailable`. Do not fake a cgroup for a remote window; the mode is recorded precisely so a reader can tell the two apart.",
+    "remote_note": "The ssh path was NOT exercised: no network in this unit. Remote behaviour is proven through injected readers (`RemoteMeminfo(host, runner=...)`); the default runner is a BatchMode ssh cat whose non-zero exit, empty output, timeout, or unparseable text raises. Tests assert no local cgroup is created for remote windows.",
+    "commands": [
+      ".venv/bin/python -m pytest experiments/ptr-engine/serving/tests/test_spcc_supervisor.py -q",
+      "PYTHONPATH=/tmp .venv/bin/python -m pytest experiments/ptr-engine/serving/tests/test_spcc_supervisor.py::test_wrong_host_memtotal_29_refused_before_child -q -p redplugin_u13",
+      "SPCC_BASE_DIR=/tmp/u13-base .venv/bin/python experiments/ptr-engine/serving/spcc_supervisor.py open-window --job u13 --declared-peak-gb 10"
+    ]
+  },
+  "blocker": null,
+  "next_unit_hint": "When a real GX10 is reachable, open a window with --target-host <gx10> to exercise RemoteMeminfo end to end; it must record enforcement declared-only and can never return VERIFIED. If remote enforcement is ever required, it needs a supervisor process running on the GX10 itself (cgroup lives there), not a local one.",
+  "write_paths": [
+    "experiments/ptr-engine/serving/spcc_supervisor.py",
+    "experiments/ptr-engine/serving/tests/test_spcc_supervisor.py",
+    "experiments/ptr-engine/serving/MEM-WINDOW.schema.md",
+    "orchestration/units/U-SPCC-13.md",
+    "orchestration/handoffs/U-SPCC-13.json"
+  ]
+}

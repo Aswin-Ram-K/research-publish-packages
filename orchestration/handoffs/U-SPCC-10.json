@@ -1,0 +1,41 @@
+{
+  "unit": "U-SPCC-10",
+  "status": "done",
+  "artifacts": [
+    "measure/FIXTURE-MAP-MT36.note",
+    "orchestration/units/U-SPCC-10.md"
+  ],
+  "evidence": {
+    "rows_inventory": "wc -l experiments/ptr-engine/measure/rows-agg-fetch-mt36.jsonl = 41; distinct fixture_sha256 = 1 -> 2b416d827c36ec958aa50e54db4ec5d52f72f061e7c39e9a417b5f0b2078370c (41 rows). fixture_id=TX-AGG.TX-AGG.v1 generation=gen-7 fixture_path=/home/zer0null/research extractor/experiments/ptr-engine/longrun/tasks-v7/TX-AGG.v1.json arm=bounded-context-fetch model=occamy-1.0-NVFP4 engine=sglang run_id=longrun-2026-11-09T084217Z-bounded-context-fetch-r1 claim=none comparison_eligible=False run_manifest_sha256=1be2a2ceab7b0c7d9e67437d973b2cf2b2488be2c73809b589a6e3c335dddf49",
+    "global_pins": "54 rows-agg-fetch-mt50.jsonl / 36 rows-agg-fetch-test.jsonl / 10 rows-agg-fetch-r1.jsonl / 100 rows-agg-masking-r1.jsonl / 37 rows-agg-fetch-test2.jsonl / 41 rows-agg-fetch-mt36.jsonl => TOTAL 278 rows pin 2b416d82...",
+    "candidate_paths": "experiments/ptr-engine/longrun/tasks-v7/TX-AGG.v1.json sha256=178042c254f7b732f57603985de35adf8e3722f80507219103c0f7b259e81b03 size=79427 schema=consonance.longrun-fixture/2 gen-7 N=100 wall_tokens=4312 fetch_budget_tokens=1024 -> DIFFERS from pinned digest. find / -maxdepth 6 -name 'TX-AGG*.json' returned only this one path.",
+    "workspace_byte_scan": "python os.walk over repo (skip .git/node_modules/__pycache__/.venv), 56431 files hashed, all <=8MB: matches for 2b416d82... = [] (zero). grep -rl of the digest hits only 20 manifests under experiments/ptr-engine/longrun/manifests/ and the rows family.",
+    "serialization_probe": "re-serialize on-disk doc with schema in {consonance.longrun-fixture/1, /2} x indent in {None,1,2,3,4} x sort_keys {True,False} x ensure_ascii {True,False} x trailing {'' , '\\n'}: matches = []. File has no CRLF, no trailing newline.",
+    "content_identity": "26 of 26 rows embedding a checkpoint match on id/turn/question/source but disagree on expected/answer_form (0 identical): cp.TX-AGG.g00.d2 20786 vs 156145; g01.d2 60786 vs 210513; g00.d6 10131 vs 51443; g02.d2 100786 vs 269767; g01.d6 30131 vs 84932; g03.d2 140786 vs 268509",
+    "git_history": "git log --all -- '.../tasks-v7/TX-AGG.v1.json' => single commit 9fadcc9 2026-11-09 06:56:48 -0600 'wip(ptr-engine): preserve context x serving instrument, fixtures and measurements'; all historical blobs of that path hash 178042c2...; git log --all --diff-filter=D --name-only -- '*agg*' '*mt36*' '*TX-AGG*' => EMPTY (no deletion); git status/diff for path => clean; HEAD blob sha256 = 178042c254f7b732f57603985de35adf8e3722f80507219103c0f7b259e81b03",
+    "timestamps": "stat TX-AGG.v1.json => mtime=2026-11-09 02:57:28.485662399 -0600 ctime=2026-11-09 02:57:28.485662399 -0600 size=79427 (both = 2026-11-09T08:57:28Z, a real in-place write)",
+    "manifest_timeline": "20 manifests record fixture.sha256=2b416d82... for that path, from created_utc 2026-11-09T08:21:44Z through 2026-11-09T08:49:43Z (last: longrun-2026-11-09T084942Z-bounded-context-fetch-r1). Rewrite at 08:57:28Z follows the last of them."
+  },
+  "blocker": null,
+  "classification": "unverifiable",
+  "justification": "No document anywhere in the workspace (56,431 files hashed) or in any git ref carries the pinned content, and the sole same-named fixture is a re-generated TX-AGG whose checkpoint expected values differ from every row that records one.",
+  "claim_limits": {
+    "may_support": [
+      "per-row recorded measurements (tokens, ttft_s, latency_s, content_sha256, request_sha256, arm, rep, turn)",
+      "that a run with run_id longrun-2026-11-09T084217Z-bounded-context-fetch-r1 loaded a TX-AGG document hashing 2b416d82... at that moment",
+      "the answers emitted and their grading against each row's own recorded expected values"
+    ],
+    "may_not_support": [
+      "reproducibility: the prompt prefix and any derived token counts cannot be rebuilt",
+      "substituting the current on-disk fixture's numbers for these rows (different document, different ground truths)",
+      "cross-arm comparability (all rows claim=none, comparison_eligible=false)",
+      "any ABSENT-means-0 reading of the missing fixture"
+    ]
+  },
+  "next_unit_hint": "Owner of experiments/ptr-engine/longrun/tests/test_lost_fixture.py must decide whether to freeze these 278 rows (41 in mt36) into state/logs/lost-fixture-baseline.json as a recorded loss; no lookup mapping is valid. Separately, the in-place fixture rewrite at 2026-11-09T08:57:28Z (same gen-7/TX-AGG.v1 identifiers, different document values) is a fixture-regeneration hygiene defect worth flagging: regenerating must write a new versioned path, never overwrite a pinned one.",
+  "write_paths": [
+    "measure/FIXTURE-MAP-MT36.note",
+    "orchestration/units/U-SPCC-10.md",
+    "orchestration/handoffs/U-SPCC-10.json"
+  ]
+}

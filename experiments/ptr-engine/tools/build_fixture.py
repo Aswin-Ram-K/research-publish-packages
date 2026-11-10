@@ -22,6 +22,15 @@ Exit codes
 Byte-identity is the acceptance test. The serialization recorded per variant in `emit`
 (indent, ensure_ascii, sort_keys, trailing newline) is part of the fixture: re-serializing the
 same document with different settings is a different file, and rows on disk pin sha256.
+
+FIXTURE IDENTITY RULE -- a fixture is identified by its path *and* its digest. Rows pin
+sha256, so a path is only an addressing convention. A regeneration that changes any byte MUST
+write a new versioned path (`TX-AGG.v2.json`, a fresh `--out`), and it must
+never overwrite the previous version in place, because rows pin the digest and identity-by-path
+silently becomes false. This already happened once: `tasks-v7/TX-AGG.v1.json` was rewritten in place at
+2026-11-09T08:57:28Z under the same gen-7 identifiers, leaving 278 rows pinned to a digest that
+exists in no file and in no git ref (`measure/FIXTURE-MAP-MT36.note`). Identity survives only
+if the old bytes keep the old path; nothing can repair it after the fact.
 """
 from __future__ import annotations
 

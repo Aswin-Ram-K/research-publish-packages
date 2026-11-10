@@ -1,4 +1,4 @@
-# Journal index — 2026-09-28 … 2026-11-04
+# Journal index — 2026-09-28 … 2026-11-10
 
 Two eras. The **Consonance/Duval era** below (15 notes, 2026-09-28 … 2026-10-13) is indexed by Duval
 commit count and anchor commit. The **campaign era** (2026-10-26 → present, second table) is indexed by
@@ -37,3 +37,4 @@ carrying that day's headline claim. Corrected by unit UJC1.
 | [2026-11-03](2026-11-03.md) | Consonance bounded-context research filed: report + prospective protocol, both PASS after repair (E2 ≤120 → 123 descriptive; comparative 6,300 → 7,560 = 4.37× ⇒ UNFUNDED); 0 live calls, no build | `orchestration/handoffs/V-CONSONANCE-BC-REPORT-RECHECK.json`, `V-CONSONANCE-BC-EVAL-RECHECK.json` |
 | [2026-11-04](2026-11-04.md) | Paper-candidate sweep of everything since the 2026-10-24 compile: four one-page briefs, N1 (append-cost residue law) recommended, six numbers corrected by independent re-check; recorded on branch `research/paper-candidates-2026-11-04`, 0 requests | `orchestration/handoffs/PAPER-CANDIDATES-2026-11-04.json` |
 | [2026-11-06](2026-11-06.md) | Research seed package: evidence warrants **two** papers (append-cost law flagship + instrument-validity methods), with kill criteria and a staged roadmap; corrections folded (5,403 uncited rows not 1,892; 69 claims not 63); 0 requests | `experiments/ptr-engine/research-seed-concepts/README.md` |
+| [2026-11-10](2026-11-10.md) | Serving/context programme executed: preservation landed (research branch only — `origin/main` never moved) and the leaked-tree `origin/main` merge reverted; findings ledger checked; layer compiler built **and wired** as the `spcc` arm; launch script + no-fork decision; memory allowance as a supervisor chain (`VERIFIED` last resort); E1–E6 pre-registered; suite 86 failed → 5 failed of 806 passed, and the masking claim corrected to 12/48 + 8/48 (all d=2, 0/36 beyond), and the live billing **plumbing** proof run (100 turns, cached/prompt 0.917821) with accuracy on that arm unproven | `orchestration/handoffs/U-SPCC-0.json` … `U-SPCC-9C.json`, `U-SPCC-CLOSE.json` |

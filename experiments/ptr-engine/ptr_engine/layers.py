@@ -1,8 +1,13 @@
 """Stable-prefix context compiler.
 
-Replaces marker masking with a byte-stable prefix (L0+L1+L2), an append-only
-journal (L2), scheduled compaction and fetch into L3 only. See
-``research-seed-concepts/PROMPT-ENGINE-V1.md``.
+Builds a byte-stable prefix ``L0+L1`` from bytes that do not change between
+compactions, plus an append-only journal ``L2`` that grows after it.
+
+``prefix_sha256`` covers ``L0+L1`` only: hashing the growing ``L2`` tail would
+report drift on every legitimate append and could not distinguish an append
+from a destructive rewrite.  Compaction alone -- at the epoch boundary -- may
+break the prefix; it rewrites ``L1``.  Rationale: ``compile_prompt`` below and
+``research-seed-concepts/PROMPT-ENGINE-V1.md`` (lines 48-56).
 """
 
 from __future__ import annotations

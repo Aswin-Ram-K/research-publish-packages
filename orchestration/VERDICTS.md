@@ -4459,3 +4459,35 @@ rep1 `(6,1,2,1,1,1)/8`, rep2 `(6,1,0,0,0,0)/8`. Re-run with `--tools fetch` (`to
 `--temperature 0 --seed 42`, two reps (`rows-tx03-fetchfix-r{1,2}.jsonl`), fetch_rows 52 and 47, scores
 rep1 `(8,8,8,8,6,3)/8` (41/48) and rep2 `(8,8,8,7,6,5)/8` (42/48), 0 ungradeable. 272 requests,
 4134 -> 4406, cap 12094. Results: `experiments/ptr-engine/research-seed-concepts/RESULTS-TX03-CELL1.md`.
+
+## Batch: backfill adjudication of six settled units (2026-11-10)
+
+Adjudicator `U-SPCC-9D` — author of none of the six. Method: read each handoff, verify every claimed artefact on
+disk, re-run the unit's own check at HEAD `17182ffc760bbb9b9556ee7e8b429c9c5b986c53`, and record what passes
+**today**. 0 live requests, 0 network. No handoff was edited, no existing row was rewritten, and no baseline
+exemption was created.
+
+| Unit | Verdict | Artefact / check run today | Why |
+|---|---|---|---|
+| `VERDICT-BACKFILL-FIXTURE-GENERATIONS` | **pass** | 3 claimed artefacts exist (2,869 / 3,391 / 1,521 B); `pytest experiments/ptr-engine/longrun/tests/test_build_fixture.py -q` → `5 passed in 0.43s`, exit 0 | The handoff pastes both exits (`check_exit 0`, `pytest_exit 0`, tail `ok: 10/10 variants`) and both reproduce. The row it claims (`96ec0bcc…/efa8039f…`) covers a *different* execution than the one that closed (`8505be1b…/228949d9…`) — that key mismatch, not a false claim, is why the ritual listed it. |
+| `BUDGET-48-WIRE` | **superseded** | `experiments/ptr-engine/measure/GRID-PARAMS.json` 44,876 B, 22 top-level keys, loads exit 0; its anchors no longer hold — `run_longrun.py:226` is now `sched = doc.get("revision_schedule", None)` and `--fetch-rounds-per-arm` exists at `run_longrun.py:3858` | The audit was correct when written: the flag it named as missing did not exist. `RUNNER-ROUNDS-48` then executed this unit's own `next_unit_hint` (pool 24→48 at `run_longrun.py:230`, flag added, `run_a_star.py` budget 67→108). Re-adjudicating its line anchors today would measure the follow-up, not this unit. |
+| `V-GRID-REPORT` | **partial** | `experiments/ptr-engine/measure/V-GRID-REPORT.json` 6,194 B (`attempts` 8, `findings` 3), `docs/V-GRID-REPORT.md` 4,651 B; its attack harness `/tmp/vgfinal/attack.py` **no longer exists**, so the F1/F2 quotes cannot be re-executed; F1's subject is now guarded — `pytest experiments/ptr-engine/tests/test_run_grid_report.py experiments/ptr-engine/tests/test_grid_report_era_guard.py -q` → `20 passed`, exit 0 | A substantive adversarial report (8 attempts, 3 findings, emitter output quoted), but the only command that produced it was a `/tmp` scratch file never committed, so nothing in the repo reproduces its numbers. The era-pooling defect it named is since pinned by a permanent guard. |
+| `HARNESS-MAP-LINEREFS` | **partial** (stale-tree) | `python experiments/ptr-engine/tools/harness_map_check.py --check` → `165 citations · baselined 31 · blank_line 8 · comment_only 5 · ok 119 · symbol_moved 2` / `FAIL (15 unbaselined)`, exit 1; `pytest tests/test_harness_map_check.py -q` → `2 failed, 3 passed` | At its own recorded sha `f17663d1` it measured `exit 0 — 165 citations: 32 baselined + 133 ok`. Today both cited lines are empty (`cell.py:1671`, `run_longrun.py:1072` are blank lines): the guard is working and the map's pin has rotted under later edits. Artefact real, claim true as recorded, not true at HEAD. |
+| `CAPGATE-CELL-LABEL` | **pass** | All named artefacts exist (`exit_codes.py` 16,804 B, `test_capgate_label.py` 14,938 B, `test_exit_codes.py` 27,870 B, `docs/EXIT-CODES.md` 14,814 B, plus `cell.py`/`run_longrun.py`/`GATE-CHAIN.md`); `pytest experiments/ptr-engine/longrun/tests/test_capgate_label.py experiments/ptr-engine/longrun/tests/test_exit_codes.py -q` → `25 passed, 15 subtests passed`, exit 0 | Each red case (a–d) is pasted with its observed mislabelling and the green reproduces at HEAD. Its own residual — pre-send exit 4 not proven end to end — is disclosed in the handoff rather than papered over: the claim is smaller than the evidence. |
+| `GRID-2-FINAL` | **pass** | `tools/grid2_final_report.py` 40,199 B, `tests/test_grid2_final.py` 9,037 B, `measure/GRID-2-FINAL.json` 24,572 B, `docs/GRID-2-FINAL.md` 12,670 B; `pytest experiments/ptr-engine/tests/test_grid2_final.py -q` → `21 passed in 1.43s`, exit 0 | The counts in the handoff (16 censused → 6 usable, 1,270 rows, `n_eff` 26.14 / 60.95, TVS `UNDEFINED`) match the 24,572 B record and the frozen command reproduces today. |
+
+### Where the six rows actually live
+
+The ritual test does **not** read this page. It reads `~/.dsh/storages/orchestration/verdict.jsonl`, keyed
+`taskId:executionId`, and all six closures were absent from that ledger — which is why appending prose alone can
+never turn it green. This batch therefore also recorded one row per closure, each naming the command actually run
+at HEAD `17182ffc…` with its measured exit code, the output tail prefixed
+`[U-SPCC-9D backfill adjudication, not the unit's own frozen command]` so no row can be mistaken for the unit's
+own frozen row.
+
+Five rows carry `exitCode 0`. `HARNESS-MAP-LINEREFS` carries `exitCode 1` because its guard fails at HEAD — the
+`partial` verdict above and the row agree rather than contradicting. `BUDGET-48-WIRE` has no runnable acceptance
+command (it is a source-reading audit, and `orchestration_verdict` refused it twice when it was written), so its
+row records the JSON-load check it itself named, exit 0, and the `superseded` verdict carries the substance.
+
+After the six rows: `test_verdict_ritual.py` → **10 passed** (was `1 failed, 9 passed`).

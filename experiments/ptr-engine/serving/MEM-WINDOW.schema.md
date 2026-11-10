@@ -25,6 +25,36 @@ directory):
 4. Samples are taken every `SAMPLE_INTERVAL` (2 s). The peak is the kernel's
    `memory.peak` maximum, not the largest sampled value.
 
+## Which host is measured
+
+`mem_source` records *where the supervisor read its memory facts*, because the
+60 GB allowance is about the host that holds the workload — the 121 GB GB10 /
+GX10 unified pool — not necessarily the machine the CLI runs on. Two sources
+exist: `"local"` (`LocalMeminfo`, reading `/proc/meminfo` here, `SPCC_MEMINFO_PATH`
+overrides the path in tests) and `"ssh:<host>"` (`RemoteMeminfo`, running
+`ssh -o BatchMode=yes <host> cat /proc/meminfo`, read-only). A remote read that
+fails raises and is refused; it never becomes zero. `--target-host` (or
+`SPCC_TARGET_HOST`) selects the source at `open-window`; `run` reuses the source
+recorded in the window unless it is given its own `--target-host`.
+
+`enforcement` states what the window can actually prove. `"cgroup"` is claimed
+**only** when `mem_source` is `"local"`: the cgroup written by `run`
+(`spcc-<job>-<pid>`, `memory.max = 60 GiB`) governs the child this supervisor
+spawned, so `memory.peak` is a real measurement of that child. A remote host
+can only ever yield **`"declared-only"`**: the supervisor cannot write a cgroup
+on another machine, so there is no measured peak and no kernel-enforced cap —
+only the declared peak admitted at open time plus the sampled `MemAvailable`.
+Do not fake a cgroup for a remote window; the mode is recorded precisely so a
+reader can tell the two apart.
+
+`MIN_TOTAL_GB = 100` exists to stop the supervisor silently bounding a laptop.
+`open-window` reads `MemTotal` from the chosen source before anything else and
+refuses with exit code **4** (distinct from the allowance refusal, exit 2) when
+it is below 100 GB, naming both numbers and the 121 GB pool the allowance
+governs. On this box `MemTotal` is 29 GB, so a local window is now refused by
+construction instead of pretending that a 68 GB reserve on a 29 GB laptop
+bounds the accelerator.
+
 ## Open record (`MEM-WINDOW.json`)
 
 | Field | Type | Meaning |
@@ -37,6 +67,9 @@ directory):
 | `owner_pid` | int | pid of the `open-window` process (first owner) |
 | `owner_start_time` | int | `/proc/<owner_pid>/stat` field 22 at open time |
 | `owners` | array of `{pid, start_time}` | opener and its immediate parent, in that order |
+| `mem_source` | `"local"` \| `"ssh:<host>"` | where `MemTotal`/`MemAvailable` were read; default `"local"` |
+| `mem_total_gb` | float | `MemTotal` of that source; refused below `MIN_TOTAL_GB = 100` |
+| `enforcement` | `"cgroup"` \| `"declared-only"` | `cgroup` only for a local source; remote is always declared-only |
 | `mem_available_gb` | float | `MemAvailable` at open time; the baseline for `unaccounted_gb` |
 
 ## Window ownership rule
@@ -71,9 +104,10 @@ All open-record fields, plus:
 
 | Field | Type | Meaning |
 |---|---|---|
-| `cgroup_peak_gb` | float or `null` | `memory.peak` / 2^30; `null` if the closing read failed |
-| `unaccounted_gb` | float or `null` | `(opened MemAvailable − closing MemAvailable) − cgroup_peak_gb`; `null` unless both reads succeeded. May be negative when `MemAvailable` rose mid-run — that means the remainder was **not measured**, so it is never treated as a zero |
-| `unaccounted_reason` | string, absent when accounted | `"mem-available-rose"` for a negative remainder; `"close-read-failed"` when `cgroup_peak_gb` or the closing `MemAvailable` is `null` |
+| `cgroup_peak_gb` | float or `null` | `memory.peak` / 2^30; `null` if the closing read failed **or** `enforcement` is `declared-only` (there is no cgroup to measure) |
+| `unaccounted_gb` | float or `null` | `(opened MemAvailable − closing MemAvailable) − cgroup_peak_gb`; `null` unless both reads succeeded. May be negative when `MemAvailable` rose mid-run — that means the remainder was **not measured**, so it is never treated as a zero. Always `null` for a declared-only window |
+| `unaccounted_reason` | string, absent when accounted | `"mem-available-rose"` for a negative remainder; `"close-read-failed"` when `cgroup_peak_gb` or the closing `MemAvailable` is `null`; `"remote-host-declared-only"` for any declared-only window |
+| `mem_source` / `enforcement` | string | carried over from the open record; the close record never upgrades a mode |
 | `killed` | string or `null` | `"cgroup-peak"` when `memory.peak` exceeded the cap (SIGTERM, then SIGKILL after `--grace`) |
 | `aborted` | string or `null` | `"sample-unreadable"` when any sample or closing read failed |
 | `aborted_path` | string, when aborted | the path that could not be read |
@@ -92,6 +126,7 @@ All open-record fields, plus:
 | `cgroup_peak_gb > 60` | `UNVERIFIED` (`allowance_reason: "peak-exceeded-cap"`) |
 | `unaccounted_gb` is `null` | `UNVERIFIED` (`allowance_reason: "unaccounted-unknown"`) |
 | `unaccounted_gb < 0` | `UNVERIFIED` (`allowance_reason: "mem-available-rose"`) |
+| `enforcement` is `declared-only` | `UNVERIFIED` (`allowance_reason: "remote-host-declared-only"`) — the peak was declared, not measured, and the cgroup that would prove it is on another host |
 | none of the above | `VERIFIED` (`allowance_reason` names `cgroup_peak_gb + unaccounted_gb <= 60 GB`) |
 
 Only the last row is a claim that the workload stayed inside the 60 GB
@@ -113,10 +148,23 @@ diagnosable without further inspection:
 refusing: MemAvailable 14.0 GB < 68.0 GB reserve (short by 54.0 GB)
 refusing: declared peak 61.0 GB exceeds cap 60 GB (over by 1.0 GB)
 refusing: memory window already open (owner pid 1234 start 8877665544 alive)
+refusing: mem_source local reports MemTotal 29.0 GB < 100 GB minimum; the allowance governs a 121 GB pool and this supervisor would bound the wrong machine
+refusing: mem_source ssh:gx10 MemTotal unreadable: ssh: connect to host gx10 port 22: Connection timed out
 refusing to run: window owner pid 1234 start_time 8877665544 no longer alive (pid reuse or owner exited)
 ```
+
+Exit codes are distinct so callers can tell the refusals apart: **2** for an
+allowance refusal (declared peak, reserve, or an already-open window), **3**
+for a `run` precondition, and **4** for a wrong/unreadable memory host. Exit 4
+means the supervisor could not establish that the chosen host is the 121 GB
+pool the allowance is about, so it refuses before any child is spawned rather
+than enforcing a cap on the wrong machine.
 
 The admission reserve is `cap + 8 GB = 68 GB` of `MemAvailable` immediately
 before launch, so the host keeps working headroom even when the cap is fully
 used. On a box whose `MemAvailable` is below 68 GB every window is legitimately
-refused; the message states which number blocked it and by how much.
+refused; the message states which number blocked it and by how much. The
+reserve applies to the chosen `mem_source`, not necessarily this machine: on the
+29 GB box that runs the CLI the `MIN_TOTAL_GB` gate refuses first (exit 4),
+which is correct — a 68 GB reserve there would bound the laptop, not the 121 GB
+pool the allowance describes.

@@ -1,6 +1,6 @@
 # STATE — the current state of this workspace
 
-**Last updated:** 2026-11-06 · **By:** SEED-CONCEPTS-2026-11-06 (closing writer)
+**Last updated:** 2026-11-10 · **By:** U-SPCC-CLOSE (closing writer)
 **Read this first.** It is the single *current-state* page. Older status pages remain valid as dated
 records but are superseded here as current state — chiefly [`orchestration/STATUS.md`](orchestration/STATUS.md)
 (the docket-era batch record, 2026-10-21) and [`orchestration/CLOSING.md`](orchestration/CLOSING.md).
@@ -11,14 +11,19 @@ narrative: [`journal/INDEX.md`](../journal/INDEX.md) · build spec (historical):
 
 ## 0. One line
 
-The live work is the **ptr-engine serving/cache/cost experiment**: the gen-6 16-cell grid is measured
-and its verdict is **`not_adjudicable`** (2026-10-28); the instrument itself, not the budget, is the
-binding constraint, and the next step is a **gen-7 instrument decision that belongs to the user**.
-The request ledger is reconciled (**2,591 spent / 1,729 remaining of 4,320**). The app and the paper
-track are dormant-but-intact, not abandoned. Separately, the **Consonance bounded-context research is
-filed** (2026-11-03): a report and a prospective protocol, both independently rechecked **PASS**, with **0
-live calls** — and the comparative experiment they specify is **UNFUNDED** (7,560 requests against 1,729
-remaining) until the user decides (§2a).
+The live work is the **serving-context programme (SPCC)**: the layer compiler exists and is **wired** as
+the `spcc` arm, the memory allowance is a supervisor decision chain whose `VERIFIED` is only reachable as
+a last resort, and **E1–E6 are pre-registered** (§1a). The **billed-accounting plumbing proof is live**
+(100 turns, 0 failed; prompt 174,047 · cached 159,744 ⇒ **0.917821**), but the arm's answers are **not**:
+that run's scorecard exits **1** with **40/50 answer-shape failures**; the bill itself is settled —
+**billed 14,303 charged** (`billed_source "derived"`) against **159,744 discounted**, with a **557**-token
+residual reported inside a **1,740** tolerance. The gen-6 grid
+verdict stays **`not_adjudicable`**, and the ledger stands at **7,969 spent / 4,125 remaining of 12,094**
+(re-measured 2026-11-10; the 4,320 default cap in the ledger tool is exceeded and that is a decision, §6).
+Two machine changes block the plan's own verification items and both are user decisions: the SGLang
+relaunch with `--enable-hierarchical-cache`, and a single authorised remote root for the GX10. The app and
+the paper track are dormant-but-intact; the **Consonance bounded-context research** remains filed with **0
+live calls** and its comparative **`UNFUNDED`** (§2a).
 
 ---
 
@@ -96,6 +101,61 @@ its §0 state snapshot is historical) · `docs/LEDGER-RECONCILE.md` + `experimen
 `docs/CACHE-CREDIT-CHAT.md` (cache credit is measurable: +2,048 cached tokens on a repeated prompt).
 **Historical:** `docs/GRID-BUDGET-RECHECK.md`, `docs/LEASE-REOPEN-12.md`, `docs/CANARY-ERA-B*`,
 `experiments/ptr-engine/measure/GRID-SHAPE.json`, `experiments/ptr-engine/measure/GRID-PARAMS-16CELL.json`, `docs/GRID-RUNBOOK.md` §0.
+
+---
+
+## 1a. SPCC — the serving-context programme (current at 2026-11-10, nothing yet measured live)
+
+**What exists, per deliverable, with the handoff that owns it:**
+
+| Piece | State | Path / evidence |
+|---|---|---|
+| **Layer compiler** | built; five layers **L0 CONTRACT / L1 WORLD INDEX / L2 JOURNAL / L3 WORK / L4 CONTRACT-LINE**, `COMPACT_EVERY = 24`, `PtrPrefixDrift`; 5 tests pass | `experiments/ptr-engine/ptr_engine/layers.py`, spec `experiments/ptr-engine/research-seed-concepts/PROMPT-ENGINE-V1.md` (`U-SPCC-23.json`) |
+| **`prefix_sha256` scope** | **`L0+L1`**, not `L0+L1+L2`: L2 is append-only, so hashing it cannot be identical across turns 1–24. L2 is the tail; compaction is the only permitted break | `U-SPCC-2C.json` `prefix_hash_decision` |
+| **`spcc` arm** | **wired** — `ARM_SPCC`, `SpccArmState`, dispatch and stamping; an unwired first incarnation was caught and repaired; 26-turn offline stub run: `layer_tokens` on every row, one prefix break at turn 25, `epoch == 1`, `cached_tokens: null` where unreported | `experiments/ptr-engine/longrun/arm_cd.py`, `experiments/ptr-engine/longrun/run_longrun.py` (`U-SPCC-2C.json` `first_three_rows`, `prefix_and_compaction`) |
+| **Launch contract** | `launch-sglang-spcc.sh` mirrors the captured invocation, adds `--enable-hierarchical-cache`, `--mem-fraction-static 0.45` (54.45 GB of a 121 GB pool), has a dry run and **refuses to start while a memory window exists** | `experiments/ptr-engine/serving/launch-sglang-spcc.sh` (`U-SPCC-4.json`, `U-SPCC-4B.json`) |
+| **Fork decision** | **no fork** — none of the three gap criteria (per-range eviction protection, non-prefix reuse, per-range attribution) demonstrated by a failing run | [`docs/serving-options/FORK-DECISION.md`](serving-options/FORK-DECISION.md) (`U-SPCC-4.json`) |
+| **Memory allowance** | a mechanism, not arithmetic: hard cgroup cap **60 GiB (`64424509440`)**, admission reserve **68 GB `MemAvailable`**, 2 s sampling; `VERIFIED` reachable **only** as the last resort of the chain `killed-by-supervisor → aborted → died-by-signal → peak-unknown → peak-exceeded-cap → unaccounted-unknown → mem-available-rose → VERIFIED`; 22 tests | `experiments/ptr-engine/serving/spcc_supervisor.py`, `experiments/ptr-engine/serving/MEM-WINDOW.schema.md` (`U-SPCC-5D.json` `final_chain`, `green_full_suite`) |
+| **Pre-registration** | **E1–E6**, fixed order, a prediction written before each run, falsifier and request budget per experiment; **E6 gated on E1** | `experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.md` (`U-SPCC-6.json`) |
+| **Instrument** | `billing` block (`prompt_tokens`, `cached_tokens`, `uncached_tokens`, `billed_tokens`, `cached_fraction`, `coverage`, `attribution`), one-answer-per-checkpoint guard that fails loudly naming duplicated ids, `denominator_mismatch`, and `reconcile()` | `experiments/ptr-engine/longrun/score_longrun.py`, `experiments/ptr-engine/tools/request_ledger.py` (`U-SPCC-7.json`) |
+| **Findings ledger** | 7 rows, every one traced to a source document; the masking claim corrected in place | `experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md` (`U-SPCC-1.json`) |
+| **Suite** | full directory **86 failed / 723 passed → 5 failed / 806 passed**; the v4-fixture cluster was closed after that count (three suites 28 passed) | `U-SPCC-9A.json` `full_directory`, `U-SPCC-9C.json` `three_suites_after` |
+
+**Ledger, re-derived at close-out 2026-11-10:** **`spent 7,969`** of cap **12,094** (`PROJECT_QUOTA`,
+`experiments/ptr-engine/longrun/cell.py:141`) ⇒ **4,125 remaining**. The count is a **row count over the 93
+`rows-*.jsonl` files** in `experiments/ptr-engine/measure/`, which is the count of record because every
+request writes a row; a later reader can re-derive it the same way. The 2026-11-09 reconciliation recorded
+7,869 / 4,225 and `U-SPCC-LIVE.json` `store_after` records 7,969 / 4,125 after its 100 turns (Δ **+100**).
+**The 4,320 default cap is exceeded by 3,649**, which is why `test_request_ledger::test_g` is red: a true
+fact, not a test bug. (An intermediate `request_ledger.py` snapshot read 7,953 while the proof's rows were
+still landing; it is not the count of record.)
+
+**The live billed proof, exactly.** `orchestration/handoffs/U-SPCC-LIVE.json` (**done**, 2026-11-10T06:29)
+ran `run_longrun.py --claim-mode plumbing --arms masking-no-fetch --fixture tasks-v7/TX-03.v1.json`:
+**100 rows / 100 requests, 0 failed, 0 truncated, `finish_reason{"stop":100}`**. Its bill re-derives:
+**prompt 174,047 · cached 159,744 · uncached 13,746 ⇒ cached/prompt 0.917821**; `cached_tokens` is `null`
+on turns **[1, 5]** (`coverage 0.98`), and **557 prompt tokens are accounted as neither** (174,047 −
+159,744 − 13,746). **The bill, after the stamping fix (`U-SPCC-11`, no model call):**
+`billed_tokens` **14,303** with `billed_source "derived"` — defined as `prompt − cached`, and `= prompt`
+when `cached` is null, because SGLang omits the counter when nothing was cached; it is **never**
+`uncached_tokens` and **never** `0`. The single ambiguous `cached_fraction` was **removed** in favour of
+two named fields: `cached_fraction_of_prompt` **0.917821048337518** and `cached_fraction_of_accounted`
+**0.920767767594674**. `reconcile_delta_total` **557** against tolerance **1,740** (1 % of prompt) —
+**within tolerance true**; the residual is **reported, not asserted away**. **14,303 is charged; 159,744 is
+the discount.** **What it does not prove:** the scorecard exits **1** with **40/50 checks failing on answer
+shape (`kind NONE != NUM`)**, so this is a billing proof, not evidence that `masking-no-fetch` works on
+`TX-03`. The landed score file `experiments/ptr-engine/measure/score-spcc-billedproof-2026-11-10.json` still
+carries the stale `billed_tokens: 0` block; a landing unit refreshes it and it must not be cited.
+
+**Not measured — do not read any of the above as a result.** No live `spcc` cell has run; the
+memory window cannot currently be admitted (`MemAvailable` ~14 GB against a 68 GB reserve, so the
+supervisor's correct answer is *refuse*). The compiler's own `cached_tokens`
+are `null` wherever the endpoint did not report them.
+
+**Blocked by a machine change nobody authorised:** plan verification item 7 needs the SGLang container
+relaunched with `--enable-hierarchical-cache`; item 8 needs Nemotron weights on the GX10, and remote
+writes are **blocked until the operator authorises one root**
+(`experiments/ptr-engine/serving/REMOTE-ROOT.md`, `U-SPCC-4.json`).
 
 ---
 
@@ -215,9 +275,19 @@ those classes `UNAVAILABLE` / `NOT_OBSERVED` and refuses to score them as succes
   `reserach extarctor` is not a path and does not exist; `STRUCTURE.md` carried a false claim that the
   misspelling was intentional until 2026-10-28, when it was rewritten to record the old spelling only
   as a dated-record artefact. Dated records keep the old spelling; live instructions were fixed.
-- **Git:** branch `research/next-candidates-2026-10-24`, HEAD `f17663d` (2026-10-25), remote
-  `Aswin-Ram-K/research-publish-packages`. **Everything after 2026-10-25 is uncommitted**, and ~1,300
-  files are untracked — including this page's sources of truth. HEAD is a checkpoint, not the truth.
+- **Git:** branch `research/next-candidates-2026-10-24`, HEAD `17182ff`, remote
+  `Aswin-Ram-K/research-publish-packages`. The pre-2026-11-09 backlog was committed as a preservation
+  commit (`9fadcc9`, **2,665 files**: 54 modified, 2,001 untracked) and then merged with
+  `research/paper-candidates-2026-11-04` (`afe4d78`); a small dirty/untracked layer remains (89 paths
+  before this close-out's seven documentation files). The `origin/main` merge (`ca9d65e`) was **reverted**
+  (`1977d30`, leaked tree removed `dfba6aa`, recorded `59c1c60`) after it leaked an unrelated tree;
+  history was never rewritten. **Ancestry, measured 2026-11-10:** `origin/main` is at `5554d82` and **is an
+  ancestor** of HEAD (`mergebase 5554d82`) — the earlier "shares no common ancestor" claim is false — and
+  the branch's backup ref is `origin/backup/screened-dirty-progress-2026-11-10-1348`. **Neither merge
+  advanced `origin/main`, so plan deliverable 0 is only half done.** HEAD is still a checkpoint, not the
+  truth. `docs/CURRENT-REPO-STATE.md` (dated record) still carries the old `HEAD: dfba6aa` and the false
+  ancestry sentence; it is outside this close-out's write paths and is named for its owner in
+  `orchestration/handoffs/U-SPCC-CLOSE.json`.
 - **omp worktrees are partial:** a session started under `~/.omp/wt/…` sees tracked files only. Use
   absolute paths under the real root.
 - **Session contract:** [`AGENTS.md`](../AGENTS.md) — owner mode, documentation contract, hard
@@ -251,8 +321,22 @@ those classes `UNAVAILABLE` / `NOT_OBSERVED` and refuses to score them as succes
    leaving it uncommitted, is a user call; agents must not run `git add -A` / `git clean` unasked.
 7. **Consonance E2 budget and comparative funding** (since 2026-11-03) — E2 runs at **123 calls
    (descriptive only)**, at **369–450 (adjudicable, needs approval)**, or not at all; and the comparative
-   is **`UNFUNDED` at 7,560 against 1,729 remaining**, with a **185-call pilot** as the funded
-   alternative. Three mutually exclusive answers, all the user's (§2a).
+   is **`UNFUNDED`**, with a **185-call pilot** as the funded alternative. Three mutually exclusive
+   answers, all the user's (§2a). *Arithmetic refreshed 2026-11-10:* §2a's 4.37× was computed against the
+   2,591 / 1,729 snapshot; against today's **4,125 remaining** the comparative is **7,560 / 4,125 = 1.833×**
+   — still unfunded, but by 1.833, not 4.37.
+8. **Authorise a remote root for the GX10 (Nemotron weights)** — remote writes are blocked until the
+   operator names **one** root; plan verification item 8 cannot start before that (§1a,
+   `experiments/ptr-engine/serving/REMOTE-ROOT.md`).
+9. **Authorise the SGLang relaunch with `--enable-hierarchical-cache`** — a container change; without it
+   plan verification item 7 is unproven and E1's cache boundary cannot be read on the serving side
+   (`experiments/ptr-engine/serving/launch-sglang-spcc.sh`, `U-SPCC-4.json`).
+10. **The 4,320 default budget cap** — **7,969 already spent** (a row count over the 93 `rows-*.jsonl`
+    files), i.e. **3,649** over that default, while the live project quota (`PROJECT_QUOTA`,
+    `experiments/ptr-engine/longrun/cell.py:141`) is 12,094 with **4,125** headroom. Either the default
+    moves (and to what) or the ledger tool keeps reporting an over-budget fact.
+    `test_request_ledger::test_g` is red on exactly this and must not be "fixed" by
+    editing the constant (§1a).
 
 ---
 
@@ -397,3 +481,66 @@ instruments); (iii) decide the comparative: fund 7,560 by raising the 4,320 cap,
 **Verified:** `python3 tools/doc_check.py` → `OK docs clean under /home/zer0null/research extractor`
 (exit 0); every link in the five package documents resolves (**23 targets, 0 broken**); no file outside the
 package was modified (`find . -newermt '2026-11-06 00:00'` → **0** hits outside it).
+
+---
+
+## 11. What changed on 2026-11-09 … 2026-11-10 — the serving-context programme (SPCC)
+
+**The plan that was executed:** `local://serving-context-programme-plan.md`, steps 0–7 plus suite repair,
+by roughly thirty units (cards and handoffs `orchestration/units/U-SPCC-*.md`,
+`orchestration/handoffs/U-SPCC-*.json`). Narrative: [`journal/2026-11-10.md`](../journal/2026-11-10.md).
+
+**Landed**
+
+- **Preservation** — one commit over the whole uncommitted backlog (`9fadcc9`, **2,665 files**), merge of
+  the paper-candidates branch (`afe4d78`); the row store verified as growth, not corruption (**92 files,
+  7,869 rows, 0 exact duplicates, 123 manifests** — `U-SPCC-0B.json` `row_tallies`; the store is now
+  **93 files / 7,969 rows** after the live proof's 100 turns).
+- **The leaked-tree merge, reversed** — `origin/main` was merged accepting (`ca9d65e`) with
+  `--allow-unrelated-histories` and introduced an unrelated tree (a vendored `api_server.py`, removed in
+  `dfba6aa`); it was then **reverted** (`1977d30`) and the repair recorded (`59c1c60`). History was not
+  rewritten. **Corrected 2026-11-10:** `origin/main` **is** an ancestor (`mergebase 5554d82`) — the
+  "unrelated root / different project" claim is false — and neither merge advanced `origin/main`, so
+  deliverable 0 is **half done** (§5).
+- **Findings ledger** — `experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md`, seven rows,
+  every row checked against a source document (`U-SPCC-1.json`).
+- **Compiler** — `experiments/ptr-engine/ptr_engine/layers.py`; `prefix_sha256` over **L0+L1** with L2 as
+  the append-only tail (a deliberate correction of the plan's impossible requirement); spec
+  `PROMPT-ENGINE-V1.md`.
+- **The `spcc` arm, wired** — `experiments/ptr-engine/longrun/arm_cd.py` + `run_longrun.py`; a first
+  incarnation that never called `compile_prompt` was caught and repaired; 26-turn offline stub proves
+  stamping and exactly one prefix break (turn 25) (`U-SPCC-2C.json`).
+- **Serving** — `experiments/ptr-engine/serving/launch-sglang-spcc.sh` (dry run, hierarchical cache flag,
+  memory-window refusal), [`docs/serving-options/FORK-DECISION.md`](serving-options/FORK-DECISION.md)
+  (**no fork**), and `experiments/ptr-engine/serving/REMOTE-ROOT.md` (remote writes **blocked**).
+- **Allowance** — `spcc_supervisor.py` + `MEM-WINDOW.schema.md`: 60 GiB hard cap, 68 GB admission reserve,
+  2 s sampling, `VERIFIED` only as the chain's last resort; 22 tests (`U-SPCC-5D.json`).
+- **Pre-registration** — `PREREG-SPCC.md`, E1–E6 in fixed order, E6 gated on E1.
+- **Instrument** — billing block, one-answer-per-checkpoint guard, `denominator_mismatch`, `reconcile()`;
+  the published **42/48** re-scored unchanged and rows reconciled 7,869 = 7,869 (`U-SPCC-7.json`).
+- **Suite** — **86 failed / 723 passed → 5 failed / 806 passed**; stale tests were diagnosed, not
+  loosened (exit 14 is `EXIT_CAPGATE_UNRECORDED`; the `run_id` builder always appends `-r{rep}`; the
+  session-poisoning socket monkeypatch was removed from import and armed in `setup_module`); derived
+  artefacts regenerated by their real generators (`STOP-REASON.json`, `VERBOSITY.json`, `FALSE-PASS.json`
+  3→19) (`U-SPCC-8/9A/9B/9C`).
+
+**Corrections recorded** — masking is **12/48 on `:8012` and 8/48 on `:8014`**, all successes in the d=2
+bucket (**0/36 beyond distance 2**), not "0/48 on both stacks"; D-086's source is `MEASURED_FACTS.md` F3;
+the ledger is **7,969 spent / 4,125 remaining** (row count over 93 `rows-*.jsonl` files; not the 7,869 /
+4,225 reconciled earlier, and not the 7,953 of a mid-write snapshot); the 5-failure
+suite count is a point-in-time figure (the v4-fixture cluster was closed after it).
+
+**Still red, each for a stated reason** — the ledger over-budget test (a true fact against the 4,320
+default), `test_lost_fixture` (rows pin a fixture that is not on disk; row files out of bounds),
+`test_journal_lint` (290 new unjournaled handoffs; writing them now would fabricate history),
+`test_verdict_ritual::LiveLedgerTest` (six unverdicted closures; a backfill unit owns it).
+
+**Live billed proof — DONE, plumbing only** (`orchestration/handoffs/U-SPCC-LIVE.json`): 100 turns, 0
+failed, 0 truncated; prompt **174,047**, cached **159,744**, uncached **13,746**, cached/prompt
+**0.917821**, billed **14,303**; `null` cached on turns **[1, 5]** only; **557** prompt tokens accounted as
+neither. After the stamping fix (`U-SPCC-11`): `billed_tokens` **14,303** (`billed_source "derived"`),
+`cached_fraction_of_prompt` **0.917821048337518**, `cached_fraction_of_accounted` **0.920767767594674**,
+`reconcile_delta_total` **557** within tolerance **1,740** — **14,303 charged, 159,744 discounted**, 557
+residual reported. **Open on it:** the scorecard exits **1** with 40/50 answer-shape failures, so it
+licenses the billing account and nothing about accuracy. The machine blockers (SGLang relaunch, remote
+root, 68 GB reserve) are unchanged by this proof.

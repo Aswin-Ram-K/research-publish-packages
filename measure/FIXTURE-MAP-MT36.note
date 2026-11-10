@@ -1,0 +1,143 @@
+FIXTURE-MAP-MT36 — provenance of the fixture pinned by the TX-AGG rows
+======================================================================
+Written 2026-11-10 by unit U-SPCC-10. The rows files named below are NOT edited
+by this note; they stay as the historical record.
+
+CLASSIFICATION: UNVERIFIABLE (not recoverable, not a commit-recorded deletion).
+No file anywhere in the workspace, and no blob in any git ref, has the content
+that these rows pin. The fixture they name still exists at the recorded path,
+but its bytes were rewritten in place after the last run that used it, and the
+pre-rewrite bytes were never committed.
+
+1. WHAT THE ROWS PIN
+--------------------
+Rows file: experiments/ptr-engine/measure/rows-agg-fetch-mt36.jsonl
+  wc -l = 41 rows; 1 distinct fixture_sha256, on all 41 rows:
+    2b416d827c36ec958aa50e54db4ec5d52f72f061e7c39e9a417b5f0b2078370c
+  fixture_path  = /home/zer0null/research extractor/experiments/ptr-engine/longrun/tasks-v7/TX-AGG.v1.json
+  fixture_id    = TX-AGG.TX-AGG.v1
+  generation    = gen-7
+  task_id       = TX-AGG ; arm = bounded-context-fetch ; model = occamy-1.0-NVFP4
+  run_id        = longrun-2026-11-09T084217Z-bounded-context-fetch-r1
+  claim = none ; comparison_eligible = false (all 41 rows)
+  engine = sglang ; endpoint = http://192.168.2.168:8012/v1
+  run_manifest_sha256 = 1be2a2ceab7b0c7d9e67437d973b2cf2b2488be2c73809b589a6e3c335dddf49
+
+The same digest is pinned by 278 rows in total across six files
+(no other rows file in the corpus uses it):
+  54  experiments/ptr-engine/measure/rows-agg-fetch-mt50.jsonl
+  36  experiments/ptr-engine/measure/rows-agg-fetch-test.jsonl
+  10  experiments/ptr-engine/measure/rows-agg-fetch-r1.jsonl
+ 100  experiments/ptr-engine/measure/rows-agg-masking-r1.jsonl
+  37  experiments/ptr-engine/measure/rows-agg-fetch-test2.jsonl
+  41  experiments/ptr-engine/measure/rows-agg-fetch-mt36.jsonl
+(The ticket said "400+ rows"; the measured count is 278.)
+
+2. CANDIDATES ON DISK AND THE COMPARISON
+----------------------------------------
+Only one TX-AGG fixture exists in the repository:
+  experiments/ptr-engine/longrun/tasks-v7/TX-AGG.v1.json
+    sha256 = 178042c254f7b732f57603985de35adf8e3722f80507219103c0f7b259e81b03
+    size   = 79427 bytes   schema = consonance.longrun-fixture/2
+    task_id = TX-AGG ; generation = gen-7 ; fixture_version = TX-AGG.v1
+    N = 100 ; wall_tokens = 4312 ; fetch_budget_tokens = 1024
+             => 178042c2... != 2b416d82... (DIFFERENT BYTES, same identifiers)
+
+Full-workspace byte scan (os.walk over the repo, 56,431 files, skipping
+.git/node_modules/__pycache__/.venv, files <= 8 MB): ZERO files hash to
+2b416d82... . The digest occurs only inside text of the 20 run manifests and
+inside this rows family — never as a document.
+
+Serialization probe (exhaustive over the plausible space): parsing the on-disk
+document and re-serializing with schema in {/1,/2} x indent in {None,1,2,3,4} x
+sort_keys in {True,False} x ensure_ascii in {True,False} x trailing newline in
+{"", "\n"} produces NO match for 2b416d82... . The file has no CRLF and no
+trailing newline. So the pinned digest is not a formatting/canonicalization
+variant of the current file — the CONTENT differs.
+
+Content-level proof of the difference (semantic, not cosmetic): 26 of 26 rows
+that embed a `checkpoint` object match the on-disk checkpoints by id, turn,
+question and source, but DISAGREE on `expected` / `answer_form`; 0 of 26 agree.
+Examples (row value -> on-disk value):
+  cp.TX-AGG.g00.d2  20786    -> 156145
+  cp.TX-AGG.g01.d2  60786    -> 210513
+  cp.TX-AGG.g00.d6  10131    -> 51443
+  cp.TX-AGG.g02.d2  100786   -> 269767
+The on-disk fixture is therefore a RE-GENERATED TX-AGG (same ids, gen-7,
+TX-AGG.v1) with different document bodies and different ground-truth answers,
+not the document those rows measured.
+
+3. GIT HISTORY
+--------------
+  git log --all --format='%h %ad %s' -- .../tasks-v7/TX-AGG.v1.json
+    9fadcc9 2026-11-09 06:56:48 -0600  wip(ptr-engine): preserve context x
+            serving instrument, fixtures and measurements
+  That is the ONLY commit that ever touched the path. Every historical blob of
+  it hashes 178042c2... (= current content); there is no other blob version.
+  git log --all --diff-filter=D --name-only -- '*agg*' '*mt36*' '*TX-AGG*'
+    (empty) — no fixture matching these patterns was ever deleted in history.
+  git status/diff for the path: clean (current bytes are the committed bytes).
+  ctime == mtime == 2026-11-09 02:57:28.485662399 -0600 = 2026-11-09T08:57:28Z
+  Git object ids are content-addressed, so had the pre-rewrite bytes ever been
+  committed, a blob with sha256 2b416d82... would be reachable. None is.
+
+4. TIMELINE (all UTC)
+---------------------
+  08:21:44Z .. 08:49:43Z  20 manifests recorded fixture.sha256 = 2b416d82... for
+                          path tasks-v7/TX-AGG.v1.json (schema /2, wall_tokens
+                          4312), i.e. at run time the file really had those bytes.
+                          Last one: longrun-2026-11-09T084942Z-bounded-context-fetch-r1.
+  08:57:28Z               TX-AGG.v1.json overwritten in place; mtime AND ctime
+                          both 08:57:28Z (ctime is not backdatable, so this is a
+                          real write, ~8 min after the last run that used the
+                          old bytes).
+  12:56:48Z               9fadcc9 commits the path for the first time, already
+                          carrying the post-rewrite bytes (178042c2...).
+  Consequence: the pinned content lived only on disk between two runs and was
+  destroyed by an in-place rewrite without ever entering version control.
+
+5. WHAT THESE ROWS MAY AND MAY NOT SUPPORT
+------------------------------------------
+MAY support (conditional, descriptive, about the run record itself):
+  - the per-row measurements as recorded: prompt/cached/completion tokens,
+    ttft_s, latency_s, request_sha256, content/content_sha256, arm, rep, turn;
+  - that a run with run_id longrun-2026-11-09T084217Z-bounded-context-fetch-r1
+    loaded a TX-AGG document whose bytes hashed 2b416d82... at that moment;
+  - the answers the model actually emitted and their grading against the
+    expected values recorded inside each row.
+
+MAY NOT support:
+  - any reproducibility claim: the named fixture cannot be produced, so the
+    prompt prefix (and every token count that depends on it) cannot be rebuilt
+    or re-measured;
+  - any claim about the TX-AGG fixture currently on disk: it is a different
+    document with different ground truths; its numbers are NOT these rows'
+    numbers and must never be substituted for them;
+  - any cross-arm comparability: all rows carry claim="none" and
+    comparison_eligible=false, and the fixture identity is unestablished;
+  - any "ABSENT means 0" reading: the fixture is missing, not empty.
+
+6. WHY NOT "RECOVERABLE"
+------------------------
+recoverable would require an on-disk document with the same content under a
+different name or schema. There is none: no byte match in 56,431 files, no
+canonicalization match, and the sole same-named candidate disagrees on
+ground-truth answers. A mapping row-digest -> that path would be false.
+
+7. WHY NOT "DELETED" (committed)
+--------------------------------
+The bytes existed and were destroyed, but no commit and no ref ever held them;
+classifying it as a commit-recorded deletion would invent provenance. The
+accurate state is: provenance broken by an unversioned in-place rewrite at
+2026-11-09T08:57:28Z, therefore unverifiable.
+
+8. TEST CONSEQUENCE (do not "fix")
+----------------------------------
+experiments/ptr-engine/longrun/tests/test_lost_fixture.py::
+test_no_new_row_pins_a_missing_fixture is correctly red for these 278 rows.
+Its baseline freezes only the older lost digest
+72c3832d95f9c7966b4358eda10fa2882775a416ee8a663d57b1c871ed19c44d (259 rows);
+2b416d82... is a separate, genuinely-new miss. Honouring a mapping is NOT
+justified here (there is no content to map to). Freezing these 278 rows in the
+baseline would record the loss without repairing it — that decision belongs to
+the unit that owns the test, not to this note.

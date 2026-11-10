@@ -1,0 +1,34 @@
+{
+  "unit": "V-SPCC-2C",
+  "status": "pass",
+  "artifacts": [
+    "orchestration/units/V-SPCC-2C.md"
+  ],
+  "evidence": {
+    "author_test": "....                                                                     [100%]\n4 passed in 0.34s",
+    "scratch_summary": "TOTAL 32 checks, 0 FAIL",
+    "determinism": "PASS 1 determinism: same state twice byte-identical       len=234 sha=07dd599f720a3b82\nPASS 1 determinism: prefix_sha256 equal\nPASS 1 determinism: two fresh arm states agree",
+    "drift_positive": "PASS 2 drift: one L0 byte within run raises PtrPrefixDrift",
+    "drift_two_runs_one_process": "PASS 2 converse: two run_ids in one process do not raise\nPASS 2 converse: same run_id + separate state, no false drift\nPASS 2 converse: state reused across run_ids restarts baseline\nPASS 2 nothing writes the legacy module global _L0_HASHES  {}",
+    "fetch_isolation_24_turns": "PASS 3 prefix unchanged across turns 1-24  distinct=1\nPASS 3 L3 grew exactly 3 times  [5, 12, 19]\nPASS 3 fetched body never in L0/L1/L2  []\nPASS 3 journal append-only: 23 lines, no compaction yet  journal=23 compactions=0",
+    "compaction_turn_25": "PASS 4 turn 24 pre-fold: compactions==0, epoch==0\nPASS 4 turn 25: compactions==1\nPASS 4 turn 25: epoch==1\nPASS 4 turn 25: journal empty after compile  after25=[] after26=['T25|user|QUESTION (T25)']\nPASS 4 all world-index lines retained  index=5 world=4\nPASS 4 exactly one summary block, appended last  [summary: 24 turns folded into epoch 1]\nPASS 4 no mid-turn compaction (journal never rendered >= COMPACT_EVERY)  max post-build journal=23\nPASS 4 epoch monotone, never regressed (26)",
+    "prefix_covers_L0_L1": "PASS 5 prefix_sha256 == sha256(L0+L1)  1ab792c14961c5e9\nPASS 5 prefix_sha256 != sha256(whole prompt)\nPASS 5 L2 is the append-only tail (not in hash)\ndoc PROMPT-ENGINE-V1.md:48-56 states: prefix_sha256 is the hash of the cacheable prefix, L0+L1; L2 is the append-only tail; hashing the growing L2 would report a change on every append and could not distinguish a legitimate append from a destructive rewrite.",
+    "wiring_greps": "arm_cd.py:24  mask_output, build_table, fetch, ...   (import)\narm_cd.py:132  _marker, entry = mask_output(   [class ArmCDState]\narm_cd.py:200  marker, entry = mask_output(    [class ArmCDState]\narm_cd.py:30   from ptr_engine.layers import (compile_prompt, CompactionState, format_journal_line, RETURN_SYMBOL,\narm_cd.py:37   ARM_SPCC = \"spcc\"\narm_cd.py:490  prompt = compile_prompt(self.run, self.state, epoch=self.state.epoch, journal=new_lines, work=l3)\nrun_longrun.py:1399-1400  self.spcc = arm_cd.SpccArmState(fixture=fixture) if arm in (arm_cd.ARM_SPCC, \"spcc\") else None\nrun_longrun.py:1534  if arm == arm_cd.ARM_SPCC:\nrun_longrun.py:1546  info[\"prefix_sha256\"] = prompt.prefix_sha256\nrun_longrun.py:1547-1549  epoch/compactions/layer_tokens from the prompt object\nrun_longrun.py:1502  info[\"prefix_sha256\"] = sha256_text(prefix)   # pointer-stable arm, not spcc\nmask_output( occurrences inside SpccArmState (arm_cd.py:399-501) = 0; mask_output in ptr_engine/layers.py = 0",
+    "row_reproduction_26": "PASS 7 26 rows  rows=26\nPASS 7 layer_tokens is a real dict (L0..L4) on every row\nPASS 7 exactly one prefix break, at turn 25  [25]\nPASS 7 turns 25-26 share the post-compaction prefix\nPASS 7 epoch==1 and compactions==1 after turn 25\nPASS 7 cached_tokens null where the stub reported nothing  non-null=[]",
+    "row_stamping": "PASS 8 row stamp == compiler's own L0+L1 hash (T1)  1f251bcc8a1f5ac5\nPASS 8 row stamp != sha256 of the whole prompt\nPASS 8 row stamp is not sha256_text(prompt) of run_longrun",
+    "file_hashes": "13b608e5d036c6d27ee4aa5b6675f550f262830e1b1602218da73f6cb229e606  ptr_engine/layers.py\n9f214da44e8588182d8ec06aa8b384427934a9108734b56508a8d4d2d5407cd5  longrun/arm_cd.py\n419f46d68c2031228cc98514bf84e21b77d8f6ffb09ceccef06e02d13be0a878  longrun/run_longrun.py\n858c8521eb9e00a435f3777ec778ef935e9bb928819cfe7ab257c7e8406e8635  longrun/tests/test_spcc_arm.py",
+    "commands": [
+      "/home/zer0null/research extractor/.venv/bin/python -m pytest longrun/tests/test_spcc_arm.py -q",
+      "/home/zer0null/research extractor/.venv/bin/python longrun/tests/_scratch_2c.py   (written in-repo, run, then deleted)",
+      "grep -n compile_prompt|mask_output|ARM_SPCC|SpccArmState|prompt.prefix_sha256 longrun/arm_cd.py longrun/run_longrun.py",
+      "awk '/^class |^def /{n=$0} /mask_output\\(/{print NR\" inside [\"n\"]\"}' longrun/arm_cd.py",
+      "sha256sum ptr_engine/layers.py longrun/arm_cd.py longrun/run_longrun.py longrun/tests/test_spcc_arm.py"
+    ]
+  },
+  "blocker": null,
+  "next_unit_hint": "No compiler work needed. Two comment-level cleanups if anyone touches these files: (1) ptr_engine/layers.py:1-5 module header still says 'byte-stable prefix (L0+L1+L2)' while the hashed prefix is L0+L1 (compile_prompt docstring and PROMPT-ENGINE-V1.md:48-56 are correct); (2) the assignment's 'mask_output absent from both' is false as written - it lives in ArmCDState (arm_cd.py:132,200) for arms C/D, only the spcc path and layers.py are free of it. Also note run_longrun.py is under concurrent edit, so pin hashes before quoting line numbers.",
+  "write_paths": [
+    "orchestration/units/V-SPCC-2C.md",
+    "orchestration/handoffs/V-SPCC-2C.json"
+  ]
+}

@@ -129,54 +129,153 @@ def tokens_of(record):
         return int(prompt + completion)
     return None
 
+BILLED_RECONCILE_TOLERANCE_FRACTION = 0.01
+"""Tolerance for the ``prompt - cached - uncached`` residual, as a fraction of prompt.
+
+One token is not a defensible tolerance: the 100-turn SGLang billed proof carries a
+557-token residual (5.6 tokens/turn) between ``prompt_tokens`` and the cache report,
+presumably padding or a counted-vs-reported tokenisation difference. An assertion at
+1 token would fire on every real run and would end up disabled. 1% of prompt tokens
+(1740 tokens here) still makes a genuinely broken accounting visible without
+manufacturing a failure out of ordinary drift.
+"""
+
+
+def billed_of(record):
+    """``(billed_tokens, source)`` for one row; ``(None, None)`` when it contributes nothing.
+
+    ``billed_tokens`` is the number of prompt tokens the SERVER charged for. Every token
+    it did not report as cached was prefilled and charged, so:
+
+    * ``prompt_tokens - cached_tokens`` when the row reports ``cached_tokens``;
+    * ``prompt_tokens`` when ``cached_tokens`` is null — nothing was served from cache,
+      so the whole prompt is billed (per the engine null semantics: SGLang omits the
+      counter when it is 0);
+    * ``None`` only when ``prompt_tokens`` is missing: no prompt, no bill.
+
+    ``billed_tokens`` is NOT ``uncached_tokens``: the server's prefill accounting leaves
+    557 tokens (0.32%) unexplained on the 100-turn SGLang billed proof, so summing
+    ``uncached`` understates the bill. ``uncached`` is a separate observation and
+    ``reconcile_delta_tokens`` keeps the residual visible.
+
+    Sources: ``"field"`` when the row stamps ``billed_tokens`` itself (rows written by
+    ``run_longrun.make_row``), ``"derived"`` when the consumer computes it from the
+    prompt/cache report (rows written before that stamp existed).
+    """
+    if not isinstance(record, dict):
+        return None, None
+    b = record.get("billed_tokens")
+    if isinstance(b, (int, float)):
+        return int(b), "field"
+    prompt = record.get("prompt_tokens")
+    if not isinstance(prompt, (int, float)):
+        return None, None
+    cached = record.get("cached_tokens")
+    if isinstance(cached, (int, float)):
+        return int(prompt) - int(cached), "derived"
+    return int(prompt), "derived"
+
+
 def billing_block(records):
     """Aggregate billed accounting over the given turn records.
 
-    Null cached_tokens are excluded (never counted as 0) for cached_fraction
-    and coverage; sums treat a missing value as 0.
+    ``billed_tokens`` sums ``billed_of`` over the rows (see that function for the
+    definition). A sum over zero contributing rows is ``None``, never 0 — an unwritten
+    field and a genuinely free request must not read the same.
+
+    Two cache fractions, each with its denominator in the name, because the same name
+    meant two different quantities across artefacts (0.920768 vs 0.917821 for this run):
+
+    * ``cached_fraction_of_prompt``   = cached / prompt over the whole prompt total —
+      "what share of the tokens we SENT were cached".
+    * ``cached_fraction_of_accounted`` = cached / (cached + uncached) — "what share of
+      the tokens the server ACCOUNTED for were cached". Can read higher, because the
+      residual is outside its denominator.
+
+    ``coverage`` is the share of rows with a server-reported ``cached_tokens``;
+    ``billed_coverage`` the share contributing to the billed sum. ``attribution`` is
+    ``None`` (no rows), ``"unavailable"`` (nothing billed), ``"partial"``, or
+    ``"available"``.
+
+    The residual ``prompt - cached - uncached`` is reported, not corrected: it is
+    557 tokens on the SGLang billed proof and the cause is unknown, so it stays
+    visible. ``reconcile_within_tolerance`` compares it against
+    ``BILLED_RECONCILE_TOLERANCE_FRACTION`` of the prompt total.
     """
     records = [r for r in (records or []) if isinstance(r, dict)]
-    prompt_total = cached_total = uncached_total = billed_total = 0
-    reported = []
+    prompt_total = cached_total = uncached_total = 0
+    billed_total = billed_rows = reported_rows = 0
+    sources = set()
+    reconcile_delta = 0
     for r in records:
         p = r.get("prompt_tokens")
         c = r.get("cached_tokens")
         u = r.get("uncached_tokens")
-        b = r.get("billed_tokens")
-        if isinstance(p, (int, float)):
-            prompt_total += int(p)
-        if isinstance(c, (int, float)):
-            cached_total += int(c)
-        if isinstance(u, (int, float)):
-            uncached_total += int(u)
-        if isinstance(b, (int, float)):
-            billed_total += int(b)
+        p_i = int(p) if isinstance(p, (int, float)) else 0
+        c_i = int(c) if isinstance(c, (int, float)) else 0
+        u_i = int(u) if isinstance(u, (int, float)) else 0
+        prompt_total += p_i
+        cached_total += c_i
+        uncached_total += u_i
+        # The aggregate identity main asked to keep visible. A null cache counter is
+        # counted as 0 HERE ONLY, as part of the arithmetic identity -- this is not a
+        # claim that such a turn was billed zero (that is what coverage says).
+        reconcile_delta += p_i - c_i - u_i
         if c is not None:
-            reported.append(r)
-    coverage = (len(reported) / len(records)) if records else None
-    if not reported:
-        cached_fraction = None
-        attribution = "unavailable"
+            reported_rows += 1
+        b, src = billed_of(r)
+        if b is not None:
+            billed_total += b
+            billed_rows += 1
+            sources.add(src)
+    coverage = (reported_rows / len(records)) if records else None
+    billed_coverage = (billed_rows / len(records)) if records else None
+    if not records:
+        cached_fraction_of_prompt = cached_fraction_of_accounted = None
+        attribution = None
     else:
-        rep_prompt = 0
-        rep_cached = 0
-        for r in reported:
-            pp = r.get("prompt_tokens")
-            cc = r.get("cached_tokens")
-            if isinstance(pp, (int, float)):
-                rep_prompt += int(pp)
-            if isinstance(cc, (int, float)):
-                rep_cached += int(cc)
-        cached_fraction = (rep_cached / rep_prompt) if rep_prompt else None
-        attribution = "available"
+        cached_effective = 0
+        for r in records:
+            c = r.get("cached_tokens")
+            if isinstance(c, (int, float)):
+                cached_effective += int(c)
+            else:
+                n = r.get("cached_tokens_normalized")
+                if isinstance(n, (int, float)):
+                    cached_effective += int(n)
+        cached_fraction_of_prompt = ((cached_effective / prompt_total)
+                                     if prompt_total else None)
+        accounted = cached_total + uncached_total
+        cached_fraction_of_accounted = (cached_total / accounted) if accounted else None
+        if billed_rows == 0:
+            attribution = "unavailable"
+        elif billed_rows == len(records):
+            attribution = "available"
+        else:
+            attribution = "partial"
+    if not sources:
+        billed_source = None
+    elif len(sources) == 1:
+        billed_source = next(iter(sources))
+    else:
+        billed_source = "mixed"
+    reconcile_tolerance = (int(prompt_total * BILLED_RECONCILE_TOLERANCE_FRACTION)
+                           if records else None)
     return {
         "prompt_tokens": prompt_total,
         "cached_tokens": cached_total,
         "uncached_tokens": uncached_total,
-        "billed_tokens": billed_total,
-        "cached_fraction": cached_fraction,
+        "billed_tokens": billed_total if billed_rows else None,
+        "billed_source": billed_source,
+        "cached_fraction_of_prompt": cached_fraction_of_prompt,
+        "cached_fraction_of_accounted": cached_fraction_of_accounted,
         "coverage": coverage,
+        "billed_coverage": billed_coverage,
         "attribution": attribution,
+        "reconcile_delta_total": reconcile_delta if records else None,
+        "reconcile_tolerance_tokens": reconcile_tolerance,
+        "reconcile_within_tolerance": (abs(reconcile_delta) <= reconcile_tolerance
+                                       if records else None),
     }
 
 

@@ -1,0 +1,52 @@
+{
+  "unit": "U-SPCC-9D",
+  "status": "done",
+  "artifacts": [
+    "orchestration/VERDICTS.md",
+    "orchestration/units/U-SPCC-9D.md",
+    "orchestration/handoffs/U-SPCC-9D.json",
+    "~/.dsh/storages/orchestration/verdict.jsonl"
+  ],
+  "evidence": {
+    "pytest_before": "1 failed, 9 passed in 0.05s — LiveLedgerTest.test_no_new_unverdicted_closure_since_the_baseline: fresh={'VERDICT-BACKFILL-FIXTURE-GENERATIONS': ['8505be1b-…:228949d9-…'], 'BUDGET-48-WIRE': ['e310eddd-…:b28a83f9-…'], 'V-GRID-REPORT': ['c6bada83-…:c3280e05-…'], 'HARNESS-MAP-LINEREFS': ['6c49788b-…:616e484f-…'], 'CAPGATE-CELL-LABEL': ['bbd84a7d-…:9951b625-…'], 'GRID-2-FINAL': ['80e00f76-…:b6ad5033-…']} != {}",
+    "pytest_after": "10 passed in 0.05s (experiments/ptr-engine/longrun/tests/test_verdict_ritual.py -q)",
+    "mechanism_correction": "The ritual test reads verdict_keys from ~/.dsh/storages/orchestration/verdict.jsonl `put` records (taskId:executionId), NOT from orchestration/VERDICTS.md. Appending prose rows alone cannot turn it green; six ledger rows were therefore appended (file 226 -> 232 lines), each with a real command run at HEAD and its measured exit code.",
+    "artefact_checks": [
+      "VERDICT-BACKFILL-FIXTURE-GENERATIONS: 2869 sha057bc1caac59f08a experiments/ptr-engine/measure/VERDICT-BACKFILL-FIXTURE-GENERATIONS.json | 3391 e64f704882186fbe docs/VERDICT-BACKFILL-FIXTURE-GENERATIONS.md | 1521 1bfdfbc07c1a4d56 orchestration/units/VERDICT-BACKFILL-FIXTURE-GENERATIONS.md; pytest experiments/ptr-engine/longrun/tests/test_build_fixture.py -q -> exit 0, 5 passed in 0.41s",
+      "BUDGET-48-WIRE: 44876 9f6636018cf4eef9 experiments/ptr-engine/measure/GRID-PARAMS.json (22 top-level keys, json.load exit 0); 11242 0ca2095d9ec65416 docs/GRID-PARAMS.md; 2203 538156edd5b464dd orchestration/units/BUDGET-48-WIRE.md; anchors superseded -> run_longrun.py:3858 add_argument --fetch-rounds-per-arm default TOOL_FETCH_ROUNDS_PER_ARM, run_longrun.py:226 now 'sched = doc.get(\"revision_schedule\", None)'; superseding handoff orchestration/handoffs/RUNNER-ROUNDS-48.json exists",
+      "V-GRID-REPORT: 6194 a488f9bc12256c89 experiments/ptr-engine/measure/V-GRID-REPORT.json (attempts 8, findings 3, verdict emitter_unsound); 4651 5f18962be1d572b0 docs/V-GRID-REPORT.md; /tmp/vgfinal/ -> 'No such file or directory'; pytest experiments/ptr-engine/tests/test_run_grid_report.py experiments/ptr-engine/tests/test_grid_report_era_guard.py -q -> exit 0, 20 passed",
+      "HARNESS-MAP-LINEREFS: 233601 6323445d6f63435c docs/HARNESS-MAP.md; 4317 3813df9324280819 experiments/ptr-engine/measure/HARNESS-MAP-LINEREFS.json; harness_map_check.py --check -> 'harness_map_check: 165 citations | baselined 31 | blank_line 8 | comment_only 5 | ok 119 | symbol_moved 2' / 'FAIL (15 unbaselined citation(s))', exit 1; sed -n 1671p cell.py and 1072p run_longrun.py both return empty lines; pytest tests/test_harness_map_check.py -q -> 2 failed, 3 passed",
+      "CAPGATE-CELL-LABEL: 16804 efa8fa66e84cded1 experiments/ptr-engine/longrun/exit_codes.py; 14938 165e35a4dccb90d2 tests/test_capgate_label.py; 27870 df6d146d75066ae0 tests/test_exit_codes.py; 14814 daebc1c6980bd503 docs/EXIT-CODES.md; pytest both files -q -> exit 0, 25 passed, 15 subtests passed",
+      "GRID-2-FINAL: 40199 55ad51106e4b17ac experiments/ptr-engine/tools/grid2_final_report.py; 9037 aea6e76d694ec3c6 experiments/ptr-engine/tests/test_grid2_final.py; 24572 3c899e8b26eb0d35 experiments/ptr-engine/measure/GRID-2-FINAL.json; 12670 0e9e361012578807 docs/GRID-2-FINAL.md; pytest experiments/ptr-engine/tests/test_grid2_final.py -q -> exit 0, 21 passed in 1.38s"
+    ],
+    "verdicts": {
+      "VERDICT-BACKFILL-FIXTURE-GENERATIONS": "pass",
+      "BUDGET-48-WIRE": "superseded",
+      "V-GRID-REPORT": "partial",
+      "HARNESS-MAP-LINEREFS": "partial",
+      "CAPGATE-CELL-LABEL": "pass",
+      "GRID-2-FINAL": "pass"
+    },
+    "prior_adjudication_search": "grep -n <unit> orchestration/VERDICTS.md -> no verdict row for any of the six; GRID-2-FINAL appears only in prose at line 4316 (a summary paragraph, not an adjudication)",
+    "tree_state": "git --no-optional-locks rev-parse HEAD -> 17182ffc760bbb9b9556ee7e8b429c9c5b986c53",
+    "commands": [
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_verdict_ritual.py -q (before: 1 failed, 9 passed; after: 10 passed)",
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_build_fixture.py -q -> exit 0",
+      ".venv/bin/python -c 'import json;d=json.load(open(\"experiments/ptr-engine/measure/GRID-PARAMS.json\"));print(\"json ok keys:\",len(d))' -> exit 0, 22 keys",
+      ".venv/bin/python -m pytest experiments/ptr-engine/tests/test_run_grid_report.py experiments/ptr-engine/tests/test_grid_report_era_guard.py -q -> exit 0",
+      ".venv/bin/python experiments/ptr-engine/tools/harness_map_check.py --check -> exit 1 (15 unbaselined)",
+      ".venv/bin/python -m pytest tests/test_harness_map_check.py -q -> 2 failed, 3 passed",
+      ".venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_capgate_label.py experiments/ptr-engine/longrun/tests/test_exit_codes.py -q -> exit 0",
+      ".venv/bin/python -m pytest experiments/ptr-engine/tests/test_grid2_final.py -q -> exit 0"
+    ],
+    "live_requests": 0,
+    "network": false
+  },
+  "blocker": "",
+  "next_unit_hint": "Two of the six are not green at HEAD and were not upgraded: HARNESS-MAP-LINEREFS' citation guard rots as the map's line pins age (cell.py:1671, run_longrun.py:1072 are blank now) — the fix is symbol anchoring, not a re-pin; V-GRID-REPORT's attack harness was a /tmp scratch file, so its F1/F2 numerics have no in-repo reproducer. Also: the ritual test's ledger is ~/.dsh/storages/orchestration/verdict.jsonl, so any future 'append a row to VERDICTS.md' instruction is insufficient by construction — say 'record a verdict row' and name the ledger.",
+  "write_paths": [
+    "orchestration/VERDICTS.md",
+    "orchestration/units/U-SPCC-9D.md",
+    "orchestration/handoffs/U-SPCC-9D.json"
+  ]
+}
