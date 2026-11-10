@@ -1,0 +1,27 @@
+{
+  "unit": "U-SPCC-43",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_fetch_arm_row_persistence.py",
+    "orchestration/units/U-SPCC-43.md"
+  ],
+  "evidence": {
+    "red": "pre-fix run_longrun.py: 'FAILED ...::test_budget_exhausted_exit_reconciles - TypeError: 'NoneType' object is not subscriptable' (manifest['cap_gate']['reconcile'] is None: the run wrote its manifest at start and never reconciled) and 'FAILED ...::test_service_failure_persists_the_turn_row - ValueError: fetch request missing tool_call_id' (the paid send's row never written; the exception left run_cell); '2 failed, 3 passed in 0.21s'",
+    "green": "post-fix: pytest test_fetch_arm_row_persistence.py -> '5 passed in 0.18s'",
+    "acceptance_suite": "test_fetch_arm_row_persistence + test_paid_row_persistence + test_arm_cd_wiring + test_cap_gate -> '27 passed, 3 subtests passed'",
+    "full_longrun_dir": "875 passed, 2 failed: the same two pre-existing failures U-SPCC-42 recorded (test_request_ledger::TestRealCorpus::test_g correctly red on spend over the tool default cap; test_journal_lint::test_census_over_the_live_corpus_is_reported, other agents' handoff JSONs outside the frozen journal baseline)",
+    "doc_check": "python3 tools/doc_check.py -> exit 0",
+    "delta_before": "service_fetches unwind: 0 rows for 1 paid send and reconcile=None (no delta reported at all); BudgetExhausted exit: 1 row for 1 paid send and reconcile=None",
+    "delta_after": "0 on both paths; rows == sends",
+    "completed_cell_unchanged": "bounded-context-fetch, 1 turn, fetch on send 1: 2 sends, 2 rows, kinds ['turn-initial','turn'], delta 0, used_in_run 2 -- identical to pre-fix"
+  },
+  "blocker": null,
+  "next_unit_hint": "In the D arm's follow-up handler, 'except RequestFailure' precedes 'except client.TurnWallCap' and TurnWallCap subclasses RequestFailure, so the wall-cap handler is dead code: a wall-capped follow-up is recorded as a plain failure and loses its partial fold and runaway accounting (row count is unaffected). Also: the D arm's turn row carries send_index=0 because rounds_this_turn is only set on the fetch_rounds path, so a D-arm follow-up row is indistinguishable from the turn's own send by send_index alone.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_fetch_arm_row_persistence.py",
+    "orchestration/units/U-SPCC-43.md",
+    "orchestration/handoffs/U-SPCC-43.json"
+  ]
+}

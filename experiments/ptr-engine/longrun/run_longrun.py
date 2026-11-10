@@ -1273,6 +1273,31 @@ def _flush_partial_followups(followups, resp, row_sink, exc=None, keep_last=True
             pass
 
 
+def _persist_d_turn_row(rows_path, cfg, fixture, arm, rep, run_id, t, manifest_sha,
+                        extras, info, initial_resp, error):
+    """Persist the D arm's turn row before an exception unwinds past the paid send.
+
+    PAID-ROW-PERSISTENCE (U-SPCC-43): ``arm_cd.service_fetches`` runs AFTER the turn's own
+    request was paid for, and the turn's row used to be written only once the whole
+    ``arm == arm_cd.ARM_D`` block had returned.  Anything that unwound out of that block
+    before the send -- a malformed fetch call, an unrenderable fetch result -- therefore
+    left a paid request with no row AND the run with no reconciliation at all.
+    ``bounded-context-fetch`` is one of the three arms in E1, so that path could undercount
+    an E1 run's spend.
+
+    The row is the one the completed path already writes for the turn's own send
+    (``kind="turn-initial"``), so neither the row schema nor the row count changes.
+    """
+    append_row(rows_path, make_row(
+        cfg, fixture, arm, rep, run_id, t, initial_resp,
+        initial_resp.get("content") if initial_resp else None,
+        "turn-initial", manifest_sha,
+        dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+             send_index=0, initial_send=True,
+             row_measurement_source="turn-initial",
+             next_request_kind="tool-followup", error=error)))
+
+
 def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messages, resp,
                  sent, budget, rounds_used, served=None, pinned=None, per_turn_cap=None,
                  may_request=None, gate=None, row_sink=None):
@@ -3414,7 +3439,9 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
             if sent >= budget:
                 print(f"BUDGET ABORT at T{t}: {sent} requests already sent (budget {budget})",
                       file=sys.stderr)
-                return 4
+                # BUDGET-RECONCILE (U-SPCC-43): a budget-exhausted exit spent requests,
+                # so it reconciles like every other exit path.
+                return _abort_stop(4, gate, manifest_path, manifest_sha, rows_path)
             msg = info["digest_request"]
             try:
                 gate.acquire(t, "digest")
@@ -3463,7 +3490,9 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
         if sent >= budget:
             print(f"BUDGET ABORT at T{t}: {sent} requests already sent (budget {budget})",
                   file=sys.stderr)
-            return 4
+            # BUDGET-RECONCILE (U-SPCC-43): a budget-exhausted exit spent requests, so it
+            # reconciles like every other exit path.
+            return _abort_stop(4, gate, manifest_path, manifest_sha, rows_path)
         # WIRE-CAP-GATE: the per-request brake, immediately BEFORE the wire.  Not per-run:
         # a run-level preflight cannot see the mid-run divergence (6 vs 130 on dbed0e9d).
         try:
@@ -3538,21 +3567,33 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                 extras["ref_as_emitted"] = _tc0.get("ref_as_emitted")
                 extras["ref_revision_normalised"] = _tc0.get("ref_revision_normalised")
             if _calls:
-                _results, _attempt, _outcomes = arm_cd.service_fetches(
-                    planner.arm_cd, _calls, _fetch_budget, tokenizer=getattr(planner.arm_cd, "tokenizer", None))
-                extras["tool_call_id"] = (_results[0].tool_call_id if _results else None)
-                extras["tool_call_ids"] = [getattr(r, "tool_call_id", None) for r in _results]
-                _asst = {"role": "assistant", "content": resp.get("content") or ""}
-                _tc = resp.get("tool_calls") or []
-                if _tc:
-                    _asst["tool_calls"] = [
-                        {"id": c.get("id"), "type": c.get("type") or "function",
-                         "function": {"name": c.get("name"),
-                                      "arguments": c.get("arguments") or "{}"}}
-                        for c in _tc
-                    ]
-                _tool_msgs = [arm_cd.render_fetch_result(r) for r in _results]
-                _followup_msgs = planner.messages(info["prompt"]) + [_asst] + _tool_msgs
+                # PAID-ROW-PERSISTENCE (U-SPCC-43): the turn's own request is already
+                # paid for.  Anything that unwinds out of the fetch service before the
+                # follow-up is sent writes that request's row and leaves through the
+                # gate, so rows == sends and the exit reconciliation reports delta 0.
+                try:
+                    _results, _attempt, _outcomes = arm_cd.service_fetches(
+                        planner.arm_cd, _calls, _fetch_budget, tokenizer=getattr(planner.arm_cd, "tokenizer", None))
+                    extras["tool_call_id"] = (_results[0].tool_call_id if _results else None)
+                    extras["tool_call_ids"] = [getattr(r, "tool_call_id", None) for r in _results]
+                    _asst = {"role": "assistant", "content": resp.get("content") or ""}
+                    _tc = resp.get("tool_calls") or []
+                    if _tc:
+                        _asst["tool_calls"] = [
+                            {"id": c.get("id"), "type": c.get("type") or "function",
+                             "function": {"name": c.get("name"),
+                                          "arguments": c.get("arguments") or "{}"}}
+                            for c in _tc
+                        ]
+                    _tool_msgs = [arm_cd.render_fetch_result(r) for r in _results]
+                    _followup_msgs = planner.messages(info["prompt"]) + [_asst] + _tool_msgs
+                except Exception as exc:
+                    _persist_d_turn_row(rows_path, cfg, fixture, arm, rep, run_id, t,
+                                        manifest_sha, extras, info, initial_resp,
+                                        "fetch_service_failed")
+                    print(f"TURN FAILED (fetch service) T{t}: {exc} — cell stopped, "
+                          f"failure row recorded", file=sys.stderr)
+                    return _abort_stop(4, gate, manifest_path, manifest_sha, rows_path)
                 try:
                     if sent >= budget:
                         raise BudgetExhausted("fetch follow-up at T%d would exceed the request budget of %d" % (t, budget))
@@ -3569,7 +3610,9 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                              row_measurement_source="turn-initial",
                              next_request_kind="tool-followup", error="budget_exhausted")))
                     print(f"BUDGET ABORT at T{t}: {exc}", file=sys.stderr)
-                    return 4
+                    # BUDGET-RECONCILE (U-SPCC-43): a budget-exhausted exit spent
+                    # requests, so it reconciles like every other exit path.
+                    return _abort_stop(4, gate, manifest_path, manifest_sha, rows_path)
                 except CapRefusal as exc:
                     append_row(rows_path, make_row(
                         cfg, fixture, arm, rep, run_id, t, initial_resp,
@@ -3714,7 +3757,9 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                     manifest_sha, dict(extras, prompt_sha256=sha256_text(info["prompt"]),
                                        error="budget_exhausted")))
                 print(f"BUDGET ABORT at T{t}: {exc}", file=sys.stderr)
-                return 4
+                # BUDGET-RECONCILE (U-SPCC-43): a budget-exhausted exit spent requests,
+                # so it reconciles like every other exit path.
+                return _abort_stop(4, gate, manifest_path, manifest_sha, rows_path)
             except client.TurnWallCap as exc:
                 sent += 1
                 part = exc.as_response(cfg)
