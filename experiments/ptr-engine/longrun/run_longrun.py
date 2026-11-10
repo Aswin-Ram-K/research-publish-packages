@@ -3690,6 +3690,43 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
         initial_resp = resp
         _retrieval_stamp = {}
         _d_fetch_done = False
+        # FETCH-MULTI-ROUND (U-SPCC-54): the D arm's paid rows are written in WIRE ORDER
+        # and each one BEFORE the next send.  `_d_initial_written` / `_d_flushed` make the
+        # writer IDEMPOTENT, so the failure paths and the completed path can both call it
+        # and no request's row is ever written twice.  Both stay 0/False on every other
+        # arm, so the shared post-loop writer below is unchanged for them.
+        _d_initial_written = False
+        _d_flushed = 0
+
+        def _flush_d_rows(final=False):
+            """Persist the D turn's paid rows, once each, in wire order.
+
+            ``final=True`` leaves the LAST follow-up row unwritten: the turn row stands in
+            its slot (ROW-ATTRIBUTION), so the row count stays one per send.
+            """
+            nonlocal _d_initial_written, _d_flushed
+            if not _d_initial_written:
+                _ie = dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+                           send_index=0, initial_send=True,
+                           row_measurement_source="turn-initial",
+                           next_request_kind="tool-followup",
+                           fetch_rounds_this_turn=rounds_this_turn)
+                if is_answer_turn:
+                    _ie.update(checkpoint_answer_fields(initial_resp))
+                    # TOOL-CALL-CAPTURE (U-SPCC-49): same precedence as the turn row --
+                    # the response-level violation survives the answer-field derivation.
+                    if extras.get("protocol_violation") is not None:
+                        _ie["protocol_violation"] = extras["protocol_violation"]
+                append_row(rows_path, make_row(
+                    cfg, fixture, arm, rep, run_id, t, initial_resp,
+                    initial_resp.get("content") if initial_resp else None,
+                    "turn-initial", manifest_sha, _ie))
+                _d_initial_written = True
+            limit = len(followup_rows) - 1 if final else len(followup_rows)
+            while _d_flushed < limit:
+                append_row(rows_path, followup_rows[_d_flushed])
+                _d_flushed += 1
+
         if arm == arm_cd.ARM_D and (fetch_tools_enabled(cfg) or tools_enabled(cfg)):
             _fetch_budget = arm_cd.resolve_fetch_budget(planner.arm_cd, fixture)
             extras["fetch_budget_tokens"] = _fetch_budget
@@ -3714,7 +3751,36 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                 extras["protocol_variant"] = "text_call"
                 extras["ref_as_emitted"] = _tc0.get("ref_as_emitted")
                 extras["ref_revision_normalised"] = _tc0.get("ref_revision_normalised")
-            if _calls:
+            # FETCH-MULTI-ROUND (U-SPCC-54): the per-turn loop services up to
+            # `per_turn_cap` rounds, not exactly one.  Before this the D arm sent ONE
+            # `_resp2` follow-up per turn and dropped any call that follow-up itself
+            # emitted, so `fetch_rounds_cap_per_turn=3` was stamped on every row while
+            # `max(fetch_rounds_this_turn)` never exceeded 1 across the whole arm
+            # (measured on measure/rows-e1-parserfix-2026-11-10.jsonl: 125 fetch rows).
+            # `cp.TX-03.f04.d8` (turn 32) is the last harness loss it caused: the fetch
+            # succeeded and the follow-up's own tool call was never serviced.
+            #
+            # The loop stops on: no further declared calls, the per-turn cap, the
+            # per-arm round pool, or a non-tool-call finish.  Every follow-up is a PAID
+            # request and its row is appended BEFORE the next send (the 9a5b811/03e920e
+            # guarantee), so rows == sends on every exit path.
+            _convo = planner.messages(info["prompt"])
+            _arm_pool = fetch_rounds_per_arm(cfg)
+            while _calls:
+                if per_turn_cap > 0 and rounds_this_turn >= per_turn_cap:
+                    break
+                if fetch_rounds_used >= _arm_pool:
+                    break
+                # PAID-ROW-PERSISTENCE: another round is definitely coming (both guards
+                # above passed), so every request already sent this turn has its row on
+                # disk BEFORE this one reaches the wire.  Flushing here rather than at the
+                # end of the previous iteration is what keeps the row count equal to the
+                # send count: a round that turns out to be the LAST one is never flushed
+                # early, so the turn row can still stand in its slot.  Nothing is flushed
+                # on the first round: the turn's own row is written by the failure paths
+                # (with their error label) or by the post-loop writer, exactly as before.
+                if followup_rows:
+                    _flush_d_rows()
                 # PAID-ROW-PERSISTENCE (U-SPCC-43): the turn's own request is already
                 # paid for.  Anything that unwinds out of the fetch service before the
                 # follow-up is sent writes that request's row and leaves through the
@@ -3723,7 +3789,8 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                     _results, _attempt, _outcomes = arm_cd.service_fetches(
                         planner.arm_cd, _calls, _fetch_budget, tokenizer=getattr(planner.arm_cd, "tokenizer", None))
                     extras["tool_call_id"] = (_results[0].tool_call_id if _results else None)
-                    extras["tool_call_ids"] = [getattr(r, "tool_call_id", None) for r in _results]
+                    extras["tool_call_ids"] = list(extras.get("tool_call_ids") or []) + [
+                        getattr(r, "tool_call_id", None) for r in _results]
                     _asst = {"role": "assistant", "content": resp.get("content") or ""}
                     _tc = resp.get("tool_calls") or []
                     if _tc:
@@ -3734,7 +3801,7 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                             for c in _tc
                         ]
                     _tool_msgs = [arm_cd.render_fetch_result(r) for r in _results]
-                    _followup_msgs = planner.messages(info["prompt"]) + [_asst] + _tool_msgs
+                    _followup_msgs = _convo + [_asst] + _tool_msgs
                 except Exception as exc:
                     _persist_d_turn_row(rows_path, cfg, fixture, arm, rep, run_id, t,
                                         manifest_sha, extras, info, initial_resp,
@@ -3749,37 +3816,16 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                         gate.acquire(t, "tool-followup")
                     _resp2 = send_chat(cfg, _followup_msgs)
                 except BudgetExhausted as exc:
-                    append_row(rows_path, make_row(
-                        cfg, fixture, arm, rep, run_id, t, initial_resp,
-                        initial_resp.get("content") if initial_resp else None,
-                        "turn-initial", manifest_sha,
-                        dict(extras, prompt_sha256=sha256_text(info["prompt"]),
-                             send_index=0, initial_send=True,
-                             row_measurement_source="turn-initial",
-                             next_request_kind="tool-followup", error="budget_exhausted")))
+                    _flush_d_rows()
                     print(f"BUDGET ABORT at T{t}: {exc}", file=sys.stderr)
                     # BUDGET-RECONCILE (U-SPCC-43): a budget-exhausted exit spent
                     # requests, so it reconciles like every other exit path.
                     return _abort_stop(4, gate, manifest_path, manifest_sha, rows_path)
                 except CapRefusal as exc:
-                    append_row(rows_path, make_row(
-                        cfg, fixture, arm, rep, run_id, t, initial_resp,
-                        initial_resp.get("content") if initial_resp else None,
-                        "turn-initial", manifest_sha,
-                        dict(extras, prompt_sha256=sha256_text(info["prompt"]),
-                             send_index=0, initial_send=True,
-                             row_measurement_source="turn-initial",
-                             next_request_kind="tool-followup")))
+                    _flush_d_rows()
                     return _cap_stop(exc, gate, manifest_path, manifest_sha, rows_path)
                 except RequestFailure as exc:
-                    append_row(rows_path, make_row(
-                        cfg, fixture, arm, rep, run_id, t, initial_resp,
-                        initial_resp.get("content") if initial_resp else None,
-                        "turn-initial", manifest_sha,
-                        dict(extras, prompt_sha256=sha256_text(info["prompt"]),
-                             send_index=0, initial_send=True,
-                             row_measurement_source="turn-initial",
-                             next_request_kind="tool-followup")))
+                    _flush_d_rows()
                     append_row(rows_path, make_row(
                         cfg, fixture, arm, rep, run_id, t, None, None, "tool-followup", manifest_sha,
                         dict(extras, http_status=exc.status, error=str(exc),
@@ -3792,14 +3838,7 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                     wall_runaways += 1
                     wall_runaway_turns.append("T%d (tool-followup, wall %.1fs > cap %.1fs)"
                                               % (t, exc.wall_s, wall_cap))
-                    append_row(rows_path, make_row(
-                        cfg, fixture, arm, rep, run_id, t, initial_resp,
-                        initial_resp.get("content") if initial_resp else None,
-                        "turn-initial", manifest_sha,
-                        dict(extras, prompt_sha256=sha256_text(info["prompt"]),
-                             send_index=0, initial_send=True,
-                             row_measurement_source="turn-initial",
-                             next_request_kind="tool-followup")))
+                    _flush_d_rows()
                     append_row(rows_path, make_row(
                         cfg, fixture, arm, rep, run_id, t, part, part["content"],
                         "tool-followup", manifest_sha,
@@ -3817,6 +3856,7 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                 # never incremented on this path, so the arm stamped 0 on every turn row
                 # while spending 18 of its 48-round pool.
                 fetch_rounds_used += 1
+                rounds_this_turn += 1
                 resp = _resp2
                 _retrieval_stamp = {
                     "fetch_rows": len(_calls),
@@ -3833,8 +3873,21 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                     dict(extras, prompt_sha256=sha256_text(_followup_msgs[-1]["content"]),
                          fetch_followup=True, tool_calls=[{"ref": c.get("ref")} for c in _calls],
                          fetch_rounds_used=fetch_rounds_used,
-                         send_index=1)))
+                         send_index=rounds_this_turn)))
                 _d_fetch_done = True
+                # FETCH-MULTI-ROUND (U-SPCC-54): the follow-up's OWN reply is read the
+                # same way the turn's was.  A call it carries is serviced on the next
+                # iteration instead of being dropped on the floor -- the exact loss that
+                # stranded `cp.TX-03.f04.d8` at turn 32.
+                _convo = _followup_msgs
+                _calls = arm_cd.parse_fetch_calls_from_response(
+                    resp, tool_names=fetch_call_tool_names(cfg))
+                _unserviced = unserviced_structured_calls(resp, _calls)
+                if _unserviced:
+                    extras["tool_calls"] = _unserviced
+                    extras["unserviced_tool_call_ids"] = [c.get("id") for c in _unserviced]
+                    extras["protocol_violation"] = "tool_call_unserviced"
+
         if tools_enabled(cfg) and not is_answer_turn and arm not in (arm_cd.ARM_C, arm_cd.ARM_D, arm_cd.ARM_SPCC):
             # ANSWER-CONTRACT (v5): tools are unavailable on a checkpoint turn, so no
             # <tool_call> is executed and no follow-up request is bought.
@@ -4022,24 +4075,28 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
             # of the follow-ups it triggered.  It is the ONLY row that measures the
             # turn's own request; ``kind="turn-initial"`` never existed before, so no
             # historical row is re-meant and no historical file is touched.
-            initial_extra = dict(
-                extras, prompt_sha256=sha256_text(info["prompt"]),
-                send_index=0, initial_send=True,
-                row_measurement_source="turn-initial",
-                fetch_rounds_this_turn=len(followup_rows),
-                next_request_kind="tool-followup")
-            if is_answer_turn:
-                initial_extra.update(checkpoint_answer_fields(initial_resp))
-                # TOOL-CALL-CAPTURE (U-SPCC-49): same precedence as the turn row -- the
-                # response-level violation survives the answer-field derivation.
-                if extras.get("protocol_violation") is not None:
-                    initial_extra["protocol_violation"] = extras["protocol_violation"]
-            append_row(rows_path, make_row(
-                cfg, fixture, arm, rep, run_id, t, initial_resp,
-                initial_resp.get("content") if initial_resp else None,
-                "turn-initial", manifest_sha, initial_extra))
+            # FETCH-MULTI-ROUND (U-SPCC-54): the D arm may already have written this row
+            # (and the follow-ups before it) mid-turn, so the writer is idempotent.
+            if not _d_initial_written:
+                initial_extra = dict(
+                    extras, prompt_sha256=sha256_text(info["prompt"]),
+                    send_index=0, initial_send=True,
+                    row_measurement_source="turn-initial",
+                    fetch_rounds_this_turn=len(followup_rows),
+                    next_request_kind="tool-followup")
+                if is_answer_turn:
+                    initial_extra.update(checkpoint_answer_fields(initial_resp))
+                    # TOOL-CALL-CAPTURE (U-SPCC-49): same precedence as the turn row --
+                    # the response-level violation survives the answer-field derivation.
+                    if extras.get("protocol_violation") is not None:
+                        initial_extra["protocol_violation"] = extras["protocol_violation"]
+                append_row(rows_path, make_row(
+                    cfg, fixture, arm, rep, run_id, t, initial_resp,
+                    initial_resp.get("content") if initial_resp else None,
+                    "turn-initial", manifest_sha, initial_extra))
+                _d_initial_written = True
         # follow-ups 1..k-1 get their own rows; follow-up k's row is the turn row below.
-        for frow in (followup_rows[:-1] if attribute_initial_send() else followup_rows):
+        for frow in (followup_rows[:-1] if attribute_initial_send() else followup_rows)[_d_flushed:]:
             append_row(rows_path, frow)
         append_row(rows_path, row)
         planner.record(t, resp["content"])

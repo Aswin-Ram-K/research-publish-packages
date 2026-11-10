@@ -1,0 +1,28 @@
+{
+  "unit": "U-SPCC-54",
+  "status": "COMPLETE",
+  "artifacts": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/run_longrun.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_fetch_multi_round.py",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-54.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-54.json"
+  ],
+  "evidence": {
+    "red_before_fix": "FAILED test_two_calls_on_one_turn_are_both_serviced - AssertionError: 2 != 3 : the turn's own send + one follow-up per serviced call\nFAILED test_four_calls_stop_at_the_per_turn_cap - AssertionError: 2 != 4\nFAILED test_per_arm_pool_exhaustion_stops_the_loop - AssertionError: 0 != 1\nFAILED test_calls_in_one_response_share_one_round - AssertionError: 0 != 1\nFAILED test_one_row_per_send_and_rows_precede_the_next_send - Lists differ: ['turn-initial', 'turn'] != ['turn-initial', 'tool-followup', 'tool-followup', 'turn']\n5 failed in 0.20s",
+    "green_after_fix": ".....                                                                    [100%]\n5 passed in 0.20s",
+    "five_file_suite": "25 passed, 2 subtests passed in 0.69s",
+    "command": "TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_fetch_multi_round.py experiments/ptr-engine/longrun/tests/test_fetch_call_names.py experiments/ptr-engine/longrun/tests/test_fetch_arm_row_persistence.py experiments/ptr-engine/longrun/tests/test_fetch_rounds_accounting.py experiments/ptr-engine/longrun/tests/test_arm_cd_wiring.py -q",
+    "doc_check": "OK docs clean under /home/zer0null/research extractor (exit 0)",
+    "multi_round_behaviour": "while _calls: stop on no further declared calls, rounds_this_turn >= fetch_rounds_per_turn(cfg), or fetch_rounds_used >= fetch_rounds_per_arm(cfg). Each follow-up is re-parsed with arm_cd.parse_fetch_calls_from_response(resp, tool_names=fetch_call_tool_names(cfg)). _flush_d_rows() runs at the top of each round after both guards pass, so every paid request's row is on disk before the next send and the last follow-up's row is still left to the turn row (rows == sends).",
+    "ref_availability": "NO. The ARM_D prompt never lists the available refs. Planner.build (run_longrun.py:1732) starts from working_set_block (run_longrun.py:1747); its INDEX lines come from index_lines (run_longrun.py:366-373) and read '- @knowledge:{item[id]}@1 {hash8} {len}' -- item ids in the @knowledge: namespace, not doc-<name>@r<rev> refs. Real refs reach the model only as [MASKED <ref>] markers on masked turns (run_longrun.py:1760, make_ref = {doc_id}@r{revision}) or as TOOL_OUTPUT (doc_id@rev) lines on the delivery turn. checkpoint_prompt (run_longrun.py:2366-2385) teaches the ref FORM plus three example refs (doc-config@r1, doc-constants@r1, doc-errors@r1) that need not exist. The 12 bad refs are consistent with guessing from the INDEX: knowledge/item-1@1 and knowledge/item-1 are the INDEX id form; ptr_engine/resolve.py and knowledge/doc-fact-02.txt are path-shaped guesses.",
+    "unchanged": "per-turn cap (3), per-arm pool (48), answer contract, scoring; a single response carrying several calls is still serviced in ONE round (asserted by test_calls_in_one_response_share_one_round)"
+  },
+  "blocker": null,
+  "next_unit_hint": "Re-run the E1 fetch arm and confirm max(fetch_rounds_this_turn) now reaches 3 and that cp.TX-03.f04.d8 (turn 32) is serviced. Separately: the ref-availability gap is a prompt defect, not a harness one -- if the arm is to be scored on retrieval rather than on ref guessing, the ARM_D prompt needs the available refs enumerated (or the INDEX must carry doc-<name>@r<rev> refs instead of @knowledge:<id>@1).",
+  "write_paths": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/run_longrun.py",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/tests/test_fetch_multi_round.py",
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-54.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-54.json"
+  ]
+}
