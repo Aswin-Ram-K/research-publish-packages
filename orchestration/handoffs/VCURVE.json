@@ -1,0 +1,54 @@
+{
+  "unit": "VCURVE",
+  "status": "done",
+  "artifacts": [
+    "orchestration/handoffs/VCURVE.json",
+    "orchestration/units/VCURVE.md"
+  ],
+  "evidence": {
+    "recomputed_table": {
+      "claimed": {
+        "masking_r1": {"2": 8, "5": 0, "6": 0, "8": 0, "20": 0, "32": 0},
+        "masking_r2": {"2": 8, "5": 0, "6": 0, "8": 0, "20": 0, "32": 0},
+        "fetch_r1": {"2": 8, "5": 8, "6": 8, "8": 8, "20": 6, "32": 3},
+        "fetch_r2": {"2": 8, "5": 8, "6": 8, "8": 7, "20": 6, "32": 5}
+      },
+      "recomputed": {
+        "masking_r1": {"2": 8, "5": 0, "6": 0, "8": 0, "20": 0, "32": 0},
+        "masking_r2": {"2": 8, "5": 0, "6": 0, "8": 0, "20": 0, "32": 0},
+        "fetch_r1": {"2": 8, "5": 8, "6": 8, "8": 8, "20": 6, "32": 3},
+        "fetch_r2": {"2": 8, "5": 8, "6": 8, "8": 7, "20": 6, "32": 5}
+      }
+    },
+    "score_commands": [
+      ".venv/bin/python experiments/ptr-engine/longrun/score_longrun.py --answer-contract experiments/ptr-engine/longrun/tasks-v7/TX-03.v1.json experiments/ptr-engine/measure/rows-tx03-masking-r1.jsonl",
+      ".venv/bin/python experiments/ptr-engine/longrun/score_longrun.py --answer-contract experiments/ptr-engine/longrun/tasks-v7/TX-03.v1.json experiments/ptr-engine/measure/rows-tx03-masking-r2.jsonl",
+      ".venv/bin/python experiments/ptr-engine/longrun/score_longrun.py --answer-contract experiments/ptr-engine/longrun/tasks-v7/TX-03.v1.json experiments/ptr-engine/measure/rows-tx03-fetchfix-r1.jsonl",
+      ".venv/bin/python experiments/ptr-engine/longrun/score_longrun.py --answer-contract experiments/ptr-engine/longrun/tasks-v7/TX-03.v1.json experiments/ptr-engine/measure/rows-tx03-fetchfix-r2.jsonl"
+    ],
+    "score_outputs": {
+      "masking_r1": "contract_correct=8 value_correct=8 ungradeable=0 abstained=40 total=48; by_distance 2:8/8 5:0/8 6:0/8 8:0/8 20:0/8 32:0/8",
+      "masking_r2": "contract_correct=8 value_correct=8 ungradeable=0 abstained=40 total=48; by_distance 2:8/8 5:0/8 6:0/8 8:0/8 20:0/8 32:0/8",
+      "fetch_r1": "contract_correct=41 value_correct=41 ungradeable=0 abstained=5 total=48; by_distance 2:8/8 5:8/8 6:8/8 8:8/8 20:6/8 32:3/8",
+      "fetch_r2": "contract_correct=42 value_correct=42 ungradeable=0 abstained=3 total=48; by_distance 2:8/8 5:8/8 6:8/8 8:7/8 20:6/8 32:5/8"
+    },
+    "config_checks": {
+      "masking_r1": "tools_mode=off(100/100) tools_schema_sent=False(100/100) temperature=0.0(100/100) seed=42(100/100) task_id=TX-03(100/100) fixture_sha256=f0a636fe... matches file sha256",
+      "masking_r2": "tools_mode=off(100/100) tools_schema_sent=False(100/100) temperature=0.0(100/100) seed=42(100/100) task_id=TX-03(100/100) fixture_sha256=f0a636fe... matches file sha256",
+      "fetch_r1": "tools_mode=on:fetch(138/138) tools_schema_sent=True(138/138) temperature=0.0(138/138) seed=42(138/138) task_id=TX-03(138/138) fixture_sha256=f0a636fe... matches file sha256",
+      "fetch_r2": "tools_mode=on:fetch(134/134) tools_schema_sent=True(134/134) temperature=0.0(134/134) seed=42(134/134) task_id=TX-03(134/134) fixture_sha256=f0a636fe... matches file sha256"
+    },
+    "fetch_rows_counts": "r1 sum fetch_rows=52 (38 non-None rows); r2 sum=47 (34 non-None rows)",
+    "retrieval_outcomes": "r1: OK=49 NOT_FOUND=3; r2: OK=47",
+    "denominator_check": "fixture has 48 checkpoints, 8 per distance {2,5,6,8,20,32}; checkpoint_prompt injected a question on exactly 48 of 100 turns, 8 per distance; every row file has 48 checkpoint rows (kind=turn) with 8 per distance",
+    "masked_check": "masking arm fetch_rows=0 on all rows; masked_rows>0 on exactly 8 turns per rep (8 tool-output turns in fixture); 0/8 buckets are all NONE abstentions, 0 ungradeable, 0 wrong values",
+    "leak_check_d32": "5 correct d=32 fetch successes shown: turn49 doc-fact-03 VAL_F=3205 (outcomes OK,OK,OK; fetch_rows=3); turn93 doc-fact-07 VAL_F=3605 (OK; fetch_rows=1); turn100 doc-fact-08 VAL_F=3705 (8 OK; fetch_rows=8); turn33(r2) doc-fact-01 VAL_F=3005 (4 OK; fetch_rows=4); turn40(r2) doc-fact-02 VAL_F=3105 (3 OK; fetch_rows=3). Each fetched body contains the exact expected value; masking arm yields 0/8 at same distances",
+    "verdict": "REPRODUCED EXACTLY: recomputed table is identical to claimed table for all 4 reps x 6 distances"
+  },
+  "blocker": "",
+  "next_unit_hint": "Curve verified; safe to report as first substantive finding. Note retrieval_omitted=True on most fetch turns and 3 NOT_FOUND outcomes (wrong ref formats) are secondary quality observations, not curve invalidators.",
+  "write_paths": [
+    "orchestration/handoffs/VCURVE.json",
+    "orchestration/units/VCURVE.md"
+  ]
+}

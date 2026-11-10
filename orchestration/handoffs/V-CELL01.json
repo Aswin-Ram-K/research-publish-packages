@@ -1,0 +1,35 @@
+{
+  "unit": "V-CELL01",
+  "overall": "partial",
+  "checks": [
+    "1. Totals recomputed — PASS: 111 rows; masking-no-fetch 12 checkpoints all ANSWER: NONE (0/12 passes, 12 abstentions, 0 ungradeable); bounded-context-fetch 12 checkpoint answer rows all verified (12/12), plus 12 tool-call intermediate rows. Matches handoff's 0/12 and 12/12.",
+    "2. Control integrity — PASS: masking-no-fetch rows n=48: tools_declared=False (48/48), tools_mode='off', tools_schema_sent=False, fetch_rows=None (48/48), tool_call_ids=[] (0 calls), protocol_violation=None (48/48), retrieval_omitted=False (48/48), answer_raw='ANSWER: NONE' (48/48). No expected value or earlier answer appears in any control answer; answer_source='content'.",
+    "3. Treatment attribution — PASS (with caveat): all 12 passing fetch checkpoints have fetch_rows=3, retrieval_outcomes=['OK','OK','OK'], marker_refs=['doc-config@r1','doc-errors@r1','doc-constants@r1'], and expected_present=False. Each expected value is a substring of its source doc body in the fixture. No returned fetch body is recorded in rows, so body-content verification rests on ref+outcome+fixture ground truth.",
+    "4. Masking applied — FAIL: expected_present=False on all 36 checkpoint rows (fact string absent from prompt), but masked_rows=0 on all 36 checkpoint rows; masked_rows>0 only on 4 rows (turns 5 and 21, both arms, value 3). masked_rows counts newly masked turns only, not cumulative state.",
+    "5. Accounting — PASS: 111 rows = claimed 111 requests; row_seq 1..111 contiguous and unique; request_sha256 111 unique; task_id='TX-01' (111/111); fixture_sha256 single value 44a1b4356536a0a55757ed2a4c90f5ef7f9d0541836007dc195a50ab3db2ec21; no failed_turns, errors, or provenance gaps.",
+    "6. Contract discipline — PASS: masking arm 48/48 on-contract (NONE), 0 OOV, 0 protocol_violation. Fetch arm 47/63 on-contract (6 NUM + 6 TEXT at checkpoints + 33 NONE + 2 TEXT on partial turns), 16 rows answer_kind=None (tool-call intermediate requests, answer_parse_error='no_answer_line'), 0 OOV, 0 protocol_violation. retrieval_omitted True on 32 non-checkpoint rows only; 0 at checkpoints.",
+    "7. Hand-grading spot check — PASS: passing checkpoints (turns 20, 28, 40) answer_raw equals expected ('ANSWER: NUM 3', 'ANSWER: TEXT PtrMissingRefError', 'ANSWER: TEXT sha256'); failing checkpoints (masking arm turns 20, 28, 40) answer_raw='ANSWER: NONE' vs expected values. Handoff verdicts correct."
+  ],
+  "not_reproduced": [
+    "Per-checkpoint masked_rows > 0: 0 of 36 checkpoint rows have masked_rows > 0 (all 0).",
+    "Returned fetch body containing the expected value: rows record no fetched body; only retrieval_outcomes and marker_refs.",
+    "Cap delta 2867->2978: verified only by row count (111); ledger/cap file not independently recomputed."
+  ],
+  "overstated": [
+    "Handoff implies masking is observable at every checkpoint via masked_rows; in the recorded rows masking is a one-time event at turn 5 (and a duplicate at turn 21), with masked_rows=0 thereafter.",
+    "Handoff's 'fetching all three markers at every checkpoint turn' holds for the 12 answer rows, but 3 non-checkpoint turns (27, 29, 43) fetched only 1 marker with retrieval_omitted=True.",
+    "0/12 counts 12 abstentions (NONE), not graded failures; per contract NONE is an abstention, not an ungradeable fail."
+  ],
+  "unverified": [
+    "Prompt text is not stored (only prompt_sha256); expected_present field used as proxy for 'expected fact absent from prompt'.",
+    "Fetch body content not recorded in rows; attribution uses fixture ground truth plus ref/outcome.",
+    "Cap/ledger accounting beyond row count not independently verified."
+  ],
+  "blocker": "",
+  "next_unit_hint": "Redefine or fix masking instrumentation so cumulative masked state is reported per checkpoint (or update activation predicate/check to expected_present); re-run only if per-checkpoint masked_rows is required. Verify fetched bodies if treatment attribution must be airtight.",
+  "write_paths": [
+    "orchestration/handoffs/V-CELL01.json"
+  ],
+  "tool_calls": 23,
+  "bound": 40
+}

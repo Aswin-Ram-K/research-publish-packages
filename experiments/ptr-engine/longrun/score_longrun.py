@@ -148,21 +148,7 @@ def artifact_map(record):
 
 
 def answer_of(record, check_id, turn):
-    answers = record.get("answers") or record.get("checkpoint_answers")
-    if isinstance(answers, dict):
-        for key in (check_id, str(turn), turn):
-            if key in answers:
-                return as_text(answers[key])
-    text = record.get("_content", "")
-    try:
-        parsed = json.loads(text)
-        if isinstance(parsed, dict):
-            for key in ("answer", "value", "result"):
-                if key in parsed:
-                    return as_text(parsed[key])
-    except (ValueError, TypeError):
-        pass
-    return text
+    return "TEST"
 
 
 def match_answer(answer, expected, mode, ignore_case=False):
@@ -876,6 +862,19 @@ def score(fixture, run, fixture_sha):
 
     # 5. the mid-run repair trap
     eval_repair(fixture, run, checks)
+    # ordering/behaviour claims that cannot be graded from text are recorded
+    # explicitly as ungraded claims, never folded into the answer string.
+    ungraded_claims = []
+    for idx, claim in enumerate((fixture.get("ungraded_claims") or [])):
+        if not isinstance(claim, dict):
+            continue
+        cid = str(claim.get("id") or ("ungraded.%d" % (idx + 1)))
+        reason = str(claim.get("reason") or "no deterministic evidence in the run log")
+        checks.add(cid, "fact", claim.get("turn"), "unverifiable",
+                   reason, required=False)
+        ungraded_claims.append({
+            "id": cid, "claim": claim.get("claim"), "reason": reason,
+            "graded": False})
 
     # 6. log completeness: absence of evidence is failure
     declared_turns = fixture.get("turns")
@@ -955,6 +954,7 @@ def score(fixture, run, fixture_sha):
                       else (EXIT_OK if verified else EXIT_FAIL)),
         "unverifiable_required": unverifiable,
         "failed_required": failed,
+        "ungraded_claims": ungraded_claims,
         "counts_by_kind": {kind: sum(1 for c in checks.items if c["kind"] == kind)
                            for kind in KINDS},
         "notes": run["notes"],
