@@ -1,0 +1,51 @@
+{
+  "unit": "U-SPCC-41",
+  "status": "blocked",
+  "artifacts": [
+    "orchestration/units/U-SPCC-41.md"
+  ],
+  "evidence": {
+    "requests_spent": 0,
+    "rows_written": 0,
+    "rows_path_created": false,
+    "halt_reason": "parent interjection before the first request: mid-turn refusal loses rows for paid follow-up calls (U-SPCC-40 measured delta=-4 at the 500 stop), so a fetch-enabled three-arm cell would undercount spend against a row-counted programme cap",
+    "g3_offline_verdict": {
+      "method": "cell.eval_gate_prereg called directly with the runner's own operands; pure function, no network",
+      "fixture": "experiments/ptr-engine/longrun/tasks-v7/TX-03.v1.json",
+      "task_id": "TX-03",
+      "fixture_N": 100,
+      "checkpoints_in_fixture": 48,
+      "operands": {"hypothesis": "E1", "turns": 100, "reps": 1, "arms": 3},
+      "gate": "G3",
+      "rule_id": "PREREG-SPCC",
+      "n": 300,
+      "n_basis": "turns x arms x reps (baseline; fetch follow-ups are extra)",
+      "ok": true,
+      "short": "G3 n=300 in [200, 500]",
+      "limit": "n in [200, 500] and >= 48 checkpoint(s)",
+      "request_ceiling": [200, 500],
+      "artefact_sha256": "3a01b3e4130dd6d4d2e9db2bbb0e16558847ebd65e46c1991a1696cd2eda7af8"
+    },
+    "g3_single_arm_control": {
+      "operands": {"hypothesis": "E1", "turns": 100, "reps": 1, "arms": 1},
+      "n": 100,
+      "ok": false,
+      "short": "G3 n=100 outside [200, 500]",
+      "note": "confirms the earlier single-arm rows-e1-spcc-2026-11-10.jsonl cell was inadmissible"
+    },
+    "instrument_finding": "run_longrun.main returns from the --dry-run branch at run_longrun.py:4204-4216 before claim_mode.resolve_claim and enforce_prereg_gate at run_longrun.py:4218-4240, so --dry-run never prints a G3 verdict; the verdict above came from the gate's own function. Reporting gap only: the live path still refuses before the first request.",
+    "not_done": [
+      "no live cell invocation",
+      "no rows file at experiments/ptr-engine/measure/rows-e1-three-arm-2026-11-10.jsonl",
+      "no scoring, no pass-turn split, no verdict against E1's prediction (no data)",
+      "no FINDINGS-LEDGER.md row (no result to record)",
+      "no commit (nothing changed)"
+    ]
+  },
+  "blocker": "row loss on mid-turn refusal undercounts spend; fix in flight",
+  "next_unit_hint": "Re-issue the same admitted shape (3 arms x 1 rep x 100 turns, baseline n=300, ceiling 500 on actual sends) once the row-persistence fix lands and the 500-stop path is proven to write a row for every paid call with reconciliation delta == 0 at the stop. Optionally also make --dry-run print the G3 verdict so Step 1 is satisfiable from the dry-run path.",
+  "write_paths": [
+    "orchestration/units/U-SPCC-41.md",
+    "orchestration/handoffs/U-SPCC-41.json"
+  ]
+}
