@@ -1,0 +1,60 @@
+{
+  "unit": "U-SPCC-38",
+  "status": "done",
+  "head_tested": "e18a587557bcdef71ff2cec82aae4dcccd96dc02",
+  "branch": "research/next-candidates-2026-10-24",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/tests/test_layers_compiler.py",
+    "experiments/ptr-engine/measure/STOP-REASON.json",
+    "experiments/ptr-engine/measure/VERBOSITY.json",
+    "docs/VERBOSITY.md",
+    "experiments/ptr-engine/measure/rows-smoke-spcc-2026-11-10.jsonl",
+    "experiments/ptr-engine/measure/rows-smoke-spcc2-2026-11-10.jsonl",
+    "orchestration/units/U-SPCC-38.md",
+    "orchestration/handoffs/U-SPCC-38.json"
+  ],
+  "evidence": {
+    "assertion_rewrite": {
+      "file": "experiments/ptr-engine/longrun/tests/test_layers_compiler.py",
+      "lines": "84, 91-102",
+      "old": "assert any(\"summary\" in ln.lower() for ln in state.index_lines)",
+      "new": "before = list(state.index_lines) ... assert len(state.index_lines) == len(before) + 1; marker = state.index_lines[-1]; assert marker.startswith(\"[\") and marker.endswith(\"]\"); assert \"summary\" not in marker.lower(); assert str(len(journal)) in marker",
+      "red_at_head": "1 failed, 4 passed in 0.03s -- AssertionError at test_layers_compiler.py:90: assert False = any(<generator object test_compaction.<locals>.<genexpr>)",
+      "green_after": "5 passed in 0.03s",
+      "not_repinned_to": "the word 'compacted' -- deliberately avoided, it would move the same incidental-wording dependency one word over"
+    },
+    "artefact_regeneration": {
+      "generators": [
+        "experiments/ptr-engine/tools/stop_reason_audit.py",
+        "experiments/ptr-engine/longrun/tests/test_verbosity.py (build())"
+      ],
+      "stop_reason_before": {"rows": 7969, "answered_rows": 6665, "empty_content_rows": 1304, "empty_content_with_completion_tokens": 1286, "reasoning_with_empty_content": 1114, "completion_tokens_spent_on_empty_content": 111608},
+      "stop_reason_after": {"rows": 8081, "answered_rows": 6777, "empty_content_rows": 1304, "empty_content_with_completion_tokens": 1286, "reasoning_with_empty_content": 1114, "completion_tokens_spent_on_empty_content": 111608},
+      "verbosity_before": {"corpus_files": 93, "rows_total": 7969, "completed_turns": 6122},
+      "verbosity_after": {"corpus_files": 96, "rows_total": 8081, "completed_turns": 6234},
+      "delta_rows": 112,
+      "delta_sources": "rows-e1-spcc-2026-11-10.jsonl (100, tracked in e18a587) + rows-smoke-spcc-2026-11-10.jsonl (6) + rows-smoke-spcc2-2026-11-10.jsonl (6)",
+      "verdict_unchanged": "confound_immaterial, 86.7% of the TTFT gap survives completion-length normalisation"
+    },
+    "suite": {
+      "command": "TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python -m pytest experiments/ptr-engine/longrun/tests -q --tb=no -rf",
+      "result": "2 failed, 860 passed, 1 warning, 31 subtests passed in 46.30s",
+      "remaining_failures": [
+        "test_journal_lint.py::test_census_over_the_live_corpus_is_reported",
+        "test_request_ledger.py::TestRealCorpus::test_g_real_corpus_total_and_delta_from_466"
+      ],
+      "both_correctly_red_and_untouched": true
+    },
+    "doc_check": "tools/doc_check.py -> 'OK docs clean under /home/zer0null/research extractor', exit 0"
+  },
+  "blocker": null,
+  "next_unit_hint": "The two remaining reds need an operator decision, not a code change: (a) extend state/logs/journal-lint-baseline.json for the five journal-less handoffs A1-AUTHOR/A2-FIX/A3-FIX/ACCFIX2/ACCRESCOPE, or write their journals; (b) raise or re-scope the 4320 request cap in test_request_ledger.py::TestRealCorpus now that the corpus is 8081 rows. Note that VERBOSITY.json and STOP-REASON.json go stale again on every new rows-*.jsonl, so a corpus-growth hook that re-runs both generators is the durable fix.",
+  "write_paths": [
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-38.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-38.json"
+  ],
+  "notes": [
+    "The two rows-smoke-spcc* files were untracked peer output. They are committed with this unit because VERBOSITY.json declares the corpus it was computed over and test_verbosity.py::test_every_rows_file_appears_with_its_sha compares that declaration against the on-disk corpus; committing the artefact without them would ship a report that fails on a fresh checkout.",
+    "The worktree /home/zer0null/.omp/wt/wt-20261109-055629-bd8df5c is stale (f17663d, branch wt/20261109-055629) and does not contain experiments/ptr-engine/longrun/tests/test_layers_compiler.py at all; all work was done in /home/zer0null/research extractor."
+  ]
+}

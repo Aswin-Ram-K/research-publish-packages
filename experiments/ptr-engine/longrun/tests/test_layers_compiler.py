@@ -81,13 +81,25 @@ def test_compaction():
     run = _run()
     state = CompactionState(index_lines=_idx())
     journal = ["T%d|user|c%d" % (i, i) for i in range(1, 25)]
+    before = list(state.index_lines)
     out = compile_prompt(run, state, epoch=0, journal=journal, work="q25")
     assert state.compactions == 1
     assert state.epoch == 1
     assert state.journal == []
     for ln in _idx():
         assert ln in state.index_lines
-    assert any("summary" in ln.lower() for ln in state.index_lines)
+    # The fold appends exactly one marker line and nothing else.
+    assert len(state.index_lines) == len(before) + 1, (
+        "index_lines grew by %d, expected 1" % (len(state.index_lines) - len(before))
+    )
+    marker = state.index_lines[-1]
+    assert marker.startswith("[") and marker.endswith("]"), "marker not bracketed: %r" % marker
+    # Honesty property: the fold drops turns, it does not summarise them.
+    assert "summary" not in marker.lower(), "marker claims a summary: %r" % marker
+    # The marker must name how many turns were dropped.
+    assert str(len(journal)) in marker, (
+        "marker does not name the %d dropped turns: %r" % (len(journal), marker)
+    )
     assert out.epoch == 1
     assert out.compactions == 1
 
