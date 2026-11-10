@@ -16,8 +16,9 @@ lessons: [`docs/LESSONS.md`](../docs/LESSONS.md) · handoff contract: [`AGENTS.m
 > for it are **not met** and cannot be met from here (the store holds **0 claims / 0 verdicts / 0
 > evidence**, so every docket verdict is **`UNVERIFIED`**); and, separately, the **context-cache
 > mechanism batch has settled** — 6 live cells, 12 additional units of verification/repair, and 4
-> licensed manuscript facts (§7); and the **R2-VLLM instrument repair batch has closed** (§8) — the
-> instrument is repaired and verified (`V-R2-VLLM-RERUN`, partial), with no arm-policy fact licensed.
+> licensed manuscript facts (§7); the **R2-VLLM instrument repair batch has closed** (§8); and the
+> **COMBINED-CONTEXT-SERVING** pilot closed **NO PROMOTION** on 2026-11-05 (144 calls, gate `no-promotion`,
+> cost/verified A 3,490 vs B 4,573 vs C 7,338; policy unchanged).
 
 ## 1. Goal, and the two external blockers
 
@@ -372,3 +373,23 @@ requests, 0 measurements of its own**.
 - **Owed:** an independent verifier. `PAPER-FINAL` wrote the close and repaired the three defects; it did not
   verify itself, and by `VERDICTS.md`'s own rule this row is the **author's report, not a verdict**.
 
+
+## Batch: HL-PILOT typed-context pilot (2026-11-04)
+
+- Units: HL-PILOT (author) + V-HL-PILOT (verifier, verdict `partial`) + held-out analysis unit.
+- Deliverables: `experiments/context-cache/cells/HL-PILOT/REPORT.md`, `CALL-LEDGER.md`, `orchestration/handoffs/V-HL-PILOT.json`, `journal/2026-11-04.md`.
+- Verdict: NO PROMOTION; production context policy unchanged. 765 model requests, 0 minutes container downtime, Duval untouched.
+- Next decision: whether to re-test arm B against a real price schedule (none on disk).
+
+## Batch: COMBINED-CONTEXT-SERVING (2026-11-05)
+
+- Units: CLOSEOUT-WRITER (this) + AUDIT-INSTRUMENT, INTEGRITY-HELDOUT, ANALYSIS-PIPELINE, GRADER-HARDEN, WATCHER-REPAIR (verifiers/repairs) + STATE-PIN, LEDGER-RESERVE, TASK-GEN, CONTEXT-ARMS, RUN-PREP, CALIBRATE, PROMPT-FIX, PATH-CONTRACT, FORMAT-CONTRACT, CLOSE-CAL (pilot units).
+- Deliverables: `experiments/context-cache/cells/COMBINED-CONTEXT-SERVING/REPORT.md` (measured result), `rows/ccs.jsonl` (144 rows), `run/analyse.py` (gate `no-promotion`), `notes/REGRADE.md` (0 verdicts flipped), `tools/watcher.py` (red→green), `orchestration/handoffs/{INTEGRITY-HELDOUT,ANALYSIS-PIPELINE,GRADER-HARDEN,WATCHER-REPAIR}.json`.
+- Verdict: **NO PROMOTION**. Cost per verified success A 3,490 vs B 4,573 (+31 %) vs C 7,338 (+110 %). Both B and C pass the quality bar (verified 14/15 vs A 12 of 48) but fail the cost bar (≥10 % lower). Cached share collapses: A 0.782, B 0.637, C 0.260. Production context policy unchanged.
+- Next decision: run the opposite direction — measure prefix stability of an append-only record format with a stable header; repair arm C (persist bodies). Re-test arm B against a real price schedule if one becomes available.
+
+## Post-close-out verifier verdicts (2026-11-05)
+
+- VERIFY-REPORT (independent re-derivation of REPORT.md): initial verdict `incorrect`; repaired (cache-share denominator coercion; gate gained held-out split). `run/analyse.py` now reports `rows_without_cache_report` / `cache_share_reported_only` (A 0.7853 over 47 rows) and a `heldout` block (0/24, 0/24, 3/24; gate `undefined-no-verified-success`); pooled `no-promotion` explicitly scoped. A's cost stated as upper bound (41,322–41,882). Accounting corrected to 19 unrowed sends; 209 incident-log entries unreconciled.
+- RESERVE-GUARD: repaired reservation lock (concurrent reservations grant exactly one; ledger sha unchanged, spent 208, zero model calls) and alert path (driver aborts before next send on any alert; three offline proofs pass).
+- Batch calls spent: 208 of 1,500. Gate: `no-promotion`. Next experiment: prefix-stable append-only record format plus an arm C repair (persist bodies so references resolve).

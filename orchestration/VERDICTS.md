@@ -4008,3 +4008,35 @@ and `R2-VLLM-CELL-rows` resolvable, (2) add a guard that parses CLAIMS.md value 
 
 - **V-PAPER-CLOSE — PARTIAL (verifier, 2026-10-25).** Independent re-check of §10: verify_package PASS; recompute C64 38/38, C65 48/48, C66 75/75, C67 85/85 (+C68 70/70, SYSOPT 50/50 from recompute_r2) and COVERAGE GUARD PASS; serving_brief --check PASS; G17 present and state/gap-ledger.json = 3 closed / 3 narrowed / 11 open / 1 unverifiable; C63 '+-' count 0 with both guards requiring absence; check_divergence directions/values/own-accusation all as repaired; handoff baselines sha256-pinned with the over-declares guard green; RED->GREEN shown on the C63 double-sign guard via '+-222.89x' in a /tmp copy. NOT reproduced: 'pytest tests/ -q -> 1368 passed, 1 skipped' — actual 1376 passed, 1 skipped, **1 FAILED** (test_no_new_contract_key_gaps on NEW verifier-shape gap {'BILL-AUDIT.json': ['overall','checks']}), caused by a handoff written 2026-10-25 00:58 by another unit, so the suite is red for a reason outside PAPER-FINAL's three repairs. The close is verified in 6 of 8 checks; the test-count sentence is not certifiable as written.
 - **V-QUALITY-ARM — PARTIAL (verifier, 2026-10-25).** CONFIRMED: 115 rows reconcile exactly (48 request + 48 prediction + 12 rep + 4 corpus + 3 compaction); discrimination control A 3/3, B 0/3, C 3/3, D 0/3 — arm D resolves 0 of 5 withheld bodies and answers `756741be`; index 458 B, sha256 `e81ba025cfb484a8460022dedffa8cb8e7ffe09a53b365f9b84227eb105531d5` (hash re-derived from the in-row `index_text`; the standalone artefact was lost with the /tmp run roots); no `AUD-`/`lumen` in the index, the fact lives in `k01` only; PREREG matches the run. REFUTED: billed tokens do NOT telescope to `sum(prompt_tokens)+12·(R−1)` — residuals A +151/+110/+106, B +117/+150/+127, C +159/+111/+17,193, D +100×3; `RESULTS.md:176` "raw 34,201" measures 32,401; `RESULTS.md:150` "0 avalanches" is contradicted by `per_turn` (residue 1, avalanche True, uncached 34,190); `RESULTS.md:174` claims exactness in a sentence whose own next clause shows it does not hold. ROOT CAUSE: per-turn `usage.prompt_tokens_details.cached_tokens` is read at `runner.py:585-596` but never written to `rows.jsonl`; `billed_tokens_measured` is a recomputation at `runner.py:688`. GUARD: bites — `corpus.py` offline gate in a /tmp copy: `position == 1` → `>= 1` turns GREEN_EXIT=0 into RED_EXIT=1 with `fact_unique_to_k01 False`; restore sha `9bc91d68…b4e97fdea64` byte-identical. CONTAINMENT: no attributable write outside `quality/**` plus its own two files; undisclosed artefacts `runner.py`, `probe_instrument.py`, `rerun_corrected.py`, `rows-corrected.jsonl`, `rerun-corrected.log` written 01:07-01:10, after the 00:39 handoff. CONSEQUENCE: the moat argument survives on its discrimination control; no paper or claim may rest on the billing identity until a live re-run persists per-turn `cached_tokens`. Handoff `orchestration/handoffs/V-QUALITY-ARM.json`.
+
+## Batch: HL-PILOT typed-context pilot (2026-11-04)
+
+| Unit | Verdict | Notes |
+|---|---|---|
+| HL-PILOT (author) | n/a (author) | 765 model requests; NO PROMOTION; policy unchanged |
+| V-HL-PILOT | partial | red→green 7 passed / 3 failed on mutant; rejected 4 overstated phrases (uptime "16 h throughout", "no verified success anywhere", "48 calls" for E1, probe count 5) |
+| held-out analysis unit | partial (report section) | LR-01 held-out: B −40.8 % uncached, −8.6 % combined; silent turns A 6/B 14/C 19 of 48 |
+| V-HL-E5B | pass | 144 rows; per-arm uncached 34485/20425/41535 and output 28761/37380/39358; deltas -40.8%/+20.4% uncached and -8.6%/+27.9% combined; silent counts 6/14/19; check map reproduced |
+
+## Batch: COMBINED-CONTEXT-SERVING (2026-11-05)
+
+| Unit | Verdict | Notes |
+|---|---|---|
+| AUDIT-INSTRUMENT | pass (holes closed) | Grader holes closed: `neg.no_outside_write` now sees writes outside `work_parent` (bwrap sandbox); `neg.no_network` catches dynamic imports via runtime hook (`__import__('socket')` fails). `escape_write.py` fails `neg.no_outside_write`; `dynamic_import.py` fails `neg.no_network`. |
+| INTEGRITY-HELDOUT | done (phrasing (b)) | Held-out T3/T4 question text revised after observing calibration failures; supported phrasing (b): "held out from arm selection but questions revised after calibration failures." Not pristine held-out. |
+| ANALYSIS-PIPELINE | done (gate reproduced) | Gate `no-promotion` reproduced from pinned rows: cost/verified A 3,490 vs B 4,573 vs C 7,338; paired quality A vs B both 12, only-first 0, only-second 2; A vs C both 11, only-first 1, only-second 4. |
+| GRADER-HARDEN | pass (0 flips) | bwrap 0.11.1 sandbox + import hook; 20/20 prior cases unchanged (4 pass, 16 fail); all 144 stored artifacts re-graded, 0 verdicts flipped (`notes/REGRADE.md`). Rows sha 72182ada… |
+| WATCHER-REPAIR | pass (red→green) | Watcher crashed at startup (TypeError on missing rows file); fixed red→green in `tools/watcher.py` with regression test; launcher exits non-zero if watcher dies. Governing envelope rev 5 (2,400 tokens); rev 6 (3,200 tokens) void. |
+
+### Gate call
+
+**NO PROMOTION** (quality first, then ≥10 % lower cost per verified success). Cost per verified success: A 3,490, B 4,573 (+31 %), C 7,338 (+110 %). Both B and C pass the quality bar (verified 14/15 vs A 12 of 48) but fail the cost bar. Drivers: B loses 21 % of the cached prefix by rewriting the record tail each turn (uncached prefill +66 %); C's masking collapses cached share 0.582→0.111 and never recovers (uncached prefill 2.7× A; completion tokens 10,266→23,994). Production context policy unchanged.
+
+### Additional verifier verdicts (post-close-out, 2026-11-05)
+
+| Unit | Verdict | Notes |
+|---|---|---|
+| VERIFY-REPORT | incorrect → repaired | Independent re-derivation of `REPORT.md` found two defects: (1) one unreported cache count was coerced into the share denominator; (2) the gate had no held-out split. Repairs landed: `run/analyse.py` now reports `rows_without_cache_report` and `cache_share_reported_only` (A 0.7853 over 47 rows, B 0.637, C 0.2602); A's cost stated as an upper bound (41,322–41,882) because of its single unreported row. `run/analyse.py` now emits a `heldout` block: 0/24 (A), 0/24 (B), 3/24 (C), gate `undefined-no-verified-success`; the pooled `no-promotion` is explicitly scoped. Accounting corrected to 19 unrowed sends (208 ledger − 189 row-bearing sends); 209 incident-log entries recorded as unreconciled rather than assumed to over-count. |
+| RESERVE-GUARD | pass (repaired) | Repaired the two remaining defects VERIFY-REPORT named: reservation lock (two concurrent reservations from the same tree and one across trees each grant exactly one; authoritative ledger sha256 unchanged, spent 208, zero model calls) and the alert path (driver aborts before the next send on any alert; three offline proofs pass). |
+
+Batch calls spent: 208 of 1,500. Gate: `no-promotion`. Next experiment: prefix-stable append-only record format plus an arm C repair (persist bodies so references resolve).

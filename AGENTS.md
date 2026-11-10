@@ -1,26 +1,171 @@
-# AGENTS.md — Research Extractor workspace
+# AGENTS.md — how work happens in this workspace
 
-**Spec of record:** [`docs/PLAN.md`](docs/PLAN.md). Read it before any work. This file governs *how*
-work happens; the plan governs *what* is built.
+**Workspace root:** `/home/zer0null/research extractor`
+**Read first:** this file, then [`docs/STATE.md`](docs/STATE.md). Everything else is on demand via
+[`docs/INDEX.md`](docs/INDEX.md).
+**Product of this workspace:** evidence and write-ups. It is a research and documentation workspace:
+models/experiments are probed, measured, priced, and written down so the result can be carried into
+other work. Code exists to make a measurement possible. A measurement that is not documented did not
+happen.
 
-## The main session does three things, and nothing else
+> This contract replaces the earlier "main session orchestrates only" regime (2026-10-08 … 2026-10-28).
+> That regime is preserved as history in `orchestration/CLOSING.md` and `orchestration/VERDICT-RITUAL.md`.
+> The hard constraints in §5 and the evidence rules in §4 were not relaxed by the change.
 
-| Main session MAY | Main session MUST NOT |
+---
+
+## 0. Session pickup — do this before anything else
+
+1. **Confirm where you are.** `pwd` must be this workspace root (or a path inside it). An omp session
+   may start in a linked worktree under `~/.omp/wt/…`; a worktree checkout **lacks the untracked
+   files** that are the current state. If `pwd` is not the root, use absolute paths rooted at
+   `/home/zer0null/research extractor` for every read and write.
+2. **Read `docs/STATE.md`.** It is the single current-state page: what is live, what was last
+   measured, what is blocked, what the next actions are. It supersedes older status pages as *current
+   state*; those remain valid as dated records.
+3. **Read only what the task names.** `docs/STATE.md` points at the authoritative document per
+   program; `docs/INDEX.md` maps the rest. Do not scan 176 documents to orient.
+4. **Run `python3 tools/session_start.py`.** It prints the git checkpoint, the dirty/untracked counts,
+   the newest journal entry and handoffs, the live request ledger, and the documentation check —
+   cheap, read-only, no network.
+5. If the task is a measurement, read the runbook it names (`docs/GRID-RUNBOOK.md` for ptr-engine)
+   before the first command. The runbook's first command is often a 0-request reconcile, not a run.
+
+---
+
+## 1. What lives here
+
+| Program | State | Entry point |
+|---|---|---|
+| **ptr-engine serving/cache/cost experiment** — 4-arm context grid against live Occamy/SGLang | **LIVE**; gen-6 grid measured 2026-10-28, verdict `not_adjudicable`, gen-7 decision pending | `experiments/ptr-engine/`, `docs/GRID-RUNBOOK.md`, `docs/STATE.md` §1 |
+| **Paper track** — 3 papers filed (Zenodo + TMLR), 4th (`context-cache`) in progress | filed/waiting; 4th live | `papers/`, `strategy/SUBMISSION_RECORD.md`, `docs/STATE.md` §2 |
+| **Research Extractor app** (`resextract`) — repo→docket pipeline | dormant, still contract-load-bearing (tests/config pin it) | `src/resextract/`, `docs/PLAN.md` (build plan, historical), `docs/OPERATIONS.md` |
+| **Supporting workstreams** — jobs, release, repro, submission kit, external-practice surveys | parked/done | `docs/STATE.md` §4 |
+
+The detailed filesystem map, including paths that must never move, is [`STRUCTURE.md`](STRUCTURE.md).
+
+---
+
+## 2. Operating model
+
+**Owner mode is the default.** The session that owns the task may read source, run commands, write
+files, and debug failures. It also owns the write-up. Delegation is a tool for throughput, not a
+constitutional barrier.
+
+- **Delegate fan-out, not the top-level plan.** The owning session settles scope, decomposition and
+  cross-slice contracts; independent slices go to subagents in parallel with disjoint declared write
+  paths. ≤5 concurrent subagents (operator instruction).
+- **Give every subagent a self-contained slice.** It has no access to this conversation: state the
+  target files, the change, the acceptance check, the write paths, and the bound (max attempts or a
+  stop condition). Shared prerequisites go in the shared context, not repeated per slice.
+- **Verification independence for claims.** A *measurement* or a *guard* is verified by a different
+  agent than the one that produced it, or by re-running the recorded command in a fresh process. The
+  author's own summary is never the evidence.
+- **Partial is a result.** Report `partial` with the remainder named. Never fabricate a green.
+- **Never extend a unit; supersede it.** A failed unit is replaced by a new one carrying the failure
+  evidence, not resumed with a different brief.
+
+---
+
+## 3. Documentation contract — mandatory, and the thing that has failed before
+
+A session that changes anything in this tree **has not finished** until all of the following are true
+in the same session:
+
+1. **`journal/YYYY-MM-DD.md`** — append a dated entry: what was done, **why**, the exact commands and
+   their results (numbers, not adjectives), and what remains open. If the file exists, append; never
+   rewrite an earlier day.
+2. **`docs/STATE.md`** — update `Last updated:` and every program block whose state changed. This is
+   the page the next session reads first; a stale STATE page is a defect, not a cosmetic issue.
+3. **`docs/INDEX.md`** — one line for every document you create. The guard
+   (`tools/doc_check.py`) fails on an unindexed doc or an index entry pointing at a missing file.
+4. **An experiment gets a home.** A new experiment lands in `experiments/<name>/` with:
+   `README.md` (question, status, how to run, where the evidence lives), `EVIDENCE.md` (what was
+   measured and with what command), `RUN.json` (machine-readable run record). The machine twin of a
+   result then goes in that experiment's `measure/` (`experiments/<name>/measure/<SLUG>.json`) and the
+   write-up in `docs/` — the experiment directory is not the final home of a *write-up*, but it is the
+   home of the measurement it produced. Cross-experiment outputs may sit in the root `measure/`.
+5. **`journal/INDEX.md`** — one row per daily entry (date, headline, anchor). It is the narrative
+   index; the guard checks coverage.
+
+**Rules that keep the record honest:**
+
+- **One fact, one home.** `docs/STATE.md` owns *current state*; dated docs under `docs/` own the
+  measurement at their date; the machine twin under `experiments/<name>/measure/*.json` owns the raw
+  numbers; `journal/` owns the narrative. Link, don't duplicate.
+- **Supersede, never overwrite.** A newer document states which older one it supersedes; the older
+  file stays on disk. Frozen records (`orchestration/handoffs/`, `orchestration/units/`,
+  `orchestration/VERDICTS.md`, `state/logs/` baselines) are append-only.
+- **A dated record keeps its spelling.** Historical commands that name the old workspace path
+  (`/home/zer0null/reserach extarctor`) are records of what was run; leave them. Fix the path only in
+  documents whose job is to instruct a *future* session (runbooks, operations, state).
+- **Mark inference.** `[INFERENCE]` for anything not measured in this session; never present a
+  plausible number as a measurement.
+- **No orphan docs.** A file under `docs/` that no index line mentions is a guard failure.
+- **Definition of done:** behaviour verified by a real run **and** the documentation contract satisfied —
+  the journal entry, the `docs/STATE.md` update, the `docs/INDEX.md` line, the `journal/INDEX.md` row —
+  plus the experiment's own record when the change is an experiment. A change with no journal line did
+  not happen.
+
+---
+
+## 4. Evidence discipline (unchanged in force)
+
+- **Measured vs asserted.** Every claim carries either the command that produced it or the marker
+  that it is asserted. Numbers copied from prose are not measurements.
+- **Red→green for guards.** A guard test must be shown to fail when the fix is reverted, and the
+  reverted run recorded in the test docstring (this is the house style — see
+  `tests/test_orchestration_handoffs.py`).
+- **Frozen verdicts.** Once a verdict row is written it is not re-edited; a correction is a new
+  verdict that names the one it supersedes. Swapping an estimator after rows exist is an instrument
+  change and mints a generation whose rows may not be pooled with the old one.
+- **Pinned, not live.** A trace-dependent claim cites the pinned copy and its digest, never the live
+  path or its current size. The canonical example is the Duval m0 trace in
+  `dockets/duval/duval-u55-pinned/material/data/2026-09-28-duval-m0.jsonl` (866,816 bytes, sha256
+  `431605e624ca90596ec8c5890fc40da08715ae1ffa6759b689255f1670af4ecb`).
+- **Never run the same paid measurement twice.** A 48-turn cell is money and evidence; re-run a
+  partial as a fresh stamp, never append, never retry a locked cell.
+
+---
+
+## 5. Hard constraints (never relax without explicit user approval)
+
+| # | Rule |
 |---|---|
-| Compose a unit card and pass it as a subagent prompt | Write, edit or create any file on disk (unit cards included — subagents persist their own) |
-| Launch subagents (`subagent`, `subagent_fork`), ≤5 concurrent, watching for write-path clashes | Run builds, tests, installs, `git`, or the pipeline itself |
-| Read `orchestration/handoffs/*.json`, `orchestration/STATUS.md`, and ≤15–20-line command summaries | Read source code, logs, or debug a failure |
-| Relay status, verdicts and evidence lines to the user; escalate decisions | "Fix" a failed unit — re-delegate to a **fresh** unit carrying the failure evidence |
-| Make the phase-gate call (advance / re-delegate) from a verifier's verdict | Approve its own work — every claim is verified by a **different** subagent |
+| 1 | **Target repos are strictly read-only.** `/home/zer0null/Duval` and every registered target: no writes, no git-state changes, no hooks. Prove with a lock-free `git status` plus an mtime sweep. |
+| 2 | **Never run a bare `git status` against a target.** Pass `--no-optional-locks` or set `GIT_OPTIONAL_LOCKS=0`; the index refresh writes. Prefer reading files over invoking git at all. |
+| 3 | **Never read or walk a target's `.worktrees/`** — a foreign actor writes there. |
+| 4 | **Nothing is written outside this workspace** (`/home/zer0null/research extractor`). The old spelling `reserach extarctor` is not a path; it does not exist. |
+| 5 | **No systemd unit enabled, no DSH plugin mounted, no DSH service restarted, no GX10/Occamy service restart** — these are user decisions. A long-lived server is started as a managed background job by the owning session and its exact URL reported. |
+| 6 | **Secrets never enter dockets or commits.** Secret-shaped paths are refused from `material/`; the commit scan is value-based; never edit completed evidence to satisfy a scan. |
+| 7 | **Do not hand-edit derived or frozen artefacts:** `experiments/ptr-engine/measure/REQUEST-LEDGER.json` and `experiments/ptr-engine/measure/LEDGER-GRID-BASELINE-*.json` are regenerated by `experiments/ptr-engine/tools/request_ledger.py`, baselines are superseded not edited; `state/logs/*baseline*.json` are sha-pinned by guard tests. |
+| 8 | **Git safety.** The working tree holds ~1,300 untracked evidence files and HEAD (`f17663d`) is a checkpoint, not the truth. Never run `git clean`, `git reset --hard`, `git checkout -- .`, `git add -A`, or `git commit -a` without explicit approval; never assume an uncommitted file is disposable. |
+| 9 | **Automated sessions never ask.** A session started by a schedule, the task board, or a cron reminder has no answerer: never call an interactive question tool, never wait for input. Missing value → the most conservative defensible default, recorded under `assumptions`, then continue to a deliverable. Interactive sessions *may* ask when the decision is genuinely the user's (cost, service change, scope). |
 
-**Concurrency cap: ≤5 concurrent subagents.** Raised from ≤3 by explicit **user instruction** during this
-build ("use upto 5 subagents in cincurrency") — an operator instruction, not a build convenience.
+---
 
-## Unit contract (every unit, no exceptions)
+## 6. Where new things go
+
+| You have… | Put it in… |
+|---|---|
+| Product code | `src/resextract/` |
+| A guard or behaviour test | `tests/` (house style: pin the semantics, name the rule, record red→green) |
+| A current-state change | `docs/STATE.md` (+ its line in `journal/`) |
+| A measurement write-up | `docs/<UPPER-SLUG>.md`, machine twin in the experiment's `measure/<SAME-SLUG>.json` |
+| A new experiment | `experiments/<name>/` with `README.md`, `EVIDENCE.md`, `RUN.json` |
+| A daily narrative | `journal/YYYY-MM-DD.md` (+ `journal/INDEX.md` row) |
+| A delegated unit's card / report | `orchestration/units/<UNIT>.md` / `orchestration/handoffs/<UNIT>.json` (valid JSON) |
+| Scratch, DBs, one-off outputs | `state/` (gitignored; never commit, never move) |
+| A produced docket | `dockets/` (versioning is an open user decision) |
+| An obsolete artifact worth keeping | `archive/` + a line in `archive/README.md` |
+
+---
+
+## 7. Delegation contract (a unit card and its report)
 
 1. **One purpose per unit.** No multi-step task files.
-2. **Hard bound** stated up front: max tool calls / attempts, or a stop condition ("if X cannot be verified in N tries, STOP and report").
-3. **Declared write paths**, listed in the unit card and checked against the concurrently running units for clashes.
+2. **Hard bound** stated up front: max tool calls / attempts, or a stop condition.
+3. **Declared write paths**, checked against concurrently running units for clashes.
 4. **Persist your own card** to `orchestration/units/<UNIT>.md`.
 5. **Forced report-back.** Every unit ends by writing `orchestration/handoffs/<UNIT>.json`:
 
@@ -30,103 +175,78 @@ build ("use upto 5 subagents in cincurrency") — an operator instruction, not a
     "blocker":"","next_unit_hint":"...","write_paths":["..."]}
    ```
 
-   and returns a **≤15-line summary** to the main session: status, artifacts, the evidence lines that
-   prove the claim, blocker, next hint. That cap is what keeps the orchestrating session small.
+   and returns a **≤15-line summary**: status, artifacts, the evidence lines that prove the claim,
+   blocker, next hint. **A handoff MUST be valid JSON** — `tests/test_orchestration_handoffs.py`
+   parses every `orchestration/handoffs/*.json`, skips a file only when its bytes change between two
+   immediate reads (mid-write), and fails on a stable unparseable file. Two shapes are contracted:
+   the seven-key **unit handoff** above, and the **verifier verdict**
+   (`unit, overall, checks, blocker, next_unit_hint, write_paths`, commonly
+   `not_reproduced, overstated, unverified, containment, bound, scope, red_green, tool_calls,
+   corrections`). A verdict-shaped handoff is not a defective unit report; known historical gaps are
+   frozen in the baselines under `state/logs/`. Any *new* missing required key fails the guard.
+6. **Fresh context per unit.** A unit reads only its own card, the previous unit's handoff, and the
+   current disk state. No unit is ever extended — it is superseded by a new one.
+7. **Partial is a result**, not a system failure. Report it with the remainder named.
 
-   **A handoff MUST be valid JSON** — it is machine-read by the main session, and that requirement is
-   enforced rather than aspirational by `tests/test_orchestration_handoffs.py`, which parses every
-   `orchestration/handoffs/*.json`, skips a file only when its bytes change between two immediate reads
-   (mid-write), and fails on a stable unparseable file.
+Concurrency: ≤5 subagents, and only with disjoint write paths. The owning session keeps the plan, the
+phase-gate call, and the final write-up.
 
-   **Two handoff shapes are contracted** — both valid JSON. The seven keys above define the
-   **unit handoff** (a unit's report of its own work). A **verifier verdict** — a verifier unit's
-   judgement — is a *different* shape with a different job: it reports whether an author's claims
-   survived re-checking, so it carries a verdict, not a unit's self-report. Measured across the 43 `V*`
-   handoffs present when this was written (U8.18), its core keys — those carried by ≥90% of them — are
-   `unit`, `overall`, `checks`, `blocker`, `next_unit_hint`, `write_paths`:
+---
 
-   ```json
-   {"unit":"V0.1","overall":"pass|fail|partial","checks":["..."],
-    "blocker":"","next_unit_hint":"...","write_paths":["..."],
-    "not_reproduced":[],"overstated":[],"unverified":[],"tool_calls":0,"bound":0}
-   ```
+## 8. Board mode (dormant, optional)
 
-   Commonly carried but **not** required (count over the same 43): `not_reproduced` 37, `overstated` 37,
-   `unverified` 37, `tool_calls` 36, `containment` 36, `bound` 35, `scope` 34, `red_green` 32,
-   `corrections` 31. Neither shape is "the wrong one": a verdict-shaped handoff is not a defective unit
-   report and is **not** to be rewritten into the unit shape — that would mean inventing values nobody
-   wrote. Known shape gaps stay **recorded gaps** in the frozen baselines under `state/logs/` (frozen by
-   U8.15 for the unit shape, by U8.18 for the verifier shape); the guard fails on any *new* missing
-   required key.
-6. **Fresh context per unit.** A unit reads only: its own card, the previous unit's handoff, and the
-   current disk state. **No unit is ever extended** — it is superseded by a new unit.
-7. **Partial is a result**, not a system failure. Report `partial` with the remainder named.
+The DSH task board and its watchdog live outside this repo (`~/.dsh/…`, `.orchestration/incidents/`).
+They are **not** a prerequisite for work here; an interactive session is recorded by its journal
+entry. If the board is used again:
 
-## Verification independence
+- **A card's `prompt` IS the contract.** The board sends `prompt` (plus any tag prefix), never
+  `description`; a one-line prompt produces a confused unit.
+- **Every executable card carries an `automated` tag** whose prefix repeats "never call
+  `ask_user_question`"; and a card that must persist a handoff is `workspace-write`, never `read-only`
+  (under `read-only` with approvals off, the handoff write is denied and the unit ships nothing).
+- **No board unit spawns its own subagents.** Further work is a new card. `tools/board/session_recon.py`
+  reports a subagent whose root ancestor is a board execution as `delegated-from-card`.
+- **A card whose execution has ended is settled in the same pass** (`done`/`failed`), never left
+  `todo`/`running`.
 
-Every batch gets a **separate verifier unit that is not the author**. It re-runs the evidence commands,
-checks the plan's clause, and includes a **red→green** check on at least one guard (the test must fail
-when the fix is reverted). Verdicts are recorded in [`orchestration/VERDICTS.md`](orchestration/VERDICTS.md);
-the main session makes the gate call from them.
+---
 
-## Hard constraints
+## 9. Known traps
 
-- **Target repos are strictly read-only.** `/home/zer0null/Duval` (the acceptance target) and every
-  other registered target: no writes, no `git` state changes, no hooks installed inside them. Proven by a
-  **lock-free** `git status` (`--no-optional-locks`) plus an mtime sweep, before and after.
-- **Never run a bare `git status` against a target.** Any git command run against a read-only target must
-  pass `--no-optional-locks` (or set `GIT_OPTIONAL_LOCKS=0`): `git status` refreshes `.git/index`, so it
-  writes. Prefer reading files over invoking git at all. Measured over the `commands` arrays in
-  `orchestration/handoffs/*.json`: of **136** handoffs carrying **194** target-referencing command strings,
-  **62** ran a plain `git -C /home/zer0null/Duval … status` and **0** ran a target-mutating verb.
-- **Trace-dependent claims cite a pinned copy, not a live path.** If a claim depends on a file that can
-  change under us, it must name the pinned copy's path and digest. The pinned trace is
-  `dockets/duval/duval-u55-pinned/material/data/2026-09-28-duval-m0.jsonl` — **866,816 bytes, 573 records,
-  573 gated lines / 712 gate occurrences** (pattern set `strategy/LEAD_PACKAGE.md` §1 "Gate-hit measurement",
-  `:41-46`), sha256 `431605e624ca90596ec8c5890fc40da08715ae1ffa6759b689255f1670af4ecb`. **Dated observation:**
-  the live path grew 866816 → 1570243 bytes mid-batch and measured **1,624,082 bytes / 1087 lines / sha256
-  `35687221…` at 2026-10-15 21:02:05** — never cite that path or size as the current size.
-- **Nothing is written outside this workspace** (`/home/zer0null/reserach extarctor`).
-- No systemd unit is enabled, no DSH plugin mounted, no DSH service restarted — without explicit user approval.
-- Long-lived processes (the dashboard) are started as **managed background jobs by the owning unit**,
-  which verifies and reports the exact URL. The main session never starts a server.
-- Secrets are never written into dockets; secret-shaped paths are refused from `material/`.
-- **Every session that does work in this workspace has board ancestry.** A subagent inherits its parent card; an interactive session that works here must have either a card or a dated waiver in `state/logs/session-recon-waivers.json`. A card must not settle `done` while a descendant session is still live — if the child outlives the card, the residual work is re-carded, not silently orphaned.
-- **(a) The user's main session lives outside the board by design.** It may drive the board (compose cards, launch subagents, relay verdicts) but it does not itself do work; any work it performs is a card. A non-board session is not automatically an offender — only when it acts as a work session without ancestry.
-- **(b) No board unit spawns its own subagents.** A card unit must not delegate to subagents; further work is a new card, not a child of the running unit. `session_recon.py` reports any `card-subagent` (a subagent whose root ancestor is a board execution) as `delegated-from-card`.
-  - The guard grades historical (closed) descendants as recorded violations, not offenders: a closed card-subagent is listed under `historicalDescendants` with its parent card and last-write time and does not fail the run; only a live card-subagent (or `--strict`) fails it.
-- **(c) A card whose execution has ended must be settled in the same pass.** Never leave a card in `todo`/`running` once its latest execution has ended — settle it to `done`/`failed`. `session_recon.py` reports such cards as `settled-lag`.
+- **Path spelling.** The workspace was renamed from `reserach extarctor` to `research extractor`.
+  Many dated docs and the external watchdog still carry the old spelling. Only live instructions were
+  corrected; a record that names the old path is not a bug to "fix".
+- **Git HEAD is stale by design.** Everything after 2026-10-25 is uncommitted; `git status` is
+  measured in thousands of entries. `docs/`, `journal/`, `strategy/` and most of `experiments/` are
+  untracked. Never infer "deleted" from "not in HEAD".
+- **Worktrees are partial by construction.** `.omp/wt/…` checkouts contain tracked files only; the
+  untracked evidence layer is missing. Guard tests compute `ROOT` from `__file__`, so running them
+  inside a worktree tests the worktree, not the live workspace.
+- **Gitignored-but-critical:** `state/logs/U8.15/baseline_gaps.json` and
+  `state/logs/U8.18/verifier_shape_baseline.json` are read (and sha-pinned) by the handoff guard; a
+  fresh clone fails that guard until they are restored.
+- **Do not edit** `orchestration/VERDICT-RITUAL.md` or `orchestration/units/TEMPLATE.md` casually:
+  `experiments/ptr-engine/longrun/tests/test_verdict_ritual.py` asserts literal strings and ordering
+  inside them. Treat both as contract text.
+- **Ledger discipline.** After any cell batch, rebuild
+  `experiments/ptr-engine/measure/REQUEST-LEDGER.json` with
+  `experiments/ptr-engine/tools/request_ledger.py`; the launcher refuses to start when the ledger disagrees with the rows
+  (`RUN-A RECONCILE … gap=` must be 0). A baseline is superseded, never edited.
+- **`.occamy.lock`** serialises live cells; one request in flight, strictly serial, held for the whole
+  batch. A dead lock is released by its owner record, never by killing a live runner.
+- **Do not restart the shared model server** (`192.168.2.168:8012`); a crash-looping unit is a user
+  decision, and the KV-cache sizing guard makes a bare restart a coin flip.
 
-## Current state
+---
 
-See [`orchestration/STATUS.md`](orchestration/STATUS.md) for the batch/unit table and live status.
+## 10. Closing checklist (run before you yield)
 
-## Automated sessions never ask the user
+```bash
+python3 tools/session_start.py                 # orientation snapshot + doc check
+python3 tools/doc_check.py                    # docs/journal index coverage, STATE page
+.venv/bin/python -m pytest tests/test_agent_context.py -q   # the documentation guard
+# + the specific test/command covering the change, re-run in a fresh process
+```
 
-A session started by the task board, a schedule, a cron reminder, or any other non-human trigger has **no
-answerer**. `ask_user_question` in such a session blocks until something external resolves it — and the unit
-produces nothing. Observed on 2026-10-21: three task-board execution sessions stalled for hours this way.
-`session-7e3c8cc9-6347-4419-b4b4-5b03729810cd` (unit `U3`) called `ask_user_question` at step 3, asking for
-its own unit objective because the board card's `prompt` was a single thin line — "Live measurement unit.
-Hold the `.occamy.lock` for the whole cell batch." — while the full unit contract lived only in the card's
-`description`, which the board does not send. That session sat **8h31m** and produced no artefact. The `U6`
-session called `ask_user_question` **9** times and also produced nothing.
-
-- **Rule: in an automated session, never call `ask_user_question`.** Never wait for input. Never ask for
-  confirmation.
-- **Missing value → conservative default, recorded.** When a required value is genuinely missing, choose the
-  most conservative defensible default, record it in the handoff (`orchestration/handoffs/<UNIT>.json`) under
-  an `assumptions` key with the reason, and continue to a deliverable. "Partial" is an acceptable result;
-  stalling is not.
-- **Rule for whoever creates the cards: the `prompt` IS the contract.** A card's `prompt` must be the WHOLE
-  unit contract — objective, hard bound, write paths, kill condition, deliverable shape. The board sends
-  `prompt` (prefixed by any tag `promptPrefix`); it does **not** send `description`. A one-line prompt
-  guarantees a confused unit.
-- **Rule: every executable card carries an `automated` tag** whose `promptPrefix` repeats the no-questions
-  instruction, so the rule survives even when a card's own prompt forgets it.
-- **Rule: a card that must persist a handoff is `workspace-write`, never `read-only`.** Under `read-only`
-  with approvals disabled the handoff write is denied, so the unit can complete its whole analysis and ship
-  nothing — and the failure is invisible to every test, because the artefact it would have written is
-  simply absent. This cost three wasted units: `V-G3FOLD2` re-derived C62, found the two understated bands,
-  and its verdict could not be persisted at all. If a card's job is to *report*, it needs a writable path
-  for that report; only cards that write nothing anywhere may be `read-only`.
+Then: `journal/YYYY-MM-DD.md` written or appended, `docs/STATE.md` updated, `docs/INDEX.md` updated,
+`journal/INDEX.md` row added. If any of those is missing, the session is not finished.

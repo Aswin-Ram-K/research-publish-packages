@@ -1,4 +1,4 @@
-# Journal index — 2026-09-28 … 2026-10-13
+# Journal index — 2026-09-28 … 2026-11-04
 
 15 daily notes [corrected by UCONS1, 2026-10-15: the prose said "14"; measured 15 dated
 `YYYY-MM-DD.md` files] (2026-10-03 has no note: **no work recorded (0 commits)**). Commit counts are
@@ -23,3 +23,4 @@ carrying that day's headline claim. Corrected by unit UJC1.
 | [2026-10-11](2026-10-11.md) | Judge boundary closed in the goal seed; trace overclaim corrected in every site; project PAUSED | 39 | `e0b786a` |
 | [2026-10-12](2026-10-12.md) | Minimal State-driven kernel planned and built by six workstreams after Gate 0 RED → GREEN | 127 | `db1554c` |
 | [2026-10-13](2026-10-13.md) | Pilot evaluator assembled; "authenticity gate" measured caller-controlled; EXP#22 closes EMERGE with no satisfying source | 94 | `65bc07a` |
+| [2026-11-04](2026-11-04.md) | HL-PILOT typed-context pilot + COMBINED-CONTEXT-SERVING close-out: NO PROMOTION, policy unchanged | HL-PILOT, COMBINED-CONTEXT-SERVING |

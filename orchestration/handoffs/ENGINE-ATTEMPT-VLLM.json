@@ -1,0 +1,37 @@
+{
+  "unit": "ENGINE-ATTEMPT-VLLM",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/pins/rollback-baseline.json",
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/notes/ENGINE-VLLM-ATTEMPT.md",
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/pins/logs/docker-ps-before.txt",
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/pins/logs/docker-ps-after-restore.txt",
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/pins/logs/vllm-smoke1.json",
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/pins/logs/vllm-smoke2.json",
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/pins/logs/baseline-v1-models-before.json",
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/pins/logs/baseline-v1-models-after.json",
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/pins/logs/baseline-server-info-after.json",
+    "orchestration/units/ENGINE-ATTEMPT-VLLM.md"
+  ],
+  "evidence": {
+    "command_or_count": "2 ledger-reserved smoke calls under phase serving (attempt ids 857904c1-da74-4537-92f6-ffcd03416165 and 2fbb611e-3567-4406-ad75-ed04f7fabb63), both outcome ok; baseline restored and healthy",
+    "commands": [
+      "ssh gx10 docker stop gx10-occamy-nvfp4 (exit 0) before trial",
+      "ssh gx10 docker run -d --name gx10-vllm-occamy ... 2c211a1273b4 ... --quantization modelopt_fp4 --dtype bfloat16 --max-model-len 8192 --gpu-memory-utilization 0.5 --enforce-eager --trust-remote-code (container 06006bbe...)",
+      "curl http://192.168.2.168:8013/v1/models -> occamy-1.0",
+      "curl POST http://192.168.2.168:8013/v1/chat/completions max_tokens=16 x2",
+      "ssh gx10 docker stop/rm gx10-vllm-occamy",
+      "curl http://192.168.2.168:8012/v1/models -> {\"id\":\"occamy-1.0\"} (HTTP 200)",
+      "curl http://192.168.2.168:8012/get_server_info -> model_path == ...fa865dc5e80a13b9a2d8ae8d65ed2ee332f33652"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Serving comparison may proceed: same-weight vLLM (0.27.1) is viable on occamy; CacheBlend/LMCache and FreeToken remain unverified. Baseline SGLang restored and healthy. Ledger serving phase has 286 remaining calls.",
+  "write_paths": [
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/pins/rollback-baseline.json",
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/notes/ENGINE-VLLM-ATTEMPT.md",
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/pins/logs/",
+    "orchestration/units/ENGINE-ATTEMPT-VLLM.md",
+    "orchestration/handoffs/ENGINE-ATTEMPT-VLLM.json"
+  ]
+}

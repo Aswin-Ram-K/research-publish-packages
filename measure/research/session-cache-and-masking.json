@@ -1,0 +1,146 @@
+{
+  "slug": "session-cache-and-masking",
+  "note": "docs/research/session-cache-and-masking.md",
+  "protocol": "docs/RESEARCH-PROTOCOL.md",
+  "question": "Does the installed SGLang build support session-aware radix caching, and what does the observation-masking result actually license for a cache-adjusted cost comparison on our stack?",
+  "retrieved_at": "2026-11-04",
+  "live_model_requests": 0,
+  "budget": {
+    "fetches_used": 2,
+    "fetch_limit": 6,
+    "stop_reason": "each required question answered by a primary source (vendor page + arXiv abstract) or moved to open_questions; the remaining questions are about our own build and rows, which are measurements, not research"
+  },
+  "sources": [
+    {
+      "id": "s1",
+      "url": "https://docs.sglang.io/docs/advanced_features/session_radix_cache",
+      "retrieved_at": "2026-11-04",
+      "kind": "primary",
+      "publisher": "SGLang project documentation",
+      "version_scope": "current-main, unversioned; NOT pinned to the build at :8012 (0.0.0.dev1+g4ccff141d)",
+      "claim_taken": "Session-aware radix caching is enabled with --enable-session-radix-cache, is implemented only by UnifiedRadixCache, protects KV by session reference rather than pinning, requires the application to pass the same top-level session_id on every request, and releases references via POST /close_session; eviction drains unreferenced nodes before referenced ones, then follows the configured policy; component cascade is full -> SWA -> mamba."
+    },
+    {
+      "id": "s2",
+      "url": "https://arxiv.org/abs/2508.21433",
+      "retrieved_at": "2026-11-04",
+      "kind": "primary",
+      "publisher": "arXiv (Lindenbauer, Slinko, Felder, Bogomolov, Zharov)",
+      "version_scope": "arXiv:2508.21433, published 2025-08-29, cs.SE/cs.AI",
+      "claim_taken": "In SWE-agent on SWE-bench Verified across five model configurations, a simple environment observation-masking strategy halves cost relative to the raw agent while matching, and sometimes slightly exceeding, the solve rate of LLM summarization; a hybrid approach reduces cost a further 7% (vs masking) and 11% (vs summarization); initial evidence generalises to the OpenHands scaffold."
+    }
+  ],
+  "local_checks": [
+    {
+      "id": "L1",
+      "method": "ssh docker exec gx10-occamy-nvfp4 grep enable_session_radix_cache python/sglang/srt/server_args.py",
+      "observed": "flag present with help text 'Track per-session references on UnifiedRadixCache KV: eviction consumes unreferenced entries before referenced ones, and closing a session only dereferences its KV.'",
+      "checked_version": "0.0.0.dev1+g4ccff141d (image sha256:72457f09d20efcd34cdf005f71811a25efe771ccc5dd0c93f8ac112569e00ad7)"
+    },
+    {
+      "id": "L2",
+      "method": "ssh docker exec gx10-occamy-nvfp4 ls/grep mem_cache/",
+      "observed": "mem_cache/unified_radix_cache.py and mem_cache/unified_cache/session_ref_tracker.py exist; registry.py builds UnifiedRadixCache and appends the MAMBA component when ctx.is_hybrid_ssm",
+      "checked_version": "same build"
+    },
+    {
+      "id": "L3",
+      "method": "ssh docker exec gx10-occamy-nvfp4 grep close_session entrypoints/http_server.py",
+      "observed": "http_server.py:1567 defines /close_session (GET, POST)",
+      "checked_version": "same build"
+    },
+    {
+      "id": "L4",
+      "method": "ssh docker exec gx10-occamy-nvfp4 grep session_id entrypoints/openai/protocol.py",
+      "observed": "session_id: Optional[str] appears at lines 371, 840 and 1548 of the OpenAI protocol module, so the field is part of the HTTP request models",
+      "checked_version": "same build"
+    },
+    {
+      "id": "L5",
+      "method": "GET http://192.168.2.168:8012/get_server_info",
+      "observed": "enable_session_radix_cache=false, enable_streaming_session=false, uses_mamba_radix_cache=true, mamba_radix_cache_strategy=extra_buffer, page_size=1, max_mamba_cache_size=64, token_capacity=1582310",
+      "checked_version": "same build, running production config"
+    }
+  ],
+  "claims": [
+    {
+      "id": "C1",
+      "claim": "SGLang's session-aware radix cache protects KV by session reference (soft, evictable) and changes eviction ORDER only; it does not pin memory and does not change what the model sees.",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "'Session references are soft protection, not memory pins. Referenced KV can still be evicted when reclaiming unreferenced KV is insufficient.'"
+    },
+    {
+      "id": "C2",
+      "claim": "The /close_session endpoint is required for correct lifecycle; closing dereferences but does not immediately free KV.",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "'Closing removes the session's references but does not immediately free its KV. The KV remains reusable and returns to the normal eviction order.'"
+    },
+    {
+      "id": "C3",
+      "claim": "Session accounting tracks each UnifiedRadixCache component separately, with cascade rules full -> SWA -> mamba.",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "'Evicting an internal Full node also evicts its SWA and Mamba data; evicting SWA also evicts Mamba data; evicting Mamba affects only Mamba.'"
+    },
+    {
+      "id": "C4",
+      "claim": "The feature is compiled into the build serving :8012 (modules, flag, endpoint and request field all present).",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "Local checks L1-L4 on version 0.0.0.dev1+g4ccff141d."
+    },
+    {
+      "id": "C5",
+      "claim": "The feature is OFF on the production configuration (enable_session_radix_cache=false), so no observation in this pilot can be attributed to it; enabling it would be a different engine fingerprint and would need a restart.",
+      "status": "verified",
+      "source": "s1",
+      "evidence": "Local check L5: enable_session_radix_cache=false in /get_server_info of the running server."
+    },
+    {
+      "id": "C6",
+      "claim": "Whether the OpenAI-compatible chat/completions path actually honours session_id end-to-end on this build is NOT established; presence of the field in the protocol models is necessary, not sufficient.",
+      "status": "inferred",
+      "source": "s1",
+      "evidence": "L4 shows the field exists; no request with session_id was sent, and the feature is disabled, so behaviour is untested."
+    },
+    {
+      "id": "C7",
+      "claim": "At the pilot's context sizes (roughly 5-40K prompt tokens against a 1.58M-token pool) the session cache cannot be exercised discriminatingly: it only changes eviction order under memory pressure, and the STATE-CLIFF sweep showed residency under pressure is only bracketed at >=128 documents wide.",
+      "status": "inferred",
+      "source": "s1",
+      "evidence": "C1 (order-only effect under pressure) plus experiments/context-cache/cells/STATE-CLIFF/RESIDENCY-BOUNDS.md (bracket width 128-136 docs)."
+    },
+    {
+      "id": "C8",
+      "claim": "Observation masking halves agent cost while matching summarization's solve rate on SWE-bench Verified with SWE-agent, and a hybrid masking+summarization variant saves a further 7% (vs masking) / 11% (vs summarization).",
+      "status": "verified",
+      "source": "s2",
+      "evidence": "Abstract, verbatim: 'a simple environment observation masking strategy halves cost relative to the raw agent while matching, and sometimes slightly exceeding, the solve rate of LLM summarization' and 'further reduces costs by 7% and 11% compared to just observation masking or LLM summarization, respectively'."
+    },
+    {
+      "id": "C9",
+      "claim": "The paper's cost axis is provider-priced tokens for a hosted setup; it does not report engine-side cache reuse or uncached prefill, so its result does not transfer to a cache-adjusted comparison without local measurement.",
+      "status": "inferred",
+      "source": "s2",
+      "evidence": "The abstract reports cost and solve rate only; no KV/prefix-cache accounting, no engine fingerprint, and the models are not occamy-1.0."
+    },
+    {
+      "id": "C10",
+      "claim": "Observation masking is a prefix REWRITE (older observations are omitted), so on a prefix-caching engine the treatment can increase uncached prefill even while shrinking the payload -- the exact conflation handoff/DO_NOT_REDO.md §1 forbids.",
+      "status": "inferred",
+      "source": "s2",
+      "evidence": "Masking removes earlier observation text from the prompt; DO_NOT_REDO §1 records payload -24.2% / billed -2.4% on a comparable change."
+    }
+  ],
+  "changes_plan": [
+    "Session-aware radix cache is recorded as AVAILABLE-BUT-OFF: a separate fingerprinted experiment requiring a restart, with no discriminating test at pilot pressure. It is not a candidate for this pilot and must not be credited with any measured difference.",
+    "Arm C (masking + one checkpoint) is justified by s2 only as a quality-neutral hypothesis; the gate still requires it to win on cache-adjusted cost per verified success measured on our rows, because C10 says the paper's cost axis can invert here."
+  ],
+  "open_questions": [
+    "Does the OpenAI chat/completions route honour session_id on 0.0.0.dev1+g4ccff141d? Requires a variant container with --enable-session-radix-cache; not attempted (would be a new engine fingerprint).",
+    "What is the marginal prefill cost per uncached token on this box? Measured in E1/E2 (latency and uncached-token counts), not researchable.",
+    "Is there a trustworthy GPU price schedule for this host? None in the workspace; the gate therefore uses uncached-input + output tokens as a labelled proxy, never dollars."
+  ]
+}

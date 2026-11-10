@@ -1,0 +1,26 @@
+{
+  "unit": "REUSE-INTEGRATIONS",
+  "status": "done",
+  "artifacts": [
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/notes/REUSE-INTEGRATIONS.md",
+    "orchestration/units/REUSE-INTEGRATIONS.md"
+  ],
+  "evidence": {
+    "command_or_count": "0 model calls; read-only SSH to gx10 (docker exec SGLang container grep for lmcache/blend; python import checks for lmcache/vllm/freetoken; uv cache listing); web searches of SGLang/LMCache/FreeToken primary sources",
+    "commands": [
+      "ssh gx10 'docker exec gx10-occamy-nvfp4 python3 -c \"import lmcache\"' -> ModuleNotFoundError (lmcache not installed in SGLang container)",
+      "ssh gx10 'docker exec gx10-occamy-nvfp4 grep -rn blend .../storage/lmcache/' -> no matches (prefix-only connector)",
+      "ssh gx10 'python3 -c \"import vllm; print(vllm.__version__)\"' -> 0.22.1rc1.dev112+g3f0a91bb9",
+      "ssh gx10 'ls /home/zer0null/.cache/uv/sdists-v9/pypi/lmcache/' -> 0.5.2",
+      "ssh gx10 'which ft freetoken' -> not found (FreeToken not installed)",
+      "web_search SGLang lmcache integration, LMCache CacheBlend, issue #4071, FreeToken models doc, FreeToken paper"
+    ]
+  },
+  "blocker": "",
+  "next_unit_hint": "Serving phase should run Candidate 1 (vLLM+CacheBlend) smoke first (~12 calls + negative control) then Candidate 2 (FreeToken, <=30 calls contingency). Prefix-only methods (HiCache, mamba-radix, SGLang-LMCache) belong to the prefix-reuse comparison arm, never the non-prefix claim.",
+  "write_paths": [
+    "experiments/context-cache/cells/CONTEXT-SERVING-CAMPAIGN/notes/REUSE-INTEGRATIONS.md",
+    "orchestration/units/REUSE-INTEGRATIONS.md",
+    "orchestration/handoffs/REUSE-INTEGRATIONS.json"
+  ]
+}

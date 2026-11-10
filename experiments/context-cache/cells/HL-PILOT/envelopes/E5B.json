@@ -1,0 +1,177 @@
+{
+  "applicability": {
+    "LR-01": {
+      "12": "answerable-in-replay",
+      "24": "answerable-in-replay",
+      "46": "answerable-in-replay",
+      "48": "requires-execution"
+    }
+  },
+  "arm": "A,B,C-CONTEXT-DESIGN-V2B",
+  "arm_order": [
+    "A",
+    "B",
+    "C"
+  ],
+  "arms": {
+    "A": "append-only verbatim transcript",
+    "B": "typed append-only records with sha8 references",
+    "C": "B plus masking of work turns older than 12"
+  },
+  "budgets": {
+    "max_calls": 320,
+    "max_cost_usd": 0
+  },
+  "call_plan_count": 144,
+  "controls": {
+    "applicability_split": "checkpoint facts answerable-in-replay; 'run the tests / report exit codes' pre-registered unavailable",
+    "mismatched_tokenizer": "UNAVAILABLE",
+    "same_turn_stream": true,
+    "same_verifier": "one evaluator for all arms",
+    "stable_prefix_identity": "prefix sha256 recorded in every row; identical across arms"
+  },
+  "engine_flags": [
+    "sglang",
+    "serve",
+    "--model-path",
+    "/root/.cache/huggingface/hub/models--Accio-Lab--occamy-1.0-NVFP4/snapshots/fa865dc5e80a13b9a2d8ae8d65ed2ee332f33652",
+    "--served-model-name",
+    "occamy-1.0",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "30000",
+    "--tp-size",
+    "1",
+    "--trust-remote-code",
+    "--quantization",
+    "modelopt_fp4",
+    "--dtype",
+    "bfloat16",
+    "--context-length",
+    "131072",
+    "--mem-fraction-static",
+    "0.45",
+    "--kv-cache-dtype",
+    "fp8_e4m3",
+    "--chunked-prefill-size",
+    "8192",
+    "--max-running-requests",
+    "5",
+    "--mamba-radix-cache-strategy",
+    "extra_buffer",
+    "--mamba-track-interval",
+    "256",
+    "--max-mamba-cache-size",
+    "64",
+    "--mamba-ssm-dtype",
+    "float32",
+    "--attention-backend",
+    "triton",
+    "--mamba-backend",
+    "triton",
+    "--mm-attention-backend",
+    "sdpa",
+    "--moe-runner-backend",
+    "flashinfer_cutlass",
+    "--cuda-graph-max-bs-decode",
+    "8",
+    "--reasoning-parser",
+    "qwen3",
+    "--tool-call-parser",
+    "qwen3_coder",
+    "--enable-metrics",
+    "--enable-cache-report"
+  ],
+  "engine_image_digest": "sha256:72457f09d20efcd34cdf005f71811a25efe771ccc5dd0c93f8ac112569e00ad7",
+  "envelope_revisions": [
+    {
+      "at": "first freeze",
+      "defect": "the runner iterated every fixture instead of the --tasks subset, so `tasks` listed LR-04 too and the first launch spent 8 calls re-running LR-04 into rows/e5b.jsonl",
+      "disposition": "rows quarantined to rows/e5b-lr04-duplicates.jsonl; runner patched to TASKS=(\"LR-01\",); envelope re-frozen before any LR-01 call",
+      "spent_calls": 8
+    }
+  ],
+  "fingerprints": {
+    "engine_fingerprint": "sha256:4517590d843ac7c3317643b11ba0a6d544e81c6c4ef108f3f6e8c66fec8f087d",
+    "model_fingerprint": "sha256:9020050264acd441041af7b0e047a47db6cba0b5d32f096c034fcdcfbf678aee",
+    "renderer_fingerprint": "sha256:caf33922ee92253c699e6c868af28f50cdffb91115345a4e4ff53cf7b67cb46f",
+    "tokenizer_fingerprint": "sha256:5042a3a93836e0fc61147ee8140261d1383d5bde619fcc7fdcdb0524bcf72413"
+  },
+  "fixture_sha": {
+    "LR-01": "sha256:2c07e4610abf0a885e53b4fb2430cb5a31584e7bd8458b75d6190584709ba06a"
+  },
+  "flushed_between_arms": true,
+  "generation": {
+    "max_tokens": 1200,
+    "seed": 7,
+    "temperature": 0.0,
+    "thinking": true
+  },
+  "git_sha": "f17663d1fed0162a7dc3c5a0a58d372c710974c3",
+  "hardware": "gx10 / GB10, 128 GB unified",
+  "notes": "Hypothesis: dense typed records (B) preserve every answerable checkpoint and negative constraint while cutting cache-adjusted cost per verified success by >= 10 %. Falsifier: any check or constraint worse than A, or no uncached-work reduction. cached_tokens absent is null, never 0.",
+  "order": [
+    "LR-01"
+  ],
+  "quantization": "nvfp4 (modelopt_fp4)",
+  "run_id": "HL-E5B-2026-11-04",
+  "schema": "consonance.run/1",
+  "sources": {
+    "LR-01": [
+      {
+        "declared": "sha256:71a14c2c1dd1b6e97b3fdf2a666ea459d093adcd0f813676cf787271a48da563",
+        "digest": "sha256:71a14c2c1dd1b6e97b3fdf2a666ea459d093adcd0f813676cf787271a48da563",
+        "digest_ok": true,
+        "embedded": "full file",
+        "id": "resolve.py",
+        "lines": 169,
+        "path": "experiments/ptr-engine/ptr_engine/resolve.py",
+        "pointer": "#L66-L110"
+      },
+      {
+        "declared": "sha256:402dc9589d8e8fd5de82ed6c8f3364390e105bf8285eb7c326b799f8200fdba0",
+        "digest": "sha256:402dc9589d8e8fd5de82ed6c8f3364390e105bf8285eb7c326b799f8200fdba0",
+        "digest_ok": true,
+        "embedded": "full file",
+        "id": "errors.py",
+        "lines": 250,
+        "path": "experiments/ptr-engine/ptr_engine/errors.py",
+        "pointer": "#L114-L126"
+      },
+      {
+        "declared": "sha256:00f54ed84d0d32efd05a8498b3a36a8235f2e643af858ce1aee3c7137948ee07",
+        "digest": "sha256:00f54ed84d0d32efd05a8498b3a36a8235f2e643af858ce1aee3c7137948ee07",
+        "digest_ok": true,
+        "embedded": "full file",
+        "id": "test_scope.py",
+        "lines": 83,
+        "path": "experiments/ptr-engine/tests/test_scope.py",
+        "pointer": "#L16-L80"
+      },
+      {
+        "declared": "sha256:f3d09cd0298cce30be558b5b8b2402658909bdb3a9de0077c292b6bbafd96bd2",
+        "digest": "sha256:f3d09cd0298cce30be558b5b8b2402658909bdb3a9de0077c292b6bbafd96bd2",
+        "digest_ok": true,
+        "embedded": "full file",
+        "id": "test_negative_controls.py",
+        "lines": 136,
+        "path": "experiments/ptr-engine/tests/test_negative_controls.py",
+        "pointer": "#L80-L117"
+      }
+    ]
+  },
+  "started_utc": "2026-11-05T05:56:16Z",
+  "supersedes": {
+    "defects": [
+      "the first LR-01 call spent all 1200 tokens reasoning and returned empty content (finish_reason=length), so every answer would have been blank",
+      "two probe calls showed the ask string is what tips it: 'Answer in one line. Do not deliberate.' still exhausted the budget; 'Output ONLY the answer line. No preamble, no deliberation.' returned content in 28 s"
+    ],
+    "run_id": "HL-E5-2026-11-04",
+    "task": "LR-01"
+  },
+  "tasks": [
+    "LR-01"
+  ],
+  "user_ask": "Output ONLY the answer line. No preamble, no deliberation."
+}
