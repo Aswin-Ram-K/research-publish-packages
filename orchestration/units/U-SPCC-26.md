@@ -90,3 +90,29 @@ checkout) and already contains this unit's two files:
 The test was re-run **from HEAD** after that commit and passes (`1 passed in 0.03s`), so
 the green above is the state of the repository, not just of the working tree. Docs gate:
 `python3 tools/doc_check.py` → `OK docs clean`, `exit=0`.
+
+## 7. Suite
+
+```
+.venv/bin/python -m pytest experiments/ptr-engine/longrun/tests -q --tb=no -rf \
+  --ignore=experiments/ptr-engine/longrun/tests/test_lost_fixture.py
+6 failed, 829 passed, 1 warning, 31 subtests passed in 38.68s
+```
+
+`test_lost_fixture` is the third named known-red test and is excluded only because it
+exceeds 280 s re-scanning 8,210 pins (U-SPCC-9C's blocker, unchanged here). Of the six:
+
+- named known-red: `test_journal_lint::test_census_over_the_live_corpus_is_reported`,
+  `test_request_ledger::TestRealCorpus::test_g_real_corpus_total_and_delta_from_466`;
+- not named by this unit's acceptance, and not on its code path:
+  `test_stop_reason::OnDiskArtefact::test_stop_reason_json_matches_a_fresh_scan`
+  (stale artefact) and the three `test_verbosity` tests, all on
+  `rows file missing from corpus: rows-spcc-billedproof-2026-11-10.jsonl` — a peer
+  unit's rows artefact, not the preview tree.
+
+Dry-run-specific files stay green: `test_dry_turn_scope.py` +
+`test_tranch1_dryrun.py` + `test_preview_preservation.py` → 22 passed in 3.87 s, so
+injecting `root` into `run_dry` broke no existing preview assertion.
+
+Card committed as `1969767` (`dry-run: preserve committed preview evidence (U-SPCC-26
+card)`) and pushed to `research/next-candidates-2026-10-24`.
