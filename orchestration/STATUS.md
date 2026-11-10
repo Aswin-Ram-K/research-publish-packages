@@ -628,3 +628,42 @@ preregistered 200–500 ceiling.
 or keep the prereg as written and accept that E1's small-effect clauses stay unadjudicable.
 The prereg's prediction, falsifier and ceiling are **unedited**; the deviation note under E1
 is additions-only.
+
+## U-SPCC-51 — corrected three-arm E1 cell (tools on): retention, not mechanism
+
+`measure/rows-e1-tools-2026-11-10.jsonl`, commit `08a7908`, 318 requests, 0 failed, 0
+truncated, reconciliation delta 0 on all three arms (`spcc` 8,381→8,481/100; `masking`
+8,481→8,581/100; fetch 8,581→8,699/118). Programme spend **8,699 of 12,094**.
+`tools_mode: on:read_file`, `tools_schema_sent=true` on all 100 `spcc` and all 118 fetch rows.
+
+| arm | value | contract | NONE | wrong | unparsed | graded | requests |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `spcc` | 22 | 21 | 26 | 0 | 0 | 48 | 100 |
+| `masking-no-fetch` | 8 | 8 | 40 | 0 | 0 | 48 | 100 |
+| `bounded-context-fetch` | 22 | 22 | 11 | 4 | 11 | 48 | 118 |
+
+18 of 48 fetch rounds used; 18 checkpoints answered on a follow-up carrying a fetched body,
+15 of those 18 correct; `fetch_prompt_serves=0`.
+
+**Gaps vs the ±2/48 band.** `spcc`−masking **+14 value / +13 contract** (outside).
+fetch−masking **+14 / +14** (outside). **fetch−`spcc` 0 value / +1 contract (inside — the two
+retention mechanisms are not separable on this cell).**
+
+**Claim.** The effect is **retention, not mechanism**. Masking destroys the body at turn 4;
+the stable-prefix journal and fetch-on-demand both keep it reachable, and both land at 22/48.
+Neither is separable from the other. Both fail at `d32` together.
+
+**Caveats (all four travel with the table).**
+
+1. Fetch 22 is a **floor**: 10 of 48 checkpoints ended `finish_reason=tool_calls` with
+   `content ''`, `tool_calls []`, `tool_call_ids null` and no follow-up — harness capture bug,
+   fix in flight (`U-SPCC-49`). Not the arm's ceiling.
+2. Rows carry **pre-fix** `fetch_rounds_used` stamps (0 on 52, null on 66); counter was dead
+   at `run_longrun.py:3359`; corrected counter (`a9b9b70`) appears only on the next cell.
+   Rows must not be rewritten.
+3. 16 rows carry `protocol_violation=answer_wrapped_tool_call` on fetch-arm turn-initial rows;
+   each has a matching turn row that did fetch, so none stranded. Still open.
+4. Temperature 0 + seed 42 is not reproducible here (±2/48); every figure is a single-rep
+   point estimate with that band.
+
+`PREREG-SPCC.md` unedited.

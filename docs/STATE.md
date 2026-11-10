@@ -624,3 +624,44 @@ unedited; this is a reading, not a revision):
 amended to admit a powered design. A powered E1 costs 1,200–1,800 requests against a live
 ledger headroom of **3,682** (raw; 3,712 deduplicated), so it fits — but it is 2.4–3.6× the
 preregistered ceiling. Not decided here.
+
+## U-SPCC-51 — the corrected three-arm E1 cell: retention, not mechanism
+
+`measure/rows-e1-tools-2026-11-10.jsonl`, commit `08a7908`, 318 requests, 0 failed, 0
+truncated, reconciliation delta **0** on all three arms (`spcc` 8,381→8,481/100, `masking`
+8,481→8,581/100, fetch 8,581→8,699/118). Programme spend **8,699 of 12,094**. This is the
+first E1 cell where the fetch channel was actually on: `tools_mode: on:read_file` and
+`tools_schema_sent=true` on all 100 `spcc` and all 118 fetch rows (`masking` `off`/`false`).
+
+| arm | value | contract | NONE | wrong | unparsed | graded | requests |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `spcc` | 22 | 21 | 26 | 0 | 0 | 48 | 100 |
+| `masking-no-fetch` | 8 | 8 | 40 | 0 | 0 | 48 | 100 |
+| `bounded-context-fetch` | 22 | 22 | 11 | 4 | 11 | 48 | 118 |
+
+18 of 48 fetch rounds were used; 18 checkpoints answered on a follow-up carrying a fetched
+body, 15 of those 18 correct; `fetch_prompt_serves=0`.
+
+**Gaps against the measured ±2/48 band.** `spcc`−masking **+14 value / +13 contract**
+(outside). fetch−masking **+14 / +14** (outside). **fetch−`spcc` 0 value / +1 contract —
+inside the band.** The two retention mechanisms are **not separable on this cell**.
+
+**The claim.** The effect is **retention, not mechanism**. Masking destroys the body at turn
+4; the stable-prefix journal and fetch-on-demand both keep it reachable, and both land at
+22/48. Neither is separable from the other. Both fail at `d32` together (`spcc` 0/8, fetch
+1/8, masking 0/8).
+
+**Four caveats that travel with every figure above.**
+
+1. The fetch arm's 22 is a **floor**, not a ceiling. 10 of its 48 checkpoints ended on
+   `finish_reason=tool_calls` with `content ''`, `tool_calls []`, `tool_call_ids null` and no
+   follow-up — a harness capture bug, not model behaviour. A fix is in flight (`U-SPCC-49`).
+2. The rows carry **pre-fix** `fetch_rounds_used` stamps (0 on 52 rows, null on 66) because
+   the counter was dead at `run_longrun.py:3359`; the corrected counter (`a9b9b70`) only
+   appears on the next cell. The rows must not be rewritten.
+3. 16 rows carry `protocol_violation=answer_wrapped_tool_call` on fetch-arm turn-initial
+   rows; each has a matching turn row that did fetch, so none stranded. Still open.
+4. Temperature 0 plus seed 42 is not reproducible on this endpoint (±2/48 measured); every
+   figure above is a single-rep point estimate with that band.
+
+`PREREG-SPCC.md` is **unedited** — the prereg stays as written.

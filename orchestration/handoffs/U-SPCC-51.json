@@ -1,0 +1,63 @@
+{
+  "unit": "U-SPCC-51",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "docs/STATE.md",
+    "journal/2026-11-10.md",
+    "orchestration/STATUS.md",
+    "orchestration/units/U-SPCC-51.md",
+    "orchestration/handoffs/U-SPCC-51.json"
+  ],
+  "evidence": {
+    "rows_file": "experiments/ptr-engine/measure/rows-e1-tools-2026-11-10.jsonl",
+    "rows_commit": "08a7908",
+    "rows": 318,
+    "failed": 0,
+    "truncated": 0,
+    "reconciliation_delta": 0,
+    "reconciliation_chain": {
+      "spcc": "8381->8481/100",
+      "masking-no-fetch": "8481->8581/100",
+      "bounded-context-fetch": "8581->8699/118"
+    },
+    "programme_spend": "8699 of 12094",
+    "tools_mode": "on:read_file",
+    "tools_schema_sent": "true on all 100 spcc and all 118 fetch rows; masking off/false",
+    "arms": {
+      "spcc": {"value": 22, "contract": 21, "NONE": 26, "wrong": 0, "unparsed": 0, "graded": 48, "requests": 100, "billed_tokens": 16875},
+      "masking-no-fetch": {"value": 8, "contract": 8, "NONE": 40, "wrong": 0, "unparsed": 0, "graded": 48, "requests": 100, "billed_tokens": 14007},
+      "bounded-context-fetch": {"value": 22, "contract": 22, "NONE": 11, "wrong": 4, "unparsed": 11, "graded": 48, "requests": 118, "billed_tokens": 39594}
+    },
+    "fetch_rounds_used": "18 of 48",
+    "fetch_followups": "18 checkpoints answered on a follow-up carrying a fetched body; 15 of 18 correct",
+    "fetch_prompt_serves": 0,
+    "gaps_vs_band": {
+      "spcc_minus_masking": "+14 value / +13 contract (outside +/-2/48)",
+      "fetch_minus_masking": "+14 / +14 (outside)",
+      "fetch_minus_spcc": "0 value / +1 contract (inside; not separable)"
+    },
+    "claim": "The effect is retention, not mechanism. Masking destroys the body at turn 4; the stable-prefix journal and fetch-on-demand both keep it reachable, and both land at 22/48. Neither is separable from the other. Both fail at d32 together.",
+    "caveats": [
+      "fetch 22 is a floor: 10 of 48 checkpoints ended finish_reason=tool_calls with content '', tool_calls [], tool_call_ids null and no follow-up (harness capture bug, fix in flight U-SPCC-49); not the arm's ceiling",
+      "rows carry pre-fix fetch_rounds_used stamps (0 on 52 rows, null on 66) because the counter was dead at run_longrun.py:3359; corrected counter (a9b9b70) appears only on the next cell; rows must not be rewritten",
+      "16 rows carry protocol_violation=answer_wrapped_tool_call on fetch-arm turn-initial rows; each has a matching turn row that did fetch, so none stranded; still open",
+      "temperature 0 + seed 42 is not reproducible on this endpoint (+/-2/48 measured); every figure is a single-rep point estimate with that band"
+    ],
+    "correction_to_shared_context": "fetch unparsed is 11, not 10 (22+11+4+10=47, not 48). The 11th is cp.TX-03.f02.d8 answering 'ANSWER: CAL...' on a follow-up; the 10 harness-capture rows are exactly those with tool_call_ids null.",
+    "ledger_column_check": "18 rows at 7 columns before, 19 after; 10-column and 3-column tables unchanged",
+    "prereg_edited": false,
+    "endpoint_requests": 0,
+    "model_calls": 0
+  },
+  "blocker": null,
+  "next_unit_hint": "U-SPCC-49 lands the tool-call capture fix; re-run the fetch arm to lift the 22 floor. Then decide whether a powered E1 (4-6 reps, 1,200-1,800 requests) is worth amending the 200-500 ceiling for, given fetch-spcc is 0/+1 and the retention claim is already settled.",
+  "write_paths": [
+    "experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
+    "docs/STATE.md",
+    "journal/2026-11-10.md",
+    "orchestration/STATUS.md",
+    "orchestration/units/U-SPCC-51.md",
+    "orchestration/handoffs/U-SPCC-51.json"
+  ]
+}
