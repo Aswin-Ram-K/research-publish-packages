@@ -727,3 +727,34 @@ unnecessary; the fetch arm answers everything and costs **3.0× `spcc`'s billed 
   masking, so it does not fire here. Record the instability rather than picking a cell.
 
 `PREREG-SPCC.md` and its companion JSON unedited.
+
+## U-SPCC-58 — the masking arm's 10 wrong answers are confabulation, not index leakage
+
+`U-SPCC-58` classified the 10 wrong answers in the `masking-no-fetch` arm of
+`experiments/ptr-engine/measure/rows-e1-indexfix-2026-11-10.jsonl` (index fix `b38db8a`):
+**9 pure confabulation, 1 cross-fact confusion, 0 index leakage**. The answered values occur
+in no index line and no fixture body. The masking arm's **8/48 retention score is unchanged
+and fair**; the **0→10 wrong count is a prompt-design artefact** of showing the arm an index
+it cannot address, and must not be read as an arm property.
+
+All 100 masking prompts were rebuilt through `Planner.build` + `checkpoint_prompt` with
+**100/100 `sha256` match**, so the reconstruction is exact.
+
+| turn | checkpoint | expected | answered | class | source |
+|---:|---|---:|---:|---|---|
+| 6 | `cp.TX-03.f01.d5` | 3001 | 4000 | pure confabulation | nowhere |
+| 7 | `cp.TX-03.f01.d6` | 3002 | 5000 | pure confabulation | nowhere |
+| 9 | `cp.TX-03.f01.d8` | 3003 | 3103 | cross-fact confusion | `doc-fact-02` body in L3, delivered T8 |
+| 13 | `cp.TX-03.f02.d5` | 3101 | 4100 | pure confabulation | nowhere |
+| 14 | `cp.TX-03.f02.d6` | 3102 | 4103 | pure confabulation | nowhere |
+| 22 | `cp.TX-03.f03.d5` | 3201 | 4200 | pure confabulation | nowhere |
+| 23 | `cp.TX-03.f03.d6` | 3202 | 4203 | pure confabulation | nowhere |
+| 25 | `cp.TX-03.f03.d8` | 3203 | 4203 | pure confabulation | self-echo of its own T23 answer |
+| 29 | `cp.TX-03.f04.d5` | 3301 | 4300 | pure confabulation | nowhere |
+| 30 | `cp.TX-03.f04.d6` | 3302 | 4303 | pure confabulation | nowhere |
+
+Counts: **9 pure confabulation, 1 cross-fact confusion, 0 index leakage**. The 8 correct
+turns (3, 10, 19, 26, 47, 54, 63, 70) are identical in both cells and all `d2`; the 10
+flipped turns were `NONE` in `rows-e1-parserfix-2026-11-10.jsonl`. No value leaked from the
+index — the index carries ref names, a digest and a byte count only; the index leaked only
+names the question already states.
