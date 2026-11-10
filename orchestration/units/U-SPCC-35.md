@@ -1,76 +1,162 @@
-# U-SPCC-35 — E1 cell refused at the precondition: `E1` is not a claim id
+# U-SPCC-35 — E1: `spcc` beats masking and fetch on TX-03, but not at `d2`
 
-## Outcome
+## 0. Precondition
 
-**Blocked. Zero requests spent. No rows file written. No cell run.**
+`resolve_claim("E1")` from `experiments/ptr-engine/longrun/claim_mode.py` returned
+`mode=hypothesis claim=E1 comparison_eligible=True`. The first attempt, against the
+committed resolver, raised `ClaimRefusal` (`claim_mode.py:222`, `CLAIM_IDS = ("H1",
+"H2", "H3")` at `:95`); the claim-namespace unit landed `SPCC_CLAIM_IDS = ("E1", ...,
+"E6")` at `claim_mode.py:102` while this unit was open, and the gate then passed. No
+substitution (`smoke`/`plumbing`/`H1`/`H2`/`H3`) was used and the cap was not raised.
 
-The unit's precondition is that `resolve_claim("E1")` returns a record with
-`comparison_eligible: True` and `claim: "E1"`. It does not. It raises
-`ClaimRefusal`, so the cell was never launched.
-
-## The refusal, verbatim
+## 1. The cell
 
 ```
-$ TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python -c \
-    "import sys; sys.path.insert(0,'experiments/ptr-engine/longrun'); import claim_mode; \
-     print(claim_mode.resolve_claim('E1'))"
-
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-  File "/home/zer0null/research extractor/experiments/ptr-engine/longrun/claim_mode.py", line 222, in resolve_claim
-    raise ClaimRefusal(flag_value)
-claim_mode.ClaimRefusal: claim REFUSED: --hypothesis='E1' is not a declaration this run may make. The three accepted forms are (1) `--hypothesis smoke` and (2) `--hypothesis plumbing` -- both declare claim=none, so the cell is plumbing and its rows are NOT comparison_eligible -- and (3) `--hypothesis H1`, `--hypothesis H2` or `--hypothesis H3`, the PARM-1 claim the cell will make. Silence is not a claim: an absent or empty --hypothesis is refused here, and so is an explicit `none` -- a run may start without a hypothesis only by declaring that it makes no claim.
+TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python experiments/ptr-engine/longrun/run_longrun.py \
+  --fixture experiments/ptr-engine/longrun/tasks-v7/TX-03.v1.json \
+  --arms spcc --reps 1 --temperature 0 --seed 42 \
+  --model occamy-1.0 --base-url http://192.168.2.168:8012/v1 \
+  --claim-mode E1 --budget-cap 12094 \
+  --run-id e1-spcc-2026-11-10 \
+  --rows experiments/ptr-engine/measure/rows-e1-spcc-2026-11-10.jsonl
 ```
 
-## Why
+Exit 0, wall 30.55 s. `rows=100 requests=100 truncated=0 failed_turns=0`,
+`finish_reason {"stop": 100}`, `answer_source {"content": 100}`,
+`token_dist {"n": 100, "mean": 4.6, "p95": 7.0, "max": 7.0}`,
+`tok_method=tiktoken:cl100k_base`. Cap gate: `allocation=100 cap=12094
+spent_at_start=7981 used_in_run=100 spent_after=8081 delta=0`, reconciled
+(`the run's count 100 equals the rows gained 100`). Manifest
+`longrun/manifests/e1-spcc-2026-11-10-spcc-r1.json` sha256
+`dbd5047c041ba2241a92e1bb7c56737aca23dddf2c350f46ffbfaf6357148e5c`.
+Every row carries `claim=E1`, `comparison_eligible=True`, `model=occamy-1.0`,
+`temperature=0.0`, `seed=42`, `fixture_sha256=f0a636fe…620c3`.
 
-`experiments/ptr-engine/longrun/claim_mode.py:95` is the whole namespace:
+## 2. Three-arm table
 
-```python
-CLAIM_IDS = ("H1", "H2", "H3")
-```
+Scored by `longrun/score_longrun.py:score_answer_contract_rows(fixture, rows)` — the
+repo's own entry point, not a hand-rolled counter. All three files are `:8012`
+(`manifests/celltx03-*.json` → `endpoint http://192.168.2.168:8012/v1`, `id
+occamy-1.0`), same fixture, seed 42, temperature 0. `rows-tx03-8014-*` was not used.
 
-`resolve_claim` (`claim_mode.py:206-222`) accepts `smoke`/`plumbing` (→
-`claim="none"`, `comparison_eligible=False`) and the three `CLAIM_IDS` (→
-`comparison_eligible=True`). `E1` is in neither set, so it falls through to
-`raise ClaimRefusal(flag_value)` at `:222`.
+| arm | rows file | checkpoint_accuracy | answered_correctly | abstained_after_mask | answered_wrong | unparsed | total |
+|---|---|---|---|---|---|---|---|
+| `spcc` | `rows-e1-spcc-2026-11-10.jsonl` | **20/48** | 20 | 0 | 0 | 0 | 48 |
+| `masking-no-fetch` | `rows-tx03-masking-r1.jsonl` | 8/48 | 8 | 40 | 0 | 0 | 48 |
+| `bounded-context-fetch` | `rows-tx03-fetch-r1.jsonl` | 12/48 | 12 | 16 | 1 | 10 | 48 |
 
-The claim-namespace unit that is to add `E1` has not landed. Evidence:
+`spcc` also reports `contract_correct=19` / `value_correct=20`: one pass
+(`cp.TX-03.f08.d2`, turn 70) answered `kind=TEXT` with the right value `3700`, so it
+counts as `answered_correctly` but not as a NUM-contract pass.
 
-- `git log --oneline -- experiments/ptr-engine/longrun/claim_mode.py` → a single
-  commit, `9fadcc9 wip(ptr-engine): preserve context x serving instrument,
-  fixtures and measurements`. No commit adds `E1`.
-- `grep -n "E1" experiments/ptr-engine/longrun/tests/test_claim_mode.py` → no
-  matches; the test file still enumerates only `smoke`, `plumbing`, `H1`, `H3`,
-  `None`, `""`, `"none"`, `"H4"` as its accepted/refused cases
-  (`claim_mode.py:427`).
-- `git --no-optional-locks status --porcelain` in the checkout shows no
-  modification to `claim_mode.py`, so the on-disk resolver is the committed one.
+By distance (`contract`/`n`):
 
-## What was deliberately not done
+| arm | d2 | d5 | d6 | d8 | d20 | d32 |
+|---|---|---|---|---|---|---|
+| `spcc` | 6/8 | 3/8 | 5/8 | 3/8 | 2/8 | 0/8 |
+| `masking-no-fetch` | 8/8 | 0/8 | 0/8 | 0/8 | 0/8 | 0/8 |
+| `bounded-context-fetch` | 6/8 | 1/8 | 2/8 | 1/8 | 1/8 | 1/8 |
 
-The assignment forbids substituting `smoke`, `plumbing`, `H1`, `H2` or `H3` to
-get past the precondition, and forbids raising the budget cap. Neither was done.
-`H1`/`H2`/`H3` are the PARM-1 claims; stamping an SPCC cell with one of them
-would write rows into a comparison under a claim the cell does not make, which
-is exactly the failure `claim_mode.py:14-16` warns about.
+## 3. Per-checkpoint breakdown for `spcc`
 
-## Consequence for the unit's acceptance criteria
+20 of 48 checkpoints passed. `COMPACT_EVERY = 24`, so compactions fall at turns
+24, 48, 72, 96. Fact delivery turns: `f01`@1, `f02`@8, `f03`@17, `f04`@24, `f05`@45,
+`f06`@52, `f07`@61, `f08`@68.
 
-| # | Criterion | State |
-|---|---|---|
-| 1 | 100 turns, 0 failed, 0 truncated, 100 rows | not attempted — no cell |
-| 2 | three-arm table from the repo scorer | not attempted — no spcc rows |
-| 3 | per-checkpoint spcc breakdown | not attempted |
-| 4 | spcc billing line | not attempted |
-| 5 | verdict against E1's preregistered prediction | not adjudicable — no data |
-| 6 | FINDINGS-LEDGER row | not written — a ledger row without a measurement would be a fabricated result |
-| 7 | `python3 tools/doc_check.py` exits 0 | run, see handoff |
-| 8 | commit + push | this card and the handoff |
+| checkpoint | probe turn | intro turn | distance | epoch |
+|---|---|---|---|---|
+| `cp.TX-03.f01.d2` | 3 | 1 | 2 | pre-compaction |
+| `cp.TX-03.f01.d5` | 6 | 1 | 5 | pre-compaction |
+| `cp.TX-03.f01.d6` | 7 | 1 | 6 | pre-compaction |
+| `cp.TX-03.f01.d8` | 9 | 1 | 8 | pre-compaction |
+| `cp.TX-03.f02.d2` | 10 | 8 | 2 | pre-compaction |
+| `cp.TX-03.f02.d5` | 13 | 8 | 5 | pre-compaction |
+| `cp.TX-03.f02.d6` | 14 | 8 | 6 | pre-compaction |
+| `cp.TX-03.f02.d8` | 16 | 8 | 8 | pre-compaction |
+| `cp.TX-03.f03.d2` | 19 | 17 | 2 | pre-compaction |
+| `cp.TX-03.f01.d20` | 21 | 1 | 20 | pre-compaction |
+| `cp.TX-03.f03.d5` | 22 | 17 | 5 | pre-compaction |
+| `cp.TX-03.f03.d6` | 23 | 17 | 6 | pre-compaction |
+| `cp.TX-03.f05.d2` | 47 | 45 | 2 | post-24, fact delivered after it |
+| `cp.TX-03.f06.d2` | 54 | 52 | 2 | post-48, fact delivered after it |
+| `cp.TX-03.f06.d6` | 58 | 52 | 6 | post-48, fact delivered after it |
+| `cp.TX-03.f07.d2` | 63 | 61 | 2 | post-48, fact delivered after it |
+| `cp.TX-03.f07.d6` | 67 | 61 | 6 | post-48, fact delivered after it |
+| `cp.TX-03.f07.d8` | 69 | 61 | 8 | post-48, fact delivered after it |
+| `cp.TX-03.f08.d2` | 70 | 68 | 2 | post-48, fact delivered after it |
+| `cp.TX-03.f06.d20` | 72 | 52 | 20 | post-48, probe on the compaction turn |
 
-## Unblocking
+**12 passes are pre-compaction (turn < 24). 8 passes are post-compaction (turns
+47–72), and every one of those is for a fact introduced after the most recent
+compaction. Zero passes cross a compaction boundary** — checked as
+`intro < c < probe` for `c ∈ {24, 48, 72, 96}`, 0 hits. `f04` (delivered at turn 24,
+the compaction turn itself) never passes: `d2`@26, `d5`@29, `d6`@30, `d8`@32,
+`d20`@44, `d32`@56 all fail. The journal is dropped, not summarised, and no fact
+survives the fold.
 
-Land `E1` in `claim_mode.CLAIM_IDS` (and its `resolve_claim` docstring, its
-`_REFUSAL` text, and `tests/test_claim_mode.py`), then re-issue this unit
-unchanged. The cell command, fixture, seed, temperature and budget cap in the
-assignment are all still valid; nothing about them was found to be wrong.
+## 4. Billing for the `spcc` cell
+
+From `score_answer_contract_rows(...)["spcc__rep1"]["billing"]`:
+
+| field | value |
+|---|---|
+| `prompt_tokens` | 47,594 |
+| `cached_tokens` | 37,632 |
+| `billed_tokens_known` | 9,962 |
+| `billed_upper_bound_tokens` | 9,962 |
+| `billed_unknown_rows` | 0 |
+| `coverage` | 1.0 |
+
+`billed_source=reported`, `cached_fraction_of_prompt=0.7907`,
+`reconcile_delta_total=0` (tolerance 475), `reconcile_within_tolerance=true`.
+Comparison arms: `masking-no-fetch` 12,489 billed (80,905 prompt / 68,416 cached);
+`bounded-context-fetch` 23,624 billed (100,104 / 76,480). All three `coverage=1.0`,
+`billed_unknown_rows=0`.
+
+## 5. Verdict against E1
+
+Quoted from `experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.md` §E1:
+
+> **Predicted outcome (written before running):** `spcc` scores ≥ fetch on single-fact
+> and > masking everywhere; billed tokens ≤ masking.
+>
+> **Falsifier:** `spcc` below fetch on single-fact, or `spcc` not strictly above masking
+> on any checkpoint class, or billed tokens above masking.
+
+**The prediction FAILED. The falsifier did NOT fire.**
+
+- `spcc` ≥ fetch on single-fact: **holds** — 20/48 vs 12/48 overall, and 6/8 vs 6/8 at
+  `d2`, 3/8 vs 1/8 at `d5`, 5/8 vs 2/8 at `d6`, 3/8 vs 1/8 at `d8`.
+- `spcc` > masking **everywhere**: **fails.** At `d2` masking scores 8/8 and `spcc`
+  6/8; at `d32` both score 0/8, which is not ">". `spcc` is strictly above masking on
+  `d5` (3>0), `d6` (5>0), `d8` (3>0) and `d20` (2>0) only.
+- billed tokens ≤ masking: **holds** — 9,962 ≤ 12,489.
+
+Falsifier clauses, one by one: `spcc` is not below fetch on single-fact (20 > 12), so
+clause 1 does not fire; `spcc` *is* strictly above masking on four checkpoint classes,
+so clause 2 ("not strictly above masking on **any** class") does not fire; billed
+tokens are below masking, so clause 3 does not fire. The prereg's own deviation note
+predicted the falsifier "is expected to fire" on post-compaction probes — **it did
+not**, because `spcc` does beat masking on `d5`/`d6`/`d8`/`d20`. That expectation was
+wrong; the prediction's "everywhere" conjunct is what broke, and it broke at `d2`,
+which is pre-compaction.
+
+## 6. Limitations, stated plainly
+
+- **The cell is below E1's own request floor.** `PREREG-SPCC.md:25` says "E1–E5 are
+  each 200–500 requests"; this cell spent 100. `run_longrun.py` does not call
+  `cell.eval_gate_prereg` (no reference to `eval_gate_prereg`, `validate_g3` or
+  `GATE_PREREG` in the file), so nothing refused the shortfall. The result is a
+  single-rep, under-ceiling observation, not a full E1 adjudication.
+- **One rep per arm, `:8012` only.** `spcc` has never been run on `:8014`; no
+  cross-build claim is made (ledger rule 9).
+- **`d2` is the only class where masking is non-zero**, so "`spcc` > masking
+  everywhere" was always going to be decided at `d2` alone. `spcc` loses there.
+
+## 7. Ledger and gates
+
+`experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md` gained one row
+(7 columns, matching the main table). Column-count check before: `15 10 / 7 3 / 14 7`;
+after: `15 10 / 7 3 / 15 7` — the 7-column table went 14 → 15, nothing else moved.
+`python3 tools/doc_check.py` → `OK docs clean under /home/zer0null/research extractor`,
+exit 0.

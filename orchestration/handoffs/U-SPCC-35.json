@@ -1,39 +1,66 @@
 {
   "unit": "U-SPCC-35",
-  "status": "blocked",
+  "status": "complete",
   "artifacts": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/measure/rows-e1-spcc-2026-11-10.jsonl",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/manifests/e1-spcc-2026-11-10-spcc-r1.json",
+    "/home/zer0null/research extractor/experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
     "/home/zer0null/research extractor/orchestration/units/U-SPCC-35.md",
     "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-35.json"
   ],
   "evidence": {
-    "precondition": "resolve_claim('E1') from experiments/ptr-engine/longrun/claim_mode.py must return comparison_eligible=True and claim='E1' before any request is spent.",
-    "precondition_result": "FAILED. resolve_claim('E1') raises ClaimRefusal at claim_mode.py:222.",
-    "refusal_verbatim": "claim REFUSED: --hypothesis='E1' is not a declaration this run may make. The three accepted forms are (1) `--hypothesis smoke` and (2) `--hypothesis plumbing` -- both declare claim=none, so the cell is plumbing and its rows are NOT comparison_eligible -- and (3) `--hypothesis H1`, `--hypothesis H2` or `--hypothesis H3`, the PARM-1 claim the cell will make. Silence is not a claim: an absent or empty --hypothesis is refused here, and so is an explicit `none` -- a run may start without a hypothesis only by declaring that it makes no claim.",
-    "namespace": "claim_mode.py:95 CLAIM_IDS = (\"H1\", \"H2\", \"H3\"); resolve_claim at claim_mode.py:206-222 accepts only smoke/plumbing (claim='none', comparison_eligible=False) and those three ids (comparison_eligible=True). 'E1' is in neither set.",
-    "namespace_not_landed": [
-      "git log --oneline -- experiments/ptr-engine/longrun/claim_mode.py -> single commit 9fadcc9 'wip(ptr-engine): preserve context x serving instrument, fixtures and measurements'; no commit adds E1.",
-      "grep -n 'E1' experiments/ptr-engine/longrun/tests/test_claim_mode.py -> no matches; the accepted/refused case list at claim_mode.py:427 is ('smoke','plumbing','H1','H3',None,'','none','H4').",
-      "git --no-optional-locks status --porcelain shows no modification to claim_mode.py, so the on-disk resolver is the committed one."
-    ],
-    "requests_spent": 0,
-    "rows_written": 0,
-    "cell_launched": false,
-    "substitutions_refused": "Did not substitute smoke, plumbing, H1, H2 or H3, and did not raise --budget-cap. H1/H2/H3 are the PARM-1 claims; stamping an SPCC cell with one would write rows into a comparison under a claim the cell does not make (claim_mode.py:14-16).",
-    "acceptance_state": {
-      "1_100_turns_100_rows": "not attempted - no cell",
-      "2_arm_table_from_repo_scorer": "not attempted - no spcc rows",
-      "3_per_checkpoint_breakdown": "not attempted",
-      "4_billing_line": "not attempted",
-      "5_verdict_vs_prereg": "not adjudicable - no data",
-      "6_findings_ledger_row": "not written - a ledger row without a measurement would be a fabricated result",
-      "7_doc_check": "python3 tools/doc_check.py -> 'OK docs clean under /home/zer0null/research extractor', exit=0",
-      "8_commit_push": "this card and handoff"
+    "precondition": "resolve_claim('E1') -> mode=hypothesis claim=E1 comparison_eligible=True. The first attempt against the committed resolver raised ClaimRefusal at claim_mode.py:222 (CLAIM_IDS = ('H1','H2','H3') at :95); the claim-namespace unit landed SPCC_CLAIM_IDS = ('E1','E2','E3','E4','E5','E6') at claim_mode.py:102 while this unit was open, and the gate then passed. No smoke/plumbing/H1/H2/H3 substitution was used and the cap was not raised.",
+    "cell": "run_longrun.py --fixture tasks-v7/TX-03.v1.json --arms spcc --reps 1 --temperature 0 --seed 42 --model occamy-1.0 --base-url http://192.168.2.168:8012/v1 --claim-mode E1 --budget-cap 12094 --run-id e1-spcc-2026-11-10 --rows measure/rows-e1-spcc-2026-11-10.jsonl -> exit 0, wall 30.55s.",
+    "cell_summary": "rows=100 requests=100 truncated=0 failed_turns=0; finish_reason {'stop': 100}; answer_source {'content': 100}; token_dist {'n':100,'mean':4.6,'p95':7.0,'max':7.0}; tok_method=tiktoken:cl100k_base.",
+    "cap_gate": "allocation=100 cap=12094 reserve=0 spent_at_start=7981 used_in_run=100 spent_after=8081 delta=0; reconciled: the run's count 100 equals the rows gained 100.",
+    "manifest_sha256": "dbd5047c041ba2241a92e1bb7c56737aca23dddf2c350f46ffbfaf6357148e5c",
+    "row_stamp": "every row: claim=E1, comparison_eligible=True, model=occamy-1.0, temperature=0.0, seed=42, fixture_sha256=f0a636fea0f82b152e8d23f0f51a9fb0f38479eabd40290e73bd98ebd3e620c3",
+    "scorer": "longrun/score_longrun.py:score_answer_contract_rows(fixture, rows) -- the repo's own entry point, not a hand-rolled counter.",
+    "arm_table": {
+      "spcc": {"rows_file": "experiments/ptr-engine/measure/rows-e1-spcc-2026-11-10.jsonl", "checkpoint_accuracy": "20/48", "answered_correctly": 20, "abstained_after_mask": 0, "answered_wrong": 0, "unparsed": 0, "total": 48, "contract_correct": 19, "value_correct": 20},
+      "masking-no-fetch": {"rows_file": "experiments/ptr-engine/measure/rows-tx03-masking-r1.jsonl", "checkpoint_accuracy": "8/48", "answered_correctly": 8, "abstained_after_mask": 40, "answered_wrong": 0, "unparsed": 0, "total": 48},
+      "bounded-context-fetch": {"rows_file": "experiments/ptr-engine/measure/rows-tx03-fetch-r1.jsonl", "checkpoint_accuracy": "12/48", "answered_correctly": 12, "abstained_after_mask": 16, "answered_wrong": 1, "unparsed": 10, "total": 48}
     },
-    "checkout_note": "The session cwd /home/zer0null/.omp/wt/wt-20261109-055629-bd8df5c is a stale worktree at f17663d (an ancestor of the branch tip) with 58 unrelated dirty entries and no claim_mode.py. The branch of record research/next-candidates-2026-10-24 is checked out at /home/zer0null/research extractor at 997df58, which contains both the spcc repair (997df58 'U-SPCC-33: spcc keeps fixture deliveries in L2; fetches stay L3-only') and claim_mode.py. All work was done in that checkout."
+    "arm_provenance": "all three files are :8012 -- manifests/celltx03-masking-r1-masking-no-fetch-r1.json and celltx03-fetch-r1-bounded-context-fetch-r1.json both record endpoint http://192.168.2.168:8012/v1, engine sglang, id occamy-1.0. rows-tx03-8014-* (qwen3.5-9b) was NOT used.",
+    "by_distance_contract_over_n": {
+      "spcc": {"2": "6/8", "5": "3/8", "6": "5/8", "8": "3/8", "20": "2/8", "32": "0/8"},
+      "masking-no-fetch": {"2": "8/8", "5": "0/8", "6": "0/8", "8": "0/8", "20": "0/8", "32": "0/8"},
+      "bounded-context-fetch": {"2": "6/8", "5": "1/8", "6": "2/8", "8": "1/8", "20": "1/8", "32": "1/8"}
+    },
+    "spcc_passes": {
+      "count": 20,
+      "pre_compaction_turns": [3, 6, 7, 9, 10, 13, 14, 16, 19, 21, 22, 23],
+      "post_compaction_turns": [47, 54, 58, 63, 67, 69, 70, 72],
+      "post_compaction_note": "every post-compaction pass is for a fact introduced AFTER the most recent compaction (f05@45, f06@52, f07@61, f08@68); f06.d20 at turn 72 is a probe on the compaction turn itself",
+      "passes_crossing_a_compaction_boundary": 0,
+      "boundary_test": "intro < c < probe for c in {24, 48, 72, 96} -> 0 hits across all 20 passes",
+      "f04_never_passes": "f04 is delivered at turn 24, the compaction turn; d2@26, d5@29, d6@30, d8@32, d20@44, d32@56 all fail",
+      "kind_note": "cp.TX-03.f08.d2 (turn 70) answered kind=TEXT with the correct value 3700, so it is answered_correctly but not a NUM-contract pass (contract_correct=19, value_correct=20)"
+    },
+    "billing_spcc": {"prompt_tokens": 47594, "cached_tokens": 37632, "billed_tokens_known": 9962, "billed_upper_bound_tokens": 9962, "billed_unknown_rows": 0, "coverage": 1.0, "billed_source": "reported", "cached_fraction_of_prompt": 0.790687901836366, "reconcile_delta_total": 0, "reconcile_within_tolerance": true},
+    "billing_other_arms": {"masking-no-fetch": {"prompt_tokens": 80905, "cached_tokens": 68416, "billed_tokens_known": 12489, "coverage": 1.0}, "bounded-context-fetch": {"prompt_tokens": 100104, "cached_tokens": 76480, "billed_tokens_known": 23624, "coverage": 1.0}},
+    "verdict": {
+      "prediction_quoted": "spcc scores >= fetch on single-fact and > masking everywhere; billed tokens <= masking",
+      "falsifier_quoted": "spcc below fetch on single-fact, or spcc not strictly above masking on any checkpoint class, or billed tokens above masking",
+      "prediction": "FAILED",
+      "falsifier": "DID NOT FIRE",
+      "why": "spcc >= fetch on single-fact holds (20/48 vs 12/48; 6/8 vs 6/8 at d2, 3/8 vs 1/8 at d5, 5/8 vs 2/8 at d6, 3/8 vs 1/8 at d8) and billed tokens <= masking holds (9,962 <= 12,489), but '> masking everywhere' fails: at d2 masking scores 8/8 and spcc 6/8, and at d32 both score 0/8 which is not '>'. spcc is strictly above masking only on d5 (3>0), d6 (5>0), d8 (3>0) and d20 (2>0). No falsifier clause fires: spcc is not below fetch, it IS strictly above masking on four classes, and it bills below masking. The prereg's own deviation note predicted the falsifier 'is expected to fire' on post-compaction probes -- it did not; the 'everywhere' conjunct broke at d2, which is pre-compaction."
+    },
+    "limitations": [
+      "The cell is below E1's own request floor: PREREG-SPCC.md:25 says 'E1-E5 are each 200-500 requests'; this cell spent 100. run_longrun.py contains no reference to eval_gate_prereg, validate_g3 or GATE_PREREG, so nothing refused the shortfall. The result is a single-rep, under-ceiling observation, not a full E1 adjudication.",
+      "One rep per arm, :8012 only. spcc has never been run on :8014; no cross-build claim is made (ledger rule 9).",
+      "d2 is the only class where masking is non-zero, so 'spcc > masking everywhere' was always decided at d2 alone, and spcc loses there."
+    ],
+    "ledger": "FINDINGS-LEDGER.md gained one 7-column row. Column counts before: 15x10, 7x3, 14x7; after: 15x10, 7x3, 15x7 -- the 7-column table went 14 -> 15, nothing else moved.",
+    "docs_gate": "python3 tools/doc_check.py -> 'OK docs clean under /home/zer0null/research extractor', exit=0",
+    "checkout_note": "The session cwd /home/zer0null/.omp/wt/wt-20261109-055629-bd8df5c is a stale worktree at f17663d (an ancestor of the branch tip) with 58 unrelated dirty entries and no claim_mode.py. The branch of record research/next-candidates-2026-10-24 is checked out at /home/zer0null/research extractor at 997df58, which carries both the spcc repair (997df58 'U-SPCC-33: spcc keeps fixture deliveries in L2; fetches stay L3-only') and claim_mode.py. All work was done in that checkout."
   },
-  "blocker": "E1 claim id not yet resolvable",
-  "next_unit_hint": "Land E1 in claim_mode.CLAIM_IDS (claim_mode.py:95) plus its resolve_claim docstring, the _REFUSAL text and tests/test_claim_mode.py, then re-issue U-SPCC-35 unchanged: the cell command, TX-03.v1.json fixture, temperature 0, seed 42, occamy-1.0 at http://192.168.2.168:8012/v1 and --budget-cap 12094 were all found valid and were never exercised.",
+  "blocker": null,
+  "next_unit_hint": "E1's 'everywhere' conjunct is decided entirely at d2, where masking is 8/8 and spcc 6/8 -- the two spcc d2 misses are f04.d2 (turn 26, fact delivered on the turn-24 compaction) and one other. A follow-up should (a) run the cell at E1's own 200-500 request floor with >=2 reps so the d2 gap is not a single-rep artefact, and (b) wire run_longrun.py through cell.eval_gate_prereg so an E* cell below PREREG-SPCC's request floor is refused rather than silently run. E2 (COMPACT_EVERY in {12,24,48}) is the natural next experiment: this cell shows zero passes cross a compaction boundary, which is exactly the distance E2 varies.",
   "write_paths": [
+    "/home/zer0null/research extractor/experiments/ptr-engine/measure/rows-e1-spcc-2026-11-10.jsonl",
+    "/home/zer0null/research extractor/experiments/ptr-engine/longrun/manifests/e1-spcc-2026-11-10-spcc-r1.json",
+    "/home/zer0null/research extractor/experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md",
     "/home/zer0null/research extractor/orchestration/units/U-SPCC-35.md",
     "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-35.json"
   ]
