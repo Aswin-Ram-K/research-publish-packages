@@ -1248,9 +1248,34 @@ def followups_spent(rows: list[dict]) -> int:
                if row.get("kind") == "tool-followup" or row.get("fetch_followup") is True)
 
 
+def _flush_partial_followups(followups, resp, row_sink, exc=None, keep_last=True):
+    """Persist the follow-up rows a turn already bought before an exception unwinds.
+
+    PAID-ROW-PERSISTENCE (U-SPCC-42): a mid-turn ``CapRefusal`` used to propagate out of
+    the round loop before the rows for the follow-up requests already sent in that turn
+    were written, so the exit reconciliation reported a NEGATIVE delta and the ledger
+    understated the spend.  Every row for a request that reached the wire is now on disk
+    before the exception leaves this function.
+
+    ``keep_last`` leaves the FINAL follow-up row unwritten because the caller's turn row
+    stands in its slot (the completed path writes it that way, so the row count is
+    unchanged); a transport failure keeps nothing back, because the caller writes a
+    failure row instead of a turn row.
+    """
+    if row_sink is not None:
+        for row in (followups[:-1] if keep_last else followups):
+            row_sink(row)
+    if exc is not None:
+        try:
+            exc.partial_followups = list(followups)
+            exc.partial_resp = resp
+        except (AttributeError, TypeError):
+            pass
+
+
 def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messages, resp,
                  sent, budget, rounds_used, served=None, pinned=None, per_turn_cap=None,
-                 may_request=None, gate=None):
+                 may_request=None, gate=None, row_sink=None):
     """Run the bounded read_file channel after one model turn.
 
     Bounds (PROBE-CP3-V6): <= TOOL_CALLS_PER_TURN (2) calls per turn, at most
@@ -1372,12 +1397,28 @@ def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messag
              + "\n\nUse the tool result above. Answer the QUESTION now, within the word budget."},
         ]
         if sent >= budget:
+            # PAID-ROW-PERSISTENCE: the rounds already bought in this turn are on disk
+            # before the abort unwinds past them.
+            _flush_partial_followups(followups, resp, row_sink)
             raise BudgetExhausted(f"fetch at T{t} would exceed the request budget of {budget}")
         # WIRE-CAP-GATE: a follow-up is a REAL request and bills separately, so the brake
         # must see it too.  Reserved (and possibly refused) BEFORE the send.
         if gate is not None:
-            gate.acquire(t, "tool-followup")
-        resp = send_chat(cfg, next_messages)
+            try:
+                gate.acquire(t, "tool-followup")
+            except BaseException as exc:
+                # PAID-ROW-PERSISTENCE (U-SPCC-42): a refusal here must not discard the
+                # rows for the follow-ups already sent in this turn.  The last one is
+                # left to the caller's turn row, which stands in its slot.
+                _flush_partial_followups(followups, resp, row_sink, exc)
+                raise
+        try:
+            resp = send_chat(cfg, next_messages)
+        except BaseException as exc:
+            # A transport failure keeps nothing back: the caller writes a failure row
+            # for the send that failed, so every earlier follow-up needs its own row.
+            _flush_partial_followups(followups, resp, row_sink, exc, keep_last=False)
+            raise
         sent += 1
         rounds_this_turn += 1
         if fresh:
@@ -3613,25 +3654,65 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                  followup_rows) = fetch_rounds(
                     cfg, fixture, arm, rep, run_id, t, manifest_sha, extras,
                     planner.messages(info["prompt"]), resp, sent, budget, fetch_rounds_used,
-                    fetch_cache, pinned, per_turn_cap, _may_request, gate)
+                    fetch_cache, pinned, per_turn_cap, _may_request, gate,
+                    row_sink=lambda _r: append_row(rows_path, _r))
                 followups_bought += len(followup_rows)
                 rounds_this_turn = len(followup_rows)
                 prompt_serves = sum(1 for c in turn_calls
                                     if c.get("served_from") == "prompt")
             except CapRefusal as exc:
-                # The refusal lands MID-turn: this turn's own request already reached the
-                # wire and is billed, so its row is written before the run stops — rows
-                # written stay equal to the requests legitimately made.
+                # PAID-ROW-PERSISTENCE (U-SPCC-42): the refusal lands MID-turn.  The rows
+                # for the follow-ups already sent were persisted by fetch_rounds before
+                # the refusal unwound; the turn's own send and the last follow-up (whose
+                # row IS the turn row) are written here, so rows == requests on the
+                # refusal path and the exit reconciliation reports delta 0.
+                partial = list(getattr(exc, "partial_followups", None) or [])
+                last_resp = getattr(exc, "partial_resp", None) or resp
+                if attribute_initial_send() and partial:
+                    append_row(rows_path, make_row(
+                        cfg, fixture, arm, rep, run_id, t, resp, resp.get("content"),
+                        "turn-initial", manifest_sha,
+                        dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+                             send_index=0, initial_send=True,
+                             row_measurement_source="turn-initial",
+                             fetch_rounds_this_turn=len(partial),
+                             next_request_kind="tool-followup")))
+                turn_extra = dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+                                  cap_refused_mid_turn=True)
+                if partial:
+                    # ROW-ATTRIBUTION: this row stands in the LAST follow-up's slot, so
+                    # it carries that request's durable markers exactly as the completed
+                    # path's turn row does.
+                    turn_extra.update(
+                        row_measurement_source="tool-followup",
+                        send_index=len(partial), fetch_followup=True,
+                        fetch_round_final=True,
+                        final_round_billed=partial[-1].get("billed_round"),
+                        final_round_prompt_served=partial[-1].get("prompt_served"))
                 append_row(rows_path, make_row(
-                    cfg, fixture, arm, rep, run_id, t, resp, resp.get("content"), "turn",
-                    manifest_sha, dict(extras, prompt_sha256=sha256_text(info["prompt"]),
-                                       cap_refused_mid_turn=True)))
-                for _f in followup_rows:
-                    append_row(rows_path, _f)
+                    cfg, fixture, arm, rep, run_id, t, last_resp,
+                    last_resp.get("content") if last_resp else None, "turn",
+                    manifest_sha, turn_extra))
                 return _cap_stop(exc, gate, manifest_path, manifest_sha, rows_path)
             except BudgetExhausted as exc:
-                for _f in followup_rows:
-                    append_row(rows_path, _f)
+                # Same invariant as the refusal path: the rounds already bought are on
+                # disk, and the turn's own send plus the last follow-up are written here.
+                partial = list(getattr(exc, "partial_followups", None) or [])
+                last_resp = getattr(exc, "partial_resp", None) or resp
+                if attribute_initial_send() and partial:
+                    append_row(rows_path, make_row(
+                        cfg, fixture, arm, rep, run_id, t, resp, resp.get("content"),
+                        "turn-initial", manifest_sha,
+                        dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+                             send_index=0, initial_send=True,
+                             row_measurement_source="turn-initial",
+                             fetch_rounds_this_turn=len(partial),
+                             next_request_kind="tool-followup")))
+                append_row(rows_path, make_row(
+                    cfg, fixture, arm, rep, run_id, t, last_resp,
+                    last_resp.get("content") if last_resp else None, "turn",
+                    manifest_sha, dict(extras, prompt_sha256=sha256_text(info["prompt"]),
+                                       error="budget_exhausted")))
                 print(f"BUDGET ABORT at T{t}: {exc}", file=sys.stderr)
                 return 4
             except client.TurnWallCap as exc:

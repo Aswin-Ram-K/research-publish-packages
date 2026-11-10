@@ -1,0 +1,27 @@
+{
+  "unit": "U-SPCC-42",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_paid_row_persistence.py",
+    "orchestration/units/U-SPCC-42.md"
+  ],
+  "evidence": {
+    "red": "pre-fix run_longrun.py: allocation=2 -> 'cap-gate: ... spent_after=101 delta=-1' + 'CAP GATE UNRECORDED (delta=-1) - refusing, exit 9'; allocation=3 -> 'delta=-2' + exit 9; pytest '3 failed, 2 passed, 1 subtests passed'",
+    "green": "post-fix: pytest test_paid_row_persistence.py -> '3 passed, 3 subtests passed'",
+    "acceptance_suite": "test_paid_row_persistence + test_gate_arm_count + test_cap_gate + test_request_ledger -> '38 passed, 1 failed'; the only failure is test_request_ledger::TestRealCorpus::test_g (correctly red on spend over the tool default cap, left alone)",
+    "full_longrun_dir": "870 passed, 2 failed: test_g (known red) and test_journal_lint::test_census_over_the_live_corpus_is_reported (pre-existing, other agents' handoff JSONs outside the frozen journal baseline)",
+    "doc_check": "python3 tools/doc_check.py -> exit 0",
+    "delta_before": "-1 at allocation=2 and -2 at allocation=3 on the mid-turn refusal path",
+    "delta_after": "0 on every refusal path; rows == sends",
+    "completed_cell_unchanged": "no-tools 2-turn cell: 2 sends, 2 rows, kinds ['turn','turn'], delta 0; tools-on completed turn: rows == sends, delta 0"
+  },
+  "blocker": null,
+  "next_unit_hint": "The ARM_D inline follow-up path (run_cell, arm_cd.service_fetches) still writes its rows only after the send returns; it has the same shape but was out of scope. Also consider routing the BudgetExhausted exit through _abort_stop so its spend is reconciled like every other abort.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_paid_row_persistence.py",
+    "orchestration/units/U-SPCC-42.md",
+    "orchestration/handoffs/U-SPCC-42.json"
+  ]
+}
