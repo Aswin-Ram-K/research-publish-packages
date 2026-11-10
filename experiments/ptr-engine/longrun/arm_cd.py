@@ -42,9 +42,21 @@ WINDOW_TURNS = 4
 class ArmCDState:
     """Per-cell state for masking + bounded fetch."""
 
-    def __init__(self, fixture: Optional[dict] = None, tokenizer=None):
+    def __init__(self, fixture: Optional[dict] = None, tokenizer=None,
+                 window_turns: int = WINDOW_TURNS):
         self.fixture = fixture
         self.tokenizer = tokenizer if tokenizer is not None else StubTokenizer()
+        # E3's cell dimension: the masking window.  Omitted means the module
+        # constant, so a run without --window-turns masks exactly as before; a
+        # window above the fixture's turn count masks nothing, which is how E3
+        # separates position from eviction with the body retained.
+        try:
+            window = int(window_turns)
+        except (TypeError, ValueError):
+            raise ValueError("window_turns must be an integer, got %r" % (window_turns,))
+        if window < 1:
+            raise ValueError("window_turns must be >= 1, got %r" % (window_turns,))
+        self.window_turns = window
         if self.fixture is None:
             self._discover_fixture()
         self.masked_turns: set = set()
@@ -170,7 +182,7 @@ class ArmCDState:
         self._turn = int(t)
         self.masked_rows_this_turn = 0
         entries_this: List[Dict[str, Any]] = []
-        cutoff = int(t) - WINDOW_TURNS
+        cutoff = int(t) - int(self.window_turns)
         turns = (self.fixture or {}).get("turns", []) if isinstance(self.fixture, dict) else []
         # existing refs for dedup of pointer entries
         existing_refs = {getattr(e, "ref", None) for e in self._turn_entries}

@@ -1,0 +1,59 @@
+{
+  "unit": "U-SPCC-63",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/arm_cd.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_window_turns_param.py",
+    "orchestration/units/U-SPCC-63.md",
+    "orchestration/handoffs/U-SPCC-63.json"
+  ],
+  "evidence": {
+    "window_constant": {"name": "WINDOW_TURNS", "value": 4, "unchanged": true},
+    "parameter": {
+      "arm_cd": "ArmCDState(fixture=None, tokenizer=None, window_turns=WINDOW_TURNS) -> self.window_turns",
+      "cutoff": "arm_cd.py:185 cutoff = int(t) - int(self.window_turns)",
+      "planner": "Planner(arm, fixture, dry_run, compact_every=COMPACT_EVERY, window_turns=arm_cd.WINDOW_TURNS)",
+      "run_cell": "run_cell(cfg, fixture, arm, rep, run_id, rows_path, compact_every=COMPACT_EVERY, window_turns=arm_cd.WINDOW_TURNS)",
+      "cli": "--window-turns N (type=int, default None); window_turns_setting(cfg) resolves None -> 4 and rejects < 1 with exit 2",
+      "run_id_stamp": "non-default window appends -w<N> to the cell run id (dry-run and live)"
+    },
+    "unchanged": ["masking semantics", "[MASKED <ref>] marker format", "evicted == masked_rows stamping (run_longrun.py:1794)"],
+    "default_byte_identical": {
+      "turns": 30,
+      "prompts_compared": 30,
+      "pre_change_source": "git show HEAD:experiments/ptr-engine/longrun/arm_cd.py",
+      "result": "all 30 prompt_sha256 identical",
+      "first_sha": "8f593bdc8505f338ddee8c1345e1eb1910a85fc5dfc4249baa6ce399580ad587",
+      "last_sha": "d8026742e58e1356978bc35b9735f50eb3f58379703bf2951bbb0e1525760959"
+    },
+    "no_mask_proof_window_200": {
+      "turns": 100,
+      "masked_rows_all_zero": true,
+      "masked_marker_absent": true,
+      "body_retained_at_t100": "VAL_A = 3001 present in the T100 prompt"
+    },
+    "unchanged_mask_proof_window_4": {
+      "t1_tool_output_masked_at_turn": 5,
+      "t4_tool_output_masked_at_turn": 8,
+      "marker": "[MASKED doc-fact-01@r1]",
+      "body_absent_after_mask": true
+    },
+    "evicted_equals_masked_rows": {"windows": [4, 200], "turns": 30, "result": "equal on every row"},
+    "red": "4 failed, 1 passed: TypeError: Planner.__init__() got an unexpected keyword argument 'window_turns'; AttributeError: 'ArmCDState' object has no attribute 'window_turns'",
+    "green": "5 passed",
+    "suite": "TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python -m pytest test_window_turns_param.py test_arm_cd_wiring.py test_compact_every_param.py test_tx04_fixture.py -q -> 31 passed",
+    "doc_check": "exit 0",
+    "endpoint_requests": 0,
+    "model_calls": 0
+  },
+  "blocker": null,
+  "next_unit_hint": "E3 can now run the C arm with --window-turns 200 (or any value above N) to retain every body and measure position with no eviction, and with --window-turns 4 (or no flag) to reproduce today's masking arm. The launch gate (treatment_refusals) does not gate arm C, so a no-mask C cell is not refused. Note the run id carries -w200 so the two cells never pool.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/arm_cd.py",
+    "experiments/ptr-engine/longrun/run_longrun.py",
+    "experiments/ptr-engine/longrun/tests/test_window_turns_param.py",
+    "orchestration/units/U-SPCC-63.md",
+    "orchestration/handoffs/U-SPCC-63.json"
+  ]
+}

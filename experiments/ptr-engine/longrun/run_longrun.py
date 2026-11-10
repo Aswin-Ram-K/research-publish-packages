@@ -1563,12 +1563,15 @@ class Planner:
     """Builds the next prompt for one arm from the answers already recorded."""
 
     def __init__(self, arm: str, fixture: dict, dry_run: bool,
-                 compact_every: int = COMPACT_EVERY):
+                 compact_every: int = COMPACT_EVERY,
+                 window_turns: int = arm_cd.WINDOW_TURNS):
         self.arm = arm
         self.fixture = fixture
         self.dry_run = dry_run
         # E2's cell dimension: the fold distance this cell's spcc arm runs at.
         self.compact_every = int(compact_every)
+        # E3's cell dimension: the masking window this cell's C/D arm runs at.
+        self.window_turns = int(window_turns)
         self.answers: list[str] = []
         self.bpt = float(fixture["bytes_per_token"])
         self.wall_tokens = int(fixture["wall_tokens"])
@@ -1576,7 +1579,8 @@ class Planner:
         # B state
         self.digest: str | None = None
         self.raw: list[str] = []
-        self.arm_cd = arm_cd.ArmCDState(fixture=fixture) if arm in (arm_cd.ARM_C, arm_cd.ARM_D) else None
+        self.arm_cd = (arm_cd.ArmCDState(fixture=fixture, window_turns=self.window_turns)
+                       if arm in (arm_cd.ARM_C, arm_cd.ARM_D) else None)
         # spcc: stable-prefix compiler state (own journal, epoch and compaction count).
         self.spcc = (arm_cd.SpccArmState(fixture=fixture,
                                          compact_every=self.compact_every)
@@ -3244,7 +3248,8 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int, int]],
     for label in order:
         arm, interval = variants[label]
         fx = fixture_for_arm(fixture, arm)
-        planner = Planner(arm, fx, dry_run=True, compact_every=interval)
+        planner = Planner(arm, fx, dry_run=True, compact_every=interval,
+                          window_turns=window_turns_setting(cfg))
         c = {"reps": reps_by_arm[label], "digest_requests": 0, "wall_turn": None,
              "trunc_turn": None, "post_wall": None}
         counts[label] = c
@@ -3381,7 +3386,8 @@ def refuse_arm_without_tools(cfg, arm: str) -> int:
 
 
 def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str,
-             compact_every: int = COMPACT_EVERY) -> int:
+             compact_every: int = COMPACT_EVERY,
+             window_turns: int = arm_cd.WINDOW_TURNS) -> int:
     assert_repeat_identity(run_id, rep, getattr(cfg, 'generation', 'gen-7'))
     # BEFORE the ARM_C copy below clears cfg.tools: the guard reads the launch's own
     # --tools, and C is allowed to be tool-less while D is not.
@@ -3452,7 +3458,8 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
           f"spent_at_start={gate.spent_at_start} headroom={gate.headroom} "
           f"files={len(gate.paths)} (per-request brake armed before the first send)")
 
-    planner = Planner(arm, fixture, dry_run=False, compact_every=compact_every)
+    planner = Planner(arm, fixture, dry_run=False, compact_every=compact_every,
+                      window_turns=window_turns)
     start = 1
     if rows:
         start = resume_start(rows) + 1
@@ -4299,6 +4306,11 @@ def build_parser():
                          "spcc arm inside the SAME cell, so G3's n = turns x variants "
                          "x reps. Omitted = the module default (%d), one variant, "
                          "byte-identical to a run without this flag." % COMPACT_EVERY)
+    ap.add_argument("--window-turns", type=int, default=None, dest="window_turns",
+                    metavar="N",
+                    help="masking window for the C/D arms (default: the module constant, "
+                         "4). A value above the fixture's turn count masks nothing, which "
+                         "is how E3 forces retention with the body intact.")
     ap.add_argument("--generation", default="gen-7",
                     help="recorded validity generation of this run; gen-7 asserts hard, "
                          "gen-6 and earlier are labelled LEGACY-NONCONFORMING")
@@ -4450,6 +4462,26 @@ def compact_intervals(cfg) -> list:
     if not out:
         raise ValueError("--compact-every %r names no interval" % (raw,))
     return out
+
+
+def window_turns_setting(cfg) -> int:
+    """The masking window this run uses (``--window-turns``, default ``WINDOW_TURNS``).
+
+    Omitted means the module constant, so a run without the flag masks exactly as
+    before and its prompts are byte-identical.  A value above the fixture's turn
+    count masks nothing: the body is retained and the arm measures position, not
+    eviction (PREREG-SPCC §E3).
+    """
+    raw = getattr(cfg, "window_turns", None)
+    if raw is None:
+        return arm_cd.WINDOW_TURNS
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError("--window-turns %r is not an integer" % (raw,))
+    if value < 1:
+        raise ValueError("--window-turns %r: the window must be >= 1" % (raw,))
+    return value
 
 
 def expand_cells(arms, reps, intervals) -> list:
@@ -4619,6 +4651,14 @@ def main(argv=None) -> int:
         print("COMPACT-EVERY USAGE: %s" % (exc,), file=sys.stderr)
         return 2
     cfg.compact_intervals = intervals
+    # E3's cell dimension: the masking window.  Resolved once, before any manifest is
+    # frozen, so the preview and the live cell read the same number.
+    try:
+        window = window_turns_setting(cfg)
+    except ValueError as exc:
+        print("WINDOW-TURNS USAGE: %s" % (exc,), file=sys.stderr)
+        return 2
+    cfg.window_turns = window
     cells = expand_cells(arms, cfg.reps, intervals)
     # WALL-KEY PREFLIGHT: resolve every requested arm's wall BEFORE a manifest is frozen or
     # a body is rendered, so a fixture that declares `wall_tokens_by_arm` but omits an arm
@@ -4635,6 +4675,8 @@ def main(argv=None) -> int:
             rid = f"dryrun-{fixture['task_id']}-{arm}-r{rep}"
             if interval != COMPACT_EVERY:
                 rid += f"-c{interval}"
+            if window != arm_cd.WINDOW_TURNS:
+                rid += f"-w{window}"
             mid = cfg.manifest_path or os.path.join(cfg.manifest_dir, rid + ".json")
             # the manifest freezes the wall the CELL runs at: per arm, never the top-level
             doc = build_manifest(cfg, fixture_for_arm(fixture, arm), arm, rep, rid, rows_path)
@@ -4685,7 +4727,10 @@ def main(argv=None) -> int:
         rid = f"{run_base}-{arm}-r{rep}"
         if interval != COMPACT_EVERY:
             rid += f"-c{interval}"
-        rc = run_cell(cfg, fixture, arm, rep, rid, rows_path, compact_every=interval)
+        if window != arm_cd.WINDOW_TURNS:
+            rid += f"-w{window}"
+        rc = run_cell(cfg, fixture, arm, rep, rid, rows_path, compact_every=interval,
+                      window_turns=window)
         if rc != 0:
             return rc
     return report_run(rows_path, run_base, cfg, smoke=bool(cfg.smoke))
