@@ -1,0 +1,33 @@
+{
+  "unit": "U-SPCC-39",
+  "status": "blocked",
+  "artifacts": [
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-39.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-39.json",
+    "/home/zer0null/research extractor/experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md"
+  ],
+  "evidence": {
+    "arithmetic_answer": "The gate's n is turns x reps PER ARM, not the request count. cell.py:1259 `facts[\"n\"] = int(t[\"value\"]) * int(r[\"value\"])` has two operands and no arm term; cell.py:1296 `if ok and not (lo <= facts[\"n\"] <= hi)` compares that n to PREREG-SPCC's request_ceiling. G1 disagrees: cell.py:1130 `turns_total = facts[\"turns\"] * facts[\"arms\"] * facts[\"reps\"]` does count arms. The runner prices per arm at run_longrun.py:3105 `cell_total = turns + extra` and sums at run_longrun.py:3113 `would_send_total`.",
+    "shapes": {
+      "3_arms_1_rep_100_turns": {"gate_n": 100, "gate_verdict": "refused (below 200)", "true_requests": 300, "violates": "gate floor"},
+      "3_arms_2_reps_100_turns": {"gate_n": 200, "gate_verdict": "admitted", "true_requests": 600, "violates": "500 request ceiling"},
+      "2_arms_2_reps_100_turns": {"gate_n": 200, "gate_verdict": "admitted", "true_requests": 400, "violates": "E1 design (needs 3 arms)"},
+      "1_arm_2_reps_100_turns": {"gate_n": 200, "gate_verdict": "admitted", "true_requests": 200, "violates": "E1 design (needs 3 arms)"}
+    },
+    "gate_defect": "A three-arm two-rep cell is ADMITTED at n=200 while sending 600 requests, 100 above PREREG-SPCC's own 500 ceiling. The gate cannot see the other arms: cell.py:2222 takes a single --arm and validate_g3 never receives an arm count. The only three-arm shape that fits the ceiling (reps=1, 300 requests) is refused for being under the floor.",
+    "dry_run": "run_longrun.py --dry-run --fixture longrun/tasks-v7/TX-03.v1.json --arms spcc,masking-no-fetch,bounded-context-fetch --reps 1 --temperature 0 --seed 42 -> would_send_total=300 (each arm turn_requests=100, digest_requests=0); --reps 2 -> would_send_total=600 (each arm turn_requests=200, digest_requests=0).",
+    "validate_g3_direct": "cell.validate_g3('E1', 100, reps, 48, {'E1': e1}, spcc=e1) -> reps=1: n=100 ok=False; reps=2: n=200 ok=True. Identical n for 1, 2 or 3 arms.",
+    "fixture_span": "longrun/tasks-v7/TX-03.v1.json: N=100, 48 checkpoints, turns 3..100, 12 at turn<24 and 36 at turn>=24. A shortened --max-turns cell loses checkpoints and is not E1.",
+    "requests_spent": 0,
+    "ledger": "FINDINGS-LEDGER.md 7-column table 15 -> 16 rows; awk -F'|' '/^\\|/ {print NF-2}' | sort | uniq -c before: 15x10, 7x3, 15x7; after: 15x10, 7x3, 16x7.",
+    "docs_gate": "python3 tools/doc_check.py -> exit 0",
+    "checkout_note": "The session cwd /home/zer0null/.omp/wt/wt-20261109-055629-bd8df5c is a stale worktree at f17663d with no longrun/cell.py. All work was done in /home/zer0null/research extractor on research/next-candidates-2026-10-24 (HEAD 5bc1338)."
+  },
+  "blocker": "E1 as preregistered cannot be run inside its own 200-500 request ceiling with the current gate arithmetic. No three-arm shape satisfies gate n in [200,500] AND true requests <= 500: reps=1 gives n=100 (refused) and 300 requests; reps=2 gives n=200 (admitted) and 600 requests. Shortening --max-turns or substituting a fixture would not be E1. No request was spent.",
+  "next_unit_hint": "Fix the gate before any E1 run: either pass the arm count into validate_g3 so n is the request count the ceiling is denominated in (matching G1's turns_total at cell.py:1130), or restate PREREG-SPCC's E1 ceiling per arm. Then re-derive the admissible shape. Note that U-SPCC-37's case b ('E1, reps=2 -> n=200, sends 200') was a single-arm cell and is exactly the shape that hides the 3x undercount.",
+  "write_paths": [
+    "/home/zer0null/research extractor/orchestration/units/U-SPCC-39.md",
+    "/home/zer0null/research extractor/orchestration/handoffs/U-SPCC-39.json",
+    "/home/zer0null/research extractor/experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md"
+  ]
+}
