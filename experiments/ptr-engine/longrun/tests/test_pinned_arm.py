@@ -161,3 +161,71 @@ def test_window_pressure_folds_before_the_interval():
     floored = _state(fold_at_fraction=0.70, compact_every=24)
     assert floored.compact_every == 24
     assert floored.fold_at_tokens == st.fold_at_tokens
+
+
+def test_calibrated_fraction_lands_the_fold_in_the_design_band():
+    """``FOLD_AT_FRACTION`` is calibrated so the fold fires at 70-80 % of the
+    window in REAL tokens, not in the compiler's estimate.
+
+    The compiler has no tokenizer: it divides characters by
+    ``CHARS_PER_TOKEN = 3.122``, measured on a prose-heavy whole prompt.
+    Delivered code bodies measure 3.93 chars/token on cl100k, so the estimate
+    runs 5.5 % high and a bare ``0.70`` fired at 67.1 % of the window -- below
+    the design's floor.  ``0.739`` corrects it.
+
+    Measured on LR-07 with the real tokenizer, 0 requests: pre-fold real
+    fractions 0.702, 0.699, 0.703, 0.711, 0.708 (mean 0.705) across five folds.
+    """
+    import tiktoken
+
+    enc = tiktoken.get_encoding("cl100k_base")
+    fx = _fixture()
+    run = arm_cd.pinned_run(fx, "m", recency=False)
+    st = arm_cd.PinnedArmState(fixture=fx, tokenizer=enc, run=run, index_lines=[])
+    prev_epoch = 0
+    last_real = 0
+    fractions = []
+    for t in range(1, 221):
+        turn = fx["turns"][t - 1]
+        for out in (turn.get("tool_outputs") or []):
+            st.add_delivery(out.get("body"))
+        prompt = st.build(t, turn.get("question", ""))
+        if st.state.epoch != prev_epoch:
+            # ``prompt`` is the POST-fold render; the trigger fired on the
+            # PRE-fold size, which is the previous turn's prompt.
+            fractions.append(last_real / fx["window_tokens"])
+            prev_epoch = st.state.epoch
+        last_real = len(enc.encode(prompt))
+
+    assert len(fractions) >= 4, fractions
+    for frac in fractions:
+        assert 0.69 <= frac <= 0.81, (frac, fractions)
+    assert 0.70 <= sum(fractions) / len(fractions) <= 0.80, fractions
+
+
+def test_count_refetch_counts_a_reread_and_ignores_pathless_calls():
+    """E7's primary mechanism: a tool call that re-reads a range already read
+    in this cell is a re-fetch.  A call with no path (refused or malformed) is
+    neither counted nor recorded, so a refusal cannot inflate the metric."""
+    import run_longrun
+
+    seen = set()
+    first = [
+        {"path": "ptr_engine/errors.py", "start_line": 114, "end_line": 126},
+        {"path": "ptr_engine/resolve.py", "start_line": 66, "end_line": 110},
+        {"ref": "call_1"},  # refused: no path
+    ]
+    assert run_longrun.count_refetch(first, seen) == 0
+    assert len(seen) == 2
+
+    # The same range again is a re-fetch; a different range is not.
+    second = [
+        {"path": "ptr_engine/errors.py", "start_line": 114, "end_line": 126},
+        {"path": "ptr_engine/errors.py", "start_line": 114, "end_line": 127},
+        {"path": "ptr_engine/errors.py", "start_line": 114, "end_line": 126},
+    ]
+    assert run_longrun.count_refetch(second, seen) == 2
+    assert len(seen) == 3
+    # An empty turn is zero, not an error.
+    assert run_longrun.count_refetch([], seen) == 0
+    assert run_longrun.count_refetch(None, seen) == 0

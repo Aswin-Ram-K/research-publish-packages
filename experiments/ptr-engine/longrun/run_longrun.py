@@ -54,6 +54,13 @@ from typing import Optional, List
 # ANSWER-CONTRACT (v5): the parser is grade_v5's own function, imported - never a
 # second implementation. Same directory, stdlib only, no request, no model.
 _LONGRUN_HERE = os.path.dirname(os.path.abspath(__file__))
+# The repo root, anchored to THIS file rather than to the process cwd.  The
+# manifest default below is a repo-root-relative path; resolving it against cwd
+# meant a dry-run started from ``experiments/ptr-engine`` wrote its manifests to
+# ``experiments/ptr-engine/experiments/ptr-engine/longrun/manifests/`` -- a stray
+# tree that looked like evidence and was not.  Same class of bug as the preview
+# hazard (docs/STATE.md §6 item 13): a default path that silently depends on cwd.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(_LONGRUN_HERE)))
 if _LONGRUN_HERE not in sys.path:
     sys.path.insert(0, _LONGRUN_HERE)
 from grade_v5 import parse_answer_contract  # noqa: E402
@@ -1566,6 +1573,30 @@ def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messag
 
 
 # ------------------------------------------------------------------------ planner
+def count_refetch(turn_calls, seen):
+    """Count this turn's tool calls that re-read a range already read in this cell.
+
+    E7's primary mechanism.  A fold drops the journal, so a fact the agent had
+    already read has to be fetched again; ``refetch_count`` is what makes that
+    cost visible per row.  ``seen`` is the per-cell set of
+    ``(path, start_line, end_line)`` tuples, mutated in place: a hit is a
+    re-fetch, a miss is added.  A call with no ``path`` (a refused or malformed
+    call) is neither counted nor recorded.
+    """
+    refetch = 0
+    for call in turn_calls or ():
+        if not isinstance(call, dict):
+            continue
+        key = (call.get("path"), call.get("start_line"), call.get("end_line"))
+        if key[0] is None:
+            continue
+        if key in seen:
+            refetch += 1
+        else:
+            seen.add(key)
+    return refetch
+
+
 class Planner:
     """Builds the next prompt for one arm from the answers already recorded."""
 
@@ -1607,6 +1638,11 @@ class Planner:
         self.lease_state = ""
         self.lease = 1
         self.lease_start = 1
+        # E7's primary mechanism: a tool call whose (path, start, end) was already
+        # read in this cell is a RE-FETCH.  The set is per-cell (one Planner per
+        # cell), so a re-read across a fold is counted, which is exactly the cost
+        # a fold causes.
+        self.seen_ranges = set()
 
     # -- helpers ---------------------------------------------------------
     def messages(self, user: str) -> list[dict]:
@@ -4149,6 +4185,13 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                 row_extra["tool_calls"] = turn_calls
             row_extra["fetch_rounds_used"] = fetch_rounds_used
             row_extra["fetch_rounds_this_turn"] = rounds_this_turn
+            # E7's primary mechanism, measured per row: a tool call whose
+            # (path, start_line, end_line) was already read in this cell is a
+            # RE-FETCH -- the cost a fold causes by dropping the journal.  The
+            # set is per-cell, so a re-read after a fold is counted.
+            _refetch = count_refetch(turn_calls, planner.seen_ranges)
+            row_extra["refetch_count"] = _refetch
+            row_extra["distinct_ranges_read"] = len(planner.seen_ranges)
             row_extra["fetch_prompt_serves"] = prompt_serves
             row_extra["fetch_rounds_cap_per_turn"] = per_turn_cap
             suppressed = sum(1 for c in turn_calls if c.get("followup_suppressed"))
@@ -4385,7 +4428,8 @@ def build_parser():
                          "gen-6 and earlier are labelled LEGACY-NONCONFORMING")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--self-test", action="store_true")
-    ap.add_argument("--manifest-dir", default="experiments/ptr-engine/longrun/manifests")
+    ap.add_argument("--manifest-dir",
+                    default=os.path.join(_REPO_ROOT, "experiments/ptr-engine/longrun/manifests"))
     ap.add_argument("--manifest-path", default=None)
     ap.add_argument("--preview-root", default=None, dest="preview_root",
                     help="redirect the dry-run preview tree (default: the tracked "

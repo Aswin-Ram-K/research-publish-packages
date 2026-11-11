@@ -63,7 +63,17 @@ PIN_CAP_TOKENS = 512
 #: ``window_tokens``.  A real agent folds because the window fills, not because a
 #: turn count is reached (docs/COMPACTION-CACHE-DESIGN.md §7, PREREG-COMPACTION.md
 #: "Design": "Fold at 70 % of the window").  The turn interval stays as a floor.
-FOLD_AT_FRACTION = 0.70
+#:
+#: CALIBRATED, not guessed.  The compiler has no tokenizer, so it estimates size
+#: as ``len(text) / CHARS_PER_TOKEN`` with ``CHARS_PER_TOKEN = 3.122`` -- measured
+#: on a whole real prompt, which is prose-heavy.  Delivered code bodies measure
+#: 3.93 chars/token on cl100k, so the estimate runs 5.5 % HIGH on a code-heavy
+#: journal.  Measured on LR-07: at ``0.70`` the fold fired at 87,990 real tokens
+#: = 67.1 % of a 131,072 window, below the design's 70 % floor.  ``0.70 x 1.055
+#: = 0.739`` lands the fold at 70.0 % in real tokens, which is what the design
+#: asks for.  Re-derive this if CHARS_PER_TOKEN or the fixture's content mix
+#: changes; the derivation is recorded in PREREG-COMPACTION.md "Deviation note 3".
+FOLD_AT_FRACTION = 0.739
 
 # Zero-width and bidi control characters.  A pin written from tool output is
 # trusted text once it is in the prefix, so the characters that make a poisoned

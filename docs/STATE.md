@@ -206,7 +206,8 @@ and is worse than `pins` in all 8. E7 was therefore redesigned to **six arms at 
 in, and `spcc` is no longer an E7 arm. Its quality instrument is
 `experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-07.v5.json`: 220 turns, `L0 ≈ 40.5 k` tokens,
 `window_tokens = 131072`, 5 decidable checkpoints (4 NUM, 1 CALL) over 28 real `ptr_engine` files, built
-byte-reproducibly by `longrun/tools/build_long_fixture.py` (seed 20261111, sha256 `55dc768a…`), verified
+byte-reproducibly by `longrun/tools/build_long_fixture.py` (seed 20261111; rebuilt with the real read
+bodies, sha256 `b2d2d3f2…`), verified
 `PASS: 5/5 checkpoints decidable, none colliding, all <= 40 tokens` and shown to discriminate by
 `grade_v5.py` (correct 4/4 pass, wrong 0/5 fail). E7's pre-registration is
 `experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md`: six arms, six predictions, five
@@ -232,11 +233,48 @@ the overflow returned, `supersedes P<n>`, sanitise zero-width/bidi from tool tex
 pin, and an `ACTIVE` line gated on `recency`. 47 contract tests pass; red→green recorded in
 `test_layers_compaction.py` (3 failed against the pre-change module, 6 pass now).
 
-**One fixture gap remains, and it blocks the window trigger.** `LR-07.v5.json` carries no `tool_outputs`
-bodies, so each journal line is only the question text (~45 tokens) and the prompt reaches just
-**55,485 tokens at T220** — the 91,750 threshold is never reached. The fixture is real-length in `L0` but
-not in journal growth; it is being rebuilt with the real read bodies so the journal grows ~1,000
-tokens/turn and the prompt crosses the threshold at roughly T47.
+**The fixture gap is closed, and the window trigger now fires (2026-11-11, 0 requests).**
+`LR-07.v5.json` was rebuilt with the real read bodies: every work turn carries
+`tool_outputs: [{body, doc_id, revision: 1}]` and the fixture gained a top-level `documents` list (33
+entries, one per distinct read range) — required, because `run_longrun.py:299` raises `fixture turn N
+has tool_outputs but no documents` and `:317` raises `tool_outputs body != revision value` on any
+mismatch. Journal growth is now **208 work turns × 1 body, 835,995 body bytes, 212,668 cl100k tokens,
+mean 1,022 / median 1,002 per work turn**. The fixture is 1,283,217 B, sha256
+`2e5dde6c62ae3e6fc0ffd3a3dbca814d7dcc81fb52250d5caea936759cc65a95`, 25 top-level keys (LR-01 has 24),
+system prompt 141,710 chars. The generator is byte-reproducible (three builds, one sha256) and
+**touch-stable** — the workspace tree is now name-ordered rather than newest-mtime-first, so touching a
+file no longer moves the fixture's sha out from under rows already scored against it.
+
+**The fixture's sha still moves when a doc it embeds changes**, because the system prompt is built from
+the live `docs/` tree: editing `docs/STATE.md` moved it from `2e5dde6c…` to `b2d2d3f2…` in this session.
+That is not a defect in the generator — it is what "the fixture pins a snapshot" means — but it is a
+**run-order constraint**: rebuild the fixture as the last step before the first E7 request, after the
+docs settle, and record the sha in the run record. Rows scored against one sha must not be pooled with
+rows scored against another.
+
+Dry-run on `pinned`: `distinct_prefixes=6 over T1..T220 first_prefix_change=T41`, folds at
+**T41, T79, T119, T159, T199** (on the pre-rebuild fixture: T41, T79, T119, T161, T201), fold records
+`P2|fold|T34|34 turns dropped at epoch 1` … `P7|fold|T212|35 turns dropped at epoch 6`. Before the
+rebuild: `distinct_prefixes=1`, no fold, 55,485 tokens at T220.
+
+**`FOLD_AT_FRACTION` is calibrated to `0.739`, not `0.70`.** The compiler estimates size as
+`len(text) / CHARS_PER_TOKEN` with `3.122`, measured on a prose-heavy whole prompt; delivered code
+bodies measure 3.93 chars/token, so the estimate runs 5.5 % high and a bare `0.70` fired at **67.1 %**
+of the window — below the design's 70 % floor. At `0.739` the measured pre-fold real fractions are
+**0.702, 0.699, 0.703, 0.711, 0.708** (mean 0.705), inside the 70–80 % band. Pinned by
+`test_calibrated_fraction_lands_the_fold_in_the_design_band`, red at `0.70` (0.660–0.668) and green at
+`0.739`. Derivation in `PREREG-COMPACTION.md` "Deviation note 3".
+
+**Two instrument defects found and fixed while wiring E7.** `refetch_count` — E7's primary mechanism —
+was **not instrumented**; it existed only in comments and a prediction string. Rows now carry
+`refetch_count` and `distinct_ranges_read`, computed by `count_refetch(turn_calls, seen)` against a
+per-cell `Planner.seen_ranges` set keyed on `(path, start_line, end_line)`, so a re-read across a fold is
+counted. And `--manifest-dir` defaulted to a repo-root-relative path resolved against **cwd**, so a
+dry-run started from `experiments/ptr-engine` wrote its manifests to
+`experiments/ptr-engine/experiments/ptr-engine/longrun/manifests/` — a stray tree that looked like
+evidence and was not. The default is now anchored to `_REPO_ROOT` derived from `__file__`; the stray
+tree was removed. Same class as the preview hazard (§6 item 13): a default path that silently depends on
+cwd.
 
 **Not measured — do not read any of the above as a result.** No live `spcc` cell has run; the
 memory window cannot currently be admitted (`MemAvailable` ~14 GB against a 68 GB reserve, so the

@@ -314,7 +314,13 @@ This agent has local long-term memory.
 
 
 def _workspace_tree(max_depth=2, per_dir=12):
-    """A real, deterministic workspace tree, newest-mtime first, depth-capped."""
+    """A real, deterministic workspace tree, name-ordered, depth-capped.
+
+    Name order, not mtime order: the fixture must be byte-reproducible, and an
+    mtime-ordered tree changes whenever any file is merely touched -- which would
+    move the fixture's sha256 out from under every row already scored against it.
+    The tree is still a real listing of this repo; only the ordering is pinned.
+    """
     skip = {".git", "__pycache__", ".venv", "node_modules", ".mypy_cache",
             ".pytest_cache", ".ruff_cache", "state"}
     rows = []
@@ -324,7 +330,7 @@ def _workspace_tree(max_depth=2, per_dir=12):
             entries = [e for e in os.scandir(path) if e.name not in skip]
         except OSError:
             return
-        entries.sort(key=lambda e: (-e.stat().st_mtime, e.name))
+        entries.sort(key=lambda e: (not e.is_dir(), e.name))
         shown = entries[:per_dir]
         for e in shown:
             rel = os.path.relpath(e.path, REPO)
@@ -357,8 +363,8 @@ def _system_prompt():
         CRITICAL,
         "<project-context>\n<workstation>\n- OS: linux 7.0.0-38-generic\n"
         "- Arch: x64\n- Workspace root: `/home/zer0null/research extractor`\n"
-        "</workstation>\n<workspace-tree>\nWorking-directory layout: newest mtime "
-        "first; depth <= 2.\n" + _workspace_tree() + "\n</workspace-tree>\n"
+        "</workstation>\n<workspace-tree>\nWorking-directory layout: name order, "
+        "directories first; depth <= 2.\n" + _workspace_tree() + "\n</workspace-tree>\n"
         "</project-context>",
     ])
     sections = [
@@ -374,23 +380,30 @@ def _system_prompt():
     if len(body) <= TARGET_SYSTEM_PROMPT_CHARS:
         return body
     # Trim the LAST section (the operating-state page) at a paragraph boundary so the
-    # prompt lands on the target without cutting a sentence in half.
+    # prompt lands on the target without cutting a sentence in half.  A paragraph
+    # boundary is chosen on whichever side of the budget lands closest to the target:
+    # the boundary before it can undershoot by a whole paragraph, so the boundary
+    # after it is preferred whenever it still fits the hard floor.
     keep = TARGET_SYSTEM_PROMPT_CHARS - len(head) - 2 - sum(
         len(h) + len(_read(r).rstrip("\n")) + 2 for h, r in sections[:-1])
     last_header, last_rel = sections[-1]
     last_text = _read(last_rel).rstrip("\n")
     budget = max(0, keep - len(last_header))
-    cut = last_text.rfind("\n\n", 0, budget)
-    if cut < 0:
-        cut = budget
+    before = last_text.rfind("\n\n", 0, budget)
+    after = last_text.find("\n\n", budget)
+    fixed = (head + "\n\n"
+             + "\n\n".join(h + _read(r).rstrip("\n") for h, r in sections[:-1])
+             + "\n\n" + last_header)
+    note = ("\n\n[operating-state page truncated at a paragraph boundary: the "
+            "fixture pins a fixed-length L0, and the remainder is on disk at "
+            "docs/STATE.md]")
+    cut = before if before >= 0 else budget
+    if after >= 0:
+        candidate = fixed + last_text[:after].rstrip("\n") + note
+        if len(candidate) >= 140_000:
+            cut = after
     trimmed = last_text[:cut].rstrip("\n")
-    return (head + "\n\n"
-            + "\n\n".join(h + _read(r).rstrip("\n") for h, r in sections[:-1])
-            + "\n\n" + last_header + trimmed
-            + "\n\n[operating-state page truncated at a paragraph boundary: the "
-              "fixture pins a fixed-length L0, and the remainder is on disk at "
-              "docs/STATE.md]"
-            )
+    return fixed + trimmed + note
 
 
 # ------------------------------------------------------------------------ turns
@@ -529,6 +542,57 @@ VERIFY_QUESTION = (
 )
 
 
+def _doc_id(rel, lo, hi):
+    """Stable document id for one read range: the path under ``ptr-engine/``.
+
+    ``make_ref`` renders it as ``{doc_id}@r{revision}``, so the id is the part a
+    pointer marker shows.  Keeping the range in the id means two reads of the
+    same file at different ranges are two documents, which is what the fetch
+    table needs: a ref must name exactly one body.
+    """
+    short = rel[len("experiments/ptr-engine/"):] if rel.startswith(
+        "experiments/ptr-engine/") else rel
+    return "%s#L%d-L%d" % (short, lo, hi)
+
+
+_BODY_CACHE = {}
+
+
+def _body(rel, lo, hi):
+    """The real content of ``rel`` lines ``lo..hi``, read once per build."""
+    key = (rel, lo, hi)
+    if key not in _BODY_CACHE:
+        _BODY_CACHE[key] = _range(rel, lo, hi)
+    return _BODY_CACHE[key]
+
+
+def _documents():
+    """One document per distinct read range, so every tool_output has a revision.
+
+    ``run_longrun`` validates each ``tool_outputs`` entry against
+    ``documents[].revisions[]`` and refuses a body that differs from the
+    revision value, so the document list is what makes the delivered bodies
+    checkable rather than free text.  ``world_index_lines`` also renders one L1
+    line per live document, which is how the model learns the refs exist.
+    """
+    seen = {}
+    for rel, lo, hi, _template in WORK_POOL:
+        did = _doc_id(rel, lo, hi)
+        if did in seen:
+            continue
+        body = _body(rel, lo, hi)
+        seen[did] = {
+            "doc_id": did,
+            "revisions": [{
+                "live_from_turn": 1,
+                "revision": 1,
+                "value": body,
+            }],
+            "scope": "granted",
+        }
+    return [seen[k] for k in sorted(seen)]
+
+
 def _turns():
     rng = random.Random(SEED)
     pool = list(WORK_POOL)
@@ -549,8 +613,17 @@ def _turns():
             turns.append({"kind": "verify", "question": VERIFY_QUESTION, "turn": turn})
             continue
         path, lo, hi, template = pool[(turn - 1) % len(pool)]
+        # The read the question asks for is delivered as a tool output, so the
+        # journal grows by the size of a real read instead of by the question
+        # text.  Without this the prompt never reaches the window-pressure fold
+        # and the arm's only trigger is never exercised.
         turns.append({"kind": "work",
                       "question": template.format(p=path, lo=lo, hi=hi),
+                      "tool_outputs": [{
+                          "body": _body(path, lo, hi),
+                          "doc_id": _doc_id(path, lo, hi),
+                          "revision": 1,
+                      }],
                       "turn": turn})
     return turns
 
@@ -686,6 +759,8 @@ def _acceptance(checkpoints):
         "'experiments/ptr-engine/ptr_engine/errors.py').read_text()); "
         "print(sum(1 for n in t.body if isinstance(n, ast.ClassDef) and "
         "n.name.startswith('PtrLaw')))\" prints 5",
+        "every work turn delivers the read it names: turns[].tool_outputs[].body "
+        "equals the named range, and the journal grows 500-1500 tokens per work turn",
     ]
     structured = []
     for i, cp in enumerate(checkpoints):
@@ -694,6 +769,10 @@ def _acceptance(checkpoints):
                            "kind": "fact", "match": "exact",
                            "note": "decided from the answer recorded at the "
                                    "checkpoint turn", "turn": cp["turn"]})
+    structured.append({"covers_prose": len(prose) - 1, "decides": "journal-growth",
+                       "id": "acc.j1", "kind": "fact", "match": "exact",
+                       "note": "asserted at build time over every work turn; the "
+                               "numbers are recorded in adaptation.journal_growth"})
     structured.extend([
         {"id": "acc.n1b", "kind": "constraint", "no_write":
          "experiments/ptr-engine/ptr_engine/compile.py", "note": "pinned source"},
@@ -752,6 +831,7 @@ def build():
     body_bytes = sum(it["body_bytes"] for it in items)
     system_prompt = _system_prompt()
     turns = _turns()
+    documents = _documents()
 
     # --- invariants the fixture claims, asserted at build time -----------------
     for cp in checkpoints:
@@ -776,6 +856,41 @@ def build():
     assert [t["turn"] for t in turns] == list(range(1, N_TURNS + 1))
     assert len(system_prompt) >= 140_000, len(system_prompt)
 
+    # --- journal growth: every work turn delivers the read it asks for ---------
+    # `run_longrun` only grows the journal from `tool_outputs`; a turn that names
+    # a range but delivers no body adds the question text alone (~45 tokens) and
+    # the window-pressure fold never fires.  Assert the delivery is present, that
+    # its body is the real range, and that the per-turn growth is in band.
+    doc_map = {d["doc_id"]: d for d in documents}
+    work_bodies = []
+    for t in turns:
+        if t["kind"] != "work":
+            assert "tool_outputs" not in t, (
+                "turn %d is %s and must not deliver a body" % (t["turn"], t["kind"]))
+            continue
+        tos = t["tool_outputs"]
+        assert len(tos) == 1, "turn %d must deliver exactly one read" % t["turn"]
+        to = tos[0]
+        assert to["doc_id"] in doc_map, "turn %d names unknown doc %r" % (
+            t["turn"], to["doc_id"])
+        rev = doc_map[to["doc_id"]]["revisions"][0]
+        assert to["revision"] == rev["revision"]
+        assert to["body"] == rev["value"], (
+            "turn %d body differs from the document revision" % t["turn"])
+        m = re.search(r"(experiments/ptr-engine/[\w./-]+\.py)#L(\d+)-L(\d+)",
+                      t["question"])
+        assert m, "turn %d question names no range: %r" % (t["turn"], t["question"])
+        assert to["body"] == _range(m.group(1), int(m.group(2)), int(m.group(3))), (
+            "turn %d body is not the range its question names" % t["turn"])
+        work_bodies.append(len(to["body"].encode("utf-8")))
+    assert work_bodies, "no work turns"
+    journal_bytes = sum(work_bodies)
+    journal_tokens = int(round(journal_bytes / BYTES_PER_TOKEN))
+    per_turn = journal_tokens / float(len(work_bodies))
+    assert 500 <= per_turn <= 1500, (
+        "journal growth %.0f tokens/work turn is outside the 500-1500 band"
+        % per_turn)
+
     doc = {
         "N": N_TURNS,
         "acceptance": _acceptance(checkpoints),
@@ -789,8 +904,23 @@ def build():
                                       "item bodies",
             "checkpoint_count": len(checkpoints),
             "checks_structured_count": len(_acceptance(checkpoints)["checks_structured"]),
+            "documents_count": len(documents),
             "fixture_version": "v5-long-context",
             "imports": "experiments/ptr-engine/longrun/adapt_v3.py -> adapt_fixture.py",
+            "journal_bytes_per_work_turn": int(round(
+                journal_bytes / float(len(work_bodies)))),
+            "journal_growth": {
+                "delivered_by": "turns[].tool_outputs[].body",
+                "documents": len(documents),
+                "journal_bytes_total": journal_bytes,
+                "journal_tokens_per_work_turn": int(round(per_turn)),
+                "journal_tokens_total": journal_tokens,
+                "method": "sum of the delivered bodies / bytes_per_token, over the "
+                          "%d work turns" % len(work_bodies),
+                "why": "run_longrun._turn_tool_outputs is the only source of journal "
+                       "growth; a turn without tool_outputs adds the question text "
+                       "alone and the window-pressure fold never fires",
+            },
             "n_stated": N_TURNS,
             "negative_constraints_count": 3,
             "runtime_schema": "consonance.longrun-fixture/1",
@@ -898,6 +1028,7 @@ def build():
             "verified_success": True,
         },
         "fixture_version": "v5-long-context",
+        "documents": documents,
         "items": items,
         "long_run": {
             "planted_at_turn": min(PLANT_TURNS),

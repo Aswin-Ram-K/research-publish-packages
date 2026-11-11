@@ -263,3 +263,31 @@ fires. The fixture is real-length in `L0` but not in journal growth, and it is b
 real read bodies so the journal grows ~1,000 tokens per turn and the prompt crosses the threshold at
 roughly T47. **E7 must not run on a fixture whose journal does not grow**, or the treatment under test
 never fires and the result is vacuous.
+
+### Deviation note 3 — 2026-11-11, the fold fraction is calibrated, not guessed
+
+`FOLD_AT_FRACTION` was `0.70` and the fold fired at **67.1 %** of the window in real tokens, below
+the design's 70 % floor. The cause is the estimator, not the fraction: the compiler has no tokenizer,
+so it divides characters by `CHARS_PER_TOKEN = 3.122` (`ptr_engine/layers.py:185`), a constant measured
+on a whole real prompt, which is prose-heavy. Delivered code bodies measure **3.93 chars/token** on
+cl100k, so the estimate runs **5.5 % high** on a code-heavy journal.
+
+`FOLD_AT_FRACTION = 0.739` (`0.70 × 1.055`) lands the fold at 70.0 % in real tokens. Measured on
+`LR-07.v5.json` with the real tokenizer, 0 requests, five folds:
+
+| fold | pre-fold real tokens | fraction of 131,072 |
+|---|---|---|
+| T41 | 92,056 | 0.702 |
+| T79 | 91,655 | 0.699 |
+| T119 | 92,098 | 0.703 |
+| T161 | 93,135 | 0.711 |
+| T201 | 92,776 | 0.708 |
+
+Mean **0.705**, inside the design's 70–80 % band. Pinned by
+`test_calibrated_fraction_lands_the_fold_in_the_design_band` in
+`experiments/ptr-engine/longrun/tests/test_pinned_arm.py`, which is **red at `0.70`** (fractions
+0.660–0.668, `assert 0.69 <= 0.6638` fails) and green at `0.739`.
+
+**Re-derive this constant** if `CHARS_PER_TOKEN` changes or a fixture's content mix moves away from
+code. It is a calibration against one measured bias, not a free parameter: the design's 70–80 % band is
+the invariant, and the fraction is whatever makes the real-token fraction land there.
