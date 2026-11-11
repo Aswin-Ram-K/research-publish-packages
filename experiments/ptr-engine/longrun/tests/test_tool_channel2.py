@@ -25,6 +25,7 @@ import hashlib
 import io
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -179,13 +180,13 @@ def assertion_c_duplicate_billed_once():
     try:
         cfg = _Cfg(tools="read_file")
         _m, _r, sent1, rounds1, turn_calls, followups = R.fetch_rounds(
-            cfg, _fake_fixture(), "pointer-stable", 1, "offline", 3, "sha", {},
+            cfg, _fake_fixture(), "pointer-stable", 1, "offline-r1", 3, "sha", {},
             _messages(), {"content": DUPLICATED_TURN}, 1,
             1 + R.TOOL_FETCH_ROUNDS_PER_ARM, 0, served)
         # same turn content again on a LATER turn: the content is already in the
         # conversation, so it is served cached and no follow-up request is bought.
         _m2, _r2, sent2, rounds2, calls2, followups2 = R.fetch_rounds(
-            cfg, _fake_fixture(), "pointer-stable", 1, "offline", 4, "sha", {},
+            cfg, _fake_fixture(), "pointer-stable", 1, "offline-r1", 4, "sha", {},
             _messages(), {"content": DUPLICATED_TURN}, sent1, 1 + R.TOOL_FETCH_ROUNDS_PER_ARM,
             rounds1, served)
     finally:
@@ -222,7 +223,7 @@ def assertion_d_resume_counter():
     rows_path = os.path.join(tmp, "rows.jsonl")
     manifest_path = os.path.join(tmp, "v4tools2-manifest.json")
     fixture = R.load_fixture(FIXTURE2)
-    arm, rep, run_id = "pointer-stable", 1, "offline-resume"
+    arm, rep, run_id = "pointer-stable", 1, "offline-resume-r1"
     cfg = _Cfg(tools="read_file")
     cfg.max_turns = 2
     cfg.resume = True
@@ -279,22 +280,48 @@ def assertion_d_resume_counter():
 
 # ------------------------------------------------------------------------ (e)
 def assertion_e_tools_off_identical():
+    """--tools off is byte-identical to the pre-fix runner.
+
+    PREVIEW-ROOT: the "after" run is a real `run_longrun.py --dry-run`, and
+    `run_dry` defaults its root to the TRACKED `state/previews/<task_id>` tree
+    (`run_longrun.py:3201`).  RED (flag removed, this assertion run in isolation):
+    `git status --porcelain experiments/ptr-engine/state/previews/` printed
+    `M .../LR-01/pointer-stable/turn-01.json`, `turn-02.json`, `turn-03.json`.
+    GREEN (flag restored, same run): that status is empty.  The pre-fix baseline
+    script has no such flag (its `run_dry` hardcodes /tmp/longrun-previews), so the
+    flag is added to the "after" argv only.  The stdout comparison below is red at
+    HEAD for an unrelated reason (the baseline predates the TREATMENT REACHABILITY
+    block and the current prompt bodies); the preview measurement is independent of it.
+    """
     assert os.path.exists(BASELINE), f"pre-fix baseline missing: {BASELINE}"
     raw, filtered = {}, {}
-    for tag, script in (("before", BASELINE),
-                        ("after", os.path.join(LONGRUN, "run_longrun.py"))):
-        mp = os.path.join(LONGRUN, "manifests", f"v4tools2-proof-off-{tag}.json")
-        proc = subprocess.run(
-            [sys.executable, script, "--fixture", FIXTURE_OFF, "--arms", "pointer-stable",
-             "--dry-run", "--manifest-path", mp],
-            cwd=WORKSPACE, capture_output=True, text=True)
-        assert proc.returncode == 0, (tag, proc.returncode, proc.stderr[-500:])
-        raw[tag] = hashlib.sha256(proc.stdout.encode()).hexdigest()
-        # the only volatile line is the manifest header: it embeds created_utc, so its
-        # sha256 changes every run by construction.  Everything else must match.
-        kept = [ln for ln in proc.stdout.splitlines() if not ln.startswith("manifest[")]
-        filtered[tag] = hashlib.sha256("\n".join(kept).encode()).hexdigest()
-        assert "fetch_rounds_cap" not in proc.stdout, "tools-off run must print no tool line"
+    tmp = tempfile.mkdtemp(prefix="tools2-proof-")
+    try:
+        for tag, script in (("before", BASELINE),
+                            ("after", os.path.join(LONGRUN, "run_longrun.py"))):
+            # the manifest is written into the tmpdir, not manifests/: the two tracked
+            # v4tools2-proof-off-{before,after}.json are committed evidence of the
+            # original run (listed in fixtures-spec/LR-01.spec.json) and every run of
+            # this test used to rewrite their created_utc header (WIRE-CLIENT.json
+            # records the same dirt).  Nothing here reads the file back.
+            mp = os.path.join(tmp, f"v4tools2-proof-off-{tag}.json")
+            argv = [sys.executable, script, "--fixture", FIXTURE_OFF, "--arms",
+                    "pointer-stable", "--dry-run", "--manifest-path", mp]
+            if tag == "after":
+                # the pre-fix baseline has no --preview-root and no --temperature flag;
+                # the current runner refuses a run whose temperature is unstated.
+                argv += ["--preview-root", os.path.join(tmp, "previews"),
+                         "--temperature", "0"]
+            proc = subprocess.run(argv, cwd=WORKSPACE, capture_output=True, text=True)
+            assert proc.returncode == 0, (tag, proc.returncode, proc.stderr[-500:])
+            raw[tag] = hashlib.sha256(proc.stdout.encode()).hexdigest()
+            # the only volatile line is the manifest header: it embeds created_utc, so its
+            # sha256 changes every run by construction.  Everything else must match.
+            kept = [ln for ln in proc.stdout.splitlines() if not ln.startswith("manifest[")]
+            filtered[tag] = hashlib.sha256("\n".join(kept).encode()).hexdigest()
+            assert "fetch_rounds_cap" not in proc.stdout, "tools-off run must print no tool line"
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
     assert filtered["before"] == filtered["after"], (filtered, "tools-off output drifted")
     print(f"  (e) --tools off byte-identical: stdout_sha before={raw['before'][:16]} "
           f"after={raw['after'][:16]} (differ only in the manifest line); "

@@ -333,20 +333,30 @@ def case_d():
 
 # --------------------------------------------------------------------- (e)
 def case_e():
-    """--no-metrics-scrape reaches the client config; the client owns the precedence."""
+    """--no-metrics-scrape reaches the client config; the client owns the precedence.
+
+    PREVIEW-ROOT: `main` dispatches `run_dry(cfg, fixture, cells, root=cfg.preview_root)`
+    (`run_longrun.py:4700`), so the stub must accept `root` and the argv must name a
+    temp `--preview-root`; otherwise a run that got past the arm refusal would either
+    TypeError on the stub or write the TRACKED `state/previews/LR-01` tree.  No red
+    run is possible at this call site: `R.run_dry` is stubbed, so it cannot write
+    previews today; the change removes the latent TypeError and keeps the argv safe
+    if the stub is ever dropped.
+    """
     print("(e) --no-metrics-scrape reaches the client config")
     captured = {}
     saved = (R.load_fixture, R.build_manifest, R.write_manifest, R.run_dry)
     R.load_fixture = lambda path: _fixture()
     R.build_manifest = lambda cfg, *a, **k: captured.setdefault("cfg", cfg) or {}
     R.write_manifest = lambda path, doc: (b"", "offline")
-    R.run_dry = lambda cfg, fixture, cells: 0
+    R.run_dry = lambda cfg, fixture, cells, root=None: 0
     tmpdir = tempfile.mkdtemp(prefix="wire-client-")
     old_env = os.environ.get(client.METRICS_SCRAPE_ENV)
     try:
         os.environ[client.METRICS_SCRAPE_ENV] = "1"   # the flag must still win
         rc = R.main(["--dry-run", "--manifest-dir", tmpdir, "--no-metrics-scrape",
-                     "--temperature", "0", "--fixture", "LR-01"])
+                     "--temperature", "0", "--fixture", "LR-01",
+                     "--preview-root", os.path.join(tmpdir, "previews")])
     finally:
         R.load_fixture, R.build_manifest, R.write_manifest, R.run_dry = saved
         if old_env is None:

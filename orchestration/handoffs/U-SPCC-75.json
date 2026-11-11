@@ -1,0 +1,49 @@
+{
+  "unit": "U-SPCC-75",
+  "status": "done",
+  "artifacts": [
+    "experiments/ptr-engine/longrun/tests/test_tool_channel2.py",
+    "experiments/ptr-engine/longrun/tests/test_wire_client.py",
+    "orchestration/units/U-SPCC-75.md"
+  ],
+  "evidence": {
+    "call_sites": {
+      "test_tool_channel2.py:289": "wrote tracked previews -> CHANGED: --preview-root <tmp>/previews and --temperature 0 on the 'after' argv only",
+      "test_wire_client.py:348": "stub could not write previews but main dispatches run_dry(..., root=cfg.preview_root) -> latent TypeError -> CHANGED: stub takes root=None, argv names a temp --preview-root",
+      "test_cell_gates.py:322": "UNCHANGED, already safe: drives cell.py, which has no preview write (one comment at cell.py:2358) and skips stage_budget under --dry-run (cell.py:2352)",
+      "test_dry_turn_scope.py:91": "UNCHANGED, already passes --preview-root",
+      "test_wall_key.py:157": "UNCHANGED, already passes --preview-root",
+      "test_preview_preservation.py:60": "UNCHANGED, already passes root=",
+      "eight live call sites": "UNCHANGED: none passes --dry-run, so run_dry is never reached"
+    },
+    "extra_fixes": [
+      "assertion_e wrote its manifests into the TRACKED manifests/ dir (v4tools2-proof-off-{before,after}.json, listed in fixtures-spec/LR-01.spec.json); now written into the test tmpdir",
+      "assertion_c and assertion_d passed run_id='offline' with rep=1, refused by assert_repeat_identity (run_longrun.py:2718); now 'offline-r1'. Proved red at HEAD by restoring the HEAD copy of the file and re-running: identical AssertionError"
+    ],
+    "red_green": {
+      "red_command": "run_longrun.py --fixture tasks-v4/runtime-v4/LR-01.v4.json --arms pointer-stable --dry-run --manifest-path /tmp/red-proof.json --temperature 0",
+      "red_result": "git status --porcelain experiments/ptr-engine/state/previews/ -> M .../LR-01/pointer-stable/turn-01.json, turn-02.json, turn-03.json",
+      "green_command": "same with --preview-root /tmp/pv-green",
+      "green_result": "git status --porcelain experiments/ptr-engine/state/previews/ -> empty",
+      "restore_method": "git show HEAD:<path> > <path> (git checkout -- is blocked by workspace policy)"
+    },
+    "tests": {
+      "pytest": "TMPDIR=/home/zer0null/tmp-pytest .venv/bin/python -m pytest -q test_cell_gates.py test_wire_client.py test_dry_turn_scope.py test_wall_key.py test_preview_preservation.py -> 38 passed, 7 subtests passed in 2.70s",
+      "script": "test_tool_channel2.py is a script, not a pytest module; run directly it now reaches assertion_d and stops on the cap gate: cap-gate: allocation=50 cap=4320 reserve=0 spent_at_start=10215 -> rc=4 (the over-budget fact, STATE §6 item 10)",
+      "pre_existing_reds": [
+        "assertion_e stdout comparison vs manifests/v4tools2-baseline-pre.py (baseline predates the TREATMENT REACHABILITY block and the current prompt bodies)",
+        "assertion_d cap gate refuses at spent_at_start=10215 > cap=4320"
+      ]
+    },
+    "tree_after": "only the two edited test files modified; previews and manifests clean",
+    "requests": 0
+  },
+  "blocker": null,
+  "next_unit_hint": "The live hazard is cell.py:411: stage_budget spawns run_longrun.py --dry-run with no --preview-root, so every LIVE cell overwrites the tracked state/previews/<task>/<arm>/turn-*.json for its own task. Recorded as STATE §6 item 13 with a recommended default (run-scoped dir under the gitignored state/). Do not change it without that decision. The two remaining reds in test_tool_channel2.py are the cap decision (item 10) and a stale pre-fix baseline that needs a re-freeze decision.",
+  "write_paths": [
+    "experiments/ptr-engine/longrun/tests/test_tool_channel2.py",
+    "experiments/ptr-engine/longrun/tests/test_wire_client.py",
+    "orchestration/units/U-SPCC-75.md",
+    "orchestration/handoffs/U-SPCC-75.json"
+  ]
+}

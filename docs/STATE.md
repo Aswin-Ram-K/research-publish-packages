@@ -372,6 +372,16 @@ those classes `UNAVAILABLE` / `NOT_OBSERVED` and refuses to score them as succes
     first erases the guard's meaning if done silently; the second rewrites history. Measured
     2026-11-11: `2 failed / 28 passed`, and the handoff written that day (`U-SPCC-74.json`) is not
     among the gaps.
+13. **Where a live cell's previews go** — `experiments/ptr-engine/longrun/cell.py:411` builds
+    `argv = [sys.executable, RUNNER, "--dry-run", "--fixture", args.fixture, "--arms", args.arm,
+    "--reps", str(args.reps)]` with **no** `--preview-root`, and `stage_budget` runs on every **live**
+    cell. So every live cell overwrites the tracked
+    `experiments/ptr-engine/state/previews/<task>/<arm>/turn-*.json` for its own task and arm — the
+    same defect class `U-SPCC-73` closed in the tests, one layer up, on the production path.
+    **Recommended default:** a run-scoped directory under the gitignored `state/`
+    (`state/previews/<run_id>/`), so a live cell keeps its prompt bodies as scratch and the committed
+    previews stay the evidence of the run that produced them. Not changed without this decision,
+    because it changes what evidence a live cell leaves behind.
 
 ---
 
