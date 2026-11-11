@@ -1,6 +1,6 @@
 # STATE — the current state of this workspace
 
-**Last updated:** 2026-11-10 · **By:** U-SPCC-71 (E3's 6/48 gap recorded as answer-slot binding, a transcript-replay artefact excluded from retention comparisons)
+**Last updated:** 2026-11-11 · **By:** the crash-recovery close-out of `U-SPCC-69`…`U-SPCC-73` (manifests committed, derived artefacts regenerated, `--preview-root` added; corpus re-measured at **103 files / 10,167 rows**, so the ledger headroom is **1,927**, not 4,125)
 **Read this first.** It is the single *current-state* page. Older status pages remain valid as dated
 records but are superseded here as current state — chiefly [`orchestration/STATUS.md`](orchestration/STATUS.md)
 (the docket-era batch record, 2026-10-21) and [`orchestration/CLOSING.md`](orchestration/CLOSING.md).
@@ -20,8 +20,9 @@ settled** — **`billed_tokens_known` 14,007, at most 14,303**, `billed_coverage
 on turn **5** are unmeasured (`ABSENT ≠ 0`) and turn **1**'s 261 are settled by the cache mechanism (no
 prior prefix), not by assumption — against **159,744 discounted**, with a **557**-token residual reported
 inside a **1,740** tolerance. The gen-6 grid
-verdict stays **`not_adjudicable`**, and the ledger stands at **7,969 spent / 4,125 remaining of 12,094**
-(re-measured 2026-11-10; the 4,320 default cap in the ledger tool is exceeded and that is a decision, §6).
+verdict stays **`not_adjudicable`**, and the ledger stands at **10,167 spent / 1,927 remaining of 12,094**
+(re-measured 2026-11-11 over **103** `rows-*.jsonl` files; the 4,320 default cap in the ledger tool is
+exceeded by **5,847** and that is a decision, §6).
 Two machine changes block the plan's own verification items and both are user decisions: the SGLang
 relaunch with `--enable-hierarchical-cache`, and a single authorised remote root for the GX10. The app and
 the paper track are dormant-but-intact; the **Consonance bounded-context research** remains filed with **0
@@ -123,14 +124,25 @@ its §0 state snapshot is historical) · `docs/LEDGER-RECONCILE.md` + `experimen
 | **Findings ledger** | 7 rows, every one traced to a source document; the masking claim corrected in place | `experiments/ptr-engine/research-seed-concepts/FINDINGS-LEDGER.md` (`U-SPCC-1.json`) |
 | **Suite** | full directory **86 failed / 723 passed → 5 failed / 806 passed**; the v4-fixture cluster was closed after that count (three suites 28 passed) | `U-SPCC-9A.json` `full_directory`, `U-SPCC-9C.json` `three_suites_after` |
 
-**Ledger, re-derived at close-out 2026-11-10:** **`spent 7,969`** of cap **12,094** (`PROJECT_QUOTA`,
-`experiments/ptr-engine/longrun/cell.py:141`) ⇒ **4,125 remaining**. The count is a **row count over the 93
-`rows-*.jsonl` files** in `experiments/ptr-engine/measure/`, which is the count of record because every
-request writes a row; a later reader can re-derive it the same way. The 2026-11-09 reconciliation recorded
-7,869 / 4,225 and `U-SPCC-LIVE.json` `store_after` records 7,969 / 4,125 after its 100 turns (Δ **+100**).
-**The 4,320 default cap is exceeded by 3,649**, which is why `test_request_ledger::test_g` is red: a true
+**Ledger, re-derived 2026-11-11:** **`spent 10,167`** of cap **12,094** (`PROJECT_QUOTA`,
+`experiments/ptr-engine/longrun/cell.py:141`) ⇒ **1,927 remaining**. The count is a **row count over the
+103 `rows-*.jsonl` files** in `experiments/ptr-engine/measure/`, which is the count of record because every
+request writes a row; a later reader can re-derive it the same way (`wc -l`). The 2026-11-09
+reconciliation recorded 7,869 / 4,225, `U-SPCC-LIVE.json` `store_after` records 7,969 / 4,125 after its
+100 turns, and the 2026-11-10 units `U-SPCC-62`/`64`/`68` added the E2 and E3 cells that take the store to
+10,167 / 1,927 (Δ **+2,198** over ten new rows files).
+**The 4,320 default cap is exceeded by 5,847**, which is why `test_request_ledger::test_g` is red: a true
 fact, not a test bug. (An intermediate `request_ledger.py` snapshot read 7,953 while the proof's rows were
 still landing; it is not the count of record.)
+
+**`REQUEST-LEDGER.json` is stale and cannot be rebuilt as things stand.** The file records `requests_raw
+2591` over `files_deduped 38 + files_not_applicable 3 = 41` rows files; the corpus is **103** files.
+`tools/request_ledger.py --write --cap 4320` refuses with exit **4**,
+`OVER BUDGET: spent=10167 + would_spend=0 = 10167 > cap=4320 - reserve=0 = 4320 (over by 5847)`, so the
+derived artefact cannot be regenerated without a cap decision (§6 item 10). Its 2,591 is the tool's own
+*billed-request* rule (kinds `turn`, `tool-followup`, `turn-initial`, `digest`), not a row count, and the
+test's 10,167 is the raw row count: the two numbers are different measures of the same corpus, and the
+disagreement is an instrument question for the operator, not a defect either side can fix alone.
 
 **The live billed proof, exactly.** `orchestration/handoffs/U-SPCC-LIVE.json` (**done**, 2026-11-10T06:29)
 ran `run_longrun.py --claim-mode plumbing --arms masking-no-fetch --fixture tasks-v7/TX-03.v1.json`:
@@ -330,21 +342,29 @@ those classes `UNAVAILABLE` / `NOT_OBSERVED` and refuses to score them as succes
 7. **Consonance E2 budget and comparative funding** (since 2026-11-03) — E2 runs at **123 calls
    (descriptive only)**, at **369–450 (adjudicable, needs approval)**, or not at all; and the comparative
    is **`UNFUNDED`**, with a **185-call pilot** as the funded alternative. Three mutually exclusive
-   answers, all the user's (§2a). *Arithmetic refreshed 2026-11-10:* §2a's 4.37× was computed against the
-   2,591 / 1,729 snapshot; against today's **4,125 remaining** the comparative is **7,560 / 4,125 = 1.833×**
-   — still unfunded, but by 1.833, not 4.37.
+   answers, all the user's (§2a). *Arithmetic refreshed 2026-11-11:* §2a's 4.37× was computed against the
+   2,591 / 1,729 snapshot; against today's **1,927 remaining** the comparative is **7,560 / 1,927 = 3.923×**
+   — still unfunded, and by more than the 1.833× recorded on 2026-11-10, because the E2/E3 cells spent
+   2,198 requests in between.
 8. **Authorise a remote root for the GX10 (Nemotron weights)** — remote writes are blocked until the
    operator names **one** root; plan verification item 8 cannot start before that (§1a,
    `experiments/ptr-engine/serving/REMOTE-ROOT.md`).
 9. **Authorise the SGLang relaunch with `--enable-hierarchical-cache`** — a container change; without it
    plan verification item 7 is unproven and E1's cache boundary cannot be read on the serving side
    (`experiments/ptr-engine/serving/launch-sglang-spcc.sh`, `U-SPCC-4.json`).
-10. **The 4,320 default budget cap** — **7,969 already spent** (a row count over the 93 `rows-*.jsonl`
-    files), i.e. **3,649** over that default, while the live project quota (`PROJECT_QUOTA`,
-    `experiments/ptr-engine/longrun/cell.py:141`) is 12,094 with **4,125** headroom. Either the default
-    moves (and to what) or the ledger tool keeps reporting an over-budget fact.
-    `test_request_ledger::test_g` is red on exactly this and must not be "fixed" by
-    editing the constant (§1a).
+10. **The 4,320 default budget cap** — **10,167 already spent** (a row count over the 103 `rows-*.jsonl`
+    files), i.e. **5,847** over that default, while the live project quota (`PROJECT_QUOTA`,
+    `experiments/ptr-engine/longrun/cell.py:141`) is 12,094 with **1,927** headroom. Either the default
+    moves (and to what) or the ledger tool keeps reporting an over-budget fact — and while it reports it,
+    `tools/request_ledger.py --write` exits 4, so **`REQUEST-LEDGER.json` cannot be regenerated at all**
+    and stays at its 41-file / 2,591-request snapshot (§1a). Every further measured cell is gated behind
+    this: the launcher's `RUN-A RECONCILE` reads the same ledger. `test_request_ledger::test_g` is red on
+    exactly this and must not be "fixed" by editing the constant (§1a).
+11. **The journal-lint baseline** — the live census reports `new_misses=360` against a frozen baseline
+    that exempts 1,017 (`state/logs/U8.15/baseline_gaps.json`). Backfilling 360 journal entries would
+    fabricate history; the alternatives are (a) accept a re-frozen baseline that records the 360 by name
+    as known history debt, or (b) backfill only those with a real source document. This is an operator
+    call because it changes what "the record is complete" means.
 
 ---
 
@@ -579,6 +599,34 @@ follow from the cache mechanism), `billed_coverage` **0.99**,
 discounted**, 557 residual reported. **Open on it:** the scorecard exits **1** with 40/50 answer-shape failures, so it
 licenses the billing account and nothing about accuracy. The machine blockers (SGLang relaunch, remote
 root, 68 GB reserve) are unchanged by this proof.
+
+**Late units of the same day — `U-SPCC-69`…`U-SPCC-73` (commits `286e2df`…`de048d6`, journaled
+2026-11-11).** These ran after the close-out above and were left unjournaled when the session died; the
+record is now in [`journal/2026-11-10.md`](../journal/2026-11-10.md) under their own headings.
+
+- **`U-SPCC-69`** — `experiments/ptr-engine/longrun/manifests/` held **23** untracked files (the ticket
+  said 39): 6 dry-run scratch + 17 completed-run manifests. The 17 were committed after every
+  `rows_path` resolved and every `run_id` was found in its rows file; the 6 `dryrun-*` were deleted.
+- **`U-SPCC-70`** — three handoffs (`U-SPCC-26`, `U-SPCC-45`, `V-SPCC-36`) and two unit cards that
+  earlier units wrote but never committed were committed; dry-run previews and refusal scratch cleared.
+- **`U-SPCC-72`** — `measure/STOP-REASON.json`, `measure/VERBOSITY.json` and `docs/VERBOSITY.md`
+  regenerated by their real generators over the current corpus (`rows 10167, answered 8772, empty 1395`;
+  `cells=128 p95_ok=50 refused=75 decomp=36 fits=93`, `VERDICT confound_immaterial`). Four corpus-drift
+  tests went green; the directory stands at **2 failed / 929 passed**.
+- **`U-SPCC-73`** — `--preview-root` added to `experiments/ptr-engine/longrun/run_longrun.py`
+  (`:4321-4324`, dispatch `:4700`). The defect it closes: `run_dry(..., root=None)` at `:3199` defaulted
+  to `preview_root(fixture["task_id"])` (`:3201`), the **tracked** tree, so a test dry run overwrote six
+  committed `experiments/ptr-engine/state/previews/LR-01/*` files with an emptied `INDEX` block. Three
+  further `--dry-run` call sites (`test_cell_gates.py:322`, `test_tool_channel2.py:289`,
+  `test_wire_client.py:348`) still pass no `--preview-root` and are the next unit.
+
+**Suite state after them (measured 2026-11-11, live checkout):** `test_verdict_ritual.py` **10 passed**
+(the six unverdicted closures are settled); `test_journal_lint` **red** at `new_misses=360`
+(`exempt_frozen=1017`); `test_request_ledger::TestRealCorpus` **red** at
+`spent=10167 > cap=4320 (over by 5847)`. Both reds are operator decisions (§6 items 10–11), not code
+defects. A fresh worktree reports `new_misses=1377` for the same test because
+`state/logs/U8.15/baseline_gaps.json` is gitignored and absent there — **the worktree cannot run that
+guard**, which is why this close-out was done in the live checkout.
 
 ## Measured noise floor — temperature 0 + seed 42 is not a reproducibility contract (2026-11-10)
 
