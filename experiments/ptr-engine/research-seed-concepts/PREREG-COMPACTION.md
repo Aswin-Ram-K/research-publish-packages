@@ -158,6 +158,23 @@ same verdict E1's gen-6 grid earned, and for the same reason.
    `[200, 500]` and a cell is stopped at **500 real requests**, not admitted on a prediction. Stage 1
    (4 arms × 100 turns × 1 rep = 400) fits. **Stage 2 (2 arms × 100 × 3 = 600) does not** — it must be
    split into two cells of 300, or the brake raised by the operator.
+9. **`spcc` must be made tool-capable, or arms B and C must be built on another arm.** This is the
+   blocker that would have wasted stage 1. `run_longrun.py:3919` services tool calls only for arms
+   **not in** `(arm_cd.ARM_C, arm_cd.ARM_D, arm_cd.ARM_SPCC)` — so **`spcc` does not service tool calls
+   today**, and `arm_requires_tools` (`run_longrun.py:3367-3369`) returns True only for `ARM_D`. The
+   only tool-enabled rows in the corpus come from `pointer-stable`
+   (`rows-longrun-v5-tools.jsonl`: 72 rows, all `arm: pointer-stable`, 48 `turn` + 24 `tool-followup`).
+   Since arms B and C are `spcc` variants and `refetch_count` is E7's primary mechanism, **E7 cannot
+   measure its own hypothesis until `spcc` services tools**. Two routes, and the choice is the
+   operator's because it changes what `spcc` is:
+   - **(a)** remove `ARM_SPCC` from the exclusion at `run_longrun.py:3919` and add it to
+     `arm_requires_tools`, so `spcc` gains the tool channel. Small change; makes `spcc` a superset of
+     `pointer-stable`'s mechanism.
+   - **(b)** build arms B and C on `pointer-stable` and port the layer compiler into it. Larger change;
+     keeps `spcc` as it is.
+
+   Route (a) is recommended: it is one line plus a predicate, and it keeps the layer compiler as the
+   single place a fold is defined.
 
 ### Deviation note — 2026-11-11, instrument properties measured before E7 ran
 

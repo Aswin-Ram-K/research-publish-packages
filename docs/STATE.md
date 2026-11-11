@@ -405,6 +405,16 @@ those classes `UNAVAILABLE` / `NOT_OBSERVED` and refuses to score them as succes
     (`state/previews/<run_id>/`), so a live cell keeps its prompt bodies as scratch and the committed
     previews stay the evidence of the run that produced them. Not changed without this decision,
     because it changes what evidence a live cell leaves behind.
+14. **How `spcc` gets the tool channel** — E7's arms B and C are `spcc` variants, and `refetch_count`
+    is E7's primary mechanism, but `run_longrun.py:3919` services tool calls only for arms **not in**
+    `(arm_cd.ARM_C, arm_cd.ARM_D, arm_cd.ARM_SPCC)`, so **`spcc` does not service tool calls today**.
+    The only tool-enabled rows in the corpus are `pointer-stable` (`rows-longrun-v5-tools.jsonl`, 72
+    rows). Two routes: **(a)** remove `ARM_SPCC` from that exclusion and add it to
+    `arm_requires_tools` (`run_longrun.py:3367-3369`) — one line plus a predicate, keeps the layer
+    compiler as the single place a fold is defined; **(b)** build arms B and C on `pointer-stable` and
+    port the layer compiler into it — larger, keeps `spcc` as it is. **Recommended: (a).** This is an
+    operator call because it changes what `spcc` is, and E7 cannot measure its own hypothesis until it
+    is settled.
 
 ---
 

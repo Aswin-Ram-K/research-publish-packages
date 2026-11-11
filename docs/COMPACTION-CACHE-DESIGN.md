@@ -157,6 +157,13 @@ re-read for a reason a pin cannot serve (a changed file, a different question ab
 It establishes the **magnitude of the opportunity**, which is what makes E7 worth 1,000 requests. The
 `refetch_count` metric in E7 is what turns this into a causal claim.
 
+**And the arm that produced this data cannot yet run the design.** All 72 rows of
+`rows-longrun-v5-tools.jsonl` are `arm: pointer-stable`. `run_longrun.py:3919` services tool calls only
+for arms **not in** `(arm_cd.ARM_C, arm_cd.ARM_D, arm_cd.ARM_SPCC)`, so **`spcc` — the only arm that
+renders through `compile_prompt` — does not service tool calls today**. Arms B and C are `spcc`
+variants, so E7 cannot measure `refetch_count` until `spcc` gains the tool channel. That is
+`PREREG-COMPACTION.md` instrument requirement 9, and it is the one that would have wasted stage 1.
+
 ---
 
 ## 3. The reframing
