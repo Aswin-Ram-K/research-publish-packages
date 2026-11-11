@@ -1327,3 +1327,35 @@ falsifier 4 is unsatisfiable as written (it compares two arms that both have no 
 **Budget.** `request_ledger.py` after both runs: `spent=10987` of `PROJECT_QUOTA=12094`, so **1,107**
 headroom. Two stage-1 runs (800 requests) produced no usable contrast; stage 2 is sized to **6 tasks ×
 2 reps × 4 arms × 20 = 960** requests, leaving 147.
+
+## `U-SPCC-80` — 2026-11-11, third session: the stage-2 instrument
+
+**What it is.** The episode loop that stage 1 proved necessary: a frozen root, a second tool, and eight
+tasks whose graded value is derived from that root by AST. Nothing here has been run live yet.
+
+**Landed** (`3356c48`, `2ad3e51`):
+
+| Piece | What it does | Guard |
+|---|---|---|
+| `longrun/run_longrun.py` | bounded `grep` beside `read_file` (`GREP_MAX_HITS 20`, pattern 200 chars, line 200 chars, skips `.git`/`__pycache__`/`state`/`.venv`/`node_modules`); `--root` and `--snapshot-manifest` verified before the first request | `test_snapshot_and_grep.py` 17 |
+| `longrun/tools/build_snapshot.py` | freezes four trees into `state/snapshots/<sha>/` with a per-file manifest; built `70f02dc6…`, 419 files | same |
+| `longrun/tools/build_agentic_tasks.py` + `tasks-agentic/AG-01..08.v1.json` | eight tasks, graded value derived from the snapshot by AST | `test_agentic_tasks.py` |
+| `longrun/agentic_contract.py` | the one definition of a task, a row and the five arms | `test_agentic_contract.py` 12 |
+| `longrun/agentic_cell.py` | the episode loop; now reads the contract schema as well as the replay-fixture schema | `test_agentic_cell.py` 23 |
+| `tools/repin_harness.py` | writes `HARNESS-PIN.json` from the tree, history kept under `superseded_generation_<N>` | `test_embedded_digests_match_pin.py` 7 |
+| `tools/agentic_pin.py` | stage 2's own pin, covering `run_longrun.py` because `agentic_cell.py` imports its tool executor | `test_agentic_pin.py` 6 |
+
+**Harness pin: generation 11 = `a668491a55a4e2714b6e58dc8168919ee163bd2b5e3bb733b54fd9e38263bf73`.**
+Generation 10 (`6852b900…`) was written before the grep change was re-applied after a concurrent
+restore, so it described bytes that no longer existed; generation 11 is the current tree.
+`run_a_star.py` (`PIN_EXPECTED_GENERATION = 11`), `measure/GRID-PARAMS.json` and `docs/GRID-RUNBOOK.md`
+all advanced with it.
+
+**Dry run, the only measurement so far.** `planned_requests=816`, `spent=10987`, `quota=12094`,
+`remaining=1107`. Per-arm fold behaviour: `none` 0 compactions / 0 evicted; `masking-no-fetch` 0 / 16
+(mask); `pinned`, `bounded-context-fetch`, `compact` 8 / 64 (journal-drop). **`masking-no-fetch` folds by
+masking, so `compactions == 0` is normal for it** — the analyser's void rule is
+`compactions == 0 AND evicted == 0`, not `compactions == 0`.
+
+**Open.** The 816-request cell has not been run. `analyze_agentic.py` still lacks the per-episode
+void/cost summary that `test_agentic_tasks.py` specifies (delegated, in flight).
