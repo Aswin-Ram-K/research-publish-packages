@@ -87,7 +87,7 @@ def test_every_key_is_derived_not_written():
 def test_committed_tasks_load_and_match_a_fresh_build():
     """The committed set cannot drift from the tree it was derived from."""
     for task in B.build(REPO):
-        path = os.path.join(TASK_DIR, "%s.json" % task["task_id"])
+        path = os.path.join(TASK_DIR, "%s.json" % task["fixture_version"])
         with open(path, "rb") as fh:
             assert fh.read() == B.serialise(task), (
                 "%s is stale; rebuild with build_agentic_tasks.py" % task["task_id"])

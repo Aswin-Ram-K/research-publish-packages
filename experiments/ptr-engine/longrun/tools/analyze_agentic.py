@@ -15,6 +15,22 @@ that destroyed a value from a model that simply answered wrongly:
 `refetch_count` is the recovery price: tool calls named `read_file` or `grep` made at or
 after the first fold of an episode.  An episode that never folded contributes zero.
 
+Two row shapes share a file.  A row carrying a `checkpoints` list is a per-episode row
+(`task`, `arm`, `rep`, `solved`, `checkpoints`, `steps_used`, `requests`,
+`refetch_count`, `compactions`, `evicted`, `billed_tokens`, `completion_tokens`); a row
+carrying `step` is a per-request row.  The per-request block above is computed over the
+per-request rows only; the episode block (`checkpoints_n`, `checkpoint_accuracy`,
+`cost_units`, `mean_compactions`, ...) is computed over the per-episode rows only,
+grouped by `(task, arm, rep)`.
+
+An episode is VOID when no fold of any kind happened: `compactions == 0 and evicted == 0`.
+`masking-no-fetch` folds by masking, so it records `compactions == 0` with `evicted > 0`
+and is a live episode; `none` has neither and is void.  A void episode is not a data
+point: it is excluded from every accuracy and cost number, and an arm whose episodes are
+all void reports `void: true` with `cost_basis: "no_live_episodes"` instead of a number.
+An 8-episode "solved %" resolves to roughly +-35 pp, so the table states that the solved
+rate is NOT reported.
+
 Five falsifiers, each printed with the numbers that fired it.  A fired falsifier is a
 result, not an error: the process always exits 0.
 
@@ -36,7 +52,21 @@ for _p in (LONGRUN, HERE):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from agentic_contract import ARMS  # noqa: E402
+#: The five arms, in report order.  Declared here rather than imported: the bespoke
+#: `agentic_contract` module lost the schema ruling and is being deleted.
+ARMS = ("none", "masking-no-fetch", "pinned", "bounded-context-fetch", "compact")
+
+#: What each arm DECLARES it does.  Voiding is judged against the declaration, not
+#: against a single global rule: `none` declares no mechanism, so it can never fail
+#: to fire one, and voiding it would delete the baseline every other arm is compared
+#: against.
+FOLD_MECHANISM = {
+    "none": "none",
+    "masking-no-fetch": "eviction",
+    "pinned": "fold",
+    "compact": "fold",
+    "bounded-context-fetch": "fold",
+}
 
 REFETCH_TOOLS = ("read_file", "grep")
 
@@ -93,6 +123,99 @@ def _episode_key(row: dict) -> tuple:
     return (row.get("run_id"), row.get("arm"), row.get("task_id"), row.get("rep"))
 
 
+def _is_episode_row(row: dict) -> bool:
+    """A per-episode row carries a `checkpoints` list; a per-request row carries `step`."""
+    return isinstance(row.get("checkpoints"), list)
+
+
+def _void_reason(arm: str, row: dict) -> tuple[bool, str]:
+    """(void, reason) for one episode under the arm's DECLARED mechanism.
+
+    `none` declares no mechanism, so it can never fail to fire one: it is the
+    baseline and is never void.  `masking-no-fetch` folds by eviction, so it is void
+    only when nothing was evicted.  The fold arms are void only when no fold fired.
+    """
+    mechanism = FOLD_MECHANISM.get(arm, "fold")
+    if mechanism == "none":
+        return False, ""
+    if mechanism == "eviction":
+        if _num(row, "evicted") == 0:
+            return True, "evicted_zero"
+        return False, ""
+    if _num(row, "compactions") == 0:
+        return True, "compactions_zero"
+    return False, ""
+
+
+def _episode_report(rows: list[dict], arm: str) -> dict:
+    """Per-episode block: void accounting, checkpoint accuracy, and cost.
+
+    Grouped by `(task, rep)` inside the arm; a repeated key is one episode written twice,
+    so the last row wins rather than being counted as a second episode.
+    """
+    groups: dict[tuple, dict] = {}
+    for row in rows:
+        groups[(row.get("task"), row.get("rep"))] = row
+
+    void_episodes = 0
+    reasons: set[str] = set()
+    live: list[dict] = []
+    for row in groups.values():
+        is_void, reason = _void_reason(arm, row)
+        if is_void:
+            void_episodes += 1
+            reasons.add(reason)
+        else:
+            live.append(row)
+
+    checkpoints_n = 0
+    checkpoints_ok = 0
+    for row in live:
+        for cp in row.get("checkpoints") or []:
+            if not isinstance(cp, dict):
+                continue
+            checkpoints_n += 1
+            if cp.get("ok"):
+                checkpoints_ok += 1
+
+    cost_units = None
+    if live:
+        cost_units = sum(_num(r, "billed_tokens") + 3.0 * _num(r, "completion_tokens")
+                         for r in live)
+
+    if not groups:
+        void = True
+        reasons.add("no_episode_rows")
+    else:
+        void = void_episodes == len(groups)
+    if not groups:
+        cost_basis = "no_episode_rows"
+    elif void:
+        cost_basis = "no_live_episodes"
+    else:
+        cost_basis = "billed_tokens_plus_3x_completion"
+
+    return {
+        "episode_rows": len(rows),
+        "fold_mechanism": FOLD_MECHANISM.get(arm, "fold"),
+        "void_episodes": void_episodes,
+        "void_reasons": sorted(reasons),
+        "checkpoints_n": checkpoints_n,
+        "checkpoints_ok": checkpoints_ok,
+        "checkpoint_accuracy": (checkpoints_ok / checkpoints_n) if checkpoints_n else None,
+        "cost_units": cost_units,
+        "cost_units_per_verified_success": (
+            cost_units / checkpoints_ok
+            if cost_units is not None and checkpoints_ok else None),
+        "mean_refetch_count": (sum(_num(r, "refetch_count") for r in live) / len(live))
+                              if live else None,
+        "mean_compactions": (sum(_num(r, "compactions") for r in live) / len(live))
+                            if live else None,
+        "void": void,
+        "cost_basis": cost_basis,
+    }
+
+
 def _tool_name(call) -> str | None:
     if isinstance(call, dict):
         return call.get("name")
@@ -109,15 +232,18 @@ def _arm_order(arm: str) -> int:
 
 
 def _arm_report(rows: list[dict]) -> dict:
+    episode_rows = [r for r in rows if _is_episode_row(r)]
+    request_rows = [r for r in rows if not _is_episode_row(r)]
+
     episodes: dict[tuple, list[dict]] = {}
-    for row in rows:
+    for row in request_rows:
         episodes.setdefault(_episode_key(row), []).append(row)
 
     counts = {"ok": 0, "lost_then_failed": 0, "present_then_failed": 0,
               "unclassified": 0}
     graded = 0
     verified = 0
-    for row in rows:
+    for row in request_rows:
         if row.get("verified") is None:
             continue
         graded += 1
@@ -147,24 +273,26 @@ def _arm_report(rows: list[dict]) -> dict:
                 if _tool_name(call) in REFETCH_TOOLS:
                     refetch += 1
 
-    n = len(rows)
-    return {
-        "episodes": len(episodes),
+    n = len(request_rows)
+    report = {
+        "episodes": len(episode_rows) or len(episodes),
         "episodes_without_fold": episodes_without_fold,
         "requests": n,
         "graded": graded,
         "verified": verified,
         "accuracy": (verified / graded) if graded else None,
-        "mean_prompt_tokens": (sum(_num(r, "prompt_tokens") for r in rows) / n)
+        "mean_prompt_tokens": (sum(_num(r, "prompt_tokens") for r in request_rows) / n)
                               if n else None,
-        "mean_cached_tokens": (sum(_num(r, "cached_tokens") for r in rows) / n)
+        "mean_cached_tokens": (sum(_num(r, "cached_tokens") for r in request_rows) / n)
                               if n else None,
-        "fold_events": sum(1 for r in rows if r.get("fold_event")),
-        "dropped_turns": int(sum(_num(r, "dropped_turns") for r in rows)),
-        "pinned_tokens": int(sum(_num(r, "pinned_tokens") for r in rows)),
+        "fold_events": sum(1 for r in request_rows if r.get("fold_event")),
+        "dropped_turns": int(sum(_num(r, "dropped_turns") for r in request_rows)),
+        "pinned_tokens": int(sum(_num(r, "pinned_tokens") for r in request_rows)),
         "refetch_count": refetch,
         "counts": counts,
     }
+    report.update(_episode_report(episode_rows, rows[0].get("arm") if rows else None))
+    return report
 
 
 def analyse(rows: list[dict]) -> dict:
@@ -253,6 +381,29 @@ def table(result: dict) -> list[str]:
                      f"{v['graded']:>7} {v['verified']:>6} {acc:>6} {prompt:>7} "
                      f"{cached:>7} {v['fold_events']:>6} {v['dropped_turns']:>5} "
                      f"{v['pinned_tokens']:>5} {v['refetch_count']:>8}")
+
+    lines.append("")
+    lines.append("episode summary (per-episode rows only; solved rate is NOT reported)")
+    lines.append("arm                   eps  void  ckpt_n  ckpt_ok  ckpt_acc  cost_units  "
+                 "cost/ok  refetch  compact")
+    for arm, v in result["arms"].items():
+        if v["void"]:
+            acc = "VOID"
+        elif v["checkpoint_accuracy"] is None:
+            acc = "-"
+        else:
+            acc = f"{v['checkpoint_accuracy']:.3f}"
+        cost = "-" if v["cost_units"] is None else f"{v['cost_units']:.0f}"
+        per_ok = ("-" if v["cost_units_per_verified_success"] is None
+                  else f"{v['cost_units_per_verified_success']:.1f}")
+        refetch = ("-" if v["mean_refetch_count"] is None
+                   else f"{v['mean_refetch_count']:.2f}")
+        compact = ("-" if v["mean_compactions"] is None
+                   else f"{v['mean_compactions']:.2f}")
+        lines.append(f"{arm:<20} {v['episode_rows']:>4} {v['void_episodes']:>5} "
+                     f"{v['checkpoints_n']:>7} {v['checkpoints_ok']:>8} {acc:>9} "
+                     f"{cost:>11} {per_ok:>8} {refetch:>8} {compact:>8}")
+
     lines.append("")
     for name in FALSIFIERS:
         check = result["verdict"]["falsifiers"][name]
@@ -277,6 +428,29 @@ def markdown(result: dict) -> str:
                      f"{v['verified']} | {acc} | {prompt} | {cached} | "
                      f"{v['fold_events']} | {v['dropped_turns']} | "
                      f"{v['pinned_tokens']} | {v['refetch_count']} |")
+    lines.append("")
+    lines.append("Per-episode rows only; solved rate is NOT reported.")
+    lines.append("")
+    lines.append("| arm | episodes | void | checkpoints | ok | checkpoint accuracy | "
+                 "cost units | cost/ok | mean refetch | mean compactions |")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|")
+    for arm, v in result["arms"].items():
+        if v["void"]:
+            acc = "VOID"
+        elif v["checkpoint_accuracy"] is None:
+            acc = "-"
+        else:
+            acc = f"{v['checkpoint_accuracy']:.3f}"
+        cost = "-" if v["cost_units"] is None else f"{v['cost_units']:.0f}"
+        per_ok = ("-" if v["cost_units_per_verified_success"] is None
+                  else f"{v['cost_units_per_verified_success']:.1f}")
+        refetch = ("-" if v["mean_refetch_count"] is None
+                   else f"{v['mean_refetch_count']:.2f}")
+        compact = ("-" if v["mean_compactions"] is None
+                   else f"{v['mean_compactions']:.2f}")
+        lines.append(f"| {arm} | {v['episode_rows']} | {v['void_episodes']} | "
+                     f"{v['checkpoints_n']} | {v['checkpoints_ok']} | {acc} | "
+                     f"{cost} | {per_ok} | {refetch} | {compact} |")
     v = result["verdict"]
     lines.append("")
     lines.append(f"`verdict: instrument_ok={v['instrument_ok']} fired={v['fired']}`")

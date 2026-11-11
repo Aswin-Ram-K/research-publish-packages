@@ -457,7 +457,7 @@ def main(argv=None) -> int:
     if args.check:
         bad = 0
         for task in tasks:
-            path = os.path.join(out_dir, "%s.json" % task["task_id"])
+            path = os.path.join(out_dir, "%s.json" % task["fixture_version"])
             try:
                 with open(path, "rb") as fh:
                     on_disk = fh.read()
@@ -474,7 +474,7 @@ def main(argv=None) -> int:
 
     os.makedirs(out_dir, exist_ok=True)
     for task in tasks:
-        path = os.path.join(out_dir, "%s.json" % task["task_id"])
+        path = os.path.join(out_dir, "%s.json" % task["fixture_version"])
         with open(path, "wb") as fh:
             fh.write(serialise(task))
         print("%s: wrote %s (%d B)" % (task["task_id"], os.path.relpath(path, REPO),
