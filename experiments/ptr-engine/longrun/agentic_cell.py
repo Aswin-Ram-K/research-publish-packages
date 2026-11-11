@@ -15,22 +15,14 @@ This module is the instrument that can: one episode = one task, one arm, one rep
 the model chooses every read and the episode ends when it answers or the budget runs out.
 It is plan step 8 (``agentic-compaction-ab-plan.md``).
 
-THE TASK IS A FIXTURE OR A CONTRACT
------------------------------------
-Two task schemas are accepted, and the document's own keys say which one it is:
-
-* ``consonance.longrun-fixture/2`` — a replay fixture.  It has ``turns``, and
-  ``run_longrun.load_fixture:164`` + ``grade_v5.derive_truth:603`` already read it, so
-  that path is unchanged and every earlier cell loads exactly as before.
-* ``agentic-contract`` — a stage-2 task (``agentic_contract.py``).  It has ``version`` and
-  ``steps`` and no ``turns``; ``_task_from_contract`` maps it onto the same ``Task``
-  (steps -> turns, contract checkpoints -> graded checkpoints, statement -> L0 goal).
-
-The contract is not a second grader: its checkpoints carry ``expected`` and its final
-answer carries ``answer_form``, so the synthesised checkpoints are graded by the same
-``grade_v5.grade_cell`` the fixture path uses.  ``tasks-agentic/`` holds both shapes side
-by side (``AG-01.json`` is a replay fixture, ``AG-01.v1.json`` is a contract task), which
-is why detection is by key and never by filename.
+THE TASK IS A ``consonance.longrun-fixture/2``
+---------------------------------------------
+One task schema is accepted.  ``run_longrun.load_fixture:164`` +
+``grade_v5.derive_truth:603`` already read it, so the loader adds nothing but the schema
+check: a document whose ``schema`` is not ``consonance.longrun-fixture/2`` is refused by
+name (``unsupported_task_schema: <schema>``), never coerced into one.  The bespoke
+``agentic-contract`` shape lost the ruling (Main, 2026-11-11) and is gone; a second task
+shape would be a second convention for the same measurement.
 
 A task is read as follows:
 
@@ -145,7 +137,7 @@ _PTR_ENGINE_ROOT = os.path.dirname(_LONGRUN_HERE)
 if _PTR_ENGINE_ROOT not in sys.path:
     sys.path.insert(0, _PTR_ENGINE_ROOT)
 
-import agentic_contract  # noqa: E402  the ONE stage-2 task/row contract
+import agentic_contract  # noqa: E402  the ONE row contract (ARMS, REQUIRED_ROW_KEYS, validate_row)
 import arm_cd  # noqa: E402  the fold machinery (SpccArmState / PinnedArmState / ArmCDState)
 import cell as cell_mod  # noqa: E402  PROJECT_QUOTA + the ledger row counter
 import client  # noqa: E402  the ONE HTTP client
@@ -157,12 +149,16 @@ from ptr_engine import layers  # noqa: E402  the ONE L0 renderer
 # ------------------------------------------------------------------ constants
 #: The five arms, in the order the design lists them.  ``spcc`` is deliberately absent:
 #: it is the layer compiler over a fixture's world index, and an episode loop has no world
-#: index to compile (docs/AGENTIC-COMPACTION-AB.md, "The arm set is five").
-ARMS = ("none", "masking-no-fetch", "pinned", "bounded-context-fetch", "compact")
+#: index to compile (docs/AGENTIC-COMPACTION-AB.md, "The arm set is five").  Declared in
+#: ``agentic_contract`` and imported, so the analyser and the cell cannot drift apart.
+ARMS = agentic_contract.ARMS
 ARM_NONE, ARM_MASK, ARM_PINNED, ARM_FETCH, ARM_COMPACT = ARMS
 
 #: Arms whose episodes buy an extra request per fold (the summary call).
 SUMMARY_ARMS = (ARM_COMPACT,)
+
+#: The one task schema this cell accepts.  Anything else is refused by name.
+FIXTURE_SCHEMA = "consonance.longrun-fixture/2"
 
 DEFAULT_STEPS = 16
 DEFAULT_MAX_REQUESTS = 20
@@ -201,12 +197,9 @@ SUMMARY_PROMPT = (
 )
 
 #: The per-request row's required keys.  The analyser reads these; a row missing one is a
-#: defect in this file, not in the data, so it is refused at write time.
-REQUIRED_ROW_KEYS = ("run_id", "arm", "task_id", "rep", "step", "kind",
-                     "prompt_tokens", "tool_calls", "fetch_rounds", "fold_event",
-                     "fold_kind", "compactions", "evicted", "prompt_tokens_max",
-                     "tools_schema_sent", "answer", "expected", "verified",
-                     "expected_present", "ts")
+#: defect in this file, not in the data, so it is refused at write time.  Declared in
+#: ``agentic_contract`` and imported — one definition for the writer and the analyser.
+REQUIRED_ROW_KEYS = agentic_contract.REQUIRED_ROW_KEYS
 
 #: A task whose ``system_prompt`` names none of these cannot fetch, so an episode against
 #: it would spend its whole budget answering from the index alone.  Refused by name
@@ -232,8 +225,9 @@ class BudgetRefusal(RuntimeError):
     """The planned or actual request count would exceed the authorised budget."""
 
 
-class RowError(ValueError):
-    """A per-request row that does not satisfy :data:`REQUIRED_ROW_KEYS`."""
+#: A per-request row that does not satisfy :data:`REQUIRED_ROW_KEYS`.  The contract's own
+#: error, so a caller catching it catches the same class the analyser raises.
+RowError = agentic_contract.ContractError
 
 
 # ------------------------------------------------------------------ task loading
@@ -287,17 +281,6 @@ def _task_from_fixture(path: str) -> Task:
                 turns=tuple(fixture["turns"]), checkpoints=tuple(checkpoints),
                 index_text=run_longrun.index_lines(fixture),
                 window_tokens=int(fixture.get("window_tokens") or 0), path=path)
-
-
-def _answer_kind(expected) -> str:
-    """``NUM`` for an integer literal, ``TEXT`` for anything else.
-
-    The contract's ``answer_form`` is authoritative for the FINAL answer; a mid-episode
-    checkpoint carries only ``expected``, so its kind is read off the literal.  This is
-    the same split ``grade_v5.grade_cell`` grades on (``int(expected)`` for NUM,
-    ``_normalize`` for TEXT), so a synthesised checkpoint is gradeable by the one grader.
-    """
-    return "NUM" if re.fullmatch(r"-?\d+", str(expected).strip()) else "TEXT"
 
 
 def _task_from_contract(doc: dict, path: str) -> Task:
@@ -378,27 +361,44 @@ def _task_from_contract(doc: dict, path: str) -> Task:
                 window_tokens=window_tokens, path=path)
 
 
+def _answer_kind(expected) -> str:
+    """``NUM`` for an integer literal, ``TEXT`` otherwise.
+
+    The contract's checkpoints carry no ``answer_form`` of their own (only the final
+    answer does), so the kind is read off the value: a bare integer is graded as a
+    number, anything else as text.
+    """
+    if isinstance(expected, bool):
+        return "TEXT"
+    if isinstance(expected, int):
+        return "NUM"
+    if isinstance(expected, str) and expected.strip().lstrip("-").isdigit():
+        return "NUM"
+    return "TEXT"
+
+
 def load_task(path: str) -> Task:
-    """One task file -> :class:`Task`.  The document says which schema it is.
+    """One task file -> :class:`Task`.  Two schemas are accepted, by key.
 
-    Two schemas are accepted:
+    * ``turns`` present            -> ``consonance.longrun-fixture/2`` (the replay path).
+    * ``version`` and ``steps``    -> the agentic contract (``agentic_contract.py``).
 
-    * ``consonance.longrun-fixture/2`` — a replay fixture.  It has ``turns``, and
-      ``run_longrun.load_fixture`` + ``grade_v5.derive_truth`` already read it, so that
-      path is unchanged.
-    * ``agentic-contract`` — a stage-2 task.  It has ``version`` and ``steps`` and no
-      ``turns``; :func:`_task_from_contract` maps it onto the same :class:`Task`.
-
-    Detection is by the document's own keys, never by filename: ``tasks-agentic/`` holds
-    both shapes side by side (``AG-01.json`` is a replay fixture, ``AG-01.v1.json`` is a
-    contract task), and a name-based rule would misread one of them.
+    The two are told apart by their keys rather than by a ``schema`` field, because the
+    contract documents carry no such field.  Anything else is refused by name —
+    ``unsupported_task_schema`` — never coerced into one.
     """
     with open(path, "r", encoding="utf-8") as fh:
         doc = json.load(fh)
-    if (isinstance(doc, dict) and "turns" not in doc
-            and "version" in doc and "steps" in doc):
+    if not isinstance(doc, dict):
+        raise TaskError("unsupported_task_schema: not an object (%s)"
+                        % os.path.basename(path))
+    if "turns" in doc:
+        return _task_from_fixture(path)
+    if "version" in doc and "steps" in doc:
         return _task_from_contract(doc, path)
-    return _task_from_fixture(path)
+    raise TaskError("unsupported_task_schema: %s (task %s; expected 'turns' or "
+                    "'version'+'steps')"
+                    % (doc.get("schema"), os.path.basename(path)))
 
 
 def load_tasks(tasks_dir: str) -> List[Task]:
@@ -1015,21 +1015,13 @@ def dry_run_folds(task: Task, arm_name: str, *, steps: int = DEFAULT_STEPS,
 
 # ------------------------------------------------------------------ rows
 def validate_row(row: dict) -> dict:
-    """Return the row unchanged, or raise :class:`RowError` naming the first defect."""
-    if not isinstance(row, dict):
-        raise RowError("row is not an object: %r" % (type(row).__name__,))
-    for key in REQUIRED_ROW_KEYS:
-        if key not in row:
-            raise RowError("row for %r step %r is missing required key %r"
-                           % (row.get("task_id"), row.get("step"), key))
-    if row["arm"] not in ARMS:
-        raise RowError("row arm %r is not one of %r" % (row["arm"], ARMS))
-    if row["kind"] not in ("work", "final", "summary"):
-        raise RowError("row kind %r is not work/final/summary" % (row["kind"],))
-    if not isinstance(row["tool_calls"], list):
-        raise RowError("row tool_calls must be a list, got %r"
-                       % (type(row["tool_calls"]).__name__,))
-    return row
+    """Return the row unchanged, or raise :class:`RowError` naming the first defect.
+
+    Delegates to ``agentic_contract.validate_row`` — the analyser validates the same rows
+    with the same function, so a row this cell writes and the analyser accepts cannot
+    disagree about what a row is.
+    """
+    return agentic_contract.validate_row(row)
 
 
 def _now() -> str:
