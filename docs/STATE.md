@@ -217,6 +217,26 @@ budget must be reconciled against the 1,927 headroom (§6 item 15). Two instrume
 to the arm or compiler mid-run would not change the harness digest; and `test_gate_arm_count.py` stops a
 cell at **500 real requests**, so the 600-request stage 2 was split into 200 + 400.
 
+**The pin arms are built (2026-11-11, 0 requests).** Route (b) is implemented: `pinned` and
+`pinned-recency` are `pointer-stable` variants with the layer compiler ported in, and `spcc` is
+untouched — its `prefix_sha256` is identical to the pre-change compiler on all 24 turns, proven by
+loading the old module from `git show HEAD:…/layers.py` and driving both. `CompactionState.pins` renders
+between `L0` and `L1` **only when non-empty**, so a no-pin arm keeps byte-identical prefixes; the fold
+record is a pin (`P<n>|fold|T<t>|…`) that persists every later turn; `prefix_sha256` covers
+`L0+PINS+L1`. `fold_at_tokens` + `CHARS_PER_TOKEN = 3.122` give the **window-pressure** trigger the
+design specifies, and the turn interval is disabled when a fixture declares a window (a 24-turn interval
+folds at ~69 k tokens on a 45 k `L0`, under the 91,750 threshold, so it would always win and the window
+trigger would be dead code). `PinnedArmState` implements the four pin rules (turn stamp, cap-refuse with
+the overflow returned, `supersedes P<n>`, sanitise zero-width/bidi from tool text), the turn-1 `PLAN`
+pin, and an `ACTIVE` line gated on `recency`. 47 contract tests pass; red→green recorded in
+`test_layers_compaction.py` (3 failed against the pre-change module, 6 pass now).
+
+**One fixture gap remains, and it blocks the window trigger.** `LR-07.v5.json` carries no `tool_outputs`
+bodies, so each journal line is only the question text (~45 tokens) and the prompt reaches just
+**55,485 tokens at T220** — the 91,750 threshold is never reached. The fixture is real-length in `L0` but
+not in journal growth; it is being rebuilt with the real read bodies so the journal grows ~1,000
+tokens/turn and the prompt crosses the threshold at roughly T47.
+
 **Not measured — do not read any of the above as a result.** No live `spcc` cell has run; the
 memory window cannot currently be admitted (`MemAvailable` ~14 GB against a 68 GB reserve, so the
 supervisor's correct answer is *refuse*). The compiler's own `cached_tokens`
