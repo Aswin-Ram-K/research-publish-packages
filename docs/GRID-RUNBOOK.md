@@ -65,9 +65,9 @@ Every line is a command, its expected output, and **the file that is wrong if it
 
 | # | Check | Command | Expected | File that is wrong if it fails |
 |---|---|---|---|---|
-| 1 | **Pin — recompute** | see block below | `32463261c9e733325b3522a00531708cab4119eadba48134e21edccdefad4ff1` | the harness file that moved (pin names all seven); then `measure/HARNESS-PIN.json` is stale and must be **regenerated, never hand-edited** |
-| 2 | **Pin — generation** | `python3 -c "import json;d=json.load(open('experiments/ptr-engine/measure/HARNESS-PIN.json'));print(d['generation'],d['harness_sha256'])"` | `9 32463261…` | `measure/HARNESS-PIN.json` |
-| 3 | **Pin — the flag you will pass** | `grep -n 'launch_must_pass' experiments/ptr-engine/measure/GRID-PARAMS.json` | `--expect-harness 32463261…` (⚠️ 1a: the copy is not the authority) | `measure/GRID-PARAMS.json` (`harness_pin.launch_must_pass`) |
+| 1 | **Pin — recompute** | see block below | `a668491a55a4e2714b6e58dc8168919ee163bd2b5e3bb733b54fd9e38263bf73` | the harness file that moved (pin names all seven); then `measure/HARNESS-PIN.json` is stale and must be **regenerated, never hand-edited** |
+| 2 | **Pin — generation** | `python3 -c "import json;d=json.load(open('experiments/ptr-engine/measure/HARNESS-PIN.json'));print(d['generation'],d['harness_sha256'])"` | `11 a668491a…` | `measure/HARNESS-PIN.json` |
+| 3 | **Pin — the flag you will pass** | `grep -n 'launch_must_pass' experiments/ptr-engine/measure/GRID-PARAMS.json` | `--expect-harness a668491a…` (⚠️ 1a: the copy is not the authority) | `measure/GRID-PARAMS.json` (`harness_pin.launch_must_pass`) |
 | 4 | **Price** | `python3 -c "import json;p=json.load(open('experiments/ptr-engine/measure/GRID-PARAMS.json'))['price'];print(p['total'],p['components'],p['remaining_after'])"` | `1056 {'tranche': 964, 'canary': 48, 'warm_ups': 4} 8447` | `measure/GRID-PARAMS.json` (`price.*`) |
 | 5 | **Price arithmetic** | same file, `price.arithmetic` | `964 tranche + 48 canary + 4 warm-ups = 1,016` | `measure/GRID-PARAMS.json` |
 | 6 | **Ledger** | `python3 experiments/ptr-engine/tools/ledger_delta.py` | `spent_before 1128` / `spent_now 1128` / `delta 0` / `remaining_now 3192` / `verdict OK (arithmetic closes…)` | `measure/LEDGER-GRID-BASELINE-2.json` if the baseline sha moved; `measure/REQUEST-LEDGER.json` if the counter cannot read its row files |
@@ -117,10 +117,10 @@ print(c.hexdigest())
 PY
 ```
 
-Measured 2026-11-11 (generation 9): prints
-`32463261c9e733325b3522a00531708cab4119eadba48134e21edccdefad4ff1` — **the pin holds**.
-Generation 6 printed `efefd885…` and generation 8 printed `64e69e49…`; both stay on the
-record under their own generation label and neither launches any more.
+Measured 2026-11-11 (generation 10): prints
+`a668491a55a4e2714b6e58dc8168919ee163bd2b5e3bb733b54fd9e38263bf73` — **the pin holds**.
+Generation 9 printed `32463261…`, generation 6 `efefd885…`, generation 8 `64e69e49…`; all
+three stay on the record under their own generation label and none launches any more.
 
 ### ⚠️ 1b. The canary wall: 12 × 60 = 720 s versus the 600 s G2 headroom
 
@@ -205,7 +205,7 @@ carries a **different fixture sha** (`967cef03…`). Neither is `usable_for` any
 python3 experiments/ptr-engine/longrun/cell.py \
   --arm <arm> --fixture experiments/ptr-engine/longrun/tasks-v6/LR-01.v8.json \
   --turns 48 --reps 1 --budget 220 \
-  --expect-harness 32463261c9e733325b3522a00531708cab4119eadba48134e21edccdefad4ff1 \
+  --expect-harness a668491a55a4e2714b6e58dc8168919ee163bd2b5e3bb733b54fd9e38263bf73 \
   --out-dir <out>
 ```
 

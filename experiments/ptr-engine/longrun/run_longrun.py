@@ -37,6 +37,7 @@ request count it would send, and exits 0.  It sends nothing and writes no row fi
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import inspect
 import json
@@ -484,7 +485,23 @@ TOOL_FETCH_ROUNDS_PER_TURN = 3
 # the fetches that genuinely need it.  A flag rather than a code path so the offline test
 # can prove the red-before-green (see tests/test_tool_channel3.py).
 TOOL_SERVE_FROM_PROMPT = True
-TOOL_NAMES = ("read_file",)
+# STAGE-2-GREP: the episode loop's second tool.  `read_file` alone makes a lost journal
+# repairable only by re-reading, which inflates the re-fetch rate the design measures
+# (docs/AGENTIC-COMPACTION-AB.md §3.2); a bounded `grep` makes re-fetch a realistic
+# choice and its cost the quantity E7 claims.  The bounds are constants here so the
+# parser, the executor and the row record cannot drift apart.
+TOOL_NAMES = ("read_file", "grep")
+GREP_TOOL_NAME = "grep"
+GREP_DEFAULT_GLOB = "*.py"
+GREP_MAX_HITS = 20
+GREP_MAX_PATTERN_CHARS = 200
+GREP_MAX_LINE_CHARS = 200
+#: Directories the grep walk never descends into.  `state/` holds run artefacts (row
+#: files, snapshots, logs), not source: searching it would let a task's own evidence
+#: answer the task.  `.venv`/`node_modules` are installed third-party bytes, not the
+#: repository: leaving them in would make a hit list depend on whether a virtualenv
+#: happens to exist under the root, which is a reproducibility hazard, not a feature.
+GREP_SKIP_DIRS = (".git", "__pycache__", "state", ".venv", "node_modules")
 # FETCH-CHANNEL path bases.  The arm emits `ptr_engine/resolve.py` — the string its own
 # fixture index uses — which does not exist under the workspace root, so every
 # well-formed call was refused `path_not_found` (54 of 68 rows).  A path now resolves
@@ -933,8 +950,30 @@ def _decode_json_objects(text: str) -> list:
         i = end
 
 
+def _grep_call_from_object(obj: dict) -> Optional[dict]:
+    """One `grep` call from a decoded JSON object, or None when it is unusable.
+
+    STAGE-2-GREP: the discriminator is the `pattern` key, not the position of the
+    object in the turn.  An EMPTY pattern is kept, not dropped: `execute_tool_call`
+    refuses it by name (`missing_pattern`), so the row says the model asked and the
+    harness refused, which is the same contract every other refusal follows.
+    """
+    pattern = obj.get("pattern")
+    if not isinstance(pattern, str):
+        return None
+    glob = obj.get("glob")
+    if not isinstance(glob, str) or not glob.strip():
+        glob = GREP_DEFAULT_GLOB
+    try:
+        max_hits = int(obj.get("max_hits", GREP_MAX_HITS))
+    except (TypeError, ValueError):
+        max_hits = GREP_MAX_HITS
+    return {"tool": GREP_TOOL_NAME, "pattern": pattern, "glob": glob.strip(),
+            "max_hits": max_hits}
+
+
 def parse_tool_calls(text: str) -> list[dict]:
-    """Parse read_file requests out of one model turn. Never raises.
+    """Parse read_file and grep requests out of one model turn. Never raises.
 
     Accepts the observed shape, where the marker is repeated as a separator:
 
@@ -942,14 +981,37 @@ def parse_tool_calls(text: str) -> list[dict]:
 
     and a single well-formed JSON object following the token `read_file`.  A turn
     that never names `read_file` yields no calls, so prose JSON cannot trigger a read.
+
+    STAGE-2-GREP: the same scan additionally accepts a JSON object carrying a
+    `pattern` key after the token `grep`, producing
+    ``{"tool": "grep", "pattern", "glob", "max_hits"}``.  The name gate is per tool:
+    a turn that names only `grep` cannot produce a `read_file` call and vice versa,
+    so prose JSON still cannot trigger either.
     """
-    if not text or "read_file" not in text:
+    if not text:
+        return []
+    has_read = client.READ_FILE_TOOL_NAME in text
+    has_grep = GREP_TOOL_NAME in text
+    if not (has_read or has_grep):
         return []
     anchor = text.find("<tool_call>")
-    region = text[anchor:] if anchor >= 0 else text[text.find("read_file"):]
+    if anchor >= 0:
+        region = text[anchor:]
+    else:
+        region = text[min(text.find(n) for n in
+                          (client.READ_FILE_TOOL_NAME, GREP_TOOL_NAME) if n in text):]
     calls: list[dict] = []
     for obj in _decode_json_objects(region):
         if not isinstance(obj, dict):
+            continue
+        if "pattern" in obj:
+            if not has_grep:
+                continue
+            call = _grep_call_from_object(obj)
+            if call is not None:
+                calls.append(call)
+            continue
+        if not has_read:
             continue
         path = obj.get("path")
         if not isinstance(path, str) or not path.strip():
@@ -988,6 +1050,32 @@ def _call_from_arguments(call_id, name, arguments_json) -> tuple:
             rng = (rng.get("start"), rng.get("end"))
         return ({"ref": ref.strip(), "range": rng,
                  "source": "structured_tool_call", "call_id": call_id}, None)
+    if name == GREP_TOOL_NAME:
+        # STAGE-2-GREP: the same refusal SHAPE as every other branch here (a recorded
+        # refusal, never a dropped call) and the same refusal VOCABULARY as
+        # `execute_tool_call`'s grep branch, so a structured call and a text call that
+        # are equally wrong are equally named on the row.
+        if not isinstance(arguments_json, dict):
+            return None, dict(refusal, reason="arguments_not_an_object")
+        pattern = arguments_json.get("pattern")
+        if not isinstance(pattern, str) or not pattern:
+            return None, dict(refusal, reason="missing_pattern")
+        if len(pattern) > GREP_MAX_PATTERN_CHARS:
+            return None, dict(refusal, reason="pattern_too_long")
+        try:
+            re.compile(pattern)
+        except re.error:
+            return None, dict(refusal, reason="bad_pattern")
+        glob = arguments_json.get("glob")
+        if not isinstance(glob, str) or not glob.strip():
+            glob = GREP_DEFAULT_GLOB
+        try:
+            max_hits = int(arguments_json.get("max_hits", GREP_MAX_HITS))
+        except (TypeError, ValueError):
+            max_hits = GREP_MAX_HITS
+        return ({"tool": GREP_TOOL_NAME, "pattern": pattern, "glob": glob.strip(),
+                 "max_hits": max_hits, "source": "structured_tool_call",
+                 "call_id": call_id}, None)
     if name != client.READ_FILE_TOOL_NAME:
         return None, dict(refusal, reason="unknown_tool")
     if not isinstance(arguments_json, dict):
@@ -1081,6 +1169,14 @@ def fetch_call_tool_names(cfg=None) -> tuple:
     neither name (``cfg is None``) falls back to ``TOOL_NAMES``.
     """
     names = list(client.tool_names(cfg)) if cfg is not None else list(TOOL_NAMES)
+    # STAGE-2-GREP: `grep` is NOT a fetch.  `parse_fetch_calls` turns every accepted
+    # call into `{"ref": args.get("ref") or args.get("path") or ""}`, so a grep call
+    # admitted here would be served as a fetch with an EMPTY ref -- the model asks for
+    # a pattern and gets a pointer-table refusal, which is a silent mis-service.  It is
+    # excluded deliberately, so a grep call in a fetch arm stays UNSERVICED and is
+    # reported by `unserviced_structured_calls` (protocol_violation
+    # "tool_call_unserviced") instead of being answered with the wrong tool.
+    names = [n for n in names if n != GREP_TOOL_NAME]
     if client.FETCH_TOOL_NAME not in names:
         names.append(client.FETCH_TOOL_NAME)
     return tuple(names)
@@ -1100,8 +1196,13 @@ def _is_secret_shaped(name: str) -> bool:
     return any(low == stem or low.startswith(stem + ".") for stem in _SECRET_STEMS)
 
 
-def _resolve_under(raw: str, root: str) -> tuple:
-    """Resolve one already-sanitised relative path under one base. Never opens the file."""
+def _resolve_under(raw: str, root: str, allow_dir: bool = False) -> tuple:
+    """Resolve one already-sanitised relative path under one base. Never opens the file.
+
+    STAGE-2-GREP: `allow_dir` exists so `grep` can scope to a directory without a second
+    copy of the containment rules.  The read channel keeps the default, so a directory is
+    still `path_not_found` for `read_file` -- only the caller that can use one asks for it.
+    """
     root_abs = os.path.realpath(root)
     target = os.path.realpath(os.path.join(root_abs, raw))
     try:
@@ -1109,12 +1210,18 @@ def _resolve_under(raw: str, root: str) -> tuple:
             return None, "path_refused"
     except ValueError:
         return None, "path_refused"
-    if target == root_abs or not os.path.isfile(target):
+    if target == root_abs:
+        return None, "path_not_found"
+    # `allow_dir` WIDENS the accepted kind, it does not replace it: a caller that can use
+    # a directory can still use a file.
+    ok = (os.path.isdir(target) or os.path.isfile(target)) if allow_dir else os.path.isfile(target)
+    if not ok:
         return None, "path_not_found"
     return target, None
 
 
-def resolve_read_path_base(path: str, root: str, engine_root=None) -> tuple:
+def resolve_read_path_base(path: str, root: str, engine_root=None,
+                           allow_dir: bool = False) -> tuple:
     """(absolute_path, refusal_or_None, base) where base is 'workspace'|'engine'|None.
 
     FETCH-CHANNEL fix: the arm emits `ptr_engine/resolve.py`, the string its own fixture
@@ -1133,11 +1240,11 @@ def resolve_read_path_base(path: str, root: str, engine_root=None) -> tuple:
         return None, "path_refused", None
     if _is_secret_shaped(raw.rsplit("/", 1)[-1]):
         return None, "path_refused", None
-    target, reason = _resolve_under(raw, root)
+    target, reason = _resolve_under(raw, root, allow_dir)
     if target is not None:
         return target, None, "workspace"
     if engine_root is not None and reason == "path_not_found":
-        e_target, e_reason = _resolve_under(raw, engine_root)
+        e_target, e_reason = _resolve_under(raw, engine_root, allow_dir)
         if e_target is not None:
             return e_target, None, "engine"
         if e_reason == "path_refused":
@@ -1151,15 +1258,133 @@ def resolve_read_path(path: str, root: str, engine_root=None) -> tuple:
     return target, reason
 
 
+def _grep_refusal(reason: str, rec: dict) -> dict:
+    """The refusal shape every tool call shares: a record, a block, no text."""
+    rec["error"] = reason
+    return {"record": rec, "block": f'<tool_result error="{reason}"/>', "text": ""}
+
+
+def _execute_grep(call: dict, root: str, engine_root=None) -> dict:
+    """Bounded regex search under `root`. Returns {record, block, text}.
+
+    STAGE-2-GREP (docs/AGENTIC-COMPACTION-AB.md §3.2).  `read_file` alone makes a lost
+    journal repairable only by re-reading, which inflates the re-fetch rate the design
+    measures; this is the second tool, and it is bounded on every axis that could make
+    it a second read channel:
+
+      * `glob` (default ``*.py``) is matched with ``fnmatch`` against the BASENAME;
+      * at most ``GREP_MAX_HITS`` (20) ``path:line: text`` lines come back, each
+        truncated to ``GREP_MAX_LINE_CHARS`` (200) characters;
+      * the walk never descends into ``GREP_SKIP_DIRS`` (``.git``, ``__pycache__``,
+        ``state``) and every candidate is re-admitted through
+        ``resolve_read_path_base``, so a symlink out of the root or a secret-shaped
+        basename is refused exactly as a read would be.  Nothing is searched that a
+        ``read_file`` could not read.
+
+    `truncated` is exact, not a guess: the scan runs until it finds ``max_hits + 1``
+    matches, so a result that happens to end exactly at the cap is not reported cut.
+    """
+    pattern = call.get("pattern")
+    glob = call.get("glob") or GREP_DEFAULT_GLOB
+    try:
+        max_hits = int(call.get("max_hits", GREP_MAX_HITS))
+    except (TypeError, ValueError):
+        max_hits = GREP_MAX_HITS
+    max_hits = max(1, min(max_hits, GREP_MAX_HITS))
+    rec = {"tool": GREP_TOOL_NAME, "pattern": pattern, "glob": glob,
+           "hits": 0, "files_scanned": 0, "executed": False, "truncated": False}
+    if not isinstance(pattern, str) or not pattern:
+        return _grep_refusal("missing_pattern", rec)
+    if len(pattern) > GREP_MAX_PATTERN_CHARS:
+        return _grep_refusal("pattern_too_long", rec)
+    try:
+        rx = re.compile(pattern)
+    except re.error:
+        return _grep_refusal("bad_pattern", rec)
+    root_abs = os.path.realpath(root)
+    # STAGE-2-GREP: a `path` argument is SCOPED, not ignored.  It goes through the same
+    # `resolve_read_path_base` gate a read does, so `.env`, `~/.ssh/id_rsa`, an absolute
+    # path or a `..` escape is refused with the read channel's own reason instead of
+    # being silently dropped -- a grep that quietly searched the whole root after being
+    # asked for one file would answer a question the model did not ask.
+    scope = root_abs
+    raw_path = call.get("path")
+    if raw_path:
+        target, reason, _base = resolve_read_path_base(raw_path, root_abs, engine_root,
+                                                       allow_dir=True)
+        if target is None:
+            rec["path"] = raw_path
+            return _grep_refusal(reason, rec)
+        scope = target
+        rec["path"] = raw_path
+    hits: list[str] = []
+    files_scanned = 0
+    truncated = False
+    if os.path.isfile(scope):
+        walk = [(os.path.dirname(scope), [], [os.path.basename(scope)])]
+    else:
+        walk = os.walk(scope)
+    for dirpath, dirnames, filenames in walk:
+        # STAGE-2-GREP: the walk prunes the same names `read_file` refuses.  A directory
+        # called `secrets/` or `keys/` is refused by `_is_secret_shaped` on its own
+        # basename, so descending into it could only produce hits the read channel
+        # would never have returned -- a leak by a second route.
+        dirnames[:] = sorted(d for d in dirnames
+                             if d not in GREP_SKIP_DIRS and not _is_secret_shaped(d))
+        for name in sorted(filenames):
+            if not fnmatch.fnmatch(name, glob):
+                continue
+            rel = os.path.relpath(os.path.join(dirpath, name), root_abs).replace(os.sep, "/")
+            target, reason, _base = resolve_read_path_base(rel, root_abs, engine_root)
+            if target is None:
+                continue
+            files_scanned += 1
+            try:
+                with open(target, "r", encoding="utf-8", errors="replace") as fh:
+                    lines = fh.readlines()
+            except OSError:
+                continue
+            for lineno, line in enumerate(lines, start=1):
+                if not rx.search(line):
+                    continue
+                text = line.rstrip("\n")
+                if len(text) > GREP_MAX_LINE_CHARS:
+                    text = text[:GREP_MAX_LINE_CHARS]
+                hits.append(f"{rel}:{lineno}: {text}")
+                if len(hits) > max_hits:
+                    truncated = True
+                    break
+            if truncated:
+                break
+        if truncated:
+            break
+    if truncated:
+        hits = hits[:max_hits]
+    rec.update({"hits": len(hits), "files_scanned": files_scanned,
+                "executed": True, "truncated": truncated})
+    body = "\n".join(hits)
+    attrs = (f'for="grep" pattern="{str(pattern).replace(chr(34), chr(39))}" '
+             f'glob="{glob}" hits="{len(hits)}" files_scanned="{files_scanned}"')
+    if truncated:
+        attrs += ' truncated="true"'
+    return {"record": rec, "block": f"<tool_result {attrs}>\n{body}\n</tool_result>",
+            "text": body}
+
+
 def execute_tool_call(call: dict, root: str, engine_root=None) -> dict:
-    """Perform one bounded read. Returns {record, block, text}.
+    """Perform one bounded tool call. Returns {record, block, text}.
 
     `block` is the delimited tool result appended to the conversation; `record` is
     the `tool_calls` entry written to the row.  A refused or unsafe path injects
     `<tool_result error="path_refused"/>` and is never read.  `base` names the root
     that matched ("workspace" first, else "engine") and is reported both on the record
     and in the `<tool_result … base="…">` attribute.
+
+    STAGE-2-GREP: dispatch is on ``call.get("tool", "read_file")``, so every call
+    shape written before this change (which carries no `tool` key) still reads a file.
     """
+    if call.get("tool", client.READ_FILE_TOOL_NAME) == GREP_TOOL_NAME:
+        return _execute_grep(call, root, engine_root)
     target, reason, base = resolve_read_path_base(call["path"], root, engine_root)
     rec = {"path": call["path"], "start_line": call["start_line"],
            "end_line": call["end_line"], "executed": False, "truncated": False}
@@ -1193,6 +1418,40 @@ def execute_tool_call(call: dict, root: str, engine_root=None) -> dict:
     if truncated:
         attrs += ' truncated="true"'
     return {"record": rec, "block": f"<tool_result {attrs}>\n{body}\n</tool_result>", "text": body}
+
+
+def verify_snapshot_manifest(manifest_path: str) -> tuple:
+    """``(root_sha256|None, refusal|None)`` for a build_snapshot.py manifest.
+
+    STAGE-2-SNAPSHOT (docs/AGENTIC-COMPACTION-AB.md §3.2 item 1): a frozen root is only
+    frozen if its bytes are re-checked.  Every entry is re-hashed here, BEFORE the first
+    request, and the first difference is named ``snapshot_manifest_mismatch: <relpath>``
+    so the abort says which file moved rather than that "something" did.
+
+    The manifest lives INSIDE the snapshot it describes, so its own directory is the
+    root the entries are relative to.  A `--root` that is not that directory is refused
+    too: a manifest that does not describe the tree being read proves nothing.
+    """
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as fh:
+            doc = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return None, "snapshot_manifest_unreadable"
+    if not isinstance(doc, dict):
+        return None, "snapshot_manifest_unreadable"
+    files = doc.get("files")
+    root_sha = doc.get("root_sha256")
+    if not isinstance(files, dict) or not isinstance(root_sha, str):
+        return None, "snapshot_manifest_unreadable"
+    base = os.path.dirname(os.path.abspath(manifest_path))
+    for rel in sorted(files):
+        try:
+            got = sha256_file(os.path.join(base, rel))
+        except OSError:
+            return None, f"snapshot_manifest_mismatch: {rel}"
+        if got != files[rel]:
+            return None, f"snapshot_manifest_mismatch: {rel}"
+    return root_sha, None
 
 
 def _cached_result(res: dict, scope: str) -> dict:
@@ -1399,7 +1658,7 @@ def _persist_d_turn_row(rows_path, cfg, fixture, arm, rep, run_id, t, manifest_s
 
 def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messages, resp,
                  sent, budget, rounds_used, served=None, pinned=None, per_turn_cap=None,
-                 may_request=None, gate=None, row_sink=None):
+                 may_request=None, gate=None, row_sink=None, root=None):
     """Run the bounded read_file channel after one model turn.
 
     Bounds (PROBE-CP3-V6): <= TOOL_CALLS_PER_TURN (2) calls per turn, at most
@@ -1432,7 +1691,9 @@ def fetch_rounds(cfg, fixture, arm, rep, run_id, t, manifest_sha, extras, messag
     cap = TOOL_FETCH_ROUNDS_PER_TURN if per_turn_cap is None else int(per_turn_cap)
     if not tools_enabled(cfg):
         return messages, resp, sent, rounds_used, turn_calls, followups
-    root = os.getcwd()
+    # STAGE-2-ROOT: the root is the caller's (`--root`, default cwd), never a second
+    # silent `os.getcwd()`: a frozen snapshot must be the ONLY tree a read can reach.
+    root = root or os.getcwd()
     engine_root = os.path.join(root, ENGINE_ROOT_REL)
     if not os.path.isdir(engine_root):
         engine_root = None
@@ -4039,7 +4300,8 @@ def run_cell(cfg, fixture: dict, arm: str, rep: int, run_id: str, rows_path: str
                     cfg, fixture, arm, rep, run_id, t, manifest_sha, extras,
                     planner.messages(info["prompt"]), resp, sent, budget, fetch_rounds_used,
                     fetch_cache, pinned, per_turn_cap, _may_request, gate,
-                    row_sink=lambda _r: append_row(rows_path, _r))
+                    row_sink=lambda _r: append_row(rows_path, _r),
+                    root=getattr(cfg, "root", None))
                 followups_bought += len(followup_rows)
                 rounds_this_turn = len(followup_rows)
                 prompt_serves = sum(1 for c in turn_calls
@@ -4523,7 +4785,18 @@ def build_parser():
     client.add_metrics_scrape_argument(ap)
     ap.add_argument("--tools", default="", metavar="LIST",
                     help="comma-separated tool channel(s) to enable (default: none / off); "
-                         "supported: read_file")
+                         "supported: read_file, grep")
+    # STAGE-2-ROOT: every tool call resolves under ONE root.  Without a frozen root an
+    # "agentic" read is a read of the live tree, so the task is not reproducible and a
+    # re-run measures a different repository.  Default stays cwd, so every pre-existing
+    # invocation is byte-identical.
+    ap.add_argument("--root", default=None, metavar="DIR",
+                    help="workspace root every tool call resolves under (default: cwd); "
+                         "point it at a frozen snapshot for a reproducible episode")
+    ap.add_argument("--snapshot-manifest", default=None, metavar="PATH",
+                    help="manifest.json written by longrun/tools/build_snapshot.py; every "
+                         "entry is re-hashed before the first request and the run aborts "
+                         "with 'snapshot_manifest_mismatch: <relpath>' on any difference")
     ap.add_argument("--fetch-policy", choices=("strict", "instructed"), default="strict",
                     dest="fetch_policy",
                     help="FETCH-POLICY: 'strict' (default, reproducible) or 'instructed' "
@@ -4702,6 +4975,23 @@ def main(argv=None) -> int:
               f"(got {cfg.fetch_rounds_per_arm!r}); 0 and negative values are refused",
               file=sys.stderr)
         return 2
+
+    # STAGE-2-ROOT: a named root must exist, and a named manifest must still describe
+    # it.  Both checks run BEFORE the first request, so a moved snapshot costs nothing.
+    if cfg.root is not None and not os.path.isdir(cfg.root):
+        print(f"--root is not a directory: {cfg.root}", file=sys.stderr)
+        return 2
+    if cfg.snapshot_manifest:
+        _root_sha, _refusal = verify_snapshot_manifest(cfg.snapshot_manifest)
+        if _refusal:
+            print(_refusal, file=sys.stderr)
+            return 2
+        _manifest_root = os.path.dirname(os.path.abspath(cfg.snapshot_manifest))
+        if cfg.root is not None and os.path.realpath(cfg.root) != os.path.realpath(_manifest_root):
+            print(f"snapshot_manifest_root_mismatch: --root {cfg.root} is not the "
+                  f"manifest's directory {_manifest_root}", file=sys.stderr)
+            return 2
+        print(f"SNAPSHOT: root_sha256={_root_sha} manifest={cfg.snapshot_manifest}")
 
     if cfg.self_test:
         return self_test()

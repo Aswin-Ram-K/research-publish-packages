@@ -34,6 +34,7 @@ FILES = (
     "longrun/agentic_cell.py",
     "longrun/agentic_contract.py",
     "longrun/client.py",
+    "longrun/run_longrun.py",
     "longrun/tools/analyze_agentic.py",
     "longrun/tools/build_agentic_tasks.py",
 )

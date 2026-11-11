@@ -1,0 +1,90 @@
+{
+  "task_id": "AG-01",
+  "version": "AG-01.v1",
+  "root": "experiments/ptr-engine",
+  "statement": "Audit the token-quantisation module. Establish its block size, the padding reserve it keeps for a free residue, and the shape-selection helpers it exposes, then answer a question about the padding reserve.",
+  "steps": [
+    {
+      "prompt": "Read `ptr_engine/quantise.py` and list the module-level constants it defines.",
+      "expect_tool": true
+    },
+    {
+      "prompt": "Read `ptr_engine/quantise.py` and report the value of `BLOCK_SIZE_DEFAULT`.",
+      "expect_tool": true
+    },
+    {
+      "prompt": "Read `ptr_engine/quantise.py` and report the value of `DEFAULT_TARGET_RESIDUE`.",
+      "expect_tool": true
+    },
+    {
+      "prompt": "Read `ptr_engine/layers.py` and report the value of `COMPACT_EVERY`.",
+      "expect_tool": true
+    },
+    {
+      "prompt": "Read `ptr_engine/layers.py` and name the class whose name ends with `State`.",
+      "expect_tool": true
+    },
+    {
+      "prompt": "Read `ptr_engine/compile.py` and report the value of `HASH_PREFIX_LEN`.",
+      "expect_tool": true
+    },
+    {
+      "prompt": "Read `ptr_engine/compile.py` and report the string value of `INDEX_MAGIC`.",
+      "expect_tool": true
+    },
+    {
+      "prompt": "Read `ptr_engine/ledger.py` and report the value of `FRAMING_TOKENS`.",
+      "expect_tool": true
+    },
+    {
+      "prompt": "Compare the block size you found in `ptr_engine/quantise.py` at step 2 with the framing constant you found in `ptr_engine/ledger.py` at step 8 and say which is larger.",
+      "expect_tool": false
+    },
+    {
+      "prompt": "Read `ptr_engine/resolve.py` and report the value of `DEFAULT_MAX_REFS`.",
+      "expect_tool": true
+    }
+  ],
+  "final_question": "Using the constant you identified at step 2 — do not restate it — report the value of the constant in the same file that records how many padding tokens are reserved for a free residue.",
+  "expected": "33",
+  "answer_form": "NUM",
+  "fact": {
+    "value": "64",
+    "introduced_at_step": 2,
+    "source_path": "ptr_engine/quantise.py",
+    "derivation": {
+      "rule": "constant_value",
+      "path": "ptr_engine/quantise.py",
+      "name": "BLOCK_SIZE_DEFAULT"
+    }
+  },
+  "expected_derivation": {
+    "rule": "constant_value",
+    "path": "ptr_engine/quantise.py",
+    "name": "PAD_FOR_FREE_RESIDUE"
+  },
+  "checkpoints": [
+    {
+      "step": 4,
+      "question": "What is the value of `COMPACT_EVERY` in `ptr_engine/layers.py`?",
+      "expected": "24",
+      "fact_id": "COMPACT_EVERY",
+      "derivation": {
+        "rule": "constant_value",
+        "path": "ptr_engine/layers.py",
+        "name": "COMPACT_EVERY"
+      }
+    },
+    {
+      "step": 7,
+      "question": "What is the string value of `INDEX_MAGIC` in `ptr_engine/compile.py`?",
+      "expected": "ptr-index/1",
+      "fact_id": "INDEX_MAGIC",
+      "derivation": {
+        "rule": "constant_value",
+        "path": "ptr_engine/compile.py",
+        "name": "INDEX_MAGIC"
+      }
+    }
+  ]
+}

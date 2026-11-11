@@ -77,13 +77,12 @@ FETCH_ALLOWANCE = 48
 # -> 9b12b2ea... and run_longrun.py 30dfa9e9... -> 4f40dde1..., so the record's
 # generation 6 digest is efefd885... (measure/HARNESS-PIN.json). Generation 5's
 # 35ff41b7... stays on the record as the canary's epoch; it no longer launches.
-# Generation 9 (U-SPCC-78): HARNESS_FILES grew 5 -> 7 (arm_cd.py and
-# ptr_engine/layers.py) and the three inputs that had already moved were re-hashed
-# (client.py -> 3a9a3d09..., grade_v5.py -> c7c0e5c1..., run_longrun.py -> e05fc9ed...),
-# so the record's generation 9 digest is 32463261... . Generation 8's 64e69e49... stays
-# on the record under supersedes_generation_8; it no longer launches.
-PIN_EXPECTED_GENERATION = 9
-PIN_EXPECTED_DIGEST = "32463261c9e733325b3522a00531708cab4119eadba48134e21edccdefad4ff1"
+# Generation 11 (U-SPCC-80): the grep tool joined the replay runner, so run_longrun.py
+# moved again and the record's generation 11 digest is a668491a... . Generation 9's
+# 32463261... and generation 8's 64e69e49... stay on the record under their own labels;
+# neither launches any more.
+PIN_EXPECTED_GENERATION = 11
+PIN_EXPECTED_DIGEST = "a668491a55a4e2714b6e58dc8168919ee163bd2b5e3bb733b54fd9e38263bf73"
 PIN_RECORD = os.environ.get("RUN_A_STAR_PIN") or os.path.join(MEAS, "HARNESS-PIN.json")
 
 # GRID-STAMP-WIRING: every finished cell must carry its own `usable_for` stamp, or
