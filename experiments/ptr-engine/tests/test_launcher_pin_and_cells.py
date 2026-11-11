@@ -46,7 +46,14 @@ def load_launcher(**env):
 
     Both hooks (``RUN_A_STAR_PIN``, ``RUN_A_STAR_GRID``) are read at import time, so
     a refusal happened already by the time the module object exists.
+
+    ``RUN_A_STAR_ROOT`` is set to THIS tree: the launcher's default root is an absolute
+    literal (so a copy in tmp_path still prices the real cell.py), and a git worktree
+    would otherwise judge the main checkout's HARNESS-PIN.json -- a record the worktree
+    has already superseded. The tests below are about the tree they live in.
     """
+    env = dict(env)
+    env.setdefault("RUN_A_STAR_ROOT", ROOT)
     saved = {k: os.environ.get(k) for k in env}
     os.environ.update({k: v for k, v in env.items() if v is not None})
     try:
@@ -68,6 +75,7 @@ def run(argv, launcher=LAUNCHER, env=None):
     e.pop("CELL_RUNNER_PATH", None)
     e.pop("RUN_A_STAR_PIN", None)
     e.pop("RUN_A_STAR_GRID", None)
+    e["RUN_A_STAR_ROOT"] = ROOT  # the tree under test, not the launcher's literal default
     e.update(env or {})
     return subprocess.run([PY, launcher] + argv, cwd=ROOT, env=e,
                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)

@@ -1,0 +1,91 @@
+{
+ "unit": "U-SPCC-77",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/tools/predict_answer_slot.py",
+  "experiments/ptr-engine/longrun/tools/build_mismatch_fixture.py",
+  "experiments/ptr-engine/longrun/tasks-v7/TX-04S.v1.json",
+  "experiments/ptr-engine/longrun/tests/test_answer_slot_predictor.py",
+  "experiments/ptr-engine/longrun/manifests/dryrun-TX-04S-masking-no-fetch-r1.json"
+ ],
+ "evidence": {
+  "pytest_runner": "`python3 -m pytest` is broken system-wide on this box: Python 3.14.4 resolves an old pytest 7.4.0 from /home/zer0null/swebench/runs/baseline/pytest-7490/repo/src via a dist-packages .pth and dies with `TypeError: required field \"lineno\" missing from alias` before collecting anything. Every run below uses /home/zer0null/research extractor/.venv/bin/python -m pytest (pytest 9.1.1, Python 3.14.4).",
+  "predict_answer_slot": {
+   "command": "python3 experiments/ptr-engine/tools/predict_answer_slot.py --fixture experiments/ptr-engine/longrun/tasks-v7/TX-04.v1.json --rows experiments/ptr-engine/measure/rows-e3-retain-2026-11-10.jsonl --arms masking-no-fetch,spcc --rep 1",
+   "exit": 0,
+   "output": [
+    "sha provenance: masking-no-fetch 100/100 byte-identical; spcc 100/100 byte-identical",
+    "masking-no-fetch: 48 checkpoints, grammars={'flat-transcript-replay': 48}",
+    "  predicted BOUND : wrong   4 | right   1",
+    "  predicted FREE  : wrong   2 | right  41",
+    "  actual wrong 6/48; predicted BOUND 5; recall of failures 0.6667; precision of BOUND 0.8",
+    "  BOUND T10 cp.TX-04.f02.d8 asked doc-fact-02.VAL_A expected 4021 delivered doc-fact-06 -> predicted 4061; actual 4061 (WRONG; = predicted)",
+    "  BOUND T12 cp.TX-04.f06.d2 asked doc-fact-06.VAL_A expected 4061 delivered doc-fact-04 -> predicted 4041; actual 4061 (right; != predicted)",
+    "  BOUND T30 cp.TX-04.f09.d2 asked doc-fact-09.VAL_A expected 4091 delivered doc-fact-01 -> predicted 4011; actual 4011 (WRONG; = predicted)",
+    "  BOUND T31 cp.TX-04.f08.d20 asked doc-fact-08.VAL_C expected 4083 delivered doc-fact-07 -> predicted 4073; actual 4073 (WRONG; = predicted)",
+    "  BOUND T39 cp.TX-04.f07.d8 asked doc-fact-07.VAL_B expected 4072 delivered doc-fact-10 -> predicted 4102; actual 4102 (WRONG; = predicted)",
+    "  FREE-but-wrong T34 cp.TX-04.f02.d32 expected 4023 actual 4022 (reason no_delivery_above; prior_answer_echo,adjacent_symbol_in_same_body)",
+    "  FREE-but-wrong T73 cp.TX-04.f12.d20 expected 4123 actual 4124 (reason no_delivery_above; adjacent_symbol_in_same_body)",
+    "  per distance: d2 n=10 wrong=1 bound=2 bound&wrong=1; d8 n=10 wrong=2 bound=2 bound&wrong=2; d20 n=10 wrong=2 bound=1 bound&wrong=1; d32 n=9 wrong=1 bound=0 bound&wrong=0; d64 n=9 wrong=0 bound=0 bound&wrong=0",
+    "spcc: 48 checkpoints, grammars={'layered-compiler': 48}",
+    "  predicted BOUND : wrong   0 | right   0",
+    "  predicted FREE  : wrong   0 | right  48",
+    "claim_tested={\"all_masking_failures_predicted_bound\": false, \"measured_masking\": {\"actual_wrong\": 6, \"bound_but_right\": 1, \"failures_not_predicted\": 2, \"failures_predicted_bound\": 4, \"predicted_bound\": 5}, \"spcc_predicted_bound\": 0}",
+    "NO-HTTP PROOF ok: 5 clients patched, network_attempts=[], inherited_guard_attempts=[], fingerprint_probes_refused=6, requests_sent=0"
+   ]
+  },
+  "claim_verdict": {
+   "claim": "all 6 masking-arm failures are predicted BOUND; spcc has 0 predicted BOUND (0 false positives)",
+   "measured": "FALSIFIED AS STATED on the masking side, CONFIRMED on the spcc side: 4 of 6 failures are BOUND (T10, T30, T31, T39) and each answered exactly the delivered document's value; 2 failures (T34, T73) have no delivery above the slot and are a DIFFERENT mode — the answer is an adjacent symbol of the RIGHT document's body (4023->4022, 4123->4124); 1 BOUND turn (T12) was answered correctly, so the binding rule is not deterministic even where the shape fires. spcc: 48/48 FREE, 0 predicted BOUND, 0 wrong.",
+   "not_tuned": "the rule (block-above delivery of a different document carrying the asked symbol) was written before any row was joined; the report carries threshold_/rule provenance under rule.thresholds_chosen_after_seeing_rows=false and the answer join only scores the prediction."
+  },
+  "fixture_build": {
+   "command": "python3 experiments/ptr-engine/longrun/tools/build_mismatch_fixture.py",
+   "output": [
+    "wrote experiments/ptr-engine/longrun/tasks-v7/TX-04S.v1.json sha256=7f41f9b31df2d6beb98e46865f101b048ba1b397625ba5b2349aceea45c299c1",
+    "  task_id=TX-04S N=100 checkpoints=41 wall_tokens=867",
+    "  distances={'0': 1, '2': 5, '20': 10, '32': 10, '64': 5, '8': 10}",
+    "  mismatch_turns=14 [3, 4, 5, 6, 7, 9, 10, 13, 17, 24, 29, 36, 41, 73]",
+    "    schedule-inherent=[3, 4, 5, 6, 7, 9, 10] decoy=[13, 17, 24, 29, 36, 41, 73]",
+    "  same_document_control=[19] no_delivery=26",
+    "  predicted={'BOUND': 14, 'FREE': 27} (re-rendered with run_longrun.Planner at window_turns=200)",
+    "  gates: load_fixture OK, check_pointer_fixtures.validate OK, grade_v5.derive_truth OK, block-above classification OK"
+   ],
+   "determinism": "python3 experiments/ptr-engine/longrun/tools/build_mismatch_fixture.py --check -> CHECK experiments/ptr-engine/longrun/tasks-v7/TX-04S.v1.json: OK sha256=7f41f9b3..."
+  },
+  "dry_run": {
+   "command": "python3 experiments/ptr-engine/longrun/run_longrun.py --dry-run --fixture experiments/ptr-engine/longrun/tasks-v7/TX-04S.v1.json --arms masking-no-fetch --reps 1 --temperature 0 --preview-root /tmp/tx04s-previews",
+   "exit": 0,
+   "output": ["[masking-no-fetch] treatments contract not declared by this fixture — not gated", "masking-no-fetch    turn_requests=100 (N=100 x reps=1)  digest_requests=0  cell_total=100", "would_send_total=100", "PREVIEW PAIRWISE (first three request bodies; 0/3 differ = identical)"],
+   "temperature_note": "the ticket's literal command (no --temperature) is refused for EVERY fixture, not just this one: `--temperature must be stated explicitly (got None); refusing run` reproduced with tasks-v7/TX-04.v1.json and the same flags. --temperature 0 is the runner's own requirement."
+  },
+  "tests_new": {
+   "command": "/home/zer0null/research extractor/.venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_answer_slot_predictor.py -q",
+   "output": "7 passed in 0.04s",
+   "red_green": "three deliberate breaks were run and reverted, failure text recorded in the test module docstring: same_document guard removed -> `assert 'BOUND' == 'FREE'`; both refusal gates neutered -> `assert 0 == 9` (and a report file written on a violated premise); turn 13's decoy delivery deleted -> asserted mismatch list vs declared list differs by 13, then the fixture was regenerated and its sha256 returned to 7f41f9b3..."
+  },
+  "tests_suite": {
+   "command": "/home/zer0null/research extractor/.venv/bin/python -m pytest experiments/ptr-engine/longrun/tests -q",
+   "output": "5 failed, 949 passed, 1 warning, 36 subtests passed in 40.05s",
+   "failures": [
+    "test_cell.py::CellCommandTests::test_a_offline_records — `assert (… and 8 == 6)`: the offline record's harness map carries 8 files, the test pins 6",
+    "test_journal_lint.py::test_frozen_baseline_exists_and_is_forward_only — state/logs/journal-lint-baseline.json absent",
+    "test_journal_lint.py::test_census_over_the_live_corpus_is_reported — known red (recorded operator decision)",
+    "test_request_ledger.py::TestRealCorpus::test_g_real_corpus_total_and_delta_from_466 — known red (spent=10167 > cap=4320)",
+    "test_spawn_tree_binding.py::TreeBinding::test_d5_unstamped_tree_is_labelled_not_invented — regex ^[0-9a-f]{40}$ not found in 'unstamped'"
+   ],
+   "baseline_before_my_files": "5 failed, 942 passed (identical ids and messages, captured before the predictor/fixture/tests existed), so the 7 new tests are the whole 942->949 delta and no new red was introduced",
+   "untouched_by_me": "this worktree already carried 11 modified tracked files (docs/GRID-RUNBOOK.md, experiments/ptr-engine/longrun/cell.py, measure/GRID-PARAMS.json, measure/HARNESS-PIN.json, experiments/ptr-engine/tests/{test_embedded_digests_match_pin,test_launcher_pin_and_cells,test_ledger_reconcile,test_precondition10_scope}.py, tools/{harness_baseline,launch_contract_diff,run_a_star}.py) and an untracked orchestration/handoffs/U-SPCC-78.json from another lane; three of the five reds are outside the two recorded decisions and plausibly belong to that residue, which only the owning session can adjudicate"
+  }
+ },
+ "blocker": "",
+ "next_unit_hint": "Owning session must write into docs/STATE.md (U-SPCC-64/67 material, not STATE prose by me): (1) the offline predictor exists at experiments/ptr-engine/tools/predict_answer_slot.py and its measured confusion matrices are the numbers above, reproducible with zero requests; (2) the U-SPCC-67 claim needs amending, not repeating — answer-slot binding explains 4 of the 6 masking failures, and the remaining 2 (T34 4023->4022, T73 4123->4124) are an adjacent-symbol error inside the correct document's body, a separate mode that the binding rule cannot see; T12 is a BOUND turn answered correctly, so the mechanism is a strong tendency, not a law; (3) tasks-v7/TX-04S.v1.json (41 checkpoints, 14 declared mismatch turns, 1 same-document control, 26 no-delivery, sha256 7f41f9b3...) is the fixture for a live contrast run — it needs a cell (arms masking-no-fetch vs spcc, window-turns 200, temperature stated) before any claim about binding *rates* can be made; (4) three pre-existing reds beyond the two recorded ones need a recorded decision or a fix by whoever owns the pre-existing cell.py/harness_baseline.py edits.",
+ "write_paths": [
+  "experiments/ptr-engine/tools/predict_answer_slot.py",
+  "experiments/ptr-engine/longrun/tools/build_mismatch_fixture.py",
+  "experiments/ptr-engine/longrun/tasks-v7/TX-04S.v1.json",
+  "experiments/ptr-engine/longrun/tests/test_answer_slot_predictor.py",
+  "experiments/ptr-engine/longrun/manifests/dryrun-TX-04S-masking-no-fetch-r1.json",
+  "orchestration/handoffs/U-SPCC-77.json"
+ ]
+}

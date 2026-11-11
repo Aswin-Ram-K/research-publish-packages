@@ -1,6 +1,6 @@
 # STATE — the current state of this workspace
 
-**Last updated:** 2026-11-11 · **By:** the crash-recovery close-out of `U-SPCC-69`…`U-SPCC-73` (manifests committed, derived artefacts regenerated, `--preview-root` added; corpus re-measured at **103 files / 10,167 rows**, so the ledger headroom is **1,927**, not 4,125), then the compaction/cache design and E7's pre-registration (§1a, 0 requests), then the **real-length correction**: a 0-request replay over eight real sessions measured `pins` at **1.91–2.70× cheaper than `compact`**, E7 was redesigned to six arms at real length, and its quality instrument `LR-07.v5.json` (220 turns, `L0 ≈ 40.5 k`) was built and verified
+**Last updated:** 2026-11-11 · **By:** the crash-recovery close-out of `U-SPCC-69`…`U-SPCC-73` (manifests committed, derived artefacts regenerated, `--preview-root` added; corpus re-measured at **103 files / 10,167 rows**, so the ledger headroom is **1,927**, not 4,125), then the compaction/cache design and E7's pre-registration (§1a, 0 requests), then the **real-length correction**: a 0-request replay over eight real sessions measured `pins` at **1.91–2.70× cheaper than `compact`**, E7 was redesigned to six arms at real length, and its quality instrument `LR-07.v5.json` (220 turns, `L0 ≈ 40.5 k`) was built and verified. **Then the second session** (pickup after the crash loop, 0 requests): `U-SPCC-77` (answer-slot predictor — binding explains 4 of 6 masking failures; `tasks-v7/TX-04S.v1.json` built and dry-run) and `U-SPCC-78` (**harness generation 9**, `32463261…`, covering 7 measurement files) — both §`U-SPCC-77/78` at the end of this page; three stale claims on this page were corrected (§1a header, §6 item 15, the E3 open question in the findings ledger)
 **Read this first.** It is the single *current-state* page. Older status pages remain valid as dated
 records but are superseded here as current state — chiefly [`orchestration/STATUS.md`](orchestration/STATUS.md)
 (the docket-era batch record, 2026-10-21) and [`orchestration/CLOSING.md`](orchestration/CLOSING.md).
@@ -107,7 +107,12 @@ its §0 state snapshot is historical) · `docs/LEDGER-RECONCILE.md` + `experimen
 
 ---
 
-## 1a. SPCC — the serving-context programme (current at 2026-11-10, nothing yet measured live)
+## 1a. SPCC — the serving-context programme (current at 2026-11-11; E1–E3 measured live, 10,167 requests spent, E4–E6 blocked)
+
+*The label this section carried until 2026-11-11 — "nothing yet measured live" — stopped being true on
+2026-11-10, when the E1, E2 and E3 cells ran (verdicts in the dated sections below, latest first:
+`U-SPCC-64` … `U-SPCC-51`). The table that follows is the state of each deliverable **as built**, before
+those cells; it is kept as the build record, not as the current measurement status.*
 
 **What exists, per deliverable, with the handoff that owns it:**
 
@@ -505,13 +510,17 @@ those classes `UNAVAILABLE` / `NOT_OBSERVED` and refuses to score them as succes
     **Settled 2026-11-11: route (b).** The operator chose to build the pin arms on `pointer-stable` and
     port the layer compiler into it, leaving `spcc` untouched. The port is in progress
     (`RouteBPort`); `spcc` keeps its current no-tool behaviour and is no longer an E7 arm.
-15. **E7's budget does not fit the headroom** — the six-arm real-length design
-    (`experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md`) needs **2,400** requests
-    (6 arms × 4 reps × 100 turns) against **1,927** remaining. Either stage 1 is trimmed to 4 arms
-    (1,600 requests, fits), or the cap moves. The operator set the E7 budget at **1,000** (m02033), so
-    the pre-registration's 2,400 figure is the full design and stage 1 must be cut to fit 1,000 —
-    which is 2 arms × 4 reps × 100 turns, or 4 arms × 2 reps × 100 turns. This is an operator call
-    because it decides which comparison E7 can actually make.
+15. **E7's budget — corrected 2026-11-11: it already fits.** The earlier wording here said the six-arm
+    design needs 2,400 requests and that stage 1 had to be cut to fit the operator's 1,000. The
+    pre-registration has since been rewritten to a **staged** plan that totals exactly 1,000 and fits
+    the 1,927 headroom: stage 1 = 4 arms × 1 rep × 100 turns = **400** (decides the cost ranking),
+    then stage 2a = the two surviving arms × 1 more rep = **200** and stage 2b = the same two × 2 more
+    reps = **400** (accuracy at ±4.2 pp). Stage 2 runs only if stage 1's cost separation clears the
+    sensitivity grid; otherwise E7 stops at 400 and reports `not_adjudicable`. See
+    `experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md` §"Budget ceiling (requests)".
+    What remains an operator call is not the arithmetic but the **headroom**: E7 spends 1,000 of the
+    1,927 left, which leaves 927 for every other cell (E2's d64 rep, E3's answer-slot cell, any re-run).
+    Approve that allocation or re-split it.
 
 ---
 
@@ -1167,3 +1176,81 @@ warmth, not work. Therefore: **only within-run comparisons are valid, and prompt
 the cache-independent measure.** This qualifies E2's −5.72% cost claim — that comparison was
 within a single cell, so it stands — but no billed figure from one cell may be compared to
 another.
+
+---
+
+## `U-SPCC-77/78` — 2026-11-11, second session: the answer-slot rule as a predictor, the wider-mismatch fixture, and harness generation 9
+
+**0 requests. Nothing live was touched; both units are offline.**
+
+### `U-SPCC-77` — answer-slot binding, measured without a model
+
+`experiments/ptr-engine/tools/predict_answer_slot.py` re-materialises the prompt each turn (the
+`prompt_at_turn.py` method: `run_longrun.send_chat` replaced by a recorder, `run_cell` driven with the
+recorded replies; network clients trip-wired, `requests_sent=0`) and applies one rule: a checkpoint is
+**BOUND** iff a delivery of a *different* document sits above the answer slot and carries the asked
+symbol. Both arms rebuilt **100/100 prompts byte-identical** to the recorded `prompt_sha256`.
+
+| arm | checkpoints | predicted BOUND | BOUND & wrong | BOUND & right | FREE & wrong | FREE & right |
+|---|---:|---:|---:|---:|---:|---:|
+| `masking-no-fetch` | 48 | 5 | **4** | 1 | 2 | 41 |
+| `spcc` | 48 | **0** | 0 | 0 | 0 | 48 |
+
+Recall of failures **0.667**, precision of BOUND **0.80**. Bound-and-wrong: T10 `4021←4061`, T30
+`4091←4011`, T31 `4083←4073`, T39 `4072←4102` — each answer equals the predicted value. Not binding:
+T34 `4023→4022` (a replayed prior answer for the same document, plus the adjacent symbol) and T73
+`4123→4124` (the line immediately below `VAL_C = 4123` in the correct body). T12 was predicted BOUND
+and answered correctly.
+
+**This refines `U-SPCC-67`; it does not confirm it.** Binding is a tendency of the transcript replay,
+not a law: 4 of 6, and the exclusion rule ("do not pool the 6/48 with retention") is now mechanical
+rather than narrated. `spcc` has no bound answer at all — 0 predicted, 0 observed.
+
+`experiments/ptr-engine/longrun/tasks-v7/TX-04S.v1.json` (`TX-04.v1.json` read only; sha256
+`7f41f9b31df2d6be…`) is the instrument a binding *rate* would need: 100 turns, **41 checkpoints**,
+**14 declared delivery/ask mismatches** (7 schedule-inherent + 7 decoy), 1 same-document control, 26
+with no delivery, `wall_tokens 867`; `load_fixture`, `check_pointer_fixtures.validate` and
+`grade_v5.derive_truth` clean; `--dry-run` reports `would_send_total=100`. **No cell has run on it and
+none is funded** — a rate claim needs one.
+
+### `U-SPCC-78` — harness generation 9
+
+`cell.py`'s `HARNESS_FILES` is now seven measurement inputs — `run_longrun.py`, `client.py`,
+`grade_v5.py`, `analyze_stats.py`, `tools/det_verify.py`, **`arm_cd.py`**, **`ptr_engine/layers.py`** —
+plus the fixture, so the record names eight. `measure/HARNESS-PIN.json` is **generation 9**,
+`32463261c9e733325b3522a00531708cab4119eadba48134e21edccdefad4ff1`; `measure/GRID-PARAMS.json::harness_pin`,
+the three `docs/GRID-RUNBOOK.md` digest positions and `tools/run_a_star.py`'s signed-off expectation all
+declare it. Generations 8, 6 and 5 and every attribution block stay on the record under
+supersedes-matching keys — nothing deleted, nothing reused as current.
+
+**Why it matters.** Through the whole programme the pin described bytes that no longer existed: at
+every one of the fourteen commits that touch a pinned input (`497e94a` … `8cd7601`) the record said
+`64e69e49…` (generation 8), the launcher's documented constant said `efefd885…` (generation 6), and the
+disk hashed `d4b828dd…`. Rows are self-describing so no measured cell is invalidated, but the guard that
+is supposed to catch a mid-run change was dead. It is alive again, and it now covers the two files E7
+edits — which is PREREG-COMPACTION instrument requirement 6.
+
+**Guards repaired alongside, each red→green in the live root:** `tests/test_embedded_digests_match_pin.py`
+3 failed / 1 passed → **7 passed**; `longrun/tests/test_cell.py` pinned `len(harness.files) == 6` (now:
+names equal `cell.HARNESS_FILES + fixture`, with `arm_cd.py` and `ptr_engine/layers.py` asserted
+literally); `tests/test_pin_propagation.py` pinned the record to generation 6 and expected a refusal to
+name generation 6's digest (now: the launcher agrees with the record's current generation and digest,
+generation 6 stays on the record as history), and its `test_generation_6_is_unmoved_…` — which asserted
+generation 6's values equalled the live tree, false since three inputs moved — is replaced by the
+invariants that hold (current generation matches the tree; the 8/6/5 blocks survive with distinct
+digests; the 5→6 delta names `client.py` and `run_longrun.py`).
+
+### Census after this session (live root, `.venv/bin/python -m pytest`)
+
+| suite | before | after |
+|---|---|---|
+| `experiments/ptr-engine/longrun/tests` + `tests/test_agent_context.py` | 2 failed / 957 passed | **2 failed / 964 passed** |
+| `experiments/ptr-engine/tests` | 49 failed / 383 passed (mid-session, after the pin landed) | **46 failed / 386 passed** |
+| `tests/test_embedded_digests_match_pin.py` | 3 failed / 1 passed | **7 passed** |
+| `tests/test_pin_propagation.py` | 2 failed / 11 passed | **13 passed** |
+
+The two longrun reds are the recorded operator decisions (`test_journal_lint` new misses; 
+`test_request_ledger::test_g` at 5,847 over the 4,320 default cap) — true facts, not test bugs. The 46
+reds in `experiments/ptr-engine/tests` are the pre-existing set minus the three repaired here; the
+clusters are `test_ledger_reconcile` (live corpus vs its baseline), `test_tool_channel_*`
+(`rep=1 not present in run_id`), and `test_grade_v5_decoration`.

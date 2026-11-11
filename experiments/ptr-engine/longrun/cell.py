@@ -133,7 +133,9 @@ HARNESS_FILES = (
     (os.path.join(HERE, "grade_v5.py"), "grade_v5.py"),
     (os.path.join(HERE, "analyze_stats.py"), "analyze_stats.py"),
     (os.path.join(ENGINE, "tools", "det_verify.py"), "tools/det_verify.py"),
-)  # the fixture is added per invocation: it is the 6th measurement input
+    (os.path.join(HERE, "arm_cd.py"), "arm_cd.py"),
+    (os.path.join(ENGINE, "ptr_engine", "layers.py"), "ptr_engine/layers.py"),
+)  # the fixture is added per invocation: it is the 8th measurement input
 
 # The project's request budget for this vector (docs/HARNESS-MAP.md). The runner
 # does not report a quota, so the remainder here is BEST-EFFORT: it is computed

@@ -59,7 +59,15 @@ RECONCILE_RE = re.compile(r"RECONCILE baseline=(\d+) attributed_delta=(\d+) live
 # --------------------------------------------------------------------------- helpers
 
 def load_launcher(**env):
-    """Import the launcher by path with its ledger hooks set BEFORE import."""
+    """Import the launcher by path with its ledger hooks set BEFORE import.
+
+    ``RUN_A_STAR_ROOT`` is set to THIS tree for the same reason ``run()`` sets it: the
+    launcher's default root is an absolute literal, so a git worktree would otherwise
+    judge the main checkout's HARNESS-PIN.json and a re-pin refusal would pre-empt the
+    ledger gate these tests are about.
+    """
+    env = dict(env)
+    env.setdefault("RUN_A_STAR_ROOT", ROOT)
     saved = {k: os.environ.get(k) for k in env}
     os.environ.update({k: v for k, v in env.items() if v is not None})
     try:
@@ -106,6 +114,10 @@ def run(args, env=None):
     e.pop("RUN_A_STAR_LEDGER_BASELINE", None)
     e.pop("RUN_A_STAR_LEDGER_LIVE", None)
     e.pop("RUN_A_STAR_LEDGER_ROWS", None)
+    # The launcher's default root is an absolute literal, so a git worktree would judge
+    # the main checkout's HARNESS-PIN.json -- a record this tree may have superseded --
+    # and a re-pin refusal would pre-empt the gate under test.
+    e["RUN_A_STAR_ROOT"] = ROOT
     e.update(env or {})
     return subprocess.run([PY, LAUNCHER] + args, cwd=ROOT, env=e,
                           capture_output=True, text=True, timeout=300)
@@ -219,8 +231,8 @@ def test_reverted_delta_check_lets_the_seven_through(tmp_path):
     env = {"RUN_A_STAR_LEDGER_BASELINE": base, "RUN_A_STAR_LEDGER_LIVE": live}
     green = run(CANARY, env=env)
     red = subprocess.run([PY, str(reverted)] + CANARY, cwd=ROOT,
-                         env={**os.environ, **env}, capture_output=True, text=True,
-                         timeout=300)
+                         env={**os.environ, "RUN_A_STAR_ROOT": ROOT, **env},
+                         capture_output=True, text=True, timeout=300)
     assert green.returncode != 0, "GREEN: the guard did not fire:\n" + green.stdout[-1500:]
     assert red.returncode == 0, (
         "RED: with the guard removed the 7 are still refused, so this test proves "

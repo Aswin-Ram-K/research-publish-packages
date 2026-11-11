@@ -1,0 +1,50 @@
+{
+ "unit": "U-SPCC-78",
+ "status": "done",
+ "artifacts": [
+  "experiments/ptr-engine/measure/HARNESS-PIN.json",
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/tools/harness_baseline.py",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/measure/GRID-PARAMS.json",
+  "experiments/ptr-engine/tools/launch_contract_diff.py",
+  "docs/GRID-RUNBOOK.md",
+  "experiments/ptr-engine/tests/test_embedded_digests_match_pin.py",
+  "experiments/ptr-engine/tests/test_launcher_pin_and_cells.py",
+  "experiments/ptr-engine/tests/test_ledger_reconcile.py",
+  "experiments/ptr-engine/tests/test_precondition10_scope.py"
+ ],
+ "evidence": {
+  "pin_generation": "generation 9, harness_sha256=32463261c9e733325b3522a00531708cab4119eadba48134e21edccdefad4ff1, 8 files: analyze_stats.py arm_cd.py client.py fixture grade_v5.py ptr_engine/layers.py run_longrun.py tools/det_verify.py",
+  "recipe_names": "seven HARNESS_FILES, sorted name:sha256 + fixture = 8 entries; recomputed twice, byte-identical",
+  "generation_8_digest_64e69e49a49433dd": "generation 8, preserved verbatim under supersedes_generation_8 plus superseded_harness_sha256",
+  "superseded_harness_sha256_generation_7": "d20f9cd37b47962e9b57b3cefc0f335066379688f692f51ff3f6d78a7879573a kept with a note that generation 7 never had a block",
+  "full_before_after_digests": "client.py 9b12b2ea->3a9a3d09, grade_v5.py 07c883d0->c7c0e5c1, run_longrun.py eb0a26ec->e05fc9ed, all kept whole in observed_intermediate_delta",
+  "python3 -m pytest experiments/ptr-engine/tests/test_embedded_digests_match_pin.py -q": "7 passed in 0.02s (was 3 failed / 1 passed)",
+  "python3 -m pytest tests/test_launcher_pin_and_cells.py tests/test_pin_propagation.py tests/test_era_b_rehearsal_2.py tests/test_grade_v5_decoration.py -q": "15 failed, 21 passed in 0.97s -- failure-id set identical to the pre-change run (diff /tmp/Pre4.txt /tmp/Post4.txt is empty)",
+  "python3 -m pytest experiments/ptr-engine/tests -q (after)": "49 failed, 372 passed, 1 xfailed in 11.35s (test_verdict_scope.py excluded, see note)",
+  "python3 -m pytest experiments/ptr-engine/tests -q (before, git archive HEAD)": "53 failed, 365 passed, 1 xfailed in 12.61s (same exclusion; 3 fewer tests because the 3 new guard tests did not exist)",
+  "failure-set diff before->after": "no new red. Converted to green: test_pin_matches_the_bytes_on_disk, test_live_declarations_equal_the_pinned_digest, test_no_foreign_digest_in_current_only_files, test_ledger_reconcile.py::test_reverted_delta_check_lets_the_seven_through",
+  "masked-reason check": "every pre-existing red was re-read after the re-pin: none now fails at the pin gate first. The two that still print it are test_pin_propagation.py's own wrong-digest refusals (asserting the hardcoded generation-6 digest efefd885...), red before this unit for the same reason",
+  "python3 tools/doc_check.py": "OK docs clean under /home/zer0null/.omp/wt/wt-20261111-152729-bd8df5c",
+  "interpreter": "python3 -m pytest is broken here (pytest 6.0.0rc2 via ~/.local/site-packages on python3.14: TypeError: required field \"lineno\" missing from alias); every run above used /home/zer0null/research extractor/.venv/bin/python (pytest 9.1.1)",
+  "excluded-from-full-suite": "test_verdict_scope.py is excluded from both counts: its _repo_root() requires a .git DIRECTORY, so in a linked worktree it walks past the worktree (where .git is a file) to /home/zer0null/.git and git-scans $HOME until it hangs; in the HEAD archive it raises RuntimeError at collection. Pre-existing, not caused by this unit.",
+  "root-hook detail": "run_a_star.ROOT stays the absolute literal; test_launcher_pin_and_cells.py (load_launcher+run), test_ledger_reconcile.py (load_launcher+run+the reverted-launcher subprocess) and test_precondition10_scope.py (load_launcher) now pass RUN_A_STAR_ROOT=<tree under test>, so a worktree judges its own record instead of the main checkout's generation-8 pin. Without this, 9 pre-existing reds changed REASON to the pin gate while keeping their ids"
+ },
+ "blocker": "",
+ "next_unit_hint": "Owning session: journal + STATE must record (a) harness pin generation 9 = 32463261..., superseding 64e69e49..., with arm_cd.py and ptr_engine/layers.py now inside the recipe (PREREG-COMPACTION instrument requirement 6 is now satisfied, so E7 may spend a request); (b) three launcher files moved under 9fadcc9/d32e4ce and are now hashed, so --expect-harness 32463261... is the only value that passes; (c) pre-existing reds left alone: test_pin_propagation.py asserts generation 6 / GEN6 and its supersede-chain walk cannot cross the missing generation-7 block, test_era_b_rehearsal_2.py's grader card declares 3d70ed1d while grade_v5.py is c7c0e5c1, 6 test_grade_v5_decoration.py reds, 8 test_ledger_reconcile.py reds (live ledger 2591 vs baseline 1321 + 8846 attributed), root tests/test_run_a_star_pin.py and tests/test_launch_contract_diff.py still assert generation 7, and test_verdict_scope.py cannot run in a linked worktree; (d) main's working tree still holds generation 8, so the worktree launcher tests only agree after this lands; (e) test_pin_propagation.py::test_a_record_with_a_wrong_digest_is_refused_naming_both still hardcodes generation 6's efefd885... in its assertion -- a one-line fix to the current digest would turn it green.",
+ "write_paths": [
+  "experiments/ptr-engine/measure/HARNESS-PIN.json",
+  "experiments/ptr-engine/longrun/cell.py",
+  "experiments/ptr-engine/tools/harness_baseline.py",
+  "experiments/ptr-engine/tools/run_a_star.py",
+  "experiments/ptr-engine/tools/launch_contract_diff.py",
+  "experiments/ptr-engine/measure/GRID-PARAMS.json",
+  "docs/GRID-RUNBOOK.md",
+  "experiments/ptr-engine/tests/test_embedded_digests_match_pin.py",
+  "experiments/ptr-engine/tests/test_launcher_pin_and_cells.py",
+  "experiments/ptr-engine/tests/test_ledger_reconcile.py",
+  "experiments/ptr-engine/tests/test_precondition10_scope.py",
+  "orchestration/handoffs/U-SPCC-78.json"
+ ]
+}

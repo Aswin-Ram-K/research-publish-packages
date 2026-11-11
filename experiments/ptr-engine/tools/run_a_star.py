@@ -28,7 +28,7 @@ it as-is. cell.py DOES honour `CELL_RUNNER_PATH` (cell.py:122) and launches
 `[sys.executable, RUNNER, ...]` (cell.py:1502), so `--tools read_file` is carried
 by a shim: a two-line python file that re-executes the frozen run_longrun.py BY
 BYTES (runpy over its path) with `--tools read_file` appended. cell.py's
-HARNESS_FILES digest (cell.py:126-133) digests run_longrun.py itself, which the
+HARNESS_FILES digest (cell.py:130-138) digests run_longrun.py itself, which the
 shim never modifies, so the harness pin still matches -- the dry run prints it.
 
     python3 experiments/ptr-engine/tools/run_a_star.py --tools read_file --dry-run
@@ -77,8 +77,13 @@ FETCH_ALLOWANCE = 48
 # -> 9b12b2ea... and run_longrun.py 30dfa9e9... -> 4f40dde1..., so the record's
 # generation 6 digest is efefd885... (measure/HARNESS-PIN.json). Generation 5's
 # 35ff41b7... stays on the record as the canary's epoch; it no longer launches.
-PIN_EXPECTED_GENERATION = 8
-PIN_EXPECTED_DIGEST = "64e69e49a49433dd60ac7dc31ed39911e15e765a1597e611e0f66a03649993d4"
+# Generation 9 (U-SPCC-78): HARNESS_FILES grew 5 -> 7 (arm_cd.py and
+# ptr_engine/layers.py) and the three inputs that had already moved were re-hashed
+# (client.py -> 3a9a3d09..., grade_v5.py -> c7c0e5c1..., run_longrun.py -> e05fc9ed...),
+# so the record's generation 9 digest is 32463261... . Generation 8's 64e69e49... stays
+# on the record under supersedes_generation_8; it no longer launches.
+PIN_EXPECTED_GENERATION = 9
+PIN_EXPECTED_DIGEST = "32463261c9e733325b3522a00531708cab4119eadba48134e21edccdefad4ff1"
 PIN_RECORD = os.environ.get("RUN_A_STAR_PIN") or os.path.join(MEAS, "HARNESS-PIN.json")
 
 # GRID-STAMP-WIRING: every finished cell must carry its own `usable_for` stamp, or

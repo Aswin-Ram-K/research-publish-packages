@@ -87,8 +87,29 @@ EXPECT_HARNESS = re.compile(r"--expect-harness[`\s]+([0-9a-f]{64})")
 #: business; the same file legitimately quotes ledger/row/artefact shas as well.
 HARNESS_CONTEXT = re.compile(r"harness|\bpin\b|pinned", re.I)
 
-PIN_RECIPE_NAMES = ("analyze_stats.py", "client.py", "fixture", "grade_v5.py",
-                    "run_longrun.py", "tools/det_verify.py")
+#: The recipe's names come from cell.py ITSELF, so adding a measurement input cannot
+#: silently desync this guard from the thing that computes the digest.  The literal
+#: below is the other half of the same guard: a REMOVAL still fails, because a
+#: derivation that follows cell.py would happily follow a file out of the list.
+EXPECTED_RECIPE_NAMES = ("analyze_stats.py", "arm_cd.py", "client.py", "fixture",
+                         "grade_v5.py", "ptr_engine/layers.py", "run_longrun.py",
+                         "tools/det_verify.py")
+
+
+def _cell_module():
+    """cell.py by path -- the owner of HARNESS_FILES and of the digest recipe."""
+    import importlib.util
+
+    path = Path(__file__).resolve().parents[1] / "longrun" / "cell.py"
+    spec = importlib.util.spec_from_file_location("_pin_cell", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _recipe_names() -> tuple:
+    """cell.HARNESS_FILES names + 'fixture'; cell.py is NOT in its own list."""
+    return tuple(sorted([name for _path, name in _cell_module().HARNESS_FILES] + ["fixture"]))
 
 
 def _root() -> Path:
@@ -185,8 +206,9 @@ def test_pin_matches_the_bytes_on_disk():
     root = _root()
     pin = _pin(root)
     names = {entry["name"] for entry in pin["files"]}
-    assert names == set(PIN_RECIPE_NAMES), (
-        "the pin must name exactly cell.py's HARNESS_FILES + fixture; got %r" % sorted(names))
+    assert names == set(_recipe_names()), (
+        "the pin must name exactly cell.py's HARNESS_FILES + fixture; got %r, cell.py says %r"
+        % (sorted(names), list(_recipe_names())))
     per_file = {entry["name"]: _sha256_file(root / entry["path"]) for entry in pin["files"]}
     recomputed = _combined(per_file)
     assert recomputed == pin["harness_sha256"], (
@@ -197,6 +219,44 @@ def test_pin_matches_the_bytes_on_disk():
         assert entry["sha256"] == per_file[entry["name"]], (
             "%s::files[%s].sha256 %s does not match the file (now %s)"
             % (PIN_REL, entry["name"], entry["sha256"], per_file[entry["name"]]))
+
+
+def test_the_recipe_names_are_the_literal_this_guard_pins():
+    """A silent REMOVAL from HARNESS_FILES must fail, not be followed by the derivation."""
+    assert _recipe_names() == EXPECTED_RECIPE_NAMES, (
+        "cell.py's HARNESS_FILES + fixture is %r but this guard is pinned to %r: if the "
+        "list really changed, re-cut the pin and update EXPECTED_RECIPE_NAMES in the same "
+        "commit; if it did not, a measurement input was dropped"
+        % (list(_recipe_names()), list(EXPECTED_RECIPE_NAMES)))
+
+
+def test_the_pin_covers_the_compiler_and_the_window_layers():
+    """PREREG-COMPACTION.md instrument requirement 6: E7 edits both, so both are pinned."""
+    names = {name for _path, name in _cell_module().HARNESS_FILES}
+    assert {"arm_cd.py", "ptr_engine/layers.py"} <= names, (
+        "E7 changes experiments/ptr-engine/longrun/arm_cd.py and "
+        "experiments/ptr-engine/ptr_engine/layers.py, so a digest that does not cover them "
+        "cannot invalidate a run; cell.HARNESS_FILES names %r" % sorted(names))
+    pin_names = [entry["name"] for entry in _pin(_root())["files"]]
+    assert sorted(pin_names) == sorted(names | {"fixture"}), (
+        "%s::files must name exactly cell.HARNESS_FILES + fixture; pin=%r cell=%r"
+        % (PIN_REL, sorted(pin_names), sorted(names | {"fixture"})))
+
+
+def test_the_baseline_tool_mirrors_the_recipe():
+    """harness_baseline.py keeps its own copy of the list; a copy that drifts is a blind spot."""
+    import importlib.util
+
+    path = Path(__file__).resolve().parents[1] / "tools" / "harness_baseline.py"
+    spec = importlib.util.spec_from_file_location("_pin_baseline", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mirrored = tuple(sorted(name for name, _rel in mod.HARNESS_FILES))
+    owned = tuple(sorted(name for _path, name in _cell_module().HARNESS_FILES))
+    assert mirrored == owned, (
+        "experiments/ptr-engine/tools/harness_baseline.py::HARNESS_FILES is %r but "
+        "cell.py's is %r: a baseline taken over the short list cannot see the files it "
+        "omits" % (list(mirrored), list(owned)))
 
 
 def test_live_declarations_equal_the_pinned_digest():

@@ -48,14 +48,24 @@ def _load(name):
 
 
 def test_launcher_expectation_equals_the_record():
+    """The launcher's signed-off expectation IS the record's current value.
+
+    This used to assert the record was still generation 6 (generation 6's digest, GEN6).
+    That stopped being true at generation 7 and the assertion had been red since — a guard
+    that pins a number instead of the coupling it cares about. It now pins the coupling:
+    the launcher must agree with whatever the record's current generation and digest are,
+    the record may not go backwards past 6, and generation 6 remains reachable in the
+    record for the historical test below.
+    """
     rec = _record()
     ras = _load("run_a_star")
-    assert rec["generation"] == 6
-    assert rec["harness_sha256"] == GEN6
+    assert rec["generation"] >= 6, rec["generation"]
     assert ras.PIN_EXPECTED_GENERATION == rec["generation"]
     assert ras.PIN_EXPECTED_DIGEST == rec["harness_sha256"]
     # the launcher passes exactly the value it read from the record
-    assert ras.pinned_digest() == GEN6
+    assert ras.pinned_digest() == rec["harness_sha256"]
+    # generation 6's digest is still ON the record, as history, not as the live value
+    assert GEN6 in json.dumps(rec), "the record dropped generation 6's digest"
 
 
 def test_the_flag_the_launcher_passes_carries_the_digest():
@@ -74,7 +84,9 @@ def test_a_record_with_a_wrong_digest_is_refused_naming_both(tmp_path):
     with pytest.raises(SystemExit) as exc:
         ras.pinned_digest(str(path))
     msg = str(exc.value)
-    assert GEN6 in msg, "the refusal must name the signed-off digest it expected"
+    # the coupling, not a frozen generation's number: the refusal must name the digest the
+    # launcher was signed off to expect and the digest the record carried.
+    assert ras.PIN_EXPECTED_DIGEST in msg, "the refusal must name the signed-off digest it expected"
     assert "0" * 64 in msg, "the refusal must name the digest the record carried"
     assert "disagrees" in msg
 
@@ -106,15 +118,40 @@ def test_a_missing_anchor_is_a_named_failure_mode(tmp_path):
     assert "no anchor found" in reason
 
 
-def test_generation_6_is_unmoved_and_generation_5_names_the_movers():
+def test_the_current_generation_matches_the_tree_and_generation_5_names_the_movers():
+    """The live generation describes the bytes on disk; the 5 -> 6 move still names its two
+    inputs.
+
+    Rewritten 2026-11-11. The body this replaces asserted that *generation 6's* recorded
+    values equalled the live tree, which is only true while generation 6 is the top of the
+    chain: three pinned inputs (client.py, grade_v5.py, run_longrun.py) moved after it froze,
+    so the assertion had been red since generation 8 and then died outright with
+    ``ValueError: no pin generation 6 in HARNESS-PIN.json (have: 8)``.
+
+    Red→green: against the generation-8 record this test fails at the first assertion's
+    resolution step; against generation 9 it passes. The invariant it now holds is the one
+    that matters before a launch — the current record matches the tree, and the historical
+    blocks are still ON the record with their own digests.
+    """
     lcd = _load("launch_contract_diff")
-    doc6 = lcd.build(lcd.ROOT, lcd.resolve_scope(lcd.ROOT, generation=6))
-    moved6 = [n for n in doc6["numbers"] if n["status"] == "MOVED"]
-    assert not moved6, "generation 6 must match the tree: %r" % [
-        (n["id"], n["reason"]) for n in moved6]
-    doc5 = lcd.build(lcd.ROOT, lcd.resolve_scope(lcd.ROOT, generation=5))
-    row = [n for n in doc5["numbers"] if n["status"] == "MOVED"]
-    assert [n["id"] for n in row] == ["harness_pin_digest"]
-    names = " ".join(m["path"] for m in row[0]["moved_inputs"])
-    assert "client.py" in names and "run_longrun.py" in names
-    assert len(row[0]["moved_inputs"]) == 2
+    rec = _record()
+    current = lcd.build(lcd.ROOT, lcd.resolve_scope(lcd.ROOT, generation=rec["generation"]))
+    moved = [n for n in current["numbers"] if n["status"] == "MOVED"]
+    assert not moved, "generation %s must match the tree: %r" % (
+        rec["generation"], [(n["id"], n["reason"]) for n in moved])
+
+    g8 = rec.get("supersedes_generation_8")
+    g6 = rec.get("superseded_pin_generation_6")
+    assert isinstance(g8, dict) and g8.get("generation") == 8
+    assert isinstance(g6, dict) and g6.get("generation") == 6
+    g5 = g6.get("supersedes_pin_generation_5")
+    assert isinstance(g5, dict) and g5.get("generation") == 5
+    digests = [rec["harness_sha256"], g8["harness_sha256"], g6["harness_sha256"],
+               g5["harness_sha256"]]
+    assert len(set(digests)) == 4, "a preserved generation repeats another's digest: %r" % digests
+
+    per = lambda block: {f["name"]: f["sha256"] for f in block["files"]}
+    moved_names = sorted(n for n in per(g6) if per(g5).get(n) != per(g6)[n])
+    assert moved_names == ["client.py", "run_longrun.py"], moved_names
+    for name in moved_names:
+        assert name in g6["cause"], "generation 6's cause does not name %s" % name

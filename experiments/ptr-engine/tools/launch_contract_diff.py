@@ -810,8 +810,8 @@ def checks(root):
            role="evidence", on_disagree=True,
            note="pinned inputs whose bytes moved: %s" % (", ".join(pin_drift(root)) or "none")),
          L(DOC_RUNBOOK, 68, pin, pin),
-         L(DOC_RUNBOOK, 119, pin, pin),
-         L(DOC_RUNBOOK, 381,
+         L(DOC_RUNBOOK, 121, pin, pin),
+         L(DOC_RUNBOOK, 385,
            "35ff41b7\u2026",
            "35ff41b7\u2026",
            role="stale", marker="generation 5 was the canary's epoch",
@@ -944,7 +944,7 @@ def checks(root):
     out.append(check(
         "canary_arms", "canary arms",
         [CA("CANARY_ARMS tuple length", arms_present, arms, arms_path),
-         L(DOC_RUNBOOK, 123, "4 arms", "4")],
+         L(DOC_RUNBOOK, 127, "4 arms", "4")],
         authoritative="run_a_star.py:73 CANARY_ARMS (four named arms)",
         resolution="4",
         absent_from=["GRID-PARAMS.json :: canary (carries N only, no arm count)"]))

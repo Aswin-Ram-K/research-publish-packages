@@ -182,6 +182,21 @@ Full digests: `2b416d827c36ec958aa50e54db4ec5d52f72f061e7c39e9a417b5f0b2078370c`
 ## Open questions this ledger does not answer
 
 - Is the distance cliff a matter of presence or position (E3)? **Half closed: the 40 failures are content absence**, verified as 0 occurrences of the expected value in every post-mask prompt — see §The TX-03 cliff is content absence; position is untested here above. **The position half is open:** this arm's surviving probes are all pre-mask `d2`, so no present-value distance contrast was ever run, and the earlier "presence, not position / position is excluded" reading is superseded. E3 (`experiments/ptr-engine/research-seed-concepts/PREREG-SPCC.md`) keeps the body present and varies distance.
+
+  *Correction 2026-11-11 (appended; the sentence above is kept as written).* **The position half was run
+  on 2026-11-10 and is closed** — it is the cell `experiments/ptr-engine/measure/rows-e3-retain-2026-11-10.jsonl`
+  (200 rows, fixture `longrun/tasks-v7/TX-04.v1.json`, arms `spcc` + `masking-no-fetch`, `--window-turns 200
+  --compact-every 200`), verdict in `docs/STATE.md` §"U-SPCC-64 — E3: the cliff is eviction, not position".
+  Re-scored from the rows on 2026-11-11: `spcc` 48/48, `masking-no-fetch` 42/48, per distance
+  `d2 10/10 · d8 10/10 · d20 10/10 · d32 9/9 · d64 9/9` and `9/10 · 8/10 · 8/10 · 8/9 · 9/9`; control
+  `masked_rows 0`, `compactions 0`, `evicted 0`, `expected_present` 96/96. A value can sit at distance 64
+  with its body present and be answered. The sentence above remains true only of the **TX-02/TX-03**
+  masking cells, whose surviving probes are all pre-mask `d2`.
+  One consequence for the pre-registration: E3's design ("both arms, no eviction") is not encodable with
+  the masking treatment **on**, because keeping a fact's body present past the mask requires re-delivering
+  it, and `longrun/check_pointer_fixtures.py:307-312` rejects any occurrence of the fact value in another
+  turn's tool output as leakage; the mask window is a run flag (`--window-turns`), not a fixture field.
+  The cell therefore measures retention versus prompt format, not the masking arm's cliff.
 - Whether bounded fetch's aggregation ceiling can be lifted above 4/48.
 - Whether a fork of SGLang is justified (per-range eviction, non-prefix reuse, per-range attribution).
 - Whether Nemotron Nano can hold the answer contract at or above occamy.

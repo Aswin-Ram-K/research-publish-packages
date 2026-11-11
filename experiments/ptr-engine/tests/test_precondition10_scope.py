@@ -53,10 +53,21 @@ REAL = {
 
 
 def load_launcher(path=LAUNCHER):
-    spec = importlib.util.spec_from_file_location("run_a_star_p10_scope", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    # ROOT is read at import time and the launcher's default is an absolute literal, so a
+    # git worktree would otherwise judge the main checkout's HARNESS-PIN.json -- a record
+    # this tree may have superseded -- and a re-pin refusal would pre-empt these guards.
+    saved = os.environ.get("RUN_A_STAR_ROOT")
+    os.environ["RUN_A_STAR_ROOT"] = ROOT
+    try:
+        spec = importlib.util.spec_from_file_location("run_a_star_p10_scope", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+    finally:
+        if saved is None:
+            os.environ.pop("RUN_A_STAR_ROOT", None)
+        else:
+            os.environ["RUN_A_STAR_ROOT"] = saved
 
 
 RA = load_launcher()

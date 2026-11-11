@@ -127,7 +127,17 @@ def check_offline_records(cell_path, tmp):
     with open(os.path.join(out, [n for n in names if n.endswith(".json")][0])) as fh:
         doc = json.load(fh)
     assert doc["offline"] is True and doc["requests_used"] == 0
-    assert doc["harness"]["harness_sha256"] and len(doc["harness"]["files"]) == 6
+    # The record must carry one digest per MEASUREMENT INPUT: every entry of cell.py's
+    # HARNESS_FILES plus the fixture.  Pinned by name, not by count, so an accidental
+    # removal still fails while a deliberate addition (generation 9 added arm_cd.py and
+    # ptr_engine/layers.py) does not have to be retyped here.
+    import cell as _cell
+    expected = {name for _path, name in _cell.HARNESS_FILES} | {"fixture"}
+    assert set(doc["harness"]["files"]) == expected, (
+        "harness record names %r, cell.HARNESS_FILES+fixture is %r"
+        % (sorted(doc["harness"]["files"]), sorted(expected)))
+    assert {"arm_cd.py", "ptr_engine/layers.py"} <= set(doc["harness"]["files"])
+    assert doc["harness"]["harness_sha256"]
 
 
 def check_missing_system_prompt(cell_path, tmp):

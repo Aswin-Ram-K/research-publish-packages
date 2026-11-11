@@ -15,8 +15,8 @@ Two subcommands, offline and read-only with respect to every source file:
         re-hash each copy and refuse (exit 1) if a copied byte differs from its
         source, then write ``MANIFEST.json`` with path/sha256/size/mtime_ns per
         file plus ``taken_at`` and ``harness_sha256_of_HARNESS_FILES`` (the
-        cell.py recipe over the five HARNESS_FILES; fixture excluded because it
-        is added per invocation, cell.py:128-135).
+        cell.py recipe over the seven HARNESS_FILES; fixture excluded because it
+        is added per invocation, cell.py:128-139).
 
     harness_baseline.py verify <baseline-dir> [--root DIR]
         Recompute the sha256 of every file named in the manifest and print one
@@ -39,13 +39,17 @@ import time
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
-# cell.py:128-135 -- name used by the digest, repo-relative path.
+# cell.py:128-139 -- name used by the digest, repo-relative path.  This tuple must
+# not drift from cell.py's: test_embedded_digests_match_pin.py compares the two
+# name sets, and a baseline taken over a short list would miss the files it omits.
 HARNESS_FILES = (
     ("run_longrun.py", "experiments/ptr-engine/longrun/run_longrun.py"),
     ("client.py", "experiments/ptr-engine/longrun/client.py"),
     ("grade_v5.py", "experiments/ptr-engine/longrun/grade_v5.py"),
     ("analyze_stats.py", "experiments/ptr-engine/longrun/analyze_stats.py"),
     ("tools/det_verify.py", "experiments/ptr-engine/tools/det_verify.py"),
+    ("arm_cd.py", "experiments/ptr-engine/longrun/arm_cd.py"),
+    ("ptr_engine/layers.py", "experiments/ptr-engine/ptr_engine/layers.py"),
 )
 
 # Every other file in the harness lineage that a concurrent card can edit and
@@ -71,7 +75,7 @@ def sha256_file(path: str) -> str:
 
 
 def harness_digest(root: str) -> str:
-    """cell.py:332-346 recipe over the five HARNESS_FILES (fixture excluded)."""
+    """cell.py:381-402 recipe over the seven HARNESS_FILES (fixture excluded)."""
     shas = {}
     for name, rel in HARNESS_FILES:
         shas[name] = sha256_file(os.path.join(root, rel))
@@ -118,7 +122,7 @@ def cmd_snapshot(args) -> int:
         "taken_at": taken_at,
         "root": root,
         "harness_sha256_of_HARNESS_FILES": harness_digest(root),
-        "harness_files_digest_recipe": "cell.py:332-346 over the five HARNESS_FILES; fixture excluded (per-invocation input)",
+        "harness_files_digest_recipe": "cell.py:381-402 over the seven HARNESS_FILES; fixture excluded (per-invocation input)",
         "files": entries,
     }
     mpath = os.path.join(dest, "MANIFEST.json")
