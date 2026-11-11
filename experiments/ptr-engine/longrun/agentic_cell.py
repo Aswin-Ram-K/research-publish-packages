@@ -136,8 +136,12 @@ if _LONGRUN_HERE not in sys.path:
 _PTR_ENGINE_ROOT = os.path.dirname(_LONGRUN_HERE)
 if _PTR_ENGINE_ROOT not in sys.path:
     sys.path.insert(0, _PTR_ENGINE_ROOT)
+_PTR_ENGINE_TOOLS = os.path.join(_PTR_ENGINE_ROOT, "tools")
+if _PTR_ENGINE_TOOLS not in sys.path:
+    sys.path.insert(0, _PTR_ENGINE_TOOLS)
 
 import agentic_contract  # noqa: E402  the ONE row contract (ARMS, REQUIRED_ROW_KEYS, validate_row)
+import agentic_pin  # noqa: E402  stage 2's own pin: every row names the instrument that wrote it
 import arm_cd  # noqa: E402  the fold machinery (SpccArmState / PinnedArmState / ArmCDState)
 import cell as cell_mod  # noqa: E402  PROJECT_QUOTA + the ledger row counter
 import client  # noqa: E402  the ONE HTTP client
@@ -282,21 +286,105 @@ def _task_from_fixture(path: str) -> Task:
                 window_tokens=int(fixture.get("window_tokens") or 0), path=path)
 
 
-def load_task(path: str) -> Task:
-    """One task file -> :class:`Task`.  Only ``consonance.longrun-fixture/2`` is accepted.
+def _task_from_contract(doc: dict, path: str) -> Task:
+    """An ``agentic-contract`` document -> the same :class:`Task` the fixture path builds.
 
-    The bespoke ``agentic-contract`` schema lost the ruling (Main, 2026-11-11): every
-    fixture in ``tasks-agentic/`` is a v2 replay fixture, so a second task shape would be
-    a second convention for the same measurement.  A document whose ``schema`` is not v2
-    is refused by name — ``unsupported_task_schema: <schema>`` — never coerced into one.
+    The contract (``agentic_contract.py``) is the stage-2 task schema: a statement, a list
+    of work steps, one final question, and the graded value.  The episode loop already
+    consumes a :class:`Task`, so this maps the contract onto it rather than teaching the
+    loop a second shape.
+    """
+    missing = [k for k in ("task_id", "version", "statement", "steps",
+                           "final_question", "expected", "answer_form", "fact")
+               if k not in doc]
+    if missing:
+        raise TaskError("%s: contract task is missing %s"
+                        % (os.path.basename(path), ", ".join(missing)))
+    if not isinstance(doc["steps"], list) or not doc["steps"]:
+        raise TaskError("%s: contract task has no steps" % os.path.basename(path))
+    if str(doc["answer_form"]) not in ("NUM", "TEXT"):
+        raise TaskError("%s: answer_form %r is not NUM or TEXT"
+                        % (os.path.basename(path), doc["answer_form"]))
+    steps = list(doc["steps"])
+    turns: List[dict] = [
+        {"turn": i, "kind": "work", "question": str(step.get("prompt") or "")}
+        for i, step in enumerate(steps, 1)]
+    final_turn = len(steps) + 1
+    turns.append({"turn": final_turn, "kind": "final",
+                  "question": str(doc["final_question"])})
+
+    checkpoints: List[dict] = []
+    for i, cp in enumerate(doc.get("checkpoints") or [], 1):
+        expected = cp["expected"]
+        checkpoints.append({
+            "id": str(cp.get("fact_id") or ("cp-%02d" % i)),
+            "turn": int(cp["step"]),
+            "question": str(cp.get("question") or ""),
+            "expected": expected,
+            "kind": _answer_kind(expected),
+            "derivation": {"rule": "contract", "task": str(doc["task_id"]),
+                           "step": int(cp["step"]),
+                           "text": "%s checkpoint at step %d"
+                                   % (doc["task_id"], int(cp["step"]))},
+        })
+    checkpoints.append({
+        "id": "final",
+        "turn": final_turn,
+        "question": str(doc["final_question"]),
+        "expected": doc["expected"],
+        "kind": str(doc["answer_form"]),
+        "derivation": {"rule": "contract", "task": str(doc["task_id"]),
+                       "step": final_turn,
+                       "text": "%s final answer" % (doc["task_id"],)},
+    })
+
+    window_tokens = int(doc.get("window_tokens") or DEFAULT_WINDOW_TOKENS)
+    fixture = {
+        "task_id": str(doc["task_id"]),
+        "turns": turns,
+        "system_prompt": str(doc["statement"]),
+        "window_tokens": window_tokens,
+        "documents": [],
+        "fact": dict(doc["fact"]),
+        "expect_tool": any(bool(step.get("expect_tool")) for step in steps),
+    }
+    return Task(task_id=str(doc["task_id"]), fixture=fixture,
+                statement=str(doc["statement"]), turns=tuple(turns),
+                checkpoints=tuple(checkpoints), index_text="",
+                window_tokens=window_tokens, path=path)
+
+
+def _answer_kind(expected) -> str:
+    """``NUM`` for an integer literal, ``TEXT`` otherwise."""
+    if isinstance(expected, bool):
+        return "TEXT"
+    if isinstance(expected, int):
+        return "NUM"
+    if isinstance(expected, str) and expected.strip().lstrip("-").isdigit():
+        return "NUM"
+    return "TEXT"
+
+
+def load_task(path: str) -> Task:
+    """One task file -> :class:`Task`.  Two schemas are accepted, told apart by key.
+
+    * ``turns`` present         -> ``consonance.longrun-fixture/2`` (the replay path).
+    * ``version`` and ``steps`` -> the agentic contract (``agentic_contract.py``).
+
+    Anything else is refused by name — ``unsupported_task_schema`` — never coerced.
     """
     with open(path, "r", encoding="utf-8") as fh:
         doc = json.load(fh)
-    schema = doc.get("schema") if isinstance(doc, dict) else None
-    if schema != FIXTURE_SCHEMA:
-        raise TaskError("unsupported_task_schema: %s (task %s; only %s is accepted)"
-                        % (schema, os.path.basename(path), FIXTURE_SCHEMA))
-    return _task_from_fixture(path)
+    if not isinstance(doc, dict):
+        raise TaskError("unsupported_task_schema: not an object (%s)"
+                        % os.path.basename(path))
+    if "turns" in doc:
+        return _task_from_fixture(path)
+    if "version" in doc and "steps" in doc:
+        return _task_from_contract(doc, path)
+    raise TaskError("unsupported_task_schema: %s (task %s; expected 'turns' or "
+                    "'version'+'steps')"
+                    % (doc.get("schema"), os.path.basename(path)))
 
 
 def load_tasks(tasks_dir: str) -> List[Task]:
@@ -943,6 +1031,26 @@ def _call_record(call: dict, result: dict) -> dict:
             "error": rec.get("error"), "truncated": bool(rec.get("truncated"))}
 
 
+_INSTRUMENT_SHA: Optional[str] = None
+
+
+def instrument_sha256() -> str:
+    """Stage 2's pin digest, verified against the tree before the first request.
+
+    A row that does not name the instrument that wrote it cannot be attributed, and an
+    unattributable row is not evidence.  ``agentic_pin.check`` returns 0 only when the
+    record and the tree agree, so a run whose code moved since the record is refused
+    here rather than discovered later.
+    """
+    global _INSTRUMENT_SHA
+    if _INSTRUMENT_SHA is None:
+        code, message = agentic_pin.check()
+        if code != 0:
+            raise TaskError("agentic_pin_check_failed: %s" % (message,))
+        _INSTRUMENT_SHA = agentic_pin.compute()["harness_sha256"]
+    return _INSTRUMENT_SHA
+
+
 def _row(run_id, arm_name, task, rep, step, kind, resp, call_records, arm, *,
          answer, expected, verified, expected_present, model,
          prompt_tokens_max=None, tools_schema_sent=False) -> dict:
@@ -956,6 +1064,7 @@ def _row(run_id, arm_name, task, rep, step, kind, resp, call_records, arm, *,
     """
     return {
         "run_id": run_id,
+        "harness_sha256": instrument_sha256(),
         "arm": arm_name,
         "task_id": task.task_id,
         "rep": int(rep),
