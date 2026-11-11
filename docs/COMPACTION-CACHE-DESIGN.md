@@ -676,10 +676,14 @@ a forbidden action is not better (CONPACT: 30/100 sessions).
 - `refetch_count` does not differ between A and D → the mechanism is not the one claimed.
 
 **Budget.** An accuracy claim needs ≥ 4 reps; a cost-only claim needs 1 rep per arm. The pre-registered
-run is **two stages**: stage 1, 6 arms × 1 rep × 200 turns = 1,200 requests, decides the cost ranking;
-stage 2, +3 reps on the two surviving arms = 1,200 requests, decides accuracy. Total **2,400 requests**,
-which **exceeds the 1,927 headroom** — so stage 1 must be trimmed to 4 arms (800 requests) or the cap
-raised. That is `docs/STATE.md` §6 item 1, and it is the binding constraint on the whole experiment.
+run is **two stages totalling 1,000 requests**, which is the operator's ceiling and fits the 1,927
+headroom: stage 1, 4 arms (A, B, C, D) × 1 rep × 100 turns = **400**, decides the cost ranking; stage 2a,
+the two surviving arms × +1 rep × 100 turns = **200**; stage 2b, the same two arms × +2 reps × 100 turns
+= **400**, decides accuracy. Stage 2 is split into two cells because the runner stops a cell at **500
+real requests** (`test_gate_arm_count.py`, `request_ceiling` `[200, 500]`); a single 600-request cell
+would be killed mid-run and its rows would be a partial stamp. Stage 2 runs only if stage 1 produces a
+cost separation larger than the sensitivity grid's flip threshold; if the ranking flips inside the grid,
+E7 stops at 400 requests and reports `not_adjudicable`. The full table is in `PREREG-COMPACTION.md`.
 
 ---
 

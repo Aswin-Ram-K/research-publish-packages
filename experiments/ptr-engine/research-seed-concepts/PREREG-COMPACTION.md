@@ -206,8 +206,12 @@ same verdict E1's gen-6 grid earned, and for the same reason.
    - **(b)** build arms B and C on `pointer-stable` and port the layer compiler into it. Larger change;
      keeps `spcc` as it is.
 
-   Route (a) is recommended: it is one line plus a predicate, and it keeps the layer compiler as the
-   single place a fold is defined.
+   **Settled 2026-11-11: route (b).** The operator chose to build the pin arms on `pointer-stable` and
+   port the layer compiler into it, leaving `spcc` untouched. `spcc` therefore keeps its current
+   no-tool behaviour and is no longer an E7 arm; the arms are `compact`, `mask`, `retrieval`, `pins`,
+   `pins-recency` and `none`, and the pin arms are `pointer-stable` variants. The port is the
+   `RouteBPort` change: `PINS` added to `CompactionState`, `pin`/`retire`/`pins` with the four rules,
+   the `PLAN` pin and `ACTIVE` line, and the arm registry updated.
 
 ### Deviation note — 2026-11-11, instrument properties measured before E7 ran
 
