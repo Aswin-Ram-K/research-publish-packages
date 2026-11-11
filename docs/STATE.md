@@ -1309,5 +1309,21 @@ tool-channel arm was refused), or `--budget-cap` (the runner's default is the le
 gate). Added `--temperature` (0.0), `--tools`, `--fetch-policy`, `--budget-cap` (default
 `PROJECT_QUOTA = 12094`).
 
-**Budget.** 800 of the 1,927 headroom spent on stage 1 (the TX-05C run plus the TX-05D re-run). Stage 2
-must be sized to the remainder.
+**Result, TX-05D (400 requests).** `tools_schema_sent: true` on every row, so the schema reached the
+wire. `masking-no-fetch`, `spcc` and `pinned` made **0 tool calls** and answered `ANSWER: NONE` at all six
+carry turns. `bounded-context-fetch` did call the tool (3 and 5 fetch rounds at turns 36 and 46) and
+answered with the **wrong symbol** (`SYM_03`, 4031/4037) instead of `SYM_01`'s override 4017.
+`analyze_chain.py`: `ok 0 / lost 6 / present 0` in every arm, `refetch` **64** on
+`bounded-context-fetch` and 0 on the other three, `compactions` 3 on `spcc` and 4 on `pinned`. Verdict
+`instrument_ok=False`, the same two falsifiers.
+
+**Root cause of the second void run.** The pointer names the *step* and never the *symbol*, so the fold
+removes the locator as well as the value: the model cannot choose which ref to fetch. The correction is
+recorded in `docs/AGENTIC-COMPACTION-AB.md` §7 — the question must name the symbol and never the value —
+and is **not yet run**. §7 also records that `PinnedArmState` pins no bodies by construction
+(`arm_cd.py:697-701`), so the design's `pinned` retention row is false for this codebase, and that
+falsifier 4 is unsatisfiable as written (it compares two arms that both have no fetch channel).
+
+**Budget.** `request_ledger.py` after both runs: `spent=10987` of `PROJECT_QUOTA=12094`, so **1,107**
+headroom. Two stage-1 runs (800 requests) produced no usable contrast; stage 2 is sized to **6 tasks ×
+2 reps × 4 arms × 20 = 960** requests, leaving 147.
