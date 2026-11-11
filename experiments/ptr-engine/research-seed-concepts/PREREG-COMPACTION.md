@@ -232,3 +232,34 @@ and the falsifier fires. That is a result E7 will produce, not a reason to softe
 
 The predictions and falsifiers above remain binding and unedited. This note records instrument
 properties discovered before the run, not a post-hoc revision of the hypothesis.
+
+### Deviation note 2 — 2026-11-11, the fold trigger as implemented
+
+`docs/COMPACTION-CACHE-DESIGN.md` §5.3 specifies two triggers: "fold when the prompt reaches 70–80 % of
+the model's window, **or when the journal exceeds a token budget — whichever comes first**". The
+implementation has the first and not the second, and that is deliberate:
+
+- **Window pressure is implemented** as `CompactionState.fold_at_tokens`, set by the pin arms to
+  `FOLD_AT_FRACTION = 0.70 × fixture["window_tokens"]`. The compiler has no tokenizer, so the size is
+  estimated from characters at `CHARS_PER_TOKEN = 3.122` (measured on the 871-turn session).
+- **The turn interval is off** for the pin arms (`compact_every=None`). A 24-turn interval folds at
+  ~69 k tokens on a 45 k-token `L0`, under the 91,750 threshold, so it would always win and the window
+  trigger would be dead code. A caller that names an interval still gets it as a floor.
+- **The journal budget is not a separate parameter.** The window trigger already bounds the journal at
+  `0.70 × window − L0`; a separate budget smaller than that headroom would always fire first and make
+  the window trigger dead code, which is the same trap in the other direction. If a later fixture has a
+  small `L0` and a large window, the journal budget becomes meaningful and should be added then, with
+  the headroom arithmetic recorded.
+
+**Consequence for the run.** On `LR-07.v5.json` (`L0 ≈ 40.5 k`, window 131,072) the threshold is
+**91,750 tokens**, so the journal may reach ~51 k before a fold. That is the intended real-session
+behaviour: a fold is forced by the window filling, not by a turn count.
+
+**A fixture gap this exposed, recorded because it would have silently voided the trigger.**
+`LR-07.v5.json` as first built carries no `tool_outputs` bodies, so `add_delivery` is never called and
+each journal line is only the question text (~45 tokens). Driving the real arm over all 220 turns, the
+prompt reaches only **55,485 tokens at T220** — the threshold is never reached and the window fold never
+fires. The fixture is real-length in `L0` but not in journal growth, and it is being rebuilt with the
+real read bodies so the journal grows ~1,000 tokens per turn and the prompt crosses the threshold at
+roughly T47. **E7 must not run on a fixture whose journal does not grow**, or the treatment under test
+never fires and the result is vacuous.
