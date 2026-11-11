@@ -365,6 +365,13 @@ those classes `UNAVAILABLE` / `NOT_OBSERVED` and refuses to score them as succes
     fabricate history; the alternatives are (a) accept a re-frozen baseline that records the 360 by name
     as known history debt, or (b) backfill only those with a real source document. This is an operator
     call because it changes what "the record is complete" means.
+12. **The handoff-shape baseline** — `tests/test_orchestration_handoffs.py` is red on **49** unit-shape
+    gaps that the 2026-10-24 frozen baseline (`state/logs/U8.15/baseline_gaps.json`) never covered;
+    the files were committed by the preservation commit `9fadcc9`. Either re-freeze the baseline naming
+    the 49 as known history debt, or repair the 49 docket-era handoffs to the seven-key shape. The
+    first erases the guard's meaning if done silently; the second rewrites history. Measured
+    2026-11-11: `2 failed / 28 passed`, and the handoff written that day (`U-SPCC-74.json`) is not
+    among the gaps.
 
 ---
 
@@ -623,10 +630,14 @@ record is now in [`journal/2026-11-10.md`](../journal/2026-11-10.md) under their
 **Suite state after them (measured 2026-11-11, live checkout):** `test_verdict_ritual.py` **10 passed**
 (the six unverdicted closures are settled); `test_journal_lint` **red** at `new_misses=360`
 (`exempt_frozen=1017`); `test_request_ledger::TestRealCorpus` **red** at
-`spent=10167 > cap=4320 (over by 5847)`. Both reds are operator decisions (§6 items 10–11), not code
-defects. A fresh worktree reports `new_misses=1377` for the same test because
-`state/logs/U8.15/baseline_gaps.json` is gitignored and absent there — **the worktree cannot run that
-guard**, which is why this close-out was done in the live checkout.
+`spent=10167 > cap=4320 (over by 5847)`; `tests/test_orchestration_handoffs.py` **red** at
+**2 failed / 28 passed** — `A2-FIX.json` carries no status/verdict/result/overall key, and **49**
+unit-shape gaps sit outside the 2026-10-24 frozen baseline (`state/logs/U8.15/baseline_gaps.json`
+contains none of them; the files were committed by the preservation commit `9fadcc9`). All three reds
+are operator decisions (§6 items 10–12), not code defects. A fresh worktree reports `new_misses=1377`
+for the journal-lint test because `state/logs/U8.15/baseline_gaps.json` is gitignored and absent
+there — **the worktree cannot run that guard**, which is why this close-out was done in the live
+checkout.
 
 ## Measured noise floor — temperature 0 + seed 42 is not a reproducibility contract (2026-11-10)
 
