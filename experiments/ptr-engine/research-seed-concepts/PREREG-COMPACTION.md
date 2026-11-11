@@ -136,7 +136,17 @@ same verdict E1's gen-6 grid earned, and for the same reason.
 1. **Arms B and C exist and are registered** in `ARMS` (`run_longrun.py:74`), with `--tools` accepted.
    `experiments/ptr-engine/longrun/tests/test_matrix_audit.py:239-243` asserts the **exact** arm set, so
    it must be updated in the same change.
-2. **The pin API exists** (`pin`, `retire`, `pins`) and writes to the new `PINS` layer only.
+2. **The pin API exists** (`pin`, `retire`, `pins`) and writes to the new `PINS` layer only. The API
+   must implement the four rules §3.6/§5.2 added, because an arm that omits them is not the design
+   under test:
+   - `pin(kind, text, source=None)` writes `P<n>|kind|T<t>|text` — the **turn stamp** is mandatory;
+   - a write that would push PINS past its token budget is **refused** and the overflow returned, never
+     truncated;
+   - a correction is a new pin carrying `supersedes P<n>`, never an edit;
+   - text whose `source` is tool output is **sanitised** for zero-width and bidi control characters
+     before it enters PINS.
+   The kind set is `goal|decision|constraint|blocker|warning|fact|ref|fold` — a synthesis, not a
+   published standard (§3.6).
 3. **The fold record is a pin in PINS**, and `prefix_sha256` is computed over `L0+PINS+L1`.
    `experiments/ptr-engine/longrun/tests/test_spcc_arm.py:118` asserts
    `set(lt) == {"L0","L1","L2","L3","L4"}` and must become `{"L0","PINS","L1","L2","L3","L4"}`.

@@ -227,6 +227,69 @@ retaining a lot **never** pays back.
 | **Tombstone removal gives 16/16 replay failures** | Direct support for §5.1's append-only + tombstone rule. Removing a line from the prefix is not a neutral edit. |
 | **27 compaction summaries contained self-injected instructions** | The strongest argument for "never summarise" — and it is a **safety** argument, not a cost one. A summary is an LLM writing into the trusted prefix; a pin is the agent writing a line it can be held to. |
 
+### 3.6 Pinning specifically — what the prior art settles, and the four rules it adds
+
+A second research pass (2026-11-11, web only) asked the pinning question directly. It **confirms the
+core design** and adds four rules the design was missing.
+
+**Confirmation, with numbers.** The design's central claim — constraints must live outside the
+summarised range — is measured, not argued:
+
+| Study | Measurement | What it settles |
+|---|---|---|
+| [CONPACT, arXiv:2608.11242](https://arxiv.org/abs/2608.11242) | compactors retain **17 %** of injected side constraints on average; the agent performed a forbidden delete in **30/100 sessions after compaction vs 0 before**; a separate constraint extractor appended to the compacted context reaches **>90 %** without touching the compactor | The design's `PINS` layer *is* that separate store. The 17 % is the cost of the alternative. |
+| [The Missing Boundary, arXiv:2609.11024](https://arxiv.org/abs/2609.11024) | 1,800 trajectories, 5 models: preserving control constraints → **0 %** loss of control; omitting them → **87 %** | A pin is not a convenience; it is the difference between 0 % and 87 % on the safety-relevant failure. |
+| [openai/codex#25792](https://github.com/openai/codex/issues/25792) | progress reporting fell **97 % → 42 %** after automatic compaction; AGENTS rules stopped applying | Task state is *reconstructed* after a fold, not read. A pin is read. |
+| [ACE, arXiv:2510.04618](https://arxiv.org/abs/2510.04618) | names **brevity bias** and **context collapse**; incremental append gains +10.6 % over iterative rewriting | Direct support for §5.1's append-only rule: a pin is a log, not a document. |
+| [Claude Code, what survives compaction](https://code.claude.com/docs/en/context-window#what-survives-compaction) | root `CLAUDE.md`, auto memory, skill descriptions and the plan are **re-injected from disk**; context a hook added earlier is **summarised with everything else** | The production pattern is re-injection by runtime rule, not model discretion. It also shows the failure: anything not re-injected is lost. |
+
+**The tension the design must name.** Manus deliberately re-injects its `todo.md` at the **end** of the
+context every step, "reciting its objectives into the end of the context … avoiding 'lost-in-the-middle'
+issues" ([Manus](https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus)).
+That is the opposite placement from this design, and it is deliberate: **head placement buys cache, tail
+placement buys recency.** The design chooses the head because its pins are *durability* pins (a
+constraint must survive a fold), not *attention* pins. A recency pin is a different object and is out of
+scope; conflating them is how a design ends up paying a cache miss every turn for a note that only
+needed to be read once.
+
+**Engine fact that forbids relying on the cache to hold a pin.** SGLang's eviction policy "only scores.
+It does not decide how much to free, and it **cannot pin KV in memory** — a node protected by the policy
+is still evicted if reclaiming everything else is not enough"
+([SGLang](https://docs.sglang.io/docs/advanced_features/radix_eviction_policy)). So a pin is a
+**prompt-layout invariant plus an idempotent re-prefill**, never a cache reservation. This is why §5.1
+makes the pin block append-only and why E7 measures `cached_tokens` rather than assuming warmth.
+
+**Four rules the design was missing, now adopted:**
+
+1. **Cap the pin, enforce at write time, fail loudly.** Letta exposes `chars_current`/`chars_limit` in
+   the block itself; Claude Code caps auto memory at "the first 200 lines … or the first 25 KB" and
+   silently drops the rest on the next load; Cursor says keep rules under 500 lines. Silent truncation
+   is the worst outcome, so `pin()` must **refuse** a write that would exceed the cap and return the
+   overflow, rather than truncate. Adopted as §5.2's cap rule.
+2. **Stamp every pin and surface conflicts.** Claude Code records an ISO-8601 `modified` field because
+   it "shows how current the fact is", and admits that for contradictory instructions "Claude may pick
+   one arbitrarily". A pin therefore carries the turn it was written (`P7|blocker|T31|…`), and a new pin
+   whose kind+subject matches a live pin must be written as a **supersede** (`P9|decision|T40|supersedes
+   P7|…`) so the conflict is visible in the prefix rather than resolved silently.
+3. **Treat pinned text as untrusted.** The Pillar "Rules File Backdoor" (2025-03-18) hid instructions in
+   `.cursor/rules` behind zero-width joiners and bidi markers — invisible to human and PR review,
+   readable by the model, and surviving forks; CVE-2025-54135 is the execution end of that chain. A pin
+   written from tool output (a fetched file, a web page) must be sanitised for zero-width and bidi
+   control characters before it enters `PINS`, and a pin must record its `source` so a poisoned pin is
+   traceable.
+4. **Do not rely on position alone.** Lost-in-the-Middle reports a U-shape
+   ([arXiv:2307.03172](https://arxiv.org/abs/2307.03172)); Chroma's replication found "no notable
+   variation … for this specific NIAH task"
+   ([context rot](https://research.trychroma.com/context-rot)). Two measurements disagree, so no rule
+   here depends on where in the window a pin sits — only on it being in the cached prefix and
+   append-only.
+
+**What the prior art does not provide.** There is **no published `NOTES` schema with typed
+`warning | blocker | decision | fact` entries**. The closest primitives are Claude Code's four `type`
+values (`user`, `feedback`, `project`, `reference`), Cline's prescribed heading lists, and CONPACT's
+separate constraint store. The design's kind set is therefore a **synthesis**, and §5.2 says so rather
+than citing a standard that does not exist.
+
 ---
 
 ## 4. The cost model
@@ -336,14 +399,18 @@ Omitting an empty block keeps arm A **byte-identical to today**, so the control 
 
 ### 5.2 The pin model
 
-A pin is a line in the **PINS** layer with a stable id, a kind, and text that is **never summarised and
-never rewritten**:
+A pin is a line in the **PINS** layer with a stable id, a kind, the turn it was written, and text that is
+**never summarised and never rewritten**:
 
 ```
-P7|blocker|the ledger tool exits 4 over the 4,320 default cap; do not regenerate REQUEST-LEDGER.json
-P8|decision|the fold record is a pin in PINS, not a line in L1, so a fold extends the prefix
-P9|fact|TX-03 distances are 2/5/6/8/20/32; d32 is the fixture ceiling
+P7|blocker|T31|the ledger tool exits 4 over the 4,320 default cap; do not regenerate REQUEST-LEDGER.json
+P8|decision|T33|the fold record is a pin in PINS, not a line in L1, so a fold extends the prefix
+P9|fact|T40|supersedes P8|TX-03 distances are 2/5/6/8/20/32; d32 is the fixture ceiling
 ```
+
+The `T<n>` stamp is the turn the pin was written. It is not decoration: Claude Code records an ISO-8601
+`modified` field for exactly this reason — it "shows how current the fact is" — and a pin without a
+stamp cannot be aged out or superseded safely (§3.6).
 
 | Kind | Written by | Example |
 |---|---|---|
@@ -353,13 +420,19 @@ P9|fact|TX-03 distances are 2/5/6/8/20/32; d32 is the fixture ceiling
 | `blocker` | agent | "cap gate refuses; awaiting operator" |
 | `warning` | agent | "this test rewrites tracked previews" |
 | `fact` | agent | a measured value the task depends on |
+| `ref` | agent | a pointer, not content: `P6|ref|T12|ptr_engine/errors.py:114-126` |
+| `fold` | harness | the fold record: `P4|fold|T24|24 turns dropped at epoch 1` |
+
+The kind set is a **synthesis**, not a standard: no published schema defines a typed
+`warning|blocker|decision|fact` block (§3.6). The closest precedents are Claude Code's four `type`
+values, Cline's heading lists, and CONPACT's separate constraint store.
 
 **API (one call, append-only):**
 
 ```
-pin(kind, text) -> id          # appends P<n>|kind|text to PINS
-retire(id, reason) -> None     # appends a tombstone line; never removes the pin
-pins() -> list                 # read back, for the summary and for the handoff
+pin(kind, text, source=None) -> id   # appends P<n>|kind|T<t>|text; refuses on cap overflow
+retire(id, reason) -> None           # appends a tombstone line; never removes the pin
+pins() -> list                       # read back, for the summary and for the handoff
 ```
 
 **Rules:**
@@ -368,7 +441,18 @@ pins() -> list                 # read back, for the summary and for the handoff
   reason, and the retirement is itself a line.
 - A pin is **never re-injected per turn** as a separate message. It lives in PINS, which is in the
   cached prefix, so it is read at cache price — which on this endpoint is **zero** (§2.3).
-- A pin is **never edited**. A correction is a new pin that names the old one.
+- A pin is **never edited**. A correction is a new pin that names the old one (`supersedes P7`), so the
+  conflict is visible in the prefix instead of being resolved silently. Claude Code admits that for
+  contradictory instructions "Claude may pick one arbitrarily"; a supersede line removes the ambiguity.
+- **Cap the pin block and fail loudly.** `pin()` refuses a write that would push PINS past its budget
+  and returns the overflow, rather than truncating. Silent truncation is the documented worst outcome:
+  Claude Code's over-limit auto-memory writes succeed but "everything past the limit is dropped on the
+  next load". The budget is a token count, not a line count, because the cost is tokens.
+- **Sanitise a pin whose text came from tool output.** A pin written from a fetched file or a web page
+  must have zero-width and bidi control characters stripped before it enters PINS, and must record its
+  `source`. Poisoned rule files are invisible to human and PR review, are readable by the model, and
+  survive forks (Pillar "Rules File Backdoor", 2025-03-18; CVE-2025-54135 is the execution end of that
+  chain). A pin is trusted text; it must not become an injection surface.
 - Pins are **batched at fold boundaries** where possible: appending a pin extends the prefix, which is
   cheap, but appending one every turn turns the prefix into a per-turn rewrite.
 
@@ -379,7 +463,7 @@ pins() -> list                 # read back, for the summary and for the handoff
   `COMPACT_EVERY = 24` folds a 1,500-token prompt that had no need to fold (measured: 6.38 % saving at
   best, 0.88 % at a realistic prefix).
 - **Fold only L2.** L0, PINS and L1 are untouched. The fold record is appended to **PINS** as a pin.
-- **Never summarise.** The fold drops the journal and appends `P<n>|fold|T24: 24 turns dropped at
+- **Never summarise.** The fold drops the journal and appends `P<n>|fold|T24|24 turns dropped at
   epoch 1` to PINS. No LLM call, no prefix rewrite, no lossy artefact that later has to be trusted.
   The record persists on every later turn, so the agent always knows history was truncated and how
   much — which is the one thing a fold must never hide.
@@ -404,12 +488,12 @@ exists in production: *architectural decisions, unresolved bugs, implementation 
 most recently accessed files*. Adopt it as the default, mapped onto the kinds above:
 
 ```
-P1|goal|<the task's acceptance check>
-P2|constraint|<the hard constraints that must not be violated>
-P3|decision|<architectural decision> — because <reason>
-P4|blocker|<unresolved bug or refusal>
-P5|fact|<implementation detail the task depends on>
-P6|ref|<the five most recently accessed files, as paths>
+P1|goal|T1|<the task's acceptance check>
+P2|constraint|T1|<the hard constraints that must not be violated>
+P3|decision|T<n>|<architectural decision> — because <reason>
+P4|blocker|T<n>|<unresolved bug or refusal>
+P5|fact|T<n>|<implementation detail the task depends on>
+P6|ref|T<n>|<the five most recently accessed files, as paths>
 ```
 
 `ref` is a new kind: a pointer, not content. It costs a few tokens and lets the agent re-read
@@ -429,6 +513,10 @@ deliberately instead of re-fetching blindly — which is the whole point of §2.
 | **Fold on window pressure, not on a count** | drop saving is 6.38 % at 1.5 k L0, 0.88 % at 12 k L0 | §2.2 |
 | **Keep the fold record append-only and persistent** | a record in PINS extends the prefix; a record in L3 vanishes after the fold turn | §5.1, §5.3 |
 | **Batch pins to at least one cache block** | vLLM caches only full 16-token blocks; a sub-block pin may not be cached at all | §3.5 |
+| **Cap the pin block and refuse on overflow** | silent truncation drops everything past the limit on the next load; a refused write is recoverable, a truncated pin is not | §3.6, §5.2 |
+| **Stamp every pin with its turn** | an unstamped pin cannot be aged out or superseded; Claude Code keeps `modified` for exactly this | §3.6, §5.2 |
+| **Supersede, never silently overwrite** | contradictory pins are resolved arbitrarily by the model; a `supersedes P7` line makes the conflict visible in the prefix | §3.6, §5.2 |
+| **Sanitise pins written from tool output** | poisoned rule files are invisible to review, readable by the model, and survive forks | §3.6, §5.2 |
 
 ---
 

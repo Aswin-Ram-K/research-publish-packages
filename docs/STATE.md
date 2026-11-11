@@ -179,9 +179,18 @@ the fixed prefix grows). The cost is the **re-fetch** that lost information caus
 44,426 — so a pin in the cached prefix costs **0 marginal units** on this endpoint and 480 at the
 Anthropic/OpenAI 0.1× read price, against a re-fetch's ~1,627. The design's conclusion is therefore
 **invariant across the whole plausible cache-price range**. The design adds a `PINS` layer between L0
-and L1, moves the fold marker from L1 to L3, makes PINS and L1 append-only with tombstones, and forbids
-summarising (a summary is a full prompt read + output + a prefix rewrite, is lossy, and 27 measured
-summaries carried self-injected instructions). E7's pre-registration is
+and L1, makes the fold record a **pin in PINS** (`P<n>|fold|T24|24 turns dropped at epoch 1`) so it
+persists on every later turn and extends the cached prefix instead of rewriting it, makes PINS and L1
+append-only with tombstones, and forbids summarising (a summary is a full prompt read + output + a
+prefix rewrite, is lossy, and 27 measured summaries carried self-injected instructions). Prior art
+folded in 2026-11-11 **confirms the design with numbers**: CONPACT (arXiv:2608.11242) measures
+compactors retaining **17 %** of side constraints with a forbidden delete in **30/100 sessions after
+compaction vs 0 before**, while a separate constraint store reaches **>90 %**; The Missing Boundary
+(arXiv:2609.11024) measures **0 %** vs **87 %** loss of control depending on whether control constraints
+survive; `openai/codex#25792` records progress **97 % → 42 %** after compaction. It also added four
+rules now in §5.2: cap the pin block and **refuse** on overflow (never truncate), stamp every pin with
+its turn, supersede rather than overwrite, and sanitise pins written from tool output (the Pillar
+"Rules File Backdoor" / CVE-2025-54135 injection surface). E7's pre-registration is
 `experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md`: four arms
 (`spcc` / `pinned-compact` / `pinned-summary` / `no-compact`), five predictions, four falsifiers, a
 two-stage 1,000-request budget. **It cannot run yet** — the cap decision (§6 item 1) gates it, and the
