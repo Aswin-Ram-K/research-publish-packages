@@ -251,7 +251,7 @@ package prose attached to an experiment, not workspace documents).
 | doc | why read it | status |
 |---|---|---|
 | [experiments/ptr-engine/research-seed-concepts/README.md](../experiments/ptr-engine/research-seed-concepts/README.md) | the 2026-11-06 research seed package: which papers the evidence warrants (two), what each may claim, and the staged validation each needs — plus `EVIDENCE-DOSSIER.md`, `RESEARCH-BRIEF.md`, `SECOND-PAPER-BRIEF.md`, `VALIDATION-ROADMAP.md` beside it | current |
-| [experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md](../experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md) | E7's pre-registration: the four-arm pinning-vs-summarising A/B, its predictions, falsifiers, two-stage budget, and the instrument requirements that must hold before the first request | current (gated on the cap decision) |
+| [experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md](../experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md) | E7's pre-registration: the six-arm real-length A/B (`compact`/`mask`/`retrieval`/`pins`/`pins-recency`/`none`), its predictions, falsifiers, two-stage budget, and the instrument requirements that must hold before the first request | current (gated on the cap decision) |
 
 ---
 

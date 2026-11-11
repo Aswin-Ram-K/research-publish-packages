@@ -424,6 +424,16 @@ those classes `UNAVAILABLE` / `NOT_OBSERVED` and refuses to score them as succes
     port the layer compiler into it — larger, keeps `spcc` as it is. **Recommended: (a).** This is an
     operator call because it changes what `spcc` is, and E7 cannot measure its own hypothesis until it
     is settled.
+    **Settled 2026-11-11: route (b).** The operator chose to build the pin arms on `pointer-stable` and
+    port the layer compiler into it, leaving `spcc` untouched. The port is in progress
+    (`RouteBPort`); `spcc` keeps its current no-tool behaviour and is no longer an E7 arm.
+15. **E7's budget does not fit the headroom** — the six-arm real-length design
+    (`experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md`) needs **2,400** requests
+    (6 arms × 4 reps × 100 turns) against **1,927** remaining. Either stage 1 is trimmed to 4 arms
+    (1,600 requests, fits), or the cap moves. The operator set the E7 budget at **1,000** (m02033), so
+    the pre-registration's 2,400 figure is the full design and stage 1 must be cut to fit 1,000 —
+    which is 2 arms × 4 reps × 100 turns, or 4 arms × 2 reps × 100 turns. This is an operator call
+    because it decides which comparison E7 can actually make.
 
 ---
 

@@ -38,6 +38,11 @@ units*, and a real tokenizer would put them ~1.3× higher. The **ratios** (0.05 
 unaffected, because numerator and denominator are the same measure. §2.4's figures are different: they
 are `prompt_tokens`/`completion_tokens` read from the API's own response, so those are real tokens.
 
+**Read §2.6 before drawing a conclusion from §2.1–§2.3.** Those three subsections were measured at
+`L0 = 1,515` layer units; a real session's `L0` is **38,408 tokens**, and at that size the conclusions
+change: compaction becomes the dominant cost lever rather than a marginal one, and the summary call
+becomes the largest single term in it. §2.6 measures the real regime on eight session transcripts.
+
 ### 2.1 The current fold rewrites the cached prefix
 
 `experiments/ptr-engine/ptr_engine/layers.py:247-257` drops the journal and appends the marker to
@@ -164,6 +169,57 @@ for arms **not in** `(arm_cd.ARM_C, arm_cd.ARM_D, arm_cd.ARM_SPCC)`, so **`spcc`
 renders through `compile_prompt` — does not service tool calls today**. Arms B and C are `spcc`
 variants, so E7 cannot measure `refetch_count` until `spcc` gains the tool channel. That is
 `PREREG-COMPACTION.md` instrument requirement 9, and it is the one that would have wasted stage 1.
+
+### 2.6 The real-length regime — and the correction it forces
+
+**§2.1–§2.3 were measured at `L0 = 1,515` layer units. A real session's `L0` is 38,408 tokens.** That
+is not a detail; it inverts the framing. Measured on eight real session transcripts
+(`~/.omp/agent/sessions/**/*.jsonl`, 0 requests) with
+`experiments/ptr-engine/tools/replay_policy_cost.py`:
+
+| Session | turns | L0 | max prompt | `none` cost | `compact` cost | `pins` cost | pins vs compact |
+|---|---|---|---|---|---|---|---|
+| 871-turn | 1,788 | 38,408 | 131,072 | 40,983,701 | 2,026,727 | **783,381** | **2.6×** |
+| 2026-11-10T15-26 | 1,024 | 38,4xx | 131,072 | 7,500,491 | 781,863 | **304,425** | **2.6×** |
+| 2026-11-09T13-40 | 1,102 | 38,4xx | 131,069 | 14,264,843 | 660,003 | **281,884** | **2.3×** |
+| 2026-11-11T18-28 | 1,436 | 38,4xx | 131,072 | 15,026,095 | 1,677,581 | **610,884** | **2.7×** |
+| 2026-10-27T05-59 | 402 | 38,4xx | 130,746 | 3,146,279 | 823,894 | **431,167** | **1.9×** |
+| 2026-11-08T23-36 | 512 | 38,4xx | 131,064 | 2,059,545 | 701,969 | **281,124** | **2.5×** |
+| short (no fold) | 96 | 38,4xx | 70,564 | 70,564 | 70,564 | 71,414 | 1.0× |
+| short (1 fold) | 214 | 38,4xx | 100,264 | 100,264 | 200,034 | **101,197** | **2.0×** |
+
+Cost is `billed + summary calls` in prompt tokens; a cached token is billed at zero on this endpoint
+(§2.3). The model is stated in the tool's docstring: content is reconstructed from the transcript at
+3.122 chars/token (measured), the cache hit is the longest common prefix with the previous turn, a
+`compact` fold pays one extra request reading the whole pre-fold prompt, and a `pins` fold pays none.
+
+**Three findings, in order of importance.**
+
+1. **At real length, compaction is the dominant lever, not a marginal one.** `none` (FIFO truncation at
+   the window) costs **5–50× more** than any folding policy, because dropping the oldest turn changes
+   the front of the prompt and re-prefills everything behind it. The toy-regime 6.38 % saving was an
+   artifact of a 1,515-unit `L0`; at 38 k the journal is most of the prompt and dropping it is the
+   whole game.
+2. **`pins` is 1.9–2.7× cheaper than `compact` at equal prompt size**, and the entire difference is the
+   **summary call**: 13 folds × ~92 k pre-fold prompt = 1.22 M of `compact`'s 2.03 M cost in the
+   871-turn session. The design's "never summarise" rule is therefore a **cost** rule as well as a
+   quality rule, and the cost part is now measured.
+3. **Masking alone is not a cost win.** It is sometimes *worse* than `none` (127 k vs 70 k on the short
+   session; 293 k vs 100 k on the other) because it changes the prefix without reducing the prompt
+   enough to avoid FIFO. Masking is a quality intervention, not a cost one, unless it is paired with a
+   fold.
+
+**What this does not prove, stated plainly.** The model assumes a perfectly stable prefix, so its
+absolute cache-hit rates (0.99 for the folding policies) are **optimistic** — the real 871-turn session
+reported 75.3 %. The *ranking* is robust because the summary-call count is a direct count, not a cache
+model output. The quality half of the claim — that pins retain constraints a summary loses — is
+**not** measured here and is what E7's graded arms exist to test.
+
+**The reframed product case.** At real length the prompt is window-bounded no matter what you do. The
+question is not "how do I avoid compaction" but **"what survives the bound"**. Compaction summarises
+(17 % constraint retention, §3.6), FIFO drops the oldest (loses the task statement), pins keep the
+durable set at zero marginal cost. The design wins on *what survives*, and secondarily on cost because
+it never pays for a summary call.
 
 ---
 
@@ -499,6 +555,50 @@ P6|ref|T<n>|<the five most recently accessed files, as paths>
 `ref` is a new kind: a pointer, not content. It costs a few tokens and lets the agent re-read
 deliberately instead of re-fetching blindly — which is the whole point of §2.4.
 
+### 5.5 The two-tier todo — a durable plan and a recency line
+
+The head-vs-tail tension (§3.6) is not resolved by choosing a side. It is resolved by **splitting the
+object**: the plan and the active step have different access patterns and belong in different layers.
+
+**Tier 1 — `PLAN`, durable, head, in PINS:**
+
+```
+P1|plan|T1|1. read resolve.py raise sites  2. add ledger row before each raise  3. run tests  4. verify no double-write
+```
+
+Written once at task start. Superseded only when the plan genuinely changes
+(`P7|plan|T20|supersedes P1|…`). It is in the cached prefix, so it costs **0 marginal units** on this
+endpoint and survives every fold.
+
+**Tier 2 — `ACTIVE`, recency, tail, in L3:**
+
+```
+ACTIVE: step 2 of 4 — add ledger row before each raise (plan P1)
+```
+
+Rewritten every turn from actual state. ~25 units, uncached, at the tail where attention is highest.
+
+| | `PLAN` | `ACTIVE` |
+|---|---|---|
+| Layer | PINS (head) | L3 (tail) |
+| Written | once, superseded on change | every turn |
+| Read | rarely | every turn |
+| Cost | 0 (cached) | ~25 units/turn |
+| Survives a fold | yes | no — it is per-turn by design |
+| Answers | *where are we going* | *what am I doing now* |
+
+**Why not one object.** A single todo list placed at the head is never salient; placed at the tail it is
+lost at every fold. The two-tier split gives the plan durability and the active step salience, and the
+`(plan P1)` back-reference makes a contradiction between them visible in the prefix rather than silent.
+
+**The risk, stated.** `ACTIVE` is a *claim*. If it is stale — says step 2 while the agent is on step 4 —
+it shadows reality and is worse than nothing. It must therefore be **derived from actual state each
+turn**, never carried forward, and it must name the plan pin it belongs to.
+
+**Cost.** `PLAN` = 0 (cached). `ACTIVE` ≈ 25 units/turn; over a 48-turn run that is 1,200 units, against
+one re-fetch at ~1,627 (§2.4). It pays for itself if it prevents **0.7 wasted turns** over the run.
+[INFERENCE on the 25-unit estimate — measurable in the first cell.]
+
 ---
 
 ## 6. Break-even rules (the arithmetic an operator can check)
@@ -522,63 +622,74 @@ deliberately instead of re-fetching blindly — which is the whole point of §2.
 
 ## 7. The A/B design (summary; full pre-registration in `PREREG-COMPACTION.md`)
 
-Four arms on one tool-enabled fixture, one model, temperature 0, seed 42:
+**Six arms, one tool-enabled fixture at real context length, one model, temperature 0, seed 42.** The
+comparator set is chosen so that a win means *best*, not *better than the worst*: every arm is a method
+someone actually ships.
 
-| Arm | Fold | Pins | Summary call |
-|---|---|---|---|
-| **A `spcc`** (control) | drop journal, record in L1 | none | no |
-| **B `pinned-compact`** | drop journal, record in PINS | PINS append-only | no |
-| **C `pinned-summary`** | drop journal, record in PINS | PINS append-only | **yes** — journal summarised into PINS |
-| **D `no-compact`** | grow until the window forces a FIFO truncation from the front | none | no |
+| Arm | Fold | Pins | Recency | Summary call | Retrieval |
+|---|---|---|---|---|---|
+| **A `compact`** | summarise the journal at 70 % window | none | no | **yes** | no |
+| **B `mask`** | mask tool results older than 8 turns | none | no | no | no |
+| **C `retrieval`** | drop the journal; retrieve top-k past turns per question | none | no | no | **yes** |
+| **D `pins`** | drop the journal, record in PINS | PLAN + facts | no | no | no |
+| **E `pins-recency`** | drop the journal, record in PINS | PLAN + facts | **ACTIVE at tail** | no | no |
+| **F `none`** | FIFO truncate at the window | none | no | no | no |
 
-Arm A is the existing `spcc` arm unchanged. Arm D is the existing `transcript-grow` arm, which
-"replay[s] the whole history every turn; FIFO-truncate[s] from the [front]" (`run_longrun.py:10`) — so
-it is not literally never-compacting: it is the **cost ceiling**, and it truncates only when the window
-forces it. Arms B and C are new and must be added to `ARMS` in
-`experiments/ptr-engine/longrun/run_longrun.py:74`.
+Arm A is the industry default and the one to beat. Arm B is the strongest cheap alternative. Arm C is
+the retrieval baseline the operator asked for; it needs its own instrument (an embedding or BM25 index
+over the journal) and is the only arm that is not a pure prompt-layout change. Arm F is the cost
+ceiling. Arms D and E are the design; E isolates the two-tier todo (§5.5) from the pins.
+
+**Regime.** The fixture must reach **100 k+ prompt tokens** (`LR-07.v5.json`, 200+ turns, `L0 ≈ 38 k`),
+because §2.6 shows the toy regime inverts the conclusion. `window_tokens = 131072`, fold at 70 %.
 
 **Primary metric:** `cost_units_per_verified_success` at `(c=0.00, o=3)`, with the sensitivity grid.
-**Secondary:** `refetch_count` (tool calls that read material already present in the journal),
-`checkpoint_accuracy`, `prefix_breaks`, `reprefill_tokens`, `compactions`.
+**Secondary:** `refetch_count`, `checkpoint_accuracy`, `prefix_breaks`, `reprefill_tokens`,
+`compactions`, `summary_calls`.
+**Guardrail:** constraint violations from the fixture's `acceptance` checks — a cheap arm that performs
+a forbidden action is not better (CONPACT: 30/100 sessions).
 
 **Predictions, written before the run:**
 
-1. **B ≤ A on cost** at equal accuracy, because the pins prevent re-fetches and the fold record is
-   append-only. The margin is small in tokens (§2.1) and large in re-fetches (§2.4).
-2. **C > B on cost** — the summary call plus the prefix rewrite costs more than the pins it replaces.
-3. **C ≤ B on accuracy** — a summary is lossy; a pin is not. If C beats B on accuracy, the design's
-   "never summarise" rule is wrong and must be revised.
-4. **D has the highest prompt tokens and the lowest re-fetch count** — it never loses anything, and it
-   is the cost ceiling.
-5. **A has the highest re-fetch count** — it loses the journal and keeps nothing.
+1. **A, D and E all beat F on cost** — FIFO truncation re-prefills the whole prompt every turn (§2.6).
+2. **D < A on cost by ~2×** — the summary call is the difference, measured at 1.9–2.7× on eight real
+   sessions (§2.6).
+3. **E ≈ D on cost, E ≥ D on accuracy** — the ACTIVE line costs ~25 units/turn and buys recency; if it
+   does not improve accuracy, the two-tier todo is not worth its tokens.
+4. **B ≈ F on cost** — masking alone does not reduce the prompt enough to avoid FIFO (§2.6).
+5. **C is between A and D on cost** — retrieval avoids the summary call but pays an index and a
+   retrieval read per turn.
+6. **D and E ≥ A on accuracy** — pins retain constraints a summary loses (17 % vs >90 %, §3.6).
 
 **Falsifiers:**
 
-- B's `cost_units_per_verified_success` ≥ A's → the pinning design does not pay.
-- B's accuracy < A's beyond the measured noise band (±4.2 pp, `PREREG-SPCC.md` §noise floor) → pinning
+- D's `cost_units_per_verified_success` ≥ A's → the pinning design does not pay.
+- D's accuracy < A's beyond the measured noise band (±4.2 pp, `PREREG-SPCC.md` §noise floor) → pinning
   costs quality.
-- C's accuracy > B's beyond the band → summarising is worth it, and rule 5.3 ("never summarise") is
-  falsified.
-- `refetch_count` does not differ between A and B → the mechanism is not the one claimed, and the
-  result is a token-only comparison that §2.2 already says is 1–6 %.
+- E's accuracy ≤ D's beyond the band → the two-tier todo is not worth its tokens, and §5.5 is wrong.
+- A's accuracy ≥ D's → summarising is worth it, and the "never summarise" rule is falsified.
+- `refetch_count` does not differ between A and D → the mechanism is not the one claimed.
 
-**Power and budget.** The noise floor is ±2/48 = ±4.2 pp per checkpoint set, so an accuracy claim needs
-≥ 4 reps (1,200 requests for 3 arms × 100 turns). A **cost-only** claim needs 1 rep per arm. The
-pre-registered run is therefore **two stages**: stage 1, 4 arms × 1 rep = 400 requests, decides the
-cost ranking; stage 2, +3 reps on the two surviving arms = 600 requests, decides accuracy. Total
-**1,000 requests**, inside the 1,927 headroom but **gated on the 4,320 default-cap decision**
-(`docs/STATE.md` §6 item 10).
+**Budget.** An accuracy claim needs ≥ 4 reps; a cost-only claim needs 1 rep per arm. The pre-registered
+run is **two stages**: stage 1, 6 arms × 1 rep × 200 turns = 1,200 requests, decides the cost ranking;
+stage 2, +3 reps on the two surviving arms = 1,200 requests, decides accuracy. Total **2,400 requests**,
+which **exceeds the 1,927 headroom** — so stage 1 must be trimmed to 4 arms (800 requests) or the cap
+raised. That is `docs/STATE.md` §6 item 1, and it is the binding constraint on the whole experiment.
 
 ---
 
 ## 8. What this design does not claim
 
-- It does not claim compaction is unnecessary. It claims compaction is **window management**, and that
-  its cost is the re-fetch, not the prefill.
-- It does not claim pinning is free. It costs 187.6 % of the drop saving in tokens and is justified
-  only by re-fetch avoidance.
+- It does not claim compaction is unnecessary. At real length it is **the dominant lever** (§2.6); the
+  design's claim is about *what survives* the fold, not about avoiding it.
+- It does not claim pinning is free. It costs 187.6 % of the drop saving in tokens at a billed cache
+  price (§2.3) and is justified by re-fetch avoidance and by constraint retention.
 - It does not claim the numbers in §2 transfer to another engine. They are measured on this compiler
   and this corpus; the cache multipliers are parameters, and the ranking is re-checked at the
   sensitivity bounds.
 - It does not claim a summary is never useful. It claims a summary is not justified **as a cost
-  measure**, and the A/B is designed to falsify that if it is wrong.
+  measure** — the summary call is 60 % of compaction's cost at real length (§2.6) — and the A/B is
+  designed to falsify that if it is wrong.
+- It does not claim the replay model in §2.6 is exact. It assumes a perfectly stable prefix, so its
+  absolute cache-hit rates are optimistic; the ranking is robust because the summary-call count is a
+  direct count.

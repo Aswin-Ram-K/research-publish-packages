@@ -36,24 +36,45 @@ result is known.
 ### Hypothesis
 
 At equal verified accuracy, a fold that **drops the journal and keeps an append-only pinned layer**
-(arm B) costs fewer normalised units per verified success than (a) the current fold that drops the
-journal and keeps nothing (arm A), and (b) a fold that **summarises** the journal into the prefix
-(arm C). The mechanism is not the prefix re-prefill — measured at 0.05 % of prompt tokens — but the
-**re-fetch** that lost information causes.
+(arm D) costs fewer normalised units per verified success than every method a production agent actually
+ships: plain compaction (arm A), observation masking (arm B), retrieval over history (arm C), and FIFO
+truncation (arm F). The mechanism is **two** things, and the second was measured after this
+pre-registration's first draft:
+
+1. **The summary call.** At real context length a `compact` fold pays one extra request reading the
+   whole pre-fold prompt. Measured on eight real session transcripts: `pins` is **1.9–2.7× cheaper**
+   than `compact` at equal prompt size, and the entire difference is the summary call
+   (`docs/COMPACTION-CACHE-DESIGN.md` §2.6).
+2. **The re-fetch** that lost information causes — 202 of 290 tool calls (69.7 %) re-read a range
+   already read (§2.5).
+
+The prefix re-prefill is **not** the mechanism: measured at 0.05 % of prompt tokens in the toy regime,
+and small even at real length because the post-fold prompt is small.
 
 ### Design
 
-One tool-enabled fixture, one model, temperature 0, seed 42, 100 turns per rep.
+One tool-enabled fixture at **real context length** (`LR-07.v5.json`, 200+ turns, `L0 ≈ 38 k`,
+`window_tokens = 131072`), one model, temperature 0, seed 42. Fold at **70 % of the window**.
 
-| Arm | Fold | Pins | Summary call | Marker location |
-|---|---|---|---|---|
-| **A `spcc`** (control) | drop journal at `COMPACT_EVERY` | none | no | L1 (inside prefix) |
-| **B `pinned-compact`** | drop journal on window pressure | L1 append-only | no | L4 (tail) |
-| **C `pinned-summary`** | drop journal on window pressure | L1 append-only | **yes** | L4 (tail) |
-| **D `no-compact`** | never | none | no | — |
+| Arm | Fold | Pins | Recency | Summary call | Retrieval |
+|---|---|---|---|---|---|
+| **A `compact`** | summarise the journal at 70 % window | none | no | **yes** | no |
+| **B `mask`** | mask tool results older than 8 turns | none | no | no | no |
+| **C `retrieval`** | drop the journal; retrieve top-k past turns per question | none | no | no | **yes** |
+| **D `pins`** | drop the journal, record in PINS | PLAN + facts | no | no | no |
+| **E `pins-recency`** | drop the journal, record in PINS | PLAN + facts | **ACTIVE at tail** | no | no |
+| **F `none`** | FIFO truncate at the window | none | no | no | no |
 
-Arm A is the existing `spcc` arm unchanged. Arm D is the existing `transcript-grow` arm. Arms B and C
-are new and must be added to `ARMS` in `experiments/ptr-engine/longrun/run_longrun.py:74`.
+Arm A is the industry default and the one to beat. Arm B is the strongest cheap alternative. Arm C is
+the retrieval baseline; it needs its own instrument (a BM25 or embedding index over the journal) and is
+the only arm that is not a pure prompt-layout change. Arm F is the cost ceiling. Arms D and E are the
+design; E isolates the two-tier todo (`docs/COMPACTION-CACHE-DESIGN.md` §5.5) from the pins.
+
+**Why the regime changed.** The first draft of this pre-registration used `LR-01.v5.json` (48 turns,
+`L0 ≈ 760` tokens, `window_tokens = 65536`). A real session has `L0 ≈ 38,408` tokens, a median prompt
+of 115,677 and a max of 221,711. At toy length the drop-journal saving is 6.38 %; at real length it is
+the dominant lever. The regime change is recorded here because it was made **before** any E7 request,
+on the strength of a 0-request replay, not after seeing a result.
 
 ### Controls
 
