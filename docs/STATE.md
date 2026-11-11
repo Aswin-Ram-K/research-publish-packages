@@ -521,6 +521,25 @@ those classes `UNAVAILABLE` / `NOT_OBSERVED` and refuses to score them as succes
     What remains an operator call is not the arithmetic but the **headroom**: E7 spends 1,000 of the
     1,927 left, which leaves 927 for every other cell (E2's d64 rep, E3's answer-slot cell, any re-run).
     Approve that allocation or re-split it.
+16. **The harness trace-collection duty writes into read-only targets — operator decision
+    (2026-11-11).** The user-level agent contract makes trace collection a standing duty and puts each
+    repo's bundles at `<repo>/.omp/traces/`. Running it as written at the close of this session rewrote,
+    at 16:13:08, **44 files inside `/home/zer0null/Duval`** (the derived day bundles
+    `bundles/2026-11-07…2026-11-11/{incidents.jsonl,metrics.json,report.md,sessions.jsonl}` and
+    `state/cursor.json`), plus 51 in `/home/zer0null/omp_core`, 13 in `/home/zer0null/AGENTIC VCS` and
+    45 here. **Git state was not touched** — `.git/info/exclude` mtime is `2026-11-09 08:05:02` with
+    `.omp/traces/` already present, `GIT_OPTIONAL_LOCKS=0 git --no-optional-locks status --porcelain`
+    is empty and HEAD is `b5de5ab8` — but §5.1 ("target repos are strictly read-only … no writes") and
+    §5.4 ("nothing is written outside this workspace") are violated in letter: `.omp/` sits inside the
+    target's working directory. The tree predates this session (`index.json` 13:03 today) and an
+    earlier session today had already written there, so the collision is old and repeated, not new.
+    Nothing was deleted — a deletion would be a second write into the same read-only tree and would
+    destroy the evidence. **Decision needed:** whether the collector may write into targets at all, and
+    into which repositories. The compliant default costs nothing and is what this session follows
+    until told otherwise: `node ~/.omp/agent/tooling/trace-collector/collector.mjs --mode=incremental
+    --repo="/home/zer0null/research extractor"` (the tool takes `--repo=/abs/path`), and everything
+    else lands in `~/.omp/trace-collector/unattributed/`. See `journal/2026-11-11.md` §"Constraint
+    conflict, disclosed".
 
 ---
 
