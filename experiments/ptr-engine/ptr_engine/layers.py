@@ -257,7 +257,18 @@ def compile_prompt(run: Any, state: CompactionState, *, epoch: int, journal: lis
     ``compact_every`` is the fold distance.  ``None`` (the default) means "use the
     state's own interval", which itself defaults to ``COMPACT_EVERY``; a caller
     that names it overrides the state and the state records the new value, so the
-    interval a run folds at is always readable from the state it folded.
+    interval a run folds at is always readable from the state it folded.  A state
+    whose ``compact_every`` is ``None`` has NO interval fold at all -- the E7 pin
+    arms run that way, because the design's trigger is window pressure, not a turn
+    count (docs/COMPACTION-CACHE-DESIGN.md §5.3).
+
+    ``fold_at_tokens`` is the window-pressure trigger: when set, the compiler also
+    folds as soon as the prompt would exceed that many tokens.  The size is
+    estimated from characters at ``CHARS_PER_TOKEN`` (3.122, measured) because the
+    compiler has no tokenizer; ``_layer_tokens`` is a WORD count and is not a
+    token estimate.  The interval, when set, remains a floor, so a fixture that
+    never reaches the threshold still folds at least once; with
+    ``compact_every=None`` there is no floor and such a fixture does not fold.
 
     ``prefix_sha256`` is the hash of the CACHEABLE prefix: ``L0+PINS+L1``.  ``L2``
     is the append-only journal tail -- growing it extends the cached prefix
