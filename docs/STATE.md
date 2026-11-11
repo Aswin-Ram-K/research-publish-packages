@@ -1,6 +1,6 @@
 # STATE — the current state of this workspace
 
-**Last updated:** 2026-11-11 · **By:** the crash-recovery close-out of `U-SPCC-69`…`U-SPCC-73` (manifests committed, derived artefacts regenerated, `--preview-root` added; corpus re-measured at **103 files / 10,167 rows**, so the ledger headroom is **1,927**, not 4,125)
+**Last updated:** 2026-11-11 · **By:** the crash-recovery close-out of `U-SPCC-69`…`U-SPCC-73` (manifests committed, derived artefacts regenerated, `--preview-root` added; corpus re-measured at **103 files / 10,167 rows**, so the ledger headroom is **1,927**, not 4,125), then the compaction/cache design and E7's pre-registration (§1a, 0 requests)
 **Read this first.** It is the single *current-state* page. Older status pages remain valid as dated
 records but are superseded here as current state — chiefly [`orchestration/STATUS.md`](orchestration/STATUS.md)
 (the docket-era batch record, 2026-10-21) and [`orchestration/CLOSING.md`](orchestration/CLOSING.md).
@@ -166,6 +166,29 @@ prove:** the scorecard exits **1** with **40/50 checks failing on answer
 shape (`kind NONE != NUM`)**, so this is a billing proof, not evidence that `masking-no-fetch` works on
 `TX-03`. The landed score file `experiments/ptr-engine/measure/score-spcc-billedproof-2026-11-10.json` still
 carries the stale `billed_tokens: 0` block; a landing unit refreshes it and it must not be cited.
+
+**Compaction/cache design, written 2026-11-11 (0 requests).** `docs/COMPACTION-CACHE-DESIGN.md` reframes
+the fold: its cost is **not** the prefix re-prefill (measured **86 layer units over 100 turns = 0.05 %**
+of 156,390 prompt units) and **not** the token saving (drop-journal saves **6.38 %** at L0 = 1,515,
+**1.73 %** at 6,060, **0.88 %** at 12,120 — the absolute saving is constant, so its share collapses as
+the fixed prefix grows). The cost is the **re-fetch** that lost information causes: one extra request at
+~5,448 prompt tokens + ~179 output (`rows-longrun-v5-tools.jsonl`, 24 `tool-followup` rows of 72).
+**A cached token is billed at zero here** — `billed_of` (`score_longrun.py:144-190`) computes
+`billed_tokens = prompt_tokens − cached_tokens`, and over 300 rows of
+`rows-e2-turnover-2026-11-10.jsonl` the sums are prompt 476,697 / cached 431,680 (90.6 %) / billed
+44,426 — so a pin in the cached prefix costs **0 marginal units** on this endpoint and 480 at the
+Anthropic/OpenAI 0.1× read price, against a re-fetch's ~1,627. The design's conclusion is therefore
+**invariant across the whole plausible cache-price range**. The design adds a `PINS` layer between L0
+and L1, moves the fold marker from L1 to L3, makes PINS and L1 append-only with tombstones, and forbids
+summarising (a summary is a full prompt read + output + a prefix rewrite, is lossy, and 27 measured
+summaries carried self-injected instructions). E7's pre-registration is
+`experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md`: four arms
+(`spcc` / `pinned-compact` / `pinned-summary` / `no-compact`), five predictions, four falsifiers, a
+two-stage 1,000-request budget. **It cannot run yet** — the cap decision (§6 item 1) gates it, and the
+live-cell preview hazard (§6 item 13) must be closed first. Two instrument facts it recorded:
+`cell.py:130-136` `HARNESS_FILES` does **not** include `arm_cd.py` or `ptr_engine/layers.py`, so an edit
+to the arm or compiler mid-run would not change the harness digest; and `test_gate_arm_count.py` stops a
+cell at **500 real requests**, so the 600-request stage 2 was split into 200 + 400.
 
 **Not measured — do not read any of the above as a result.** No live `spcc` cell has run; the
 memory window cannot currently be admitted (`MemAvailable` ~14 GB against a 68 GB reserve, so the

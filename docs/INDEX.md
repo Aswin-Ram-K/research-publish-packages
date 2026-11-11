@@ -13,6 +13,7 @@ Status key: `current` = authoritative for its question · `record` = dated findi
 | [docs/STATE.md](STATE.md) | the single current-state page: what is live, last measured, blocked, next action | current |
 | [docs/INDEX.md](INDEX.md) | this map — one row per doc, so nothing is silently lost | current |
 | [docs/GRID-RUNBOOK.md](GRID-RUNBOOK.md) | the commands, exit codes and reconcile-first rules for touching a running or interrupted grid | current |
+| [docs/COMPACTION-CACHE-DESIGN.md](COMPACTION-CACHE-DESIGN.md) | the compaction/cache design: why a fold costs a re-fetch and not a prefill, the pin model, the break-even rules, and the E7 A/B | current |
 | [docs/PREREG-ARM-RUN.md](PREREG-ARM-RUN.md) | the frozen arm-comparison design (PARM-1): what may be concluded from which cells | current |
 | [docs/GRID-2-FINAL.md](GRID-2-FINAL.md) | the last grid verdict: which 6 of 16 cells are usable and what they do not settle | current |
 | [docs/TVS.md](TVS.md) | the metric definition — tokens to verified success, and when it is UNDEFINED | current |
@@ -250,6 +251,7 @@ package prose attached to an experiment, not workspace documents).
 | doc | why read it | status |
 |---|---|---|
 | [experiments/ptr-engine/research-seed-concepts/README.md](../experiments/ptr-engine/research-seed-concepts/README.md) | the 2026-11-06 research seed package: which papers the evidence warrants (two), what each may claim, and the staged validation each needs — plus `EVIDENCE-DOSSIER.md`, `RESEARCH-BRIEF.md`, `SECOND-PAPER-BRIEF.md`, `VALIDATION-ROADMAP.md` beside it | current |
+| [experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md](../experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md) | E7's pre-registration: the four-arm pinning-vs-summarising A/B, its predictions, falsifiers, two-stage budget, and the instrument requirements that must hold before the first request | current (gated on the cap decision) |
 
 ---
 
