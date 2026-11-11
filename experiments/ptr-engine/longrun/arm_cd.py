@@ -28,7 +28,7 @@ from ptr_engine.fetch_tool import (  # noqa: E402
 )
 from ptr_engine.layers import (  # noqa: E402
     compile_prompt, CompactionState, format_journal_line, RETURN_SYMBOL,
-    escape_journal_content, reset_prefix_state, COMPACT_EVERY,
+    escape_journal_content, reset_prefix_state, COMPACT_EVERY, _estimate_tokens,
 )
 from ptr_engine.quantise import StubTokenizer  # noqa: E402  real counter
 
@@ -93,8 +93,14 @@ def sanitise_pin_text(text) -> str:
 
 
 def _pin_tokens(lines) -> int:
-    """Token count of a PINS block, by the compiler's own counter."""
-    return len("\n".join(str(x) for x in (lines or [])).split())
+    """Token count of a PINS block, in real tokens.
+
+    Uses the compiler's own character-based estimate (``CHARS_PER_TOKEN``), not
+    a word count: a word count makes a 200-character unbroken pin cost 1, so a
+    cap expressed in "tokens" would admit ~200x the intended block.  The cap is
+    a real budget, so it is measured the same way the window trigger is.
+    """
+    return _estimate_tokens("\n".join(str(x) for x in (lines or [])))
 
 
 class PinCapExceeded(ValueError):
@@ -765,7 +771,13 @@ class PinnedArmState:
         else:
             body = escape_journal_content(text)
         if supersedes is not None:
-            body = "supersedes P%d|%s" % (int(supersedes), body)
+            # Accept both the id this API returns ("P2") and a bare number (2):
+            # a caller that passes back what ``pin()`` gave it must not have to
+            # strip the prefix.
+            ref = str(supersedes).strip()
+            if ref.startswith("P"):
+                ref = ref[1:]
+            body = "supersedes P%d|%s" % (int(ref), body)
         line = "P%d|%s|T%d|%s" % (len(self.state.pins) + 1, kind, self._turn(), body)
         self._admit(line)
         self.state.pins = list(self.state.pins) + [line]
