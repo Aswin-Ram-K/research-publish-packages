@@ -169,11 +169,10 @@ DEFAULT_REPS = 2
 DEFAULT_COMPACT_EVERY = 8
 #: Design §3.2: "tool results older than 8 turns".
 DEFAULT_WINDOW_TURNS = 8
-#: The window a CONTRACT task folds at when it declares none.  The contract schema has no
-#: ``window_tokens`` (its world is the snapshot, not a fixture), so the pin arms need a
-#: number to take ``FOLD_AT_FRACTION`` of; 4096 is the stage-1 chain fixture's window and
-#: the value the plan's stage-2 dry run prices against.  A replay fixture always carries
-#: its own, so this default never overrides one.
+#: The window the pin arms fold at when a fixture declares none.  A v2 fixture always
+#: carries ``window_tokens``, so this default never overrides one; it exists so a fixture
+#: that omits the key still gets a number to take ``FOLD_AT_FRACTION`` of rather than a
+#: ``TypeError``.  4096 is the stage-1 chain fixture's window.
 DEFAULT_WINDOW_TOKENS = 4096
 
 ANSWER_PREFIX = "ANSWER:"
@@ -283,122 +282,21 @@ def _task_from_fixture(path: str) -> Task:
                 window_tokens=int(fixture.get("window_tokens") or 0), path=path)
 
 
-def _task_from_contract(doc: dict, path: str) -> Task:
-    """An ``agentic-contract`` document -> the same :class:`Task` the fixture path builds.
-
-    The contract (``agentic_contract.py``) is the stage-2 task schema: a statement, a list
-    of work steps, one final question, and the graded value.  The episode loop already
-    consumes a :class:`Task`, so this maps the contract onto it rather than teaching the
-    loop a second shape:
-
-    * ``turns``       — one per step (``question`` = the step's ``prompt``) plus the final
-                        question as the last turn, which is where the episode stops.
-    * ``checkpoints`` — one per contract checkpoint at its ``step``, plus the final answer
-                        at ``len(steps) + 1`` with the contract's own ``answer_form``.
-    * ``fixture``     — the minimal mapping the arm machinery reads: ``task_id`` and
-                        ``system_prompt`` (``arm_cd.spcc_run``/``pinned_run``),
-                        ``window_tokens`` (``PinnedArmState``'s fold threshold),
-                        ``documents`` (``ArmCDState._doc_entries`` — empty, because a
-                        contract task's world is the snapshot, not a fixture index),
-                        ``fact`` (the episode's ``fact_present`` measurement) and
-                        ``turns``.
-    * ``index_text``  — empty: this module has no snapshot index renderer, and the
-                        contract's world is the frozen root the model reads with tools.
-
-    ``agentic_contract.validate_task`` runs FIRST, so a malformed task is refused by the
-    shared contract with a named defect instead of by a ``KeyError`` here.
-    """
-    agentic_contract.validate_task(doc)
-    steps = list(doc["steps"])
-    turns: List[dict] = [
-        {"turn": i, "kind": "work", "question": str(step.get("prompt") or "")}
-        for i, step in enumerate(steps, 1)]
-    final_turn = len(steps) + 1
-    turns.append({"turn": final_turn, "kind": "final",
-                  "question": str(doc["final_question"])})
-
-    checkpoints: List[dict] = []
-    for i, cp in enumerate(doc.get("checkpoints") or [], 1):
-        expected = cp["expected"]
-        checkpoints.append({
-            "id": str(cp.get("fact_id") or ("cp-%02d" % i)),
-            "turn": int(cp["step"]),
-            "question": str(cp.get("question") or ""),
-            "expected": expected,
-            "kind": _answer_kind(expected),
-            "derivation": {"rule": "contract", "task": str(doc["task_id"]),
-                           "step": int(cp["step"]),
-                           "text": "%s checkpoint at step %d"
-                                   % (doc["task_id"], int(cp["step"]))},
-        })
-    checkpoints.append({
-        "id": "final",
-        "turn": final_turn,
-        "question": str(doc["final_question"]),
-        "expected": doc["expected"],
-        "kind": str(doc["answer_form"]),
-        "derivation": {"rule": "contract", "task": str(doc["task_id"]),
-                       "step": final_turn,
-                       "text": "%s final answer" % (doc["task_id"],)},
-    })
-
-    window_tokens = int(doc.get("window_tokens") or DEFAULT_WINDOW_TOKENS)
-    fixture = {
-        "task_id": str(doc["task_id"]),
-        "turns": turns,
-        "system_prompt": str(doc["statement"]),
-        "window_tokens": window_tokens,
-        "documents": [],
-        "fact": dict(doc["fact"]),
-        # The contract's own per-step tool declaration, aggregated: the statement is a
-        # goal paragraph and need not name the tool, but a step that says
-        # ``expect_tool: true`` is the contract's explicit form of the same fact.
-        "expect_tool": any(bool(step.get("expect_tool")) for step in steps),
-    }
-    return Task(task_id=str(doc["task_id"]), fixture=fixture,
-                statement=str(doc["statement"]), turns=tuple(turns),
-                checkpoints=tuple(checkpoints), index_text="",
-                window_tokens=window_tokens, path=path)
-
-
-def _answer_kind(expected) -> str:
-    """``NUM`` for an integer literal, ``TEXT`` otherwise.
-
-    The contract's checkpoints carry no ``answer_form`` of their own (only the final
-    answer does), so the kind is read off the value: a bare integer is graded as a
-    number, anything else as text.
-    """
-    if isinstance(expected, bool):
-        return "TEXT"
-    if isinstance(expected, int):
-        return "NUM"
-    if isinstance(expected, str) and expected.strip().lstrip("-").isdigit():
-        return "NUM"
-    return "TEXT"
-
-
 def load_task(path: str) -> Task:
-    """One task file -> :class:`Task`.  Two schemas are accepted, by key.
+    """One task file -> :class:`Task`.  Only ``consonance.longrun-fixture/2`` is accepted.
 
-    * ``turns`` present            -> ``consonance.longrun-fixture/2`` (the replay path).
-    * ``version`` and ``steps``    -> the agentic contract (``agentic_contract.py``).
-
-    The two are told apart by their keys rather than by a ``schema`` field, because the
-    contract documents carry no such field.  Anything else is refused by name —
-    ``unsupported_task_schema`` — never coerced into one.
+    The bespoke ``agentic-contract`` schema lost the ruling (Main, 2026-11-11): every
+    fixture in ``tasks-agentic/`` is a v2 replay fixture, so a second task shape would be
+    a second convention for the same measurement.  A document whose ``schema`` is not v2
+    is refused by name — ``unsupported_task_schema: <schema>`` — never coerced into one.
     """
     with open(path, "r", encoding="utf-8") as fh:
         doc = json.load(fh)
-    if not isinstance(doc, dict):
-        raise TaskError("unsupported_task_schema: not an object (%s)"
-                        % os.path.basename(path))
-    if "turns" in doc:
-        return _task_from_fixture(path)
-    if "version" in doc and "steps" in doc:
-        return _task_from_contract(doc, path)
-    raise TaskError("unsupported_task_schema: %s (task %s; expected 'turns' or "
-                    "'version'+'steps')"
-                    % (doc.get("schema"), os.path.basename(path)))
+    schema = doc.get("schema") if isinstance(doc, dict) else None
+    if schema != FIXTURE_SCHEMA:
+        raise TaskError("unsupported_task_schema: %s (task %s; only %s is accepted)"
+                        % (schema, os.path.basename(path), FIXTURE_SCHEMA))
+    return _task_from_fixture(path)
 
 
 def load_tasks(tasks_dir: str) -> List[Task]:
