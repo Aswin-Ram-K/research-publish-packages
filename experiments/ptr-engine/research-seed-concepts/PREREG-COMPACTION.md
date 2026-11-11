@@ -137,9 +137,11 @@ same verdict E1's gen-6 grid earned, and for the same reason.
    `experiments/ptr-engine/longrun/tests/test_matrix_audit.py:239-243` asserts the **exact** arm set, so
    it must be updated in the same change.
 2. **The pin API exists** (`pin`, `retire`, `pins`) and writes to the new `PINS` layer only.
-3. **The fold marker is in L3** (`work`), and `prefix_sha256` is computed over `L0+PINS+L1`.
+3. **The fold record is a pin in PINS**, and `prefix_sha256` is computed over `L0+PINS+L1`.
    `experiments/ptr-engine/longrun/tests/test_spcc_arm.py:118` asserts
    `set(lt) == {"L0","L1","L2","L3","L4"}` and must become `{"L0","PINS","L1","L2","L3","L4"}`.
+   The record must **persist on every turn after the fold** — a record written to L3 (`work`) would
+   vanish on the next turn and the agent would lose the knowledge that history was truncated.
 4. **`refetch_count` is instrumented** — a tool call whose `path`+range is already present in the
    journal counts as a re-fetch. Without this the primary mechanism is unmeasured.
 5. **The cache-details field is proven present.** ✅ **Already satisfied**: 298 of 300 rows in
@@ -180,8 +182,8 @@ same verdict E1's gen-6 grid earned, and for the same reason.
 
 Measured offline against the real compiler, 0 requests:
 
-- The fold marker lands **inside** the hashed prefix (`ptr_engine/layers.py:249-258` appends to
-  `state.index_lines`; `prefix_text = "\n\n".join([l0, l1])` at `:283-284`), so every fold changes
+- The fold marker lands **inside** the hashed prefix (`ptr_engine/layers.py:247-257` appends to
+  `state.index_lines`; `prefix_text = "\n\n".join([l0, l1])` at `:282-283`), so every fold changes
   `prefix_sha256`. The re-prefill it forces is **86 tokens over 100 turns = 0.05 %** of 156,390 prompt
   tokens, because the post-fold prompt is small.
 - The drop-journal saving is **6.38 %** of prompt tokens at L0 = 1,515, **1.73 %** at 6,060, **0.88 %**

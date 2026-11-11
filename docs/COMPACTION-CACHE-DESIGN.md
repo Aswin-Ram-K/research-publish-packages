@@ -53,8 +53,9 @@ turn 24: L1=7  L2=0   prompt=1052 chars  prefix_sha=bfb2e6ef
 
 So every fold changes `prefix_sha256`. **But the re-prefill it forces is tiny**, because the post-fold
 prompt is small: over 100 turns with a 1,515-token L0, the four folds re-prefill **86 tokens in total —
-0.05 % of the 156,390 prompt tokens sent**. Moving the marker out of the prefix (into the tail) would
-save 70 of those 86 tokens.
+0.05 % of the 156,390 prompt tokens sent**. The design does **not** try to reduce that 86: it keeps the
+fold record in the prefix (in PINS) because the record must persist on every later turn, and an
+append-only record extends the cached prefix instead of rewriting it.
 
 **Conclusion 1: the prefix rewrite is not the cost of compaction.** Any design that optimises only the
 prefix break is optimising 0.05 %.
@@ -276,10 +277,10 @@ one new layer inserted. The current compiler renders `layers = [l0, l1, l2, l3, 
 | Layer | Code name | Content | Mutability | In the cached prefix? |
 |---|---|---|---|---|
 | **L0** | `_l0_text(run)` | system prompt, tool schema, answer grammar | **immutable within a run** (`PtrPrefixDrift` guards it) | yes |
-| **PINS** *(new)* | `st.pins` | memory/knowledge injections, agent notes, retired-pin tombstones | **append-only** | yes |
+| **PINS** *(new)* | `st.pins` | memory/knowledge injections, agent notes, retired-pin tombstones, **the fold record** | **append-only** | yes |
 | **L1** | `st.index_lines` | world-index refs, one line per addressable ref | **append-only** (a dead ref is tombstoned, never removed) | yes |
 | **L2** | `st.journal` | one line per prior turn | **droppable** — the only layer a fold removes | no (tail) |
-| **L3** | `work` | this turn's question, deliveries, fetches, **the fold marker** | per-turn | no |
+| **L3** | `work` | this turn's question, deliveries, fetches | per-turn | no |
 | **L4** | `contract_line` | the answer contract for this turn | per-turn | no |
 
 Three changes from the current compiler:
@@ -290,13 +291,18 @@ Three changes from the current compiler:
    `set(lt) == {"L0","L1","L2","L3","L4"}` — must be updated to
    `{"L0","PINS","L1","L2","L3","L4"}`. That is a deliberate contract change, not a test weakening:
    the test pins the layer set, and the layer set is what is changing.
-2. **The fold marker moves from L1 to L3.** It is a fact about this turn, not about the world index.
-   This keeps L0, PINS and L1 byte-stable across a fold, so the shared prefix is `L0+PINS+L1` instead
-   of `L0`.
+2. **The fold record moves from L1 to PINS, as a pin.** It is a durable fact about the conversation
+   ("24 turns were dropped at epoch 1"), so it belongs with the other durable facts — and it must
+   **persist on every turn after the fold**, not only on the fold turn. Writing it to L3 (`work`) would
+   make fold-awareness vanish on turn 25, which is worse than today's behaviour. Writing it to PINS
+   keeps it visible every turn *and* keeps it append-only, so it extends the cached prefix instead of
+   rewriting it. The line is `P<n>|fold|T24: 24 turns dropped at epoch 1`.
 3. **PINS and L1 are append-only.** A pin is appended; a retired pin gets a tombstone line
    (`P7|retired|T31 superseded by P9`), never a rewrite. An index ref that dies is tombstoned the same
    way. This is what makes the prefix *extend* rather than *change* — an extension is a cache hit up to
-   the old length; a change is a re-prefill of everything after it.
+   the old length; a change is a re-prefill of everything after it. (`_sort_index_lines` at
+   `layers.py:148-157` already puts non-`@` lines last, so today's marker append also extends L1 rather
+   than rewriting it; the change is about **persistence and semantics**, not about the sort.)
 
 `prefix_sha256` is computed over `L0+PINS+L1` and must be **stable within an epoch**; the only
 permitted change is a fold, and a fold no longer touches it. `PtrPrefixDrift` keeps guarding L0.
@@ -311,8 +317,8 @@ is §2.4, the re-fetch.
 1. `CompactionState` (`experiments/ptr-engine/ptr_engine/layers.py:36`) gains `pins: List[str] = []`.
 2. `compile_prompt` (`layers.py:169-330`) renders `pins` as its own block between `l0` and `l1`, and
    `prefix_text` becomes `"\n\n".join([l0, pins, l1])`; `layer_tokens` gains a `"PINS"` key.
-3. The fold block (`layers.py:247-257`) appends the marker to the **work** layer instead of
-   `st.index_lines`.
+3. The fold block (`layers.py:247-257`) appends `P<n>|fold|T<t>: <n> turns dropped at epoch <e>` to
+   `st.pins` instead of appending the marker to `st.index_lines`.
 4. `SpccArmState` (`experiments/ptr-engine/longrun/arm_cd.py:481-565`) gains `pin(kind, text)`,
    `retire(id, reason)` and `pins()`, each appending to `self.state.pins`. Its `__init__` already
    constructs `CompactionState(index_lines=..., compact_every=...)`, so the new field needs no
@@ -335,7 +341,7 @@ never rewritten**:
 
 ```
 P7|blocker|the ledger tool exits 4 over the 4,320 default cap; do not regenerate REQUEST-LEDGER.json
-P8|decision|compaction marker lives in L3, not L1, so a fold cannot break the prefix
+P8|decision|the fold record is a pin in PINS, not a line in L1, so a fold extends the prefix
 P9|fact|TX-03 distances are 2/5/6/8/20/32; d32 is the fixture ceiling
 ```
 
@@ -372,9 +378,11 @@ pins() -> list                 # read back, for the summary and for the handoff
   model's window, or when the journal exceeds a token budget — whichever comes first. A fixed
   `COMPACT_EVERY = 24` folds a 1,500-token prompt that had no need to fold (measured: 6.38 % saving at
   best, 0.88 % at a realistic prefix).
-- **Fold only L2.** L0, PINS and L1 are untouched. The marker goes to L3.
-- **Never summarise.** The fold drops the journal and appends `[compacted: N turns dropped at epoch E]`
-  to L3. No LLM call, no prefix rewrite, no lossy artefact that later has to be trusted.
+- **Fold only L2.** L0, PINS and L1 are untouched. The fold record is appended to **PINS** as a pin.
+- **Never summarise.** The fold drops the journal and appends `P<n>|fold|T24: 24 turns dropped at
+  epoch 1` to PINS. No LLM call, no prefix rewrite, no lossy artefact that later has to be trusted.
+  The record persists on every later turn, so the agent always knows history was truncated and how
+  much — which is the one thing a fold must never hide.
 - **Keep a recovery route.** The full journal stays on disk (the rows file); the fold only changes the
   outgoing view. A pin can reference a journal range (`P10|fact|see T12-T18`) so the agent can re-read
   it deliberately rather than re-fetch it blindly.
@@ -419,7 +427,7 @@ deliberately instead of re-fetching blindly — which is the whole point of §2.
 | **A fold that clears little while retaining a lot never pays back** | `n ≈ 12.5 × S / X` turns; clearing 30 k while retaining 40 k needs ~17 turns | §3.5 |
 | **Do not summarise** | a summary is a full prompt read + output + a prefix rewrite, is lossy, and 27 measured summaries carried self-injected instructions | §3, §3.5 |
 | **Fold on window pressure, not on a count** | drop saving is 6.38 % at 1.5 k L0, 0.88 % at 12 k L0 | §2.2 |
-| **Keep the marker out of the prefix** | 86 → 16 re-prefill units over 100 turns | §2.1 |
+| **Keep the fold record append-only and persistent** | a record in PINS extends the prefix; a record in L3 vanishes after the fold turn | §5.1, §5.3 |
 | **Batch pins to at least one cache block** | vLLM caches only full 16-token blocks; a sub-block pin may not be cached at all | §3.5 |
 
 ---
@@ -430,9 +438,9 @@ Four arms on one tool-enabled fixture, one model, temperature 0, seed 42:
 
 | Arm | Fold | Pins | Summary call |
 |---|---|---|---|
-| **A `spcc`** (control) | drop journal, marker in L1 | none | no |
-| **B `pinned-compact`** | drop journal, marker in L3 | PINS append-only | no |
-| **C `pinned-summary`** | drop journal, marker in L3 | PINS append-only | **yes** — journal summarised into PINS |
+| **A `spcc`** (control) | drop journal, record in L1 | none | no |
+| **B `pinned-compact`** | drop journal, record in PINS | PINS append-only | no |
+| **C `pinned-summary`** | drop journal, record in PINS | PINS append-only | **yes** — journal summarised into PINS |
 | **D `no-compact`** | grow until the window forces a FIFO truncation from the front | none | no |
 
 Arm A is the existing `spcc` arm unchanged. Arm D is the existing `transcript-grow` arm, which
@@ -447,8 +455,8 @@ forces it. Arms B and C are new and must be added to `ARMS` in
 
 **Predictions, written before the run:**
 
-1. **B ≤ A on cost** at equal accuracy, because the marker leaves the prefix and the pins prevent
-   re-fetches. The margin is small in tokens (§2.1) and large in re-fetches (§2.4).
+1. **B ≤ A on cost** at equal accuracy, because the pins prevent re-fetches and the fold record is
+   append-only. The margin is small in tokens (§2.1) and large in re-fetches (§2.4).
 2. **C > B on cost** — the summary call plus the prefix rewrite costs more than the pins it replaces.
 3. **C ≤ B on accuracy** — a summary is lossy; a pin is not. If C beats B on accuracy, the design's
    "never summarise" rule is wrong and must be revised.
