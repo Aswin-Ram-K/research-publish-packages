@@ -85,19 +85,25 @@ def write(engine: str = ENGINE, record: str = RECORD) -> dict:
 
 
 def check(engine: str = ENGINE, record: str = RECORD) -> tuple:
-    """``(ok, message)``.  A missing record is a failure, not a pass."""
+    """``(code, message)``: 0 = agrees, 1 = the tree moved, 2 = no record.
+
+    A missing record is a DISAGREEMENT, not a pass: a gate that cannot fail is not a gate.
+    The three codes are distinct so a caller can tell "the instrument moved" (1) from
+    "the instrument was never recorded" (2) — the same split ``cell.py`` uses for
+    ``SPEC NOT RECORDED``.
+    """
     if not os.path.exists(record):
-        return False, "no record at %s; run --write" % (record,)
+        return 2, "no record at %s; run --write" % (record,)
     with open(record, encoding="utf-8") as fh:
         rec = json.load(fh)
     live = compute(engine)
     if rec.get("harness_sha256") == live["harness_sha256"]:
-        return True, "ok %s (%d files)" % (live["harness_sha256"], live["file_count"])
+        return 0, "ok %s (%d files)" % (live["harness_sha256"], live["file_count"])
     moved = sorted(name for name in live["files"]
                    if rec.get("files", {}).get(name) != live["files"][name])
-    return False, ("record %s != tree %s; moved: %s"
-                   % (rec.get("harness_sha256"), live["harness_sha256"],
-                      ", ".join(moved) or "(file set changed)"))
+    return 1, ("record %s != tree %s; moved: %s"
+               % (rec.get("harness_sha256"), live["harness_sha256"],
+                  ", ".join(moved) or "(file set changed)"))
 
 
 def main(argv=None) -> int:
@@ -113,9 +119,9 @@ def main(argv=None) -> int:
               % (RECORD, payload["harness_sha256"], payload["file_count"]))
         return 0
     if args.check:
-        ok, message = check()
-        print(("agentic pin: " + message))
-        return 0 if ok else 1
+        code, message = check(ENGINE, RECORD)
+        print("agentic pin: " + message)
+        return code
     print(compute()["harness_sha256"])
     return 0
 

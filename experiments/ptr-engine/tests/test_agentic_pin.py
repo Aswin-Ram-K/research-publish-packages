@@ -51,19 +51,39 @@ def test_check_fails_when_a_pinned_file_moves(tmp_path):
     engine = _fake_engine(tmp_path)
     record = tmp_path / "AGENTIC-PIN.json"
     P.write(str(engine), str(record))
-    ok, message = P.check(str(engine), str(record))
-    assert ok is True, message
+    code, message = P.check(str(engine), str(record))
+    assert code == 0, message
     (engine / P.FILES[1]).write_text("moved\n", encoding="utf-8")
-    ok, message = P.check(str(engine), str(record))
-    assert ok is False
+    code, message = P.check(str(engine), str(record))
+    assert code == 1
     assert P.FILES[1] in message
 
 
 def test_a_missing_record_is_a_failure_not_a_pass(tmp_path):
     engine = _fake_engine(tmp_path)
-    ok, message = P.check(str(engine), str(tmp_path / "absent.json"))
-    assert ok is False
+    code, message = P.check(str(engine), str(tmp_path / "absent.json"))
+    assert code == 2
     assert "no record" in message
+
+
+def test_check_with_no_record_exits_non_zero(tmp_path, monkeypatch, capsys):
+    """Red->green: a gate that cannot fail is not a gate.
+
+    Reverted by returning ``0`` from ``main``'s ``--check`` branch regardless of the code
+    (the defect Main reported: a missing record printed its message and exited 0).  The
+    test then failed on ``assert code == 2`` with ``assert 0 == 2``.  Collapsing the
+    absent code into the mismatch code (``0 if code == 0 else 1``) also fails it, with
+    ``assert 1 == 2`` — the two conditions are distinct on purpose.
+    """
+    engine = _fake_engine(tmp_path)
+    absent = tmp_path / "absent.json"
+    monkeypatch.setattr(P, "RECORD", str(absent))
+    monkeypatch.setattr(P, "ENGINE", str(engine))
+    code = P.main(["--check"])
+    out = capsys.readouterr().out
+    assert code == 2
+    assert "no record" in out
+    assert "run --write" in out
 
 
 def test_a_missing_instrument_file_is_refused(tmp_path):

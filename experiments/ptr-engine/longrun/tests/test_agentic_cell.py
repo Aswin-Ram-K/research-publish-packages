@@ -106,6 +106,12 @@ it.  Command for every one of them::
 
         >       assert rc == 3
         E       assert 0 == 3
+
+(m6) offline running totals — reverted ``max(...)`` to ``sum(...)`` for ``evicted``.
+    ``test_offline_regrades_rows_without_a_request``::
+
+        >       assert ep["evicted"] == 8
+        E       assert 64 == 8
 """
 from __future__ import annotations
 
@@ -487,7 +493,8 @@ def test_offline_regrades_rows_without_a_request(tmp_path):
                            else answer_reply(FACT_B) if n == 16
                            else tool_reply(call_id="c%d" % n))
     rows_out = str(tmp_path / "rows-agentic-offline.jsonl")
-    run(tmp_path, "none", script, max_steps=16, turns=16, rows_path=rows_out)
+    run(tmp_path, "bounded-context-fetch", script, max_steps=16, turns=16,
+        rows_path=rows_out)
     episodes = AC.offline_episodes(rows_out)
     assert len(episodes) == 1
     ep = episodes[0]
@@ -495,9 +502,40 @@ def test_offline_regrades_rows_without_a_request(tmp_path):
     assert ep["requests"] == 16
     assert ep["solved"] is True
     assert [c["step"] for c in ep["checkpoints"]] == [4, 16]
+    # running totals are read as totals, not summed down the column
+    assert ep["compactions"] == 1
+    assert ep["evicted"] == 8
+    assert ep["refetch_count"] == 13
+    assert ep["verdict"] == "solved"
+    assert ep["fold_mechanism"] == "journal-drop"
 
 
 # ------------------------------------------------------------------ (m) m00447
+def test_a_non_v2_task_is_refused_by_name(tmp_path):
+    """Only ``consonance.longrun-fixture/2`` is accepted; anything else is named."""
+    path = tmp_path / "AG-OLD.json"
+    path.write_text(json.dumps({"task_id": "AG-OLD", "version": "AG-OLD.v1",
+                                "steps": [{"prompt": "read a"}],
+                                "final_question": "q", "expected": "1",
+                                "answer_form": "NUM"}), encoding="utf-8")
+    try:
+        AC.load_task(str(path))
+    except AC.TaskError as exc:
+        assert "unsupported_task_schema" in str(exc)
+        assert "AG-OLD.json" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("a non-v2 task must be refused")
+    # a v2 document with the wrong schema string is refused the same way
+    fixture = make_fixture(tmp_path)
+    fixture["schema"] = "consonance.longrun-fixture/1"
+    try:
+        AC.load_task(write_task(tmp_path, fixture))
+    except AC.TaskError as exc:
+        assert "unsupported_task_schema: consonance.longrun-fixture/1" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("v1 must be refused")
+
+
 def test_prompt_declares_no_tool_refuses_before_any_request(tmp_path):
     """A prompt that never names the tool is refused by name, not measured as a failure."""
     fixture = make_fixture(tmp_path)

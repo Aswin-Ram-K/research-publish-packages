@@ -286,105 +286,25 @@ def _task_from_fixture(path: str) -> Task:
                 window_tokens=int(fixture.get("window_tokens") or 0), path=path)
 
 
-def _task_from_contract(doc: dict, path: str) -> Task:
-    """An ``agentic-contract`` document -> the same :class:`Task` the fixture path builds.
-
-    The contract (``agentic_contract.py``) is the stage-2 task schema: a statement, a list
-    of work steps, one final question, and the graded value.  The episode loop already
-    consumes a :class:`Task`, so this maps the contract onto it rather than teaching the
-    loop a second shape.
-    """
-    missing = [k for k in ("task_id", "version", "statement", "steps",
-                           "final_question", "expected", "answer_form", "fact")
-               if k not in doc]
-    if missing:
-        raise TaskError("%s: contract task is missing %s"
-                        % (os.path.basename(path), ", ".join(missing)))
-    if not isinstance(doc["steps"], list) or not doc["steps"]:
-        raise TaskError("%s: contract task has no steps" % os.path.basename(path))
-    if str(doc["answer_form"]) not in ("NUM", "TEXT"):
-        raise TaskError("%s: answer_form %r is not NUM or TEXT"
-                        % (os.path.basename(path), doc["answer_form"]))
-    steps = list(doc["steps"])
-    turns: List[dict] = [
-        {"turn": i, "kind": "work", "question": str(step.get("prompt") or "")}
-        for i, step in enumerate(steps, 1)]
-    final_turn = len(steps) + 1
-    turns.append({"turn": final_turn, "kind": "final",
-                  "question": str(doc["final_question"])})
-
-    checkpoints: List[dict] = []
-    for i, cp in enumerate(doc.get("checkpoints") or [], 1):
-        expected = cp["expected"]
-        checkpoints.append({
-            "id": str(cp.get("fact_id") or ("cp-%02d" % i)),
-            "turn": int(cp["step"]),
-            "question": str(cp.get("question") or ""),
-            "expected": expected,
-            "kind": _answer_kind(expected),
-            "derivation": {"rule": "contract", "task": str(doc["task_id"]),
-                           "step": int(cp["step"]),
-                           "text": "%s checkpoint at step %d"
-                                   % (doc["task_id"], int(cp["step"]))},
-        })
-    checkpoints.append({
-        "id": "final",
-        "turn": final_turn,
-        "question": str(doc["final_question"]),
-        "expected": doc["expected"],
-        "kind": str(doc["answer_form"]),
-        "derivation": {"rule": "contract", "task": str(doc["task_id"]),
-                       "step": final_turn,
-                       "text": "%s final answer" % (doc["task_id"],)},
-    })
-
-    window_tokens = int(doc.get("window_tokens") or DEFAULT_WINDOW_TOKENS)
-    fixture = {
-        "task_id": str(doc["task_id"]),
-        "turns": turns,
-        "system_prompt": str(doc["statement"]),
-        "window_tokens": window_tokens,
-        "documents": [],
-        "fact": dict(doc["fact"]),
-        "expect_tool": any(bool(step.get("expect_tool")) for step in steps),
-    }
-    return Task(task_id=str(doc["task_id"]), fixture=fixture,
-                statement=str(doc["statement"]), turns=tuple(turns),
-                checkpoints=tuple(checkpoints), index_text="",
-                window_tokens=window_tokens, path=path)
-
-
-def _answer_kind(expected) -> str:
-    """``NUM`` for an integer literal, ``TEXT`` otherwise."""
-    if isinstance(expected, bool):
-        return "TEXT"
-    if isinstance(expected, int):
-        return "NUM"
-    if isinstance(expected, str) and expected.strip().lstrip("-").isdigit():
-        return "NUM"
-    return "TEXT"
-
-
 def load_task(path: str) -> Task:
-    """One task file -> :class:`Task`.  Two schemas are accepted, told apart by key.
+    """One task file -> :class:`Task`.  Only ``consonance.longrun-fixture/2`` is accepted.
 
-    * ``turns`` present         -> ``consonance.longrun-fixture/2`` (the replay path).
-    * ``version`` and ``steps`` -> the agentic contract (``agentic_contract.py``).
-
-    Anything else is refused by name — ``unsupported_task_schema`` — never coerced.
+    The bespoke ``agentic-contract`` shape was tried and dropped: two task schemas for one
+    measurement means two graders, two validators and two test sets, and the numbers stop
+    being comparable with every earlier cell.  A document that is not v2 is refused by
+    name — ``unsupported_task_schema`` — never coerced into one.
     """
     with open(path, "r", encoding="utf-8") as fh:
         doc = json.load(fh)
     if not isinstance(doc, dict):
         raise TaskError("unsupported_task_schema: not an object (%s)"
                         % os.path.basename(path))
-    if "turns" in doc:
-        return _task_from_fixture(path)
-    if "version" in doc and "steps" in doc:
-        return _task_from_contract(doc, path)
-    raise TaskError("unsupported_task_schema: %s (task %s; expected 'turns' or "
-                    "'version'+'steps')"
-                    % (doc.get("schema"), os.path.basename(path)))
+    schema = doc.get("schema")
+    if schema != "consonance.longrun-fixture/2":
+        raise TaskError("unsupported_task_schema: %s (task %s; only "
+                        "'consonance.longrun-fixture/2' is accepted)"
+                        % (schema, os.path.basename(path)))
+    return _task_from_fixture(path)
 
 
 def load_tasks(tasks_dir: str) -> List[Task]:
@@ -1803,3 +1723,5 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+# MARKER-TEST-1729
