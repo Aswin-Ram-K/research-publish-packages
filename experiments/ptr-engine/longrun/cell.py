@@ -411,7 +411,13 @@ def stage_budget(args):
         raise Abort(3, "3/7 budget", "--budget is required for a live cell (offline mode "
                     "skips stages 3-4)")
     argv = [sys.executable, RUNNER, "--dry-run", "--fixture", args.fixture,
-            "--arms", args.arm, "--reps", str(args.reps)]
+            "--arms", args.arm, "--reps", str(args.reps),
+            "--temperature", str(float(args.temperature)),
+            "--budget-cap", str(int(args.budget_cap))]
+    if args.tools:
+        argv += ["--tools", args.tools]
+    if args.fetch_policy:
+        argv += ["--fetch-policy", args.fetch_policy]
     # BUDGET-TURN-SCOPE: price the cell the LIVE path will actually run. stage_run caps a
     # partial cell at --turns (same condition, read the same way: n_turns set AND different
     # from the fixture's N); this argv used to omit it, so the runner priced the fixture.
@@ -1939,7 +1945,13 @@ def stage_run(args, rows_path, gate_manifest=None):
             "--reps", str(args.reps), "--rows", rows_path,
             "--turn-wall-cap", str(float(args.turn_wall_cap)),
             "--runaway-turns", str(int(args.runaway_turns)),
+            "--temperature", str(float(args.temperature)),
+            "--budget-cap", str(int(args.budget_cap)),
             "--thinking", thinking_for_runner(args)]
+    if args.tools:
+        argv += ["--tools", args.tools]
+    if args.fetch_policy:
+        argv += ["--fetch-policy", args.fetch_policy]
     if args.endpoint:
         argv += ["--base-url", args.endpoint]
     n_turns = int(args.turns or 0)
@@ -2259,6 +2271,22 @@ def main(argv=None):
     ap.add_argument("--offline", default=None, metavar="ROWS_JSONL",
                     help="skip stages 3-4 and grade/analyse/record an existing row file")
     ap.add_argument("--out-dir", default=MEASURE)
+    ap.add_argument("--temperature", type=float, default=0.0,
+                    help="greedy-decoding temperature handed to the runner. The runner "
+                         "refuses a run that does not state it (TEMPZERO), so the cell "
+                         "must state it too; default 0.0 is the runner's own default")
+    ap.add_argument("--tools", default="", metavar="LIST",
+                    help="comma-separated tool channel(s) handed to the runner. A "
+                         "tool-channel arm (pinned, bounded-context-fetch) is refused by "
+                         "the runner when this is empty, so the cell must forward it")
+    ap.add_argument("--fetch-policy", default=None, metavar="strict|instructed",
+                    help="forwarded to the runner. 'instructed' states at each checkpoint "
+                         "that a not-in-view value must be fetched before answering")
+    ap.add_argument("--budget-cap", type=int, default=PROJECT_QUOTA,
+                    help="global request cap handed to the runner's cap gate. The "
+                         "runner's own default is the ledger's DEFAULT_CAP (4320), which "
+                         "is below the rows already spent; the operator-selected project "
+                         "quota is PROJECT_QUOTA (%d)" % PROJECT_QUOTA)
     ap.add_argument("--thinking", default=None, metavar="absent|off|auto|on",
                     help="the cell's thinking mode. Drives BOTH the runner payload "
                          "(--thinking; absent means off, the runner's own default) and "

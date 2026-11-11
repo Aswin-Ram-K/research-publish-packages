@@ -1277,3 +1277,37 @@ The two longrun reds are the recorded operator decisions (`test_journal_lint` ne
 reds in `experiments/ptr-engine/tests` are the pre-existing set minus the three repaired here; the
 clusters are `test_ledger_reconcile` (live corpus vs its baseline), `test_tool_channel_*`
 (`rep=1 not present in run_id`), and `test_grade_v5_decoration`.
+
+## `U-SPCC-79` — 2026-11-11, third session: the chain instrument (stage 1 of the agentic compaction A/B)
+
+**What it is.** A pointer-only chain reference on the replay runner: a value is learned at turn *j*, the
+arm folds at `chain.fold_turn`, and a later turn asks for a *different* value defined in the same body,
+naming only the step ("using the symbol you identified at step j — do not restate it"). The value is
+never in the question, so recovering it requires the journal. 400 requests, four arms × 100 turns.
+
+**Built:** `longrun/tools/build_chain_fixture.py`, `ptr_engine/tx05_constants.py`,
+`longrun/tasks-v7/TX-05C.v1.json` (sha256 `904b1e62…`, `window_tokens 4096`, fold at T24) and
+`TX-05D.v1.json` (sha256 `798cee99…`, the same fixture with `fetch(ref)` declared in the system prompt),
+a `chain` lint block in `longrun/check_pointer_fixtures.py`, `longrun/tools/analyze_chain.py`, and
+`longrun/tests/test_chain_fixture.py` (6 tests, green).
+
+**Result, TX-05C (400 requests).** Every arm: 6/6 reference checkpoints pass, 6/6 carry checkpoints
+fail, `present_then_failed = 0`, `unclassified = 0`. The fold fired (`compactions` 3 on `spcc`, 4 on
+`pinned`; `masked_rows` 1 on `masking-no-fetch`). Verdict `instrument_ok=False`, firing
+`falsifier_3_pin_premise_fails` and `falsifier_4_recovery_not_paid`.
+
+**Root cause, measured.** `tool_calls = 0` in every arm — the model never called the tool, because the
+fixture's system prompt never declared one. A 1-request probe with the real `READ_FILE_TOOL_SCHEMA`
+returned `finish_reason: tool_calls`, so the model will call a tool it is told about; it omits
+`start_line`/`end_line`. The correct channel for this fixture is `fetch(ref)`, since the index
+advertises refs, not paths.
+
+**Three cell defects fixed** (`longrun/cell.py`, not a `HARNESS_FILES` member, so no re-pin): the cell
+never forwarded `--temperature` (the runner refuses a run that does not state it), `--tools` (every
+tool-channel arm was refused), or `--budget-cap` (the runner's default is the ledger's
+`DEFAULT_CAP = 4320`, below the 10,167 rows already spent, so every live cell was refused at the cap
+gate). Added `--temperature` (0.0), `--tools`, `--fetch-policy`, `--budget-cap` (default
+`PROJECT_QUOTA = 12094`).
+
+**Budget.** 800 of the 1,927 headroom spent on stage 1 (the TX-05C run plus the TX-05D re-run). Stage 2
+must be sized to the remainder.

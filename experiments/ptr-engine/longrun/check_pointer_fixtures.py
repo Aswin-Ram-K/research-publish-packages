@@ -312,6 +312,127 @@ def validate(fx, disabled=None):
                         errs.append(f"checkpoint {cp.get('id')} fact value {ev!r} leaked into another turn's tool output (turn {tn})")
                         break
 
+    # ---- chain reference (TX-05C): pointer-only, no value in the question ----
+    # A chain pair says: a value was learned at `ref_turn`, the arm folds at
+    # `fold_turn`, and `use_turn` asks for a value defined beside it, naming only the
+    # step.  If the value appears in the question the fold cannot destroy it and the
+    # instrument measures error propagation instead of retention.
+    if "chain" not in disabled:
+        chain = fx.get("chain")
+        if chain is not None:
+            if not isinstance(chain, dict):
+                errs.append("chain is not an object")
+            else:
+                if chain.get("rule") != "pointer-only":
+                    errs.append(f"chain.rule != 'pointer-only': {chain.get('rule')!r}")
+                pairs = chain.get("pairs")
+                if not isinstance(pairs, list) or not pairs:
+                    errs.append("chain.pairs is empty or not a list")
+                    pairs = []
+                try:
+                    fold_turn = int(chain.get("fold_turn"))
+                except (TypeError, ValueError):
+                    errs.append(f"chain.fold_turn not an int: {chain.get('fold_turn')!r}")
+                    fold_turn = None
+                try:
+                    window_turns = int(chain.get("window_turns"))
+                except (TypeError, ValueError):
+                    window_turns = None
+                cp_by_id = {c.get("id"): c for c in cps if isinstance(c, dict)}
+                for idx, pair in enumerate(pairs):
+                    if not isinstance(pair, dict):
+                        errs.append(f"chain.pairs[{idx}] not an object")
+                        continue
+                    try:
+                        rt = int(pair.get("ref_turn"))
+                        ut = int(pair.get("use_turn"))
+                    except (TypeError, ValueError):
+                        errs.append(f"chain.pairs[{idx}] ref_turn/use_turn not ints")
+                        continue
+                    if not (1 <= rt <= N and 1 <= ut <= N):
+                        errs.append(f"chain.pairs[{idx}] turn out of 1..{N}: {rt}/{ut}")
+                        continue
+                    if rt >= ut:
+                        errs.append(f"chain.pairs[{idx}] ref_turn {rt} not before use_turn {ut}")
+                    ref_cp = cp_by_id.get(pair.get("ref_checkpoint"))
+                    if ref_cp is None:
+                        errs.append(f"chain.pairs[{idx}] ref_checkpoint "
+                                    f"{pair.get('ref_checkpoint')!r} names no checkpoint")
+                    else:
+                        intro = ref_cp.get("fact_introduction_turn",
+                                           ref_cp.get("introduction_turn"))
+                        if intro is not None and int(intro) > rt:
+                            errs.append(f"chain.pairs[{idx}] ref_checkpoint introduced at "
+                                        f"{intro}, after ref_turn {rt}")
+                    carry_cp = cp_by_id.get(pair.get("carry_checkpoint"))
+                    if carry_cp is None:
+                        errs.append(f"chain.pairs[{idx}] carry_checkpoint "
+                                    f"{pair.get('carry_checkpoint')!r} names no checkpoint")
+                    use_turn_obj = turn_by_num.get(ut)
+                    if use_turn_obj is None:
+                        errs.append(f"chain.pairs[{idx}] use_turn {ut} not in turns")
+                        continue
+                    q = str(use_turn_obj.get("question", ""))
+                    if str(pair.get("pointer_text", "")).strip() != q.strip():
+                        errs.append(f"chain.pairs[{idx}] use_turn {ut} question is not the "
+                                    f"declared pointer_text")
+                    # the leak: neither the referenced value nor the carried value may
+                    # appear in the question that asks for it
+                    for label, cp in (("ref", ref_cp), ("carry", carry_cp)):
+                        if cp is None:
+                            continue
+                        val = str(cp.get("expected", "")).strip()
+                        if val and _squash(val) in _squash(q):
+                            errs.append(f"chain.pairs[{idx}] {label} value {val!r} leaked "
+                                        f"into the use_turn {ut} question")
+                    # and not into any work note at or after the reference turn
+                    for t in (turns or []):
+                        if not isinstance(t, dict):
+                            continue
+                        try:
+                            tn = int(t.get("turn"))
+                        except (TypeError, ValueError):
+                            continue
+                        if tn < rt:
+                            continue
+                        note = t.get("note")
+                        if not isinstance(note, dict):
+                            continue
+                        for label, cp in (("ref", ref_cp), ("carry", carry_cp)):
+                            if cp is None:
+                                continue
+                            val = str(cp.get("expected", "")).strip()
+                            if val and _squash(val) in _squash(note.get("body", "")):
+                                errs.append(f"chain.pairs[{idx}] {label} value {val!r} "
+                                            f"leaked into the note at turn {tn}")
+                    if fold_turn is not None and not (rt < fold_turn < ut):
+                        errs.append(f"chain.pairs[{idx}] fold_turn {fold_turn} not between "
+                                    f"ref_turn {rt} and use_turn {ut}")
+                    if window_turns is not None and ut - window_turns <= rt:
+                        errs.append(f"chain.pairs[{idx}] masking window {window_turns} does "
+                                    f"not cover ref_turn {rt} at use_turn {ut}")
+                if fold_turn is not None:
+                    try:
+                        projected = int(chain.get("projected_tokens_at_fold"))
+                    except (TypeError, ValueError):
+                        errs.append("chain.projected_tokens_at_fold not an int")
+                        projected = None
+                    if projected is not None:
+                        try:
+                            from arm_cd import FOLD_AT_FRACTION as _faf
+                        except Exception:
+                            _faf = 0.739
+                        try:
+                            wt = int(fx.get("window_tokens"))
+                        except (TypeError, ValueError):
+                            wt = None
+                        if wt is None:
+                            errs.append("chain declared but window_tokens is not an int")
+                        elif projected < _faf * wt:
+                            errs.append(f"chain.projected_tokens_at_fold {projected} does not "
+                                        f"cross {_faf} * window_tokens {wt} "
+                                        f"({_faf * wt:.0f})")
+
     return errs
 
 
