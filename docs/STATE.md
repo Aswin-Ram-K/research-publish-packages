@@ -1,6 +1,6 @@
 # STATE — the current state of this workspace
 
-**Last updated:** 2026-11-11 · **By:** the crash-recovery close-out of `U-SPCC-69`…`U-SPCC-73` (manifests committed, derived artefacts regenerated, `--preview-root` added; corpus re-measured at **103 files / 10,167 rows**, so the ledger headroom is **1,927**, not 4,125), then the compaction/cache design and E7's pre-registration (§1a, 0 requests)
+**Last updated:** 2026-11-11 · **By:** the crash-recovery close-out of `U-SPCC-69`…`U-SPCC-73` (manifests committed, derived artefacts regenerated, `--preview-root` added; corpus re-measured at **103 files / 10,167 rows**, so the ledger headroom is **1,927**, not 4,125), then the compaction/cache design and E7's pre-registration (§1a, 0 requests), then the **real-length correction**: a 0-request replay over eight real sessions measured `pins` at **1.91–2.70× cheaper than `compact`**, E7 was redesigned to six arms at real length, and its quality instrument `LR-07.v5.json` (220 turns, `L0 ≈ 40.5 k`) was built and verified
 **Read this first.** It is the single *current-state* page. Older status pages remain valid as dated
 records but are superseded here as current state — chiefly [`orchestration/STATUS.md`](orchestration/STATUS.md)
 (the docket-era batch record, 2026-10-21) and [`orchestration/CLOSING.md`](orchestration/CLOSING.md).
@@ -190,11 +190,29 @@ compaction vs 0 before**, while a separate constraint store reaches **>90 %**; T
 survive; `openai/codex#25792` records progress **97 % → 42 %** after compaction. It also added four
 rules now in §5.2: cap the pin block and **refuse** on overflow (never truncate), stamp every pin with
 its turn, supersede rather than overwrite, and sanitise pins written from tool output (the Pillar
-"Rules File Backdoor" / CVE-2025-54135 injection surface). E7's pre-registration is
-`experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md`: four arms
-(`spcc` / `pinned-compact` / `pinned-summary` / `no-compact`), five predictions, four falsifiers, a
-two-stage 1,000-request budget. **It cannot run yet** — the cap decision (§6 item 1) gates it, and the
-live-cell preview hazard (§6 item 13) must be closed first. Two instrument facts it recorded:
+"Rules File Backdoor" / CVE-2025-54135 injection surface). **The regime was then found wrong, and the design was corrected (0 requests).** §2.1–§2.3 above were
+measured at `L0 = 1,515` layer units; a real session is `L0 ≈ 38,408` tokens (871 turns, median prompt
+115,677, max 221,711, cache hit 75.3 %, 4 real compactions). At that size the journal is most of the
+prompt, so dropping it is the **dominant** lever, not a 6.38 % one, and the summary call becomes the
+largest single term. A 0-request replay over eight real session transcripts
+(`experiments/ptr-engine/tools/replay_policy_cost.py`, record
+`experiments/ptr-engine/measure/REPLAY-POLICY-COST-2026-11-11.json`) measures `pins` at **1.91–2.70×
+cheaper than `compact`** in every session that folds, with the whole difference being the summary call
+(13 folds × ~92 k = 1.22 M of `compact`'s 2.03 M in the 871-turn session); `none` (FIFO truncation) costs
+**5–50×** more than any folding policy; masking alone beats `none` in 5 of 8 sessions and is worse in 3,
+and is worse than `pins` in all 8. E7 was therefore redesigned to **six arms at real length**
+(`compact` / `mask` / `retrieval` / `pins` / `pins-recency` / `none`), and the operator settled route
+**(b)** for the tool channel — the pin arms are `pointer-stable` variants with the layer compiler ported
+in, and `spcc` is no longer an E7 arm. Its quality instrument is
+`experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-07.v5.json`: 220 turns, `L0 ≈ 40.5 k` tokens,
+`window_tokens = 131072`, 5 decidable checkpoints (4 NUM, 1 CALL) over 28 real `ptr_engine` files, built
+byte-reproducibly by `longrun/tools/build_long_fixture.py` (seed 20261111, sha256 `55dc768a…`), verified
+`PASS: 5/5 checkpoints decidable, none colliding, all <= 40 tokens` and shown to discriminate by
+`grade_v5.py` (correct 4/4 pass, wrong 0/5 fail). E7's pre-registration is
+`experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md`: six arms, six predictions, five
+falsifiers, a two-stage **1,000-request** budget (400 + 200 + 400). **It cannot run yet** — the cap
+decision (§6 item 1) gates it, the live-cell preview hazard (§6 item 13) must be closed first, and the
+budget must be reconciled against the 1,927 headroom (§6 item 15). Two instrument facts it recorded:
 `cell.py:130-136` `HARNESS_FILES` does **not** include `arm_cd.py` or `ptr_engine/layers.py`, so an edit
 to the arm or compiler mid-run would not change the harness digest; and `test_gate_arm_count.py` stops a
 cell at **500 real requests**, so the 600-request stage 2 was split into 200 + 400.
