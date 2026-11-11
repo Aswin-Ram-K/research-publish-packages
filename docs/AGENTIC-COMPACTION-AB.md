@@ -197,3 +197,35 @@ quantities. This is the strongest argument for grading **3–5 facts per task** 
   cost of *recovering* lost state.
 - Neither stage re-opens E7's predictions. If stage 2 contradicts them, that is a new verdict superseding
   E7's, not an edit to it.
+
+---
+
+## 7. Errata, measured 2026-11-11 (two stage-1 runs, 800 requests, both void)
+
+**E1 — §3.1's arm table is wrong about `pinned`.** `PinnedArmState` pins **no bodies**:
+`arm_cd.py:697-701` says "No body is pinned: L1 carries refs, digests and byte lengths only, so
+`run_longrun.pinned_views` finds nothing to serve from the prompt and every tool call is a real fetch."
+The row "`pinned` — the fact is in PINS → recoverable without a read" is therefore false for this
+codebase. `pinned` is a refs-only arm; the retention comparison the table describes is not available in
+the replay runner.
+
+**E2 — a pointer that names only the step destroys the locator as well as the value.** TX-05C (400
+requests) declared no tool, so `tool_calls = 0` in every arm and every carry checkpoint answered
+`ANSWER: NONE`; the run is void. TX-05D (400 requests) declared `fetch(ref)` and recorded
+`tools_schema_sent: true`; `masking-no-fetch`, `spcc` and `pinned` still made 0 tool calls and answered
+`NONE`, while `bounded-context-fetch` fetched 3 and 5 rounds at turns 36 and 46 and answered with the
+**wrong symbol** (`SYM_03`, 4031/4037) instead of `SYM_01`. The model had lost the symbol name at the
+fold, so it could not choose which ref to fetch. `analyze_chain.py` over the four TX-05D files:
+`ok 0 / lost 6 / present 0` in every arm, `refetch` 64 on `bounded-context-fetch` and 0 on the other
+three, `compactions` 3 on `spcc` and 4 on `pinned`.
+
+**Correction to the pointer rule.** The question must name the **symbol** and never the value:
+`Using SYM_01 — do not restate its value — find the caller that overrides it.` The leak check already
+forbids the value; it must also be shown to permit the symbol. Naming the symbol is not a leak: the
+graded value is the override, and the symbol alone does not contain it. This correction is recorded and
+**not yet run** — the budget after the two void runs is 1,107 requests, and stage 2 is the instrument
+that can answer the question stage 1 was meant to price.
+
+**Falsifier 4 is unsatisfiable as written.** It compares `refetch_count` between `masking-no-fetch` and
+`pinned`, and neither arm has a fetch channel, so both are 0 by construction. The measurable form is
+`bounded-context-fetch` against the rest: 64 against 0.
