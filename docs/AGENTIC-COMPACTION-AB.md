@@ -229,3 +229,42 @@ that can answer the question stage 1 was meant to price.
 **Falsifier 4 is unsatisfiable as written.** It compares `refetch_count` between `masking-no-fetch` and
 `pinned`, and neither arm has a fetch channel, so both are 0 by construction. The measurable form is
 `bounded-context-fetch` against the rest: 64 against 0.
+
+## 8. Stage 2 as built — the arm set changed, and why (2026-11-11)
+
+Stage 1's two void runs taught one thing that changes stage 2's design: **the replay runner cannot
+measure recovery at all.** `run_longrun.py:2405` states that at a checkpoint turn the tools are OFF,
+`CHECKPOINT_CONTRACT_LINE` says "emit exactly one line and nothing else", and the fetch channel is
+serviced only for `arm_cd.ARM_D` (`run_longrun.py:3862-3900`). The only turn that asks for a lost value
+is therefore a tools-off checkpoint, so no arm can re-read at the moment it matters. Stage 2's episode
+loop keeps the tools ON at the graded turn, which is the whole reason it exists.
+
+**The arm set is five, not four, and `spcc` is not one of them.**
+
+| arm | what it does | why it is in the set |
+|---|---|---|
+| `none` | nothing dropped | the control: the transcript grows and the server never truncates at these lengths |
+| `masking-no-fetch` | old tool results replaced by a marker, no fetch channel | the cheapest policy, and the one that cannot recover |
+| `pinned` | pinned facts kept verbatim, the rest folded | tests whether pinning alone is enough |
+| `bounded-context-fetch` | fold + a fetch channel that can re-read | the recovery arm |
+| `compact` | fold + a model-written summary of the dropped turns | what every real system runs; without it the experiment does not answer "is compaction worth it" |
+
+`spcc` is dropped because it is the layer compiler over a fixture's **world index**, and an episode loop
+has no world index to compile — the arm would be a different instrument wearing the same name. `compact`
+takes the slot, and it is the more important arm: it is the real-world baseline the other four are
+measured against. This is a change to the approved plan, recorded here rather than made silently.
+
+**Sizing to the remaining budget.** 10,987 rows are spent against the 12,094 cap, so 1,107 requests
+remain. `compact` buys one extra request per fold, so its episodes cost more than the others:
+
+```
+8 tasks x 2 reps x (4 arms x 12 requests + 1 arm x 16 requests) = 8 x 2 x 64 = 1,024
+```
+
+leaving 83 for a smoke episode. The plan's 1,280 assumed the full headroom; the two void stage-1 runs
+spent 800 of it, and the invariant the plan set was the budget, not the task count.
+
+**The contract is code, not prose.** `longrun/agentic_contract.py` holds the task schema, the row
+schema, the arm list, the tool bounds, and the validators the runner, the task builder and the analyser
+all import, so the three cannot drift apart. `expected_present` is never defaulted to true: an unknown
+is `null`, and the analyser treats `null` as "not evidence", never as a pass.
