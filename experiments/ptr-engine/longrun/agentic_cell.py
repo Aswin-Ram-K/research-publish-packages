@@ -1462,7 +1462,9 @@ def offline_episodes(rows_path: str) -> List[dict]:
             "prompt_tokens_max": max([int(r["prompt_tokens"]) for r in group
                                       if isinstance(r.get("prompt_tokens"), (int, float))]
                                      or [0]) or None,
-            "billed_tokens": None,
+            "billed_tokens": sum(int(r.get("prompt_tokens") or 0)
+                                 + int(r.get("completion_tokens") or 0)
+                                 for r in group),
             "verdict": _verdict(solved, checkpoints, compactions, mechanism),
             "goal_present": [],
             "fact_present": [],
