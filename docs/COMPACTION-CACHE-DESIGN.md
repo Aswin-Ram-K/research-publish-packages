@@ -330,12 +330,12 @@ Omitting an empty block keeps arm A **byte-identical to today**, so the control 
 
 ### 5.2 The pin model
 
-A pin is a line in L1 with a stable id, a kind, and text that is **never summarised and never
-rewritten**:
+A pin is a line in the **PINS** layer with a stable id, a kind, and text that is **never summarised and
+never rewritten**:
 
 ```
 P7|blocker|the ledger tool exits 4 over the 4,320 default cap; do not regenerate REQUEST-LEDGER.json
-P8|decision|compaction marker lives in L4, not L1, so a fold cannot break the prefix
+P8|decision|compaction marker lives in L3, not L1, so a fold cannot break the prefix
 P9|fact|TX-03 distances are 2/5/6/8/20/32; d32 is the fixture ceiling
 ```
 
@@ -351,17 +351,17 @@ P9|fact|TX-03 distances are 2/5/6/8/20/32; d32 is the fixture ceiling
 **API (one call, append-only):**
 
 ```
-pin(kind, text) -> id          # appends P<n>|kind|text to L1
+pin(kind, text) -> id          # appends P<n>|kind|text to PINS
 retire(id, reason) -> None     # appends a tombstone line; never removes the pin
 pins() -> list                 # read back, for the summary and for the handoff
 ```
 
 **Rules:**
 
-- A pin is **never summarised**. If L1 grows past its budget, pins are **retired explicitly**, with a
+- A pin is **never summarised**. If PINS grows past its budget, pins are **retired explicitly**, with a
   reason, and the retirement is itself a line.
-- A pin is **never re-injected per turn** as a separate message. It lives in L1, which is in the cached
-  prefix, so it is read at cache price.
+- A pin is **never re-injected per turn** as a separate message. It lives in PINS, which is in the
+  cached prefix, so it is read at cache price — which on this endpoint is **zero** (§2.3).
 - A pin is **never edited**. A correction is a new pin that names the old one.
 - Pins are **batched at fold boundaries** where possible: appending a pin extends the prefix, which is
   cheap, but appending one every turn turns the prefix into a per-turn rewrite.
@@ -372,9 +372,9 @@ pins() -> list                 # read back, for the summary and for the handoff
   model's window, or when the journal exceeds a token budget — whichever comes first. A fixed
   `COMPACT_EVERY = 24` folds a 1,500-token prompt that had no need to fold (measured: 6.38 % saving at
   best, 0.88 % at a realistic prefix).
-- **Fold only L3.** L0, L1, L2 are untouched. The marker goes to L4.
+- **Fold only L2.** L0, PINS and L1 are untouched. The marker goes to L3.
 - **Never summarise.** The fold drops the journal and appends `[compacted: N turns dropped at epoch E]`
-  to L4. No LLM call, no prefix rewrite, no lossy artefact that later has to be trusted.
+  to L3. No LLM call, no prefix rewrite, no lossy artefact that later has to be trusted.
 - **Keep a recovery route.** The full journal stays on disk (the rows file); the fold only changes the
   outgoing view. A pin can reference a journal range (`P10|fact|see T12-T18`) so the agent can re-read
   it deliberately rather than re-fetch it blindly.
