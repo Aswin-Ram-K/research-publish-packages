@@ -38,22 +38,33 @@ def _fixture():
 def _layers(prompt, state, work, l3_bodies=()):
     """The compiled prompt's own L0..L4 split, proven byte-exact.
 
-    ``compile_prompt`` joins the five layers with a blank line, but L0 itself
+    ``compile_prompt`` joins the layers with a blank line, but L0 itself
     contains a blank line (the empty tool schema), so splitting the prompt on
-    "\\n\\n" cannot recover the boundaries.  Rebuild the five layer texts from
+    "\\n\\n" cannot recover the boundaries.  Rebuild the layer texts from
     the state the compile just wrote and assert the prompt is exactly their
     join -- then the per-layer assertions below are assertions about the
     compiled prompt, not about a guess.
+
+    PINS is a sixth block between L0 and L1, rendered only when it carries a
+    pin (the fold record is a pin), so it is included only when non-empty.  The
+    result is keyed by layer NAME, not by position: inserting PINS shifts every
+    later index, and a positional read would silently start asserting about the
+    wrong layer on the fold turn.
     """
-    parts = [
-        L._l0_text(state.run),
-        "\n".join(L._sort_index_lines(state.state.index_lines)),
-        "\n".join(str(x) for x in state.state.journal),
-        str(work) + ("\n" + "\n".join(l3_bodies) if l3_bodies else ""),
-        "ANSWER: NONE",
-    ]
-    assert str(prompt) == "\n\n".join(parts) + "\n", "layer reconstruction mismatch"
-    return parts
+    pins = "\n".join(str(x) for x in state.state.pins)
+    named = {
+        "L0": L._l0_text(state.run),
+        "L1": "\n".join(L._sort_index_lines(state.state.index_lines)),
+        "L2": "\n".join(str(x) for x in state.state.journal),
+        "L3": str(work) + ("\n" + "\n".join(l3_bodies) if l3_bodies else ""),
+        "L4": "ANSWER: NONE",
+    }
+    if pins:
+        named["PINS"] = pins
+    order = ["L0"] + (["PINS"] if pins else []) + ["L1", "L2", "L3", "L4"]
+    assert str(prompt) == "\n\n".join(named[k] for k in order) + "\n", (
+        "layer reconstruction mismatch")
+    return named
 
 
 def test_delivery_persists_in_l2_until_compaction():
@@ -63,15 +74,15 @@ def test_delivery_persists_in_l2_until_compaction():
     state.add_delivery(BODY)
     w1 = "QUESTION (T1): what is VAL_A?"
     p1 = state.build(1, w1)
-    assert BODY in _layers(p1, state, w1, (BODY,))[3], "delivery missing from L3 on its own turn"
+    assert BODY in _layers(p1, state, w1, (BODY,))["L3"], "delivery missing from L3 on its own turn"
 
     for t in (2, 3, 4):
         work = "QUESTION (T%d): restate it" % t
         p = state.build(t, work)
         layers = _layers(p, state, work)
-        assert BODY in layers[2], "delivery missing from L2 at turn %d" % t
-        assert BODY not in layers[0], "delivery leaked into L0 at turn %d" % t
-        assert BODY not in layers[1], "delivery leaked into L1 at turn %d" % t
+        assert BODY in layers["L2"], "delivery missing from L2 at turn %d" % t
+        assert BODY not in layers["L0"], "delivery leaked into L0 at turn %d" % t
+        assert BODY not in layers["L1"], "delivery leaked into L1 at turn %d" % t
 
     # Walk to the fold.  The T1 line is appended on the T2 compile, so the
     # journal reaches COMPACT_EVERY lines at the start of the (COMPACT_EVERY+1)th
@@ -80,7 +91,7 @@ def test_delivery_persists_in_l2_until_compaction():
     for t in range(5, COMPACT_EVERY + 2):
         work = "QUESTION (T%d): restate it" % t
         p = state.build(t, work)
-        if BODY in _layers(p, state, work)[2]:
+        if BODY in _layers(p, state, work)["L2"]:
             last_visible = t
     assert last_visible == COMPACT_EVERY, (
         "delivery should survive through turn %d, last seen at %r"
@@ -127,9 +138,9 @@ def test_model_fetch_never_enters_l0_l1_l2():
     w2 = "QUESTION (T2): restate it"
     p2 = state.build(2, w2)
     layers = _layers(p2, state, w2, (FETCHED,))
-    assert FETCHED in layers[3], "fetch missing from L3 on its own turn"
-    for idx, name in ((0, "L0"), (1, "L1"), (2, "L2")):
-        assert FETCHED not in layers[idx], "fetch leaked into %s" % name
+    assert FETCHED in layers["L3"], "fetch missing from L3 on its own turn"
+    for name in ("L0", "L1", "L2"):
+        assert FETCHED not in layers[name], "fetch leaked into %s" % name
 
     p3 = state.build(3, "QUESTION (T3): restate it")
     assert FETCHED not in str(p3), "fetch survived its own turn"

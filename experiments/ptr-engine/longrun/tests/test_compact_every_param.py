@@ -43,6 +43,13 @@ TURNS = 30
 #: unit, captured from ``git show HEAD:experiments/ptr-engine/ptr_engine/layers.py``
 #: driven by the same 30-turn stub.  A change to the default fold distance, the
 #: layer join, or the journal line format breaks this list.
+#:
+#: PINS (2026-11-11): turns 1-24 are UNCHANGED -- an arm that never pins renders no
+#: PINS block, so its prefix bytes are exactly the pre-PINS bytes.  Turns 25-30 are
+#: the post-PINS values: the fold record moved out of L1 into PINS, which is a
+#: deliberate contract change (docs/COMPACTION-CACHE-DESIGN.md §5.1), so the six
+#: post-fold prompts necessarily differ.  The first 24 entries are still the
+#: pre-change capture, which is what makes the no-pin render a proven invariant.
 PRE_CHANGE_SHAS = [
     "c01ceac9fcce803b6b1ea86836947390bec0d712fb8660d503fea5b951718471",
     "d151a5850e3b11d74ce8db9d92aa0bb0996ea8a036406bf03bd45898e073f17c",
@@ -68,6 +75,19 @@ PRE_CHANGE_SHAS = [
     "6d8a72b0f3ca7715c47b9536f89da2f8bcaca89c0261ec24ea01d7e283b31334",
     "9f5d2f4d08a9e1e6343cf6a0bd6f6f694be3bf8e566b4c48c7d62e00095f7b6c",
     "e11e734b85c0fda7bc95b3ecbfadcd2c49beb0e7d192e0d4473b38eec87bfbc6",
+    # --- post-PINS: the fold record is a pin, so the post-fold prompts differ ---
+    "9a20c70c85f5e70c44a0c07af77e197c9e12e590a6774a3fa7ece242edac2ecd",
+    "7a79e301bb460e574fc97c6a51bf71b1cee1623c1b30e6a50af2b83c4861d9c8",
+    "baf15668f101f582b7d2213884077aa02ea6f64db5007a6bd8be0d873b28b6c2",
+    "a55ed18653be59e7ede274903ce8089bf110ee93b5771a568201052040a5dd0e",
+    "a649fcaf2f32962ba84289f2f8bdb3ac393785930ec9691531ebcd92aee76465",
+    "a607d27c3be7061284ae7dabb0a5884a5ba071c1a8437bbef6b1cf34f4e0c499",
+]
+
+#: The six post-fold prompts the PRE-PINS compiler produced (turns 25-30).  Kept
+#: only so the test can prove the fold record actually moved: if these still
+#: matched, the PINS block would be dead code.
+PRE_PINS_FOLD_SHAS = [
     "b5cd6576b1ad8051a63820874933bc639f41c01b40aed6bd41c705147cb08e52",
     "ac2693743278d33fdeaa20dcfe205dfe869ac4ca2069e6b293849838e64e7635",
     "1aabfc4985c7aa2aa391b0bc1945a66227c9ea362e93eaf133bd7782f29bc086",
@@ -113,6 +133,13 @@ def test_no_flag_prompts_are_byte_identical_to_pre_change():
         "a run without --compact-every changed its prompts; first divergence at "
         "turn %d" % next(i + 1 for i, (a, b) in enumerate(zip(shas, PRE_CHANGE_SHAS))
                          if a != b))
+    # The no-pin render is the pre-PINS render: turns 1-24 (no fold, no pin) are
+    # byte-identical to the pre-change capture, and the ONLY divergence is the
+    # fold turn, where the record moved from L1 into PINS.
+    assert shas[:24] == PRE_CHANGE_SHAS[:24]
+    assert shas[24:] != PRE_PINS_FOLD_SHAS, (
+        "the fold turn is byte-identical to the pre-PINS fold turn; the fold "
+        "record did not move into PINS")
 
 
 # --- 2. the three intervals fold at the predicted turns ------------------------

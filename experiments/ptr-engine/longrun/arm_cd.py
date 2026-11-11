@@ -36,7 +36,84 @@ ARM_C = "masking-no-fetch"
 ARM_D = "bounded-context-fetch"
 ARM_SPCC = "spcc"
 SPCC = ARM_SPCC
+# E7's design arms (docs/COMPACTION-CACHE-DESIGN.md §7): D `pinned` and E
+# `pinned-recency`.  Both are built on the pointer-stable tool-servicing path
+# (run_longrun services tool calls for every arm that is not C/D/spcc) and both
+# render through the SAME layer compiler as spcc, so the fold and the prefix
+# hash have one definition.  They differ in exactly one thing: `pinned-recency`
+# rewrites the two-tier todo's ACTIVE line into L3 every turn, `pinned` does
+# not -- which is what lets E7 isolate the todo from the pins (§5.5).
+ARM_PINNED = "pinned"
+ARM_PINNED_RECENCY = "pinned-recency"
+PINNED_ARMS = (ARM_PINNED, ARM_PINNED_RECENCY)
 WINDOW_TURNS = 4
+
+# The pin kinds the design admits (§5.2).  A synthesis, not a published
+# standard; `fold` is written by the compiler itself and `retired` is a
+# tombstone line, not a pin, so neither is a caller-supplied kind.
+PIN_KINDS = ("goal", "decision", "constraint", "blocker", "warning", "fact", "ref", "fold")
+
+# The PINS budget, in TOKENS (not lines): the cost of a pin is tokens, and a
+# silent truncation is the documented worst outcome (Claude Code's over-limit
+# auto-memory writes succeed but "everything past the limit is dropped on the
+# next load"), so a write past the cap is REFUSED and the overflow returned.
+PIN_CAP_TOKENS = 512
+
+#: Window-pressure fold threshold, as a fraction of the fixture's
+#: ``window_tokens``.  A real agent folds because the window fills, not because a
+#: turn count is reached (docs/COMPACTION-CACHE-DESIGN.md §7, PREREG-COMPACTION.md
+#: "Design": "Fold at 70 % of the window").  The turn interval stays as a floor.
+FOLD_AT_FRACTION = 0.70
+
+# Zero-width and bidi control characters.  A pin written from tool output is
+# trusted text once it is in the prefix, so the characters that make a poisoned
+# rule file invisible to human and PR review (Pillar "Rules File Backdoor",
+# 2025-03-18; CVE-2025-54135 is the execution end of that chain) are stripped
+# before it enters PINS.
+_INVISIBLE_CHARS = dict.fromkeys(map(ord, (
+    "\u00ad"                          # SOFT HYPHEN
+    "\u180e"                          # MONGOLIAN VOWEL SEPARATOR
+    "\u200b\u200c\u200d"              # ZWSP, ZWNJ, ZWJ
+    "\u200e\u200f"                    # LRM, RLM
+    "\u202a\u202b\u202c\u202d\u202e"  # LRE, RLE, PDF, LRO, RLO
+    "\u2060"                          # WORD JOINER
+    "\u2066\u2067\u2068\u2069"        # LRI, RLI, FSI, PDI
+    "\ufeff"                          # ZERO WIDTH NO-BREAK SPACE / BOM
+)), None)
+
+
+def sanitise_pin_text(text) -> str:
+    """Strip zero-width/bidi controls and flatten to one line.
+
+    A pin is one line in a block whose structure is the line, so a newline in
+    the text would forge a second pin; it is escaped with the journal's own
+    ``RETURN_SYMBOL``, exactly as a journal line escapes its content.
+    """
+    return str(text).translate(_INVISIBLE_CHARS).replace("\n", RETURN_SYMBOL)
+
+
+def _pin_tokens(lines) -> int:
+    """Token count of a PINS block, by the compiler's own counter."""
+    return len("\n".join(str(x) for x in (lines or [])).split())
+
+
+class PinCapExceeded(ValueError):
+    """A pin write that would push PINS past its token budget.
+
+    Raised, never swallowed: the write is REFUSED and the overflow is carried
+    on the exception, because a truncated pin is unrecoverable while a refused
+    write is not.
+    """
+
+    def __init__(self, *, cap: int, current: int, added: int):
+        self.cap = int(cap)
+        self.current = int(current)
+        self.added = int(added)
+        self.overflow = max(0, self.current + self.added - self.cap)
+        super().__init__(
+            "PINS cap exceeded: %d current + %d new = %d tokens > cap %d "
+            "(overflow %d tokens); the pin was REFUSED, never truncated"
+            % (self.current, self.added, self.current + self.added, self.cap, self.overflow))
 
 
 class ArmCDState:
@@ -478,6 +555,20 @@ def spcc_run(fixture: Optional[dict] = None, model: str = "offline-model") -> di
     }
 
 
+def pinned_run(fixture: Optional[dict] = None, model: str = "offline-model",
+               recency: bool = False) -> dict:
+    """A run-shaped mapping for the E7 pin arms.
+
+    Same L0 fields as ``spcc_run`` -- the two arms must be comparable on the
+    immutable layer -- with a run_id that names the arm, so two pin cells in one
+    process never share an L0 baseline by accident.
+    """
+    run = spcc_run(fixture, model=model)
+    run["run_id"] = "%s:%s" % (ARM_PINNED_RECENCY if recency else ARM_PINNED,
+                               (fixture or {}).get("task_id", "offline-fixture"))
+    return run
+
+
 class SpccArmState:
     """Per-cell state for the stable-prefix arm.
 
@@ -559,6 +650,222 @@ class SpccArmState:
             content = content + " refs=" + ",".join(self.last_refs)
         self._pending_line = format_journal_line(int(t), role, content)
         self.last_turn = int(t)
+        self.fetched = []
+        self.delivered = []
+        self.last_refs = []
+        return prompt
+
+
+# -------------------------------------------------------------- arm pinned ----
+# E7 arms D (`pinned`) and E (`pinned-recency`).  Rendered by the SAME layer
+# compiler as spcc, so the layer set, the fold and the prefix hash are one
+# definition; the difference is the PINS layer, which carries the durable facts
+# a fold must not lose.  Tool calls are serviced by run_longrun's generic
+# read_file channel (the pointer-stable path), which is what makes E7's primary
+# mechanism -- `refetch_count` -- measurable on these arms.
+
+class PinnedArmState:
+    """Per-cell state for the E7 pin arms.
+
+    ``state.pins`` is the PINS layer: append-only, in the cached prefix, and
+    never rewritten.  It holds the durable PLAN pin (tier 1 of the two-tier
+    todo), whatever the agent pins as it works, and the compiler's own fold
+    record.  ``state.index_lines`` is L1 (the world index, no bodies) and
+    ``state.journal`` is L2 (one line per prior turn, droppable).
+
+    ``recency`` selects tier 2 of the two-tier todo: ``pinned-recency`` rewrites
+    an ``ACTIVE`` line into L3 every turn, ``pinned`` does not.  That is the
+    only difference between the two arms, which is what lets E7 isolate the todo
+    from the pins (docs/COMPACTION-CACHE-DESIGN.md §5.5, §7).
+
+    No body is pinned: L1 carries refs, digests and byte lengths only, so
+    ``run_longrun.pinned_views`` finds nothing to serve from the prompt and every
+    tool call is a real fetch.  That is deliberate -- a body served from the
+    prompt would be a fetch that never happened, and the arm's whole claim is
+    about re-fetches.
+    """
+
+    def __init__(self, fixture: Optional[dict] = None, tokenizer=None,
+                 run: Optional[dict] = None, index_lines: Optional[List[str]] = None,
+                 compact_every: Optional[int] = None,
+                 pin_cap_tokens: int = PIN_CAP_TOKENS, recency: bool = False,
+                 fold_at_fraction: Optional[float] = FOLD_AT_FRACTION):
+        self.fixture = fixture or {}
+        self.tokenizer = _spcc_tokenizer(tokenizer)
+        self.index_lines = (list(index_lines) if index_lines is not None
+                            else spcc_world_index(self.fixture, self.tokenizer))
+        # ``compact_every=None`` (the default) means NO turn-interval fold: the pin
+        # arms fold on window pressure only, because a fixed interval folds a prompt
+        # that never needed to fold (docs/COMPACTION-CACHE-DESIGN.md §5.3).  A
+        # caller that names an interval gets it back as a floor, never as the
+        # trigger -- pressure still fires first whenever it fires at all.
+        self.compact_every = (int(compact_every) if compact_every is not None else None)
+        self.pin_cap_tokens = int(pin_cap_tokens)
+        self.recency = bool(recency)
+        # Window-pressure fold: a real agent folds when the window fills, not on
+        # a turn count.  ``fold_at_fraction`` of the fixture's ``window_tokens``
+        # is the threshold; ``None`` disables pressure and leaves only the
+        # interval (which is itself off by default, so ``None``/``None`` never
+        # folds -- a fixture that never reaches the threshold does not fold).
+        self.fold_at_fraction = (float(fold_at_fraction)
+                                 if fold_at_fraction is not None else None)
+        window = int(self.fixture.get("window_tokens") or 0)
+        self.fold_at_tokens = (int(window * self.fold_at_fraction)
+                               if self.fold_at_fraction is not None and window > 0
+                               else None)
+        self.state = CompactionState(index_lines=list(self.index_lines),
+                                     compact_every=self.compact_every,
+                                     fold_at_tokens=self.fold_at_tokens)
+        self.run = run if run is not None else pinned_run(self.fixture, recency=self.recency)
+        self.fetched: List[str] = []
+        self.delivered: List[str] = []
+        self.last_refs: List[str] = []
+        self._pending_line: Optional[str] = None
+        self.last_turn = 0
+        self.plan_id: Optional[str] = None
+        self._plan_written = False
+
+    # -- pin API (append-only; never edits, never truncates) --------------
+    def _turn(self) -> int:
+        """The turn a pin written now is stamped with (1 before the first build)."""
+        return max(1, int(self.last_turn or 1))
+
+    def _admit(self, line: str) -> None:
+        """Refuse a line that would push PINS past its token budget."""
+        current = _pin_tokens(self.state.pins)
+        added = _pin_tokens([line])
+        if current + added > self.pin_cap_tokens:
+            raise PinCapExceeded(cap=self.pin_cap_tokens, current=current, added=added)
+
+    def pin(self, kind: str, text, source=None, supersedes=None) -> str:
+        """Append one pin and return its id (``P<n>``).
+
+        Line shape: ``P<n>|kind|T<turn>|text``.  ``n`` is the 1-based index of
+        the line in PINS, so an id is stable for the life of the run and a
+        tombstone never renumbers a live pin.
+
+        ``supersedes`` names the pin this one corrects: the text is prefixed
+        with ``supersedes P<n>|`` so the conflict is visible in the prefix
+        instead of being resolved silently.  A pin is never edited.
+
+        ``source`` records provenance.  A pin that names a source is treated as
+        externally sourced and is sanitised for zero-width/bidi controls before
+        it enters PINS: a pin is trusted text and must not become an injection
+        surface.
+
+        Raises ``PinCapExceeded`` (carrying ``.overflow``) rather than
+        truncating when the write would exceed the budget.
+        """
+        kind = str(kind)
+        if kind not in PIN_KINDS:
+            raise ValueError("unknown pin kind %r; known: %s" % (kind, list(PIN_KINDS)))
+        if source is not None:
+            body = sanitise_pin_text(text)
+            body = "%s [source=%s]" % (body, sanitise_pin_text(source))
+        else:
+            body = escape_journal_content(text)
+        if supersedes is not None:
+            body = "supersedes P%d|%s" % (int(supersedes), body)
+        line = "P%d|%s|T%d|%s" % (len(self.state.pins) + 1, kind, self._turn(), body)
+        self._admit(line)
+        self.state.pins = list(self.state.pins) + [line]
+        return "P%d" % len(self.state.pins)
+
+    def retire(self, pin_id, reason) -> str:
+        """Append a tombstone for ``pin_id``; the pin itself is never removed.
+
+        A retirement is a line, not a deletion: removing a pin would rewrite
+        PINS, and a rewrite is a re-prefill of everything after it.
+        """
+        pid = str(pin_id).strip()
+        if not pid.startswith("P"):
+            pid = "P" + pid
+        line = "P%d|retired|T%d|%s retired: %s" % (
+            len(self.state.pins) + 1, self._turn(), pid, sanitise_pin_text(reason))
+        self._admit(line)
+        self.state.pins = list(self.state.pins) + [line]
+        return "P%d" % len(self.state.pins)
+
+    def pins(self) -> List[str]:
+        """Read back the PINS layer (live pins and tombstones, in write order)."""
+        return list(self.state.pins)
+
+    # -- two-tier todo ----------------------------------------------------
+    def write_plan(self, text=None) -> str:
+        """Write tier 1 of the two-tier todo: the durable PLAN pin, once.
+
+        It lives in PINS, so it is in the cached prefix (zero marginal cost on
+        this endpoint) and survives every fold.  It is superseded only when the
+        plan genuinely changes, never rewritten.
+        """
+        if self._plan_written:
+            return self.plan_id
+        task = str(self.fixture.get("task_id") or "task")
+        body = text or ("PLAN: %s -- answer every checkpoint from the pinned index; "
+                        "fetch a body only when the index does not carry the fact" % task)
+        self.plan_id = self.pin("goal", body)
+        self._plan_written = True
+        return self.plan_id
+
+    def active_line(self, t: int, work) -> str:
+        """Tier 2 of the two-tier todo: the ACTIVE line, derived from THIS turn.
+
+        It is a claim, so it is rebuilt from actual state every turn and never
+        carried forward; it names the plan pin it belongs to, so a contradiction
+        between the two tiers is visible in the prompt rather than silent.
+        """
+        question = " ".join(str(work).split())
+        if len(question) > 120:
+            question = question[:117] + "..."
+        return "ACTIVE: T%d -- %s (plan %s)" % (int(t), question, self.plan_id or "P1")
+
+    # -- per-turn inputs (same surface as SpccArmState) -------------------
+    def note_refs(self, refs) -> None:
+        """Record refs emitted this turn; they ride the next journal line."""
+        self.last_refs = [str(r) for r in (refs or [])]
+
+    def add_fetch(self, body) -> None:
+        """Queue a MODEL-INITIATED fetch for L3 on the next compile only."""
+        if body is not None:
+            self.fetched.append(str(body))
+
+    def add_delivery(self, body) -> None:
+        """Queue a FIXTURE-DELIVERED body: L3 this turn, then L2 until the fold."""
+        if body is not None:
+            text = str(body)
+            self.fetched.append(text)     # L3 on the delivery turn
+            self.delivered.append(text)   # L2 from the next compile onward
+
+    def build(self, t: int, work: str, *, role: str = "user"):
+        """Render turn ``t``; returns the ``_Prompt`` with stamping metadata."""
+        t = int(t)
+        # Tier 1 is written before the first compile, so the PLAN is in the
+        # prefix from turn 1 and the prefix is stable across turns 1..24.
+        self.write_plan()
+        new_lines: List[str] = []
+        if self._pending_line is not None:
+            new_lines.append(self._pending_line)
+        l3 = str(work)
+        if self.recency:
+            # Tier 2: recency, tail, rewritten every turn (never carried).
+            l3 = l3 + "\n" + self.active_line(t, work)
+        if self.fetched:
+            l3 = l3 + "\n" + "\n".join(self.fetched)
+        prompt = compile_prompt(
+            self.run, self.state,
+            epoch=self.state.epoch, journal=new_lines, work=l3,
+            compact_every=self.compact_every,
+            fold_at_tokens=self.fold_at_tokens,
+        )
+        content = str(work)
+        if self.delivered:
+            # Fixture deliveries are transcript, not fetches: they ride the
+            # journal line so they persist in L2 until the fold.
+            content = content + "\n" + "\n".join(self.delivered)
+        if self.last_refs:
+            content = content + " refs=" + ",".join(self.last_refs)
+        self._pending_line = format_journal_line(t, role, content)
+        self.last_turn = t
         self.fetched = []
         self.delivered = []
         self.last_refs = []

@@ -71,7 +71,7 @@ from ptr_engine.layers import COMPACT_EVERY  # noqa: E402
 # monkeypatch that exact function to prove the client is on the path.
 import client  # noqa: E402
 
-ARMS = ("transcript-grow", "transcript-compact", "pointer-stable", "lease-reopen", "masking-no-fetch", "bounded-context-fetch", "spcc")
+ARMS = ("transcript-grow", "transcript-compact", "pointer-stable", "lease-reopen", "masking-no-fetch", "bounded-context-fetch", "spcc", "pinned", "pinned-recency")
 DEFAULT_BASE_URL = "http://192.168.2.168:8012/v1"
 DEFAULT_MODEL = "occamy-1.0-NVFP4"
 DEFAULT_ENGINE = "sglang"
@@ -89,6 +89,13 @@ PREDICTIONS = {
     "bounded-context-fetch": ("D: bounded-recoverable with fetch; 2 requests per turn."),
     "spcc": ("Stable-prefix compiler: byte-stable L0+L1 prefix, append-only L2 journal, "
              "scheduled compaction every 24 turns, fetch into L3 only."),
+    "pinned": ("E7 D: drop the journal, record the fold in PINS; PLAN + facts pinned in the "
+               "cached prefix, no recency line. Predictions: D < A on cost by ~2x (no summary "
+               "call), D has the lowest refetch_count, D >= A on accuracy."),
+    "pinned-recency": ("E7 E: D plus the two-tier todo's ACTIVE line rewritten into L3 every "
+                       "turn. Prediction: E ~= D on cost, E >= D on accuracy; if E's accuracy "
+                       "does not beat D's beyond the noise band, the todo is not worth its "
+                       "tokens."),
 }
 
 
@@ -1585,6 +1592,16 @@ class Planner:
         self.spcc = (arm_cd.SpccArmState(fixture=fixture,
                                          compact_every=self.compact_every)
                      if arm in (arm_cd.ARM_SPCC, "spcc") else None)
+        # E7 pin arms: the same compiler plus the PINS layer.  `recency` is the
+        # ONLY difference between `pinned` and `pinned-recency` (the ACTIVE line).
+        # `compact_every=None`: these arms fold on window pressure (70 % of the
+        # fixture's window), not on E2's turn interval -- a fixed interval folds a
+        # prompt that never needed to fold (docs/COMPACTION-CACHE-DESIGN.md §5.3).
+        self.pinned = (arm_cd.PinnedArmState(
+                           fixture=fixture, compact_every=None,
+                           recency=(arm == arm_cd.ARM_PINNED_RECENCY),
+                           fold_at_fraction=arm_cd.FOLD_AT_FRACTION)
+                       if arm in arm_cd.PINNED_ARMS else None)
         # D state
         self.walls = list(fixture.get("lease_reopen_turns") or [])
         self.lease_state = ""
@@ -1729,6 +1746,27 @@ class Planner:
             # now and rides the journal line so it persists in L2 until compaction.
             # Model-initiated fetches stay on add_fetch (L3 only, never L0/L1/L2).
             state = self.spcc
+            question = turn_user(t, turn)
+            for to in _turn_tool_outputs(turn):
+                body = to.get("body")
+                if body is not None:
+                    state.add_delivery(str(body))
+            prompt = state.build(t, question)
+            info["prompt"] = str(prompt)
+            info["prefix_sha256"] = prompt.prefix_sha256
+            info["epoch"] = prompt.epoch
+            info["compactions"] = prompt.compactions
+            info["layer_tokens"] = dict(prompt.layer_tokens)
+            return info
+
+        if arm in arm_cd.PINNED_ARMS:
+            # E7 pin arms: rendered by the layer compiler, with PINS carrying the
+            # durable facts (the PLAN pin, the agent's pins, the fold record).
+            # The question leads L3; fixture deliveries follow it and ride the
+            # journal line; model-initiated fetches stay L3-only.  No body is
+            # pinned, so every tool call is a real fetch -- which is what makes
+            # `refetch_count` measurable on this arm.
+            state = self.pinned
             question = turn_user(t, turn)
             for to in _turn_tool_outputs(turn):
                 body = to.get("body")
@@ -2024,7 +2062,8 @@ def treatment_report(fixture: dict, arm: str, horizon: int = HORIZON_TURNS) -> l
              + ("" if arm == "lease-reopen" else f"  (declared {fixture.get('lease_reopen_turns')}"
                 f", no lease in this arm)"),
              f"  [{arm}] first prefix change at turn {_show(fires['prefix'])}"
-             + ("" if arm == "pointer-stable" else "  (pointer-stable's own treatment)")]
+             + ("" if arm in ("pointer-stable",) + arm_cd.PINNED_ARMS
+                else "  (pointer-stable's own treatment)")]
     for reason in fires["reasons"]:
         lines.append(f"  [{arm}] TREATMENT UNREACHABLE: {reason}")
     return lines
@@ -3219,6 +3258,10 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int, int]],
         reps_by_arm[label] += 1
     previews: dict[str, list[str]] = {label: [] for label in order}
     counts: dict[str, dict] = {}
+    # LAYER ACCOUNTING: the compiler's own view of each turn, so a dry run proves the
+    # layer wiring (which blocks exist, and whether the prefix is stable) without a
+    # request.  Only arms that render through ``compile_prompt`` report anything.
+    layer_seen: dict[str, dict] = {}
 
     # TREATMENTS LAUNCH PRECONDITION — printed FIRST, before a single preview body is
     # rendered, and fatal.  A dry run that reaches no hook is not a preview of a cell; it
@@ -3253,9 +3296,13 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int, int]],
         c = {"reps": reps_by_arm[label], "digest_requests": 0, "wall_turn": None,
              "trunc_turn": None, "post_wall": None}
         counts[label] = c
+        acc = layer_seen.setdefault(label, {"keys": set(), "prefixes": []})
         written: set[str] = set()
         for t in range(1, n_turns + 1):
             info = planner.build(t)
+            if info.get("layer_tokens"):
+                acc["keys"].update(info["layer_tokens"])
+                acc["prefixes"].append((t, info.get("prefix_sha256")))
             if t in checkpoint_turns(fixture):
                 # ANSWER-CONTRACT (v5): identical injection to run_cell, so the preview
                 # body is the body a checkpoint turn would really send.
@@ -3297,6 +3344,21 @@ def run_dry(cfg, fixture: dict, cells: list[tuple[str, int, int]],
         # covers but no longer produces.  Other arms' previews are never considered.
         for gone in prune_stale_previews(os.path.join(root, label), written, n_turns):
             print(f"  [{label}] removed stale preview {gone} (superseded by this run)")
+
+    print("\nLAYER ACCOUNTING (compiler view; no request sent)")
+    for label in order:
+        acc = layer_seen.get(label)
+        if not acc or not acc["prefixes"]:
+            print(f"  {label:19s} not rendered by the layer compiler")
+            continue
+        keys = sorted(acc["keys"])
+        shas = [s for _t, s in acc["prefixes"]]
+        distinct = len(set(shas))
+        first_change = next((t for (t, s), prev in zip(acc["prefixes"][1:], shas)
+                             if s != prev), None)
+        print(f"  {label:19s} layers={keys} distinct_prefixes={distinct} "
+              f"over T1..T{acc['prefixes'][-1][0]}"
+              + (f" first_prefix_change=T{first_change}" if first_change else ""))
 
     print("\nREQUEST COUNTS (what --dry-run would send)")
     total = 0
@@ -3365,22 +3427,29 @@ EXIT_ARM_REQUIRES_TOOLS = 2
 
 
 def arm_requires_tools(arm: str) -> bool:
-    """True for the arms whose treatment cannot fire without the tool channel."""
-    return arm == arm_cd.ARM_D
+    """True for the arms whose treatment cannot fire without the tool channel.
+
+    ``bounded-context-fetch`` (D) buys a masked body back with a ``fetch`` call,
+    and the E7 pin arms (``pinned``, ``pinned-recency``) measure ``refetch_count``
+    -- a tool call whose range the prompt already carries.  With ``--tools``
+    absent neither mechanism can fire, so both are refused before the first
+    request instead of producing a degenerate cell that exits 0.
+    """
+    return arm == arm_cd.ARM_D or arm in arm_cd.PINNED_ARMS
 
 
 def refuse_arm_without_tools(cfg, arm: str) -> int:
     """``0`` when the arm may run, else the refusal exit code (nothing sent, no row).
 
-    Only the fetch arm is gated: ``masking-no-fetch`` (C) is DEFINED by having no tool
-    channel -- ``run_cell`` clears ``cfg.tools`` for it -- and ``spcc`` never fetches, so
-    both are unaffected by an absent ``--tools``.
+    Only the fetch arm and the E7 pin arms are gated: ``masking-no-fetch`` (C) is
+    DEFINED by having no tool channel -- ``run_cell`` clears ``cfg.tools`` for it
+    -- and ``spcc`` never fetches, so both are unaffected by an absent ``--tools``.
     """
     if not arm_requires_tools(arm) or tools_enabled(cfg):
         return 0
-    print(f"ARM REFUSED (exit {EXIT_ARM_REQUIRES_TOOLS}): arm {arm!r} is the fetch arm and "
-          f"requires --tools (e.g. --tools read_file); --tools is absent, so tools_mode="
-          f"{client.tools_mode_label(tool_names(cfg))!r} and the fetch service would never "
+    print(f"ARM REFUSED (exit {EXIT_ARM_REQUIRES_TOOLS}): arm {arm!r} is a tool-channel arm "
+          f"and requires --tools (e.g. --tools read_file); --tools is absent, so tools_mode="
+          f"{client.tools_mode_label(tool_names(cfg))!r} and the tool service would never "
           f"run. No row was written and no request was sent.", file=sys.stderr)
     return EXIT_ARM_REQUIRES_TOOLS
 

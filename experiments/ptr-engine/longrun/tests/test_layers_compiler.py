@@ -88,20 +88,55 @@ def test_compaction():
     assert state.journal == []
     for ln in _idx():
         assert ln in state.index_lines
-    # The fold appends exactly one marker line and nothing else.
-    assert len(state.index_lines) == len(before) + 1, (
-        "index_lines grew by %d, expected 1" % (len(state.index_lines) - len(before))
-    )
-    marker = state.index_lines[-1]
-    assert marker.startswith("[") and marker.endswith("]"), "marker not bracketed: %r" % marker
+    # The fold record is a PIN, not an L1 line: it must persist on every later
+    # turn, and PINS is append-only, so the record extends the cached prefix
+    # instead of rewriting L1 (which would re-prefill everything after it).
+    assert state.index_lines == before, "the fold rewrote L1: %r" % (state.index_lines,)
+    assert len(state.pins) == 1, "expected exactly one fold pin, got %r" % (state.pins,)
+    pin = state.pins[0]
+    assert pin == "P1|fold|T24|24 turns dropped at epoch 1", pin
     # Honesty property: the fold drops turns, it does not summarise them.
-    assert "summary" not in marker.lower(), "marker claims a summary: %r" % marker
-    # The marker must name how many turns were dropped.
-    assert str(len(journal)) in marker, (
-        "marker does not name the %d dropped turns: %r" % (len(journal), marker)
-    )
+    assert "summary" not in pin.lower(), "pin claims a summary: %r" % pin
+    # The record names how many turns were dropped and the epoch it opened.
+    assert str(len(journal)) in pin, (
+        "pin does not name the %d dropped turns: %r" % (len(journal), pin))
     assert out.epoch == 1
     assert out.compactions == 1
+    # PINS is rendered and counted once it carries a pin.
+    assert out.layer_tokens["PINS"] > 0, out.layer_tokens
+
+
+def test_fold_pin_persists_and_extends_the_prefix():
+    """The fold record survives every later turn and never rewrites the prefix."""
+    run = _run()
+    state = CompactionState(index_lines=_idx())
+    journal = ["T%d|user|c%d" % (i, i) for i in range(1, 25)]
+    out25 = compile_prompt(run, state, epoch=0, journal=journal, work="q25")
+    prefix25 = out25.prefix_sha256
+    # Turns 26-28: the record is still in PINS, and the prefix does not move.
+    for t in range(26, 29):
+        out = compile_prompt(run, state, epoch=state.epoch,
+                             journal=["T%d|user|c%d" % (t, t)], work="q%d" % t)
+        assert out.prefix_sha256 == prefix25, "prefix moved after the fold at T%d" % t
+        assert "P1|fold|T24|24 turns dropped at epoch 1" in str(out), (
+            "the fold record vanished at T%d" % t)
+        assert out.layer_tokens["PINS"] > 0
+
+
+def test_no_pins_means_no_pins_block():
+    """An arm that never pins renders no PINS block and no PINS key."""
+    run = _run()
+    state = CompactionState(index_lines=_idx())
+    out = compile_prompt(run, state, epoch=0, journal=[], work="q")
+    assert "PINS" not in out.layer_tokens, out.layer_tokens
+    assert set(out.layer_tokens) == {"L0", "L1", "L2", "L3", "L4"}
+    # ... and the prefix is exactly the pre-PINS L0+L1 hash: the first two
+    # blocks of the prompt, with no empty PINS block inserted between them.
+    import hashlib
+    parts = str(out).split("\n\n")
+    assert parts[1].startswith("@artifact:"), parts[1]
+    assert out.prefix_sha256 == hashlib.sha256(
+        ("\n\n".join(parts[:2])).encode("utf-8")).hexdigest()
 
 
 def test_fetch_isolation():
@@ -119,5 +154,7 @@ if __name__ == "__main__":
     test_drift()
     test_prefix_stability()
     test_compaction()
+    test_fold_pin_persists_and_extends_the_prefix()
+    test_no_pins_means_no_pins_block()
     test_fetch_isolation()
     print("ALL OK")

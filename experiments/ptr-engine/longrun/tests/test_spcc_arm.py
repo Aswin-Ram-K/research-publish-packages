@@ -111,11 +111,17 @@ def test_spcc_26_turn_rows_stamp_layers_and_prefix():
     rows = _run_spcc()
     assert len(rows) == TURNS, "expected %d rows, got %d" % (TURNS, len(rows))
 
-    # 1. every row carries a real per-layer token dict (never None).
+    # 1. every row carries a real per-layer token dict (never None).  PINS is
+    #    rendered only when it carries a pin, and the fold record IS a pin: turns
+    #    1-24 (no pin yet) carry five layers, turns 25-26 carry six.
     for row in rows:
         lt = row.get("layer_tokens")
         assert isinstance(lt, dict), "turn %s layer_tokens=%r" % (row.get("turn"), lt)
-        assert set(lt) == {"L0", "L1", "L2", "L3", "L4"}, lt
+        expected = ({"L0", "PINS", "L1", "L2", "L3", "L4"} if row["turn"] >= 25
+                    else {"L0", "L1", "L2", "L3", "L4"})
+        assert set(lt) == expected, (row["turn"], lt)
+        if row["turn"] >= 25:
+            assert lt["PINS"] > 0, "the fold record is not in PINS: %r" % (lt,)
 
     # 2. the stable prefix is identical for turns 1-24 and breaks exactly once,
     #    at the compaction on turn 25; turns 25-26 then share the new prefix.
