@@ -252,6 +252,7 @@ package prose attached to an experiment, not workspace documents).
 |---|---|---|
 | [experiments/ptr-engine/research-seed-concepts/README.md](../experiments/ptr-engine/research-seed-concepts/README.md) | the 2026-11-06 research seed package: which papers the evidence warrants (two), what each may claim, and the staged validation each needs — plus `EVIDENCE-DOSSIER.md`, `RESEARCH-BRIEF.md`, `SECOND-PAPER-BRIEF.md`, `VALIDATION-ROADMAP.md` beside it | current |
 | [experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md](../experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md) | E7's pre-registration: the six-arm real-length A/B (`compact`/`mask`/`retrieval`/`pins`/`pins-recency`/`none`), its predictions, falsifiers, two-stage budget, and the instrument requirements that must hold before the first request | current (gated on the cap decision) |
+| [experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-07.v5.json](../experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-07.v5.json) | E7's quality instrument: 220 turns, `L0 ≈ 40.5 k` tokens, `window_tokens = 131072`, 5 decidable checkpoints (4 NUM, 1 CALL) over 28 real `ptr_engine` files; built by `longrun/tools/build_long_fixture.py` (seed 20261111, byte-reproducible, sha256 `55dc768a…`) | current |
 
 ---
 
