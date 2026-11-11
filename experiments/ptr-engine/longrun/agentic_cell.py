@@ -1546,28 +1546,51 @@ def offline_episodes(rows_path: str) -> List[dict]:
                         "expected_present": r.get("expected_present"),
                         "answered_at": r["step"], "verdict": None, "reason": None}
                        for r in graded]
+        # ``compactions``/``evicted``/``dropped_turns`` are RUNNING TOTALS on every row, so
+        # the episode's value is the last one, never the sum of the column.
+        compactions = max([int(r.get("compactions") or 0) for r in group] or [0])
+        evicted = max([int(r.get("evicted") or 0) for r in group] or [0])
+        seen, refetch = set(), 0
+        for r in group:
+            for call in r.get("tool_calls") or []:
+                key = json.dumps([call.get("name"), call.get("arguments")],
+                                 sort_keys=True)
+                if key in seen:
+                    refetch += 1
+                seen.add(key)
+        solved = bool(checkpoints) and all(c["ok"] for c in checkpoints)
+        mechanism = _mechanism_of(arm)
         out.append({
             "task": task_id, "arm": arm, "rep": rep,
-            "solved": bool(checkpoints) and all(c["ok"] for c in checkpoints),
+            "solved": solved,
             "checkpoints": checkpoints,
             "steps_used": max(int(r["step"]) for r in group),
             "requests": len(group),
-            "refetch_count": sum(len(r.get("tool_calls") or []) for r in group),
-            "compactions": sum(1 for r in group if r.get("fold_event")),
-            "evicted": sum(int(r.get("dropped_turns") or 0) for r in group),
+            "refetch_count": refetch,
+            "compactions": compactions,
+            "evicted": evicted,
             "prompt_tokens_max": max([int(r["prompt_tokens"]) for r in group
                                       if isinstance(r.get("prompt_tokens"), (int, float))]
                                      or [0]) or None,
             "billed_tokens": None,
-            "verdict": "offline",
+            "verdict": _verdict(solved, checkpoints, compactions, mechanism),
             "goal_present": [],
             "fact_present": [],
-            "fold_mechanism": "offline",
+            "fold_mechanism": mechanism,
             "stopped": "offline",
             "run_id": run_id,
             "offline": True,
         })
     return out
+
+
+def _mechanism_of(arm: str) -> str:
+    """The fold mechanism an arm name implies, for a re-grade that has no arm object."""
+    if arm == ARM_MASK:
+        return "mask"
+    if arm == ARM_NONE:
+        return "none"
+    return "journal-drop"
 
 
 # ------------------------------------------------------------------ CLI
