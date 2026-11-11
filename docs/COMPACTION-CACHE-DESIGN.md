@@ -127,6 +127,36 @@ pin 200 tok for 24 turns ≈ 0.1 × 200 × 24 = 480 units
 **Conclusion 4: pinning pays if it prevents one re-fetch per fold interval, with ~3.4× margin.**
 That is the break-even rule, and it is the only justification for a pin.
 
+### 2.5 How much of the tool traffic is already redundant
+
+The same file, counted by `(path, start_line, end_line)` over all 290 tool calls in its 68 tool-call
+rows:
+
+| Quantity | Value |
+|---|---:|
+| tool calls | **290** |
+| distinct `(path, start, end)` ranges | **88** |
+| **re-fetches** (a range already fetched earlier in the cell) | **202 (69.7 %)** |
+
+The five most-repeated ranges:
+
+| Range | Fetches |
+|---|---:|
+| `ptr_engine/errors.py:114-126` | **22** |
+| `ptr_engine/resolve.py:200-2785` | **20** |
+| `ptr_engine/resolve.py:66-110` | **18** |
+| `ptr_engine/resolve.py:66-130` | **17** |
+| `ptr_engine/errors.py:126-200` | **10** |
+
+**Conclusion 5: 70 % of this cell's tool calls re-read a range it had already read.** At ~1,627 units
+per re-fetch, 202 re-fetches is ~328,000 units — against a pin set that costs **0 units at `c = 0`**.
+A pin holding `errors.py:114-126` (13 lines) would have had 21 of those 22 fetches to prevent.
+
+**What this does not prove.** It does not prove a pin *would* have prevented them: the agent may have
+re-read for a reason a pin cannot serve (a changed file, a different question about the same lines).
+It establishes the **magnitude of the opportunity**, which is what makes E7 worth 1,000 requests. The
+`refetch_count` metric in E7 is what turns this into a causal claim.
+
 ---
 
 ## 3. The reframing
@@ -269,6 +299,28 @@ turns. The change is worth making because it is nearly free and it removes a cla
 silently invalidates the prefix), **not** because it saves tokens. The token argument for this design
 is §2.4, the re-fetch.
 
+**The edit surface, verified by reading the code (four touch points):**
+
+1. `CompactionState` (`experiments/ptr-engine/ptr_engine/layers.py:36`) gains `pins: List[str] = []`.
+2. `compile_prompt` (`layers.py:169-330`) renders `pins` as its own block between `l0` and `l1`, and
+   `prefix_text` becomes `"\n\n".join([l0, pins, l1])`; `layer_tokens` gains a `"PINS"` key.
+3. The fold block (`layers.py:247-257`) appends the marker to the **work** layer instead of
+   `st.index_lines`.
+4. `SpccArmState` (`experiments/ptr-engine/longrun/arm_cd.py:481-565`) gains `pin(kind, text)`,
+   `retire(id, reason)` and `pins()`, each appending to `self.state.pins`. Its `__init__` already
+   constructs `CompactionState(index_lines=..., compact_every=...)`, so the new field needs no
+   constructor change beyond the default.
+
+No other call site reads `index_lines` for the marker, and `spcc_world_index` builds L1 independently,
+so the change does not disturb the world index.
+
+**Render the `PINS` block only when it is non-empty.** `"\n\n".join([l0, "", l1])` would insert a
+double separator and change the prefix bytes for every arm, including arm A, which has no pins. That
+would mint a new prefix generation and make E7's arm A incomparable with the existing `spcc` rows.
+Omitting an empty block keeps arm A **byte-identical to today**, so the control is a true control and
+`test_prefix_stability` (`tests/test_layers_compiler.py:59-77`, which asserts
+`len(set(prefixes)) == 1` across turns 1–24) passes unchanged.
+
 ### 5.2 The pin model
 
 A pin is a line in L1 with a stable id, a kind, and text that is **never summarised and never
@@ -355,6 +407,7 @@ deliberately instead of re-fetching blindly — which is the whole point of §2.
 | Rule | Arithmetic | Source |
 |---|---|---|
 | **Pin if it prevents ≥ 1 re-fetch per fold interval** | re-fetch ≈ 1,627 units; pin 200 tok × 24 turns = **0 units at `c=0`** (this endpoint), 480 at `c=0.1` | §2.3, §2.4 |
+| **The opportunity is large, not marginal** | **202 of 290 tool calls (69.7 %) re-read a range already read**; one range was fetched 22 times | §2.5 |
 | **Pinning is free here, cheap on a billed provider** | at `c=0` a cached pin costs nothing; at `c=0.1` it costs 187.6 % of the drop saving but still beats one re-fetch | §2.3 |
 | **A fold that clears little while retaining a lot never pays back** | `n ≈ 12.5 × S / X` turns; clearing 30 k while retaining 40 k needs ~17 turns | §3.5 |
 | **Do not summarise** | a summary is a full prompt read + output + a prefix rewrite, is lossy, and 27 measured summaries carried self-injected instructions | §3, §3.5 |
