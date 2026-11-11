@@ -219,8 +219,9 @@ cell at **500 real requests**, so the 600-request stage 2 was split into 200 + 4
 
 **The pin arms are built (2026-11-11, 0 requests).** Route (b) is implemented: `pinned` and
 `pinned-recency` are `pointer-stable` variants with the layer compiler ported in, and `spcc` is
-untouched — its `prefix_sha256` is identical to the pre-change compiler on all 24 turns, proven by
-loading the old module from `git show HEAD:…/layers.py` and driving both. `CompactionState.pins` renders
+untouched — its `prefix_sha256` is identical to the pre-change compiler on **turns 1–23**, proven by
+loading the old module from `git show f4de200:…/layers.py` and driving both; at the fold turn (T24) it
+differs because the fold record moved from `L1` into `PINS`, which is the intended change. `CompactionState.pins` renders
 between `L0` and `L1` **only when non-empty**, so a no-pin arm keeps byte-identical prefixes; the fold
 record is a pin (`P<n>|fold|T<t>|…`) that persists every later turn; `prefix_sha256` covers
 `L0+PINS+L1`. `fold_at_tokens` + `CHARS_PER_TOKEN = 3.122` give the **window-pressure** trigger the
