@@ -522,7 +522,11 @@ those classes `UNAVAILABLE` / `NOT_OBSERVED` and refuses to score them as succes
     1,927 left, which leaves 927 for every other cell (E2's d64 rep, E3's answer-slot cell, any re-run).
     Approve that allocation or re-split it.
 16. **The harness trace-collection duty writes into read-only targets — operator decision
-    (2026-11-11).** The user-level agent contract makes trace collection a standing duty and puts each
+    (2026-11-11).** *Settled in part: the operator ruled these writes acceptable* — "probably cause a lot
+    of this research is correlated and it was just handoff material anyway" (m01103) — so the Duval
+    bundles stay, nothing is rolled back, and only the *policy* question (which repositories) remains
+    open; the default stays `--repo="/home/zer0null/research extractor"` with everything else routed to
+    `~/.omp/trace-collector/unattributed/`. The record below is why the item exists at all. The user-level agent contract makes trace collection a standing duty and puts each
     repo's bundles at `<repo>/.omp/traces/`. Running it as written at the close of this session rewrote,
     at 16:13:08, **44 files inside `/home/zer0null/Duval`** (the derived day bundles
     `bundles/2026-11-07…2026-11-11/{incidents.jsonl,metrics.json,report.md,sessions.jsonl}` and
