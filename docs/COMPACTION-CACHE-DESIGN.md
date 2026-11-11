@@ -431,11 +431,17 @@ Four arms on one tool-enabled fixture, one model, temperature 0, seed 42:
 | Arm | Fold | Pins | Summary call |
 |---|---|---|---|
 | **A `spcc`** (control) | drop journal, marker in L1 | none | no |
-| **B `pinned-compact`** | drop journal, marker in L4 | L1 append-only | no |
-| **C `pinned-summary`** | drop journal, marker in L4 | L1 append-only | **yes** — journal summarised into L1 |
-| **D `no-compact`** | never | none | no |
+| **B `pinned-compact`** | drop journal, marker in L3 | PINS append-only | no |
+| **C `pinned-summary`** | drop journal, marker in L3 | PINS append-only | **yes** — journal summarised into PINS |
+| **D `no-compact`** | grow until the window forces a FIFO truncation from the front | none | no |
 
-**Primary metric:** `cost_units_per_verified_success` at `(c=0.1, o=3)`, with the sensitivity grid.
+Arm A is the existing `spcc` arm unchanged. Arm D is the existing `transcript-grow` arm, which
+"replay[s] the whole history every turn; FIFO-truncate[s] from the [front]" (`run_longrun.py:10`) — so
+it is not literally never-compacting: it is the **cost ceiling**, and it truncates only when the window
+forces it. Arms B and C are new and must be added to `ARMS` in
+`experiments/ptr-engine/longrun/run_longrun.py:74`.
+
+**Primary metric:** `cost_units_per_verified_success` at `(c=0.00, o=3)`, with the sensitivity grid.
 **Secondary:** `refetch_count` (tool calls that read material already present in the journal),
 `checkpoint_accuracy`, `prefix_breaks`, `reprefill_tokens`, `compactions`.
 
