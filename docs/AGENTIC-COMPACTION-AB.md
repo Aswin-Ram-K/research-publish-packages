@@ -59,25 +59,52 @@ cost.
 
 ## 3. The two candidate instruments
 
-### 3.1 Stage 1 — chain substitution (small build, reuses the replay runner)
+### 3.1 Stage 1 — chain reference by pointer (small build, reuses the replay runner)
 
-Keep the scripted turns; add one field per turn: `question_from` naming a checkpoint id whose graded
-answer is **interpolated into the next question's text**. Turn *n*'s question then reads
-"…the symbol you reported at step *j* …", and the only way to answer it is to still hold the value learned
-at step *j*.
+Keep the scripted turns; add one field per turn: `ref_prior` naming a checkpoint id that an **earlier**
+turn answered. Turn *n*'s question then reads
 
-- Horizon crossing is guaranteed **by construction**: the substituted value is learned before the fold and
-  used after it.
-- Failure mode is observable and gradable: a wrong prior answer makes the step unanswerable, and the
-  chain end carries the checkpoint.
+> "Using the symbol you identified at step *j* — do not restate it — find the caller that overrides it."
+
+**The value itself never enters the question text.** That is the whole point and an earlier draft of this
+section got it wrong: interpolating the graded value would put it back in the prompt, so no fold could
+destroy it and the only failure the instrument could produce is a wrong prior answer propagating forward
+— error propagation, not compaction. A pointer-only reference makes recovery depend on the journal
+itself, so the arms differ **by construction**:
+
+| arm | what step *n* can still do |
+|---|---|
+| `pinned` | the fact is in PINS → recoverable without a read |
+| `compact` | recoverable only if the summary kept it (the thing under test) |
+| `masking-no-fetch` | the tool result is masked → must re-read (a billed fetch round) or fail |
+| `none` (FIFO) | truncated → same as masking, with no mask boundary to blame |
+
+- **Horizon crossing** is guaranteed by the reference, not by arithmetic: step *j* is before the fold and
+  step *n* is after it, and the fixture's `at_turn` for the fold is chosen so this always holds.
+- **Failure attribution is two-way and must be recorded, not assumed.** A chain break is evidence about
+  the fold only when the value was **absent** from the prompt at step *n*; when it was present, the break
+  is a model error (wrong prior answer or wrong reasoning) and is graded as such. Each chain turn
+  therefore stamps `expected_present` — the same field the E3 cell used, now computed at a digit boundary
+  (`measure/rows-e3-retain-2026-11-10.jsonl`, `expected_present 96/96`, after the reasoning-channel
+  defect was fixed) — and a break is classified `lost-then-failed` (fold's fault, the signal) or
+  `present-then-failed` (model's fault, not the signal).
+- **Re-fetch is measurable here after all.** The replay serves bodies only when the model asks, and the
+  fetch channel is model-initiated (`run_longrun.py:3866-3946`), so an arm that lost the value and asks
+  again pays a billed round that the row records (`fetch_followup`, `fetch_rounds_used`). Earlier I wrote
+  that stage 1 could not show re-fetch growth; that was wrong — it can, and `refetch_count` is the
+  secondary metric.
 - Cost: a renderer in `run_longrun.py` (`turn_user`, `:417`/`:1757`) + a `chain` block in
-  `check_pointer_fixtures.py`'s lint + a fixture builder pass. No new loop, no new grading path.
+  `check_pointer_fixtures.py`'s lint (the reference must name an *earlier* checkpoint, must not leak the
+  value into any question body, and the referenced checkpoint must precede the fold) + a builder pass.
+  No new loop, no new grading path.
 - Fixture: `tasks-v7/TX-04S.v1.json` (41 checkpoints, 14 declared mismatches, built today) is the
   starting point — 41 checkpoints/arm is the same order as the 48 that produced the ±4.2 pp band.
 - Requests: 100 turns/arm × 4 arms = **400**, + warm-ups. Fits comfortably.
 
-**What it still cannot say:** it cannot show *re-fetch* growth, because the harness still serves the
-bodies it was told to serve. It shows only whether the fold *breaks the chain*.
+**What it still cannot say:** it cannot show that a *deliberate* agent strategy — deciding to re-grep
+rather than to re-read — costs what the design claims, because the action space here is one bounded read
+per step and the fixture still supplies the question. That is stage 2's job, and it is the only thing
+stage 2 is for.
 
 ### 3.2 Stage 2 — task mode (the real agentic test)
 
@@ -138,15 +165,25 @@ quantities. This is the strongest argument for grading **3–5 facts per task** 
 
 ## 5. Falsifiers (written before any request)
 
-1. **Stage 1:** if no arm produces a chain break, the instrument is not exercising horizon crossing and
-   the fixture must change before stage 2 is built.
-2. **Stage 1:** if breaks occur in every arm equally, the fold is not the mechanism and pinning has
-   nothing to win.
-3. **Stage 2:** if `pinned`'s `cost_units_per_verified_success` ≥ `compact`'s, the design's central claim
+1. **Stage 1 — the reference is not doing work.** If no `lost-then-failed` break appears in any arm
+   across 41 checkpoints, the pointer-only reference is not making recovery depend on the journal (the
+   value survived compact, mask, truncation and pins alike). That is an **instrument failure**, not a
+   result, and stage 2 must not be built on it.
+2. **Stage 1 — the breaks are model error, not the fold.** If `present-then-failed` dominates
+   `lost-then-failed`, the chains break because the model answered wrongly earlier, and the run is
+   reported as a null with the attribution table published in full. A null of this shape does **not**
+   count as evidence for the design.
+3. **Stage 1 — pinning does not help retention.** If `pinned` shows no fewer `lost-then-failed` breaks
+   than `none`, the pin model's premise (`COMPACTION-CACHE-DESIGN.md` §5.2) fails at this instrument and
+   the cost question is moot until the retention mechanism is fixed.
+4. **Stage 1 — recovery is not being paid for.** If `refetch_count` does not differ between
+   `masking-no-fetch` and `pinned`, the recovery path is not being exercised and no re-fetch cost may be
+   attributed to losing the journal.
+5. **Stage 2:** if `pinned`'s `cost_units_per_verified_success` ≥ `compact`'s, the design's central claim
    (`COMPACTION-CACHE-DESIGN.md` §5.2) is wrong at real length under agentic work.
-4. **Stage 2:** if `refetch_count` does not differ between A and B, the claimed mechanism is not operating
+6. **Stage 2:** if `refetch_count` does not differ between A and B, the claimed mechanism is not operating
    and any cost difference is a prompt-layout artefact.
-5. **Stage 2:** if the fold never fires (`compactions == 0` in an episode), that episode is **void**, not
+7. **Stage 2:** if the fold never fires (`compactions == 0` in an episode), that episode is **void**, not
    a data point — the natural agentic regime has a small `L0` and the journal grows from the work itself,
    so a short episode is a design failure, not a result.
 
