@@ -207,7 +207,8 @@ in, and `spcc` is no longer an E7 arm. Its quality instrument is
 `experiments/ptr-engine/longrun/tasks-v5/runtime-v5/LR-07.v5.json`: 220 turns, `L0 ≈ 40.5 k` tokens,
 `window_tokens = 131072`, 5 decidable checkpoints (4 NUM, 1 CALL) over 28 real `ptr_engine` files, built
 byte-reproducibly by `longrun/tools/build_long_fixture.py` (seed 20261111; rebuilt with the real read
-bodies, sha256 `b2d2d3f2…`), verified
+bodies — the sha is recorded in the run record, not here, because the fixture embeds `docs/STATE.md`
+verbatim and therefore changes whenever this page does), verified
 `PASS: 5/5 checkpoints decidable, none colliding, all <= 40 tokens` and shown to discriminate by
 `grade_v5.py` (correct 4/4 pass, wrong 0/5 fail). E7's pre-registration is
 `experiments/ptr-engine/research-seed-concepts/PREREG-COMPACTION.md`: six arms, six predictions, five
