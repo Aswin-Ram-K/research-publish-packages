@@ -715,3 +715,28 @@ def test_presence_is_measured_from_the_document_not_the_expected_string(tmp_path
     assert final["expected_present"] is True, "the document was in the prompt"
     assert final["value_present"] is False, "the literal test cannot see a derived value"
     assert final["verified"] is True
+
+
+def test_a_new_run_truncates_the_out_file_instead_of_mixing_two_runs(tmp_path):
+    """RED before 2026-11-11: ``--out`` was opened in append mode, so a second run's
+    episodes landed under the first run's.  Measured live: 36 stale lines carrying the
+    old 5-arm plan's ``budget: 816`` sat under a new run's rows."""
+    script = lambda n, m: (answer_reply(FACT_A) if n == 2
+                           else answer_reply(FACT_B) if n == 4
+                           else tool_reply(call_id="c%d" % n))
+    rows = tmp_path / "rows.jsonl"
+    out = tmp_path / "out.jsonl"
+    run(tmp_path, "none", script, rows_path=str(rows))
+    assert rows.exists() and read_rows(str(rows))
+
+    assert AC.main(["--offline", str(rows), "--out", str(out)]) == 0
+    first = len(read_rows(str(out)))
+    assert first >= 1
+
+    # A second run over the same rows must REPLACE the record, not double it.
+    assert AC.main(["--offline", str(rows), "--out", str(out)]) == 0
+    assert len(read_rows(str(out))) == first
+
+    # ``--append`` is the explicit opt-in for accumulating.
+    assert AC.main(["--offline", str(rows), "--out", str(out), "--append"]) == 0
+    assert len(read_rows(str(out))) == 2 * first

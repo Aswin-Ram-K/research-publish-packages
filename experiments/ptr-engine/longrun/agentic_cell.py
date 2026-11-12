@@ -762,9 +762,18 @@ class FetchArm(_CompilerArm):
 
 
 class PinnedArm(_CompilerArm):
-    """``pinned`` — ``PinnedArmState``: the goal is pinned, the journal folds, no re-read."""
+    """``pinned`` — ``PinnedArmState``: the goal is pinned, the journal folds, re-reads served.
+
+    ``allow_refetch`` is True here and on ``compact``.  Measured 2026-11-11: with re-reads
+    refused, the model loops on ``refetch_refused`` for all 16 steps and never emits an
+    answer — 128 requests, zero graded checkpoints, on both arms.  An arm that yields no
+    data is void whatever its intent, and the cost of a re-read is already measured by
+    ``refetch_count``; refusing the read measures "the model is blocked", not "the context
+    lost the fact".  ``masking-no-fetch`` keeps the refusal because that IS its policy.
+    """
 
     name = ARM_PINNED
+    allow_refetch = True
 
     def _make_state(self):
         return arm_cd.PinnedArmState(fixture=self.task.fixture, run=self.run,
@@ -1600,6 +1609,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="per-request rows (default: the --out directory)")
     ap.add_argument("--budget", type=int, default=None, metavar="N",
                     help="maximum requests this cell may send (required for a live run)")
+    ap.add_argument("--append", action="store_true",
+                    help="append to --out instead of truncating it; a new run truncates "
+                         "by default so one record never mixes two runs")
     ap.add_argument("--offline", default=None, metavar="ROWS_JSONL",
                     help="re-grade an existing per-request row file; sends nothing")
     ap.add_argument("--dry-run", action="store_true",
@@ -1641,7 +1653,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             print("refused: %s" % (exc,), file=sys.stderr)
             return 2
         os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
-        with open(out_path, "a", encoding="utf-8") as fh:
+        with open(out_path, "a" if args.append else "w", encoding="utf-8") as fh:
             for row in episodes:
                 fh.write(json.dumps(row, sort_keys=True) + "\n")
         print("offline: %d episode row(s) from %s -> %s"
@@ -1735,7 +1747,12 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     total_rows = 0
     total_requests = 0
-    with grep_on_the_wire(), open(out_path, "a", encoding="utf-8") as fh:
+    # A run record belongs to ONE run.  Appending by default silently mixed a live cell's
+    # episodes with a previous attempt's (measured 2026-11-11: 36 stale lines carrying the
+    # old 5-arm plan's ``budget: 816`` sat under the new run's rows).  A new run truncates
+    # unless ``--append`` says otherwise; the multi-arm loop below still appends within it.
+    out_mode = "a" if args.append else "w"
+    with grep_on_the_wire(), open(out_path, out_mode, encoding="utf-8") as fh:
         for arm_name in arms:
             req_path = os.path.join(rows_dir, "rows-agentic-%s-%s.jsonl"
                                     % (arm_name, stamp))
