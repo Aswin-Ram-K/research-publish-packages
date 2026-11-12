@@ -1390,6 +1390,16 @@ evaluated** because `masking-no-fetch` is not in this cell. Full reading in
 now lists all four checkpoints per episode. The comparison is cost and checkpoint coverage, not
 completion.
 
+**`compact` did not test summarisation.** It issued 1 summary request in 129; 7 of 8 episodes read
+`summaries: 0` with `summary_refused: 0` against 3–10 folds each. The gate (`wants_summary()`) sat at
+the bottom of the step loop, after the answer-grading branch, where three `continue` paths skipped it,
+so only a step answering at a non-final checkpoint could reach it. Moved to immediately after
+`arm.render(...)`, before that step's request; guarded by
+`test_compact_buys_its_summary_on_the_fold_step_without_an_answer`. **The cell was not re-run**, so the
+`compact` column is `pinned` plus one summary — the two folding arms are not the contrast the design
+intended, and §10 of `docs/AGENTIC-COMPACTION-AB.md` says so. A re-run is the operator's call
+(~136 requests of the 307 left).
+
 **Four instrument defects were found and fixed by these runs** (`c15a417`, `fa439d6`, plus two
 uncommitted edits in this close-out): the presence test string-matched a derived value instead of
 locating its source revision (`_doc_anchor`/`_checkpoint_source`); `PinnedArm`/`CompactArm` inherited

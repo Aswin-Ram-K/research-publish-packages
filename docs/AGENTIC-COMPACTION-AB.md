@@ -360,6 +360,30 @@ the model has to re-read to recover, and it does — but re-reading costs steps,
 `max_steps` rather than on an answer. Compaction is 4.2x cheaper per request and unusable as a task
 policy at this step budget.
 
+### 10.1 `compact` did not test summarisation, and the column above must not be read as if it did
+
+`compact` issued **one** summary request in 129, and 7 of its 8 episodes read `summaries: 0` against
+3–10 folds each. `summary_refused` is 0 in every episode, which is the diagnostic: a refusal counter at
+zero while successes stay at zero means the question was never asked, not that the model answered
+badly.
+
+The cause was the call site. The `wants_summary()` block sat at the bottom of the step loop, after the
+answer-grading branch, and three `continue` paths jumped over it — a reply that made a tool call, a
+reply with no `ANSWER:` line, and an answer off a checkpoint turn. Only a step that answered at a
+**non-final checkpoint** reached the gate, and nothing makes the fold coincide with that. Reproduced
+offline on the cell's own fixture shape: the fold fired at step 9 with a 7-line pre-fold journal,
+`summaries=0`, `summary_refused=0`, `requests=16`.
+
+Moved to immediately after `arm.render(step, work)` and before that step's own request, so the summary
+covers exactly the dropped turns and costs one request per fold. Same probe after the fix:
+`summaries=1`, `requests=17`, a row of `kind == "summary"`. Guarded by
+`test_compact_buys_its_summary_on_the_fold_step_without_an_answer`.
+
+**The cell was not re-run.** The `compact` column above is therefore `pinned` plus one summary, and
+the two folding arms are not the contrast the design intended. Reading §10 as evidence about
+summarisation would be reading it as evidence about pinning. A re-run of the `compact` arm is the
+operator's call — 8 episodes × ~17 requests ≈ 136 of the 307 requests left.
+
 **This is a frontier, not a clean win for either arm.** `none`'s max prompt is 24,672 tokens against
 an 8,000-token window: the uncompressed arm's advantage is won by exceeding the constraint the folding
 arms obey. The honest reading is that at 16 steps the folding arms need a larger step budget (or an

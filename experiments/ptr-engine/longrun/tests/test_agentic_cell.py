@@ -742,6 +742,52 @@ def test_a_new_run_truncates_the_out_file_instead_of_mixing_two_runs(tmp_path):
     assert len(read_rows(str(out))) == 2 * first
 
 
+def test_compact_buys_its_summary_on_the_fold_step_without_an_answer(tmp_path):
+    """RED before 2026-11-11: the ``wants_summary()`` block sat at the BOTTOM of the step
+    loop, after the answer-grading branch.  Three ``continue`` paths skipped it — a tool
+    call, a reply with no ANSWER line, and an answer off a checkpoint turn — so the gate
+    was only reachable from a step that answered at a NON-final checkpoint.  The fold has
+    no reason to coincide with that, so the arm never summarised.
+
+    Measured before the fix, on this exact fixture shape (``turns=16``, ``cp1_turn=4``,
+    ``window_tokens=8000``, a transport that only ever calls tools): the fold fired at
+    step 9 with ``pre_journal=7``, ``summaries=0``, ``summary_refused=0``, ``requests=16``.
+    ``summary_refused=0`` is the tell — the question was never asked, so no refusal could
+    be recorded.  The live cell repeated it at scale: 7 of 8 ``compact`` episodes read
+    ``summaries: 0`` against 3–10 compactions each, and the arm ran as ``pinned``.
+
+    The gate must fire on the fold step itself, before that step's own request.
+    """
+    tmp_path.mkdir(exist_ok=True)
+    (tmp_path / "snap").mkdir(exist_ok=True)
+    task = make_task(tmp_path, turns=16, cp1_turn=4, window_tokens=8000)
+    summary_seen = []
+
+    def script(n, messages):
+        content = str((messages[-1] if messages else {}).get("content") or "")
+        if content.startswith(AC.SUMMARY_PROMPT[:20]):
+            summary_seen.append(n)
+            return {"content": "Goal: report the constant. Read consts.py. 4017.",
+                    "tool_calls": [], "prompt_tokens": 900, "completion_tokens": 20,
+                    "cached_tokens": 0}
+        return tool_reply(call_id="c%d" % n)
+
+    tr = FakeTransport(script)
+    res = AC.run_cell([task], "compact", 1, tr, max_steps=16, max_requests=40,
+                      budget_cap=10000, spent=0, repo_root=str(tmp_path / "snap"),
+                      log=lambda *a: None, window_tokens=8000)
+    ep = res["episodes"][0]
+    folds = int(ep["compactions"])
+    assert folds >= 1, "the fixture must fold for this test to mean anything"
+    assert ep["summaries"] >= 1, "a fold must buy a summary"
+    assert ep["summary_refused"] == 0, "a requested summary must not be refused"
+    assert len(summary_seen) == ep["summaries"]
+    kinds = [r["kind"] for r in res["request_rows"]]
+    assert kinds.count("summary") == ep["summaries"]
+    assert ep["requests"] == 16 + ep["summaries"], \
+        "each summary is one extra request on top of the 16 steps"
+
+
 def test_offline_keeps_the_live_checkpoint_denominator(tmp_path):
     """RED before 2026-11-11: ``offline_episodes`` emitted only the ANSWERED checkpoints,
     so ``solved`` was computed over a different denominator than ``run_episode`` uses.

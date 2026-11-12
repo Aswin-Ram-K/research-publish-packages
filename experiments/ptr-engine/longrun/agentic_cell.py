@@ -1140,6 +1140,35 @@ def run_episode(task: Task, arm_name: str, rep: int, *, cfg, send, root: str,
         kind = "final" if is_final else "work"
         work = task.question_at(step)
         prompt = arm.render(step, work)
+        # ``compact`` buys its summary the moment the fold drops the journal, and BEFORE
+        # this step's own request, so the summary covers exactly the turns the model can
+        # no longer see.  It is a request like any other and is refused when the budget is
+        # spent.  The pin lands in PINS for the NEXT compile: this step's prompt is already
+        # built on the post-fold state.
+        #
+        # Measured 2026-11-11: this block used to sit after the answer-grading branch at
+        # the bottom of the loop, where three ``continue`` paths (tool call, no answer, an
+        # answer off a checkpoint turn) skipped it.  Only a step that answered at a
+        # NON-final checkpoint reached it, so across 8 ``compact`` episodes and 45 folds
+        # the gate opened once (AG-04 rep1) and the arm ran as ``pinned``: `summaries: 0`
+        # with `summary_refused: 0` in the other 7.  A refusal counter that stays at zero
+        # while summaries stay at zero means the question was never asked, not that the
+        # model failed it.
+        if arm.wants_summary():
+            if requests >= int(max_requests):
+                stopped = "max_requests"
+                break
+            requests += 1
+            try:
+                sresp = send(cfg, [{"role": "system", "content": system_text},
+                                   {"role": "user", "content": arm.summary_prompt()}])
+            except client.RequestFailure as exc:
+                error = "summary_failed: %s" % (exc,)
+                break
+            arm.apply_summary(sresp.get("content") or "")
+            emit(row_for(step, "summary", sresp, [], answer=None, expected=None,
+                         verified=None, expected_present=None))
+
         goal_present.append(_goal_present(prompt, task.statement))
         fact_present.append(_value_present(prompt, task.fixture.get("fact", {}).get("value")
                                            if isinstance(task.fixture.get("fact"), dict)
@@ -1234,24 +1263,6 @@ def run_episode(task: Task, arm_name: str, rep: int, *, cfg, send, root: str,
             final_ok = bool(ok)
             stopped = "final_answer"
             break
-
-        # ``compact`` buys its summary AFTER the fold that dropped the journal, so the
-        # summary covers exactly the turns the model can no longer see.  It is a request
-        # like any other and is refused when the budget is spent.
-        if arm.wants_summary():
-            if requests >= int(max_requests):
-                stopped = "max_requests"
-                break
-            requests += 1
-            try:
-                sresp = send(cfg, [{"role": "system", "content": system_text},
-                                   {"role": "user", "content": arm.summary_prompt()}])
-            except client.RequestFailure as exc:
-                error = "summary_failed: %s" % (exc,)
-                break
-            arm.apply_summary(sresp.get("content") or "")
-            emit(row_for(step, "summary", sresp, [], answer=None, expected=None,
-                         verified=None, expected_present=None))
 
     for cp in task.checkpoints:
         turn = int(cp["turn"])

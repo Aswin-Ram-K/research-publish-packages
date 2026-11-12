@@ -205,3 +205,24 @@ Under one rule — an episode is solved only if every one of its four checkpoint
 **all three arms are 0 of 8**. `none`'s best episode answers all four and gets three. The metric this
 cell can support is checkpoint coverage and cost per arm; it cannot support a completion rate, and the
 pre-registration's completion-based reading must not be written from these rows.
+
+### 5. `compact` never bought a summary, so the arm contrast is not the design's
+
+Erratum 2 §3 and §10 of `docs/AGENTIC-COMPACTION-AB.md` treat `compact` as the summarising arm. It was
+not. `compact` issued one summary request in 129, and 7 of its 8 episodes recorded `summaries: 0` with
+`summary_refused: 0` against 3–10 folds each. `summary_refused` staying at zero is the diagnostic: the
+question was never asked.
+
+The gate was unreachable from a fold. `wants_summary()` was consulted at the bottom of the step loop,
+after the answer-grading branch, behind three `continue` paths (tool call, no `ANSWER:` line, an answer
+off a checkpoint turn); only a step answering at a non-final checkpoint reached it, and nothing aligns
+the fold with that. Reproduced offline on the cell's fixture shape (fold at step 9, 7-line pre-fold
+journal, `summaries=0`, `requests=16`) and fixed by moving the call to immediately after
+`arm.render(...)`, before the step's own request.
+
+**What this pre-registration must therefore NOT conclude.** Any sentence of the form "a model-written
+summary retains X of the lost facts" is unsupported by this cell: the summarising arm did not
+summarise. The cell supports statements about journal-drop without a summary — which is what `pinned`
+is — and the `compact` column is `pinned` plus a single summary in one episode. A re-run of the
+`compact` arm (~136 requests) is required before the summarisation half of the design has any evidence
+at all.
