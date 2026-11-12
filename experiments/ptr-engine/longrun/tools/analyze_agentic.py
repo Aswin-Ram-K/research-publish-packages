@@ -240,13 +240,19 @@ def _arm_report(rows: list[dict]) -> dict:
         episodes.setdefault(_episode_key(row), []).append(row)
 
     counts = {"ok": 0, "lost_then_failed": 0, "present_then_failed": 0,
-              "unclassified": 0}
+              "unclassified": 0, "literal_disagreement": 0}
     graded = 0
     verified = 0
     for row in request_rows:
         if row.get("verified") is None:
             continue
         graded += 1
+        # ``value_present`` is the literal test the instrument used to attribute with.
+        # A disagreement is a checkpoint the old rule would have misattributed, so the
+        # count is the size of the defect this run's presence rule repairs.
+        if (row.get("value_present") is not None
+                and _tri(row.get("value_present")) != _tri(row.get("expected_present"))):
+            counts["literal_disagreement"] += 1
         if bool(row.get("verified")):
             verified += 1
             counts["ok"] += 1

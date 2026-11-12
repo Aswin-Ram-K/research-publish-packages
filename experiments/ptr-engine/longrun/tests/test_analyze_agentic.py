@@ -21,7 +21,7 @@ import analyze_agentic as AA  # noqa: E402
 
 def _row(arm, *, task="AG-01", rep=1, step=1, verified=None, present=None,
          fold=False, tools=(), prompt=100, cached=0, dropped=0, pinned=0,
-         run_id="run-1", kind="work"):
+         run_id="run-1", kind="work", value_present=None):
     return {
         "run_id": run_id, "arm": arm, "task_id": task, "rep": rep, "step": step,
         "kind": kind, "prompt_tokens": prompt, "completion_tokens": 0,
@@ -31,7 +31,8 @@ def _row(arm, *, task="AG-01", rep=1, step=1, verified=None, present=None,
         "fold_event": fold, "fold_kind": "fold" if fold else None,
         "dropped_turns": dropped, "pinned_tokens": pinned,
         "answer": None, "expected": None, "verified": verified,
-        "expected_present": present, "ts": "2026-11-11T00:00:00Z",
+        "expected_present": present, "value_present": value_present,
+        "ts": "2026-11-11T00:00:00Z",
     }
 
 
@@ -50,7 +51,8 @@ def test_attribution_classes_are_separated():
     ]
     counts = AA.analyse(rows)["arms"]["none"]["counts"]
     assert counts == {"ok": 1, "lost_then_failed": 1,
-                      "present_then_failed": 1, "unclassified": 1}
+                      "present_then_failed": 1, "unclassified": 1,
+                      "literal_disagreement": 0}
 
 
 def test_null_presence_is_never_a_pass():
@@ -214,3 +216,22 @@ def test_cli_writes_json_and_markdown_and_exits_zero(tmp_path):
 def test_cli_exits_zero_with_no_rows(tmp_path):
     rc = AA.main(["--rows", str(tmp_path / "none-*.jsonl")])
     assert rc == 0
+
+
+def test_literal_disagreement_counts_the_rows_the_old_rule_misattributed():
+    """The literal test and the document anchor disagree on a derived answer.
+
+    A CALL checkpoint's ``expected`` is the derived structure, so ``value_present`` is
+    False while the document carrying the fact is in the prompt.  The count is the size
+    of the defect the anchor rule repairs, and it must not be folded into the
+    attribution classes.
+    """
+    rows = [
+        _row("none", step=1, verified=False, present=True, value_present=False),
+        _row("none", step=2, verified=True, present=True, value_present=True),
+        _row("none", step=3, verified=False, present=False, value_present=False),
+    ]
+    arm = AA.analyse(rows)["arms"]["none"]
+    assert arm["counts"]["literal_disagreement"] == 1
+    assert arm["counts"]["present_then_failed"] == 1
+    assert arm["counts"]["lost_then_failed"] == 1
