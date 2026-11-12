@@ -80,7 +80,7 @@ def test_four_tasks_at_four_turns():
     for task in tasks:
         assert task["schema"] == "consonance.longrun-fixture/2"
         assert task["N"] == 16
-        assert task["window_tokens"] == 4096
+        assert task["window_tokens"] == 8000
         assert [c["turn"] for c in task["checkpoints"]] == [4, 8, 12, 16]
         assert task["checkpoint_turns"] == [4, 8, 12, 16]
         assert [t["turn"] for t in task["turns"]] == list(range(1, 17))

@@ -79,18 +79,27 @@ FALSIFIERS = (
 )
 
 
-def load_rows(pattern: str) -> list[dict]:
+def load_rows(pattern) -> list[dict]:
+    """Rows from one glob, or from several patterns/globs.
+
+    A cell is run per arm into its own file, so a whole record is often several files
+    (``none`` from one run, ``pinned``/``compact`` from another).  Accepting a list here
+    means the record can be named exactly, instead of being concatenated into a temp file
+    that no one can reproduce later.
+    """
+    patterns = [pattern] if isinstance(pattern, str) else list(pattern)
     rows = []
-    for path in sorted(glob.glob(pattern)):
-        with open(path, encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rows.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue
+    for pat in patterns:
+        for path in sorted(glob.glob(pat)):
+            with open(path, encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        rows.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
     return rows
 
 
@@ -244,15 +253,12 @@ def _arm_report(rows: list[dict]) -> dict:
     graded = 0
     verified = 0
     for row in request_rows:
+        if row.get("value_present") is not None and row.get("expected_present") is not None:
+            if bool(row["value_present"]) != bool(row["expected_present"]):
+                counts["literal_disagreement"] += 1
         if row.get("verified") is None:
             continue
         graded += 1
-        # ``value_present`` is the literal test the instrument used to attribute with.
-        # A disagreement is a checkpoint the old rule would have misattributed, so the
-        # count is the size of the defect this run's presence rule repairs.
-        if (row.get("value_present") is not None
-                and _tri(row.get("value_present")) != _tri(row.get("expected_present"))):
-            counts["literal_disagreement"] += 1
         if bool(row.get("verified")):
             verified += 1
             counts["ok"] += 1
@@ -469,7 +475,12 @@ def _resolve(path: str) -> str:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--rows", required=True, help="glob of rows-agentic-*.jsonl")
+    ap.add_argument("--rows", required=True, nargs="+",
+                    help="rows-agentic-*.jsonl glob(s); several globs are read as one record")
+    ap.add_argument("--episodes", nargs="+", default=None,
+                    help="the runner's --out record(s) (one JSON object per episode, JSONL). "
+                         "Without them the per-episode table is VOID, because those records are "
+                         "produced by agentic_cell.py --out and not by the per-request rows files.")
     ap.add_argument("--out", default=None, help="JSON report path")
     ap.add_argument("--md", default=None, help="markdown table path")
     args = ap.parse_args(argv)
@@ -477,8 +488,12 @@ def main(argv=None) -> int:
     rows = load_rows(args.rows)
     if not rows:
         print(f"no rows matched {args.rows}")
+    episode_inputs = list(args.episodes or [])
+    if episode_inputs:
+        rows += load_rows(episode_inputs)
     result = analyse(rows)
     result["rows_glob"] = args.rows
+    result["episodes_glob"] = episode_inputs or None
     for line in table(result):
         print(line)
 

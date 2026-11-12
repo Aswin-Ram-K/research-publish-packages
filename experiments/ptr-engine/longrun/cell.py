@@ -412,7 +412,7 @@ def stage_budget(args):
                     "skips stages 3-4)")
     argv = [sys.executable, RUNNER, "--dry-run", "--fixture", args.fixture,
             "--arms", args.arm, "--reps", str(args.reps),
-            "--temperature", str(float(args.temperature)),
+            "--temperature", str(float(getattr(args, "temperature", 0.0))),
             "--budget-cap", str(int(args.budget_cap))]
     if args.tools:
         argv += ["--tools", args.tools]
@@ -459,6 +459,17 @@ def stage_budget(args):
                 spent += _count_rows(os.path.join(MEASURE, name))
                 nfiles += 1
     remaining = PROJECT_QUOTA - spent
+    after = remaining - would
+    # Built BEFORE the two refusals below: they pass it as Abort's evidence, and a
+    # refusal that raises UnboundLocalError instead of the budget message is a harness
+    # defect reported as an internal error (measured: project headroom exhausted).
+    detail = {"would_send_total": would, "headroom": BUDGET_HEADROOM,
+              "required_with_headroom": required, "budget": args.budget,
+              "quota_project": PROJECT_QUOTA, "quota_spent_best_effort": spent,
+              "quota_rows_files": nfiles, "quota_remaining": remaining,
+              "quota_after_this_cell": after, "quota_basis":
+              "best-effort: project cap %d minus rows on disk in %s (%d files); the "
+              "runner reports no quota" % (PROJECT_QUOTA, _repo_rel(MEASURE), nfiles)}
     # Budget preflight printout (operator 2026-11-07): spent, cap, headroom, reservation.
     print("PREFLIGHT: spent=%d cap=%d headroom=%d reservation=CCS-2026-11-05 (UNKNOWN)"
           % (spent, PROJECT_QUOTA, remaining), file=sys.stderr)
@@ -471,15 +482,6 @@ def stage_budget(args):
         raise Abort(3, "3/7 budget",
                     "cell cost %d exceeds headroom %d by %d (deficit)"
                     % (would, remaining, would - remaining), detail)
-    after = remaining - would
-
-    detail = {"would_send_total": would, "headroom": BUDGET_HEADROOM,
-              "required_with_headroom": required, "budget": args.budget,
-              "quota_project": PROJECT_QUOTA, "quota_spent_best_effort": spent,
-              "quota_rows_files": nfiles, "quota_remaining": remaining,
-              "quota_after_this_cell": after, "quota_basis":
-              "best-effort: project cap %d minus rows on disk in %s (%d files); the "
-              "runner reports no quota" % (PROJECT_QUOTA, _repo_rel(MEASURE), nfiles)}
     if required > args.budget:
         raise Abort(3, "3/7 budget",
                     "would_send_total=%d +%.0f%% headroom = %d exceeds --budget %d "
@@ -1945,7 +1947,7 @@ def stage_run(args, rows_path, gate_manifest=None):
             "--reps", str(args.reps), "--rows", rows_path,
             "--turn-wall-cap", str(float(args.turn_wall_cap)),
             "--runaway-turns", str(int(args.runaway_turns)),
-            "--temperature", str(float(args.temperature)),
+            "--temperature", str(float(getattr(args, "temperature", 0.0))),
             "--budget-cap", str(int(args.budget_cap)),
             "--thinking", thinking_for_runner(args)]
     if args.tools:

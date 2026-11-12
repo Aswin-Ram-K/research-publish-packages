@@ -67,7 +67,9 @@ def main() -> int:
     run = read(RUNNER)
     check("runner parses calls out of content (parse_tool_calls defined)",
           "def parse_tool_calls(" in run)
-    check("runner gates the channel on argv --tools", 'TOOL_NAMES = ("read_file",)' in run)
+    # STAGE-2-ROOT-GREP: the tuple gained "grep", so the assertion is on the PREFIX --
+    # the channel is still gated on argv --tools and read_file is still the first name.
+    check("runner gates the channel on argv --tools", 'TOOL_NAMES = ("read_file"' in run)
     check("runner requires the literal marker '<tool_call>'",
           '"<tool_call>"' in run)
     turns = json.loads(read(FIXTURE))

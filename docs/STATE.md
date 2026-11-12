@@ -1,6 +1,6 @@
 # STATE — the current state of this workspace
 
-**Last updated:** 2026-11-11 · **By:** the crash-recovery close-out of `U-SPCC-69`…`U-SPCC-73` (manifests committed, derived artefacts regenerated, `--preview-root` added; corpus re-measured at **103 files / 10,167 rows**, so the ledger headroom is **1,927**, not 4,125), then the compaction/cache design and E7's pre-registration (§1a, 0 requests), then the **real-length correction**: a 0-request replay over eight real sessions measured `pins` at **1.91–2.70× cheaper than `compact`**, E7 was redesigned to six arms at real length, and its quality instrument `LR-07.v5.json` (220 turns, `L0 ≈ 40.5 k`) was built and verified. **Then the second session** (pickup after the crash loop, 0 requests): `U-SPCC-77` (answer-slot predictor — binding explains 4 of 6 masking failures; `tasks-v7/TX-04S.v1.json` built and dry-run) and `U-SPCC-78` (**harness generation 9**, `32463261…`, covering 7 measurement files) — both §`U-SPCC-77/78` at the end of this page; three stale claims on this page were corrected (§1a header, §6 item 15, the E3 open question in the findings ledger). **Then the third session** (pickup after the crash, 800 requests): `U-SPCC-79` built and ran stage 1 of the agentic compaction A/B — the chain instrument, its fixture, lint and classifier — and **both runs are void**: TX-05C declared no tool (`tool_calls = 0`), and TX-05D declared `fetch(ref)` but the pointer names the step and not the symbol, so the fold removed the locator and `bounded-context-fetch` paid 64 refetch rounds to answer with the wrong symbol. The correction is recorded in `docs/AGENTIC-COMPACTION-AB.md` §7 and not yet run; the ledger stands at **10,987 spent / 1,107 remaining of 12,094**
+**Last updated:** 2026-11-11 · **By:** the crash-recovery close-out of `U-SPCC-69`…`U-SPCC-73` (manifests committed, derived artefacts regenerated, `--preview-root` added; corpus re-measured at **103 files / 10,167 rows**, so the ledger headroom is **1,927**, not 4,125), then the compaction/cache design and E7's pre-registration (§1a, 0 requests), then the **real-length correction**: a 0-request replay over eight real sessions measured `pins` at **1.91–2.70× cheaper than `compact`**, E7 was redesigned to six arms at real length, and its quality instrument `LR-07.v5.json` (220 turns, `L0 ≈ 40.5 k`) was built and verified. **Then the second session** (pickup after the crash loop, 0 requests): `U-SPCC-77` (answer-slot predictor — binding explains 4 of 6 masking failures; `tasks-v7/TX-04S.v1.json` built and dry-run) and `U-SPCC-78` (**harness generation 9**, `32463261…`, covering 7 measurement files) — both §`U-SPCC-77/78` at the end of this page; three stale claims on this page were corrected (§1a header, §6 item 15, the E3 open question in the findings ledger). **Then the third session** (pickup after the crash, 800 requests): `U-SPCC-79` built and ran stage 1 of the agentic compaction A/B — the chain instrument, its fixture, lint and classifier — and **both runs are void**: TX-05C declared no tool (`tool_calls = 0`), and TX-05D declared `fetch(ref)` but the pointer names the step and not the symbol, so the fold removed the locator and `bounded-context-fetch` paid 64 refetch rounds to answer with the wrong symbol. The correction is recorded in `docs/AGENTIC-COMPACTION-AB.md` §7 and not yet run; the ledger stands at **10,987 spent / 1,107 remaining of 12,094**. **Then stage 2 was built, run, and repaired four times** (385 requests, `instrument_ok=True`): compaction is **4.2× cheaper and answers 6 of 32 checkpoints against 15 for `none`**, solving no task where `none` solves 4 of 8 — see `U-SPCC-80` below and `docs/AGENTIC-COMPACTION-AB.md` §10; ledger now **11,787 of 12,094, 307 left**.
 **Read this first.** It is the single *current-state* page. Older status pages remain valid as dated
 records but are superseded here as current state — chiefly [`orchestration/STATUS.md`](orchestration/STATUS.md)
 (the docket-era batch record, 2026-10-21) and [`orchestration/CLOSING.md`](orchestration/CLOSING.md).
@@ -1359,3 +1359,35 @@ masking, so `compactions == 0` is normal for it** — the analyser's void rule i
 
 **Open.** The 816-request cell has not been run. `analyze_agentic.py` still lacks the per-episode
 void/cost summary that `test_agentic_tasks.py` specifies (delegated, in flight).
+
+### Stage 2 measured — 2026-11-11, third session, supersedes "Dry run, the only measurement so far"
+
+The cell ran as three arms over `rows-agentic-{none,pinned,compact}-20261112T0*.jsonl`, 385 requests,
+8 episodes per arm (4 tasks x 2 reps), snapshot `172d334b…`, pin `0c7cd2e8…`. Machine record:
+`experiments/ptr-engine/measure/AGENTIC-2026-11-11-analysis.{json,md}`; episodes in
+`AGENTIC-2026-11-11.json` and `AGENTIC-2026-11-11-none.json` (the `none` arm re-graded offline after
+the live `--out` was truncated by the next run).
+
+| arm | episodes | requests | answered /32 | correct | accuracy on answered | solved | mean prompt | cost units |
+|---|---|---|---|---|---|---|---|---|
+| `none` | 8 | 128 | 15 | 12 | 0.800 | 4 | 9,864 | 1,273,054 |
+| `pinned` | 8 | 128 | 6 | 5 | 0.833 | 0 | 4,128 | 288,589 |
+| `compact` | 8 | 129 | 6 | 6 | 1.000 | 0 | 4,153 | 304,518 |
+
+**Result: compaction buys cost and loses coverage.** Accuracy on answered checkpoints is equal or
+better for the folding arms; the difference is that they answer 6 of 32 where `none` answers 15, and
+none of them finishes a task. Instrument verdict `instrument_ok=True`, falsifiers 1/2/3/5 clear;
+falsifier 4 is **not evaluated** because `masking-no-fetch` is not in this cell. Full reading in
+`docs/AGENTIC-COMPACTION-AB.md` §10.
+
+**Four instrument defects were found and fixed by these runs** (`c15a417`, `fa439d6`, plus two
+uncommitted edits in this close-out): the presence test string-matched a derived value instead of
+locating its source revision (`_doc_anchor`/`_checkpoint_source`); `PinnedArm`/`CompactArm` inherited
+`allow_refetch = False` so nothing after the first read could be read again and neither arm ever
+answered; `--out` appended across runs so two runs mixed; and the fixtures carried
+`window_tokens 4096`, whose 3,027-token fold threshold sat below the ~3,700-token live prompt and
+thrashed the journal 12 times in 16 steps. `window_tokens` is now **8000** (threshold 5,912) in the
+fixtures and in `build_agentic_tasks.py`.
+
+**Budget: `spent=11787` of `cap=12094` — 307 left.** No further cell fits the pre-registered stage-2
+plan; anything more is an operator decision.

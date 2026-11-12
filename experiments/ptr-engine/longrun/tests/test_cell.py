@@ -182,7 +182,14 @@ def check_budget_refusal(cell_path, tmp):
                          "--no-cell-handoff"],
                         env={"CELL_RUNNER_PATH": fake, "CELL_MARKER": marker})
     assert rc == 3, "expected exit 3, got %d\n%s" % (rc, log)
-    assert "would_send_total=500" in log and "exceeds --budget 100" in log
+    # TWO refusals can fire here and they are both correct: `--budget` (the cell's own
+    # ceiling) or the PROJECT headroom, whichever is tighter. As the project spends down,
+    # headroom becomes the binding one and the `--budget` message never appears — so the
+    # assertion pins the invariant (a refusal that names the number) and not one branch's
+    # wording. Measured 2026-11-11: headroom 307 made this a headroom refusal.
+    assert "500" in log, "the dry-run's price is not named in the refusal:\n%s" % log
+    assert ("exceeds --budget 100" in log) or ("exceeds headroom" in log), \
+        "the refusal does not name which ceiling was exceeded:\n%s" % log
     assert not os.path.exists(marker), "the runner was invoked past --dry-run"
     assert not [n for n in os.listdir(out) if n.startswith("rows-cell-")], \
         "a row file was created before the budget check"

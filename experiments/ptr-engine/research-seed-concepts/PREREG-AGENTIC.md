@@ -111,3 +111,82 @@ invariant the plan set was the budget, not the task count.
 It does not measure a real user session's length: 10 steps is short by design, and the fold fires because
 the window is 4,096, not because the episode is long. It does not compare against a production
 compactor's summary quality. It does not price the summary call's own tokens beyond counting the request.
+
+---
+
+## Erratum, 2026-11-11 — the task count and the primary metric
+
+This section is appended, not substituted. Nothing above is rewritten: the table row at line 34 and the
+budget formula at line 103 stand as written, and this erratum supersedes them by reference. The
+pre-registration is frozen once the run starts, so a correction that changes what the run measures has to
+be recorded as a dated erratum rather than edited into the body.
+
+### 1. The task set is four tasks, not eight
+
+The run uses `longrun/tasks-agentic/AG-01..04.v1.json` — four tasks, not the eight the design table names.
+Each is 16 turns with 4 checkpoints at turns 4, 8, 12 and 16, and `window_tokens 4096`. The `.v1` in the
+filename is the *fixture* version, not a task-schema version: every one of the four files carries
+`schema: consonance.longrun-fixture/2`.
+
+The four `AG-05..08` files named in the table at line 34 were built in a bespoke `agentic-contract` shape.
+That schema was dropped, and the files were removed with it. `agentic_cell.load_task` now refuses any
+document whose `schema` is not `consonance.longrun-fixture/2`, raising
+`unsupported_task_schema: <schema> (task <id>; only 'consonance.longrun-fixture/2' is accepted)` — a
+foreign document is refused by name, never coerced into the accepted shape. The task count is therefore a
+property of what the loader will accept, not a number chosen for the budget.
+
+### 2. The primary metric `lost_then_failed` does not discriminate in stage 2
+
+`lost_then_failed` was defined for the stage-1 scripted replay, where the graded value could be present in
+the prompt and the fold could remove it. In an agentic episode the graded value is never in the prompt in
+any arm — the model must read it from the snapshot — so `expected_present` is False by construction
+everywhere, and every wrong answer classifies as `lost_then_failed`. The class is constant across arms and
+carries no information about the policy.
+
+The stage-2 primary metric is therefore **per-arm checkpoint accuracy**: 4 checkpoints × 4 tasks × 2 reps
+= 32 observations per arm. The mechanism measure is **`refetch_count`**, which is what distinguishes a
+policy that recovers the value by re-reading from one that never lost it. `lost_then_failed` is retained
+only as a diagnostic and must not be quoted as a stage-2 result.
+
+### 3. The arm set is four arms
+
+The stage-2 run has four arms: `none`, `masking-no-fetch`, `pinned`, `compact`. `bounded-context-fetch`
+and `spcc` are not in the stage-2 run. H1's comparison against `bounded-context-fetch` and falsifier 4
+(`recovery_not_paid`) are consequently not exercised by this run; they remain on the record as the
+hypothesis the arm set was designed to test, not as results.
+
+---
+
+## Erratum 2, 2026-11-11 — the first erratum's claim about `expected_present` is measured false, and `window_tokens` moved
+
+Appended, not substituted. Erratum 1 stays as written; this corrects it by reference, because a
+pre-registration's mistakes are part of the record.
+
+### 1. `expected_present` is NOT False by construction
+
+Erratum 1 §2 states that `expected_present` "is False by construction everywhere" in an agentic episode.
+That was reasoned, not measured, and the measurement contradicts it. The presence test asks whether the
+**source document revision** the checkpoint's value is derived from is still in the message list
+(`agentic_cell._doc_anchor` over `_checkpoint_source`), not whether the derived value's literal text
+appears — the literal test could never be true, because a CALL checkpoint's expected value is a derived
+dict and a NUM constant is computed by `ast`, and 9 of the 16 checkpoints are absent from the document
+body that carries them. Measured across three arms: `expected_present` was False at 3 checkpoints in each
+folding arm and 0 in `none`, so `lost_then_failed` totals 1 rather than 32 and the class **does**
+discriminate — it just discriminates on document presence, not on value text.
+
+### 2. `window_tokens` is 8000, not 4096
+
+The four fixtures now carry `window_tokens 8000` (`FOLD_AT_FRACTION 0.739`, threshold 5,912). At 4096 the
+threshold was 3,027 against live prompts of ~3,700 and the `pinned` arm folded 12 times in 16 steps without
+ever answering: the journal was dropped continuously, so the episode measured fold thrash and not policy.
+The value was raised once, before the recorded run, and every number in the result comes from the 8000
+fixtures. The fixtures' `documents` and `turns` are byte-identical to the 4096 versions, so the change
+moved only the fold threshold.
+
+### 3. The primary metric is coverage as well as accuracy
+
+Per-arm accuracy alone is reported with its denominator for this reason: the folding arms answer 6 of 32
+checkpoints where `none` answers 15, and no folding arm finishes a task. A `checkpoint_accuracy` quoted
+without `graded` would say the folding arms win. The result record
+(`measure/AGENTIC-2026-11-11-analysis.md`) prints both, and `docs/AGENTIC-COMPACTION-AB.md` §10 states the
+reading.

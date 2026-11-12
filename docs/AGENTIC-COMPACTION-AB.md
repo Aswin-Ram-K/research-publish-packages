@@ -318,3 +318,57 @@ number rather than counted as a zero.
 mismatch raises `agentic_pin_check_failed` and no row is written (`agentic_cell.py:969`). A row that
 does not name the instrument that wrote it is not evidence, and a run whose rows cannot be tied to a
 harness hash cannot be compared with any other run.
+
+## 10. Result, 2026-11-11: compaction buys cost and loses coverage
+
+Three arms measured, 8 episodes each (4 tasks x 2 reps), 16 steps, 385 requests, snapshot
+`state/snapshots/172d334b…`, pin `0c7cd2e8…`. Machine record:
+`experiments/ptr-engine/measure/AGENTIC-2026-11-11-analysis.{json,md}`.
+
+| arm | episodes | requests | answered /32 | correct | accuracy on answered | solved | mean prompt | max prompt | cost units |
+|---|---|---|---|---|---|---|---|---|---|
+| `none` | 8 | 128 | 15 | 12 | 0.800 | 4 | 9,864 | 24,672 | 1,273,054 |
+| `pinned` | 8 | 128 | 6 | 5 | 0.833 | 0 | 4,128 | 6,642 | 288,589 |
+| `compact` | 8 | 129 | 6 | 6 | 1.000 | 0 | 4,153 | 6,611 | 304,518 |
+
+`cost units` is `billed_tokens + 3 x completion_tokens`, the analyser's own basis.
+
+**Accuracy is not the difference; coverage is.** On the checkpoints an arm actually answers, the
+folding arms match or beat the uncompressed arm — `compact` answers 6 and gets all 6 right. What
+separates them is how many they answer: 6 of 32 against 15 of 32, and no folding arm finishes a
+single task while `none` finishes 4 of 8. The folding arms spend their last steps re-reading the
+snapshot and never emit the answer line: mean `refetch_count` is 5.0 for `pinned` and 5.5 for
+`compact` against 4.0 for `none`, over a shorter horizon.
+
+**The mechanism, stated with its consequence.** A fold drops the journal; `journal-drop` was the
+mechanism for both folding arms, firing 38 times (`pinned`) and 45 times (`compact`). After the fold
+the model has to re-read to recover, and it does — but re-reading costs steps, and the episode ends on
+`max_steps` rather than on an answer. Compaction is 4.2x cheaper per request and unusable as a task
+policy at this step budget.
+
+**This is a frontier, not a clean win for either arm.** `none`'s max prompt is 24,672 tokens against
+an 8,000-token window: the uncompressed arm's advantage is won by exceeding the constraint the folding
+arms obey. The honest reading is that at 16 steps the folding arms need a larger step budget (or an
+answer-first checkpoint contract) to be comparable, and that is the next measurement, not a revision
+of this one.
+
+**§9 is corrected on one point.** §9 said `expected_present` "is False by construction" in an agentic
+episode. That was measured and found false: the presence test asks whether the *source document
+revision* the checkpoint's value comes from is still in the prompt (`_doc_anchor` +
+`_checkpoint_source`, `agentic_cell.py`), and it reads True whenever the model has not yet folded past
+that document. Across the three arms `expected_present` was False at 3 checkpoints in each folding arm
+and 0 in `none` — which is why `lost_then_failed` totals 1 rather than 32, and why the instrument now
+clears its first falsifier instead of firing it.
+
+**Falsifiers, §5, all five against this record:**
+1. `instrument_failure` — 1 `lost_then_failed` observed, so loss is observable. Not fired.
+2. `null_model_error` — `present_then_failed` is 3 in `none` and 0 in both folding arms, so model
+   error does not dominate the folding arms' failures. Not fired.
+3. `pin_premise_fails` — `pinned` 0.833 >= `none` 0.800. Not fired.
+4. `recovery_not_paid` — `masking-no-fetch` was not run in this cell, so the comparison is
+   unavailable and the falsifier reports null rather than firing. **Not evaluated, not passed.**
+5. `compaction_not_cheaper` — `compact` mean prompt 4,153 < `none` 9,864. Not fired.
+
+Falsifier 4 is the one gap in the record: `masking-no-fetch` was run in the earlier cell and was void
+on every request (`refetch_refused`, no answers), which is recorded in the journal as a finding rather
+than as a pass.

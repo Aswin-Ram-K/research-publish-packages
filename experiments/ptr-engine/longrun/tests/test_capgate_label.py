@@ -76,7 +76,9 @@ def fake_runner(tmpdir, rc, stderr_text=REFUSAL):
 def stage_args(fixture):
     return types.SimpleNamespace(arm="pointer-stable", fixture=fixture, reps=1,
                                  turn_wall_cap=60.0, runaway_turns=2, endpoint=None,
-                                 turns=0, thinking="off", hypothesis="none")
+                                 turns=0, thinking="off", hypothesis="none",
+                                 temperature=0.0, budget_cap=12094,
+                                 tools=None, fetch_policy=None)
 
 
 class StubGate:

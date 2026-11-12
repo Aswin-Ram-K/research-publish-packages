@@ -29,7 +29,8 @@ def _args(**kw):
     base = dict(fixture=os.path.join(LONGRUN, "fixtures", "LR-01.json"),
                 arm="baseline", reps=1, turns=3, hypothesis=None,
                 turn_wall_cap=180.0, runaway_turns=2, thinking="off",
-                endpoint=None, out_dir=tempfile.mkdtemp(prefix="claimwire-"))
+                endpoint=None, out_dir=tempfile.mkdtemp(prefix="claimwire-"),
+                temperature=0.0, budget_cap=12094, tools=None, fetch_policy=None)
     base.update(kw)
     return SimpleNamespace(**base)
 

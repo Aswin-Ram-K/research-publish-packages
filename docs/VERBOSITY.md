@@ -1,6 +1,6 @@
 # VERBOSITY — does the grow arm's longer answer explain the TTFT gap?
 
-_Generated offline by `experiments/ptr-engine/longrun/tests/test_verbosity.py` (sha256 `9f6aa0e984b6595d`) at 2026-11-11T23:57:58Z from 112 rows files. Zero inference requests._
+_Generated offline by `experiments/ptr-engine/longrun/tests/test_verbosity.py` (sha256 `9f6aa0e984b6595d`) at 2026-11-12T00:43:27Z from 119 rows files. Zero inference requests._
 
 **Verdict: `confound_immaterial`.** holding completion length equal leaves 86.7% of the TTFT gap in which arm a (pointer-stable) is 0.37x the first-token latency of arm b (transcript-grow), i.e. b is 2.67x slower; the fitted b_completion is +0.0720 per ln-token and completion length differs 0.19x between the arms, so verbosity covers only 13.3% of it
 
@@ -11,7 +11,14 @@ Scope: p95 TTFT is refused corpus-wide at arm level (no cell reaches n>=60), so 
 | rows file | rows | completed turns | sha256 |
 |---|---|---|---|
 | `rows-abs2-2026-11-09.jsonl` | 242 | 198 | `20bcd6c34b4aef825bc47a6b18e357ca0a13ed0e4b2cdcf5e436d481a1fbdba8` |
-| `rows-agentic-none-20261111T235304Z.jsonl` | 116 | 0 | `2d721d9478ac9382180fd047a5d3ce03e50c2887761f71cbffaba1f0a6e101db` |
+| `rows-agentic-compact-20261112T003017Z.jsonl` | 129 | 0 | `89842ea9ddd23da2811dbc84fe3ddd5dca6afd0f1a9ad28f50163420d960b249` |
+| `rows-agentic-masking-no-fetch-20261112T000932Z.jsonl` | 128 | 0 | `71124799d4cdcf32abb793331e973e062b9b0e41f7182d0faa9ddf99bf0a5732` |
+| `rows-agentic-none-20261112T000204Z.jsonl` | 72 | 0 | `3000b78b986b4fc817f22992d2be23b785a27af635259dc5a26dc602b7fc9cb3` |
+| `rows-agentic-none-20261112T000932Z.jsonl` | 128 | 0 | `52f3a13cf50420a4fbd9b577d19eebe4b055f6d1d31117b0242fbab39ace942b` |
+| `rows-agentic-none-20261112T002154Z.jsonl` | 128 | 0 | `87d3c7b73139894fa9432299d0f55b57e89d68e2db83532e0cc6d024ab63a4fe` |
+| `rows-agentic-pinned-20261112T000932Z.jsonl` | 59 | 0 | `3fe1e3d7c65bc23f3d47e03d3bd92e92cd5f2b9f21335a1de7dcad8376f6687d` |
+| `rows-agentic-pinned-20261112T002154Z.jsonl` | 28 | 0 | `d5952b5037c254f3ae22cc65a3e2f5bbf2b46d3d402f09bd436128c4e4715d37` |
+| `rows-agentic-pinned-20261112T003017Z.jsonl` | 128 | 0 | `62825502973547a256f504c0fcdb910807b5488cc06d67e6a6e3c9de49395fc2` |
 | `rows-agg-8014.jsonl` | 141 | 99 | `e5ec0b61bcac3e3ae232e415436fd2cd9567143dffde5f9755b3749b493ed355` |
 | `rows-agg-fetch-mt36.jsonl` | 41 | 34 | `0066da598801d9a1d8686f8c9953b8081aaa5dab0caec9fb763aad9bde4b5fe2` |
 | `rows-agg-fetch-mt50.jsonl` | 54 | 41 | `baca066374f4b2110ff8d93be8b87529249d0dbfd4075963757604dc7daab3a9` |

@@ -78,6 +78,25 @@ def write(engine: str = ENGINE, record: str = RECORD) -> dict:
     payload["instrument"] = "agentic-episode-loop"
     payload["note"] = ("stage 2's own pin; the replay runner's HARNESS-PIN.json is a "
                        "different instrument and is not superseded by this record")
+    # Rows carry the digest that was current WHEN THEY WERE WRITTEN, so overwriting the
+    # record silently orphans every row file.  Keep the superseded digests, as
+    # repin_harness.py does for the replay pin: the record is the only place that can
+    # still say which bytes produced a row file after the tree has moved on.
+    previous = None
+    if os.path.exists(record):
+        try:
+            with open(record, encoding="utf-8") as fh:
+                previous = json.load(fh)
+        except (ValueError, OSError):
+            previous = None
+    if previous and previous.get("harness_sha256") != payload["harness_sha256"]:
+        history = list(previous.get("superseded") or [])
+        history.append({"harness_sha256": previous.get("harness_sha256"),
+                        "files": previous.get("files") or {},
+                        "file_count": previous.get("file_count")})
+        payload["superseded"] = history
+    elif previous and previous.get("superseded"):
+        payload["superseded"] = previous["superseded"]
     with open(record, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, indent=2, sort_keys=True)
         fh.write("\n")
@@ -112,11 +131,28 @@ def main(argv=None) -> int:
     g.add_argument("--write", action="store_true", help="record the current tree")
     g.add_argument("--check", action="store_true", help="fail if the tree moved")
     g.add_argument("--print", dest="show", action="store_true", help="print the digest")
+    ap.add_argument("--record-superseded", default=None, metavar="DIGEST",
+                    help="with --write: also record DIGEST as a superseded pin, for a "
+                         "digest whose record was overwritten before history was kept. "
+                         "Every row file carries harness_sha256, so the value is recoverable")
     args = ap.parse_args(argv)
     if args.write:
         payload = write()
-        print("wrote %s harness_sha256=%s files=%d"
-              % (RECORD, payload["harness_sha256"], payload["file_count"]))
+        if args.record_superseded:
+            history = list(payload.get("superseded") or [])
+            if args.record_superseded != payload["harness_sha256"] and not any(
+                    entry.get("harness_sha256") == args.record_superseded for entry in history):
+                history.append({"harness_sha256": args.record_superseded,
+                                "files": {}, "file_count": None,
+                                "note": "digest carried by rows written before the record "
+                                        "kept history; recovered from their harness_sha256"})
+                payload["superseded"] = history
+                with open(RECORD, "w", encoding="utf-8") as fh:
+                    json.dump(payload, fh, indent=2, sort_keys=True)
+                    fh.write("\n")
+        print("wrote %s harness_sha256=%s files=%d superseded=%d"
+              % (RECORD, payload["harness_sha256"], payload["file_count"],
+                 len(payload.get("superseded") or [])))
         return 0
     if args.check:
         code, message = check(ENGINE, RECORD)

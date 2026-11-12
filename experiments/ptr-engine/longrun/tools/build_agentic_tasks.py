@@ -48,7 +48,7 @@ SCHEMA = "consonance.longrun-fixture/2"
 OUT_DIR = "experiments/ptr-engine/longrun/tasks-agentic"
 STEPS = (4, 8, 12, 16)
 N_STEPS = 16
-WINDOW_TOKENS = 4096
+WINDOW_TOKENS = 8000
 BYTES_PER_TOKEN = 4.0914
 GENERATION = "gen-7"
 ERRORS_PY = "experiments/ptr-engine/ptr_engine/errors.py"
@@ -369,8 +369,11 @@ def _fixture(spec: dict, root: str, consts, calls) -> dict:
         "turns": _turns(spec, derived),
         "window_tokens": WINDOW_TOKENS,
         "window_tokens_basis": (
-            "PinnedArmState folds at FOLD_AT_FRACTION x window_tokens (~3028 tokens); "
-            "at 65536 a 16-step episode never folds and is VOID by design §5 falsifier 7"),
+            "PinnedArmState folds at FOLD_AT_FRACTION x window_tokens = 5912 tokens at 8000. "
+            "MEASURED 2026-11-11: at 4096 the threshold was 3028 and live prompts run ~3700, so "
+            "`pinned` folded 12 times in 16 steps and the model never answered; at 8000 it folds "
+            "4-5 times and answers. At 65536 a 16-step episode never folds and is VOID by "
+            "design §5 falsifier 7"),
         "documents": documents,
         "revision_schedule": [],
         "checkpoints": checkpoints,
