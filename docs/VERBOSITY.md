@@ -1,6 +1,6 @@
 # VERBOSITY — does the grow arm's longer answer explain the TTFT gap?
 
-_Generated offline by `experiments/ptr-engine/longrun/tests/test_verbosity.py` (sha256 `9f6aa0e984b6595d`) at 2026-11-10T18:58:42Z from 103 rows files. Zero inference requests._
+_Generated offline by `experiments/ptr-engine/longrun/tests/test_verbosity.py` (sha256 `9f6aa0e984b6595d`) at 2026-11-11T23:57:58Z from 112 rows files. Zero inference requests._
 
 **Verdict: `confound_immaterial`.** holding completion length equal leaves 86.7% of the TTFT gap in which arm a (pointer-stable) is 0.37x the first-token latency of arm b (transcript-grow), i.e. b is 2.67x slower; the fitted b_completion is +0.0720 per ln-token and completion length differs 0.19x between the arms, so verbosity covers only 13.3% of it
 
@@ -11,6 +11,7 @@ Scope: p95 TTFT is refused corpus-wide at arm level (no cell reaches n>=60), so 
 | rows file | rows | completed turns | sha256 |
 |---|---|---|---|
 | `rows-abs2-2026-11-09.jsonl` | 242 | 198 | `20bcd6c34b4aef825bc47a6b18e357ca0a13ed0e4b2cdcf5e436d481a1fbdba8` |
+| `rows-agentic-none-20261111T235304Z.jsonl` | 116 | 0 | `2d721d9478ac9382180fd047a5d3ce03e50c2887761f71cbffaba1f0a6e101db` |
 | `rows-agg-8014.jsonl` | 141 | 99 | `e5ec0b61bcac3e3ae232e415436fd2cd9567143dffde5f9755b3749b493ed355` |
 | `rows-agg-fetch-mt36.jsonl` | 41 | 34 | `0066da598801d9a1d8686f8c9953b8081aaa5dab0caec9fb763aad9bde4b5fe2` |
 | `rows-agg-fetch-mt50.jsonl` | 54 | 41 | `baca066374f4b2110ff8d93be8b87529249d0dbfd4075963757604dc7daab3a9` |
@@ -21,11 +22,17 @@ Scope: p95 TTFT is refused corpus-wide at arm level (no cell reaches n>=60), so 
 | `rows-agg2-2026-11-09.jsonl` | 242 | 209 | `3d3bbb379915057515df06e4115bf8509d294a3d9b2f3afeb6313efbdb64c2ea` |
 | `rows-agg3-instructed.jsonl` | 122 | 94 | `ecb48ddec660295279a398857a91d2856a32c439a43bba243db67bf545a1d074` |
 | `rows-baseline-2026-10-26.jsonl` | 105 | 84 | `638c84942e3bcdba4b416cceda9214f3fdcc99c42171639bf5c52736f40e032d` |
+| `rows-cell-bounded-context-fetch-20261111T231050Z.jsonl` | 101 | 100 | `227aa34901a2bf3317a837a5606e4cdf0261b9dac03cd2754bd52f3f21a3e358` |
+| `rows-cell-bounded-context-fetch-20261111T231625Z.jsonl` | 119 | 99 | `3487db7d486f4fc713821724b3135fbd83a1dde39821848f5c1cf6d8ec37f152` |
 | `rows-cell-lease-reopen-20261027T004219Z.jsonl` | 7 | 0 | `7d49862313b01b7ef7db5b9d86e4bc921678d0ec05985e528d603ef7e59a7f64` |
 | `rows-cell-lease-reopen-20261027T024223Z.jsonl` | 30 | 10 | `6bf8cf9ba751d0892ce595fc2a1d4845b741575b014e2a37cc9fa62cfb8a16aa` |
 | `rows-cell-lease-reopen-20261027T084049Z.jsonl` | 56 | 12 | `e58c21f8366695915211d801cd7b9c6c475d923552080abba651843307aabb7e` |
 | `rows-cell-lease-reopen-20261028T032823Z.jsonl` | 91 | 34 | `8b7774afc9ce19bb0fe0bfda98f5a0e83802505d42e18242130a9a57453de822` |
 | `rows-cell-lease-reopen-20261028T033139Z.jsonl` | 96 | 27 | `1efd44659c68dc709702ca589d9ba7510e7950a6f627a659d39f52841b77c54f` |
+| `rows-cell-masking-no-fetch-20261111T230833Z.jsonl` | 100 | 100 | `89ff9911dc673c29ff446e0e5b5dce5b6d424e742851776badf7c918239785dc` |
+| `rows-cell-masking-no-fetch-20261111T231412Z.jsonl` | 100 | 100 | `34d7d45e00b248fb7c030728197f40675b8e3cb5c72d7f5bfad93c97146ae3f9` |
+| `rows-cell-pinned-20261111T230953Z.jsonl` | 100 | 100 | `3ebe23ac936d5288615bbcbbf09bb2a07a8cfe983e09feeeb763a4199053ae41` |
+| `rows-cell-pinned-20261111T231541Z.jsonl` | 100 | 100 | `1229680906db4c1326f60995262f2ad10349d9ea9a09f6b6a5253eb8f7eae81f` |
 | `rows-cell-pointer-stable-20261026T145758Z.jsonl` | 6 | 5 | `5ac9dd992f5d8715696925f56c225024e172cb98b4b9a937a0ee63bd099e9800` |
 | `rows-cell-pointer-stable-20261026T182535Z.jsonl` | 27 | 25 | `46afc892480ae1dbe4b20d13fd4dacb983653a9f0a04b6a42a6283b3c55ca3b1` |
 | `rows-cell-pointer-stable-20261026T202040Z.jsonl` | 12 | 11 | `26b7f43fa3092447e4b9e88f72b035ffec39201d6c3e07bd7b1eb8206b1fa76c` |
@@ -37,6 +44,8 @@ Scope: p95 TTFT is refused corpus-wide at arm level (no cell reaches n>=60), so 
 | `rows-cell-pointer-stable-20261028T025853Z.jsonl` | 93 | 39 | `9a9caf34c4c1ee00c9343803a135b690f9001c1fed6b4f38fd53f40b0db4c00b` |
 | `rows-cell-pointer-stable-20261028T030232Z.jsonl` | 94 | 38 | `e01c94ae7fcddb145d9268dcdc08b3dbd888737ff92c147131018eebae57bf51` |
 | `rows-cell-pointer-stable-20261028T030559Z.jsonl` | 89 | 38 | `a94fd3fbf81040f11101eb9d38b148b6659d7455068e69327d4b7c332c0b60ec` |
+| `rows-cell-spcc-20261111T230914Z.jsonl` | 100 | 100 | `7a67a5b86e7f6939091a7444e4939171f0030bba8cc096eb713f692bb2528301` |
+| `rows-cell-spcc-20261111T231458Z.jsonl` | 100 | 100 | `cc75c9226a0f4dacc28f6c6941eb2b8ee6a909b73b9a1e6653d7d9b55a63a88c` |
 | `rows-cell-transcript-compact-20261026T203733Z.jsonl` | 12 | 12 | `df877fba7283c4617e4e94ce3070bed93782b4882fd59dd65d89b8ecefc95175` |
 | `rows-cell-transcript-compact-20261027T004155Z.jsonl` | 14 | 12 | `cbabecfcdcbb21231161fc098252e626d56136482c6c46f615254badbf35aad0` |
 | `rows-cell-transcript-compact-20261028T032235Z.jsonl` | 66 | 40 | `151299d09b2d8f3fae6891b32a13e025cae6ad7cc9760d2d303d378b67f373f1` |
@@ -133,10 +142,16 @@ Scope: p95 TTFT is refused corpus-wide at arm level (no cell reaches n>=60), so 
 | `rows-baseline-2026-10-26.jsonl` | C | 24 | 225.7 / 300.0 / 300.0 / 300.0 | 150.8 / 200.0 / 200.0 | 1.4970 | 2059.0 / 2637.0 | — | — (no TTFT field) |
 | `rows-baseline-2026-10-26.jsonl` | C0 | 24 | 236.1 / 300.0 / 300.0 / 300.0 | 175.4 / 200.0 / 200.0 | 1.3464 | 5131.0 / 6571.0 | — | — (no TTFT field) |
 | `rows-baseline-2026-10-26.jsonl` | R | 36 | 46.7 / 5.5 / 197.0 / 300.0 | 38.1 / 12.0 / 126.0 | 1.2261 | 4317.5 / 6429.0 | — | — (no TTFT field) |
+| `rows-cell-bounded-context-fetch-20261111T231050Z.jsonl` | bounded-context-fetch | 100 | 10.2 / 5.0 / 5.0 / 474.0 | 18.1 / 12.0 / 12.0 | 0.5651 | 3387.0 / 5217.1 | 236.7 / 232.1 / 276.9 | 294.5 |
+| `rows-cell-bounded-context-fetch-20261111T231625Z.jsonl` | bounded-context-fetch | 99 | 50.9 / 5.0 / 10.0 / 1398.0 | 142.5 / 12.0 / 16.0 | 0.3574 | 4047.0 / 5453.8 | 240.1 / 226.0 / 290.3 | 364.7 |
 | `rows-cell-lease-reopen-20261027T024223Z.jsonl` | lease-reopen | 10 | 49.7 / 43.5 / 68.8 / 85.0 | 125.0 / 120.5 / 195.1 | 0.3976 | 1227.0 / 2360.9 | 125.7 / 126.1 / 147.0 | refused (n=10<60) |
 | `rows-cell-lease-reopen-20261027T084049Z.jsonl` | lease-reopen | 12 | 47.8 / 27.0 / 78.7 / 201.0 | 121.2 / 64.5 / 265.5 | 0.3938 | 1224.0 / 1238.3 | 158.1 / 158.3 / 170.0 | refused (n=12<60) |
 | `rows-cell-lease-reopen-20261028T032823Z.jsonl` | lease-reopen | 34 | 46.4 / 31.5 / 83.4 / 229.0 | 106.7 / 79.5 / 196.1 | 0.4348 | 1236.5 / 1378.8 | 132.7 / 112.7 / 135.0 | refused (n=34<60) |
 | `rows-cell-lease-reopen-20261028T033139Z.jsonl` | lease-reopen | 27 | 67.7 / 50.0 / 132.0 / 317.0 | 158.4 / 108.0 / 193.6 | 0.4271 | 1268.0 / 2560.0 | 156.8 / 129.5 / 197.5 | refused (n=27<60) |
+| `rows-cell-masking-no-fetch-20261111T230833Z.jsonl` | masking-no-fetch | 100 | 5.3 / 5.0 / 5.0 / 10.0 | 12.2 / 12.0 / 12.0 | 0.4330 | 3025.0 / 4782.1 | 207.9 / 207.8 / 229.3 | 233.1 |
+| `rows-cell-masking-no-fetch-20261111T231412Z.jsonl` | masking-no-fetch | 100 | 5.4 / 5.0 / 5.0 / 19.0 | 12.6 / 12.0 / 12.0 | 0.4304 | 3102.0 / 4859.1 | 215.5 / 214.7 / 248.8 | 258.1 |
+| `rows-cell-pinned-20261111T230953Z.jsonl` | pinned | 100 | 5.3 / 5.0 / 5.0 / 10.0 | 12.2 / 12.0 / 12.0 | 0.4327 | 2620.0 / 4006.3 | 202.6 / 196.7 / 230.9 | 240.6 |
+| `rows-cell-pinned-20261111T231541Z.jsonl` | pinned | 100 | 7.5 / 5.0 / 5.0 / 228.0 | 13.6 / 12.0 / 12.0 | 0.5521 | 2682.5 / 3963.6 | 190.3 / 189.4 / 207.3 | 212.2 |
 | `rows-cell-pointer-stable-20261026T145758Z.jsonl` | pointer-stable | 5 | 4688.6 / 1415.0 / 10984.0 / 13126.0 | 366.4 / 152.0 / 781.2 | 12.7964 | 4312.0 / 4336.8 | 408.7 / 399.6 / 658.0 | refused (n=5<60) |
 | `rows-cell-pointer-stable-20261026T182535Z.jsonl` | pointer-stable | 25 | 162.7 / 56.0 / 481.2 / 718.0 | 600.6 / 248.0 / 1773.0 | 0.2708 | 4863.0 / 5006.2 | 195.8 / 141.6 / 206.0 | refused (n=25<60) |
 | `rows-cell-pointer-stable-20261026T202040Z.jsonl` | pointer-stable | 11 | 410.6 / 205.0 / 607.0 / 2386.0 | 1449.4 / 807.0 / 1856.0 | 0.2833 | 4864.0 / 4999.0 | 149.3 / 141.9 / 175.4 | refused (n=11<60) |
@@ -148,6 +163,8 @@ Scope: p95 TTFT is refused corpus-wide at arm level (no cell reaches n>=60), so 
 | `rows-cell-pointer-stable-20261028T025853Z.jsonl` | pointer-stable | 39 | 47.4 / 28.0 / 85.6 / 261.0 | 97.4 / 60.0 / 188.0 | 0.4868 | 5296.0 / 6157.0 | 199.0 / 148.2 / 232.3 | refused (n=39<60) |
 | `rows-cell-pointer-stable-20261028T030232Z.jsonl` | pointer-stable | 38 | 36.7 / 20.5 / 70.6 / 142.0 | 61.9 / 56.5 / 109.8 | 0.5927 | 5299.0 / 5980.4 | 190.6 / 149.9 / 237.4 | refused (n=38<60) |
 | `rows-cell-pointer-stable-20261028T030559Z.jsonl` | pointer-stable | 38 | 51.0 / 27.5 / 122.6 / 289.0 | 112.9 / 74.0 / 198.6 | 0.4517 | 5304.0 / 6740.8 | 187.2 / 156.0 / 253.2 | refused (n=38<60) |
+| `rows-cell-spcc-20261111T230914Z.jsonl` | spcc | 100 | 5.3 / 5.0 / 5.0 / 10.0 | 12.2 / 12.0 / 12.0 | 0.4330 | 2966.0 / 4737.0 | 189.9 / 189.2 / 211.8 | 223.5 |
+| `rows-cell-spcc-20261111T231458Z.jsonl` | spcc | 100 | 5.3 / 5.0 / 5.0 / 10.0 | 12.2 / 12.0 / 12.0 | 0.4330 | 3094.0 / 4865.0 | 206.8 / 195.9 / 232.1 | 287.6 |
 | `rows-cell-transcript-compact-20261026T203733Z.jsonl` | transcript-compact | 12 | 20.2 / 21.0 / 22.0 / 44.0 | 80.8 / 92.0 / 93.0 | 0.2497 | 5187.0 / 5398.0 | 142.5 / 141.9 / 168.0 | refused (n=12<60) |
 | `rows-cell-transcript-compact-20261027T004155Z.jsonl` | transcript-compact | 12 | 50.9 / 64.5 / 69.0 / 69.0 | 50.6 / 42.0 / 55.0 | 1.0066 | 5556.0 / 5716.4 | 143.0 / 144.1 / 157.3 | refused (n=12<60) |
 | `rows-cell-transcript-compact-20261028T032235Z.jsonl` | transcript-compact | 40 | 49.1 / 70.0 / 72.0 / 190.0 | 85.4 / 69.0 / 99.0 | 0.5746 | 6347.0 / 7731.0 | 158.2 / 157.8 / 180.7 | refused (n=40<60) |
@@ -274,10 +291,16 @@ Regression pooled across arms **within one file**, so no slope crosses a file bo
 | `rows-agg-masking-r1.jsonl` | 100 | -0.0243 | +0.1594 | 0.104 | +0.1801 | -0.527 |
 | `rows-agg2-2026-11-09.jsonl` | 242 | +0.0153 | +0.1019 | 0.158 | +0.1037 | 0.280 |
 | `rows-agg3-instructed.jsonl` | 122 | +0.0155 | +0.1558 | 0.238 | +0.1569 | 0.202 |
+| `rows-cell-bounded-context-fetch-20261111T231050Z.jsonl` | 101 | +0.1247 | +0.0445 | 0.187 | +0.0526 | 0.101 |
+| `rows-cell-bounded-context-fetch-20261111T231625Z.jsonl` | 119 | +0.1883 | +0.1051 | 0.413 | +0.1206 | 0.304 |
 | `rows-cell-lease-reopen-20261027T024223Z.jsonl` | 30 | +0.7483 | +0.3284 | 0.316 | +0.2863 | -0.061 |
 | `rows-cell-lease-reopen-20261027T084049Z.jsonl` | 56 | +0.4751 | +0.1622 | 0.344 | +0.1844 | 0.081 |
 | `rows-cell-lease-reopen-20261028T032823Z.jsonl` | 91 | +0.8564 | +0.1583 | 0.245 | +0.1583 | -0.000 |
 | `rows-cell-lease-reopen-20261028T033139Z.jsonl` | 96 | +0.7102 | +0.0821 | 0.280 | +0.1007 | 0.048 |
+| `rows-cell-masking-no-fetch-20261111T230833Z.jsonl` | 100 | +0.1474 | +0.1027 | 0.613 | -0.0698 | -0.405 |
+| `rows-cell-masking-no-fetch-20261111T231412Z.jsonl` | 100 | +0.1988 | +0.1169 | 0.473 | -0.0270 | -0.329 |
+| `rows-cell-pinned-20261111T230953Z.jsonl` | 100 | +0.0945 | +0.4474 | 0.324 | +0.4314 | -0.073 |
+| `rows-cell-pinned-20261111T231541Z.jsonl` | 100 | +0.0901 | -0.0131 | 0.162 | -0.0045 | 0.114 |
 | `rows-cell-pointer-stable-20261026T182535Z.jsonl` | 27 | -5.5388 | -0.0128 | 0.501 | +0.0641 | -0.418 |
 | `rows-cell-pointer-stable-20261026T202040Z.jsonl` | 12 | +0.0955 | -0.0344 | 0.515 | -0.0358 | -0.332 |
 | `rows-cell-pointer-stable-20261026T204258Z.jsonl` | 12 | -0.3453 | -0.0047 | 0.020 | +0.0133 | -0.714 |
@@ -288,6 +311,8 @@ Regression pooled across arms **within one file**, so no slope crosses a file bo
 | `rows-cell-pointer-stable-20261028T025853Z.jsonl` | 93 | +1.6356 | +0.0809 | 0.178 | +0.0787 | -0.010 |
 | `rows-cell-pointer-stable-20261028T030232Z.jsonl` | 94 | +1.9435 | +0.0454 | 0.111 | +0.0192 | -0.142 |
 | `rows-cell-pointer-stable-20261028T030559Z.jsonl` | 89 | +0.5085 | +0.0656 | 0.031 | +0.0689 | 0.061 |
+| `rows-cell-spcc-20261111T230914Z.jsonl` | 100 | +0.0614 | +0.0324 | 0.073 | +0.0101 | -0.133 |
+| `rows-cell-spcc-20261111T231458Z.jsonl` | 100 | +0.0538 | -0.1403 | 0.035 | -0.1592 | -0.135 |
 | `rows-cell-transcript-compact-20261026T203733Z.jsonl` | 12 | +2.7963 | -0.0143 | 0.739 | -0.1259 | -0.370 |
 | `rows-cell-transcript-compact-20261027T004155Z.jsonl` | 14 | +2.5261 | -0.0408 | 0.614 | -0.1124 | -0.581 |
 | `rows-cell-transcript-compact-20261028T032235Z.jsonl` | 66 | +1.5474 | +0.0776 | 0.215 | +0.0699 | -0.033 |
@@ -426,10 +451,16 @@ On the **p50** basis the gap is **0.35x** (prompt -0.672, completion -0.142, res
 | `rows-baseline-2026-10-26.jsonl` | C | 24 | 300 | 200 | 0.00 | 0.00 |
 | `rows-baseline-2026-10-26.jsonl` | C0 | 24 | 300 | 200 | 0.00 | 0.00 |
 | `rows-baseline-2026-10-26.jsonl` | R | 36 | 6 | 12 | 0.00 | 0.00 |
+| `rows-cell-bounded-context-fetch-20261111T231050Z.jsonl` | bounded-context-fetch | 100 | 5 | 12 | 0.99 | 0.00 |
+| `rows-cell-bounded-context-fetch-20261111T231625Z.jsonl` | bounded-context-fetch | 99 | 5 | 12 | 1.00 | 0.06 |
 | `rows-cell-lease-reopen-20261027T024223Z.jsonl` | lease-reopen | 10 | 44 | 120 | 0.40 | 0.00 |
 | `rows-cell-lease-reopen-20261027T084049Z.jsonl` | lease-reopen | 12 | 27 | 64 | 0.50 | 0.25 |
 | `rows-cell-lease-reopen-20261028T032823Z.jsonl` | lease-reopen | 34 | 32 | 80 | 0.59 | 0.12 |
 | `rows-cell-lease-reopen-20261028T033139Z.jsonl` | lease-reopen | 27 | 50 | 108 | 0.44 | 0.11 |
+| `rows-cell-masking-no-fetch-20261111T230833Z.jsonl` | masking-no-fetch | 100 | 5 | 12 | 1.00 | 0.06 |
+| `rows-cell-masking-no-fetch-20261111T231412Z.jsonl` | masking-no-fetch | 100 | 5 | 12 | 1.00 | 0.06 |
+| `rows-cell-pinned-20261111T230953Z.jsonl` | pinned | 100 | 5 | 12 | 1.00 | 0.06 |
+| `rows-cell-pinned-20261111T231541Z.jsonl` | pinned | 100 | 5 | 12 | 0.99 | 0.06 |
 | `rows-cell-pointer-stable-20261026T145758Z.jsonl` | pointer-stable | 5 | 1415 | 152 | 0.00 | 0.00 |
 | `rows-cell-pointer-stable-20261026T182535Z.jsonl` | pointer-stable | 25 | 56 | 248 | 0.36 | 0.12 |
 | `rows-cell-pointer-stable-20261026T202040Z.jsonl` | pointer-stable | 11 | 205 | 807 | 0.73 | 0.18 |
@@ -441,6 +472,8 @@ On the **p50** basis the gap is **0.35x** (prompt -0.672, completion -0.142, res
 | `rows-cell-pointer-stable-20261028T025853Z.jsonl` | pointer-stable | 39 | 28 | 60 | 0.28 | 0.15 |
 | `rows-cell-pointer-stable-20261028T030232Z.jsonl` | pointer-stable | 38 | 20 | 56 | 0.32 | 0.16 |
 | `rows-cell-pointer-stable-20261028T030559Z.jsonl` | pointer-stable | 38 | 28 | 74 | 0.34 | 0.16 |
+| `rows-cell-spcc-20261111T230914Z.jsonl` | spcc | 100 | 5 | 12 | 1.00 | 0.06 |
+| `rows-cell-spcc-20261111T231458Z.jsonl` | spcc | 100 | 5 | 12 | 1.00 | 0.06 |
 | `rows-cell-transcript-compact-20261026T203733Z.jsonl` | transcript-compact | 12 | 21 | 92 | 1.00 | 0.17 |
 | `rows-cell-transcript-compact-20261027T004155Z.jsonl` | transcript-compact | 12 | 64 | 42 | 0.25 | 0.08 |
 | `rows-cell-transcript-compact-20261028T032235Z.jsonl` | transcript-compact | 40 | 70 | 69 | 0.23 | 0.10 |

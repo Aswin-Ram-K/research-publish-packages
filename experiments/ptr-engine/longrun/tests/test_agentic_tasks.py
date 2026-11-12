@@ -17,6 +17,21 @@ returning `hits[0]` unconditionally:
     2 failed, 5 passed
 
 Restored, the same command is green (7 passed).
+
+VOID RULE (second red->green, same file).  The rule is per mechanism: `none` is never
+void (it declares no mechanism and is the baseline), `masking-no-fetch` is void only
+when `evicted == 0`, the fold arms only when `compactions == 0`, and an arm with no
+episode rows is void with reason `no_episode_rows`.  Reverted to the old global rule
+(`compactions == 0 and evicted == 0`):
+
+    $ .venv/bin/python -m pytest experiments/ptr-engine/longrun/tests/test_agentic_tasks.py -q
+    FAILED ...::test_none_arm_is_never_void - assert True is False
+    FAILED ...::test_masking_arm_voids_only_when_nothing_was_evicted
+    AssertionError: assert ['compactions_zero'] == ['evicted_zero']
+    FAILED ...::test_fold_arms_void_only_when_no_fold_fired - assert 0 == 1
+    3 failed, 8 passed
+
+Restored, the same command is green (11 passed).
 """
 from __future__ import annotations
 
@@ -131,22 +146,18 @@ def test_duplicate_call_is_refused():
         B._unique_const({}, "MISSING")
 
 
-def _row(arm, rep, compactions, oks, billed=1000, out=100):
+def _row(arm, rep, compactions, oks, evicted=0, billed=1000, out=100):
     return {"task": "AG-01", "arm": arm, "rep": rep, "solved": all(oks),
             "checkpoints": [{"step": (i + 1) * 4, "expected": "x", "answer": "x",
                              "ok": ok} for i, ok in enumerate(oks)],
             "steps_used": 16, "requests": 12, "refetch_count": 2,
-            "compactions": compactions, "evicted": 0, "prompt_tokens_max": 3000,
+            "compactions": compactions, "evicted": evicted, "prompt_tokens_max": 3000,
             "billed_tokens": billed, "completion_tokens": out}
 
 
-def test_analyzer_reports_void_not_a_data_point():
+def _report(rows):
     root = _scratch("agentic-rows-")
     try:
-        rows = [_row("compact", 1, 2, [True, True, True, False]),
-                _row("compact", 2, 3, [True, True, True, True]),
-                _row("pinned", 1, 0, [True, True, True, True]),   # fold never fired
-                _row("pinned", 2, 2, [True, False, True, False])]
         path = os.path.join(root, "rows.jsonl")
         with open(path, "w", encoding="utf-8") as fh:
             for row in rows:
@@ -154,30 +165,96 @@ def test_analyzer_reports_void_not_a_data_point():
         out = os.path.join(root, "AGENTIC-test.json")
         assert AA.main(["--rows", path, "--out", out]) == 0
         with open(out, encoding="utf-8") as fh:
-            result = json.load(fh)
-
-        compact = result["arms"]["compact"]
-        assert compact["void_episodes"] == 0
-        assert compact["checkpoints_n"] == 8
-        assert compact["checkpoints_ok"] == 7
-        assert compact["checkpoint_accuracy"] == pytest.approx(7 / 8)
-        assert compact["cost_units"] == pytest.approx(2 * (1000 + 3 * 100))
-        assert compact["cost_units_per_verified_success"] == pytest.approx(2600 / 7)
-        assert compact["mean_refetch_count"] == pytest.approx(2.0)
-
-        pinned = result["arms"]["pinned"]
-        assert pinned["void_episodes"] == 1
-        assert pinned["void_reasons"] == ["compactions_zero"]
-        assert pinned["checkpoints_n"] == 4          # the void row is excluded
-        assert pinned["checkpoints_ok"] == 2
-        assert pinned["checkpoint_accuracy"] == pytest.approx(0.5)
-        assert pinned["cost_units"] == pytest.approx(1300)
-        assert pinned["mean_compactions"] == pytest.approx(2.0)
-
-        text = "\n".join(AA.table(result))
-        assert "solved rate is NOT reported" in text
+            return json.load(fh)
     finally:
         shutil.rmtree(root, ignore_errors=True)
+
+
+def test_none_arm_is_never_void():
+    """Red->green: the baseline declares no mechanism, so it cannot fail to fire one.
+
+    Under the old global rule (`compactions == 0 and evicted == 0`) both of these
+    episodes were void, which deleted the control every other arm is compared against.
+    """
+    result = _report([_row("none", 1, 0, [True, True, True, True], evicted=0),
+                      _row("none", 2, 0, [True, False, True, True], evicted=0)])
+    arm = result["arms"]["none"]
+    assert arm["fold_mechanism"] == "none"
+    assert arm["void"] is False
+    assert arm["void_episodes"] == 0
+    assert arm["checkpoints_n"] == 8
+    assert arm["checkpoints_ok"] == 7
+    assert arm["checkpoint_accuracy"] == pytest.approx(7 / 8)
+    assert arm["cost_units"] == pytest.approx(2 * (1000 + 3 * 100))
+
+
+def test_masking_arm_voids_only_when_nothing_was_evicted():
+    """Red->green: masking declares eviction, so `compactions == 0` is not its failure."""
+    result = _report([_row("masking-no-fetch", 1, 0, [True] * 4, evicted=0),
+                      _row("masking-no-fetch", 2, 0, [True, True, False, True], evicted=8)])
+    arm = result["arms"]["masking-no-fetch"]
+    assert arm["fold_mechanism"] == "eviction"
+    assert arm["void_episodes"] == 1
+    assert arm["void_reasons"] == ["evicted_zero"]
+    assert arm["checkpoints_n"] == 4
+    assert arm["checkpoints_ok"] == 3
+
+
+def test_fold_arms_void_only_when_no_fold_fired():
+    """Red->green: a fold arm with evictions but no fold is void; with a fold it is not."""
+    result = _report([_row("pinned", 1, 0, [True] * 4, evicted=8),
+                      _row("pinned", 2, 1, [True, True, True, False], evicted=8),
+                      _row("compact", 1, 0, [True] * 4, evicted=8)])
+    pinned = result["arms"]["pinned"]
+    assert pinned["fold_mechanism"] == "fold"
+    assert pinned["void_episodes"] == 1
+    assert pinned["void_reasons"] == ["compactions_zero"]
+    assert pinned["checkpoints_n"] == 4
+    assert pinned["checkpoints_ok"] == 3
+    compact = result["arms"]["compact"]
+    assert compact["void"] is True
+    assert compact["cost_basis"] == "no_live_episodes"
+    assert "VOID" in "\n".join(AA.table(result))
+
+
+def test_arm_with_no_episode_rows_is_void():
+    """An arm that wrote only per-request rows has no episode to report."""
+    result = _report([{"run_id": "r1", "arm": "bounded-context-fetch",
+                       "task_id": "AG-01", "rep": 1, "step": 1, "kind": "work",
+                       "prompt_tokens": 100, "tool_calls": [], "fold_event": False,
+                       "verified": None}])
+    arm = result["arms"]["bounded-context-fetch"]
+    assert arm["void"] is True
+    assert arm["void_reasons"] == ["no_episode_rows"]
+    assert arm["cost_basis"] == "no_episode_rows"
+    assert arm["checkpoint_accuracy"] is None
+
+
+def test_analyzer_reports_void_not_a_data_point():
+    result = _report([_row("compact", 1, 2, [True, True, True, False]),
+                      _row("compact", 2, 3, [True, True, True, True]),
+                      _row("pinned", 1, 0, [True, True, True, True]),   # fold never fired
+                      _row("pinned", 2, 2, [True, False, True, False])])
+    compact = result["arms"]["compact"]
+    assert compact["void_episodes"] == 0
+    assert compact["checkpoints_n"] == 8
+    assert compact["checkpoints_ok"] == 7
+    assert compact["checkpoint_accuracy"] == pytest.approx(7 / 8)
+    assert compact["cost_units"] == pytest.approx(2 * (1000 + 3 * 100))
+    assert compact["cost_units_per_verified_success"] == pytest.approx(2600 / 7)
+    assert compact["mean_refetch_count"] == pytest.approx(2.0)
+
+    pinned = result["arms"]["pinned"]
+    assert pinned["void_episodes"] == 1
+    assert pinned["void_reasons"] == ["compactions_zero"]
+    assert pinned["checkpoints_n"] == 4          # the void row is excluded
+    assert pinned["checkpoints_ok"] == 2
+    assert pinned["checkpoint_accuracy"] == pytest.approx(0.5)
+    assert pinned["cost_units"] == pytest.approx(1300)
+    assert pinned["mean_compactions"] == pytest.approx(2.0)
+
+    text = "\n".join(AA.table(result))
+    assert "solved rate is NOT reported" in text
 
 
 def test_all_void_arm_is_reported_void():

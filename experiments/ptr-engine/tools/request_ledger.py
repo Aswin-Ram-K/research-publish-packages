@@ -163,7 +163,11 @@ DEDUP_RULE = (
 
 # The closed vocabulary of kinds that each cost exactly ONE wire request. Every entry has
 # a make_row call site as evidence (see row_bills). Adding one requires that evidence.
-COUNTED_KINDS = ("turn", "tool-followup", "turn-initial", "digest")
+COUNTED_KINDS = ("turn", "tool-followup", "turn-initial", "digest",
+                 # agentic_cell.py: one row per step, and every step is exactly one
+                 # send_chat call (run_episode's loop increments `requests` immediately
+                 # before `send`).  `work` is a non-final step, `final` the last one.
+                 "work", "final")
 
 # --- WHAT MAY BE DEDUCTED (LEDGER-CONSERVATIVE, 2026-10-26) -----------------------------
 # The rule above stays as it is: it is evidence and it still runs. This flag decides only

@@ -1,0 +1,71 @@
+# CELL masking-no-fetch — 20261111T231412Z
+
+- fixture: `experiments/ptr-engine/longrun/tasks-v7/TX-05D.v1.json`
+- arm: `masking-no-fetch`  turns: 100  reps: 1  mode: live
+- harness_sha256: `ef3c7672cc9e4b9fa737de3122d445770797a5ec1fddbcd6f2c2671645a0b85c`
+- harness files: `analyze_stats.py`, `arm_cd.py`, `client.py`, `fixture`, `grade_v5.py`, `ptr_engine/layers.py`, `run_longrun.py`, `tools/det_verify.py`
+- requests actually used: **100**
+
+## stages
+
+- `1/7 preflight ok checkpoints=12 turns=[3, 36, 5, 46, 7, 56, 9, 66, 11, 76, 13, 86] kinds=['NUM', 'NUM', 'NUM', 'NUM', 'NUM', 'NUM', 'NUM', 'NUM', 'NUM', 'NUM', 'NUM', 'NUM'] fixture=TX-05D.v1`
+- `2/7 harness ok harness_sha256=ef3c7672cc9e4b9fa737de3122d445770797a5ec1fddbcd6f2c2671645a0b85c files=8`
+- `3/7 budget ok would_send_total=100 +10%=111 <= budget=400 (quota_remaining=1526 best-effort)`
+- `3a/7 G1 ledger gate ok G1 2,700/12,094 requests · cap 12,094 - reserve 0 - spent 2,591 (counted by request_ledger.py)`
+- `3b/7 projection ok turns=100 projected_requests=100 projected_wall~=6000s (cap-per-turn 180s -> worst case 18000s) cap=20000s projected-turn-wall=60.0s source=artefact-mode thinking=absent`
+- `3c/7 G3 prereg gate ok G3 n=100 (smoke, non-comparable) · claim none (PARM-1 21cb85511b78dc4046f0f8f1449b68a7de2fd8bd8f659985efd63c9651398ec8) under {"basis": "a cell that declares claim=none makes no PARM-1 claim, so no n threshold applies; claim_mode.resolve_claim is the only resolver of that decision", "min_n": 0}`
+- `gates recorded experiments/ptr-engine/measure/cell-masking-no-fetch-20261111T231412Z-p671817-001.gates.json (3 verdicts, 3 artefact digest(s))`
+- `4/7 run ok rows=100 path=experiments/ptr-engine/measure/rows-cell-masking-no-fetch-20261111T231412Z.jsonl`
+- `5/7 grade ok verdicts=masking-no-fetch     acc=6/12 decidable=12(pass 6, fail 6) undecidable=0 missing=0 text=0 verified=False reasons=kind_mismatch:NUM_expected,none_contradicted_by_source,none_contradicted_by_source,none_contradicted_by_source,none_contradicted_by_source,none_contradicted_by_source`
+- `6/7 analyse ok checks=4 refusals=0 (a refusal is printed, never replaced by a number)`
+- `6b/7 consistency ok grader decidable=12 (grade_v5.py:653) vs analyser graded_n=12 (analyze_stats.py:457)`
+
+## budget
+
+would_send_total=100  budget=400  required_with_headroom=111  quota_remaining=1526 (best-effort: project cap 12094 minus rows on disk in experiments/ptr-engine/measure (107 files); the runner reports no quota)
+
+## gate chain (verdicts taken before the runner was invoked)
+
+- `G1 allow` computed=2,700 requests limit=12,094 requests (cap 12,094 - reserve 0 - spent 2,591) artefact=`experiments/ptr-engine/measure/REQUEST-LEDGER.json` sha256=`c1a68d415d75de2742f8aa4171d50c5127cbea2cbc48e5b98123d68a52fdd769`
+- `G2 allow` computed=6000 s limit=20000 s (--max-wall) artefact=`experiments/ptr-engine/measure/PROJECTION.json` sha256=`75d02c735da66156f6d7b13554d9cdd2da8b2d99df5d7032ea2e761feca3925c`
+- `G3 allow` computed=claim=none declared (smoke/plumbing) limit=no claim is made, so no PARM-1 n threshold applies artefact=`experiments/ptr-engine/measure/PREREG-ARM-RUN.json` sha256=`696de5100315889172d4424de1c60a9699c17bc5d3a736226cc3171987bf56d6`
+- hypothesis: `none` (flag:--hypothesis (smoke)), n=100, rule_sha256=`21cb85511b78dc4046f0f8f1449b68a7de2fd8bd8f659985efd63c9651398ec8`
+- manifest: `experiments/ptr-engine/measure/cell-masking-no-fetch-20261111T231412Z-p671817-001.gates.json`
+
+## grade (verbatim)
+
+```
+masking-no-fetch     acc=6/12 decidable=12(pass 6, fail 6) undecidable=0 missing=0 text=0 verified=False reasons=kind_mismatch:NUM_expected,none_contradicted_by_source,none_contradicted_by_source,none_contradicted_by_source,none_contradicted_by_source,none_contradicted_by_source
+  cp-01-ref    T3   pass   num_equal                asserted=4011 expected=4011  [experiments/ptr-engine/ptr_engine/tx05_constants.py:9 ast.Assign SYM_01 = 4011]
+  cp-01-carry  T36  fail   kind_mismatch:NUM_expected asserted={'callee': 'helper_03_twice', 'kwargs': {'value': 'helper_03(value)'}, 'kwargs_as_written': ['value']} expected=4017  [experiments/ptr-engine/ptr_engine/tx05_constants.py:10 ast.Assign SYM_01_OVERRIDE = 4017]
+  cp-02-ref    T5   pass   num_equal                asserted=4021 expected=4021  [experiments/ptr-engine/ptr_engine/tx05_constants.py:12 ast.Assign SYM_02 = 4021]
+  cp-02-carry  T46  fail   none_contradicted_by_source asserted=None expected=4027  [experiments/ptr-engine/ptr_engine/tx05_constants.py:13 ast.Assign SYM_02_OVERRIDE = 4027]
+  cp-03-ref    T7   pass   num_equal                asserted=4031 expected=4031  [experiments/ptr-engine/ptr_engine/tx05_constants.py:15 ast.Assign SYM_03 = 4031]
+  cp-03-carry  T56  fail   none_contradicted_by_source asserted=None expected=4037  [experiments/ptr-engine/ptr_engine/tx05_constants.py:16 ast.Assign SYM_03_OVERRIDE = 4037]
+  cp-04-ref    T9   pass   num_equal                asserted=4041 expected=4041  [experiments/ptr-engine/ptr_engine/tx05_constants.py:18 ast.Assign SYM_04 = 4041]
+  cp-04-carry  T66  fail   none_contradicted_by_source asserted=None expected=4047  [experiments/ptr-engine/ptr_engine/tx05_constants.py:19 ast.Assign SYM_04_OVERRIDE = 4047]
+  cp-05-ref    T11  pass   num_equal                asserted=4051 expected=4051  [experiments/ptr-engine/ptr_engine/tx05_constants.py:21 ast.Assign SYM_05 = 4051]
+  cp-05-carry  T76  fail   none_contradicted_by_source asserted=None expected=4057  [experiments/ptr-engine/ptr_engine/tx05_constants.py:22 ast.Assign SYM_05_OVERRIDE = 4057]
+  cp-06-ref    T13  pass   num_equal                asserted=4061 expected=4061  [experiments/ptr-engine/ptr_engine/tx05_constants.py:24 ast.Assign SYM_06 = 4061]
+  cp-06-carry  T86  fail   none_contradicted_by_source asserted=None expected=4067  [experiments/ptr-engine/ptr_engine/tx05_constants.py:25 ast.Assign SYM_06_OVERRIDE = 4067]
+```
+
+## analysis (verbatim)
+
+```
+analyze_stats  rows=100  files=1
+  definition[ttft-definition/1]: per-turn TTFT = the TTFT of the turn's own initial request: kind='turn-initial' when present, else the legacy kind='turn' row with definition_fallback=true; a kind='tool-followup' row is a request inside a turn and is never a turn's latency
+  rows-cell-masking-no-fetch-20261111T231412Z.jsonl  rows=100
+  usable_for unstamped  rows-cell-masking-no-fetch-20261111T231412Z.jsonl  (included: no usability stamp on disk -- not a certification)
+  CLAIM REFUSAL  incomparable_claim rows-cell-masking-no-fetch-20261111T231412Z.jsonl: refusing a comparison that includes 100 cell row(s) which make no claim (claim_free): cell=TX-05D arm=masking-no-fetch rep=1 turn=1; cell=TX-05D arm=masking-no-fetch rep=1 turn=2; cell=TX-05D arm=masking-no-fetch rep=1 turn=3; cell=TX-05D arm=masking-no-fetch rep=1 turn=4; cell=TX-05D arm=masking-no-fetch rep=1 turn=5; cell=TX-05D arm=masking-no-fetch rep=1 turn=6; cell=TX-05D arm=masking-no-fetch rep=1 turn=7; cell=TX-05D arm=masking-no-fetch rep=1 turn=8; cell=TX-05D arm=masking-no-fetch rep=1 turn=9; cell=TX-05D arm=masking-no-fetch rep=1 turn=10; cell=TX-05D arm=masking-no-fetch rep=1 turn=11; cell=TX-05D arm=masking-no-fetch rep=1 turn=12; cell=TX-05D arm=masking-no-fetch rep=1 turn=13; cell=TX-05D arm=masking-no-fetch rep=1 turn=14; cell=TX-05D arm=masking-no-fetch rep=1 turn=15; cell=TX-05D arm=masking-no-fetch rep=1 turn=16; cell=TX-05D arm=masking-no-fetch rep=1 turn=17; cell=TX-05D arm=masking-no-fetch rep=1 turn=18; cell=TX-05D arm=masking-no-fetch rep=1 turn=19; cell=TX-05D arm=masking-no-fetch rep=1 turn=20; cell=TX-05D arm=masking-no-fetch rep=1 turn=21; cell=TX-05D arm=masking-no-fetch rep=1 turn=22; cell=TX-05D arm=masking-no-fetch rep=1 turn=23; cell=TX-05D arm=masking-no-fetch rep=1 turn=24; cell=TX-05D arm=masking-no-fetch rep=1 turn=25; cell=TX-05D arm=masking-no-fetch rep=1 turn=26; cell=TX-05D arm=masking-no-fetch rep=1 turn=27; cell=TX-05D arm=masking-no-fetch rep=1 turn=28; cell=TX-05D arm=masking-no-fetch rep=1 turn=29; cell=TX-05D arm=masking-no-fetch rep=1 turn=30; cell=TX-05D arm=masking-no-fetch rep=1 turn=31; cell=TX-05D arm=masking-no-fetch rep=1 turn=32; cell=TX-05D arm=masking-no-fetch rep=1 turn=33; cell=TX-05D arm=masking-no-fetch rep=1 turn=34; cell=TX-05D arm=masking-no-fetch rep=1 turn=35; cell=TX-05D arm=masking-no-fetch rep=1 turn=36; cell=TX-05D arm=masking-no-fetch rep=1 turn=37; cell=TX-05D arm=masking-no-fetch rep=1 turn=38; cell=TX-05D arm=masking-no-fetch rep=1 turn=39; cell=TX-05D arm=masking-no-fetch rep=1 turn=40; cell=TX-05D arm=masking-no-fetch rep=1 turn=41; cell=TX-05D arm=masking-no-fetch rep=1 turn=42; cell=TX-05D arm=masking-no-fetch rep=1 turn=43; cell=TX-05D arm=masking-no-fetch rep=1 turn=44; cell=TX-05D arm=masking-no-fetch rep=1 turn=45; cell=TX-05D arm=masking-no-fetch rep=1 turn=46; cell=TX-05D arm=masking-no-fetch rep=1 turn=47; cell=TX-05D arm=masking-no-fetch rep=1 turn=48; cell=TX-05D arm=masking-no-fetch rep=1 turn=49; cell=TX-05D arm=masking-no-fetch rep=1 turn=50; cell=TX-05D arm=masking-no-fetch rep=1 turn=51; cell=TX-05D arm=masking-no-fetch rep=1 turn=52; cell=TX-05D arm=masking-no-fetch rep=1 turn=53; cell=TX-05D arm=masking-no-fetch rep=1 turn=54; cell=TX-05D arm=masking-no-fetch rep=1 turn=55; cell=TX-05D arm=masking-no-fetch rep=1 turn=56; cell=TX-05D arm=masking-no-fetch rep=1 turn=57; cell=TX-05D arm=masking-no-fetch rep=1 turn=58; cell=TX-05D arm=masking-no-fetch rep=1 turn=59; cell=TX-05D arm=masking-no-fetch rep=1 turn=60; cell=TX-05D arm=masking-no-fetch rep=1 turn=61; cell=TX-05D arm=masking-no-fetch rep=1 turn=62; cell=TX-05D arm=masking-no-fetch rep=1 turn=63; cell=TX-05D arm=masking-no-fetch rep=1 turn=64; cell=TX-05D arm=masking-no-fetch rep=1 turn=65; cell=TX-05D arm=masking-no-fetch rep=1 turn=66; cell=TX-05D arm=masking-no-fetch rep=1 turn=67; cell=TX-05D arm=masking-no-fetch rep=1 turn=68; cell=TX-05D arm=masking-no-fetch rep=1 turn=69; cell=TX-05D arm=masking-no-fetch rep=1 turn=70; cell=TX-05D arm=masking-no-fetch rep=1 turn=71; cell=TX-05D arm=masking-no-fetch rep=1 turn=72; cell=TX-05D arm=masking-no-fetch rep=1 turn=73; cell=TX-05D arm=masking-no-fetch rep=1 turn=74; cell=TX-05D arm=masking-no-fetch rep=1 turn=75; cell=TX-05D arm=masking-no-fetch rep=1 turn=76; cell=TX-05D arm=masking-no-fetch rep=1 turn=77; cell=TX-05D arm=masking-no-fetch rep=1 turn=78; cell=TX-05D arm=masking-no-fetch rep=1 turn=79; cell=TX-05D arm=masking-no-fetch rep=1 turn=80; cell=TX-05D arm=masking-no-fetch rep=1 turn=81; cell=TX-05D arm=masking-no-fetch rep=1 turn=82; cell=TX-05D arm=masking-no-fetch rep=1 turn=83; cell=TX-05D arm=masking-no-fetch rep=1 turn=84; cell=TX-05D arm=masking-no-fetch rep=1 turn=85; cell=TX-05D arm=masking-no-fetch rep=1 turn=86; cell=TX-05D arm=masking-no-fetch rep=1 turn=87; cell=TX-05D arm=masking-no-fetch rep=1 turn=88; cell=TX-05D arm=masking-no-fetch rep=1 turn=89; cell=TX-05D arm=masking-no-fetch rep=1 turn=90; cell=TX-05D arm=masking-no-fetch rep=1 turn=91; cell=TX-05D arm=masking-no-fetch rep=1 turn=92; cell=TX-05D arm=masking-no-fetch rep=1 turn=93; cell=TX-05D arm=masking-no-fetch rep=1 turn=94; cell=TX-05D arm=masking-no-fetch rep=1 turn=95; cell=TX-05D arm=masking-no-fetch rep=1 turn=96; cell=TX-05D arm=masking-no-fetch rep=1 turn=97; cell=TX-05D arm=masking-no-fetch rep=1 turn=98; cell=TX-05D arm=masking-no-fetch rep=1 turn=99; cell=TX-05D arm=masking-no-fetch rep=1 turn=100. A smoke/plumbing cell declares claim='H1|H2|H3|E1|E2|E3|E4|E5|E6' with comparison_eligible=false, so its rows can never enter a comparison -- they are not filtered out silently, they stop the comparison. Compare only cells that declare none, or report the smoke cell's numbers on their own with its claim named.
+
+arm masking-no-fetch  (rows n=100)
+  definition: per-turn TTFT = the turn's own initial request (kind=turn-initial, else legacy kind=turn)  version=ttft-definition/1  turns selected=100 of 100 rows  follow-up rows dropped=0  mode=fallback-turn  definition_fallback=true
+  provenance masking-no-fetch: fixture_sha256=798cee99d962 model=occamy-1.0-NVFP4 thinking=off tools_mode=off
+  ttft_p50 n=100  214.67ms [209.28, 219.35]  (ttft dropped: 0 null, 0 unavailable)  order-stat span p41.0-p61.0
+  ttft_p95 n=100  258.06ms [248.08, 264.10]  (ttft dropped: 0 null, 0 unavailable)  order-stat span p91.0-p100.0
+  timing_n = 100  (rows with a usable ttft_ms)
+  graded_n = 12  (checkpoint cells graded by grade_v5)
+  accuracy = 6/12 (pass 6, fail 6, undecidable 0, missing 0)
+  accuracy wilson95 n=12  0.5000 [0.2538, 0.7462]
+```

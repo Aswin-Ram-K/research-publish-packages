@@ -1338,10 +1338,10 @@ tasks whose graded value is derived from that root by AST. Nothing here has been
 | Piece | What it does | Guard |
 |---|---|---|
 | `longrun/run_longrun.py` | bounded `grep` beside `read_file` (`GREP_MAX_HITS 20`, pattern 200 chars, line 200 chars, skips `.git`/`__pycache__`/`state`/`.venv`/`node_modules`); `--root` and `--snapshot-manifest` verified before the first request | `test_snapshot_and_grep.py` 17 |
-| `longrun/tools/build_snapshot.py` | freezes four trees into `state/snapshots/<sha>/` with a per-file manifest; built `70f02dc6…`, 419 files | same |
-| `longrun/tools/build_agentic_tasks.py` + `tasks-agentic/AG-01..08.v1.json` | eight tasks, graded value derived from the snapshot by AST | `test_agentic_tasks.py` |
-| `longrun/agentic_contract.py` | the one definition of a task, a row and the five arms | `test_agentic_contract.py` 12 |
-| `longrun/agentic_cell.py` | the episode loop; now reads the contract schema as well as the replay-fixture schema | `test_agentic_cell.py` 23 |
+| `longrun/tools/build_snapshot.py` | freezes four trees into `state/snapshots/<sha>/` with a per-file manifest; current `172d334b…`, 416 files | same |
+| `longrun/tools/build_agentic_tasks.py` + `tasks-agentic/AG-01..04.v1.json` | four tasks (16 turns, 4 checkpoints each), graded value derived from the snapshot by AST | `test_agentic_tasks.py` 11 |
+| `longrun/agentic_contract.py` | the row contract and the five arm names; the task schema is `consonance.longrun-fixture/2` | `test_agentic_contract.py` 12 |
+| `longrun/agentic_cell.py` | the episode loop; accepts only `consonance.longrun-fixture/2` and stamps every row with `harness_sha256` | `test_agentic_cell.py` 22 |
 | `tools/repin_harness.py` | writes `HARNESS-PIN.json` from the tree, history kept under `superseded_generation_<N>` | `test_embedded_digests_match_pin.py` 7 |
 | `tools/agentic_pin.py` | stage 2's own pin, covering `run_longrun.py` because `agentic_cell.py` imports its tool executor | `test_agentic_pin.py` 6 |
 

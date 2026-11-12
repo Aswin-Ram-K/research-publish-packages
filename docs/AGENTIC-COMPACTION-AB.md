@@ -268,3 +268,53 @@ spent 800 of it, and the invariant the plan set was the budget, not the task cou
 schema, the arm list, the tool bounds, and the validators the runner, the task builder and the analyser
 all import, so the three cannot drift apart. `expected_present` is never defaulted to true: an unknown
 is `null`, and the analyser treats `null` as "not evidence", never as a pass.
+
+## 9. Stage 2 as built: four tasks, four arms, and a metric that does not transfer
+
+The arm-set paragraph of §8 is superseded by the arm-set paragraph below; the rest of that section
+stands. What follows is what the run actually is, not what the plan said it would be.
+
+**The task set is four.** `longrun/tasks-agentic/AG-01.v1.json` through `AG-04.v1.json`: 16 turns
+each, four checkpoints at turns 4, 8, 12 and 16, `window_tokens 4096`. Every graded value is derived
+from the snapshot by AST — `longrun/tools/build_agentic_tasks.py` parses the source, resolves the
+constant or the call the checkpoint names, and writes the expected value into the fixture, so no
+graded number is typed by hand and none can drift from the code it grades. The `.v1` in the filename
+is the fixture version (`fixture_version: "AG-01.v1"`), not the schema version; the schema is
+`consonance.longrun-fixture/2`.
+
+**One task schema.** `agentic_cell.load_task` accepts `consonance.longrun-fixture/2` and nothing
+else: any other `schema` is refused by name with `unsupported_task_schema: <schema>` and never
+coerced into the accepted shape (`agentic_cell.py:303-305`). The bespoke `agentic-contract` task
+shape was built and then dropped. Two task shapes for one measurement means two graders, and two
+graders mean numbers that cannot be compared with any earlier cell — including the stage-1 runs this
+experiment exists to correct.
+
+**The arm set is four:** `none`, `masking-no-fetch`, `pinned`, `compact`. `spcc` is out because it
+compiles a fixture's world index and an episode loop has no world index to compile; it would be a
+different instrument wearing the same name. `bounded-context-fetch` is out of the stage-2 run as
+well: the episode loop keeps the tools ON at the graded turn, so every arm can re-read, and a
+dedicated fetch arm would measure a channel the other three already have. `agentic_contract.ARMS`
+still lists `bounded-context-fetch` as an implemented fifth arm, so the four-arm set is what the run
+schedules, not a limit of what the code can execute.
+
+**The primary metric does not transfer.** `lost_then_failed` was defined for the stage-1 scripted
+replay, where the graded value could sit in the prompt and a fold could remove it. In an agentic
+episode the value is never in the prompt in any arm — the model has to read it out of the snapshot —
+so `expected_present`, which the cell measures from the exact message list sent
+(`agentic_cell.py:1159`), is False by construction, and every wrong answer classifies as
+`lost_then_failed`. The classification is not wrong; it is uninformative, because it can no longer
+separate a fold that destroyed a value from a model that answered badly.
+
+Stage 2's primary metric is therefore per-arm **checkpoint accuracy**: 4 checkpoints x 4 tasks x 2
+reps = 32 observations per arm, computed by `_episode_report` (`analyze_agentic.py:150`) and reported
+as `checkpoint_accuracy` (`analyze_agentic.py:205`). The mechanism measure is **`refetch_count`** —
+tool calls named `read_file` or `grep` made at or after the first fold of an episode — which is what
+says whether an arm bought its accuracy by re-reading. `lost_then_failed` stays in the report as a
+diagnostic only, and a void episode (no fold of any kind) is excluded from every accuracy and cost
+number rather than counted as a zero.
+
+**Every row names its instrument.** `harness_sha256` is a required row key
+(`agentic_contract.py:31`), verified against `measure/AGENTIC-PIN.json` before the first request; a
+mismatch raises `agentic_pin_check_failed` and no row is written (`agentic_cell.py:969`). A row that
+does not name the instrument that wrote it is not evidence, and a run whose rows cannot be tied to a
+harness hash cannot be compared with any other run.

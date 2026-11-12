@@ -43,7 +43,7 @@
   "note": "No full 64-hex other than this generation's harness_sha256 may sit at a top-level path: tests/test_embedded_digests_match_pin.py::test_no_foreign_digest_in_current_only_files reads every 64-hex outside a supersedes slot as a regression, which is exactly the defect this record had. The *_prefix fields above are 8 hex characters and nothing else -- not digests. The full before/after bytes are recorded once each in 'observed_intermediate_delta', and generation 8's own attribution evidence (client.py and run_longrun.py under TOOL-CHANNEL-WIRE, execution dda84411, verdict PASS f17663d1) is preserved verbatim in 'supersedes_generation_8.attribution'.",
   "run_dry_turn_scope_handoff": "orchestration/handoffs/RUN-DRY-TURN-SCOPE.json (mtime 2026-10-26T19:56:44Z, before generation 5 froze)"
  },
- "cause": "Generation 10's digest (6852b900...) described bytes that no longer exist. Measured 2026-11-11 against the tree at 538cfda: exactly one of the eight inputs moved -- run_longrun.py b7b8ed8f... -> fd518178... (274235 -> 275807 bytes) when grep's `path` argument was made to SCOPE the walk through resolve_read_path_base(allow_dir=True) instead of being silently ignored. The other seven inputs are byte-identical to generation 10, and client.py is one of them, so every request body is byte-identical and no epoch boundary is crossed.",
+ "cause": "Generation 10's digest (6852b900...) described bytes that no longer exist. Measured 2026-11-11 against the tree at 538cfda: exactly one of the eight inputs moved -- run_longrun.py b7b8ed8f... -> fd518178... (274235 -> 275807 bytes) when grep's `path` argument was made to SCOPE the walk through resolve_read_path_base(allow_dir=True) instead of being silently ignored. The other seven inputs are byte-identical to generation 10, and client.py is one of them, so every request body is byte-identical and no epoch boundary is crossed. RECORD DEFECT, corrected here: tools/repin_harness.py published generation 11 at 2026-11-11T17:35:25Z with a SEVEN-entry `files` list and `path: \"experiments/\"` on every entry, because `_entries()` hardcoded the path and skipped the `fixture` entry (it is not in cell.HARNESS_FILES). The digest it published was computed by `compute()` over all eight inputs and IS the tree's digest -- verified by recomputing it from the bytes on disk -- but the `files` list could not re-derive it, so the record was not internally consistent and `check()` could never have caught a moved fixture. Corrected before any launch: no cell ran under the inconsistent record. `_entries()` now emits the real repo-relative path, includes the fixture, and raises on an input it cannot locate instead of dropping it; experiments/ptr-engine/tests/test_repin_harness.py holds all three.",
  "delta_that_moved_it_to_generation_10": "run_longrun.py e05fc9ed... -> b7b8ed8f... (260996 -> 274235 bytes): --root, --snapshot-manifest and the bounded grep tool. The other seven pinned inputs are byte-identical to generation 9.",
  "digest_recipe": "sha256 over 'name:sha256\\n' for sorted(names), names = cell.py HARNESS_FILES (cell.py:130-138) + 'fixture' (cell.py:381-402 stage_harness). cell.py is NOT in its own list. Recomputed twice from cell.py's own list and recipe; both runs identical.",
  "engine_identity_gate": "0.4",
@@ -203,9 +203,11 @@
  "schema": "harness-pin/1",
  "stability_check": {
   "digest_matches_bytes_on_disk": true,
-  "note": "digest recomputed twice from cell.py's own HARNESS_FILES + fixture with cell.py's own recipe; both runs produced a668491a55a4e2714b6e58dc8168919ee163bd2b5e3bb733b54fd9e38263bf73",
-  "recomputed_at": "2026-11-11T23:37:21Z",
-  "recomputed_times": 2
+  "note": "digest recomputed from the bytes on disk AFTER the `files`-list correction, twice, from cell.py's own HARNESS_FILES + fixture with cell.py's own recipe; both runs produced a668491a55a4e2714b6e58dc8168919ee163bd2b5e3bb733b54fd9e38263bf73. `tools/repin_harness.py --check` agrees: 'ok generation 11 a668491a55a4e2714b6e58dc8168919ee163bd2b5e3bb733b54fd9e38263bf73'.",
+  "recomputed_at": "2026-11-11T23:38:35Z",
+  "recomputed_times": 2,
+  "files_list_corrected_at": "2026-11-11T23:38:35Z",
+  "files_list_corrected_by": "STAGE-2-ROOT-GREP"
  },
  "superseded_generation_10": {
   "files": [
@@ -1774,7 +1776,7 @@
  "unit": "U-SPCC-80",
  "wiring": {
   "file": "experiments/ptr-engine/tools/run_a_star.py",
-  "constant": "PIN_EXPECTED_GENERATION = 11 at run_a_star.py:89 and PIN_EXPECTED_DIGEST = 'a668491a55a4e2714b6e58dc8168919ee163bd2b5e3bb733b54fd9e38263bf73' at run_a_star.py:90",
+  "constant": "PIN_EXPECTED_GENERATION = 11 at run_a_star.py:84 and PIN_EXPECTED_DIGEST = 'a668491a55a4e2714b6e58dc8168919ee163bd2b5e3bb733b54fd9e38263bf73' at run_a_star.py:85",
   "record_check": "run_a_star.py refuses any pin record whose generation is not 11 or whose digest differs; the two now agree, so pinned_digest() passes the record",
   "advance_owner": "STAGE-2-ROOT-GREP (this unit advanced both constants; the PENDING ADVANCE that generation 9 recorded is closed here)",
   "status": "ADVANCED 2026-11-11T23:37:21Z by STAGE-2-ROOT-GREP"
