@@ -657,3 +657,61 @@ def test_cli_dry_run_refuses_a_void_plan(tmp_path, capsys):
     assert "would be VOID" in err
     assert "pinned" in err
 
+
+
+# ------------------------------------------------------------------ (g2)
+def test_presence_is_measured_from_the_document_not_the_expected_string(tmp_path):
+    """RED before 2026-11-11: a derived value is often not written the way the fixture
+    spells it, so the literal test reported "absent" for a fact the prompt carried.
+
+    Measured on the live task set: 9 of 16 agentic checkpoints are absent from their own
+    document body under the literal test, and the ``none`` arm — which cannot lose
+    anything — was being scored ``lost_then_failed``.  Presence is therefore measured
+    from the document the fact lives in, and the literal test is recorded beside it.
+    """
+    fixture = make_fixture(tmp_path, turns=4)
+    consts = tmp_path / "snap" / "consts.py"
+    consts.write_text(
+        "SYM_A = %s\nSYM_B = %s\n\n\ndef f(cfg):\n"
+        "    return cfg.read_text(encoding=\"utf-8\")\n" % (FACT_A, FACT_B),
+        encoding="utf-8")
+    body = consts.read_text(encoding="utf-8")
+    fixture["items"] = [{"id": "consts.py", "body": body}]
+    fixture["documents"][0]["revisions"][0]["value"] = body
+    # ``call_inside_function`` always parses the fixture's ``resolve.py`` source, so the
+    # test file has to BE that source; ``derive.file`` is not consulted for this rule.
+    fixture["sources"] = [{"id": "resolve.py", "path": str(consts)}]
+    fixture["checkpoints"][1] = {
+        "id": "cp2", "turn": 4, "question": "Which call does f make?",
+        "expected": "cfg.read_text(encoding='utf-8')",
+        "source": "tool_output:consts.py@r1",
+        "answer_spec": {"kind": "CALL",
+                        "derive": {"rule": "call_inside_function", "attr": "read_text",
+                                   "function": "f", "file": str(consts)}},
+    }
+    task = AC.load_task(write_task(tmp_path, fixture))
+    cp = task.checkpoint_at(4)
+    # A CALL checkpoint's ``expected`` is the DERIVED structure, not the documented
+    # string — which is why the literal test could never see it.
+    assert cp["expected"]["callee"] == "cfg.read_text"
+    assert cp["documented_expected"] == "cfg.read_text(encoding='utf-8')"
+    assert cp["documented_expected"] not in body, "the fixture must not spell the call out"
+    assert str(cp["expected"]) not in body
+    anchor = AC._doc_anchor(task.fixture,
+                            AC._checkpoint_source(task.fixture, cp["id"]))
+    assert anchor and anchor in body
+
+    def call_reply(value):
+        return {"content": "ANSWER: CALL %s" % value, "tool_calls": [],
+                "prompt_tokens": 1000, "completion_tokens": 0, "cached_tokens": 0}
+
+    script = lambda n, m: (call_reply("cfg.read_text(encoding='utf-8')") if n == 4
+                           else tool_reply(start=1, end=20, call_id="c%d" % n))
+    tr = FakeTransport(script)
+    res = AC.run_cell([task], "none", 1, tr, max_steps=4, max_requests=20,
+                      budget_cap=1000, spent=0, repo_root=str(tmp_path / "snap"),
+                      log=lambda *a: None)
+    final = [r for r in res["request_rows"] if r["kind"] == "final"][0]
+    assert final["expected_present"] is True, "the document was in the prompt"
+    assert final["value_present"] is False, "the literal test cannot see a derived value"
+    assert final["verified"] is True

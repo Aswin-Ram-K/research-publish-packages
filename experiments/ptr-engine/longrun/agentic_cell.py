@@ -525,11 +525,59 @@ def _value_present(prompt: str, value) -> bool:
 
     A numeric value is matched on digit boundaries so a digest that happens to contain
     the digits is not read as the fact being present; text is matched literally.
+
+    This is the LITERAL test and it is not the one the attribution uses: a derived
+    answer is often not written the way the fixture spells it (``cfg.read_text(
+    encoding='utf-8')`` against a source line that uses double quotes, or a constant
+    computed by ``ast`` that appears nowhere as a literal).  Measured 2026-11-11: 9 of
+    the 16 agentic checkpoints are absent from their own document body under this test,
+    so a literal miss is not evidence of context loss.  :func:`_doc_anchor` is the
+    load-bearing test; this one is recorded beside it.
     """
     text = str(value)
     if re.fullmatch(r"-?\d+", text):
         return re.search(r"(?<!\d)%s(?!\d)" % re.escape(text), prompt) is not None
     return text in prompt
+
+
+def _checkpoint_source(fixture: dict, cp_id: str) -> str:
+    """The ``source`` a derived checkpoint came from.
+
+    ``grade_v5.derive_truth`` does not carry ``source`` through to the derived cell, and
+    ``grade_v5.py`` is in the replay harness pin, so the lookup happens here instead of
+    changing a pinned file for a field only this instrument reads.
+    """
+    for cp in fixture.get("checkpoints") or []:
+        if str(cp.get("id")) == str(cp_id):
+            return str(cp.get("source") or "")
+    return ""
+
+
+def _doc_anchor(fixture: dict, source: str) -> str:
+    """A distinctive slice of the document body a checkpoint's fact lives in.
+
+    ``source`` is ``tool_output:<doc_id>@r<revision>``.  The anchor is the head of that
+    revision's body, which is what a served ``read_file`` block carries verbatim, so
+    "the anchor is in the prompt" means "the model could still read the source" — the
+    question a context-loss test actually asks.  Returns ``""`` when the source names no
+    document, and the caller then falls back to the literal test.
+    """
+    m = re.match(r"tool_output:([^@]+)@r(\d+)$", str(source or ""))
+    if not m:
+        return ""
+    doc_id, revision = m.group(1), int(m.group(2))
+    for doc in fixture.get("documents") or []:
+        if str(doc.get("doc_id")) != doc_id:
+            continue
+        for rev in doc.get("revisions") or []:
+            if int(rev.get("revision") or 0) != revision:
+                continue
+            body = str(rev.get("value") or "").strip()
+            for width in (80, 60, 40):
+                if len(body) >= width:
+                    return body[:width]
+            return body
+    return ""
 
 
 def _estimate_tokens(text: str) -> int:
@@ -973,7 +1021,8 @@ def instrument_sha256() -> str:
 
 def _row(run_id, arm_name, task, rep, step, kind, resp, call_records, arm, *,
          answer, expected, verified, expected_present, model,
-         prompt_tokens_max=None, tools_schema_sent=False) -> dict:
+         prompt_tokens_max=None, tools_schema_sent=False,
+         value_present=None) -> dict:
     """One per-request row (:data:`REQUIRED_ROW_KEYS`) for one request.
 
     ``fetch_rounds`` is the number of tool calls this request actually executed, and
@@ -1007,6 +1056,7 @@ def _row(run_id, arm_name, task, rep, step, kind, resp, call_records, arm, *,
         "expected": expected,
         "verified": verified,
         "expected_present": expected_present,
+        "value_present": value_present,
         "ts": _now(),
         "model": model,
         "temperature": 0.0,
@@ -1154,15 +1204,21 @@ def run_episode(task: Task, arm_name: str, rep: int, *, cfg, send, root: str,
 
         cell = grade_v5.grade_cell(cp, parsed)
         ok = cell.get("verdict") == "pass"
+        anchor = _doc_anchor(task.fixture,
+                             _checkpoint_source(task.fixture, cp.get("id")))
+        present = (anchor in prompt) if anchor else _value_present(prompt, cp.get("expected"))
         answered[step] = {"step": step, "expected": cp.get("expected"),
                           "answer": parsed.get("answer_raw"), "ok": bool(ok),
-                          "expected_present": _value_present(prompt, cp.get("expected")),
+                          "expected_present": bool(present),
+                          "value_present": _value_present(prompt, cp.get("expected")),
+                          "presence_basis": "doc_anchor" if anchor else "literal",
                           "answered_at": step, "verdict": cell.get("verdict"),
                           "reason": cell.get("reason")}
         emit(row_for(step, kind, resp, call_records,
                      answer=parsed.get("answer_raw"), expected=cp.get("expected"),
                      verified=bool(ok),
-                     expected_present=answered[step]["expected_present"]))
+                     expected_present=answered[step]["expected_present"],
+                     value_present=answered[step]["value_present"]))
         arm.observe(step, resp.get("content") or "", [])
         if is_final:
             final_answer = parsed.get("answer_raw")
