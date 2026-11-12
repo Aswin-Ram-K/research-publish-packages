@@ -325,20 +325,34 @@ Three arms measured, 8 episodes each (4 tasks x 2 reps), 16 steps, 385 requests,
 `state/snapshots/172d334b…`, pin `0c7cd2e8…`. Machine record:
 `experiments/ptr-engine/measure/AGENTIC-2026-11-11-analysis.{json,md}`.
 
-| arm | episodes | requests | answered /32 | correct | accuracy on answered | solved | mean prompt | max prompt | cost units |
+| arm | episodes | requests | answered /32 | correct | accuracy on answered | solved /8 | mean prompt | max prompt | cost units |
 |---|---|---|---|---|---|---|---|---|---|
-| `none` | 8 | 128 | 15 | 12 | 0.800 | 4 | 9,864 | 24,672 | 1,273,054 |
+| `none` | 8 | 128 | 15 | 12 | 0.800 | 0 | 9,864 | 24,672 | 1,273,054 |
 | `pinned` | 8 | 128 | 6 | 5 | 0.833 | 0 | 4,128 | 6,642 | 288,589 |
 | `compact` | 8 | 129 | 6 | 6 | 1.000 | 0 | 4,153 | 6,611 | 304,518 |
 
-`cost units` is `billed_tokens + 3 x completion_tokens`, the analyser's own basis.
+`cost units` is `billed_tokens + 3 x completion_tokens`, the analyser's own basis. `solved` is
+`all(checkpoints ok)` over the task's four checkpoints, the same rule `run_episode` applies to every
+arm.
 
 **Accuracy is not the difference; coverage is.** On the checkpoints an arm actually answers, the
 folding arms match or beat the uncompressed arm — `compact` answers 6 and gets all 6 right. What
-separates them is how many they answer: 6 of 32 against 15 of 32, and no folding arm finishes a
-single task while `none` finishes 4 of 8. The folding arms spend their last steps re-reading the
-snapshot and never emit the answer line: mean `refetch_count` is 5.0 for `pinned` and 5.5 for
-`compact` against 4.0 for `none`, over a shorter horizon.
+separates them is how many they answer: 6 of 32 against 15 of 32. The folding arms spend their last
+steps re-reading the snapshot and never emit the answer line: mean `refetch_count` is 5.0 for `pinned`
+and 5.5 for `compact` against 4.0 for `none`, over a shorter horizon.
+
+**No arm solves a task, and an earlier version of this table said `none` solved 4 of 8.** That number
+was an instrument defect, corrected on 2026-11-11: `agentic_cell.offline_episodes` emitted only the
+ANSWERED checkpoints, so its `solved = all(ok)` ran over a different denominator from `run_episode`
+(which holds every `task.checkpoints` entry, unanswered ones `ok=False`). `none` was graded by
+`--offline`, so `AG-02 rep2` read `answered=1 ok=1` and scored `solved` with three of its four
+checkpoints never attempted. Fixed by `_episode_checkpoints` (`agentic_cell.py`), which rebuilds the
+live shape from the task set when `--tasks` is given, guarded by
+`test_offline_keeps_the_live_checkpoint_denominator`; the `none` record was re-graded. Under the live
+rule every arm is **0 of 8**: no episode answered all four of its checkpoints, and `none`'s best is
+3 of 4 (`AG-01 rep1`). This cell therefore compares **cost and checkpoint coverage**, not completion —
+at 16 steps no policy finishes these tasks, which is itself the binding constraint on any accuracy
+claim the design wanted to make.
 
 **The mechanism, stated with its consequence.** A fold drops the journal; `journal-drop` was the
 mechanism for both folding arms, firing 38 times (`pinned`) and 45 times (`compact`). After the fold

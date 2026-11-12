@@ -8,7 +8,7 @@ Per-episode rows only; solved rate is NOT reported.
 
 | arm | episodes | void | checkpoints | ok | checkpoint accuracy | cost units | cost/ok | mean refetch | mean compactions |
 |---|---|---|---|---|---|---|---|---|---|
-| none | 8 | 0 | 15 | 12 | 0.800 | 1273054 | 106087.8 | 4.00 | 0.00 |
+| none | 8 | 0 | 32 | 12 | 0.375 | 1273054 | 106087.8 | 4.00 | 0.00 |
 | pinned | 8 | 0 | 32 | 5 | 0.156 | 288589 | 57717.8 | 5.00 | 4.75 |
 | compact | 8 | 0 | 32 | 6 | 0.188 | 304518 | 50753.0 | 5.50 | 5.50 |
 

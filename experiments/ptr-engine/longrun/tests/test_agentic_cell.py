@@ -740,3 +740,34 @@ def test_a_new_run_truncates_the_out_file_instead_of_mixing_two_runs(tmp_path):
     # ``--append`` is the explicit opt-in for accumulating.
     assert AC.main(["--offline", str(rows), "--out", str(out), "--append"]) == 0
     assert len(read_rows(str(out))) == 2 * first
+
+
+def test_offline_keeps_the_live_checkpoint_denominator(tmp_path):
+    """RED before 2026-11-11: ``offline_episodes`` emitted only the ANSWERED checkpoints,
+    so ``solved`` was computed over a different denominator than ``run_episode`` uses.
+    Measured on the ``none`` arm of the stage-2 cell: ``AG-02 rep2`` read ``answered=1
+    ok=1`` and scored ``solved`` with three of its four checkpoints never answered, which
+    reported that arm as 4/8 solved against a live 0/8.
+
+    The gate: an episode that leaves a checkpoint unanswered is NOT solved, however many
+    of the answered ones were right, and the record lists every task checkpoint.
+    """
+    task = make_task(tmp_path, turns=4, cp1_turn=2)
+    answer_only_cp1 = lambda n, m: (answer_reply(FACT_A) if n == 2
+                                    else tool_reply(call_id="c%d" % n))
+    rows = tmp_path / "rows.jsonl"
+    run(tmp_path, "none", answer_only_cp1, rows_path=str(rows))
+    assert len(task.checkpoints) == 2
+
+    # Without the task set the old, lax shape is still what the file can support.
+    loose = AC.offline_episodes(str(rows))[0]
+    assert len(loose["checkpoints"]) < len(task.checkpoints)
+
+    graded = AC.offline_episodes(str(rows), {task.task_id: task})[0]
+    assert len(graded["checkpoints"]) == len(task.checkpoints), \
+        "an offline record must list every task checkpoint, not only the answered ones"
+    assert sum(1 for c in graded["checkpoints"] if c["ok"]) >= 1
+    assert sum(1 for c in graded["checkpoints"] if c["answer"]) < len(task.checkpoints)
+    assert graded["solved"] is False, \
+        "a checkpoint that was never answered cannot count as solved"
+    assert graded["verdict"] != "solved"

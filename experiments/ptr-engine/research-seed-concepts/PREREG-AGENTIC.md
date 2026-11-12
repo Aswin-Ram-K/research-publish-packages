@@ -190,3 +190,18 @@ checkpoints where `none` answers 15, and no folding arm finishes a task. A `chec
 without `graded` would say the folding arms win. The result record
 (`measure/AGENTIC-2026-11-11-analysis.md`) prints both, and `docs/AGENTIC-COMPACTION-AB.md` §10 states the
 reading.
+
+### 4. `solved` is over ALL task checkpoints, and no arm reaches it
+
+Erratum 2 §3 said "no folding arm finishes a task", implying the uncompressed arm does. That was an
+artefact of the offline grader, not a result: `agentic_cell.offline_episodes` emitted only the ANSWERED
+checkpoints, so `solved = all(ok)` there used a narrower denominator than `run_episode` uses on every
+live arm. `none` was graded through `--offline`, so `AG-02 rep2` scored `solved` on one answered
+checkpoint out of four. Corrected by `_episode_checkpoints` in `agentic_cell.py` (applied when
+`--tasks` is passed to `--offline`), guarded by
+`test_offline_keeps_the_live_checkpoint_denominator`, and the `none` record was re-graded.
+
+Under one rule — an episode is solved only if every one of its four checkpoints is answered and right —
+**all three arms are 0 of 8**. `none`'s best episode answers all four and gets three. The metric this
+cell can support is checkpoint coverage and cost per arm; it cannot support a completion rate, and the
+pre-registration's completion-based reading must not be written from these rows.

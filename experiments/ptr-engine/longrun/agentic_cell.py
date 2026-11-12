@@ -1506,7 +1506,32 @@ def run_cell(tasks, arm: str, reps: int, transport, *, out_path: Optional[str] =
 
 
 # ------------------------------------------------------------------ offline
-def offline_episodes(rows_path: str) -> List[dict]:
+def _episode_checkpoints(graded: List[dict], task) -> List[dict]:
+    """The checkpoint list in the LIVE shape: one entry per task checkpoint.
+
+    ``--offline`` used to emit only the ANSWERED checkpoints, so ``solved = all(ok)`` was
+    computed over a different denominator than the live path uses (``run_episode``'s
+    ``records`` holds every ``task.checkpoints`` entry, unanswered ones with ``ok=False``).
+    Measured 2026-11-11 on the ``none`` arm: ``AG-02 rep2`` read ``answered=1 ok=1`` and
+    scored ``solved`` while three of its four checkpoints were never answered, which
+    inflated that arm to 4/8 solved against a live 0/8.  An offline re-grade must apply
+    the live rule, not a laxer one.
+    """
+    by_step = {int(c["step"]): c for c in graded}
+    out = []
+    for cp in task.checkpoints:
+        turn = int(cp["turn"])
+        hit = by_step.get(turn)
+        if hit is not None:
+            out.append(hit)
+        else:
+            out.append({"step": turn, "expected": cp.get("expected"), "answer": None,
+                        "ok": False, "expected_present": None, "answered_at": None,
+                        "verdict": None, "reason": None})
+    return out
+
+
+def offline_episodes(rows_path: str, tasks: Optional[Dict[str, object]] = None) -> List[dict]:
     """Re-grade a per-request row file into episode rows.  Sends nothing.
 
     Mirrors ``cell.py --offline``: the rows already on disk are the measurement, and this
@@ -1542,6 +1567,8 @@ def offline_episodes(rows_path: str) -> List[dict]:
                 if key in seen:
                     refetch += 1
                 seen.add(key)
+        if tasks and task_id in tasks:
+            checkpoints = _episode_checkpoints(checkpoints, tasks[task_id])
         solved = bool(checkpoints) and all(c["ok"] for c in checkpoints)
         mechanism = _mechanism_of(arm)
         out.append({
@@ -1648,7 +1675,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                   file=sys.stderr)
             return 2
         try:
-            episodes = offline_episodes(args.offline)
+            episodes = offline_episodes(
+                args.offline,
+                {t.task_id: t for t in load_tasks(args.tasks)} if args.tasks else None)
         except (TaskError, RowError, OSError, ValueError) as exc:
             print("refused: %s" % (exc,), file=sys.stderr)
             return 2
